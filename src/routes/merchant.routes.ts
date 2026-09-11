@@ -8,7 +8,7 @@ export const merchantRouter = Router();
 
 const registerMerchantSchema = z.object({
   businessName: z.string().min(2),
-  category: z.string().min(2),
+  categoryId: z.string().uuid(),
   address: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -26,6 +26,11 @@ merchantRouter.post("/register", requireAuth, async (req, res) => {
   const existing = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (existing) {
     return res.status(409).json({ error: "Merchant profile already exists" });
+  }
+
+  const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
+  if (!category) {
+    return res.status(404).json({ error: "Category not found" });
   }
 
   const merchant = await prisma.$transaction(async (tx) => {
@@ -62,6 +67,67 @@ merchantRouter.get("/pending", requireAuth, requireRole(Role.ADMIN), async (_req
     orderBy: { createdAt: "asc" },
   });
   res.json(pending);
+});
+
+function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+const searchMerchantsSchema = z.object({
+  q: z.string().optional(),
+  categoryId: z.string().uuid().optional(),
+  lat: z.coerce.number().optional(),
+  lng: z.coerce.number().optional(),
+  radiusKm: z.coerce.number().positive().optional(),
+});
+
+// Public: browse/search approved merchants (section 9/10/11 — discovery by category, name, and location)
+merchantRouter.get("/", async (req, res) => {
+  const parsed = searchMerchantsSchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+  const { q, categoryId, lat, lng, radiusKm } = parsed.data;
+
+  const merchants = await prisma.merchantProfile.findMany({
+    where: {
+      approvalStatus: "APPROVED",
+      ...(categoryId ? { categoryId } : {}),
+      ...(q ? { businessName: { contains: q, mode: "insensitive" } } : {}),
+    },
+    include: { category: true, discounts: { where: { isActive: true } } },
+  });
+
+  // Nearest-first sorting when the customer's location is known (section 31 "Radius Selector").
+  // Done in the app layer rather than PostGIS for now — fine at this data volume, revisit later.
+  if (lat !== undefined && lng !== undefined) {
+    const withDistance = merchants
+      .filter((m) => m.latitude !== null && m.longitude !== null)
+      .map((m) => ({ ...m, distanceKm: haversineDistanceKm(lat, lng, m.latitude!, m.longitude!) }))
+      .filter((m) => radiusKm === undefined || m.distanceKm <= radiusKm)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+    return res.json(withDistance);
+  }
+
+  res.json(merchants);
+});
+
+// Public: a merchant's storefront profile (section 8)
+merchantRouter.get("/:id", async (req, res) => {
+  const merchant = await prisma.merchantProfile.findUnique({
+    where: { id: req.params.id },
+    include: { category: true, discounts: { where: { isActive: true } } },
+  });
+  if (!merchant || merchant.approvalStatus !== "APPROVED") {
+    return res.status(404).json({ error: "Merchant not found" });
+  }
+  res.json(merchant);
 });
 
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {

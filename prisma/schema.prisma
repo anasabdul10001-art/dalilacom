@@ -81,12 +81,25 @@ model Membership {
   @@index([userId])
 }
 
+// Admin-managed, hierarchical (section 10): a category can have a parent category
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  createdAt DateTime   @default(now())
+
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  merchants MerchantProfile[]
+}
+
 // A merchant's business profile (section 3)
 model MerchantProfile {
   id              String   @id @default(uuid())
   userId          String   @unique
   businessName    String
-  category        String
+  categoryId      String
   address         String?
   latitude        Float?
   longitude       Float?
@@ -98,8 +111,11 @@ model MerchantProfile {
   updatedAt       DateTime @updatedAt
 
   user      User       @relation(fields: [userId], references: [id])
+  category  Category   @relation(fields: [categoryId], references: [id])
   discounts Discount[]
   discountTransactions DiscountTransaction[]
+
+  @@index([categoryId])
 }
 
 // A discount rule offered by a merchant (section 4)

@@ -26,6 +26,17 @@ async function main() {
     });
     console.log("Created Monthly membership plan");
   }
+
+  // A starter slice of the category list from section 10/31 — the admin can add more later.
+  const topLevelCategories = ["Restaurants", "Cafes", "Clothing", "Electronics", "Beauty", "Health"];
+  for (const name of topLevelCategories) {
+    const slug = name.toLowerCase();
+    const existingCategory = await prisma.category.findUnique({ where: { slug } });
+    if (!existingCategory) {
+      await prisma.category.create({ data: { name, slug } });
+      console.log(`Created category: ${name}`);
+    }
+  }
 }
 
 main()

@@ -5,6 +5,7 @@ import { authRouter } from "./routes/auth.routes";
 import { membershipRouter } from "./routes/membership.routes";
 import { merchantRouter } from "./routes/merchant.routes";
 import { qrRouter } from "./routes/qr.routes";
+import { categoryRouter } from "./routes/category.routes";
 
 const app = express();
 app.use(cors());
@@ -16,6 +17,7 @@ app.use("/auth", authRouter);
 app.use("/membership", membershipRouter);
 app.use("/merchant", merchantRouter);
 app.use("/qr", qrRouter);
+app.use("/categories", categoryRouter);
 
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => {
