@@ -1,4 +1,5 @@
 import "dotenv/config";
+import path from "path";
 import express from "express";
 import cors from "cors";
 import { authRouter } from "./routes/auth.routes";
@@ -15,6 +16,10 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Developer test console (public/index.html) — a plain HTML/JS page to click through the
+// API by hand; not the final Android/product UI (section 18).
+app.use(express.static(path.join(__dirname, "..", "public")));
 
 app.use("/auth", authRouter);
 app.use("/membership", membershipRouter);

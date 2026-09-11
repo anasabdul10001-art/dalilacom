@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>DALILACOM — Test Console</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; margin: 0; background: #f7f4f2; color: #1a1a1a; }
+  header { background: linear-gradient(135deg, #5A0E12, #BA2A34); color: #fff; padding: 16px 20px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; opacity: .85; font-size: 13px; }
+  .tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #eee; padding: 0 16px; overflow-x: auto; }
+  .tab { padding: 12px 18px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; color: #555; white-space: nowrap; }
+  .tab.active { color: #BA2A34; border-color: #BA2A34; }
+  .panel { display: none; padding: 16px; max-width: 720px; margin: 0 auto; }
+  .panel.active { display: block; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h3 { margin: 0 0 10px; font-size: 15px; color: #BA2A34; }
+  label { display: block; font-size: 12px; color: #666; margin: 8px 0 3px; }
+  input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  button { background: #BA2A34; color: #fff; border: none; border-radius: 8px; padding: 9px 14px; font-weight: 600; cursor: pointer; margin-top: 10px; font-size: 13px; }
+  button.secondary { background: #eee; color: #333; }
+  button.small { padding: 5px 10px; font-size: 12px; margin: 4px 4px 0 0; }
+  .status { font-size: 12px; padding: 6px 10px; border-radius: 8px; display: inline-block; margin-bottom: 8px; }
+  .status.ok { background: #e6f4ea; color: #1e7e34; }
+  .status.bad { background: #fdecea; color: #b71c1c; }
+  .item { border-top: 1px solid #f0f0f0; padding: 10px 0; }
+  .item:first-child { border-top: none; }
+  .muted { color: #888; font-size: 12px; }
+  .price-orig { text-decoration: line-through; color: #999; font-size: 12px; }
+  .price-member { color: #BA2A34; font-weight: 700; }
+  #log { background: #12100f; color: #b6f2c1; font-family: monospace; font-size: 11px; padding: 10px; border-radius: 8px; max-height: 220px; overflow: auto; white-space: pre-wrap; }
+  code.qr { font-size: 28px; letter-spacing: 4px; font-weight: 700; color: #BA2A34; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🅳 دليلكم — DALILACOM (Test Console)</h1>
+  <p>صفحة اختبار مطوّرين — مو التصميم النهائي متاع التطبيق. بتتكلم مباشرة مع الـ API الحقيقي.</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="customer">👤 زبون</div>
+  <div class="tab" data-tab="merchant">🏪 تاجر</div>
+  <div class="tab" data-tab="admin">🛡️ أدمن</div>
+  <div class="tab" data-tab="log">📜 السجل</div>
+</div>
+
+<!-- CUSTOMER -->
+<div class="panel active" id="panel-customer">
+  <div class="card">
+    <h3>الحساب</h3>
+    <div id="customer-status" class="status bad">غير مسجل دخول</div>
+    <div class="row">
+      <div><label>الإيميل</label><input id="c-email" placeholder="ahmad@test.com" /></div>
+      <div><label>كلمة السر</label><input id="c-password" type="password" placeholder="Passw0rd!" /></div>
+    </div>
+    <label>الاسم الكامل (للتسجيل فقط)</label>
+    <input id="c-fullname" placeholder="Ahmad Customer" />
+    <button onclick="customerRegister()">تسجيل حساب جديد</button>
+    <button class="secondary" onclick="customerLogin()">تسجيل دخول</button>
+    <button class="secondary" onclick="customerLogout()">تسجيل خروج</button>
+  </div>
+
+  <div class="card">
+    <h3>العضوية وبطاقتي</h3>
+    <div id="membership-info" class="muted">—</div>
+    <button onclick="loadPlans()">اعرض الخطط المتاحة</button>
+    <div id="plans-list"></div>
+    <button onclick="showQr()">اعرض كود QR الحالي (بطاقتي)</button>
+    <div id="qr-display"></div>
+  </div>
+
+  <div class="card">
+    <h3>اكتشف التجار</h3>
+    <div class="row">
+      <div><label>بحث بالاسم</label><input id="search-q" placeholder="Cafe..." /></div>
+      <div><label>تصنيف</label><select id="search-category"><option value="">الكل</option></select></div>
+    </div>
+    <div class="row">
+      <button class="small secondary" onclick="searchMerchants(33.5100,36.2900)">📍 موقعي: دمشق</button>
+      <button class="small secondary" onclick="searchMerchants(36.2021,37.1343)">📍 موقعي: حلب</button>
+      <button class="small secondary" onclick="searchMerchants()">بحث بدون موقع</button>
+    </div>
+    <div id="merchants-list"></div>
+  </div>
+
+  <div class="card">
+    <h3>سلة الشراء</h3>
+    <button onclick="loadCart()">تحديث السلة</button>
+    <div id="cart-view"></div>
+    <button onclick="checkout()">🛒 الدفع (Checkout)</button>
+  </div>
+
+  <div class="card">
+    <h3>طلباتي</h3>
+    <button onclick="loadMyOrders()">تحديث الطلبات</button>
+    <div id="my-orders"></div>
+  </div>
+</div>
+
+<!-- MERCHANT -->
+<div class="panel" id="panel-merchant">
+  <div class="card">
+    <h3>حساب التاجر</h3>
+    <div id="merchant-status" class="status bad">غير مسجل دخول</div>
+    <div class="row">
+      <div><label>الإيميل</label><input id="m-email" placeholder="cafe@test.com" /></div>
+      <div><label>كلمة السر</label><input id="m-password" type="password" placeholder="Passw0rd!" /></div>
+    </div>
+    <label>الاسم الكامل (للتسجيل فقط)</label>
+    <input id="m-fullname" placeholder="Cafe Owner" />
+    <button onclick="merchantRegisterUser()">تسجيل حساب جديد</button>
+    <button class="secondary" onclick="merchantLogin()">تسجيل دخول</button>
+    <button class="secondary" onclick="merchantLogout()">تسجيل خروج</button>
+  </div>
+
+  <div class="card">
+    <h3>الملف التجاري</h3>
+    <div class="row">
+      <div><label>اسم المحل</label><input id="m-bizname" placeholder="Cafe Damasco" /></div>
+      <div><label>التصنيف</label><select id="m-category"></select></div>
+    </div>
+    <div class="row">
+      <div><label>Latitude</label><input id="m-lat" value="33.5138" /></div>
+      <div><label>Longitude</label><input id="m-lng" value="36.2765" /></div>
+    </div>
+    <label>العنوان</label>
+    <input id="m-address" placeholder="Damascus Center" />
+    <button onclick="registerMerchantProfile()">تسجيل كتاجر (بانتظار موافقة الأدمن)</button>
+    <button class="secondary" onclick="loadMerchantMe()">اعرض ملفي التجاري</button>
+    <div id="merchant-me"></div>
+  </div>
+
+  <div class="card">
+    <h3>إضافة حسم</h3>
+    <div class="row">
+      <div><label>عنوان الحسم</label><input id="d-title" placeholder="خصم أعضاء دليلكم" /></div>
+      <div><label>نسبة %</label><input id="d-percent" value="15" /></div>
+    </div>
+    <button onclick="addDiscount()">إضافة الحسم</button>
+  </div>
+
+  <div class="card">
+    <h3>إضافة منتج</h3>
+    <div class="row">
+      <div><label>اسم المنتج</label><input id="p-name" placeholder="Cappuccino" /></div>
+      <div><label>السعر (سنت)</label><input id="p-price" value="500" /></div>
+    </div>
+    <div class="row">
+      <div><label>مخزون</label><input id="p-stock" value="10" /></div>
+      <div><label>سعر العضو (سنت، اختياري)</label><input id="p-memberprice" placeholder="400" /></div>
+    </div>
+    <button onclick="addProduct()">إضافة المنتج</button>
+    <button class="secondary" onclick="loadMyProducts()">اعرض منتجاتي</button>
+    <div id="my-products"></div>
+  </div>
+
+  <div class="card">
+    <h3>مسح ومطابقة QR (Merchant Mode)</h3>
+    <div class="row">
+      <div><label>رقم العضوية</label><input id="scan-member" placeholder="DLK-1234567890" /></div>
+      <div><label>الكود (6 أرقام)</label><input id="scan-code" placeholder="123456" /></div>
+    </div>
+    <button onclick="verifyQr()">1️⃣ تحقق (Verify)</button>
+    <label>قيمة الفاتورة (سنت)</label>
+    <input id="scan-bill" value="10000" />
+    <button onclick="redeemQr()">2️⃣ تأكيد الحسم (Redeem)</button>
+    <div id="scan-result"></div>
+  </div>
+
+  <div class="card">
+    <h3>طلباتي (كتاجر)</h3>
+    <button onclick="loadMerchantOrders()">تحديث الطلبات</button>
+    <div id="merchant-orders"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="panel" id="panel-admin">
+  <div class="card">
+    <h3>دخول الأدمن</h3>
+    <div id="admin-status" class="status bad">غير مسجل دخول</div>
+    <div class="row">
+      <div><label>الإيميل</label><input id="a-email" value="admin@dalilacom.dev" /></div>
+      <div><label>كلمة السر</label><input id="a-password" type="password" value="Admin12345!" /></div>
+    </div>
+    <button onclick="adminLogin()">تسجيل دخول</button>
+  </div>
+
+  <div class="card">
+    <h3>التجار بانتظار الموافقة</h3>
+    <button onclick="loadPending()">تحديث القائمة</button>
+    <div id="pending-list"></div>
+  </div>
+
+  <div class="card">
+    <h3>إضافة تصنيف جديد</h3>
+    <input id="cat-name" placeholder="Electronics" />
+    <button onclick="createCategory()">إضافة</button>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="panel" id="panel-log">
+  <div class="card">
+    <h3>سجل الطلبات (Request/Response Log)</h3>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+const state = { customerToken: null, merchantToken: null, adminToken: null, categories: [] };
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+});
+
+function log(label, data) {
+  const el = document.getElementById('log');
+  el.textContent = `[${new Date().toLocaleTimeString()}] ${label}\n${JSON.stringify(data, null, 2)}\n\n` + el.textContent;
+}
+
+async function api(method, path, body, token) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  log(`${method} ${path} -> ${res.status}`, data);
+  return { ok: res.ok, status: res.status, data };
+}
+
+function money(cents) { return (cents / 100).toFixed(2) + '€'; }
+
+// ---- categories (shared) ----
+async function loadCategoriesInto(selectId) {
+  const { data } = await api('GET', '/categories');
+  state.categories = [];
+  const flat = [];
+  for (const c of data) { flat.push(c); for (const ch of (c.children || [])) flat.push(ch); }
+  const sel = document.getElementById(selectId);
+  if (sel) sel.innerHTML = flat.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('search-category').innerHTML = '<option value="">الكل</option>' + flat.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+loadCategoriesInto('m-category');
+
+// ---- customer auth ----
+async function customerRegister() {
+  const { ok, data } = await api('POST', '/auth/register', {
+    email: document.getElementById('c-email').value,
+    password: document.getElementById('c-password').value,
+    fullName: document.getElementById('c-fullname').value,
+  });
+  if (ok) { state.customerToken = data.token; renderCustomerStatus(); }
+}
+async function customerLogin() {
+  const { ok, data } = await api('POST', '/auth/login', {
+    email: document.getElementById('c-email').value,
+    password: document.getElementById('c-password').value,
+  });
+  if (ok) { state.customerToken = data.token; renderCustomerStatus(); }
+}
+async function customerLogout() {
+  if (state.customerToken) await api('POST', '/auth/logout', null, state.customerToken);
+  state.customerToken = null; renderCustomerStatus();
+}
+function renderCustomerStatus() {
+  const el = document.getElementById('customer-status');
+  if (state.customerToken) { el.textContent = '✅ مسجل دخول'; el.className = 'status ok'; }
+  else { el.textContent = '❌ غير مسجل دخول'; el.className = 'status bad'; }
+}
+
+// ---- membership ----
+async function loadPlans() {
+  const { data } = await api('GET', '/membership/plans');
+  document.getElementById('plans-list').innerHTML = data.map(p =>
+    `<div class="item">${p.name} — ${p.durationDays} يوم — ${money(p.priceCents)}
+     <button class="small" onclick="subscribe('${p.id}')">اشترك</button></div>`).join('') || '<div class="muted">لا يوجد خطط</div>';
+}
+async function subscribe(planId) {
+  const { ok, data } = await api('POST', '/membership/subscribe', { planId }, state.customerToken);
+  if (ok) document.getElementById('membership-info').textContent = `✅ ${data.memberNumber} — ينتهي ${new Date(data.endDate).toLocaleDateString()}`;
+}
+async function showQr() {
+  const { ok, data } = await api('GET', '/qr/mine', null, state.customerToken);
+  document.getElementById('qr-display').innerHTML = ok
+    ? `<div>رقم العضوية: <b>${data.memberNumber}</b></div><code class="qr">${data.code}</code><div class="muted">صالح لـ ${data.expiresInSeconds} ثانية إضافية — يتغيّر كل 30 ثانية</div>`
+    : `<div class="muted">${data.error || 'لا يوجد عضوية فعالة'}</div>`;
+}
+
+// ---- discovery ----
+async function searchMerchants(lat, lng) {
+  const q = document.getElementById('search-q').value;
+  const categoryId = document.getElementById('search-category').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (categoryId) params.set('categoryId', categoryId);
+  if (lat) { params.set('lat', lat); params.set('lng', lng); params.set('radiusKm', 100); }
+  const { data } = await api('GET', '/merchant?' + params.toString());
+  document.getElementById('merchants-list').innerHTML = (data || []).map(m => `
+    <div class="item">
+      <b>${m.businessName}</b> <span class="muted">${m.category?.name || ''}</span>
+      ${m.distanceKm !== undefined ? `<span class="muted"> — ${m.distanceKm.toFixed(1)}كم</span>` : ''}
+      ${(m.discounts || []).map(d => `<div class="muted">🏷️ ${d.title} (${d.percent}%)</div>`).join('')}
+      <button class="small" onclick="viewMerchantProducts('${m.id}','${m.businessName}')">شوف المنتجات</button>
+    </div>`).join('') || '<div class="muted">لا نتائج</div>';
+}
+async function viewMerchantProducts(merchantId, name) {
+  const { data } = await api('GET', '/products?merchantId=' + merchantId);
+  document.getElementById('merchants-list').innerHTML =
+    `<button class="small secondary" onclick="searchMerchants()">⬅ رجوع للقائمة</button><h4>${name}</h4>` +
+    (data || []).map(p => `
+      <div class="item">
+        ${p.name} — ${p.memberDiscountEnabled ? `<span class="price-orig">${money(p.priceCents)}</span> <span class="price-member">${money(p.memberPriceCents)}</span>` : money(p.priceCents)}
+        <span class="muted">(مخزون: ${p.stock})</span>
+        <button class="small" onclick="addToCart('${p.id}')">أضف للسلة</button>
+      </div>`).join('') || '<div class="muted">لا منتجات</div>';
+}
+
+// ---- cart ----
+async function addToCart(productId) {
+  await api('POST', '/cart/items', { productId, quantity: 1 }, state.customerToken);
+  loadCart();
+}
+async function loadCart() {
+  const { ok, data } = await api('GET', '/cart', null, state.customerToken);
+  if (!ok) { document.getElementById('cart-view').innerHTML = '<div class="muted">سجل دخول كزبون أول</div>'; return; }
+  document.getElementById('cart-view').innerHTML = data.items.map(i => `
+    <div class="item">${i.product.name} × ${i.quantity} (${i.product.merchant.businessName})
+      — ${i.regularPriceCents !== i.unitPriceCents ? `<span class="price-orig">${money(i.regularPriceCents)}</span> <span class="price-member">${money(i.unitPriceCents)}</span>` : money(i.unitPriceCents)}
+      = ${money(i.lineTotalCents)}
+      <button class="small secondary" onclick="removeCartItem('${i.id}')">حذف</button>
+    </div>`).join('') + `<div style="margin-top:8px"><b>المجموع: ${money(data.totalCents)}</b></div>`;
+}
+async function removeCartItem(id) {
+  await api('DELETE', '/cart/items/' + id, null, state.customerToken);
+  loadCart();
+}
+async function checkout() {
+  const { ok, data } = await api('POST', '/cart/checkout', null, state.customerToken);
+  if (ok) { alert('تم إنشاء ' + data.length + ' طلب/طلبات!'); loadCart(); loadMyOrders(); }
+  else alert('خطأ: ' + (data.error?.error || data.error || JSON.stringify(data)));
+}
+async function loadMyOrders() {
+  const { data } = await api('GET', '/orders/mine', null, state.customerToken);
+  document.getElementById('my-orders').innerHTML = (data || []).map(o => `
+    <div class="item">${o.orderNumber} — ${o.merchant.businessName} — <b>${o.status}</b> — ${money(o.totalCents)}
+      ${['PENDING','CONFIRMED','PREPARING'].includes(o.status) ? `<button class="small secondary" onclick="cancelOrder('${o.id}')">إلغاء</button>` : ''}
+    </div>`).join('') || '<div class="muted">لا طلبات بعد</div>';
+}
+async function cancelOrder(id) {
+  await api('POST', '/orders/' + id + '/cancel', null, state.customerToken);
+  loadMyOrders();
+}
+
+// ---- merchant auth ----
+async function merchantRegisterUser() {
+  const { ok, data } = await api('POST', '/auth/register', {
+    email: document.getElementById('m-email').value,
+    password: document.getElementById('m-password').value,
+    fullName: document.getElementById('m-fullname').value,
+  });
+  if (ok) { state.merchantToken = data.token; renderMerchantStatus(); }
+}
+async function merchantLogin() {
+  const { ok, data } = await api('POST', '/auth/login', {
+    email: document.getElementById('m-email').value,
+    password: document.getElementById('m-password').value,
+  });
+  if (ok) { state.merchantToken = data.token; renderMerchantStatus(); }
+}
+async function merchantLogout() {
+  if (state.merchantToken) await api('POST', '/auth/logout', null, state.merchantToken);
+  state.merchantToken = null; renderMerchantStatus();
+}
+function renderMerchantStatus() {
+  const el = document.getElementById('merchant-status');
+  if (state.merchantToken) { el.textContent = '✅ مسجل دخول'; el.className = 'status ok'; }
+  else { el.textContent = '❌ غير مسجل دخول'; el.className = 'status bad'; }
+}
+
+async function registerMerchantProfile() {
+  const { ok, data } = await api('POST', '/merchant/register', {
+    businessName: document.getElementById('m-bizname').value,
+    categoryId: document.getElementById('m-category').value,
+    address: document.getElementById('m-address').value,
+    latitude: parseFloat(document.getElementById('m-lat').value),
+    longitude: parseFloat(document.getElementById('m-lng').value),
+  }, state.merchantToken);
+  if (ok) {
+    alert('تم التسجيل! الحالة: ' + data.approvalStatus + ' — لازم الأدمن يوافق (تبويب الأدمن).');
+    // Role updated server-side — re-login to get a JWT carrying the MERCHANT role.
+    await merchantLogin();
+  }
+}
+async function loadMerchantMe() {
+  const { ok, data } = await api('GET', '/merchant/me', null, state.merchantToken);
+  document.getElementById('merchant-me').innerHTML = ok
+    ? `<div>${data.businessName} — حالة الموافقة: <b>${data.approvalStatus}</b>${data.rejectionReason ? ' — سبب الرفض: ' + data.rejectionReason : ''}</div>`
+    : `<div class="muted">${data.error}</div>`;
+}
+async function addDiscount() {
+  await api('POST', '/merchant/discounts', {
+    title: document.getElementById('d-title').value,
+    percent: parseInt(document.getElementById('d-percent').value, 10),
+  }, state.merchantToken);
+}
+async function addProduct() {
+  const memberPrice = document.getElementById('p-memberprice').value;
+  await api('POST', '/products', {
+    name: document.getElementById('p-name').value,
+    priceCents: parseInt(document.getElementById('p-price').value, 10),
+    stock: parseInt(document.getElementById('p-stock').value, 10),
+    memberDiscountEnabled: !!memberPrice,
+    ...(memberPrice ? { memberPriceCents: parseInt(memberPrice, 10) } : {}),
+  }, state.merchantToken);
+  loadMyProducts();
+}
+async function loadMyProducts() {
+  const { data } = await api('GET', '/products/mine', null, state.merchantToken);
+  document.getElementById('my-products').innerHTML = (data || []).map(p =>
+    `<div class="item">${p.name} — ${money(p.priceCents)} — مخزون: ${p.stock}</div>`).join('') || '<div class="muted">لا منتجات بعد</div>';
+}
+
+async function verifyQr() {
+  const { ok, data } = await api('POST', '/qr/verify', {
+    memberNumber: document.getElementById('scan-member').value,
+    code: document.getElementById('scan-code').value,
+  }, state.merchantToken);
+  document.getElementById('scan-result').innerHTML = ok
+    ? `<div class="status ok">✅ MEMBER VERIFIED: ${data.member.fullName} — حسم: ${data.discount ? data.discount.percent + '%' : 'لا يوجد'}</div>`
+    : `<div class="status bad">${data.error}</div>`;
+}
+async function redeemQr() {
+  const { ok, data } = await api('POST', '/qr/redeem', {
+    memberNumber: document.getElementById('scan-member').value,
+    code: document.getElementById('scan-code').value,
+    billAmountCents: parseInt(document.getElementById('scan-bill').value, 10),
+  }, state.merchantToken);
+  document.getElementById('scan-result').innerHTML = ok
+    ? `<div class="status ok">✅ تم! الفاتورة: ${money(data.billAmountCents)} — الحسم: ${money(data.discountAmountCents)} — النهائي: ${money(data.finalAmountCents)}</div>`
+    : `<div class="status bad">${data.error}</div>`;
+}
+async function loadMerchantOrders() {
+  const { data } = await api('GET', '/orders/merchant', null, state.merchantToken);
+  const next = { PENDING: 'CONFIRMED', CONFIRMED: 'PREPARING', PREPARING: 'SHIPPED', SHIPPED: 'DELIVERED' };
+  document.getElementById('merchant-orders').innerHTML = (data || []).map(o => `
+    <div class="item">${o.orderNumber} — ${o.user.fullName} — <b>${o.status}</b> — ${money(o.totalCents)}
+      ${next[o.status] ? `<button class="small" onclick="advanceOrder('${o.id}','${next[o.status]}')">➡ ${next[o.status]}</button>` : ''}
+    </div>`).join('') || '<div class="muted">لا طلبات بعد</div>';
+}
+async function advanceOrder(id, status) {
+  await api('PATCH', '/orders/' + id + '/status', { status }, state.merchantToken);
+  loadMerchantOrders();
+}
+
+// ---- admin ----
+async function adminLogin() {
+  const { ok, data } = await api('POST', '/auth/login', {
+    email: document.getElementById('a-email').value,
+    password: document.getElementById('a-password').value,
+  });
+  const el = document.getElementById('admin-status');
+  if (ok) { state.adminToken = data.token; el.textContent = '✅ مسجل دخول'; el.className = 'status ok'; }
+  else { el.textContent = '❌ فشل الدخول'; el.className = 'status bad'; }
+}
+async function loadPending() {
+  const { data } = await api('GET', '/merchant/pending', null, state.adminToken);
+  document.getElementById('pending-list').innerHTML = (data || []).map(m => `
+    <div class="item">${m.businessName} — ${m.user.fullName} (${m.user.email})
+      <button class="small" onclick="approveMerchant('${m.id}')">✅ موافقة</button>
+      <button class="small secondary" onclick="rejectMerchant('${m.id}')">❌ رفض</button>
+    </div>`).join('') || '<div class="muted">لا يوجد تجار بانتظار الموافقة</div>';
+}
+async function approveMerchant(id) {
+  await api('POST', '/merchant/' + id + '/approve', null, state.adminToken);
+  loadPending();
+}
+async function rejectMerchant(id) {
+  const reason = prompt('سبب الرفض؟') || 'لم يستوفِ الشروط';
+  await api('POST', '/merchant/' + id + '/reject', { reason }, state.adminToken);
+  loadPending();
+}
+async function createCategory() {
+  await api('POST', '/categories', { name: document.getElementById('cat-name').value }, state.adminToken);
+  loadCategoriesInto('m-category');
+}
+</script>
+</body>
+</html>
