@@ -4,12 +4,9 @@ import { Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { generateCurrentCode, findMatchingTimeStep } from "../services/qr.service";
+import { isMembershipActive } from "../services/membership.service";
 
 export const qrRouter = Router();
-
-function isMembershipActive(membership: { status: string; endDate: Date }): boolean {
-  return membership.status === "ACTIVE" && membership.endDate.getTime() > Date.now();
-}
 
 // Customer: fetch the current rotating code for their own digital card (section 19/62)
 qrRouter.get("/mine", requireAuth, async (req, res) => {

@@ -30,6 +30,15 @@ enum MerchantApprovalStatus {
   REJECTED
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -43,6 +52,8 @@ model User {
 
   memberships    Membership[]
   merchantProfile MerchantProfile?
+  cart            Cart?
+  orders          Order[]
 }
 
 // One pricing plan a customer can subscribe to (Admin-managed, section 24/60/61)
@@ -92,6 +103,7 @@ model Category {
   parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryHierarchy")
   merchants MerchantProfile[]
+  products  Product[]
 }
 
 // A merchant's business profile (section 3)
@@ -114,8 +126,95 @@ model MerchantProfile {
   category  Category   @relation(fields: [categoryId], references: [id])
   discounts Discount[]
   discountTransactions DiscountTransaction[]
+  products  Product[]
+  orders    Order[]
 
   @@index([categoryId])
+}
+
+// A product in a merchant's e-commerce store (section 5/26)
+model Product {
+  id                    String   @id @default(uuid())
+  merchantId            String
+  categoryId            String?
+  name                  String
+  description           String?
+  priceCents            Int
+  memberDiscountEnabled Boolean  @default(false)
+  memberPriceCents      Int?     // set by the merchant when memberDiscountEnabled (section 5 example: €100 -> €85)
+  stock                 Int      @default(0)
+  sku                   String?
+  isActive              Boolean  @default(true) // merchant-controlled visibility, independent of stock (section 59.1)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  merchant   MerchantProfile @relation(fields: [merchantId], references: [id])
+  category   Category?       @relation(fields: [categoryId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@index([merchantId])
+}
+
+// One active cart per customer (section 6)
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id])
+  items CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+}
+
+// One order per merchant — a multi-merchant cart splits into one of these per merchant at
+// checkout (section 59.5's "Sub-Orders"), each with its own status/tracking.
+model Order {
+  id                  String      @id @default(uuid())
+  orderNumber         String      @unique
+  userId              String
+  merchantId          String
+  status              OrderStatus @default(PENDING)
+  subtotalCents       Int
+  memberDiscountCents Int         @default(0)
+  totalCents          Int
+  cancelReason        String?     // required when the merchant cancels (section 59.6)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id])
+  merchant MerchantProfile @relation(fields: [merchantId], references: [id])
+  items    OrderItem[]
+
+  @@index([userId])
+  @@index([merchantId])
+}
+
+model OrderItem {
+  id             String   @id @default(uuid())
+  orderId        String
+  productId      String
+  productName    String   // snapshot at order time, survives later product edits
+  quantity       Int
+  unitPriceCents Int      // price actually charged per unit (member price when applied)
+  createdAt      DateTime @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 }
 
 // A discount rule offered by a merchant (section 4)
