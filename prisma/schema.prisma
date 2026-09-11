@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  MERCHANT
+  ADMIN
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum TransactionStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  phone        String?  @unique
+  passwordHash String
+  fullName     String
+  role         Role     @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships    Membership[]
+  merchantProfile MerchantProfile?
+}
+
+// One pricing plan a customer can subscribe to (Admin-managed, section 24/60/61)
+model MembershipPlan {
+  id            String   @id @default(uuid())
+  name          String
+  durationDays  Int
+  priceCents    Int
+  currency      String   @default("EUR")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  memberships Membership[]
+}
+
+// A customer's active/expired subscription instance — this IS the digital card (section 19)
+model Membership {
+  id            String           @id @default(uuid())
+  memberNumber  String           @unique // human-facing membership number
+  userId        String
+  planId        String
+  status        MembershipStatus @default(ACTIVE)
+  startDate     DateTime         @default(now())
+  endDate       DateTime
+  qrSecret      String           // per-membership secret used to derive rotating QR tokens (section 62)
+  lastRedeemedTimeStep BigInt?    // replay-protection watermark for QR redemption
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user  User            @relation(fields: [userId], references: [id])
+  plan  MembershipPlan  @relation(fields: [planId], references: [id])
+
+  discountTransactions DiscountTransaction[]
+
+  @@index([userId])
+}
+
+// A merchant's business profile (section 3)
+model MerchantProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  businessName    String
+  category        String
+  address         String?
+  latitude        Float?
+  longitude       Float?
+  phone           String?
+  whatsapp        String?
+  isApproved      Boolean  @default(false) // manual admin approval (section 63)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id])
+  discounts Discount[]
+  discountTransactions DiscountTransaction[]
+}
+
+// A discount rule offered by a merchant (section 4)
+model Discount {
+  id          String    @id @default(uuid())
+  merchantId  String
+  title       String
+  percent     Int
+  isActive    Boolean   @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  merchant MerchantProfile @relation(fields: [merchantId], references: [id])
+  discountTransactions DiscountTransaction[]
+
+  @@index([merchantId])
+}
+
+// Single source of truth discount redemption log (section 34)
+model DiscountTransaction {
+  id              String            @id @default(uuid())
+  transactionRef  String            @unique @default(uuid())
+  membershipId    String
+  merchantId      String
+  discountId      String?
+  billAmountCents Int
+  discountPercent Int
+  discountAmountCents Int
+  finalAmountCents    Int
+  status          TransactionStatus @default(CONFIRMED)
+  createdAt       DateTime          @default(now())
+
+  membership Membership      @relation(fields: [membershipId], references: [id])
+  merchant   MerchantProfile @relation(fields: [merchantId], references: [id])
+  discount   Discount?       @relation(fields: [discountId], references: [id])
+
+  @@index([membershipId])
+  @@index([merchantId])
+}
