@@ -14,6 +14,7 @@ const JWT_SECRET = getJwtSecret();
 export interface AuthTokenPayload {
   sub: string;
   role: Role;
+  tokenVersion: number;
 }
 
 export function signAuthToken(payload: AuthTokenPayload): string {

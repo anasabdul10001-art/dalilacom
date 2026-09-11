@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../prisma";
 import { signAuthToken } from "../utils/jwt";
+import { requireAuth } from "../middleware/auth";
 
 export const authRouter = Router();
 
@@ -30,7 +31,7 @@ authRouter.post("/register", async (req, res) => {
     data: { email, phone, passwordHash, fullName },
   });
 
-  const token = signAuthToken({ sub: user.id, role: user.role });
+  const token = signAuthToken({ sub: user.id, role: user.role, tokenVersion: user.tokenVersion });
   return res.status(201).json({
     token,
     user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
@@ -58,9 +59,19 @@ authRouter.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  const token = signAuthToken({ sub: user.id, role: user.role });
+  const token = signAuthToken({ sub: user.id, role: user.role, tokenVersion: user.tokenVersion });
   return res.json({
     token,
     user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
   });
+});
+
+// Bumping tokenVersion invalidates this JWT (and every other JWT already issued to this
+// user, on every device) immediately, even though JWTs are otherwise stateless.
+authRouter.post("/logout", requireAuth, async (req, res) => {
+  await prisma.user.update({
+    where: { id: req.user!.id },
+    data: { tokenVersion: { increment: 1 } },
+  });
+  res.json({ message: "Logged out" });
 });

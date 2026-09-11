@@ -53,7 +53,7 @@ qrRouter.post("/verify", requireAuth, requireRole(Role.MERCHANT), async (req, re
   }
 
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
-  if (!merchant || !merchant.isApproved) {
+  if (!merchant || merchant.approvalStatus !== "APPROVED") {
     return res.status(403).json({ error: "Merchant not approved" });
   }
 
@@ -88,7 +88,7 @@ qrRouter.post("/redeem", requireAuth, requireRole(Role.MERCHANT), async (req, re
   }
 
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
-  if (!merchant || !merchant.isApproved) {
+  if (!merchant || merchant.approvalStatus !== "APPROVED") {
     return res.status(403).json({ error: "Merchant not approved" });
   }
 

@@ -39,7 +39,7 @@ merchantRouter.post("/register", requireAuth, async (req, res) => {
   res.status(201).json({
     id: merchant.id,
     businessName: merchant.businessName,
-    isApproved: merchant.isApproved,
+    approvalStatus: merchant.approvalStatus,
   });
 });
 
@@ -54,13 +54,36 @@ merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, r
   res.json(merchant);
 });
 
-// Admin-only approval — placeholder until the real admin dashboard exists (section 14/63)
+// Admin: list merchants awaiting manual review (section 14/63)
+merchantRouter.get("/pending", requireAuth, requireRole(Role.ADMIN), async (_req, res) => {
+  const pending = await prisma.merchantProfile.findMany({
+    where: { approvalStatus: "PENDING" },
+    include: { user: { select: { email: true, fullName: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  res.json(pending);
+});
+
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   const merchant = await prisma.merchantProfile.update({
     where: { id: req.params.id },
-    data: { isApproved: true },
+    data: { approvalStatus: "APPROVED", rejectionReason: null },
   });
-  res.json({ id: merchant.id, isApproved: merchant.isApproved });
+  res.json({ id: merchant.id, approvalStatus: merchant.approvalStatus });
+});
+
+const rejectSchema = z.object({ reason: z.string().min(3) });
+
+merchantRouter.post("/:id/reject", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+  const parsed = rejectSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+  const merchant = await prisma.merchantProfile.update({
+    where: { id: req.params.id },
+    data: { approvalStatus: "REJECTED", rejectionReason: parsed.data.reason },
+  });
+  res.json({ id: merchant.id, approvalStatus: merchant.approvalStatus, rejectionReason: merchant.rejectionReason });
 });
 
 const createDiscountSchema = z.object({
@@ -78,7 +101,7 @@ merchantRouter.post("/discounts", requireAuth, requireRole(Role.MERCHANT), async
   if (!merchant) {
     return res.status(404).json({ error: "Merchant profile not found" });
   }
-  if (!merchant.isApproved) {
+  if (merchant.approvalStatus !== "APPROVED") {
     return res.status(403).json({ error: "Merchant is not approved yet" });
   }
 

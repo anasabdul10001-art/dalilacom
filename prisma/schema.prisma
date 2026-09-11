@@ -24,6 +24,12 @@ enum TransactionStatus {
   CANCELLED
 }
 
+enum MerchantApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -31,6 +37,7 @@ model User {
   passwordHash String
   fullName     String
   role         Role     @default(CUSTOMER)
+  tokenVersion Int      @default(0) // bumped on logout / password reset to invalidate existing JWTs (section 56)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -85,7 +92,8 @@ model MerchantProfile {
   longitude       Float?
   phone           String?
   whatsapp        String?
-  isApproved      Boolean  @default(false) // manual admin approval (section 63)
+  approvalStatus  MerchantApprovalStatus @default(PENDING) // manual admin approval (section 63)
+  rejectionReason String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
