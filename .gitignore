@@ -6,3 +6,13 @@ dist/
 build/
 *.log
 
+# Android (android/)
+android/.gradle/
+android/.idea/
+android/local.properties
+android/*/build/
+android/captures/
+android/.cxx/
+*.apk
+*.aab
+
