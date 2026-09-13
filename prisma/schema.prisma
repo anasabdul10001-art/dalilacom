@@ -39,6 +39,16 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum CommissionType {
+  PERCENT
+  FIXED
+}
+
+enum AffiliateSourceType {
+  ORDER
+  DISCOUNT_TRANSACTION
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -54,6 +64,8 @@ model User {
   merchantProfile MerchantProfile?
   cart            Cart?
   orders          Order[]
+  affiliateOf     MerchantAffiliate[]  // merchants I market for
+  referredAs      AffiliateReferral[]  // merchants that credit a specific affiliate for my purchases
 }
 
 // One pricing plan a customer can subscribe to (Admin-managed, section 24/60/61)
@@ -128,6 +140,7 @@ model MerchantProfile {
   discountTransactions DiscountTransaction[]
   products  Product[]
   orders    Order[]
+  affiliates MerchantAffiliate[]
 
   @@index([categoryId])
 }
@@ -152,6 +165,7 @@ model Product {
   category   Category?       @relation(fields: [categoryId], references: [id])
   cartItems  CartItem[]
   orderItems OrderItem[]
+  affiliateReferrals AffiliateReferral[]
 
   @@index([merchantId])
 }
@@ -255,4 +269,64 @@ model DiscountTransaction {
 
   @@index([membershipId])
   @@index([merchantId])
+}
+
+// A merchant's own affiliate/marketer — any regular user, added by the merchant, with a
+// commission rate that merchant sets for them specifically. The same user can be an affiliate
+// for several merchants at once (section: merchant-level affiliate program, distinct from any
+// future platform-wide affiliate system).
+model MerchantAffiliate {
+  id              String         @id @default(uuid())
+  merchantId      String
+  userId          String
+  commissionType  CommissionType
+  commissionValue Int            // percent 1-100, or fixed cents, depending on commissionType
+  referralCode    String         @unique
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+
+  merchant    MerchantProfile        @relation(fields: [merchantId], references: [id])
+  user        User                   @relation(fields: [userId], references: [id])
+  referrals   AffiliateReferral[]
+  commissions AffiliateCommission[]
+
+  @@unique([merchantId, userId])
+}
+
+// Created the first time a customer opens a product through an affiliate's referral link.
+// Attributes every purchase that customer makes from this merchant (online or in-person QR
+// redemption) to that affiliate for 30 days — first click wins, no overriding an active referral.
+model AffiliateReferral {
+  id                   String   @id @default(uuid())
+  merchantAffiliateId  String
+  merchantId           String   // denormalized so checkout/redeem can look this up by (merchantId, customerId) directly
+  customerId           String
+  productId            String   // the product the referral link pointed to (analytics only)
+  createdAt            DateTime @default(now())
+  expiresAt            DateTime
+
+  merchantAffiliate MerchantAffiliate     @relation(fields: [merchantAffiliateId], references: [id])
+  customer          User                   @relation(fields: [customerId], references: [id])
+  product           Product                @relation(fields: [productId], references: [id])
+  commissions       AffiliateCommission[]
+
+  @@unique([merchantId, customerId])
+}
+
+// One row per commission-earning event (an online order or an in-person QR redemption) —
+// single source of truth an affiliate and their merchant can both reconcile against.
+model AffiliateCommission {
+  id                   String              @id @default(uuid())
+  merchantAffiliateId  String
+  referralId           String
+  sourceType           AffiliateSourceType
+  sourceId             String              // Order.id or DiscountTransaction.id
+  baseAmountCents      Int
+  commissionCents      Int
+  createdAt            DateTime            @default(now())
+
+  merchantAffiliate MerchantAffiliate @relation(fields: [merchantAffiliateId], references: [id])
+  referral          AffiliateReferral @relation(fields: [referralId], references: [id])
+
+  @@index([merchantAffiliateId])
 }

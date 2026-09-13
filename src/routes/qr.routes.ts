@@ -5,6 +5,7 @@ import { prisma } from "../prisma";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { generateCurrentCode, findMatchingTimeStep } from "../services/qr.service";
 import { isMembershipActive } from "../services/membership.service";
+import { recordAffiliateCommissionIfReferred } from "../services/affiliate.service";
 
 export const qrRouter = Router();
 
@@ -116,7 +117,7 @@ qrRouter.post("/redeem", requireAuth, requireRole(Role.MERCHANT), async (req, re
       where: { id: membership.id },
       data: { lastRedeemedTimeStep: matchedStep },
     });
-    return tx.discountTransaction.create({
+    const created = await tx.discountTransaction.create({
       data: {
         membershipId: membership.id,
         merchantId: merchant.id,
@@ -127,6 +128,15 @@ qrRouter.post("/redeem", requireAuth, requireRole(Role.MERCHANT), async (req, re
         finalAmountCents,
       },
     });
+    await recordAffiliateCommissionIfReferred(
+      tx,
+      merchant.id,
+      membership.userId,
+      "DISCOUNT_TRANSACTION",
+      created.id,
+      created.finalAmountCents,
+    );
+    return created;
   }).catch((err) => {
     if (err instanceof Error && err.message === "CODE_ALREADY_REDEEMED") return null;
     throw err;

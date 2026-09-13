@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../prisma";
 import { requireAuth } from "../middleware/auth";
 import { getActiveMembership } from "../services/membership.service";
+import { recordAffiliateCommissionIfReferred } from "../services/affiliate.service";
 
 export const cartRouter = Router();
 
@@ -199,6 +200,7 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
           },
           include: { items: true },
         });
+        await recordAffiliateCommissionIfReferred(tx, merchantId, userId, "ORDER", order.id, order.totalCents);
         createdOrders.push(order);
       }
 
