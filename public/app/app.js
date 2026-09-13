@@ -454,12 +454,28 @@ function renderQrOnly() {
 
 function tabDiscover() {
   if (!S._discover) {
-    S._discover = { loading: true, query: "", categoryId: "", categories: [], merchants: [] };
+    S._discover = {
+      loading: true, query: "", categoryId: "", categories: [], merchants: [],
+      view: "list", radiusKm: 10, discountsOnly: true, userLoc: null, locError: null,
+      mapMerchants: [], mapLoading: false,
+    };
     loadCategories().then(() => searchMerchants());
   }
   const d = S._discover;
   return `
-    <h1 class="screen-title">اكتشف التجار</h1>
+    <div class="title-line">
+      <h1 class="screen-title">اكتشف التجار</h1>
+      <div class="chip-row" style="margin-bottom:0">
+        <button class="chip ${d.view === "list" ? "active" : ""}" onclick="setDiscoverView('list')">قائمة</button>
+        <button class="chip ${d.view === "map" ? "active" : ""}" onclick="setDiscoverView('map')">🗺️ خريطة</button>
+      </div>
+    </div>
+    ${d.view === "list" ? discoverListView(d) : discoverMapView(d)}
+  `;
+}
+
+function discoverListView(d) {
+  return `
     <div class="field"><input id="disc-q" placeholder="دور على اسم محل..." value="${esc(d.query)}" oninput="onDiscoverQuery(this.value)" /></div>
     <div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
       <button class="chip ${!d.categoryId ? "active" : ""}" onclick="onDiscoverCategory('')">الكل</button>
@@ -468,6 +484,119 @@ function tabDiscover() {
     <div style="height:6px"></div>
     ${d.loading ? spinner() : (d.merchants.length ? d.merchants.map(merchantRowHtml).join("") : `<div class="empty-state">ما في نتائج</div>`)}
   `;
+}
+
+function discoverMapView(d) {
+  return `
+    <div class="chip-row">
+      <button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverDiscountsOnly()">🏷️ فيها حسم بس</button>
+      ${[1, 5, 10, 25].map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${r} كم</button>`).join("")}
+    </div>
+    ${d.locError ? `<div class="error-banner">${esc(d.locError)}</div>` : ""}
+    <div id="discover-map" style="height:340px;border-radius:16px;overflow:hidden;border:1px solid var(--border)"></div>
+    <div style="height:8px"></div>
+    ${d.mapLoading
+      ? spinner()
+      : d.userLoc
+        ? `<p class="muted">${d.mapMerchants.length} محل ${d.discountsOnly ? "عندهم حسم" : ""} بمحيط ${d.radiusKm} كم</p>`
+        : `<div class="empty-state">فعّل صلاحية الموقع من المتصفح لنعرض أقرب المحلات</div>`}
+  `;
+}
+
+function setDiscoverView(view) {
+  S._discover.view = view;
+  render();
+  if (view === "map" && !S._discover.userLoc && !S._discover.locError) requestDiscoverLocation();
+}
+
+function toggleDiscoverDiscountsOnly() {
+  S._discover.discountsOnly = !S._discover.discountsOnly;
+  searchMerchantsForMap();
+}
+
+function setDiscoverRadius(km) {
+  S._discover.radiusKm = km;
+  searchMerchantsForMap();
+}
+
+function requestDiscoverLocation() {
+  if (!navigator.geolocation) {
+    S._discover.locError = "المتصفح ما بيدعم تحديد الموقع";
+    render();
+    return;
+  }
+  S._discover.mapLoading = true;
+  render();
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      S._discover.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      S._discover.locError = null;
+      searchMerchantsForMap();
+    },
+    () => {
+      S._discover.mapLoading = false;
+      S._discover.locError = "ما قدرنا نحدد موقعك — تأكد من تفعيل صلاحية الموقع بالمتصفح";
+      render();
+    },
+    { enableHighAccuracy: true, timeout: 10000 },
+  );
+}
+
+async function searchMerchantsForMap() {
+  if (!S._discover.userLoc) return;
+  S._discover.mapLoading = true;
+  render();
+  const { lat, lng } = S._discover.userLoc;
+  const params = new URLSearchParams({ lat, lng, radiusKm: S._discover.radiusKm });
+  const { ok, data } = await api("GET", "/merchant?" + params.toString());
+  let list = ok ? data : [];
+  if (S._discover.discountsOnly) list = list.filter((m) => (m.discounts || []).length > 0);
+  S._discover.mapMerchants = list;
+  S._discover.mapLoading = false;
+  render();
+}
+
+function renderDiscoverMap() {
+  const el = document.getElementById("discover-map");
+  if (!el || typeof L === "undefined") return;
+  if (S._discoverMapInstance) {
+    S._discoverMapInstance.remove();
+    S._discoverMapInstance = null;
+  }
+  const center = S._discover.userLoc || { lat: 33.5138, lng: 36.2765 }; // Damascus, used only when location is unavailable
+  const map = L.map(el, { attributionControl: false }).setView([center.lat, center.lng], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+  L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
+
+  if (S._discover.userLoc) {
+    L.circleMarker([S._discover.userLoc.lat, S._discover.userLoc.lng], {
+      radius: 7, color: "#1565c0", fillColor: "#1565c0", fillOpacity: 0.9, weight: 2,
+    }).addTo(map).bindPopup("موقعك");
+  }
+
+  (S._discover.mapMerchants || []).forEach((m) => {
+    if (m.latitude == null || m.longitude == null) return;
+    const hasDiscount = (m.discounts || []).length > 0;
+    const icon = L.divIcon({
+      className: "",
+      html: `<div style="background:${hasDiscount ? "#ba2a34" : "#8a7a78"};color:#fff;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35)"><span style="transform:rotate(45deg);font-size:13px">${hasDiscount ? "🏷️" : "📍"}</span></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+    });
+    const discountText = hasDiscount
+      ? m.discounts.map((dc) => `${esc(dc.title)} — ${dc.percent}%`).join("<br>")
+      : "بدون حسم حاليًا";
+    L.marker([m.latitude, m.longitude], { icon }).addTo(map).bindPopup(`
+      <div style="font-family:Tajawal,sans-serif;text-align:right;direction:rtl;min-width:150px">
+        <strong>${esc(m.businessName)}</strong><br>
+        ${m.distanceKm != null ? `<span style="color:#8a7a78;font-size:12px">${m.distanceKm.toFixed(1)} كم</span><br>` : ""}
+        <span style="color:#ba2a34;font-size:12px">${discountText}</span><br>
+        <button onclick="go('merchantDetail',{merchantId:'${m.id}'})" style="margin-top:6px;background:#ba2a34;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">افتح المحل</button>
+      </div>
+    `);
+  });
+
+  S._discoverMapInstance = map;
 }
 
 function flattenCategories(cats) {
@@ -1253,6 +1382,9 @@ function qs(id) { return document.getElementById(id); }
 function wireUpAfterRender() {
   if (S.screen === "home" && S.homeTab === "card" && S._card && S._card.memberNumber) {
     renderQrOnly();
+  }
+  if (S.screen === "home" && S.homeTab === "discover" && S._discover && S._discover.view === "map") {
+    renderDiscoverMap();
   }
 }
 
