@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>DALILACOM — لوحة التحكم</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; margin: 0; background: #f7f4f2; color: #1a1a1a; }
+  a, button { font-family: inherit; }
+
+  /* ---- login screen ---- */
+  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #5A0E12, #BA2A34); }
+  .login-card { background: #fff; border-radius: 16px; padding: 32px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  .login-card h1 { margin: 0 0 4px; font-size: 22px; color: #BA2A34; }
+  .login-card p { margin: 0 0 20px; color: #777; font-size: 13px; }
+
+  /* ---- shell ---- */
+  #app { display: none; min-height: 100vh; }
+  #app.active { display: flex; }
+  .sidebar { width: 220px; background: linear-gradient(180deg, #5A0E12, #BA2A34); color: #fff; padding: 20px 0; flex-shrink: 0; }
+  .sidebar h2 { font-size: 16px; margin: 0 20px 24px; }
+  .sidebar .nav-item { padding: 12px 20px; cursor: pointer; font-weight: 600; font-size: 14px; opacity: .85; border-right: 3px solid transparent; }
+  .sidebar .nav-item:hover { opacity: 1; background: rgba(255,255,255,.08); }
+  .sidebar .nav-item.active { opacity: 1; background: rgba(255,255,255,.15); border-color: #fff; }
+  .sidebar .logout { margin-top: 30px; padding: 12px 20px; cursor: pointer; font-size: 13px; opacity: .7; }
+  .sidebar .logout:hover { opacity: 1; }
+
+  .main { flex: 1; padding: 28px 32px; max-width: 1000px; }
+  .main h2 { margin: 0 0 4px; color: #BA2A34; }
+  .main .subtitle { color: #888; font-size: 13px; margin: 0 0 20px; }
+
+  .card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h3 { margin: 0 0 14px; font-size: 15px; }
+
+  label { display: block; font-size: 12px; color: #666; margin: 8px 0 3px; }
+  input, select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+
+  button { background: #BA2A34; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; font-size: 13px; }
+  button.secondary { background: #f0f0f0; color: #333; }
+  button.danger { background: #fdecea; color: #b71c1c; }
+  button.small { padding: 5px 10px; font-size: 12px; margin: 0 3px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+
+  .filters { display: flex; gap: 8px; margin-bottom: 16px; }
+  .filters button { background: #fff; color: #666; border: 1px solid #ddd; }
+  .filters button.active { background: #BA2A34; color: #fff; border-color: #BA2A34; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: right; color: #888; font-weight: 600; padding: 8px; border-bottom: 2px solid #eee; font-size: 11px; text-transform: uppercase; }
+  td { padding: 10px 8px; border-bottom: 1px solid #f2f2f2; vertical-align: middle; }
+  tr.child-row td:first-child { padding-right: 28px; color: #666; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge.PENDING { background: #fff3cd; color: #8a6300; }
+  .badge.APPROVED { background: #e6f4ea; color: #1e7e34; }
+  .badge.REJECTED { background: #fdecea; color: #b71c1c; }
+  .badge.active { background: #e6f4ea; color: #1e7e34; }
+  .badge.inactive { background: #eee; color: #888; }
+
+  .inline-input { width: 90px; padding: 4px 6px; font-size: 12px; }
+  .error-banner { background: #fdecea; color: #b71c1c; padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+  .muted { color: #999; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>🅳 لوحة تحكم دليلكم</h1>
+    <p>دخول مخصّص للأدمن فقط</p>
+    <div id="login-error" class="error-banner" style="display:none"></div>
+    <label>الإيميل</label>
+    <input id="login-email" value="admin@dalilacom.dev" />
+    <label>كلمة السر</label>
+    <input id="login-password" type="password" value="Admin12345!" />
+    <button style="width:100%; margin-top:16px" onclick="login()">دخول</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <h2>🅳 دليلكم</h2>
+    <div class="nav-item active" data-section="merchants" onclick="showSection('merchants')">🏪 التجار</div>
+    <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
+    <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 خطط العضوية</div>
+    <div class="logout" onclick="logout()">⏻ تسجيل خروج</div>
+  </div>
+
+  <div class="main">
+    <!-- MERCHANTS -->
+    <div class="section" id="section-merchants">
+      <h2>التجار</h2>
+      <p class="subtitle">مراجعة طلبات التسجيل والموافقة/الرفض</p>
+      <div class="filters">
+        <button class="active" data-status="" onclick="loadMerchants('')">الكل</button>
+        <button data-status="PENDING" onclick="loadMerchants('PENDING')">بانتظار الموافقة</button>
+        <button data-status="APPROVED" onclick="loadMerchants('APPROVED')">معتمد</button>
+        <button data-status="REJECTED" onclick="loadMerchants('REJECTED')">مرفوض</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>اسم المحل</th><th>المالك</th><th>الإيميل</th><th>التصنيف</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+          <tbody id="merchants-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CATEGORIES -->
+    <div class="section" id="section-categories" style="display:none">
+      <h2>التصنيفات</h2>
+      <p class="subtitle">هرمية — رئيسية وفرعية</p>
+      <div class="card">
+        <h3>إضافة تصنيف جديد</h3>
+        <div class="row">
+          <div><label>الاسم</label><input id="cat-name" placeholder="Electronics" /></div>
+          <div><label>تصنيف أب (اختياري)</label><select id="cat-parent"><option value="">— بدون —</option></select></div>
+        </div>
+        <button style="margin-top:12px" onclick="addCategory()">إضافة</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>الاسم</th><th></th></tr></thead>
+          <tbody id="categories-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PLANS -->
+    <div class="section" id="section-plans" style="display:none">
+      <h2>خطط العضوية</h2>
+      <p class="subtitle">الأسعار والمدد قابلة للتعديل الكامل، وممكن تكون مجانية (0)</p>
+      <div class="card">
+        <h3>إضافة خطة جديدة</h3>
+        <div class="row">
+          <div><label>الاسم</label><input id="plan-name" placeholder="Monthly" /></div>
+          <div><label>المدة (يوم)</label><input id="plan-duration" value="30" /></div>
+        </div>
+        <div class="row">
+          <div><label>السعر (سنت)</label><input id="plan-price" value="999" /></div>
+          <div><label>العملة</label><input id="plan-currency" value="EUR" /></div>
+        </div>
+        <button style="margin-top:12px" onclick="addPlan()">إضافة</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>الاسم</th><th>المدة</th><th>السعر</th><th>العملة</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="plans-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const state = {
+  token: localStorage.getItem('admin_token'),
+  categoriesFlat: [],
+};
+
+async function api(method, path, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
+function money(cents) { return (cents / 100).toFixed(2); }
+
+// ---- auth ----
+async function login() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errorBox = document.getElementById('login-error');
+  errorBox.style.display = 'none';
+
+  const { ok, data } = await api('POST', '/auth/login', { email, password });
+  if (!ok) {
+    errorBox.textContent = 'بيانات الدخول غير صحيحة';
+    errorBox.style.display = 'block';
+    return;
+  }
+  if (data.user.role !== 'ADMIN') {
+    errorBox.textContent = 'هذا الحساب ليس حساب أدمن';
+    errorBox.style.display = 'block';
+    return;
+  }
+  state.token = data.token;
+  localStorage.setItem('admin_token', data.token);
+  enterApp();
+}
+
+function logout() {
+  state.token = null;
+  localStorage.removeItem('admin_token');
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function enterApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  loadMerchants('');
+  loadCategories();
+  loadPlans();
+}
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
+  document.getElementById('section-' + name).style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- merchants ----
+async function loadMerchants(status) {
+  document.querySelectorAll('.filters button').forEach(b => b.classList.toggle('active', b.dataset.status === status));
+  const { ok, data } = await api('GET', '/merchant/list' + (status ? '?status=' + status : ''));
+  if (!ok) { logout(); return; }
+  document.getElementById('merchants-body').innerHTML = data.map(m => `
+    <tr>
+      <td>${m.businessName}</td>
+      <td>${m.user.fullName}</td>
+      <td class="muted">${m.user.email}</td>
+      <td>${m.category ? m.category.name : '—'}</td>
+      <td><span class="badge ${m.approvalStatus}">${statusLabel(m.approvalStatus)}</span></td>
+      <td>${m.approvalStatus === 'PENDING' ? `
+        <button class="small" onclick="approveMerchant('${m.id}')">✅ موافقة</button>
+        <button class="small danger" onclick="rejectMerchant('${m.id}')">❌ رفض</button>
+      ` : ''}</td>
+    </tr>`).join('') || `<tr><td colspan="6" class="muted">لا يوجد تجار بهذه الحالة</td></tr>`;
+}
+function statusLabel(s) { return { PENDING: 'بانتظار الموافقة', APPROVED: 'معتمد', REJECTED: 'مرفوض' }[s] || s; }
+async function approveMerchant(id) {
+  await api('POST', '/merchant/' + id + '/approve');
+  loadMerchants(currentMerchantFilter());
+}
+async function rejectMerchant(id) {
+  const reason = prompt('سبب الرفض؟');
+  if (!reason) return;
+  await api('POST', '/merchant/' + id + '/reject', { reason });
+  loadMerchants(currentMerchantFilter());
+}
+function currentMerchantFilter() {
+  const active = document.querySelector('.filters button.active');
+  return active ? active.dataset.status : '';
+}
+
+// ---- categories ----
+async function loadCategories() {
+  const { data } = await api('GET', '/categories');
+  const top = data || [];
+  state.categoriesFlat = [];
+  for (const c of top) { state.categoriesFlat.push(c); for (const ch of (c.children || [])) state.categoriesFlat.push(ch); }
+
+  document.getElementById('cat-parent').innerHTML = '<option value="">— بدون —</option>' +
+    top.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+  const rows = [];
+  for (const c of top) {
+    rows.push(categoryRow(c, false));
+    for (const ch of (c.children || [])) rows.push(categoryRow(ch, true));
+  }
+  document.getElementById('categories-body').innerHTML = rows.join('') || `<tr><td colspan="2" class="muted">لا يوجد تصنيفات بعد</td></tr>`;
+}
+function categoryRow(c, isChild) {
+  return `<tr class="${isChild ? 'child-row' : ''}">
+    <td><input class="inline-input" style="width:200px" id="cat-name-${c.id}" value="${c.name}" /></td>
+    <td>
+      <button class="small" onclick="saveCategory('${c.id}')">💾 حفظ</button>
+      <button class="small danger" onclick="deleteCategory('${c.id}')">🗑️ حذف</button>
+    </td>
+  </tr>`;
+}
+async function addCategory() {
+  const name = document.getElementById('cat-name').value.trim();
+  const parentId = document.getElementById('cat-parent').value || undefined;
+  if (!name) return;
+  const { ok, data } = await api('POST', '/categories', { name, parentId });
+  if (!ok) { alert(data.error?.formErrors || data.error || 'خطأ'); return; }
+  document.getElementById('cat-name').value = '';
+  loadCategories();
+}
+async function saveCategory(id) {
+  const name = document.getElementById('cat-name-' + id).value.trim();
+  if (!name) return;
+  const { ok, data } = await api('PATCH', '/categories/' + id, { name });
+  if (!ok) alert(data.error || 'تعذّر الحفظ');
+  loadCategories();
+}
+async function deleteCategory(id) {
+  if (!confirm('حذف هذا التصنيف نهائيًا؟')) return;
+  const { ok, data } = await api('DELETE', '/categories/' + id);
+  if (!ok) {
+    alert(data.error === 'Category is still in use and can\'t be deleted'
+      ? `ما بقدر أحذفه — مستخدم حاليًا (تصنيفات فرعية: ${data.childCount}, تجار: ${data.merchantCount}, منتجات: ${data.productCount})`
+      : (data.error || 'تعذّر الحذف'));
+    return;
+  }
+  loadCategories();
+}
+
+// ---- plans ----
+async function loadPlans() {
+  const { ok, data } = await api('GET', '/membership/plans/all');
+  if (!ok) return;
+  document.getElementById('plans-body').innerHTML = (data || []).map(p => `
+    <tr>
+      <td><input class="inline-input" style="width:120px" id="plan-name-${p.id}" value="${p.name}" /></td>
+      <td><input class="inline-input" id="plan-duration-${p.id}" value="${p.durationDays}" /> يوم</td>
+      <td><input class="inline-input" id="plan-price-${p.id}" value="${money(p.priceCents)}" /></td>
+      <td><input class="inline-input" style="width:60px" id="plan-currency-${p.id}" value="${p.currency}" /></td>
+      <td><span class="badge ${p.isActive ? 'active' : 'inactive'}">${p.isActive ? 'فعالة' : 'معطّلة'}</span></td>
+      <td>
+        <button class="small" onclick="savePlan('${p.id}')">💾 حفظ</button>
+        <button class="small secondary" onclick="togglePlan('${p.id}', ${p.isActive})">${p.isActive ? 'تعطيل' : 'تفعيل'}</button>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="6" class="muted">لا يوجد خطط بعد</td></tr>`;
+}
+async function addPlan() {
+  const name = document.getElementById('plan-name').value.trim();
+  const durationDays = parseInt(document.getElementById('plan-duration').value, 10);
+  const priceCents = parseInt(document.getElementById('plan-price').value, 10);
+  const currency = document.getElementById('plan-currency').value.trim() || 'EUR';
+  if (!name || !durationDays) return;
+  const { ok, data } = await api('POST', '/membership/plans', { name, durationDays, priceCents, currency });
+  if (!ok) { alert(JSON.stringify(data.error) || 'خطأ'); return; }
+  document.getElementById('plan-name').value = '';
+  loadPlans();
+}
+async function savePlan(id) {
+  const name = document.getElementById('plan-name-' + id).value.trim();
+  const durationDays = parseInt(document.getElementById('plan-duration-' + id).value, 10);
+  const priceCents = Math.round(parseFloat(document.getElementById('plan-price-' + id).value) * 100);
+  const currency = document.getElementById('plan-currency-' + id).value.trim();
+  const { ok, data } = await api('PATCH', '/membership/plans/' + id, { name, durationDays, priceCents, currency });
+  if (!ok) alert(JSON.stringify(data.error) || 'تعذّر الحفظ');
+  loadPlans();
+}
+async function togglePlan(id, current) {
+  await api('PATCH', '/membership/plans/' + id, { isActive: !current });
+  loadPlans();
+}
+
+// ---- boot ----
+if (state.token) enterApp();
+</script>
+</body>
+</html>

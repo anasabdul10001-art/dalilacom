@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { Role } from "@prisma/client";
+import { MerchantApprovalStatus, Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole } from "../middleware/auth";
 
@@ -67,6 +67,24 @@ merchantRouter.get("/pending", requireAuth, requireRole(Role.ADMIN), async (_req
     orderBy: { createdAt: "asc" },
   });
   res.json(pending);
+});
+
+const listMerchantsAdminSchema = z.object({
+  status: z.nativeEnum(MerchantApprovalStatus).optional(),
+});
+
+// Admin: every merchant regardless of status, for the admin dashboard (section 14)
+merchantRouter.get("/list", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+  const parsed = listMerchantsAdminSchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+  const merchants = await prisma.merchantProfile.findMany({
+    where: parsed.data.status ? { approvalStatus: parsed.data.status } : {},
+    include: { user: { select: { email: true, fullName: true } }, category: true },
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(merchants);
 });
 
 function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {

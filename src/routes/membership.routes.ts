@@ -33,6 +33,33 @@ membershipRouter.post("/plans", requireAuth, requireRole(Role.ADMIN), async (req
   res.status(201).json(plan);
 });
 
+// Admin: every plan including inactive ones, for the admin dashboard (section 24/60)
+membershipRouter.get("/plans/all", requireAuth, requireRole(Role.ADMIN), async (_req, res) => {
+  const plans = await prisma.membershipPlan.findMany({ orderBy: { priceCents: "asc" } });
+  res.json(plans);
+});
+
+const updatePlanSchema = z.object({
+  name: z.string().min(2).optional(),
+  durationDays: z.number().int().positive().optional(),
+  priceCents: z.number().int().nonnegative().optional(),
+  currency: z.string().length(3).optional(),
+  isActive: z.boolean().optional(),
+});
+
+membershipRouter.patch("/plans/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+  const parsed = updatePlanSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+  const existing = await prisma.membershipPlan.findUnique({ where: { id: req.params.id } });
+  if (!existing) {
+    return res.status(404).json({ error: "Plan not found" });
+  }
+  const plan = await prisma.membershipPlan.update({ where: { id: existing.id }, data: parsed.data });
+  res.json(plan);
+});
+
 function generateMemberNumber(): string {
   // 10-digit numeric member number, e.g. DLK-3849201573
   const n = crypto.randomInt(1_000_000_000, 9_999_999_999);
