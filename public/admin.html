@@ -88,6 +88,8 @@
     <div class="nav-item active" data-section="merchants" onclick="showSection('merchants')">🏪 التجار</div>
     <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
     <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 خطط العضوية</div>
+    <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
+    <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
     <div class="logout" onclick="logout()">⏻ تسجيل خروج</div>
   </div>
 
@@ -153,6 +155,72 @@
         </table>
       </div>
     </div>
+
+    <!-- RESPONDER SETTINGS -->
+    <div class="section" id="section-responder" style="display:none">
+      <h2>المجيب الآلي</h2>
+      <p class="subtitle">التسعير والتجربة وعملة دليلكم وحسابات الدفع — كلها من هون</p>
+      <div class="card">
+        <h3>الأسعار والتجربة (بعملة دليلكم)</h3>
+        <div class="row">
+          <div><label>اسم العملة</label><input id="rs-credit-name" /></div>
+          <div><label>كم وحدة = 1 USD</label><input id="rs-credits-usd" /></div>
+        </div>
+        <div class="row">
+          <div><label>سعر الزبون / فترة</label><input id="rs-price-customer" /></div>
+          <div><label>سعر التاجر / فترة</label><input id="rs-price-merchant" /></div>
+        </div>
+        <div class="row">
+          <div><label>مدة الاشتراك (يوم)</label><input id="rs-period" /></div>
+          <div><label>مدة التجربة (يوم، 0 = بدون)</label><input id="rs-trial" /></div>
+          <div><label>حد ردود AI شهريًا</label><input id="rs-ai-limit" /></div>
+        </div>
+        <h3 style="margin-top:18px">حسابات الدفع</h3>
+        <label>عنوان محفظة USDT (شبكة TRC20 — التحقق تلقائي من البلوكتشين)</label>
+        <input id="rs-usdt" placeholder="T..." />
+        <label>المحافظ المحلية — سطر لكل محفظة: KEY|الاسم|رقم الحساب|تعليمات</label>
+        <textarea id="rs-wallets" rows="4" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:inherit" placeholder="SHAM_CASH|شام كاش|0999xxxxxx|حوّل وابعت رقم العملية"></textarea>
+        <button style="margin-top:12px" onclick="saveResponderSettings()">حفظ الإعدادات</button>
+        <span id="rs-msg" class="muted" style="margin-right:10px"></span>
+      </div>
+      <div class="card">
+        <h3>القنوات (وسائل التواصل)</h3>
+        <table><thead><tr><th>الاسم</th><th>النوع</th><th>مفتاح</th><th>اتصالات</th><th>الحالة</th><th></th></tr></thead><tbody id="channels-body"></tbody></table>
+        <div class="row" style="margin-top:12px">
+          <div><label>مفتاح (a-z, 0-9)</label><input id="ch-key" placeholder="line" /></div>
+          <div><label>الاسم</label><input id="ch-name" placeholder="LINE" /></div>
+          <div><label>النوع</label><select id="ch-driver"><option value="GENERIC_WEBHOOK">Webhook عام (أي منصة)</option><option value="TELEGRAM">Telegram</option><option value="META_PENDING">بانتظار Meta</option></select></div>
+        </div>
+        <button style="margin-top:12px" onclick="addChannel()">إضافة قناة</button>
+      </div>
+      <div class="card">
+        <h3>الاشتراكات</h3>
+        <table><thead><tr><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>ينتهي</th></tr></thead><tbody id="subs-body"></tbody></table>
+      </div>
+    </div>
+
+    <!-- TOP-UPS -->
+    <div class="section" id="section-topups" style="display:none">
+      <h2>طلبات الشحن</h2>
+      <p class="subtitle">حوالات المحافظ المحلية بانتظار تأكيدك. USDT بينتحقق منه السيرفر تلقائيًا.</p>
+      <div class="filters">
+        <button class="active" data-tstatus="PENDING" onclick="loadTopups('PENDING')">بانتظار</button>
+        <button data-tstatus="APPROVED" onclick="loadTopups('APPROVED')">مقبول</button>
+        <button data-tstatus="REJECTED" onclick="loadTopups('REJECTED')">مرفوض</button>
+      </div>
+      <div class="card">
+        <table><thead><tr><th>المستخدم</th><th>الطريقة</th><th>رقم العملية</th><th>المبلغ المُعلن</th><th>الحالة</th><th></th></tr></thead><tbody id="topups-body"></tbody></table>
+      </div>
+      <div class="card">
+        <h3>تعديل رصيد يدويًا</h3>
+        <div class="row">
+          <div><label>بريد المستخدم</label><input id="adj-email" /></div>
+          <div><label>المبلغ (سالب للخصم)</label><input id="adj-amount" /></div>
+          <div><label>ملاحظة</label><input id="adj-note" /></div>
+        </div>
+        <button style="margin-top:12px" onclick="adjustWallet()">تنفيذ</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -208,6 +276,8 @@ function enterApp() {
   loadMerchants('');
   loadCategories();
   loadPlans();
+  loadResponderAdmin();
+  loadTopups('PENDING');
 }
 
 function showSection(name) {
@@ -345,6 +415,93 @@ async function togglePlan(id, current) {
   await api('PATCH', '/membership/plans/' + id, { isActive: !current });
   loadPlans();
 }
+
+// ---- responder / payments ----
+async function loadResponderAdmin() {
+  const { ok, data } = await api('GET', '/admin/settings');
+  if (!ok) return;
+  document.getElementById('rs-credit-name').value = data.creditName;
+  document.getElementById('rs-credits-usd').value = data.creditsPerUsd;
+  document.getElementById('rs-price-customer').value = data.responder.priceCustomer;
+  document.getElementById('rs-price-merchant').value = data.responder.priceMerchant;
+  document.getElementById('rs-period').value = data.responder.periodDays;
+  document.getElementById('rs-trial').value = data.responder.trialDays;
+  document.getElementById('rs-ai-limit').value = data.responder.monthlyAiReplyLimit;
+  document.getElementById('rs-usdt').value = data.payment.usdtTrc20Address;
+  document.getElementById('rs-wallets').value = data.payment.localWallets.map(w => [w.key, w.label, w.accountNumber, w.instructions || ''].join('|')).join('\n');
+  loadChannels();
+  loadSubs();
+}
+async function saveResponderSettings() {
+  const num = (id) => Number(document.getElementById(id).value);
+  const wallets = document.getElementById('rs-wallets').value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const [key, label, accountNumber, instructions] = l.split('|').map(x => (x || '').trim());
+    return { key, label, accountNumber, instructions };
+  });
+  const { ok, data } = await api('PUT', '/admin/settings', {
+    creditName: document.getElementById('rs-credit-name').value.trim(),
+    creditsPerUsd: num('rs-credits-usd'),
+    responder: { priceCustomer: num('rs-price-customer'), priceMerchant: num('rs-price-merchant'), periodDays: num('rs-period'), trialDays: num('rs-trial'), monthlyAiReplyLimit: num('rs-ai-limit') },
+    payment: { usdtTrc20Address: document.getElementById('rs-usdt').value.trim(), localWallets: wallets },
+  });
+  const msg = document.getElementById('rs-msg');
+  msg.textContent = ok ? '✅ انحفظت' : '❌ ' + (typeof data.error === 'string' ? data.error : 'تحقق من القيم (مفاتيح المحافظ بأحرف كبيرة وأرقام و _)');
+}
+async function loadChannels() {
+  const { ok, data } = await api('GET', '/admin/channels');
+  if (!ok) return;
+  document.getElementById('channels-body').innerHTML = data.map(c => `
+    <tr><td>${esc(c.name)}</td><td class="muted">${c.driver}</td><td class="muted">${esc(c.key)}</td><td>${c._count.connections}</td>
+    <td><span class="badge ${c.isEnabled ? 'active' : 'inactive'}">${c.isEnabled ? 'مفعّلة' : 'معطّلة'}</span></td>
+    <td><button class="small secondary" onclick="toggleChannel('${c.id}', ${!c.isEnabled})">${c.isEnabled ? 'تعطيل' : 'تفعيل'}</button></td></tr>`).join('');
+}
+async function addChannel() {
+  const { ok, data } = await api('POST', '/admin/channels', {
+    key: document.getElementById('ch-key').value.trim(), name: document.getElementById('ch-name').value.trim(), driver: document.getElementById('ch-driver').value,
+  });
+  if (!ok) { alert(typeof data.error === 'string' ? data.error : 'تحقق من المفتاح (a-z, 0-9, - _) والاسم'); return; }
+  document.getElementById('ch-key').value = ''; document.getElementById('ch-name').value = '';
+  loadChannels();
+}
+async function toggleChannel(id, isEnabled) { await api('PATCH', '/admin/channels/' + id, { isEnabled }); loadChannels(); }
+async function loadSubs() {
+  const { ok, data } = await api('GET', '/admin/responder/subscriptions');
+  if (!ok) return;
+  document.getElementById('subs-body').innerHTML = data.map(s => `<tr><td>${esc(s.user.fullName)} <span class="muted">${esc(s.user.email)}</span></td><td>${s.user.role}</td><td>${s.status}</td>
+    <td class="muted">${String((s.status === 'TRIAL' ? s.trialEndsAt : s.periodEnd) || '').slice(0, 10)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">لا اشتراكات بعد</td></tr>';
+}
+let topupFilter = 'PENDING';
+async function loadTopups(status) {
+  topupFilter = status || topupFilter;
+  document.querySelectorAll('[data-tstatus]').forEach(b => b.classList.toggle('active', b.dataset.tstatus === topupFilter));
+  const { ok, data } = await api('GET', '/admin/topups?status=' + topupFilter);
+  if (!ok) return;
+  document.getElementById('topups-body').innerHTML = data.map(t => `<tr>
+    <td>${esc(t.user.fullName)} <span class="muted">${esc(t.user.email)}</span></td><td>${esc(t.method)}</td>
+    <td class="muted" style="max-width:140px;overflow-wrap:anywhere">${esc(t.reference)}</td><td>${t.amountClaimed ?? '—'}</td>
+    <td><span class="badge ${t.status === 'PENDING' ? 'PENDING' : t.status === 'APPROVED' ? 'APPROVED' : 'REJECTED'}">${t.status}${t.verifiedBy === 'AUTO' ? ' (تلقائي)' : ''}</span></td>
+    <td>${t.status === 'PENDING' ? `<button class="small" onclick="approveTopup('${t.id}')">✅ قبول</button><button class="small danger" onclick="rejectTopup('${t.id}')">❌ رفض</button>` : (t.amountCredits ? t.amountCredits + ' وحدة' : '')}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">لا يوجد طلبات</td></tr>';
+}
+async function approveTopup(id) {
+  const v = prompt('كم وحدة من عملة دليلكم تضيف لرصيده؟');
+  const amountCredits = parseInt(v, 10);
+  if (!amountCredits || amountCredits <= 0) return;
+  const { ok, data } = await api('POST', '/admin/topups/' + id + '/approve', { amountCredits });
+  if (!ok) alert(data.error || 'خطأ');
+  loadTopups();
+}
+async function rejectTopup(id) {
+  const note = prompt('سبب الرفض؟'); if (!note) return;
+  await api('POST', '/admin/topups/' + id + '/reject', { note }); loadTopups();
+}
+async function adjustWallet() {
+  const { ok, data } = await api('POST', '/admin/wallet/adjust', {
+    userEmail: document.getElementById('adj-email').value.trim(), amount: parseInt(document.getElementById('adj-amount').value, 10), note: document.getElementById('adj-note').value.trim() || undefined,
+  });
+  alert(ok ? 'الرصيد الجديد: ' + data.balance : (typeof data.error === 'string' ? data.error : 'تحقق من البيانات'));
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 // ---- boot ----
 if (state.token) enterApp();

@@ -205,6 +205,8 @@ function renderScreen() {
     case "merchantMode": return screenMerchantModeShell();
     case "productEdit": return screenProductEdit();
     case "affiliateMine": return screenAffiliateMine();
+    case "wallet": return screenWallet();
+    case "responder": return screenResponder();
     default: return screenLogin();
   }
 }
@@ -592,6 +594,7 @@ function renderDiscoverMap() {
         ${m.distanceKm != null ? `<span style="color:#8a7a78;font-size:12px">${m.distanceKm.toFixed(1)} كم</span><br>` : ""}
         <span style="color:#ba2a34;font-size:12px">${discountText}</span><br>
         <button onclick="go('merchantDetail',{merchantId:'${m.id}'})" style="margin-top:6px;background:#ba2a34;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">افتح المحل</button>
+        <a href="${directionsUrl(m.latitude, m.longitude)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;margin-right:4px;background:#fff;color:#ba2a34;border:1px solid #ba2a34;border-radius:8px;padding:5px 10px;font-size:12px;text-decoration:none">🗺️ الاتجاهات</a>
       </div>
     `);
   });
@@ -757,6 +760,10 @@ function tabProfile() {
         : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">سجّل كتاجر</button>`}
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">مسوّقياتي</button>
+      <div style="height:10px"></div>
+      <button class="btn outline" style="max-width:240px" onclick="go('responder')">🤖 المجيب الآلي</button>
+      <div style="height:10px"></div>
+      <button class="btn outline" style="max-width:240px" onclick="go('wallet')">💰 محفظتي</button>
       <div style="height:14px"></div>
       <button class="btn secondary" style="max-width:240px" onclick="doLogout()">تسجيل الخروج</button>
     </div>
@@ -814,10 +821,12 @@ function screenMerchantDetail() {
   const m = S._merchantDetail;
   if (m.loading) return backRow() + spinner();
   if (!m.merchant) return backRow() + `<div class="error-banner">هذا المحل غير متوفر</div>`;
+  const hasCoords = m.merchant.latitude != null && m.merchant.longitude != null;
   return `
     ${backRow()}
     <h1 class="screen-title">${esc(m.merchant.businessName)}</h1>
-    <p class="screen-sub">${esc(m.merchant.category ? m.merchant.category.name : "")}${m.merchant.address ? " · 📍 " + esc(m.merchant.address) : ""}</p>
+    <p class="screen-sub">${esc(m.merchant.category ? m.merchant.category.name : "")}${m.merchant.address ? " · 📍 " + esc(m.merchant.address) : ""}${m.merchant.distanceKm != null ? " · " + m.merchant.distanceKm.toFixed(1) + " كم" : ""}</p>
+    ${hasCoords ? `<a class="btn outline" style="width:auto;display:inline-flex;margin-bottom:12px" href="${directionsUrl(m.merchant.latitude, m.merchant.longitude)}" target="_blank" rel="noopener">🗺️ الاتجاهات</a>` : ""}
     ${(m.merchant.discounts || []).map((d) => `<div class="badge info" style="margin-bottom:6px">🏷️ ${esc(d.title)} — ${d.percent}%</div>`).join("")}
     <div class="section-title">المنتجات</div>
     ${(m.products || []).length === 0 ? `<div class="empty-state">ما في منتجات بعد</div>` : m.products.map((p) => `
@@ -837,9 +846,26 @@ function backRow() {
   return `<button class="back-btn" onclick="back()">‹ رجوع</button>`;
 }
 
+// Opens the phone's maps app with real turn-by-turn directions — routing is Google Maps' job.
+function directionsUrl(lat, lng) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const rad = (d) => (d * Math.PI) / 180;
+  const a = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lng2 - lng1) / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 async function loadMerchantDetail(id) {
   const [mRes, pRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/products?merchantId=" + id)]);
-  S._merchantDetail = { id, loading: false, merchant: mRes.ok ? mRes.data : null, products: pRes.ok ? pRes.data : [] };
+  const merchant = mRes.ok ? mRes.data : null;
+  const loc = S._discover && S._discover.userLoc;
+  // /merchant/:id doesn't compute distance; derive it from the location the map view already asked for.
+  if (merchant && loc && merchant.latitude != null && merchant.longitude != null) {
+    merchant.distanceKm = haversineKm(loc.lat, loc.lng, merchant.latitude, merchant.longitude);
+  }
+  S._merchantDetail = { id, loading: false, merchant, products: pRes.ok ? pRes.data : [] };
   render();
 }
 
@@ -1373,6 +1399,288 @@ async function saveProduct() {
   S.busy = false;
   if (res.ok) { S._catalog = null; back(); }
   else { S.error = errMsg(res.data, "تعذّر حفظ المنتج"); render(); }
+}
+
+
+/* ================= WALLET ================= */
+
+function screenWallet() {
+  if (!S._wallet) { S._wallet = { loading: true }; loadWallet(); }
+  const w = S._wallet;
+  if (w.loading) return backRow() + spinner();
+  const m = w.methods;
+  const locals = m.localWallets || [];
+  return `
+    ${backRow()}
+    <h1 class="screen-title">محفظتي</h1>
+    <div class="member-card" style="margin-bottom:14px">
+      <div class="label">${esc(m.creditName)}</div>
+      <div class="member-number" style="font-size:30px">${w.balance}</div>
+      <div class="label">1 USD = ${m.creditsPerUsd} ${esc(m.creditName)}</div>
+    </div>
+    <div class="section-title">شحن الرصيد</div>
+    <div class="card">
+      <div class="field"><label>طريقة الدفع</label>
+        <select id="tp-method" onchange="onTopupMethod()">
+          ${m.usdtTrc20Address ? `<option value="USDT_TRC20">USDT (شبكة TRC20) — تحقق تلقائي</option>` : ""}
+          ${locals.map((l) => `<option value="${esc(l.key)}">${esc(l.label)}</option>`).join("")}
+        </select>
+      </div>
+      <div id="tp-hint" class="muted" style="margin-bottom:10px;line-height:1.7"></div>
+      <div class="field"><label id="tp-ref-label">رقم العملية</label><input id="tp-ref" /></div>
+      <div class="field" id="tp-amount-row"><label>المبلغ اللي دفعته</label><input id="tp-amount" type="number" /></div>
+      ${errorBanner()}
+      ${S._walletMsg ? `<div class="success-banner">${esc(S._walletMsg)}</div>` : ""}
+      <button class="btn" ${w.submitting ? "disabled" : ""} onclick="submitTopup()">تأكيد الشحن</button>
+    </div>
+    <div class="section-title">الحركات</div>
+    ${(w.topups || []).map((t) => `
+      <div class="card"><div class="title-line"><strong>${esc(t.method)}</strong>
+        <span class="badge ${t.status === "APPROVED" ? "success" : t.status === "REJECTED" ? "danger" : "warning"}">${t.status === "APPROVED" ? "مقبول" : t.status === "REJECTED" ? "مرفوض" : "بانتظار التأكيد"}</span></div>
+        <p class="muted" style="overflow-wrap:anywhere">${esc(t.reference)}${t.amountCredits ? " — +" + t.amountCredits : ""}</p></div>`).join("")}
+    ${(w.transactions || []).map((t) => `
+      <div class="list-row" style="padding:5px 0"><span class="muted">${esc(t.type)} ${esc(t.ref || "")}</span>
+      <span class="price" style="color:${t.amount >= 0 ? "var(--success)" : "var(--danger)"}">${t.amount > 0 ? "+" : ""}${t.amount}</span></div>`).join("")}
+  `;
+}
+
+async function loadWallet() {
+  const [w, m, t] = await Promise.all([api("GET", "/wallet"), api("GET", "/wallet/methods"), api("GET", "/wallet/topups")]);
+  S._wallet = { loading: false, balance: w.ok ? w.data.balance : 0, transactions: w.ok ? w.data.transactions : [], methods: m.ok ? m.data : { creditName: "", creditsPerUsd: 0, localWallets: [] }, topups: t.ok ? t.data : [] };
+  render();
+  onTopupMethod();
+}
+
+function onTopupMethod() {
+  const sel = qs("tp-method");
+  if (!sel) return;
+  const m = S._wallet.methods;
+  const usdt = sel.value === "USDT_TRC20";
+  qs("tp-amount-row").style.display = usdt ? "none" : "block";
+  qs("tp-ref-label").textContent = usdt ? "رقم التحويل (txid — 64 خانة)" : "رقم العملية";
+  if (usdt) {
+    qs("tp-hint").innerHTML = `حوّل USDT عبر شبكة <b>TRC20</b> لهالعنوان، وبعدين الصق الـ txid — بنتحقق من الشبكة تلقائيًا وبينضاف الرصيد فورًا:<br><b style="direction:ltr;display:block;overflow-wrap:anywhere;user-select:all">${esc(m.usdtTrc20Address)}</b>`;
+  } else {
+    const l = (m.localWallets || []).find((x) => x.key === sel.value);
+    qs("tp-hint").innerHTML = l ? `حوّل لحساب <b style="user-select:all">${esc(l.accountNumber)}</b>${l.instructions ? " — " + esc(l.instructions) : ""}<br>بعد التحويل دخّل رقم العملية والمبلغ، والإدارة بتأكد وبيضاف رصيدك.` : "";
+  }
+}
+
+function restoreTopupDraft(d) {
+  render();
+  if (!S._wallet || S._wallet.loading) return;
+  qs("tp-method").value = d.method;
+  qs("tp-ref").value = d.reference;
+  qs("tp-amount").value = d.amount;
+  onTopupMethod();
+}
+
+async function submitTopup() {
+  const method = qs("tp-method").value;
+  const reference = qs("tp-ref").value.trim();
+  const amountText = qs("tp-amount").value;
+  const draft = { method, reference, amount: amountText };
+  const amount = parseFloat(amountText);
+  if (!reference) { S.error = "دخّل رقم العملية"; return restoreTopupDraft(draft); }
+  const body = { method, reference };
+  if (method !== "USDT_TRC20") {
+    if (!amount) { S.error = "دخّل المبلغ اللي دفعته"; return restoreTopupDraft(draft); }
+    body.amountClaimed = amount;
+  }
+  S.error = null; S._walletMsg = null;
+  const { ok, data } = await api("POST", "/wallet/topups", body);
+  if (ok) {
+    S._walletMsg = data.status === "APPROVED" ? `تم! انضاف ${data.amountCredits} لرصيدك` : "انرسل الطلب — بانتظار تأكيد الإدارة";
+    S._wallet = null;
+    return render();
+  }
+  S.error = errMsg(data, "تعذّر الشحن");
+  restoreTopupDraft(draft);
+}
+
+/* ================= AUTO-RESPONDER ================= */
+
+function screenResponder() {
+  if (!S._resp) { S._resp = { loading: true, tab: "overview" }; loadResponder(); }
+  const r = S._resp;
+  if (r.loading) return backRow() + spinner();
+  const tabs = [["overview", "الحالة"], ["channels", "القنوات"], ["rules", "القواعد"], ["inbox", "الوارد"]];
+  return `
+    ${backRow()}
+    <h1 class="screen-title">🤖 المجيب الآلي</h1>
+    <div class="chip-row" style="margin:10px 0 14px">
+      ${tabs.map(([id, label]) => `<button class="chip ${r.tab === id ? "active" : ""}" onclick="setRespTab('${id}')">${label}</button>`).join("")}
+    </div>
+    ${{ overview: respOverview, channels: respChannels, rules: respRules, inbox: respInbox }[r.tab]()}
+  `;
+}
+
+async function loadResponder() {
+  const [st, ch, cn, ru, ib] = await Promise.all([
+    api("GET", "/responder/status"), api("GET", "/responder/channels"), api("GET", "/responder/connections"),
+    api("GET", "/responder/rules"), api("GET", "/responder/inbox"),
+  ]);
+  const tab = (S._resp && S._resp.tab) || "overview";
+  S._resp = { loading: false, tab, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [] };
+  render();
+}
+
+function setRespTab(tab) { S._resp.tab = tab; S.error = null; render(); }
+
+function respStatusBadge(st) {
+  const map = { TRIAL: ["info", "تجربة مجانية"], ACTIVE: ["success", "فعّالة"], EXPIRED: ["danger", "منتهية"], OFF: ["neutral", "غير مفعّلة"] };
+  const [cls, label] = map[st] || ["neutral", st];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function respOverview() {
+  const st = S._resp.status;
+  if (!st) return `<div class="error-banner">تعذّر تحميل الحالة</div>`;
+  const daysLeft = (d) => Math.max(0, Math.ceil((new Date(d) - Date.now()) / 86400000));
+  const endInfo = st.status === "TRIAL" ? `تنتهي التجربة بعد ${daysLeft(st.trialEndsAt)} يوم` : st.status === "ACTIVE" ? `الاشتراك ساري لحد ${String(st.periodEnd).slice(0, 10)}` : "";
+  return `
+    <div class="card">
+      <div class="title-line"><strong>حالة الخدمة</strong>${respStatusBadge(st.status)}</div>
+      <p class="muted" style="margin-top:6px">${esc(endInfo)}</p>
+      ${st.status === "EXPIRED" ? `<div class="error-banner">خلصت المدة — الردود الآلية موقوفة. ادفع لتكمل الخدمة.</div>` : ""}
+      <p class="muted">رصيدك: <b>${st.balance}</b> ${esc(st.creditName)} · ردود AI هالفترة: ${st.aiRepliesUsed}/${st.aiReplyLimit}</p>
+      ${errorBanner()}
+      ${!st.running && st.trialAvailable ? `<button class="btn" onclick="respActivate()">ابدأ التجربة المجانية (${st.trialDays} يوم)</button>` : ""}
+      ${!st.running && !st.trialAvailable ? `<button class="btn" onclick="respActivate()">فعّل مقابل ${st.price} ${esc(st.creditName)} / ${st.periodDays} يوم</button>` : ""}
+      ${st.running && st.status === "ACTIVE" ? `<button class="btn outline" onclick="respRenew()">جدّد ${st.periodDays} يوم إضافي (${st.price} ${esc(st.creditName)})</button>` : ""}
+      ${st.status === "TRIAL" ? `<button class="btn outline" onclick="respRenew()">اشترك من هلق (${st.price} ${esc(st.creditName)})</button>` : ""}
+      <div style="height:8px"></div>
+      <button class="btn secondary" onclick="go('wallet')">💰 اشحن رصيدك</button>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0">عن نشاطك (بيساعد الذكاء الاصطناعي يرد صح)</div>
+      <div class="field"><label>وصف النشاط</label><input id="rp-desc" value="${esc(st.businessDescription || "")}" /></div>
+      <div class="field"><label>نبرة الرد (رسمي، ودود...)</label><input id="rp-tone" value="${esc(st.tone || "")}" /></div>
+      <button class="btn small" onclick="respSaveProfile()">حفظ</button>
+    </div>`;
+}
+
+async function respActivate() {
+  S.error = null;
+  const { ok, data } = await api("POST", "/responder/activate");
+  if (!ok) S.error = errMsg(data, "تعذّر التفعيل") + (data.needed ? ` (المطلوب ${data.needed}، رصيدك ${data.balance})` : "");
+  S._resp = { loading: true, tab: "overview" }; render(); loadResponder();
+}
+async function respRenew() {
+  S.error = null;
+  const { ok, data } = await api("POST", "/responder/renew");
+  if (!ok) S.error = errMsg(data, "تعذّر التجديد") + (data.needed ? ` (المطلوب ${data.needed}، رصيدك ${data.balance})` : "");
+  S._resp = { loading: true, tab: "overview" }; render(); loadResponder();
+}
+async function respSaveProfile() {
+  await api("PATCH", "/responder/profile", { businessDescription: qs("rp-desc").value.trim(), tone: qs("rp-tone").value.trim() });
+  loadResponder();
+}
+
+function respChannels() {
+  const r = S._resp;
+  return `
+    ${errorBanner()}
+    <div class="section-title" style="margin-top:0">القنوات المتاحة</div>
+    ${r.channels.map((c) => `
+      <div class="card">
+        <div class="title-line"><strong>${esc(c.name)}</strong>${c.connectable ? "" : `<span class="badge neutral">قريبًا</span>`}</div>
+        ${c.connectable ? `
+          ${c.fields.map((f) => `<div class="field"><label>${esc(f.label)}</label><input id="cf-${c.id}-${f.key}" ${f.secret ? 'type="password"' : ""} autocomplete="off" /></div>`).join("")}
+          <button class="btn small" onclick="respConnect('${c.id}', ${JSON.stringify(c.fields.map((f) => f.key)).replace(/"/g, "&quot;")})">ربط</button>`
+        : `<p class="muted">الربط بحسابات ميتا بيحتاج موافقة منهم — لسا مو متاح.</p>`}
+      </div>`).join("")}
+    <div class="section-title">اتصالاتي</div>
+    ${r.connections.length === 0 ? `<div class="empty-state">ما في قنوات مربوطة</div>` : r.connections.map((c) => `
+      <div class="card">
+        <div class="title-line"><strong>${esc(c.channel)}</strong><span class="badge ${c.isActive ? "success" : "neutral"}">${c.isActive ? "شغّالة" : "موقوفة"}</span></div>
+        ${c.externalAccountId ? `<p class="muted">@${esc(c.externalAccountId)}</p>` : ""}
+        ${c.hookUrl ? `<div class="field"><label>رابط استقبال الرسائل (الصقه بالمنصة)</label><input readonly value="${esc(c.hookUrl)}" onclick="this.select()" /></div>` : ""}
+        <button class="btn small outline" onclick="respToggleConn('${c.id}', ${!c.isActive})">${c.isActive ? "إيقاف" : "تشغيل"}</button>
+      </div>`).join("")}`;
+}
+
+async function respConnect(channelId, keys) {
+  const credentials = {};
+  keys.forEach((k) => { const v = qs(`cf-${channelId}-${k}`).value.trim(); if (v) credentials[k] = v; });
+  S.error = null;
+  const { ok, data } = await api("POST", "/responder/connections", { channelId, credentials });
+  if (!ok) { S.error = errMsg(data, "تعذّر الربط"); return render(); }
+  loadResponder();
+}
+async function respToggleConn(id, isActive) {
+  await api("PATCH", "/responder/connections/" + id, { isActive });
+  loadResponder();
+}
+
+function respRules() {
+  const r = S._resp;
+  return `
+    ${errorBanner()}
+    ${r.rules.map((x) => `
+      <div class="card">
+        <div class="title-line"><strong>${esc(x.name)}</strong><span class="badge ${x.mode === "AI" ? "info" : "neutral"}">${x.mode === "AI" ? "ذكاء اصطناعي" : "رد ثابت"}</span></div>
+        <p class="muted">كلمات: ${x.keywords.map(esc).join("، ")}</p>
+        ${x.replyTemplate ? `<p class="muted">الرد: ${esc(x.replyTemplate)}</p>` : ""}
+        <div class="row" style="margin-top:8px;gap:6px">
+          <button class="btn small outline" style="width:auto" onclick="respRuleToggle('${x.id}', ${!x.isActive})">${x.isActive ? "إيقاف" : "تشغيل"}</button>
+          <button class="btn small danger" style="width:auto" onclick="respRuleDelete('${x.id}')">حذف</button>
+        </div>
+      </div>`).join("")}
+    <div class="card">
+      <div class="section-title" style="margin-top:0">قاعدة جديدة</div>
+      <div class="field"><label>اسم القاعدة</label><input id="ru-name" /></div>
+      <div class="field"><label>كلمات مفتاحية (مفصولة بفاصلة)</label><input id="ru-keys" placeholder="سعر، كم، price" /></div>
+      <div class="field"><label>نوع الرد</label>
+        <select id="ru-mode"><option value="FIXED">رد ثابت</option><option value="AI">ذكاء اصطناعي</option></select></div>
+      <div class="field"><label>نص الرد (استخدم {name} لاسم الزبون)</label><input id="ru-reply" /></div>
+      <div class="field"><label>تعليمات للذكاء الاصطناعي (اختياري)</label><input id="ru-ai" /></div>
+      <div class="field"><label>القناة</label>
+        <select id="ru-channel"><option value="">كل القنوات</option>${r.channels.filter((c) => c.connectable).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+      <p class="muted" style="margin-bottom:8px">الشكاوى ما بتنرد آليًا أبدًا — بتنتظر ردك بصندوق الوارد.</p>
+      <button class="btn" onclick="respAddRule()">إضافة القاعدة</button>
+    </div>`;
+}
+
+async function respAddRule() {
+  const keywords = qs("ru-keys").value.split(/[,،]/).map((k) => k.trim()).filter(Boolean);
+  const body = { name: qs("ru-name").value.trim(), keywords, mode: qs("ru-mode").value, replyTemplate: qs("ru-reply").value.trim(), aiInstructions: qs("ru-ai").value.trim(), channelId: qs("ru-channel").value || null };
+  if (!body.name || keywords.length === 0) { S.error = "اكتب اسم القاعدة وكلمة مفتاحية وحدة عالأقل"; return render(); }
+  S.error = null;
+  const { ok, data } = await api("POST", "/responder/rules", body);
+  if (!ok) { S.error = errMsg(data, "تعذّر الحفظ"); return render(); }
+  loadResponder();
+}
+async function respRuleToggle(id, isActive) { await api("PATCH", "/responder/rules/" + id, { isActive }); loadResponder(); }
+async function respRuleDelete(id) { await api("DELETE", "/responder/rules/" + id); loadResponder(); }
+
+function respInbox() {
+  const r = S._resp;
+  const label = { SENT: ["success", "انرد"], NEEDS_REVIEW: ["warning", "بانتظار ردك"], FAILED: ["danger", "فشل الإرسال"], SKIPPED: ["neutral", "تجاهلناها"] };
+  const reason = { complaint: "شكوى", ai_unavailable: "الذكاء الاصطناعي غير متاح", empty_template: "نص الرد فاضي", no_matching_rule: "ما في قاعدة مطابقة", subscription_inactive: "الاشتراك منتهي" };
+  return `
+    ${errorBanner()}
+    ${r.inbox.length === 0 ? `<div class="empty-state">ما وصل رسائل بعد</div>` : r.inbox.map((i) => {
+      const [cls, text] = label[i.status];
+      return `<div class="card">
+        <div class="title-line"><strong>${esc(i.authorName)}</strong><span class="badge ${cls}">${text}</span></div>
+        <p class="muted">${esc(i.channel)} · ${String(i.createdAt).slice(0, 16).replace("T", " ")}${i.reason ? " · " + esc(reason[i.reason] || i.reason) : ""}</p>
+        <p>${esc(i.message)}</p>
+        ${i.reply ? `<p style="color:var(--primary)">↩ ${esc(i.reply)}</p>` : ""}
+        ${i.status === "NEEDS_REVIEW" || i.status === "FAILED" ? `
+          <div class="field" style="margin-top:8px"><input id="ib-${i.id}" placeholder="اكتب ردك..." /></div>
+          <button class="btn small" onclick="respSendInbox('${i.id}')">إرسال</button>` : ""}
+      </div>`;
+    }).join("")}`;
+}
+
+async function respSendInbox(id) {
+  const reply = qs("ib-" + id).value.trim();
+  if (!reply) return;
+  const { ok, data } = await api("POST", `/responder/inbox/${id}/send`, { reply });
+  if (!ok) { S.error = errMsg(data, "تعذّر الإرسال"); return render(); }
+  S.error = null;
+  loadResponder();
 }
 
 /* ---------------- boot ---------------- */

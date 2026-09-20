@@ -37,6 +37,18 @@ async function main() {
       console.log(`Created category: ${name}`);
     }
   }
+  // Channels the super admin offers by default. Meta ones are listed but can't be connected until a Meta
+  // developer app exists and is approved; the admin can add more channels (e.g. generic webhooks) any time.
+  const channels = [
+    { key: "telegram", name: "Telegram", driver: "TELEGRAM" as const },
+    { key: "webhook", name: "Webhook عام (أي منصة)", driver: "GENERIC_WEBHOOK" as const },
+    { key: "whatsapp", name: "WhatsApp (بانتظار Meta)", driver: "META_PENDING" as const },
+    { key: "facebook", name: "Facebook (بانتظار Meta)", driver: "META_PENDING" as const },
+    { key: "instagram", name: "Instagram (بانتظار Meta)", driver: "META_PENDING" as const },
+  ];
+  for (const c of channels) {
+    await prisma.socialChannel.upsert({ where: { key: c.key }, update: {}, create: c });
+  }
 }
 
 main()

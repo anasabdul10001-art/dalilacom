@@ -14,6 +14,12 @@ services:
         generateValue: true
       - key: QR_TOKEN_TTL_SECONDS
         value: "30"
+      - key: CREDENTIALS_ENCRYPTION_KEY
+        generateValue: true
+      - key: PUBLIC_BASE_URL
+        value: "https://dalilacom-api.onrender.com"
+      - key: ANTHROPIC_API_KEY
+        sync: false
 
 databases:
   - name: dalilacom-db

@@ -60,44 +60,52 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships    Membership[]
+  memberships     Membership[]
   merchantProfile MerchantProfile?
   cart            Cart?
   orders          Order[]
-  affiliateOf     MerchantAffiliate[]  // merchants I market for
-  referredAs      AffiliateReferral[]  // merchants that credit a specific affiliate for my purchases
+  affiliateOf     MerchantAffiliate[] // merchants I market for
+  referredAs      AffiliateReferral[] // merchants that credit a specific affiliate for my purchases
+
+  wallet                Wallet?
+  walletTransactions    WalletTransaction[]
+  topUpRequests         TopUpRequest[]
+  responderSubscription ResponderSubscription?
+  channelConnections    ChannelConnection[]
+  responderRules        ResponderRule[]
+  responderInteractions ResponderInteraction[]
 }
 
 // One pricing plan a customer can subscribe to (Admin-managed, section 24/60/61)
 model MembershipPlan {
-  id            String   @id @default(uuid())
-  name          String
-  durationDays  Int
-  priceCents    Int
-  currency      String   @default("EUR")
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(uuid())
+  name         String
+  durationDays Int
+  priceCents   Int
+  currency     String   @default("EUR")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   memberships Membership[]
 }
 
 // A customer's active/expired subscription instance — this IS the digital card (section 19)
 model Membership {
-  id            String           @id @default(uuid())
-  memberNumber  String           @unique // human-facing membership number
-  userId        String
-  planId        String
-  status        MembershipStatus @default(ACTIVE)
-  startDate     DateTime         @default(now())
-  endDate       DateTime
-  qrSecret      String           // per-membership secret used to derive rotating QR tokens (section 62)
-  lastRedeemedTimeStep BigInt?    // replay-protection watermark for QR redemption
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id                   String           @id @default(uuid())
+  memberNumber         String           @unique // human-facing membership number
+  userId               String
+  planId               String
+  status               MembershipStatus @default(ACTIVE)
+  startDate            DateTime         @default(now())
+  endDate              DateTime
+  qrSecret             String // per-membership secret used to derive rotating QR tokens (section 62)
+  lastRedeemedTimeStep BigInt? // replay-protection watermark for QR redemption
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
-  user  User            @relation(fields: [userId], references: [id])
-  plan  MembershipPlan  @relation(fields: [planId], references: [id])
+  user User           @relation(fields: [userId], references: [id])
+  plan MembershipPlan @relation(fields: [planId], references: [id])
 
   discountTransactions DiscountTransaction[]
 
@@ -106,22 +114,22 @@ model Membership {
 
 // Admin-managed, hierarchical (section 10): a category can have a parent category
 model Category {
-  id        String     @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
-  slug      String     @unique
+  slug      String   @unique
   parentId  String?
-  createdAt DateTime   @default(now())
+  createdAt DateTime @default(now())
 
-  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children  Category[] @relation("CategoryHierarchy")
+  parent    Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[]        @relation("CategoryHierarchy")
   merchants MerchantProfile[]
   products  Product[]
 }
 
 // A merchant's business profile (section 3)
 model MerchantProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique
+  id              String                 @id @default(uuid())
+  userId          String                 @unique
   businessName    String
   categoryId      String
   address         String?
@@ -131,16 +139,16 @@ model MerchantProfile {
   whatsapp        String?
   approvalStatus  MerchantApprovalStatus @default(PENDING) // manual admin approval (section 63)
   rejectionReason String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id])
-  category  Category   @relation(fields: [categoryId], references: [id])
-  discounts Discount[]
+  user                 User                  @relation(fields: [userId], references: [id])
+  category             Category              @relation(fields: [categoryId], references: [id])
+  discounts            Discount[]
   discountTransactions DiscountTransaction[]
-  products  Product[]
-  orders    Order[]
-  affiliates MerchantAffiliate[]
+  products             Product[]
+  orders               Order[]
+  affiliates           MerchantAffiliate[]
 
   @@index([categoryId])
 }
@@ -154,17 +162,17 @@ model Product {
   description           String?
   priceCents            Int
   memberDiscountEnabled Boolean  @default(false)
-  memberPriceCents      Int?     // set by the merchant when memberDiscountEnabled (section 5 example: €100 -> €85)
+  memberPriceCents      Int? // set by the merchant when memberDiscountEnabled (section 5 example: €100 -> €85)
   stock                 Int      @default(0)
   sku                   String?
   isActive              Boolean  @default(true) // merchant-controlled visibility, independent of stock (section 59.1)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  merchant   MerchantProfile @relation(fields: [merchantId], references: [id])
-  category   Category?       @relation(fields: [categoryId], references: [id])
-  cartItems  CartItem[]
-  orderItems OrderItem[]
+  merchant           MerchantProfile     @relation(fields: [merchantId], references: [id])
+  category           Category?           @relation(fields: [categoryId], references: [id])
+  cartItems          CartItem[]
+  orderItems         OrderItem[]
   affiliateReferrals AffiliateReferral[]
 
   @@index([merchantId])
@@ -206,7 +214,7 @@ model Order {
   subtotalCents       Int
   memberDiscountCents Int         @default(0)
   totalCents          Int
-  cancelReason        String?     // required when the merchant cancels (section 59.6)
+  cancelReason        String? // required when the merchant cancels (section 59.6)
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
@@ -222,9 +230,9 @@ model OrderItem {
   id             String   @id @default(uuid())
   orderId        String
   productId      String
-  productName    String   // snapshot at order time, survives later product edits
+  productName    String // snapshot at order time, survives later product edits
   quantity       Int
-  unitPriceCents Int      // price actually charged per unit (member price when applied)
+  unitPriceCents Int // price actually charged per unit (member price when applied)
   createdAt      DateTime @default(now())
 
   order   Order   @relation(fields: [orderId], references: [id])
@@ -233,17 +241,17 @@ model OrderItem {
 
 // A discount rule offered by a merchant (section 4)
 model Discount {
-  id          String    @id @default(uuid())
-  merchantId  String
-  title       String
-  percent     Int
-  isActive    Boolean   @default(true)
-  startDate   DateTime?
-  endDate     DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String    @id @default(uuid())
+  merchantId String
+  title      String
+  percent    Int
+  isActive   Boolean   @default(true)
+  startDate  DateTime?
+  endDate    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  merchant MerchantProfile @relation(fields: [merchantId], references: [id])
+  merchant             MerchantProfile       @relation(fields: [merchantId], references: [id])
   discountTransactions DiscountTransaction[]
 
   @@index([merchantId])
@@ -251,17 +259,17 @@ model Discount {
 
 // Single source of truth discount redemption log (section 34)
 model DiscountTransaction {
-  id              String            @id @default(uuid())
-  transactionRef  String            @unique @default(uuid())
-  membershipId    String
-  merchantId      String
-  discountId      String?
-  billAmountCents Int
-  discountPercent Int
+  id                  String            @id @default(uuid())
+  transactionRef      String            @unique @default(uuid())
+  membershipId        String
+  merchantId          String
+  discountId          String?
+  billAmountCents     Int
+  discountPercent     Int
   discountAmountCents Int
   finalAmountCents    Int
-  status          TransactionStatus @default(CONFIRMED)
-  createdAt       DateTime          @default(now())
+  status              TransactionStatus @default(CONFIRMED)
+  createdAt           DateTime          @default(now())
 
   membership Membership      @relation(fields: [membershipId], references: [id])
   merchant   MerchantProfile @relation(fields: [merchantId], references: [id])
@@ -280,13 +288,13 @@ model MerchantAffiliate {
   merchantId      String
   userId          String
   commissionType  CommissionType
-  commissionValue Int            // percent 1-100, or fixed cents, depending on commissionType
+  commissionValue Int // percent 1-100, or fixed cents, depending on commissionType
   referralCode    String         @unique
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
 
-  merchant    MerchantProfile        @relation(fields: [merchantId], references: [id])
-  user        User                   @relation(fields: [userId], references: [id])
+  merchant    MerchantProfile       @relation(fields: [merchantId], references: [id])
+  user        User                  @relation(fields: [userId], references: [id])
   referrals   AffiliateReferral[]
   commissions AffiliateCommission[]
 
@@ -297,17 +305,17 @@ model MerchantAffiliate {
 // Attributes every purchase that customer makes from this merchant (online or in-person QR
 // redemption) to that affiliate for 30 days — first click wins, no overriding an active referral.
 model AffiliateReferral {
-  id                   String   @id @default(uuid())
-  merchantAffiliateId  String
-  merchantId           String   // denormalized so checkout/redeem can look this up by (merchantId, customerId) directly
-  customerId           String
-  productId            String   // the product the referral link pointed to (analytics only)
-  createdAt            DateTime @default(now())
-  expiresAt            DateTime
+  id                  String   @id @default(uuid())
+  merchantAffiliateId String
+  merchantId          String // denormalized so checkout/redeem can look this up by (merchantId, customerId) directly
+  customerId          String
+  productId           String // the product the referral link pointed to (analytics only)
+  createdAt           DateTime @default(now())
+  expiresAt           DateTime
 
   merchantAffiliate MerchantAffiliate     @relation(fields: [merchantAffiliateId], references: [id])
-  customer          User                   @relation(fields: [customerId], references: [id])
-  product           Product                @relation(fields: [productId], references: [id])
+  customer          User                  @relation(fields: [customerId], references: [id])
+  product           Product               @relation(fields: [productId], references: [id])
   commissions       AffiliateCommission[]
 
   @@unique([merchantId, customerId])
@@ -316,17 +324,194 @@ model AffiliateReferral {
 // One row per commission-earning event (an online order or an in-person QR redemption) —
 // single source of truth an affiliate and their merchant can both reconcile against.
 model AffiliateCommission {
-  id                   String              @id @default(uuid())
-  merchantAffiliateId  String
-  referralId           String
-  sourceType           AffiliateSourceType
-  sourceId             String              // Order.id or DiscountTransaction.id
-  baseAmountCents      Int
-  commissionCents      Int
-  createdAt            DateTime            @default(now())
+  id                  String              @id @default(uuid())
+  merchantAffiliateId String
+  referralId          String
+  sourceType          AffiliateSourceType
+  sourceId            String // Order.id or DiscountTransaction.id
+  baseAmountCents     Int
+  commissionCents     Int
+  createdAt           DateTime            @default(now())
 
   merchantAffiliate MerchantAffiliate @relation(fields: [merchantAffiliateId], references: [id])
   referral          AffiliateReferral @relation(fields: [referralId], references: [id])
 
   @@index([merchantAffiliateId])
+}
+
+// ---------------------------------------------------------------------------
+// Platform settings + wallet (internal "Dalilacom credits") + auto-responder add-on
+// ---------------------------------------------------------------------------
+
+// Super-admin-managed key/value settings (pricing, trial length, credit name/rate, payment accounts).
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+enum WalletTxType {
+  TOPUP
+  SUBSCRIPTION
+  ADJUSTMENT
+}
+
+enum TopUpStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TopUpVerifier {
+  AUTO
+  ADMIN
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  balance   Int      @default(0) // in Dalilacom credits
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model WalletTransaction {
+  id        String       @id @default(uuid())
+  userId    String
+  type      WalletTxType
+  amount    Int // positive = credit, negative = debit
+  ref       String?
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model TopUpRequest {
+  id            String         @id @default(uuid())
+  userId        String
+  method        String // USDT_TRC20 or a local wallet key defined in platform settings
+  reference     String // blockchain txid or the wallet's transaction number
+  amountClaimed Float? // what the user says they paid (USD for USDT)
+  amountCredits Int? // set on approval
+  status        TopUpStatus    @default(PENDING)
+  verifiedBy    TopUpVerifier?
+  note          String?
+  createdAt     DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([method, reference])
+  @@index([userId])
+}
+
+enum ChannelDriver {
+  TELEGRAM
+  GENERIC_WEBHOOK
+  META_PENDING
+}
+
+// A social channel the super admin offers. GENERIC_WEBHOOK lets new platforms be added without code.
+model SocialChannel {
+  id        String        @id @default(uuid())
+  key       String        @unique
+  name      String
+  driver    ChannelDriver
+  isEnabled Boolean       @default(true)
+  config    Json          @default("{}")
+  createdAt DateTime      @default(now())
+
+  connections ChannelConnection[]
+  rules       ResponderRule[]
+}
+
+model ChannelConnection {
+  id                String   @id @default(uuid())
+  userId            String
+  channelId         String
+  credentialsEnc    String // AES-256-GCM encrypted JSON (bot token, outbound URL/secret, ...)
+  externalAccountId String?
+  hookToken         String   @unique
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  user         User                   @relation(fields: [userId], references: [id])
+  channel      SocialChannel          @relation(fields: [channelId], references: [id])
+  interactions ResponderInteraction[]
+
+  @@index([userId])
+}
+
+enum ResponderStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  OFF
+}
+
+model ResponderSubscription {
+  id                  String          @id @default(uuid())
+  userId              String          @unique
+  status              ResponderStatus @default(OFF)
+  trialUsed           Boolean         @default(false)
+  trialEndsAt         DateTime?
+  periodEnd           DateTime?
+  aiRepliesUsed       Int             @default(0)
+  aiPeriodStart       DateTime?
+  businessDescription String?
+  tone                String?
+  createdAt           DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum ResponderMode {
+  FIXED
+  AI
+}
+
+model ResponderRule {
+  id             String        @id @default(uuid())
+  userId         String
+  name           String
+  keywords       String[]
+  mode           ResponderMode @default(FIXED)
+  replyTemplate  String        @default("")
+  aiInstructions String        @default("")
+  channelId      String? // null = applies to every connected channel
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+
+  user    User           @relation(fields: [userId], references: [id])
+  channel SocialChannel? @relation(fields: [channelId], references: [id])
+
+  @@index([userId])
+}
+
+enum InteractionStatus {
+  SENT
+  NEEDS_REVIEW
+  FAILED
+  SKIPPED
+}
+
+model ResponderInteraction {
+  id              String            @id @default(uuid())
+  userId          String
+  connectionId    String
+  conversationRef String // where to send the reply (e.g. Telegram chat id)
+  authorName      String
+  message         String
+  intent          String?
+  reply           String?
+  status          InteractionStatus
+  reason          String?
+  createdAt       DateTime          @default(now())
+
+  user       User              @relation(fields: [userId], references: [id])
+  connection ChannelConnection @relation(fields: [connectionId], references: [id])
+
+  @@index([userId, createdAt])
 }
