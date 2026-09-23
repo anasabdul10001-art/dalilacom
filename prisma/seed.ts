@@ -4,18 +4,33 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = "admin@dalilacom.dev";
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
-  if (!existingAdmin) {
-    await prisma.user.create({
-      data: {
-        email: adminEmail,
-        passwordHash: await bcrypt.hash("Admin12345!", 12),
-        fullName: "Dalilacom Admin",
-        role: Role.ADMIN,
-      },
-    });
-    console.log(`Created admin user: ${adminEmail} / Admin12345!`);
+  // No hardcoded default admin — credentials must come from the environment (never committed to
+  // Git). If they're not set, the seed simply skips admin creation instead of falling back to a
+  // known/weak password (section: Admin Credentials).
+  const adminEmail = process.env.SUPER_ADMIN_EMAIL;
+  const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
+  if (adminEmail && adminPassword) {
+    const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+    if (!existingAdmin) {
+      if (adminPassword.length < 12) {
+        throw new Error("SUPER_ADMIN_PASSWORD must be at least 12 characters");
+      }
+      await prisma.user.create({
+        data: {
+          email: adminEmail,
+          passwordHash: await bcrypt.hash(adminPassword, 12),
+          fullName: "Dalilacom Admin",
+          role: Role.ADMIN,
+          isEmailVerified: true,
+        },
+      });
+      console.log(`Created admin user: ${adminEmail} (password not logged)`);
+    }
+  } else {
+    console.warn(
+      "SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD not set — skipping admin bootstrap. " +
+        "Set both env vars once to create the first admin, then use /auth/forgot-password to manage it afterwards.",
+    );
   }
 
   const planName = "Monthly";

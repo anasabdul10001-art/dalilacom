@@ -74,9 +74,10 @@
     <p>دخول مخصّص للأدمن فقط</p>
     <div id="login-error" class="error-banner" style="display:none"></div>
     <label>الإيميل</label>
-    <input id="login-email" value="admin@dalilacom.dev" />
+    <input id="login-email" autocomplete="username" />
     <label>كلمة السر</label>
-    <input id="login-password" type="password" value="Admin12345!" />
+    <input id="login-password" type="password" autocomplete="current-password" />
+    <p style="margin:10px 0 0"><a href="/reset-password.html" style="color:#BA2A34;font-size:12px">نسيت كلمة السر؟</a></p>
     <button style="width:100%; margin-top:16px" onclick="login()">دخول</button>
   </div>
 </div>

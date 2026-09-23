@@ -2,6 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { encryptJson } from "../services/crypto.service";
 import { drivers } from "../services/channels";
@@ -23,7 +24,7 @@ const CREDENTIAL_FIELDS = {
 } as const;
 
 function insufficient(res: any, err: InsufficientBalanceError) {
-  return res.status(402).json({ error: "رصيدك ما بيكفي — اشحن محفظتك أول", balance: err.balance, needed: err.needed });
+  return sendError(res, 402, "PAYMENT_REQUIRED", "رصيدك ما بيكفي — اشحن محفظتك أول", { balance: err.balance, needed: err.needed });
 }
 
 responderRouter.get("/status", requireAuth, async (req, res) => {
@@ -56,7 +57,7 @@ responderRouter.post("/activate", requireAuth, async (req, res) => {
     const result = await activate(req.user!.id, req.user!.role);
     res.status(201).json(result);
   } catch (err) {
-    if (err instanceof AlreadyRunningError) return res.status(409).json({ error: "الخدمة شغّالة أصلًا" });
+    if (err instanceof AlreadyRunningError) return sendError(res, 409, "CONFLICT", "الخدمة شغّالة أصلًا");
     if (err instanceof InsufficientBalanceError) return insufficient(res, err);
     throw err;
   }
@@ -78,7 +79,7 @@ const profileSchema = z.object({
 
 responderRouter.patch("/profile", requireAuth, async (req, res) => {
   const parsed = profileSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   await getSubscription(req.user!.id);
   const sub = await prisma.responderSubscription.update({ where: { userId: req.user!.id }, data: parsed.data });
   res.json({ businessDescription: sub.businessDescription, tone: sub.tone });
@@ -122,17 +123,17 @@ const connectSchema = z.object({ channelId: z.string().uuid(), credentials: z.re
 
 responderRouter.post("/connections", requireAuth, async (req, res) => {
   const parsed = connectSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
 
   const sub = await getSubscription(req.user!.id);
-  if (!isRunning(sub.status)) return res.status(403).json({ error: "فعّل المجيب الآلي أول (تجربة أو اشتراك)" });
+  if (!isRunning(sub.status)) return sendError(res, 403, "FORBIDDEN", "فعّل المجيب الآلي أول (تجربة أو اشتراك)");
 
   const channel = await prisma.socialChannel.findUnique({ where: { id: parsed.data.channelId } });
-  if (!channel || !channel.isEnabled) return res.status(404).json({ error: "القناة غير متاحة" });
+  if (!channel || !channel.isEnabled) return sendError(res, 404, "NOT_FOUND", "القناة غير متاحة");
 
   const driver = drivers[channel.driver];
   const invalid = driver.validateCredentials(parsed.data.credentials);
-  if (invalid) return res.status(400).json({ error: invalid });
+  if (invalid) return sendError(res, 400, "BAD_REQUEST", invalid);
 
   const hookToken = crypto.randomBytes(24).toString("hex");
   const ctx = { credentials: parsed.data.credentials, hookToken, channelConfig: channel.config as Record<string, any> };
@@ -140,7 +141,7 @@ responderRouter.post("/connections", requireAuth, async (req, res) => {
   try {
     externalAccountId = (await driver.register?.(ctx))?.externalAccountId;
   } catch (err) {
-    return res.status(400).json({ error: err instanceof Error ? err.message : "تعذّر ربط القناة" });
+    return sendError(res, 400, "CHANNEL_CONNECT_FAILED", err instanceof Error ? err.message : "تعذّر ربط القناة");
   }
 
   const connection = await prisma.channelConnection.create({
@@ -157,9 +158,9 @@ responderRouter.post("/connections", requireAuth, async (req, res) => {
 
 responderRouter.patch("/connections/:id", requireAuth, async (req, res) => {
   const parsed = z.object({ isActive: z.boolean() }).safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.channelConnection.findUnique({ where: { id: req.params.id } });
-  if (!existing || existing.userId !== req.user!.id) return res.status(404).json({ error: "Connection not found" });
+  if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Connection not found");
   const updated = await prisma.channelConnection.update({ where: { id: existing.id }, data: { isActive: parsed.data.isActive } });
   res.json({ id: updated.id, isActive: updated.isActive });
 });
@@ -182,12 +183,12 @@ responderRouter.get("/rules", requireAuth, async (req, res) => {
 
 responderRouter.post("/rules", requireAuth, async (req, res) => {
   const parsed = ruleSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   if (parsed.data.mode === "FIXED" && !parsed.data.replyTemplate.trim()) {
-    return res.status(400).json({ error: "اكتب نص الرد الثابت" });
+    return sendError(res, 400, "BAD_REQUEST", "اكتب نص الرد الثابت");
   }
   if ((await prisma.responderRule.count({ where: { userId: req.user!.id } })) >= 50) {
-    return res.status(409).json({ error: "وصلت الحد الأقصى (50 قاعدة)" });
+    return sendError(res, 409, "CONFLICT", "وصلت الحد الأقصى (50 قاعدة)");
   }
   const rule = await prisma.responderRule.create({ data: { ...parsed.data, userId: req.user!.id } });
   res.status(201).json(rule);
@@ -195,15 +196,15 @@ responderRouter.post("/rules", requireAuth, async (req, res) => {
 
 responderRouter.patch("/rules/:id", requireAuth, async (req, res) => {
   const parsed = ruleSchema.partial().safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.responderRule.findUnique({ where: { id: req.params.id } });
-  if (!existing || existing.userId !== req.user!.id) return res.status(404).json({ error: "Rule not found" });
+  if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Rule not found");
   res.json(await prisma.responderRule.update({ where: { id: existing.id }, data: parsed.data }));
 });
 
 responderRouter.delete("/rules/:id", requireAuth, async (req, res) => {
   const existing = await prisma.responderRule.findUnique({ where: { id: req.params.id } });
-  if (!existing || existing.userId !== req.user!.id) return res.status(404).json({ error: "Rule not found" });
+  if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Rule not found");
   await prisma.responderRule.delete({ where: { id: existing.id } });
   res.json({ id: existing.id });
 });
@@ -224,23 +225,23 @@ responderRouter.get("/inbox", requireAuth, async (req, res) => {
 // A person answers a message the responder held back (complaints, failed sends, AI unavailable).
 responderRouter.post("/inbox/:id/send", requireAuth, async (req, res) => {
   const parsed = z.object({ reply: z.string().trim().min(1).max(2000) }).safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
 
   const item = await prisma.responderInteraction.findUnique({
     where: { id: req.params.id },
     include: { connection: { include: { channel: true } } },
   });
-  if (!item || item.userId !== req.user!.id) return res.status(404).json({ error: "Message not found" });
+  if (!item || item.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Message not found");
   if (item.status !== "NEEDS_REVIEW" && item.status !== "FAILED") {
-    return res.status(409).json({ error: "هالرسالة مو بانتظار رد" });
+    return sendError(res, 409, "CONFLICT", "هالرسالة مو بانتظار رد");
   }
   const sub = await getSubscription(req.user!.id);
-  if (!isRunning(sub.status)) return res.status(403).json({ error: "الاشتراك منتهي — جدّده أول" });
+  if (!isRunning(sub.status)) return sendError(res, 403, "FORBIDDEN", "الاشتراك منتهي — جدّده أول");
 
   try {
     await sendThroughConnection(item.connection, parsed.data.reply, item.conversationRef);
   } catch (err) {
-    return res.status(502).json({ error: err instanceof Error ? err.message : "تعذّر الإرسال" });
+    return sendError(res, 502, "SEND_FAILED", err instanceof Error ? err.message : "تعذّر الإرسال");
   }
   const updated = await prisma.responderInteraction.update({
     where: { id: item.id },

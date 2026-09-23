@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { getSettings } from "../services/settings.service";
 import { adjustBalance, verifyUsdtTransfer } from "../services/wallet.service";
@@ -38,7 +39,7 @@ const topUpSchema = z.object({
 
 walletRouter.post("/topups", requireAuth, async (req, res) => {
   const parsed = topUpSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   const { method, reference, amountClaimed } = parsed.data;
   const userId = req.user!.id;
   const settings = await getSettings();
@@ -46,18 +47,18 @@ walletRouter.post("/topups", requireAuth, async (req, res) => {
   try {
     if (method === "USDT_TRC20") {
       const address = settings.payment.usdtTrc20Address;
-      if (!address) return res.status(503).json({ error: "الشحن بـ USDT غير مفعّل حاليًا" });
+      if (!address) return sendError(res, 503, "SERVICE_UNAVAILABLE", "الشحن بـ USDT غير مفعّل حاليًا");
       if (!/^[0-9a-fA-F]{64}$/.test(reference)) {
-        return res.status(400).json({ error: "رقم العملية (txid) لازم يكون 64 خانة" });
+        return sendError(res, 400, "BAD_REQUEST", "رقم العملية (txid) لازم يكون 64 خانة");
       }
       const check = await verifyUsdtTransfer(reference.toLowerCase(), address);
       if (!check.ok) {
         return check.reason === "NOT_FOUND"
-          ? res.status(404).json({ error: "ما لقينا هالتحويل لعنوان المنصة — تأكد من الـ txid أو استنى شوي لحد ما يتأكد بالشبكة" })
-          : res.status(502).json({ error: "تعذّر الاتصال بالشبكة للتحقق، جرّب بعد شوي" });
+          ? sendError(res, 404, "NOT_FOUND", "ما لقينا هالتحويل لعنوان المنصة — تأكد من الـ txid أو استنى شوي لحد ما يتأكد بالشبكة")
+          : sendError(res, 502, "BAD_GATEWAY", "تعذّر الاتصال بالشبكة للتحقق، جرّب بعد شوي");
       }
       const credits = Math.floor(check.usdAmount * settings.creditsPerUsd);
-      if (credits <= 0) return res.status(400).json({ error: "المبلغ صغير جدًا" });
+      if (credits <= 0) return sendError(res, 400, "BAD_REQUEST", "المبلغ صغير جدًا");
 
       const request = await prisma.$transaction(async (tx) => {
         const created = await tx.topUpRequest.create({
@@ -78,16 +79,16 @@ walletRouter.post("/topups", requireAuth, async (req, res) => {
     }
 
     if (!settings.payment.localWallets.some((w) => w.key === method)) {
-      return res.status(400).json({ error: "طريقة دفع غير معروفة" });
+      return sendError(res, 400, "BAD_REQUEST", "طريقة دفع غير معروفة");
     }
-    if (!amountClaimed) return res.status(400).json({ error: "دخّل المبلغ اللي دفعته" });
+    if (!amountClaimed) return sendError(res, 400, "BAD_REQUEST", "دخّل المبلغ اللي دفعته");
     const request = await prisma.topUpRequest.create({
       data: { userId, method, reference, amountClaimed, status: "PENDING" },
     });
     return res.status(201).json(request);
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return res.status(409).json({ error: "رقم العملية هاد مستخدم من قبل" });
+      return sendError(res, 409, "CONFLICT", "رقم العملية هاد مستخدم من قبل");
     }
     throw err;
   }

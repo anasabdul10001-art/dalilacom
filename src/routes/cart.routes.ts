@@ -2,6 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { getActiveMembership } from "../services/membership.service";
 import { recordAffiliateCommissionIfReferred } from "../services/affiliate.service";
@@ -59,13 +60,13 @@ const addItemSchema = z.object({
 cartRouter.post("/items", requireAuth, async (req, res) => {
   const parsed = addItemSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const { productId, quantity } = parsed.data;
 
   const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product || !product.isActive) {
-    return res.status(404).json({ error: "Product not found" });
+    return sendError(res, 404, "NOT_FOUND", "Product not found");
   }
 
   const cart = await getOrCreateCart(req.user!.id);
@@ -74,7 +75,7 @@ cartRouter.post("/items", requireAuth, async (req, res) => {
   });
   const newQuantity = (existing?.quantity ?? 0) + quantity;
   if (newQuantity > product.stock) {
-    return res.status(409).json({ error: `Only ${product.stock} left in stock` });
+    return sendError(res, 409, "CONFLICT", `Only ${product.stock} left in stock`);
   }
 
   await prisma.cartItem.upsert({
@@ -91,16 +92,16 @@ const updateItemSchema = z.object({ quantity: z.number().int().positive() });
 cartRouter.patch("/items/:id", requireAuth, async (req, res) => {
   const parsed = updateItemSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const cart = await getOrCreateCart(req.user!.id);
   const item = await prisma.cartItem.findUnique({ where: { id: req.params.id }, include: { product: true } });
   if (!item || item.cartId !== cart.id) {
-    return res.status(404).json({ error: "Cart item not found" });
+    return sendError(res, 404, "NOT_FOUND", "Cart item not found");
   }
   if (parsed.data.quantity > item.product.stock) {
-    return res.status(409).json({ error: `Only ${item.product.stock} left in stock` });
+    return sendError(res, 409, "CONFLICT", `Only ${item.product.stock} left in stock`);
   }
 
   await prisma.cartItem.update({ where: { id: item.id }, data: { quantity: parsed.data.quantity } });
@@ -111,7 +112,7 @@ cartRouter.delete("/items/:id", requireAuth, async (req, res) => {
   const cart = await getOrCreateCart(req.user!.id);
   const item = await prisma.cartItem.findUnique({ where: { id: req.params.id } });
   if (!item || item.cartId !== cart.id) {
-    return res.status(404).json({ error: "Cart item not found" });
+    return sendError(res, 404, "NOT_FOUND", "Cart item not found");
   }
   await prisma.cartItem.delete({ where: { id: item.id } });
   res.json(await buildCartView(req.user!.id));
@@ -131,7 +132,7 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
     include: { product: true },
   });
   if (items.length === 0) {
-    return res.status(400).json({ error: "Cart is empty" });
+    return sendError(res, 400, "BAD_REQUEST", "Cart is empty");
   }
 
   const membership = await getActiveMembership(userId);
@@ -211,10 +212,10 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
     res.status(201).json(orders);
   } catch (err) {
     if (err instanceof Error && err.message.startsWith("OUT_OF_STOCK:")) {
-      return res.status(409).json({ error: `Not enough stock for "${err.message.split(":")[1]}"` });
+      return sendError(res, 409, "CONFLICT", `Not enough stock for "${err.message.split(":")[1]}"`);
     }
     if (err instanceof Error && err.message.startsWith("PRODUCT_UNAVAILABLE:")) {
-      return res.status(409).json({ error: "One of the products in your cart is no longer available" });
+      return sendError(res, 409, "CONFLICT", "One of the products in your cart is no longer available");
     }
     throw err;
   }

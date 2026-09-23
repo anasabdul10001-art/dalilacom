@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { OrderStatus, Role } from "@prisma/client";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 
 export const orderRouter = Router();
@@ -20,7 +21,7 @@ orderRouter.get("/mine", requireAuth, async (req, res) => {
 orderRouter.get("/merchant", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) {
-    return res.status(404).json({ error: "Merchant profile not found" });
+    return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   }
   const orders = await prisma.order.findMany({
     where: { merchantId: merchant.id },
@@ -45,7 +46,7 @@ async function loadOrderForRequester(orderId: string, userId: string) {
 orderRouter.get("/:id", requireAuth, async (req, res) => {
   const order = await loadOrderForRequester(req.params.id, req.user!.id);
   if (!order) {
-    return res.status(404).json({ error: "Order not found" });
+    return sendError(res, 404, "NOT_FOUND", "Order not found");
   }
   res.json(order);
 });
@@ -69,21 +70,21 @@ const updateStatusSchema = z.object({
 orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const parsed = updateStatusSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   const order = await prisma.order.findUnique({ where: { id: req.params.id } });
   if (!merchant || !order || order.merchantId !== merchant.id) {
-    return res.status(404).json({ error: "Order not found" });
+    return sendError(res, 404, "NOT_FOUND", "Order not found");
   }
 
   const { status, cancelReason } = parsed.data;
   if (!ALLOWED_TRANSITIONS[order.status].includes(status)) {
-    return res.status(409).json({ error: `Cannot move an order from ${order.status} to ${status}` });
+    return sendError(res, 409, "CONFLICT", `Cannot move an order from ${order.status} to ${status}`);
   }
   if (status === "CANCELLED" && !cancelReason) {
-    return res.status(400).json({ error: "cancelReason is required when the merchant cancels an order" });
+    return sendError(res, 400, "BAD_REQUEST", "cancelReason is required when the merchant cancels an order");
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -107,10 +108,10 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), async 
 orderRouter.post("/:id/cancel", requireAuth, async (req, res) => {
   const order = await prisma.order.findUnique({ where: { id: req.params.id } });
   if (!order || order.userId !== req.user!.id) {
-    return res.status(404).json({ error: "Order not found" });
+    return sendError(res, 404, "NOT_FOUND", "Order not found");
   }
   if (!ALLOWED_TRANSITIONS[order.status].includes("CANCELLED")) {
-    return res.status(409).json({ error: `Order can no longer be cancelled (current status: ${order.status})` });
+    return sendError(res, 409, "CONFLICT", `Order can no longer be cancelled (current status: ${order.status})`);
   }
 
   const updated = await prisma.$transaction(async (tx) => {

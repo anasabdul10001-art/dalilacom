@@ -50,15 +50,17 @@ enum AffiliateSourceType {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  phone        String?  @unique
-  passwordHash String
-  fullName     String
-  role         Role     @default(CUSTOMER)
-  tokenVersion Int      @default(0) // bumped on logout / password reset to invalidate existing JWTs (section 56)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(uuid())
+  email           String   @unique
+  phone           String?  @unique
+  passwordHash    String
+  fullName        String
+  role            Role     @default(CUSTOMER)
+  tokenVersion    Int      @default(0) // bumped on logout / password reset to invalidate existing JWTs (section 56)
+  isEmailVerified Boolean  @default(false)
+  isDisabled      Boolean  @default(false) // admin-controlled kill switch, blocks login regardless of tokenVersion
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   memberships     Membership[]
   merchantProfile MerchantProfile?
@@ -74,6 +76,75 @@ model User {
   channelConnections    ChannelConnection[]
   responderRules        ResponderRule[]
   responderInteractions ResponderInteraction[]
+
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+  securityEvents          SecurityEvent[]
+
+  addresses       Address[]
+  businessMembers BusinessMember[]
+}
+
+// Only a SHA-256 hash of the raw token is ever stored — the raw value exists only in the
+// email link and is never persisted (section: Email Verification).
+model EmailVerificationToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// Single-use, expiring, hash-only storage — same pattern as EmailVerificationToken
+// (section: Password Reset).
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+enum SecurityEventType {
+  REGISTER
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
+  EMAIL_VERIFICATION_REQUESTED
+  EMAIL_VERIFIED
+  ACCOUNT_DISABLED
+  ACCOUNT_ENABLED
+  TOKEN_REVOKED
+  RATE_LIMIT_EXCEEDED
+}
+
+// Append-only audit trail of security-relevant events (section: Security Events). Never
+// stores passwords, raw tokens, or secrets — only what's needed to investigate later.
+model SecurityEvent {
+  id        String            @id @default(uuid())
+  userId    String?
+  type      SecurityEventType
+  ip        String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime          @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
 }
 
 // One pricing plan a customer can subscribe to (Admin-managed, section 24/60/61)
@@ -124,6 +195,9 @@ model Category {
   children  Category[]        @relation("CategoryHierarchy")
   merchants MerchantProfile[]
   products  Product[]
+
+  businesses     Business[]
+  productMasters ProductMaster[]
 }
 
 // A merchant's business profile (section 3)
@@ -514,4 +588,341 @@ model ResponderInteraction {
   connection ChannelConnection @relation(fields: [connectionId], references: [id])
 
   @@index([userId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1B — Geographic Hierarchy, Address, Business/Branch, Product Master/Offer.
+//
+// Additive foundation: MerchantProfile/Product and everything built on them (Cart, Order, QR,
+// Wallet, Affiliate) are untouched and keep working exactly as before. Every existing
+// MerchantProfile/Product is backfilled into the new Business/Branch/ProductMaster/MerchantOffer
+// tables below via `Business.legacyMerchantProfileId` / `MerchantOffer.legacyProductId` — plain
+// (non-FK) string pointers, so the old and new structures can be decoupled cleanly once every
+// consumer has migrated in a later phase (section: Compatibility Layer).
+// ---------------------------------------------------------------------------
+
+// Country-specific attributes (currency, phone format, timezone, language) live only here —
+// never hardcoded in application logic (section: Country).
+model Country {
+  id              String   @id @default(uuid())
+  name            String
+  nameArabic      String?
+  nameEnglish     String?
+  isoCode2        String   @unique // "SY", "DE"
+  isoCode3        String?  @unique // "SYR", "DEU"
+  currencyCode    String // ISO 4217, e.g. "SYP", "EUR"
+  phoneCode       String? // "+963"
+  defaultLanguage String   @default("ar")
+  timezone        String?
+  isActive        Boolean  @default(true)
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  geoUnits  GeoUnit[]
+  addresses Address[]
+
+  businesses Business[]
+  branches   Branch[]
+}
+
+enum GeoLevel {
+  REGION
+  CITY
+  AREA
+}
+
+// Self-referential so a country's actual administrative depth is whatever it really has — some
+// countries skip REGION and go Country -> City directly, others need >4 levels one day, and
+// this model doesn't need a migration either way (section: Geographic Level — "دون إعادة بناء").
+model GeoUnit {
+  id          String   @id @default(uuid())
+  countryId   String
+  level       GeoLevel
+  parentId    String?
+  name        String
+  nameArabic  String?
+  nameEnglish String?
+  code        String?
+  latitude    Float?
+  longitude   Float?
+  isActive    Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  country  Country   @relation(fields: [countryId], references: [id])
+  parent   GeoUnit?  @relation("GeoUnitHierarchy", fields: [parentId], references: [id])
+  children GeoUnit[] @relation("GeoUnitHierarchy")
+
+  addressesAsRegion  Address[]  @relation("AddressRegion")
+  addressesAsCity    Address[]  @relation("AddressCity")
+  addressesAsArea    Address[]  @relation("AddressArea")
+  businessesAsRegion Business[] @relation("BusinessRegion")
+  businessesAsCity   Business[] @relation("BusinessCity")
+  businessesAsArea   Business[] @relation("BusinessArea")
+  branchesAsRegion   Branch[]   @relation("BranchRegion")
+  branchesAsCity     Branch[]   @relation("BranchCity")
+  branchesAsArea     Branch[]   @relation("BranchArea")
+
+  @@index([countryId, level])
+  @@index([parentId])
+}
+
+enum AddressLabel {
+  HOME
+  WORK
+  OTHER
+}
+
+// General-purpose address foundation (section: Address Entity / Saved Addresses). Optionally
+// owned by a User (a saved address); Business/Branch reference their own Address rows too.
+model Address {
+  id             String        @id @default(uuid())
+  userId         String?
+  countryId      String
+  regionId       String?
+  cityId         String?
+  areaId         String?
+  street         String?
+  buildingNumber String?
+  postalCode     String?
+  additionalInfo String?
+  latitude       Float?
+  longitude      Float?
+  label          AddressLabel?
+  labelCustom    String? // free text when label = OTHER
+  isDefault      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user    User?    @relation(fields: [userId], references: [id])
+  country Country  @relation(fields: [countryId], references: [id])
+  region  GeoUnit? @relation("AddressRegion", fields: [regionId], references: [id])
+  city    GeoUnit? @relation("AddressCity", fields: [cityId], references: [id])
+  area    GeoUnit? @relation("AddressArea", fields: [areaId], references: [id])
+
+  businessRegisteredAt Business? @relation("BusinessRegisteredAddress")
+  branchAt             Branch?   @relation("BranchAddress")
+
+  @@index([userId])
+}
+
+enum BusinessStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  CLOSED
+  ARCHIVED
+}
+
+// Independent of User — an account can own/work at several Businesses, and a Business can have
+// several members, via BusinessMember (section: Business Entity / Business Ownership). Replaces
+// the old MerchantProfile's rigid "one merchant profile per user" shape going forward; the old
+// table stays untouched and fully functional during the transition (section: Existing
+// MerchantProfile / Compatibility Layer).
+model Business {
+  id          String         @id @default(uuid())
+  name        String
+  legalName   String?
+  description String?
+  categoryId  String?
+  phone       String?
+  whatsapp    String?
+  email       String?
+  status      BusinessStatus @default(DRAFT)
+
+  countryId String
+  regionId  String?
+  cityId    String?
+  areaId    String?
+  latitude  Float?
+  longitude Float?
+
+  registeredAddressId String? @unique
+
+  // Plain reference (not a DB relation) to the MerchantProfile this row was backfilled from, or
+  // that was dual-created alongside a new one via POST /merchant/register — never enforced as an
+  // FK on purpose (section: Compatibility Layer).
+  legacyMerchantProfileId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category          Category? @relation(fields: [categoryId], references: [id])
+  country           Country   @relation(fields: [countryId], references: [id])
+  region            GeoUnit?  @relation("BusinessRegion", fields: [regionId], references: [id])
+  city              GeoUnit?  @relation("BusinessCity", fields: [cityId], references: [id])
+  area              GeoUnit?  @relation("BusinessArea", fields: [areaId], references: [id])
+  registeredAddress Address?  @relation("BusinessRegisteredAddress", fields: [registeredAddressId], references: [id])
+
+  members  BusinessMember[]
+  branches Branch[]
+  offers   MerchantOffer[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([countryId])
+  @@index([cityId])
+}
+
+enum BusinessMemberRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum BusinessMemberStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// Foundation only — fine-grained permissions per role/branch come in a later RBAC phase
+// (section: Business Ownership). For now this just answers "can this user act for this business".
+model BusinessMember {
+  id         String               @id @default(uuid())
+  businessId String
+  userId     String
+  role       BusinessMemberRole   @default(OWNER)
+  status     BusinessMemberStatus @default(ACTIVE)
+  createdAt  DateTime             @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([businessId, userId])
+  @@index([userId])
+  @@index([businessId])
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// A Business can have 0..N Branches — including zero (section: Business Without Physical
+// Branch — freelancers, online-only stores, at-home services never need one).
+model Branch {
+  id         String  @id @default(uuid())
+  businessId String
+  name       String
+  code       String?
+  phone      String?
+  email      String?
+  whatsapp   String?
+
+  countryId String
+  regionId  String?
+  cityId    String?
+  areaId    String?
+  latitude  Float?
+  longitude Float?
+
+  addressId    String?      @unique
+  openingHours Json? // foundation only — {mon: [{open, close}], ...} shape, not enforced here
+  status       BranchStatus @default(ACTIVE)
+  isMain       Boolean      @default(false) // set on the branch created during MerchantProfile backfill
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  country  Country  @relation(fields: [countryId], references: [id])
+  region   GeoUnit? @relation("BranchRegion", fields: [regionId], references: [id])
+  city     GeoUnit? @relation("BranchCity", fields: [cityId], references: [id])
+  area     GeoUnit? @relation("BranchArea", fields: [areaId], references: [id])
+  address  Address? @relation("BranchAddress", fields: [addressId], references: [id])
+
+  offers MerchantOffer[]
+
+  @@index([businessId])
+  @@index([cityId])
+  @@index([areaId])
+  @@index([status])
+}
+
+enum ProductMasterStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+// The product itself — brand/model/specs only, never a price, stock level, or condition (those
+// are per-offer). Several MerchantOffers from different Businesses can point at the same
+// ProductMaster (section: Product Master).
+model ProductMaster {
+  id             String              @id @default(uuid())
+  name           String
+  brand          String?
+  model          String?
+  sku            String?
+  barcode        String?
+  categoryId     String?
+  description    String?
+  specifications Json?
+  status         ProductMasterStatus @default(ACTIVE)
+
+  // Plain reference to the single Product row this master was backfilled from (never a DB
+  // relation — same reasoning as Business.legacyMerchantProfileId).
+  legacyProductId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category Category?       @relation(fields: [categoryId], references: [id])
+  offers   MerchantOffer[]
+
+  @@index([categoryId])
+}
+
+enum ProductCondition {
+  NEW
+  USED
+  REFURBISHED
+  OPEN_BOX
+}
+
+enum OfferStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  OUT_OF_STOCK
+  ARCHIVED
+}
+
+// A Business/Branch's own offer of a ProductMaster — every merchant-specific attribute (price,
+// stock, condition, title override) lives here, never on ProductMaster (section: Merchant Offer).
+model MerchantOffer {
+  id              String  @id @default(uuid())
+  productMasterId String
+  businessId      String
+  branchId        String?
+
+  title       String? // overrides ProductMaster.name for this offer's display; falls back to it when unset
+  description String?
+  sku         String?
+
+  priceCents            Int
+  currency              String           @default("SYP")
+  memberDiscountEnabled Boolean          @default(false)
+  memberPriceCents      Int?
+  stock                 Int              @default(0)
+  condition             ProductCondition @default(NEW)
+  status                OfferStatus      @default(ACTIVE)
+
+  // Plain reference to the Product row this offer was backfilled from.
+  legacyProductId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  productMaster ProductMaster @relation(fields: [productMasterId], references: [id])
+  business      Business      @relation(fields: [businessId], references: [id])
+  branch        Branch?       @relation(fields: [branchId], references: [id])
+
+  @@index([productMasterId])
+  @@index([businessId])
+  @@index([branchId])
+  @@index([status])
 }

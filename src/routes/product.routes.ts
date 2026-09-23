@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Role } from "@prisma/client";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 
 export const productRouter = Router();
@@ -38,18 +39,18 @@ const createProductSchema = productFieldsSchema
 productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const parsed = createProductSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const result = await getOwnApprovedMerchant(req.user!.id);
   if ("error" in result) {
-    return res.status(403).json({ error: result.error });
+    return sendError(res, 403, "FORBIDDEN", result.error ?? "Forbidden");
   }
 
   if (parsed.data.categoryId) {
     const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
     if (!category) {
-      return res.status(404).json({ error: "Category not found" });
+      return sendError(res, 404, "NOT_FOUND", "Category not found");
     }
   }
 
@@ -63,7 +64,7 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res
 productRouter.get("/mine", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) {
-    return res.status(404).json({ error: "Merchant profile not found" });
+    return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   }
   const products = await prisma.product.findMany({
     where: { merchantId: merchant.id },
@@ -77,13 +78,13 @@ const updateProductSchema = productFieldsSchema.partial().extend({ isActive: z.b
 productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const parsed = updateProductSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
   if (!merchant || !existing || existing.merchantId !== merchant.id) {
-    return res.status(404).json({ error: "Product not found" });
+    return sendError(res, 404, "NOT_FOUND", "Product not found");
   }
 
   const product = await prisma.product.update({ where: { id: existing.id }, data: parsed.data });
@@ -100,7 +101,7 @@ const listProductsSchema = z.object({
 productRouter.get("/", async (req, res) => {
   const parsed = listProductsSchema.safeParse(req.query);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const { merchantId, categoryId, q } = parsed.data;
 
@@ -119,7 +120,7 @@ productRouter.get("/", async (req, res) => {
 productRouter.get("/:id", async (req, res) => {
   const product = await prisma.product.findUnique({ where: { id: req.params.id } });
   if (!product || !product.isActive) {
-    return res.status(404).json({ error: "Product not found" });
+    return sendError(res, 404, "NOT_FOUND", "Product not found");
   }
   res.json(product);
 });

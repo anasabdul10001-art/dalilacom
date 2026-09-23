@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import { CommissionType, Role } from "@prisma/client";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 
 export const affiliateRouter = Router();
@@ -31,27 +32,27 @@ const addAffiliateSchema = z.object({
 affiliateRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const parsed = addAffiliateSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const result = await getOwnApprovedMerchant(req.user!.id);
   if ("error" in result) {
-    return res.status(403).json({ error: result.error });
+    return sendError(res, 403, "FORBIDDEN", result.error ?? "Forbidden");
   }
 
   if (parsed.data.commissionType === "PERCENT" && parsed.data.commissionValue > 100) {
-    return res.status(400).json({ error: "Percent commission can't exceed 100" });
+    return sendError(res, 400, "BAD_REQUEST", "Percent commission can't exceed 100");
   }
 
   const user = await prisma.user.findUnique({ where: { email: parsed.data.userEmail } });
   if (!user) {
-    return res.status(404).json({ error: "No user with that email" });
+    return sendError(res, 404, "NOT_FOUND", "No user with that email");
   }
 
   const existing = await prisma.merchantAffiliate.findUnique({
     where: { merchantId_userId: { merchantId: result.merchant.id, userId: user.id } },
   });
   if (existing) {
-    return res.status(409).json({ error: "This user is already one of your affiliates" });
+    return sendError(res, 409, "CONFLICT", "This user is already one of your affiliates");
   }
 
   const affiliate = await prisma.merchantAffiliate.create({
@@ -70,7 +71,7 @@ affiliateRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, r
 affiliateRouter.get("/", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) {
-    return res.status(404).json({ error: "Merchant profile not found" });
+    return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   }
 
   const affiliates = await prisma.merchantAffiliate.findMany({
@@ -110,16 +111,16 @@ const updateAffiliateSchema = z.object({
 affiliateRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const parsed = updateAffiliateSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   if (parsed.data.commissionType === "PERCENT" && (parsed.data.commissionValue ?? 0) > 100) {
-    return res.status(400).json({ error: "Percent commission can't exceed 100" });
+    return sendError(res, 400, "BAD_REQUEST", "Percent commission can't exceed 100");
   }
 
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   const existing = await prisma.merchantAffiliate.findUnique({ where: { id: req.params.id } });
   if (!merchant || !existing || existing.merchantId !== merchant.id) {
-    return res.status(404).json({ error: "Affiliate not found" });
+    return sendError(res, 404, "NOT_FOUND", "Affiliate not found");
   }
 
   const updated = await prisma.merchantAffiliate.update({ where: { id: existing.id }, data: parsed.data });
@@ -137,18 +138,18 @@ const clickSchema = z.object({
 affiliateRouter.post("/click", requireAuth, async (req, res) => {
   const parsed = clickSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const { productId, code } = parsed.data;
 
   const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product) {
-    return res.status(404).json({ error: "Product not found" });
+    return sendError(res, 404, "NOT_FOUND", "Product not found");
   }
 
   const affiliate = await prisma.merchantAffiliate.findUnique({ where: { referralCode: code } });
   if (!affiliate || !affiliate.isActive || affiliate.merchantId !== product.merchantId) {
-    return res.status(404).json({ error: "Invalid referral code" });
+    return sendError(res, 404, "NOT_FOUND", "Invalid referral code");
   }
 
   const existing = await prisma.affiliateReferral.findUnique({

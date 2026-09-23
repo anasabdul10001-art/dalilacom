@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { ChannelDriver, Prisma, Role, TopUpStatus } from "@prisma/client";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
@@ -47,10 +48,10 @@ adminRouter.get("/settings", async (_req, res) => {
 
 adminRouter.put("/settings", async (req, res) => {
   const parsed = settingsSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   const keys = parsed.data.payment?.localWallets?.map((w) => w.key) ?? [];
   if (new Set(keys).size !== keys.length || keys.includes("USDT_TRC20")) {
-    return res.status(400).json({ error: "مفاتيح المحافظ لازم تكون فريدة ومو USDT_TRC20" });
+    return sendError(res, 400, "BAD_REQUEST", "مفاتيح المحافظ لازم تكون فريدة ومو USDT_TRC20");
   }
   res.json(await saveSettings(parsed.data as any));
 });
@@ -70,12 +71,12 @@ adminRouter.get("/channels", async (_req, res) => {
 
 adminRouter.post("/channels", async (req, res) => {
   const parsed = channelSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   try {
     res.status(201).json(await prisma.socialChannel.create({ data: parsed.data }));
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return res.status(409).json({ error: "في قناة بنفس المفتاح" });
+      return sendError(res, 409, "CONFLICT", "في قناة بنفس المفتاح");
     }
     throw err;
   }
@@ -83,9 +84,9 @@ adminRouter.post("/channels", async (req, res) => {
 
 adminRouter.patch("/channels/:id", async (req, res) => {
   const parsed = channelSchema.pick({ name: true, isEnabled: true }).partial().safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.socialChannel.findUnique({ where: { id: req.params.id } });
-  if (!existing) return res.status(404).json({ error: "Channel not found" });
+  if (!existing) return sendError(res, 404, "NOT_FOUND", "Channel not found");
   res.json(await prisma.socialChannel.update({ where: { id: existing.id }, data: parsed.data }));
 });
 
@@ -105,7 +106,7 @@ adminRouter.get("/topups", async (req, res) => {
 
 adminRouter.post("/topups/:id/approve", async (req, res) => {
   const parsed = z.object({ amountCredits: z.number().int().positive() }).safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   const result = await prisma.$transaction(async (tx) => {
     const request = await tx.topUpRequest.findUnique({ where: { id: req.params.id } });
     if (!request) return { code: 404 as const };
@@ -119,19 +120,19 @@ adminRouter.post("/topups/:id/approve", async (req, res) => {
     await adjustBalance(tx, request.userId, parsed.data.amountCredits, "TOPUP", `${request.method}:${request.reference}`);
     return { code: 200 as const };
   });
-  if (result.code === 404) return res.status(404).json({ error: "Request not found" });
-  if (result.code === 409) return res.status(409).json({ error: "الطلب انعالج من قبل" });
+  if (result.code === 404) return sendError(res, 404, "NOT_FOUND", "Request not found");
+  if (result.code === 409) return sendError(res, 409, "CONFLICT", "الطلب انعالج من قبل");
   res.json({ id: req.params.id, status: "APPROVED" });
 });
 
 adminRouter.post("/topups/:id/reject", async (req, res) => {
   const parsed = z.object({ note: z.string().min(1).max(300) }).safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   const claimed = await prisma.topUpRequest.updateMany({
     where: { id: req.params.id, status: "PENDING" },
     data: { status: "REJECTED", verifiedBy: "ADMIN", note: parsed.data.note },
   });
-  if (claimed.count === 0) return res.status(409).json({ error: "الطلب غير موجود أو انعالج من قبل" });
+  if (claimed.count === 0) return sendError(res, 409, "CONFLICT", "الطلب غير موجود أو انعالج من قبل");
   res.json({ id: req.params.id, status: "REJECTED" });
 });
 
@@ -141,14 +142,14 @@ adminRouter.post("/wallet/adjust", async (req, res) => {
   const parsed = z
     .object({ userEmail: z.string().email(), amount: z.number().int().refine((n) => n !== 0), note: z.string().max(200).optional() })
     .safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
   const user = await prisma.user.findUnique({ where: { email: parsed.data.userEmail } });
-  if (!user) return res.status(404).json({ error: "No user with that email" });
+  if (!user) return sendError(res, 404, "NOT_FOUND", "No user with that email");
   try {
     const balance = await prisma.$transaction((tx) => adjustBalance(tx, user.id, parsed.data.amount, "ADJUSTMENT", parsed.data.note));
     res.json({ userId: user.id, balance });
   } catch (err) {
-    if (err instanceof InsufficientBalanceError) return res.status(409).json({ error: "الرصيد ما بيكفي للخصم" });
+    if (err instanceof InsufficientBalanceError) return sendError(res, 409, "CONFLICT", "الرصيد ما بيكفي للخصم");
     throw err;
   }
 });

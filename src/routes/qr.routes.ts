@@ -2,10 +2,12 @@ import { Router } from "express";
 import { z } from "zod";
 import { Role } from "@prisma/client";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { generateCurrentCode, findMatchingTimeStep } from "../services/qr.service";
 import { isMembershipActive } from "../services/membership.service";
 import { recordAffiliateCommissionIfReferred } from "../services/affiliate.service";
+import { qrRedeemRateLimiter, qrVerifyRateLimiter } from "../middleware/rateLimit";
 
 export const qrRouter = Router();
 
@@ -16,7 +18,7 @@ qrRouter.get("/mine", requireAuth, async (req, res) => {
     orderBy: { createdAt: "desc" },
   });
   if (!membership || !isMembershipActive(membership)) {
-    return res.status(404).json({ error: "No active membership" });
+    return sendError(res, 404, "NOT_FOUND", "No active membership");
   }
 
   const { code, expiresInSeconds } = generateCurrentCode(membership.qrSecret);
@@ -44,20 +46,20 @@ async function resolveVerifiedMembership(memberNumber: string, code: string) {
 }
 
 // Merchant: step 1 — scan & verify (read-only, section 20 "MEMBER VERIFIED")
-qrRouter.post("/verify", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+qrRouter.post("/verify", qrVerifyRateLimiter, requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const parsed = scanSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
-    return res.status(403).json({ error: "Merchant not approved" });
+    return sendError(res, 403, "FORBIDDEN", "Merchant not approved");
   }
 
   const result = await resolveVerifiedMembership(parsed.data.memberNumber, parsed.data.code);
   if ("error" in result) {
-    return res.status(400).json({ error: result.error });
+    return sendError(res, 400, "BAD_REQUEST", result.error ?? "Bad request");
   }
 
   const discount = await prisma.discount.findFirst({
@@ -79,20 +81,20 @@ const redeemSchema = z.object({
 });
 
 // Merchant: step 2 — enter bill amount & confirm (section 20 "Confirm Discount")
-qrRouter.post("/redeem", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const parsed = redeemSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
-    return res.status(403).json({ error: "Merchant not approved" });
+    return sendError(res, 403, "FORBIDDEN", "Merchant not approved");
   }
 
   const result = await resolveVerifiedMembership(parsed.data.memberNumber, parsed.data.code);
   if ("error" in result) {
-    return res.status(400).json({ error: result.error });
+    return sendError(res, 400, "BAD_REQUEST", result.error ?? "Bad request");
   }
   const { membership, matchedStep } = result;
 
@@ -143,7 +145,7 @@ qrRouter.post("/redeem", requireAuth, requireRole(Role.MERCHANT), async (req, re
   });
 
   if (!transaction) {
-    return res.status(409).json({ error: "This code was already redeemed" });
+    return sendError(res, 409, "CONFLICT", "This code was already redeemed");
   }
 
   res.status(201).json({

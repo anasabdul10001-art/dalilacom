@@ -14,11 +14,43 @@ services:
         generateValue: true
       - key: QR_TOKEN_TTL_SECONDS
         value: "30"
+      - key: NODE_ENV
+        value: "production"
       - key: CREDENTIALS_ENCRYPTION_KEY
         generateValue: true
       - key: PUBLIC_BASE_URL
         value: "https://dalilacom-api.onrender.com"
       - key: ANTHROPIC_API_KEY
+        sync: false
+      # Set once in the Render dashboard to bootstrap the first admin (never generated/committed —
+      # section: Admin Credentials). Leave unset after the admin exists; use /auth/forgot-password
+      # to change the password afterwards.
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      # Optional SMTP provider for real email delivery. Without it, verification/reset emails are
+      # just logged server-side (visible in Render's logs) — the flows still work end to end.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: EMAIL_VERIFICATION_TOKEN_TTL_HOURS
+        value: "24"
+      - key: PASSWORD_RESET_TOKEN_TTL_MINUTES
+        value: "30"
+      # Comma-separated browser origins for cross-origin API calls (section: CORS). Leave unset
+      # until there's an actual separate frontend domain — same-origin pages (public/app,
+      # public/admin.html) work regardless.
+      - key: CORS_ALLOWED_ORIGINS
         sync: false
 
 databases:

@@ -2,7 +2,10 @@ import { Router } from "express";
 import { z } from "zod";
 import { MerchantApprovalStatus, Role } from "@prisma/client";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { createBusinessFromMerchantProfile } from "../services/business.service";
+import { getDefaultCountry } from "../services/geo.service";
 
 export const merchantRouter = Router();
 
@@ -20,24 +23,31 @@ const registerMerchantSchema = z.object({
 merchantRouter.post("/register", requireAuth, async (req, res) => {
   const parsed = registerMerchantSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const existing = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (existing) {
-    return res.status(409).json({ error: "Merchant profile already exists" });
+    return sendError(res, 409, "CONFLICT", "Merchant profile already exists");
   }
 
   const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
   if (!category) {
-    return res.status(404).json({ error: "Category not found" });
+    return sendError(res, 404, "NOT_FOUND", "Category not found");
   }
+
+  // Read outside the transaction (just a lookup) — the write itself, including the new
+  // Business/Branch dual-write, stays atomic with the legacy MerchantProfile creation below
+  // (section: Backfill / Compatibility Layer — every new registration builds both structures
+  // from day one, so there's nothing left to backfill once this ships).
+  const defaultCountry = await getDefaultCountry();
 
   const merchant = await prisma.$transaction(async (tx) => {
     const profile = await tx.merchantProfile.create({
       data: { userId: req.user!.id, ...parsed.data },
     });
     await tx.user.update({ where: { id: req.user!.id }, data: { role: Role.MERCHANT } });
+    await createBusinessFromMerchantProfile(tx, profile, defaultCountry.id);
     return profile;
   });
 
@@ -54,7 +64,7 @@ merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, r
     include: { discounts: true },
   });
   if (!merchant) {
-    return res.status(404).json({ error: "Merchant profile not found" });
+    return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   }
   res.json(merchant);
 });
@@ -77,7 +87,7 @@ const listMerchantsAdminSchema = z.object({
 merchantRouter.get("/list", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   const parsed = listMerchantsAdminSchema.safeParse(req.query);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const merchants = await prisma.merchantProfile.findMany({
     where: parsed.data.status ? { approvalStatus: parsed.data.status } : {},
@@ -109,7 +119,7 @@ const searchMerchantsSchema = z.object({
 merchantRouter.get("/", async (req, res) => {
   const parsed = searchMerchantsSchema.safeParse(req.query);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const { q, categoryId, lat, lng, radiusKm } = parsed.data;
 
@@ -143,7 +153,7 @@ merchantRouter.get("/:id", async (req, res) => {
     include: { category: true, discounts: { where: { isActive: true } } },
   });
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
-    return res.status(404).json({ error: "Merchant not found" });
+    return sendError(res, 404, "NOT_FOUND", "Merchant not found");
   }
   res.json(merchant);
 });
@@ -161,7 +171,7 @@ const rejectSchema = z.object({ reason: z.string().min(3) });
 merchantRouter.post("/:id/reject", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   const parsed = rejectSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const merchant = await prisma.merchantProfile.update({
     where: { id: req.params.id },
@@ -178,15 +188,15 @@ const createDiscountSchema = z.object({
 merchantRouter.post("/discounts", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const parsed = createDiscountSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) {
-    return res.status(404).json({ error: "Merchant profile not found" });
+    return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   }
   if (merchant.approvalStatus !== "APPROVED") {
-    return res.status(403).json({ error: "Merchant is not approved yet" });
+    return sendError(res, 403, "FORBIDDEN", "Merchant is not approved yet");
   }
 
   const discount = await prisma.discount.create({

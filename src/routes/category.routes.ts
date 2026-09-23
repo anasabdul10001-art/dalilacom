@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Role } from "@prisma/client";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 
 export const categoryRouter = Router();
@@ -33,14 +34,14 @@ const createCategorySchema = z.object({
 categoryRouter.post("/", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   const parsed = createCategorySchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const { name, parentId } = parsed.data;
 
   if (parentId) {
     const parent = await prisma.category.findUnique({ where: { id: parentId } });
     if (!parent) {
-      return res.status(404).json({ error: "Parent category not found" });
+      return sendError(res, 404, "NOT_FOUND", "Parent category not found");
     }
   }
 
@@ -65,21 +66,21 @@ const updateCategorySchema = z.object({
 categoryRouter.patch("/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   const parsed = updateCategorySchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const existing = await prisma.category.findUnique({ where: { id: req.params.id } });
   if (!existing) {
-    return res.status(404).json({ error: "Category not found" });
+    return sendError(res, 404, "NOT_FOUND", "Category not found");
   }
 
   if (parsed.data.parentId) {
     if (parsed.data.parentId === existing.id) {
-      return res.status(400).json({ error: "A category can't be its own parent" });
+      return sendError(res, 400, "BAD_REQUEST", "A category can't be its own parent");
     }
     const parent = await prisma.category.findUnique({ where: { id: parsed.data.parentId } });
     if (!parent) {
-      return res.status(404).json({ error: "Parent category not found" });
+      return sendError(res, 404, "NOT_FOUND", "Parent category not found");
     }
   }
 
@@ -92,7 +93,7 @@ categoryRouter.patch("/:id", requireAuth, requireRole(Role.ADMIN), async (req, r
 categoryRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   const existing = await prisma.category.findUnique({ where: { id: req.params.id } });
   if (!existing) {
-    return res.status(404).json({ error: "Category not found" });
+    return sendError(res, 404, "NOT_FOUND", "Category not found");
   }
 
   const [childCount, merchantCount, productCount] = await Promise.all([
@@ -101,8 +102,7 @@ categoryRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), async (req, 
     prisma.product.count({ where: { categoryId: existing.id } }),
   ]);
   if (childCount > 0 || merchantCount > 0 || productCount > 0) {
-    return res.status(409).json({
-      error: "Category is still in use and can't be deleted",
+    return sendError(res, 409, "CATEGORY_IN_USE", "Category is still in use and can't be deleted", {
       childCount,
       merchantCount,
       productCount,

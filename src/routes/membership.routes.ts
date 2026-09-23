@@ -2,6 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../prisma";
+import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { Role } from "@prisma/client";
 
@@ -27,7 +28,7 @@ const createPlanSchema = z.object({
 membershipRouter.post("/plans", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   const parsed = createPlanSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const plan = await prisma.membershipPlan.create({ data: parsed.data });
   res.status(201).json(plan);
@@ -50,11 +51,11 @@ const updatePlanSchema = z.object({
 membershipRouter.patch("/plans/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   const parsed = updatePlanSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
   const existing = await prisma.membershipPlan.findUnique({ where: { id: req.params.id } });
   if (!existing) {
-    return res.status(404).json({ error: "Plan not found" });
+    return sendError(res, 404, "NOT_FOUND", "Plan not found");
   }
   const plan = await prisma.membershipPlan.update({ where: { id: existing.id }, data: parsed.data });
   res.json(plan);
@@ -69,19 +70,19 @@ function generateMemberNumber(): string {
 membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
   const parsed = z.object({ planId: z.string().uuid() }).safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return sendValidationError(res, parsed.error);
   }
 
   const plan = await prisma.membershipPlan.findUnique({ where: { id: parsed.data.planId } });
   if (!plan || !plan.isActive) {
-    return res.status(404).json({ error: "Plan not found" });
+    return sendError(res, 404, "NOT_FOUND", "Plan not found");
   }
 
   const existingActive = await prisma.membership.findFirst({
     where: { userId: req.user!.id, status: "ACTIVE" },
   });
   if (existingActive) {
-    return res.status(409).json({ error: "User already has an active membership" });
+    return sendError(res, 409, "CONFLICT", "User already has an active membership");
   }
 
   const startDate = new Date();
@@ -114,7 +115,7 @@ membershipRouter.get("/me", requireAuth, async (req, res) => {
     include: { plan: true },
   });
   if (!membership) {
-    return res.status(404).json({ error: "No membership found" });
+    return sendError(res, 404, "NOT_FOUND", "No membership found");
   }
 
   const isExpired = membership.endDate.getTime() < Date.now();

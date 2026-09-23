@@ -7,11 +7,14 @@
     "postinstall": "prisma generate",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
     "deploy:migrate": "prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "backfill:1b": "tsx prisma/backfill-1b.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
@@ -19,7 +22,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.15",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -28,8 +34,12 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.7.0",
+    "@types/nodemailer": "^6.4.15",
+    "@types/supertest": "^6.0.2",
     "prisma": "^5.20.0",
+    "supertest": "^7.0.0",
     "tsx": "^4.19.1",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.2"
   }
 }
