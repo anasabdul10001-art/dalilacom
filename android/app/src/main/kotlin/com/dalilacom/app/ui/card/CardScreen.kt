@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.ui.ViewModelFactory
+import com.dalilacom.app.ui.common.QrCodeImage
 import com.dalilacom.app.ui.theme.DeepRed
 import com.dalilacom.app.ui.theme.PrimaryRed
 
@@ -122,6 +124,11 @@ private fun MembershipCardContent(state: CardUiState) {
         Spacer(Modifier.height(28.dp))
 
         state.code?.let { code ->
+            QrCodeImage(
+                content = "${state.memberNumber.orEmpty()}:$code",
+                modifier = Modifier.size(200.dp),
+            )
+            Spacer(Modifier.height(16.dp))
             Text("الكود الحالي", style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(8.dp))
             Text(

@@ -2,6 +2,7 @@ package com.dalilacom.app.ui.auth
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -29,10 +31,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.ui.ViewModelFactory
 
+private enum class SignupIntent { CUSTOMER, MERCHANT }
+
 @Composable
 fun RegisterScreen(
     factory: ViewModelFactory,
-    onRegisterSuccess: () -> Unit,
+    onRegisterSuccess: (registeringAsMerchant: Boolean) -> Unit,
     onNavigateToLogin: () -> Unit,
 ) {
     val viewModel: AuthViewModel = viewModel(factory = factory)
@@ -41,9 +45,10 @@ fun RegisterScreen(
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var signupIntent by remember { mutableStateOf(SignupIntent.CUSTOMER) }
 
     LaunchedEffect(uiState) {
-        if (uiState is AuthUiState.Success) onRegisterSuccess()
+        if (uiState is AuthUiState.Success) onRegisterSuccess(signupIntent == SignupIntent.MERCHANT)
     }
 
     Column(
@@ -54,7 +59,31 @@ fun RegisterScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("إنشاء حساب جديد", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
+
+        Text("بدك تسجّل كـ:", style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = signupIntent == SignupIntent.CUSTOMER,
+                onClick = { signupIntent = SignupIntent.CUSTOMER },
+                label = { Text("زائر") },
+            )
+            FilterChip(
+                selected = signupIntent == SignupIntent.MERCHANT,
+                onClick = { signupIntent = SignupIntent.MERCHANT },
+                label = { Text("تاجر") },
+            )
+        }
+        if (signupIntent == SignupIntent.MERCHANT) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "رح نطلب منك بيانات محلك بعد إنشاء الحساب",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Spacer(Modifier.height(20.dp))
 
         OutlinedTextField(
             value = fullName,

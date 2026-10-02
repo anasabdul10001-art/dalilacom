@@ -30,14 +30,10 @@ function fmt(cents) {
 }
 
 function errMsg(data, fallback) {
-  if (!data) return fallback;
+  if (!data || !data.error) return fallback;
   if (typeof data.error === "string") return data.error;
-  if (data.error && data.error.formErrors && data.error.formErrors.length) return data.error.formErrors.join("، ");
-  if (data.error && typeof data.error === "object") {
-    const first = Object.values(data.error.fieldErrors || {}).flat()[0];
-    if (first) return first;
-  }
-  return fallback;
+  const fieldError = Object.values((data.error.details && data.error.details.fieldErrors) || {}).flat()[0];
+  return fieldError || data.error.message || fallback;
 }
 
 async function api(method, path, body) {

@@ -62,6 +62,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    // Keystore-backed EncryptedSharedPreferences for the JWT (section: Android Token Storage).
+    implementation("androidx.security:security-crypto:1.1.0")
+
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

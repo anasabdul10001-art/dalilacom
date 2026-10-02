@@ -263,3 +263,30 @@ authRouter.post("/reset-password", resetPasswordRateLimiter, async (req, res) =>
   await logSecurityEvent({ userId: record.userId, type: "PASSWORD_RESET_COMPLETED", req });
   return res.json({ message: "تم تغيير كلمة السر بنجاح، سجّل الدخول من جديد" });
 });
+
+/* ---------------- change password (signed-in) ---------------- */
+
+const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) });
+
+// Lets a signed-in user rotate their own password without needing email delivery — the old token
+// is revoked (tokenVersion bump) and a fresh one is returned so this device stays signed in.
+authRouter.post("/change-password", loginRateLimiter, requireAuth, async (req, res) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
+  if (!(await bcrypt.compare(parsed.data.currentPassword, user.passwordHash))) {
+    await logSecurityEvent({ userId: user.id, type: "LOGIN_FAILURE", req, metadata: { reason: "bad_current_password" } });
+    return sendError(res, 401, "AUTH_INVALID_CREDENTIALS", "كلمة السر الحالية غير صحيحة");
+  }
+  if (parsed.data.newPassword === parsed.data.currentPassword) {
+    return sendError(res, 400, "BAD_REQUEST", "كلمة السر الجديدة لازم تختلف عن الحالية");
+  }
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 12), tokenVersion: { increment: 1 } },
+  });
+  await logSecurityEvent({ userId: user.id, type: "PASSWORD_RESET_COMPLETED", req, metadata: { via: "change_password" } });
+  const token = signAuthToken({ sub: updated.id, role: updated.role, tokenVersion: updated.tokenVersion });
+  return res.json({ token, message: "تم تغيير كلمة السر" });
+});

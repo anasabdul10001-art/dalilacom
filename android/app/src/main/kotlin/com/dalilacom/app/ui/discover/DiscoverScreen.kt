@@ -1,5 +1,6 @@
 package com.dalilacom.app.ui.discover
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +29,7 @@ import com.dalilacom.app.data.network.MerchantDto
 import com.dalilacom.app.ui.ViewModelFactory
 
 @Composable
-fun DiscoverScreen(factory: ViewModelFactory) {
+fun DiscoverScreen(factory: ViewModelFactory, onMerchantClick: (String) -> Unit) {
     val viewModel: DiscoverViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -68,15 +69,15 @@ fun DiscoverScreen(factory: ViewModelFactory) {
             Text("ما في نتائج", style = MaterialTheme.typography.bodyMedium)
         } else {
             LazyColumn {
-                items(state.merchants) { merchant -> MerchantRow(merchant) }
+                items(state.merchants) { merchant -> MerchantRow(merchant, onClick = { onMerchantClick(merchant.id) }) }
             }
         }
     }
 }
 
 @Composable
-private fun MerchantRow(merchant: MerchantDto) {
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+private fun MerchantRow(merchant: MerchantDto, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable(onClick = onClick)) {
         Column(Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

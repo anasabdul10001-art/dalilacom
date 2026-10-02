@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,13 +34,17 @@ import androidx.navigation.NavHostController
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.card.CardScreen
+import com.dalilacom.app.ui.cart.CartScreen
 import com.dalilacom.app.ui.discover.DiscoverScreen
+import com.dalilacom.app.ui.orders.OrdersScreen
 import com.dalilacom.app.ui.profile.ProfileScreen
 
 private enum class HomeTab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     Home("الرئيسية", Icons.Filled.Home),
     Card("بطاقتي", Icons.Filled.CreditCard),
     Discover("اكتشف", Icons.Filled.Search),
+    Cart("السلة", Icons.Filled.ShoppingCart),
+    Orders("طلباتي", Icons.AutoMirrored.Filled.ListAlt),
     Profile("حسابي", Icons.Filled.Person),
 }
 
@@ -65,12 +71,15 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
             when (selectedTab) {
                 HomeTab.Home -> WelcomeTab(onGoToCard = { selectedTab = HomeTab.Card }, onGoToDiscover = { selectedTab = HomeTab.Discover })
                 HomeTab.Card -> CardScreen(factory)
-                HomeTab.Discover -> DiscoverScreen(factory)
-                HomeTab.Profile -> ProfileScreen(container.authRepository) {
-                    rootNavController.navigate("login") {
-                        popUpTo(0)
-                    }
-                }
+                HomeTab.Discover -> DiscoverScreen(factory, onMerchantClick = { id -> rootNavController.navigate("merchant/$id") })
+                HomeTab.Cart -> CartScreen(factory, onCheckoutSuccess = { selectedTab = HomeTab.Orders })
+                HomeTab.Orders -> OrdersScreen(factory, onOrderClick = { id -> rootNavController.navigate("order/$id") })
+                HomeTab.Profile -> ProfileScreen(
+                    container = container,
+                    onLoggedOut = { rootNavController.navigate("login") { popUpTo(0) } },
+                    onRegisterMerchant = { rootNavController.navigate("merchantRegister") },
+                    onOpenMerchantMode = { rootNavController.navigate("merchantMode") },
+                )
             }
         }
     }

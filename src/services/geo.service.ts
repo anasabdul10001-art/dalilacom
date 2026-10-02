@@ -54,9 +54,25 @@ export async function validateGeoSelection(selection: GeoSelection): Promise<voi
   }
 }
 
-/** The platform's current default country — seeded once by the Phase 1B backfill script. */
+export const DEFAULT_COUNTRY = {
+  name: "Syria",
+  nameArabic: "سوريا",
+  nameEnglish: "Syria",
+  isoCode2: "SY",
+  isoCode3: "SYR",
+  currencyCode: "SYP",
+  phoneCode: "+963",
+  defaultLanguage: "ar",
+  timezone: "Asia/Damascus",
+};
+
+/**
+ * The platform's default country (the oldest one configured). Self-healing: if none exists yet
+ * (fresh database, CI) the Syria reference row is created on the spot, so merchant registration
+ * never depends on the backfill having run first.
+ */
 export async function getDefaultCountry() {
-  const country = await prisma.country.findFirst({ orderBy: { createdAt: "asc" } });
-  if (!country) throw new Error("No country is configured — run the Phase 1B backfill first");
-  return country;
+  const existing = await prisma.country.findFirst({ orderBy: { createdAt: "asc" } });
+  if (existing) return existing;
+  return prisma.country.upsert({ where: { isoCode2: DEFAULT_COUNTRY.isoCode2 }, update: {}, create: DEFAULT_COUNTRY });
 }

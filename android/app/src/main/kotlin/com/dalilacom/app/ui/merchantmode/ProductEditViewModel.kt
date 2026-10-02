@@ -1,0 +1,136 @@
+package com.dalilacom.app.ui.merchantmode
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.dalilacom.app.data.network.CreateProductRequest
+import com.dalilacom.app.data.network.UpdateProductRequest
+import com.dalilacom.app.data.repository.DiscoverRepository
+import com.dalilacom.app.data.repository.ProductRepository
+import com.dalilacom.app.ui.merchant.CategoryOption
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class ProductEditUiState(
+    val isNew: Boolean = true,
+    val isLoading: Boolean = true,
+    val name: String = "",
+    val description: String = "",
+    val priceText: String = "",
+    val stockText: String = "0",
+    val sku: String = "",
+    val memberDiscountEnabled: Boolean = false,
+    val memberPriceText: String = "",
+    val isActive: Boolean = true,
+    val categoryOptions: List<CategoryOption> = emptyList(),
+    val selectedCategoryId: String? = null,
+    val isSaving: Boolean = false,
+    val saved: Boolean = false,
+    val error: String? = null,
+)
+
+class ProductEditViewModel(
+    private val productRepository: ProductRepository,
+    private val discoverRepository: DiscoverRepository,
+    private val productId: String?,
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(ProductEditUiState(isNew = productId == null))
+    val uiState: StateFlow<ProductEditUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val categories = discoverRepository.getCategories()
+            val options = categories.flatMap { top ->
+                listOf(CategoryOption(top.id, top.name)) +
+                    top.children.map { CategoryOption(it.id, "${top.name} / ${it.name}") }
+            }
+            if (productId == null) {
+                _uiState.value = _uiState.value.copy(isLoading = false, categoryOptions = options)
+                return@launch
+            }
+            val product = productRepository.getProduct(productId)
+            if (product == null) {
+                _uiState.value = _uiState.value.copy(isLoading = false, categoryOptions = options, error = "تعذّر تحميل المنتج")
+                return@launch
+            }
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                categoryOptions = options,
+                name = product.name,
+                description = product.description.orEmpty(),
+                priceText = (product.priceCents / 100.0).toString(),
+                stockText = product.stock.toString(),
+                sku = "",
+                memberDiscountEnabled = product.memberDiscountEnabled,
+                memberPriceText = product.memberPriceCents?.let { (it / 100.0).toString() }.orEmpty(),
+                isActive = product.isActive,
+                selectedCategoryId = product.categoryId,
+            )
+        }
+    }
+
+    fun onNameChange(value: String) { _uiState.value = _uiState.value.copy(name = value) }
+    fun onDescriptionChange(value: String) { _uiState.value = _uiState.value.copy(description = value) }
+    fun onPriceChange(value: String) { _uiState.value = _uiState.value.copy(priceText = value) }
+    fun onStockChange(value: String) { _uiState.value = _uiState.value.copy(stockText = value) }
+    fun onSkuChange(value: String) { _uiState.value = _uiState.value.copy(sku = value) }
+    fun onMemberPriceChange(value: String) { _uiState.value = _uiState.value.copy(memberPriceText = value) }
+    fun onMemberDiscountToggle(enabled: Boolean) { _uiState.value = _uiState.value.copy(memberDiscountEnabled = enabled) }
+    fun onActiveToggle(active: Boolean) { _uiState.value = _uiState.value.copy(isActive = active) }
+    fun onCategorySelected(id: String?) { _uiState.value = _uiState.value.copy(selectedCategoryId = id) }
+
+    fun save() {
+        val state = _uiState.value
+        val priceCents = state.priceText.replace(",", ".").toDoubleOrNull()?.times(100)?.toInt()
+        val stock = state.stockText.toIntOrNull()
+        if (state.name.isBlank() || priceCents == null || priceCents <= 0 || stock == null || stock < 0) {
+            _uiState.value = state.copy(error = "تأكد من اسم المنتج والسعر والمخزون")
+            return
+        }
+        var memberPriceCents: Int? = null
+        if (state.memberDiscountEnabled) {
+            memberPriceCents = state.memberPriceText.replace(",", ".").toDoubleOrNull()?.times(100)?.toInt()
+            if (memberPriceCents == null || memberPriceCents <= 0 || memberPriceCents >= priceCents) {
+                _uiState.value = state.copy(error = "سعر العضو لازم يكون أقل من السعر الأصلي")
+                return
+            }
+        }
+
+        _uiState.value = state.copy(isSaving = true, error = null)
+        viewModelScope.launch {
+            val result = if (productId == null) {
+                productRepository.createProduct(
+                    CreateProductRequest(
+                        name = state.name.trim(),
+                        description = state.description.trim().ifBlank { null },
+                        priceCents = priceCents,
+                        categoryId = state.selectedCategoryId,
+                        stock = stock,
+                        sku = state.sku.trim().ifBlank { null },
+                        memberDiscountEnabled = state.memberDiscountEnabled,
+                        memberPriceCents = memberPriceCents,
+                    ),
+                )
+            } else {
+                productRepository.updateProduct(
+                    productId,
+                    UpdateProductRequest(
+                        name = state.name.trim(),
+                        description = state.description.trim().ifBlank { null },
+                        priceCents = priceCents,
+                        categoryId = state.selectedCategoryId,
+                        stock = stock,
+                        sku = state.sku.trim().ifBlank { null },
+                        memberDiscountEnabled = state.memberDiscountEnabled,
+                        memberPriceCents = memberPriceCents,
+                        isActive = state.isActive,
+                    ),
+                )
+            }
+            result
+                .onSuccess { _uiState.value = _uiState.value.copy(isSaving = false, saved = true) }
+                .onFailure { _uiState.value = _uiState.value.copy(isSaving = false, error = it.message) }
+        }
+    }
+}

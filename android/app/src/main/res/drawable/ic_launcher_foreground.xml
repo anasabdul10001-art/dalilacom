@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Ribbon-style "D": a flag-like bar on the left that wraps round into the bowl -->
+    <path
+        android:fillColor="#BA2A34"
+        android:fillType="evenOdd"
+        android:pathData="M34,28 H58 C74,28 84,38 84,54 C84,70 74,80 58,80 H34 Z M46,40 V68 H58 C66,68 72,62 72,54 C72,46 66,40 58,40 Z" />
+    <!-- Black diagonal wedge (the "N" cut) inside the counter -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M46,68 L46,48 L58,68 Z" />
+    <!-- Upward arrow (movement / progress) -->
+    <path
+        android:fillColor="#BA2A34"
+        android:pathData="M61,50 L65.5,42 L70,50 H67.5 V64 H63.5 V50 Z" />
+</vector>

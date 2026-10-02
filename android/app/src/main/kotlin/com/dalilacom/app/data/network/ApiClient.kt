@@ -10,6 +10,7 @@ import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.util.concurrent.TimeUnit
 
 // The live backend deployed on Render (see dalilacom/render.yaml in the repo root).
 private const val BASE_URL = "https://dalilacom-api.onrender.com/"
@@ -32,6 +33,12 @@ object ApiClient {
     fun create(tokenStore: TokenStore): ApiService {
         val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
         val client = OkHttpClient.Builder()
+            // The backend runs on Render's free tier, which spins the service down after
+            // ~15 minutes idle and can take 30-60+ seconds to wake back up on the next
+            // request — OkHttp's 10s defaults would time out on almost every cold start.
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
             .addInterceptor(AuthInterceptor(tokenStore))
             .addInterceptor(logging)
             .build()

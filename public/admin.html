@@ -91,6 +91,7 @@
     <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 خطط العضوية</div>
     <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
     <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
+    <div class="logout" onclick="changePassword()">🔑 تغيير كلمة السر</div>
     <div class="logout" onclick="logout()">⏻ تسجيل خروج</div>
   </div>
 
@@ -239,6 +240,7 @@ async function api(method, path, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
+function errText(d, f) { const e = d && d.error; if (!e) return f; if (typeof e === 'string') return e; const fe = Object.values((e.details && e.details.fieldErrors) || {}).flat()[0]; return fe || e.message || f; }
 function money(cents) { return (cents / 100).toFixed(2); }
 
 // ---- auth ----
@@ -262,6 +264,19 @@ async function login() {
   state.token = data.token;
   localStorage.setItem('admin_token', data.token);
   enterApp();
+}
+
+async function changePassword() {
+  const currentPassword = prompt('كلمة السر الحالية؟');
+  if (!currentPassword) return;
+  const newPassword = prompt('كلمة السر الجديدة (12 خانة على الأقل)؟');
+  if (!newPassword) return;
+  if (newPassword.length < 12) { alert('كلمة السر الجديدة لازم تكون 12 خانة على الأقل'); return; }
+  const { ok, data } = await api('POST', '/auth/change-password', { currentPassword, newPassword });
+  if (!ok) { alert(errText(data, 'تعذّر تغيير كلمة السر')); return; }
+  state.token = data.token;
+  localStorage.setItem('admin_token', data.token);
+  alert('تم تغيير كلمة السر ✅');
 }
 
 function logout() {
@@ -352,7 +367,7 @@ async function addCategory() {
   const parentId = document.getElementById('cat-parent').value || undefined;
   if (!name) return;
   const { ok, data } = await api('POST', '/categories', { name, parentId });
-  if (!ok) { alert(data.error?.formErrors || data.error || 'خطأ'); return; }
+  if (!ok) { alert(errText(data, 'خطأ')); return; }
   document.getElementById('cat-name').value = '';
   loadCategories();
 }
@@ -360,7 +375,7 @@ async function saveCategory(id) {
   const name = document.getElementById('cat-name-' + id).value.trim();
   if (!name) return;
   const { ok, data } = await api('PATCH', '/categories/' + id, { name });
-  if (!ok) alert(data.error || 'تعذّر الحفظ');
+  if (!ok) alert(errText(data, 'تعذّر الحفظ'));
   loadCategories();
 }
 async function deleteCategory(id) {
@@ -399,7 +414,7 @@ async function addPlan() {
   const currency = document.getElementById('plan-currency').value.trim() || 'EUR';
   if (!name || !durationDays) return;
   const { ok, data } = await api('POST', '/membership/plans', { name, durationDays, priceCents, currency });
-  if (!ok) { alert(JSON.stringify(data.error) || 'خطأ'); return; }
+  if (!ok) { alert(errText(data, 'خطأ')); return; }
   document.getElementById('plan-name').value = '';
   loadPlans();
 }
@@ -409,7 +424,7 @@ async function savePlan(id) {
   const priceCents = Math.round(parseFloat(document.getElementById('plan-price-' + id).value) * 100);
   const currency = document.getElementById('plan-currency-' + id).value.trim();
   const { ok, data } = await api('PATCH', '/membership/plans/' + id, { name, durationDays, priceCents, currency });
-  if (!ok) alert(JSON.stringify(data.error) || 'تعذّر الحفظ');
+  if (!ok) alert(errText(data, 'تعذّر الحفظ'));
   loadPlans();
 }
 async function togglePlan(id, current) {
@@ -446,7 +461,7 @@ async function saveResponderSettings() {
     payment: { usdtTrc20Address: document.getElementById('rs-usdt').value.trim(), localWallets: wallets },
   });
   const msg = document.getElementById('rs-msg');
-  msg.textContent = ok ? '✅ انحفظت' : '❌ ' + (typeof data.error === 'string' ? data.error : 'تحقق من القيم (مفاتيح المحافظ بأحرف كبيرة وأرقام و _)');
+  msg.textContent = ok ? '✅ انحفظت' : '❌ ' + errText(data, 'تحقق من القيم (مفاتيح المحافظ بأحرف كبيرة وأرقام و _)');
 }
 async function loadChannels() {
   const { ok, data } = await api('GET', '/admin/channels');
@@ -460,7 +475,7 @@ async function addChannel() {
   const { ok, data } = await api('POST', '/admin/channels', {
     key: document.getElementById('ch-key').value.trim(), name: document.getElementById('ch-name').value.trim(), driver: document.getElementById('ch-driver').value,
   });
-  if (!ok) { alert(typeof data.error === 'string' ? data.error : 'تحقق من المفتاح (a-z, 0-9, - _) والاسم'); return; }
+  if (!ok) { alert(errText(data, 'تحقق من المفتاح (a-z, 0-9, - _) والاسم')); return; }
   document.getElementById('ch-key').value = ''; document.getElementById('ch-name').value = '';
   loadChannels();
 }
@@ -489,7 +504,7 @@ async function approveTopup(id) {
   const amountCredits = parseInt(v, 10);
   if (!amountCredits || amountCredits <= 0) return;
   const { ok, data } = await api('POST', '/admin/topups/' + id + '/approve', { amountCredits });
-  if (!ok) alert(data.error || 'خطأ');
+  if (!ok) alert(errText(data, 'خطأ'));
   loadTopups();
 }
 async function rejectTopup(id) {
@@ -500,7 +515,7 @@ async function adjustWallet() {
   const { ok, data } = await api('POST', '/admin/wallet/adjust', {
     userEmail: document.getElementById('adj-email').value.trim(), amount: parseInt(document.getElementById('adj-amount').value, 10), note: document.getElementById('adj-note').value.trim() || undefined,
   });
-  alert(ok ? 'الرصيد الجديد: ' + data.balance : (typeof data.error === 'string' ? data.error : 'تحقق من البيانات'));
+  alert(ok ? 'الرصيد الجديد: ' + data.balance : errText(data, 'تحقق من البيانات'));
 }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 

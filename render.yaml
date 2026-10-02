@@ -3,7 +3,7 @@ services:
     name: dalilacom-api
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build && npm run deploy:migrate && npm run prisma:seed
+    buildCommand: npm install --include=dev && npm run build && npm run deploy:migrate && npm run prisma:seed && npm run backfill:1b
     startCommand: npm start
     envVars:
       - key: DATABASE_URL

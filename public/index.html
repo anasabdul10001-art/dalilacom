@@ -214,6 +214,7 @@
 </div>
 
 <script>
+function errText(d, f) { const e = d && d.error; if (!e) return f; if (typeof e === 'string') return e; const fe = Object.values((e.details && e.details.fieldErrors) || {}).flat()[0]; return fe || e.message || f; }
 const state = { customerToken: null, merchantToken: null, adminToken: null, categories: [] };
 
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
@@ -292,7 +293,7 @@ async function showQr() {
   const { ok, data } = await api('GET', '/qr/mine', null, state.customerToken);
   document.getElementById('qr-display').innerHTML = ok
     ? `<div>رقم العضوية: <b>${data.memberNumber}</b></div><code class="qr">${data.code}</code><div class="muted">صالح لـ ${data.expiresInSeconds} ثانية إضافية — يتغيّر كل 30 ثانية</div>`
-    : `<div class="muted">${data.error || 'لا يوجد عضوية فعالة'}</div>`;
+    : `<div class="muted">${errText(data, 'لا يوجد عضوية فعالة')}</div>`;
 }
 
 // ---- discovery ----
@@ -346,7 +347,7 @@ async function removeCartItem(id) {
 async function checkout() {
   const { ok, data } = await api('POST', '/cart/checkout', null, state.customerToken);
   if (ok) { alert('تم إنشاء ' + data.length + ' طلب/طلبات!'); loadCart(); loadMyOrders(); }
-  else alert('خطأ: ' + (data.error?.error || data.error || JSON.stringify(data)));
+  else alert('خطأ: ' + errText(data, JSON.stringify(data)));
 }
 async function loadMyOrders() {
   const { data } = await api('GET', '/orders/mine', null, state.customerToken);
@@ -404,7 +405,7 @@ async function loadMerchantMe() {
   const { ok, data } = await api('GET', '/merchant/me', null, state.merchantToken);
   document.getElementById('merchant-me').innerHTML = ok
     ? `<div>${data.businessName} — حالة الموافقة: <b>${data.approvalStatus}</b>${data.rejectionReason ? ' — سبب الرفض: ' + data.rejectionReason : ''}</div>`
-    : `<div class="muted">${data.error}</div>`;
+    : `<div class="muted">${errText(data, 'خطأ')}</div>`;
 }
 async function addDiscount() {
   await api('POST', '/merchant/discounts', {
@@ -436,7 +437,7 @@ async function verifyQr() {
   }, state.merchantToken);
   document.getElementById('scan-result').innerHTML = ok
     ? `<div class="status ok">✅ MEMBER VERIFIED: ${data.member.fullName} — حسم: ${data.discount ? data.discount.percent + '%' : 'لا يوجد'}</div>`
-    : `<div class="status bad">${data.error}</div>`;
+    : `<div class="status bad">${errText(data, 'خطأ')}</div>`;
 }
 async function redeemQr() {
   const { ok, data } = await api('POST', '/qr/redeem', {
@@ -446,7 +447,7 @@ async function redeemQr() {
   }, state.merchantToken);
   document.getElementById('scan-result').innerHTML = ok
     ? `<div class="status ok">✅ تم! الفاتورة: ${money(data.billAmountCents)} — الحسم: ${money(data.discountAmountCents)} — النهائي: ${money(data.finalAmountCents)}</div>`
-    : `<div class="status bad">${data.error}</div>`;
+    : `<div class="status bad">${errText(data, 'خطأ')}</div>`;
 }
 async function loadMerchantOrders() {
   const { data } = await api('GET', '/orders/merchant', null, state.merchantToken);

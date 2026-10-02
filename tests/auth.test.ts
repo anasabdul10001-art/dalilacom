@@ -211,3 +211,25 @@ describe("Auth: password reset", () => {
     expect(res.body.error.code).toBe("RESET_TOKEN_EXPIRED");
   });
 });
+
+describe("Auth: change password", () => {
+  it("rotates the password, revokes the old token and returns a working new one", async () => {
+    const { email, password } = await registerUser();
+    const login = await request(app).post("/auth/login").send({ email, password });
+    const oldToken = login.body.token as string;
+
+    const wrong = await request(app).post("/auth/change-password").set("Authorization", `Bearer ${oldToken}`).send({ currentPassword: "nope-nope", newPassword: "brand-new-password-1" });
+    expect(wrong.status).toBe(401);
+
+    const ok = await request(app).post("/auth/change-password").set("Authorization", `Bearer ${oldToken}`).send({ currentPassword: password, newPassword: "brand-new-password-1" });
+    expect(ok.status).toBe(200);
+
+    const oldCheck = await request(app).post("/auth/logout").set("Authorization", `Bearer ${oldToken}`);
+    expect(oldCheck.status).toBe(401);
+    const newCheck = await request(app).post("/auth/logout").set("Authorization", `Bearer ${ok.body.token}`);
+    expect(newCheck.status).toBe(200);
+
+    expect((await request(app).post("/auth/login").send({ email, password })).status).toBe(401);
+    expect((await request(app).post("/auth/login").send({ email, password: "brand-new-password-1" })).status).toBe(200);
+  });
+});

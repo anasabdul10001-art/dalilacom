@@ -9,18 +9,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { createBusinessFromMerchantProfile } from "../src/services/business.service";
-
-const DEFAULT_COUNTRY = {
-  name: "Syria",
-  nameArabic: "سوريا",
-  nameEnglish: "Syria",
-  isoCode2: "SY",
-  isoCode3: "SYR",
-  currencyCode: "SYP",
-  phoneCode: "+963",
-  defaultLanguage: "ar",
-  timezone: "Asia/Damascus",
-};
+import { DEFAULT_COUNTRY } from "../src/services/geo.service";
 
 export async function runBackfill(prisma: PrismaClient, log: (...args: unknown[]) => void = console.log) {
   log("=== Phase 1B backfill starting ===");

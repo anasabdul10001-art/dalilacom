@@ -76,10 +76,146 @@ data class MerchantDto(
 data class ProductDto(
     val id: String,
     val merchantId: String,
+    val categoryId: String? = null,
     val name: String,
     val description: String? = null,
     val priceCents: Int,
     val memberDiscountEnabled: Boolean = false,
     val memberPriceCents: Int? = null,
     val stock: Int,
+    val isActive: Boolean = true,
 )
+
+@Serializable
+data class MerchantSummaryDto(val id: String, val businessName: String)
+
+@Serializable
+data class UserNameDto(val fullName: String)
+
+@Serializable
+data class CartProductDto(
+    val id: String,
+    val name: String,
+    val merchant: MerchantSummaryDto,
+    val stock: Int,
+    val isActive: Boolean,
+)
+
+@Serializable
+data class CartItemDto(
+    val id: String,
+    val quantity: Int,
+    val product: CartProductDto,
+    val regularPriceCents: Int,
+    val unitPriceCents: Int,
+    val lineTotalCents: Int,
+)
+
+@Serializable
+data class CartViewDto(val items: List<CartItemDto> = emptyList(), val totalCents: Int = 0)
+
+@Serializable
+data class AddCartItemRequest(val productId: String, val quantity: Int = 1)
+
+@Serializable
+data class UpdateCartItemRequest(val quantity: Int)
+
+@Serializable
+data class OrderItemDto(
+    val id: String,
+    val productId: String,
+    val productName: String,
+    val quantity: Int,
+    val unitPriceCents: Int,
+)
+
+@Serializable
+data class OrderDto(
+    val id: String,
+    val orderNumber: String,
+    val status: String,
+    val subtotalCents: Int,
+    val memberDiscountCents: Int = 0,
+    val totalCents: Int,
+    val cancelReason: String? = null,
+    val createdAt: String,
+    val merchant: MerchantSummaryDto? = null,
+    val user: UserNameDto? = null,
+    val items: List<OrderItemDto> = emptyList(),
+)
+
+@Serializable
+data class UpdateOrderStatusRequest(val status: String, val cancelReason: String? = null)
+
+@Serializable
+data class RegisterMerchantRequest(
+    val businessName: String,
+    val categoryId: String,
+    val address: String? = null,
+    val phone: String? = null,
+)
+
+@Serializable
+data class RegisterMerchantResponse(val id: String, val businessName: String, val approvalStatus: String)
+
+@Serializable
+data class VerifyRedeemRequest(val memberNumber: String, val code: String)
+
+@Serializable
+data class VerifiedMemberDto(val fullName: String, val memberNumber: String)
+
+@Serializable
+data class VerifyResponse(
+    val verified: Boolean,
+    val member: VerifiedMemberDto,
+    val discount: DiscountDto? = null,
+)
+
+@Serializable
+data class RedeemRequest(val memberNumber: String, val code: String, val billAmountCents: Int)
+
+@Serializable
+data class RedeemResponse(
+    val transactionRef: String,
+    val billAmountCents: Int,
+    val discountPercent: Int,
+    val discountAmountCents: Int,
+    val finalAmountCents: Int,
+    val createdAt: String,
+)
+
+@Serializable
+data class CreateProductRequest(
+    val name: String,
+    val description: String? = null,
+    val priceCents: Int,
+    val categoryId: String? = null,
+    val stock: Int = 0,
+    val sku: String? = null,
+    val memberDiscountEnabled: Boolean = false,
+    val memberPriceCents: Int? = null,
+)
+
+@Serializable
+data class UpdateProductRequest(
+    val name: String? = null,
+    val description: String? = null,
+    val priceCents: Int? = null,
+    val categoryId: String? = null,
+    val stock: Int? = null,
+    val sku: String? = null,
+    val memberDiscountEnabled: Boolean? = null,
+    val memberPriceCents: Int? = null,
+    val isActive: Boolean? = null,
+)
+
+@Serializable
+data class MerchantMeDto(
+    val id: String,
+    val businessName: String,
+    val approvalStatus: String,
+    val discounts: List<DiscountDto> = emptyList(),
+)
+
+@Serializable
+data class CreateDiscountRequest(val title: String, val percent: Int)
