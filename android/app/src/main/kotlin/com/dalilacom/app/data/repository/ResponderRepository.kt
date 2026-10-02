@@ -35,6 +35,8 @@ class ResponderRepository(private val api: ApiService) {
     suspend fun toggleConnection(id: String, active: Boolean) =
         call("تعذّر التعديل") { api.toggleConnection(id, ToggleRequest(active)) }
 
+    suspend fun posts(connectionId: String) = call("تعذّر جلب المنشورات") { api.getConnectionPosts(connectionId) }
+
     suspend fun rules() = call("تعذّر تحميل القواعد") { api.getResponderRules() }
     suspend fun createRule(request: CreateRuleRequest) = call("تعذّرت إضافة القاعدة") { api.createResponderRule(request) }
     suspend fun toggleRule(id: String, active: Boolean) =

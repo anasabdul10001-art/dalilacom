@@ -485,6 +485,8 @@ enum ChannelDriver {
   TELEGRAM
   GENERIC_WEBHOOK
   META_PENDING
+  FACEBOOK
+  INSTAGRAM
 }
 
 // A social channel the super admin offers. GENERIC_WEBHOOK lets new platforms be added without code.
@@ -555,6 +557,7 @@ model ResponderRule {
   replyTemplate  String        @default("")
   aiInstructions String        @default("")
   channelId      String? // null = applies to every connected channel
+  postIds        String[]      @default([]) // empty = any message/post; otherwise only comments on these posts (Facebook/Instagram)
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
 
@@ -582,11 +585,14 @@ model ResponderInteraction {
   reply           String?
   status          InteractionStatus
   reason          String?
+  postId          String? // the Facebook/Instagram post a comment was made on
+  externalId      String? // the platform's own id for this message/comment — makes webhook redelivery idempotent
   createdAt       DateTime          @default(now())
 
   user       User              @relation(fields: [userId], references: [id])
   connection ChannelConnection @relation(fields: [connectionId], references: [id])
 
+  @@unique([connectionId, externalId])
   @@index([userId, createdAt])
 }
 

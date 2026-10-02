@@ -52,6 +52,12 @@ services:
       # public/admin.html) work regardless.
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      # Facebook/Instagram auto-responder: from the Meta app dashboard (App secret) and any string you choose
+      # as the webhook verify token. Without them the /hooks/meta webhook refuses requests.
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_VERIFY_TOKEN
+        sync: false
 
 databases:
   - name: dalilacom-db

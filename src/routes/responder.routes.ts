@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
-import { encryptJson } from "../services/crypto.service";
+import { decryptJson, encryptJson } from "../services/crypto.service";
 import { drivers } from "../services/channels";
 import { getSettings } from "../services/settings.service";
 import { InsufficientBalanceError } from "../services/wallet.service";
@@ -19,6 +19,15 @@ const CREDENTIAL_FIELDS = {
     { key: "secret", label: "سر مشترك (8 أحرف+)", secret: true },
     { key: "replyUrl", label: "رابط استقبال الردود (https)", secret: false },
     { key: "authHeader", label: "Authorization header للرد (اختياري)", secret: true },
+  ],
+  FACEBOOK: [
+    { key: 'pageId', label: 'رقم صفحة فيسبوك (Page ID)', secret: false },
+    { key: 'pageAccessToken', label: 'Page Access Token', secret: true },
+  ],
+  INSTAGRAM: [
+    { key: 'instagramAccountId', label: 'رقم حساب إنستغرام Business', secret: false },
+    { key: 'pageId', label: 'رقم صفحة فيسبوك المربوطة (Page ID)', secret: false },
+    { key: 'pageAccessToken', label: 'Page Access Token', secret: true },
   ],
   META_PENDING: [],
 } as const;
@@ -113,6 +122,8 @@ responderRouter.get("/connections", requireAuth, async (req, res) => {
       channel: c.channel.name,
       externalAccountId: c.externalAccountId,
       isActive: c.isActive,
+      driver: c.channel.driver,
+      supportsPosts: c.channel.driver === "FACEBOOK" || c.channel.driver === "INSTAGRAM",
       // Only generic-webhook users need the URL (they paste it into the other platform); Telegram sets it itself.
       hookUrl: c.channel.driver === "GENERIC_WEBHOOK" ? `${base}/hooks/${c.hookToken}` : null,
     })),
@@ -144,6 +155,13 @@ responderRouter.post("/connections", requireAuth, async (req, res) => {
     return sendError(res, 400, "CHANNEL_CONNECT_FAILED", err instanceof Error ? err.message : "تعذّر ربط القناة");
   }
 
+  const isMeta = channel.driver === "FACEBOOK" || channel.driver === "INSTAGRAM";
+  if (isMeta && externalAccountId) {
+    // One Meta page/account can feed only one connection, otherwise a comment would be answered twice.
+    const taken = await prisma.channelConnection.findFirst({ where: { externalAccountId, channel: { driver: channel.driver } } });
+    if (taken) return sendError(res, 409, "CONFLICT", "هالحساب مربوط من قبل");
+  }
+
   const connection = await prisma.channelConnection.create({
     data: {
       userId: req.user!.id,
@@ -165,6 +183,25 @@ responderRouter.patch("/connections/:id", requireAuth, async (req, res) => {
   res.json({ id: updated.id, isActive: updated.isActive });
 });
 
+// Recent posts of a connected Facebook/Instagram account, so a rule can be limited to specific ones.
+responderRouter.get("/connections/:id/posts", requireAuth, async (req, res) => {
+  const connection = await prisma.channelConnection.findUnique({ where: { id: req.params.id }, include: { channel: true } });
+  if (!connection || connection.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Connection not found");
+  const driver = drivers[connection.channel.driver];
+  if (!driver.listPosts) return sendError(res, 400, "BAD_REQUEST", "هالقناة ما فيها منشورات");
+  try {
+    res.json(
+      await driver.listPosts({
+        credentials: decryptJson(connection.credentialsEnc),
+        hookToken: connection.hookToken,
+        channelConfig: connection.channel.config as Record<string, any>,
+      }),
+    );
+  } catch (err) {
+    return sendError(res, 502, "BAD_GATEWAY", err instanceof Error ? err.message : "تعذّر جلب المنشورات");
+  }
+});
+
 /* ---------------- rules ---------------- */
 
 const ruleSchema = z.object({
@@ -174,6 +211,7 @@ const ruleSchema = z.object({
   replyTemplate: z.string().max(1000).default(""),
   aiInstructions: z.string().max(1000).default(""),
   channelId: z.string().uuid().nullable().optional(),
+  postIds: z.array(z.string().min(1).max(100)).max(30).default([]),
   isActive: z.boolean().default(true),
 });
 

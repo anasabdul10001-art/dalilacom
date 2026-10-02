@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -93,7 +94,7 @@ fun ResponderScreen(factory: ViewModelFactory, onBack: () -> Unit, onOpenWallet:
             when (state.tab) {
                 0 -> OverviewTab(state.status, state.isBusy, onActivate = viewModel::activateOrRenew, onSaveProfile = viewModel::saveProfile)
                 1 -> ChannelsTab(state.channels, state.connections, state.isBusy, viewModel)
-                2 -> RulesTab(state.rules, state.isBusy, viewModel)
+                2 -> RulesTab(state, viewModel)
                 else -> InboxTab(state.inbox, state.isBusy, onSend = viewModel::sendReply)
             }
         }
@@ -199,11 +200,9 @@ private fun ChannelsTab(
 }
 
 @Composable
-private fun RulesTab(
-    rules: List<com.dalilacom.app.data.network.RuleDto>,
-    busy: Boolean,
-    viewModel: ResponderViewModel,
-) {
+private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
+    val rules = state.rules
+    val busy = state.isBusy
     var name by remember { mutableStateOf("") }
     var keywords by remember { mutableStateOf("") }
     var mode by remember { mutableStateOf("FIXED") }
@@ -223,6 +222,38 @@ private fun RulesTab(
         OutlinedTextField(instructions, { instructions = it }, label = { Text("تعليمات للذكاء الاصطناعي") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
         OutlinedTextField(template, { template = it }, label = { Text("رد احتياطي إذا الذكاء الاصطناعي غير متاح (اختياري)") }, modifier = Modifier.fillMaxWidth())
     }
+    val socialConnections = state.connections.filter { it.supportsPosts }
+    if (socialConnections.isNotEmpty()) {
+        Spacer(Modifier.height(10.dp))
+        Text("منشورات محددة (فيسبوك / إنستغرام)", style = MaterialTheme.typography.titleSmall)
+        Text("اتركها فاضية لتنطبق القاعدة على كل شي، أو اختر منشورات لتردّ على التعليقات عليها فقط.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+            socialConnections.forEach { connection ->
+                FilterChip(
+                    selected = state.postsConnectionId == connection.id,
+                    onClick = { viewModel.loadPosts(connection.id) },
+                    label = { Text(connection.channel) },
+                )
+            }
+        }
+        if (state.postsLoading) CircularProgressIndicator()
+        state.posts.forEach { post ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(checked = post.id in state.selectedPostIds, onCheckedChange = { viewModel.togglePost(post.id) })
+                Column(Modifier.weight(1f)) {
+                    Text(post.text.take(90), style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                    post.createdAt?.take(10)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
+                }
+            }
+        }
+        if (state.selectedPostIds.isNotEmpty()) {
+            Text("📌 ${state.selectedPostIds.size} منشور محدد", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+
     Spacer(Modifier.height(8.dp))
     Button(
         onClick = {
@@ -243,6 +274,7 @@ private fun RulesTab(
                     Switch(checked = rule.isActive, onCheckedChange = { viewModel.toggleRule(rule.id, it) })
                 }
                 Text("الكلمات: ${rule.keywords.joinToString("، ")}", style = MaterialTheme.typography.bodySmall)
+                if (rule.postIds.isNotEmpty()) Text("📌 محصورة بـ ${rule.postIds.size} منشور", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 Text(if (rule.mode == "AI") "ذكاء اصطناعي" else "رد ثابت: ${rule.replyTemplate}", style = MaterialTheme.typography.bodySmall)
                 TextButton(onClick = { viewModel.deleteRule(rule.id) }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
             }

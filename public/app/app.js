@@ -1517,7 +1517,8 @@ async function loadResponder() {
     api("GET", "/responder/rules"), api("GET", "/responder/inbox"),
   ]);
   const tab = (S._resp && S._resp.tab) || "overview";
-  S._resp = { loading: false, tab, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [] };
+  const keep = S._resp || {};
+  S._resp = { loading: false, tab, ruleDraft: keep.ruleDraft, posts: keep.posts, selectedPosts: keep.selectedPosts, postsError: keep.postsError, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [] };
   render();
 }
 
@@ -1611,12 +1612,16 @@ async function respToggleConn(id, isActive) {
 
 function respRules() {
   const r = S._resp;
+  const d = r.ruleDraft || {};
+  const socialConns = (r.connections || []).filter((c) => c.supportsPosts);
+  const posts = r.posts || [];
+  const picked = r.selectedPosts || [];
   return `
     ${errorBanner()}
     ${r.rules.map((x) => `
       <div class="card">
         <div class="title-line"><strong>${esc(x.name)}</strong><span class="badge ${x.mode === "AI" ? "info" : "neutral"}">${x.mode === "AI" ? "ذكاء اصطناعي" : "رد ثابت"}</span></div>
-        <p class="muted">كلمات: ${x.keywords.map(esc).join("، ")}</p>
+        <p class="muted">كلمات: ${x.keywords.map(esc).join("، ")}${x.postIds && x.postIds.length ? ` · 📌 محصورة بـ ${x.postIds.length} منشور` : ""}</p>
         ${x.replyTemplate ? `<p class="muted">الرد: ${esc(x.replyTemplate)}</p>` : ""}
         <div class="row" style="margin-top:8px;gap:6px">
           <button class="btn small outline" style="width:auto" onclick="respRuleToggle('${x.id}', ${!x.isActive})">${x.isActive ? "إيقاف" : "تشغيل"}</button>
@@ -1625,14 +1630,26 @@ function respRules() {
       </div>`).join("")}
     <div class="card">
       <div class="section-title" style="margin-top:0">قاعدة جديدة</div>
-      <div class="field"><label>اسم القاعدة</label><input id="ru-name" /></div>
-      <div class="field"><label>كلمات مفتاحية (مفصولة بفاصلة)</label><input id="ru-keys" placeholder="سعر، كم، price" /></div>
+      <div class="field"><label>اسم القاعدة</label><input id="ru-name" value="${esc(d.name || "")}" /></div>
+      <div class="field"><label>كلمات مفتاحية (مفصولة بفاصلة)</label><input id="ru-keys" placeholder="سعر، كم، price" value="${esc(d.keys || "")}" /></div>
       <div class="field"><label>نوع الرد</label>
-        <select id="ru-mode"><option value="FIXED">رد ثابت</option><option value="AI">ذكاء اصطناعي</option></select></div>
-      <div class="field"><label>نص الرد (استخدم {name} لاسم الزبون)</label><input id="ru-reply" /></div>
-      <div class="field"><label>تعليمات للذكاء الاصطناعي (اختياري)</label><input id="ru-ai" /></div>
+        <select id="ru-mode"><option value="FIXED" ${d.mode !== "AI" ? "selected" : ""}>رد ثابت</option><option value="AI" ${d.mode === "AI" ? "selected" : ""}>ذكاء اصطناعي</option></select></div>
+      <div class="field"><label>نص الرد (استخدم {name} لاسم الزبون)</label><input id="ru-reply" value="${esc(d.reply || "")}" /></div>
+      <div class="field"><label>تعليمات للذكاء الاصطناعي (اختياري)</label><input id="ru-ai" value="${esc(d.ai || "")}" /></div>
       <div class="field"><label>القناة</label>
         <select id="ru-channel"><option value="">كل القنوات</option>${r.channels.filter((c) => c.connectable).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+      ${socialConns.length ? `
+      <div class="field"><label>منشورات محددة (فيسبوك / إنستغرام) — اتركها فاضية لتنطبق على كل شي</label>
+        <select id="ru-conn">${socialConns.map((c) => `<option value="${c.id}" ${d.conn === c.id ? "selected" : ""}>${esc(c.channel)}${c.externalAccountId ? " — " + esc(c.externalAccountId) : ""}</option>`).join("")}</select>
+        <button class="btn small outline" style="width:auto;margin-top:6px" onclick="respLoadPosts()">تحميل منشوراتي</button>
+        ${r.postsError ? `<p class="muted" style="color:#b71c1c">${esc(r.postsError)}</p>` : ""}
+        ${posts.map((p) => `
+          <label class="row" style="gap:8px;align-items:flex-start;margin-top:8px;font-size:13px">
+            <input type="checkbox" style="width:auto" ${picked.includes(p.id) ? "checked" : ""} onchange="respTogglePost('${esc(p.id)}')" />
+            <span>${esc((p.text || "").slice(0, 90))}<br><span class="muted">${String(p.createdAt || "").slice(0, 10)}</span></span>
+          </label>`).join("")}
+        ${picked.length ? `<p class="muted">📌 ${picked.length} منشور محدد — القاعدة بتردّ على التعليقات عليهم بس.</p>` : ""}
+      </div>` : ""}
       <p class="muted" style="margin-bottom:8px">الشكاوى ما بتنرد آليًا أبدًا — بتنتظر ردك بصندوق الوارد.</p>
       <button class="btn" onclick="respAddRule()">إضافة القاعدة</button>
     </div>`;
@@ -1640,12 +1657,35 @@ function respRules() {
 
 async function respAddRule() {
   const keywords = qs("ru-keys").value.split(/[,،]/).map((k) => k.trim()).filter(Boolean);
-  const body = { name: qs("ru-name").value.trim(), keywords, mode: qs("ru-mode").value, replyTemplate: qs("ru-reply").value.trim(), aiInstructions: qs("ru-ai").value.trim(), channelId: qs("ru-channel").value || null };
+  const body = { name: qs("ru-name").value.trim(), keywords, mode: qs("ru-mode").value, replyTemplate: qs("ru-reply").value.trim(), aiInstructions: qs("ru-ai").value.trim(), channelId: qs("ru-channel").value || null, postIds: S._resp.selectedPosts || [] };
   if (!body.name || keywords.length === 0) { S.error = "اكتب اسم القاعدة وكلمة مفتاحية وحدة عالأقل"; return render(); }
   S.error = null;
   const { ok, data } = await api("POST", "/responder/rules", body);
   if (!ok) { S.error = errMsg(data, "تعذّر الحفظ"); return render(); }
+  S._resp.ruleDraft = null; S._resp.posts = []; S._resp.selectedPosts = [];
   loadResponder();
+}
+
+// The rule form is rebuilt on every render, so its fields are snapshotted into state first.
+function snapshotRuleDraft() {
+  const d = {};
+  [["name", "ru-name"], ["keys", "ru-keys"], ["mode", "ru-mode"], ["reply", "ru-reply"], ["ai", "ru-ai"], ["conn", "ru-conn"]].forEach(([k, id]) => { const el = qs(id); if (el) d[k] = el.value; });
+  S._resp.ruleDraft = d;
+}
+async function respLoadPosts() {
+  snapshotRuleDraft();
+  const connId = qs("ru-conn") && qs("ru-conn").value;
+  if (!connId) return;
+  S._resp.postsError = null; S._resp.posts = []; S._resp.selectedPosts = [];
+  const { ok, data } = await api("GET", "/responder/connections/" + connId + "/posts");
+  if (ok) S._resp.posts = data; else S._resp.postsError = errMsg(data, "تعذّر جلب المنشورات");
+  render();
+}
+function respTogglePost(id) {
+  const cur = S._resp.selectedPosts || [];
+  S._resp.selectedPosts = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+  snapshotRuleDraft();
+  render();
 }
 async function respRuleToggle(id, isActive) { await api("PATCH", "/responder/rules/" + id, { isActive }); loadResponder(); }
 async function respRuleDelete(id) { await api("DELETE", "/responder/rules/" + id); loadResponder(); }

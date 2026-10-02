@@ -130,6 +130,9 @@ interface ApiService {
     @PATCH("responder/connections/{id}")
     suspend fun toggleConnection(@Path("id") id: String, @Body body: ToggleRequest): Response<kotlinx.serialization.json.JsonElement>
 
+    @GET("responder/connections/{id}/posts")
+    suspend fun getConnectionPosts(@Path("id") id: String): Response<List<PostDto>>
+
     @GET("responder/rules")
     suspend fun getResponderRules(): Response<List<RuleDto>>
 

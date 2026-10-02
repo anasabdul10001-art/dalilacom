@@ -39,6 +39,8 @@ data class ConnectionDto(
     val externalAccountId: String? = null,
     val isActive: Boolean,
     val hookUrl: String? = null,
+    val driver: String = "",
+    val supportsPosts: Boolean = false,
 )
 
 @Serializable
@@ -58,6 +60,7 @@ data class RuleDto(
     val mode: String,
     val replyTemplate: String = "",
     val aiInstructions: String = "",
+    val postIds: List<String> = emptyList(),
     val isActive: Boolean = true,
 )
 
@@ -68,6 +71,7 @@ data class CreateRuleRequest(
     val mode: String,
     val replyTemplate: String,
     val aiInstructions: String,
+    val postIds: List<String> = emptyList(),
 )
 
 @Serializable
@@ -116,3 +120,12 @@ data class TopUpRequestBody(val method: String, val reference: String, val amoun
 
 @Serializable
 data class TopUpDto(val id: String, val status: String, val method: String = "", val amountCredits: Int? = null)
+
+@Serializable
+data class PostDto(
+    val id: String,
+    val text: String = "",
+    val createdAt: String? = null,
+    val url: String? = null,
+    val image: String? = null,
+)

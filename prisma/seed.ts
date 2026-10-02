@@ -58,9 +58,14 @@ async function main() {
     { key: "telegram", name: "Telegram", driver: "TELEGRAM" as const },
     { key: "webhook", name: "Webhook عام (أي منصة)", driver: "GENERIC_WEBHOOK" as const },
     { key: "whatsapp", name: "WhatsApp (بانتظار Meta)", driver: "META_PENDING" as const },
-    { key: "facebook", name: "Facebook (بانتظار Meta)", driver: "META_PENDING" as const },
-    { key: "instagram", name: "Instagram (بانتظار Meta)", driver: "META_PENDING" as const },
+    { key: "facebook", name: "Facebook", driver: "FACEBOOK" as const },
+    { key: "instagram", name: "Instagram", driver: "INSTAGRAM" as const },
   ];
+  // Facebook/Instagram were catalogued as META_PENDING before their drivers existed — switch those two over.
+  for (const key of ["facebook", "instagram"]) {
+    const c = channels.find((x) => x.key === key)!;
+    await prisma.socialChannel.updateMany({ where: { key, driver: "META_PENDING" }, data: { driver: c.driver, name: c.name } });
+  }
   for (const c of channels) {
     await prisma.socialChannel.upsert({ where: { key: c.key }, update: {}, create: c });
   }

@@ -3,6 +3,18 @@ export interface IncomingMessage {
   authorName: string;
   text: string;
   externalAccountId?: string;
+  /** The post a comment was made on (Facebook/Instagram) — lets rules target specific posts. */
+  postId?: string;
+  /** The platform's id for this message/comment, used to ignore webhook redeliveries. */
+  externalId?: string;
+}
+
+export interface PostSummary {
+  id: string;
+  text: string;
+  createdAt?: string;
+  url?: string;
+  image?: string;
 }
 
 export interface ChannelDriverImpl {
@@ -13,6 +25,8 @@ export interface ChannelDriverImpl {
   register?(ctx: DriverContext): Promise<{ externalAccountId?: string }>;
   /** Validates the credentials a user must supply, or returns an error message. */
   validateCredentials(creds: Record<string, string>): string | null;
+  /** Recent posts of the connected account, so a rule can be limited to specific ones. */
+  listPosts?(ctx: DriverContext): Promise<PostSummary[]>;
 }
 
 export interface DriverContext {

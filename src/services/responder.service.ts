@@ -105,8 +105,16 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
     conversationRef: msg.conversationRef,
     authorName: msg.authorName,
     message: msg.text,
+    postId: msg.postId,
+    externalId: msg.externalId,
   };
   const record = (data: Outcome) => prisma.responderInteraction.create({ data: { ...base, ...data } });
+
+  // Platforms redeliver webhooks; the same comment/message must never be answered twice.
+  if (msg.externalId) {
+    const duplicate = await prisma.responderInteraction.findFirst({ where: { connectionId: connection.id, externalId: msg.externalId } });
+    if (duplicate) return duplicate;
+  }
 
   const sub = await getSubscription(userId);
   if (!isRunning(sub.status)) return record({ status: "SKIPPED", reason: "subscription_inactive" });
@@ -124,6 +132,8 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
   const rule = rules.find(
     (r) =>
       (!r.channelId || r.channelId === connection.channelId) &&
+      // A rule limited to specific posts only ever answers comments on those posts (never DMs or other posts).
+      (r.postIds.length === 0 || (!!msg.postId && r.postIds.includes(msg.postId))) &&
       r.keywords.some((k) => k.trim() && lower.includes(k.trim().toLowerCase())),
   );
   if (!rule) return record({ status: "SKIPPED", intent, reason: "no_matching_rule" });

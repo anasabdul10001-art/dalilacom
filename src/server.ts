@@ -28,7 +28,8 @@ const app = express();
 app.set("trust proxy", 1); // Render sits behind a proxy — needed for correct req.ip / X-Forwarded-For
 app.use(securityHeaders);
 app.use(cors(corsOptions));
-app.use(express.json());
+// rawBody is kept only so Meta webhook signatures can be verified against the exact bytes sent.
+app.use(express.json({ verify: (req, _res, buf) => { (req as any).rawBody = buf; } }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
