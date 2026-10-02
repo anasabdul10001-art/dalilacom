@@ -18,6 +18,8 @@ import com.dalilacom.app.ui.merchantmode.MerchantModeShell
 import com.dalilacom.app.ui.merchantmode.ProductEditScreen
 import com.dalilacom.app.ui.orders.OrderDetailScreen
 import com.dalilacom.app.ui.product.ProductDetailScreen
+import com.dalilacom.app.ui.responder.ResponderScreen
+import com.dalilacom.app.ui.responder.WalletScreen
 
 @Composable
 fun DalilacomNavGraph(container: AppContainer) {
@@ -89,6 +91,12 @@ fun DalilacomNavGraph(container: AppContainer) {
                 onRegistered = { navController.popBackStack() },
                 onBack = { navController.popBackStack() },
             )
+        }
+        composable("responder") {
+            ResponderScreen(factory = factory, onBack = { navController.popBackStack() }, onOpenWallet = { navController.navigate("wallet") })
+        }
+        composable("wallet") {
+            WalletScreen(factory = factory, onBack = { navController.popBackStack() })
         }
         composable("merchantMode") {
             MerchantModeShell(rootNavController = navController, container = container)

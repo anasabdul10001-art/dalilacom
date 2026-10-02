@@ -105,4 +105,55 @@ interface ApiService {
 
     @POST("qr/redeem")
     suspend fun redeemDiscount(@Body body: RedeemRequest): Response<RedeemResponse>
+
+    @GET("responder/status")
+    suspend fun getResponderStatus(): Response<ResponderStatusDto>
+
+    @POST("responder/activate")
+    suspend fun activateResponder(): Response<kotlinx.serialization.json.JsonElement>
+
+    @POST("responder/renew")
+    suspend fun renewResponder(): Response<kotlinx.serialization.json.JsonElement>
+
+    @PATCH("responder/profile")
+    suspend fun saveResponderProfile(@Body body: ProfileRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @GET("responder/channels")
+    suspend fun getResponderChannels(): Response<List<ChannelDto>>
+
+    @GET("responder/connections")
+    suspend fun getResponderConnections(): Response<List<ConnectionDto>>
+
+    @POST("responder/connections")
+    suspend fun connectChannel(@Body body: ConnectRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @PATCH("responder/connections/{id}")
+    suspend fun toggleConnection(@Path("id") id: String, @Body body: ToggleRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @GET("responder/rules")
+    suspend fun getResponderRules(): Response<List<RuleDto>>
+
+    @POST("responder/rules")
+    suspend fun createResponderRule(@Body body: CreateRuleRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @PATCH("responder/rules/{id}")
+    suspend fun toggleResponderRule(@Path("id") id: String, @Body body: ToggleRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @DELETE("responder/rules/{id}")
+    suspend fun deleteResponderRule(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @GET("responder/inbox")
+    suspend fun getResponderInbox(): Response<List<InboxItemDto>>
+
+    @POST("responder/inbox/{id}/send")
+    suspend fun sendInboxReply(@Path("id") id: String, @Body body: SendReplyRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @GET("wallet")
+    suspend fun getWallet(): Response<WalletDto>
+
+    @GET("wallet/methods")
+    suspend fun getWalletMethods(): Response<WalletMethodsDto>
+
+    @POST("wallet/topups")
+    suspend fun submitTopUp(@Body body: TopUpRequestBody): Response<TopUpDto>
 }

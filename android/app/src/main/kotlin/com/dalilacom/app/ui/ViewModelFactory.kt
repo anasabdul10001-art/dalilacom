@@ -12,6 +12,8 @@ import com.dalilacom.app.ui.merchantmode.CatalogViewModel
 import com.dalilacom.app.ui.merchantmode.MerchantOrdersViewModel
 import com.dalilacom.app.ui.merchantmode.RedeemViewModel
 import com.dalilacom.app.ui.orders.OrdersViewModel
+import com.dalilacom.app.ui.responder.ResponderViewModel
+import com.dalilacom.app.ui.responder.WalletViewModel
 
 /** Hand-rolled factory to avoid pulling in Hilt for this first slice of the app. */
 class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.Factory {
@@ -27,6 +29,8 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
         MerchantOrdersViewModel::class.java -> MerchantOrdersViewModel(container.orderRepository) as T
         RedeemViewModel::class.java -> RedeemViewModel(container.merchantRepository) as T
         CatalogViewModel::class.java -> CatalogViewModel(container.merchantRepository, container.productRepository) as T
+        ResponderViewModel::class.java -> ResponderViewModel(container.responderRepository) as T
+        WalletViewModel::class.java -> WalletViewModel(container.responderRepository) as T
         else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }

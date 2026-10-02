@@ -30,6 +30,8 @@ fun ProfileScreen(
     onLoggedOut: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
+    onOpenResponder: () -> Unit,
+    onOpenWallet: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var role by remember { mutableStateOf<String?>(null) }
@@ -49,6 +51,10 @@ fun ProfileScreen(
         } else {
             OutlinedButton(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text("سجّل كتاجر") }
         }
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onOpenResponder, modifier = Modifier.fillMaxWidth()) { Text("المجيب الآلي") }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onOpenWallet, modifier = Modifier.fillMaxWidth()) { Text("محفظتي") }
         Spacer(Modifier.height(16.dp))
 
         Button(onClick = {
