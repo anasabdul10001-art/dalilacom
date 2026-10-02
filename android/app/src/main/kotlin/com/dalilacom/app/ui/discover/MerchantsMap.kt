@@ -41,6 +41,7 @@ fun MerchantsMap(
     userLocation: Pair<Double, Double>?,
     selectedId: String?,
     onSelect: (String) -> Unit,
+    recenterTick: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -53,6 +54,7 @@ fun MerchantsMap(
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
+            zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
             minZoomLevel = 4.0
             controller.setZoom(11.0)
             controller.setCenter(DAMASCUS)
@@ -80,7 +82,7 @@ fun MerchantsMap(
     val located = merchants.filter { it.latitude != null && it.longitude != null }
 
     // First GPS fix: jump to the user.
-    LaunchedEffect(userLocation) {
+    LaunchedEffect(userLocation, recenterTick) {
         userLocation?.let {
             mapView.controller.setZoom(14.0)
             mapView.controller.animateTo(GeoPoint(it.first, it.second))

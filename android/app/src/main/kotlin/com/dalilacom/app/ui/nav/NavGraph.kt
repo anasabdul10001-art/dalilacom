@@ -39,6 +39,7 @@ fun DalilacomNavGraph(container: AppContainer) {
                 factory = factory,
                 onLoginSuccess = { navController.navigate("home") { popUpTo(0) } },
                 onNavigateToRegister = { navController.navigate("register") },
+                onBrowseAsGuest = { navController.navigate("home") { popUpTo(0) } },
             )
         }
         composable("register") {
