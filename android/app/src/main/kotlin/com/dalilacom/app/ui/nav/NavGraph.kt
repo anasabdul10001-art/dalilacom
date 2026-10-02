@@ -31,7 +31,7 @@ fun DalilacomNavGraph(container: AppContainer) {
             SplashScreen(
                 authRepository = container.authRepository,
                 onHasSession = { navController.navigate("home") { popUpTo(0) } },
-                onNoSession = { navController.navigate("login") { popUpTo(0) } },
+                onNoSession = { navController.navigate("home") { popUpTo(0) } }, // guests land on the map/directory
             )
         }
         composable("login") {

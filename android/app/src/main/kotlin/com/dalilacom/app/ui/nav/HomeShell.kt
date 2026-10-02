@@ -40,9 +40,8 @@ import com.dalilacom.app.ui.orders.OrdersScreen
 import com.dalilacom.app.ui.profile.ProfileScreen
 
 private enum class HomeTab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Home("الرئيسية", Icons.Filled.Home),
-    Card("بطاقتي", Icons.Filled.CreditCard),
     Discover("اكتشف", Icons.Filled.Search),
+    Card("بطاقتي", Icons.Filled.CreditCard),
     Cart("السلة", Icons.Filled.ShoppingCart),
     Orders("طلباتي", Icons.AutoMirrored.Filled.ListAlt),
     Profile("حسابي", Icons.Filled.Person),
@@ -50,8 +49,16 @@ private enum class HomeTab(val label: String, val icon: androidx.compose.ui.grap
 
 @Composable
 fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
-    var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Home) }
+    var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Discover) }
     val factory = remember { ViewModelFactory(container) }
+    var isGuest by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { isGuest = !container.authRepository.hasStoredSession() }
+    val loginPrompt: @Composable () -> Unit = {
+        LoginPrompt(
+            onLogin = { rootNavController.navigate("login") },
+            onRegister = { rootNavController.navigate("register") },
+        )
+    }
 
     Scaffold(
         bottomBar = {
@@ -69,12 +76,11 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             when (selectedTab) {
-                HomeTab.Home -> WelcomeTab(onGoToCard = { selectedTab = HomeTab.Card }, onGoToDiscover = { selectedTab = HomeTab.Discover })
-                HomeTab.Card -> CardScreen(factory)
+                HomeTab.Card -> if (isGuest) loginPrompt() else CardScreen(factory)
                 HomeTab.Discover -> DiscoverScreen(factory, onMerchantClick = { id -> rootNavController.navigate("merchant/$id") })
-                HomeTab.Cart -> CartScreen(factory, onCheckoutSuccess = { selectedTab = HomeTab.Orders })
-                HomeTab.Orders -> OrdersScreen(factory, onOrderClick = { id -> rootNavController.navigate("order/$id") })
-                HomeTab.Profile -> ProfileScreen(
+                HomeTab.Cart -> if (isGuest) loginPrompt() else CartScreen(factory, onCheckoutSuccess = { selectedTab = HomeTab.Orders })
+                HomeTab.Orders -> if (isGuest) loginPrompt() else OrdersScreen(factory, onOrderClick = { id -> rootNavController.navigate("order/$id") })
+                HomeTab.Profile -> if (isGuest) loginPrompt() else ProfileScreen(
                     container = container,
                     onLoggedOut = { rootNavController.navigate("login") { popUpTo(0) } },
                     onRegisterMerchant = { rootNavController.navigate("merchantRegister") },
@@ -88,18 +94,18 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
 }
 
 @Composable
-private fun WelcomeTab(onGoToCard: () -> Unit, onGoToDiscover: () -> Unit) {
+private fun LoginPrompt(onLogin: () -> Unit, onRegister: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("أهلًا فيك بدليلكم 👋", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Text("سجّل دخولك لتكمل", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(8.dp))
-        Text("شوف بطاقتك، أو دور على تجار عندهم حسم قريبين منك.", style = MaterialTheme.typography.bodyMedium)
+        Text("البطاقة والسلة والطلبات والحساب بتحتاج حساب. التصفح والخريطة مفتوحين للكل.", style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onGoToCard) { Text("بطاقتي") }
+        Button(onClick = onLogin) { Text("تسجيل الدخول") }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onGoToDiscover) { Text("اكتشف التجار") }
+        OutlinedButton(onClick = onRegister) { Text("إنشاء حساب جديد") }
     }
 }

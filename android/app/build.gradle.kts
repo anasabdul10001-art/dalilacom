@@ -64,6 +64,8 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     // Keystore-backed EncryptedSharedPreferences for the JWT (section: Android Token Storage).
     implementation("androidx.security:security-crypto:1.1.0")
+    // OpenStreetMap map view — no API key required.
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")

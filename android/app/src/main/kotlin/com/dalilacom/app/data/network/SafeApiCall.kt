@@ -28,6 +28,7 @@ fun errorText(response: Response<*>, fallback: String): String {
         when (error) {
             is kotlinx.serialization.json.JsonPrimitive -> error.content
             is kotlinx.serialization.json.JsonObject -> {
+                if ((error["code"] as? kotlinx.serialization.json.JsonPrimitive)?.content == "AUTH_MISSING_TOKEN") return "سجّل دخولك أول لتكمل"
                 val details = error["details"] as? kotlinx.serialization.json.JsonObject
                 val fieldError = (details?.get("fieldErrors") as? kotlinx.serialization.json.JsonObject)
                     ?.values?.firstNotNullOfOrNull { (it as? kotlinx.serialization.json.JsonArray)?.firstOrNull() as? kotlinx.serialization.json.JsonPrimitive }
