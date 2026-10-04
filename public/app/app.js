@@ -568,7 +568,7 @@ function tabDiscover() {
           ${d.userLoc ? [null, 2, 5, 10, 25].map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${r ? r + " كم" : "أي مسافة"}</button>`).join("") : ""}
         </div>` : ""}
         <div class="sheet-list">
-          ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث</div>`)}
+          ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">${d.radiusKm ? `ما في محلات ضمن ${d.radiusKm} كم منك — جرّب مسافة أكبر` : "ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث"}</div>`)}
         </div>
       </div>
     </div>
@@ -658,7 +658,7 @@ function pickRecent(q) { S._discover.query = q; S._discover.showSuggest = false;
 function pickCategory(id) { S._discover.query = ""; S._discover.categoryId = id; S._discover.showSuggest = false; searchMerchants(); }
 function onDiscoverReset() { Object.assign(S._discover, { categoryId: "", openNow: false, discountsOnly: false }); searchMerchants(); }
 function toggleDiscoverFlag(flag) { S._discover[flag] = !S._discover[flag]; render(); }
-function setDiscoverRadius(km) { S._discover.radiusKm = km; render(); }
+function setDiscoverRadius(km) { S._discover.radiusKm = km; S._radiusFit = true; render(); }
 function onDiscoverCategory(id) { S._discover.categoryId = S._discover.categoryId === id ? "" : id; searchMerchants(); }
 
 function requestDiscoverLocation(recenter) {
@@ -738,12 +738,37 @@ function renderDiscoverMap() {
   syncMapMarkers();
 }
 
+// The chosen distance is drawn as a circle around the user, and the camera moves to frame it.
+function syncRadiusLayer() {
+  const d = S._discover;
+  const map = S._map;
+  const key = d.radiusKm && d.userLoc ? `${d.radiusKm}|${d.userLoc.lat}|${d.userLoc.lng}` : "";
+  if (key !== S._radiusDrawn) {
+    S._radiusDrawn = key;
+    if (S._radiusLayer) { map.removeLayer(S._radiusLayer); S._radiusLayer = null; }
+    if (key) S._radiusLayer = L.circle([d.userLoc.lat, d.userLoc.lng], { radius: d.radiusKm * 1000, color: "#ba2a34", weight: 2, dashArray: "6 6", fillColor: "#ba2a34", fillOpacity: 0.06, interactive: false }).addTo(map);
+  }
+  if (!S._radiusFit) return;
+  S._radiusFit = false;
+  const sheetPx = sheetHeights()[S._sheet || "peek"];
+  const pad = { paddingTopLeft: [20, 150], paddingBottomRight: [20, sheetPx + 20], animate: true };
+  if (S._radiusLayer) {
+    moveMap(() => map.fitBounds(S._radiusLayer.getBounds(), pad));
+  } else if (d.userLoc) {
+    // "Any distance": frame the user together with every place on the map.
+    const pts = (S._visible || []).filter((m) => m.latitude != null && m.longitude != null).map((m) => [m.latitude, m.longitude]);
+    pts.push([d.userLoc.lat, d.userLoc.lng]);
+    moveMap(() => map.fitBounds(L.latLngBounds(pts), { ...pad, maxZoom: 15 }));
+  }
+}
+
 function syncMapMarkers() {
   const d = S._discover;
   const map = S._map;
   const located = (S._visible || []).filter((m) => m.latitude != null && m.longitude != null);
 
   syncRouteLayer();
+  syncRadiusLayer();
   S._userLayer.clearLayers();
   if (d.userLoc) {
     L.circleMarker([d.userLoc.lat, d.userLoc.lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#1e6fe0", fillOpacity: 1 }).addTo(S._userLayer).bindPopup("موقعك");

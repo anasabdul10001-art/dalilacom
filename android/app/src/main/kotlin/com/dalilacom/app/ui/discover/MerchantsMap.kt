@@ -36,6 +36,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import java.io.File
 
@@ -85,6 +86,8 @@ fun MerchantsMap(
     recenterTick: Int = 0,
     route: List<List<Double>>? = null,
     routeWalking: Boolean = false,
+    radiusKm: Double? = null,
+    radiusFitTick: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -118,9 +121,24 @@ fun MerchantsMap(
     val latestOnMoved by rememberUpdatedState(onUserMoved)
     val latestRoute by rememberUpdatedState(route)
     val latestWalking by rememberUpdatedState(routeWalking)
+    val latestRadius by rememberUpdatedState(radiusKm)
 
     fun redraw(map: MapView) {
         map.overlays.clear()
+        // The chosen distance, as a circle around the user.
+        val radius = latestRadius
+        val here = latestUser
+        if (radius != null && here != null) {
+            map.overlays.add(
+                Polygon(map).apply {
+                    points = Polygon.pointsAsCircle(GeoPoint(here.first, here.second), radius * 1000.0)
+                    fillPaint.color = Color.argb(18, 186, 42, 52)
+                    outlinePaint.color = Color.parseColor("#BA2A34")
+                    outlinePaint.strokeWidth = 2 * context.resources.displayMetrics.density
+                    outlinePaint.pathEffect = DashPathEffect(floatArrayOf(16f, 12f), 0f)
+                },
+            )
+        }
         // The road goes underneath the pins so the destination stays tappable.
         latestRoute?.takeIf { it.size >= 2 }?.let { points ->
             val density = context.resources.displayMetrics.density
@@ -245,6 +263,21 @@ fun MerchantsMap(
             lifecycleOwner.lifecycle.removeObserver(observer)
             mapView.onPause()
             mapView.onDetach()
+        }
+    }
+
+    // A distance chip was tapped: frame that circle (or everything, for "any distance").
+    LaunchedEffect(radiusFitTick) {
+        if (radiusFitTick == 0 || latestRoute != null) return@LaunchedEffect
+        val here = latestUser ?: return@LaunchedEffect
+        val center = GeoPoint(here.first, here.second)
+        val points = latestRadius?.let { Polygon.pointsAsCircle(center, it * 1000.0) }
+            ?: (latestMerchants.map { GeoPoint(it.latitude!!, it.longitude!!) } + center)
+        programmatic {
+            mapView.post {
+                mapView.zoomToBoundingBox(BoundingBox.fromGeoPoints(points).increaseByScale(1.5f), true, 60)
+                mapView.invalidate()
+            }
         }
     }
 

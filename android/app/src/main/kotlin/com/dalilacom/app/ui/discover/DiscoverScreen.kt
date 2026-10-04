@@ -97,6 +97,7 @@ fun DiscoverScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var recenterTick by remember { mutableIntStateOf(0) }
+    var radiusFitTick by remember { mutableIntStateOf(0) }
 
     fun fetchLocation() {
         viewModel.markLocationRequested()
@@ -189,6 +190,8 @@ fun DiscoverScreen(
                 recenterTick = recenterTick,
                 route = state.route?.data?.geometry,
                 routeWalking = state.route?.mode == "walking",
+                radiusKm = state.radiusKm,
+                radiusFitTick = radiusFitTick,
                 modifier = Modifier.fillMaxSize(),
             )
 
@@ -260,7 +263,7 @@ fun DiscoverScreen(
                                 MapChip(
                                     if (radius == null) "أي مسافة" else "${radius.toInt()} كم",
                                     state.radiusKm == radius,
-                                ) { viewModel.onRadiusSelected(radius) }
+                                ) { viewModel.onRadiusSelected(radius); radiusFitTick++ }
                             }
                         }
                     }
@@ -442,7 +445,7 @@ private fun DirectorySheet(
         }
         if (state.merchants.isEmpty()) {
             Text(
-                if (state.isLoading) "عم نحمّل المحلات..." else "ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث أو المسافة",
+                if (state.isLoading) "عم نحمّل المحلات..." else if (state.radiusKm != null) "ما في محلات ضمن ${state.radiusKm.toInt()} كم منك — جرّب مسافة أكبر" else "ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث أو المسافة",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(20.dp),
