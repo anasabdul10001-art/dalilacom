@@ -770,7 +770,7 @@ function syncRadiusLayer() {
   if (!S._radiusFit) return;
   S._radiusFit = false;
   const sheetPx = sheetHeights()[S._sheet || "peek"];
-  const pad = { paddingTopLeft: [20, 150], paddingBottomRight: [20, sheetPx + 20], animate: true };
+  const pad = { paddingTopLeft: [20, 150], paddingBottomRight: [20, sheetPx + 20], animate: false };
   if (S._radiusLayer) {
     moveMap(() => map.fitBounds(S._radiusLayer.getBounds(), pad));
   } else if (d.userLoc) {
