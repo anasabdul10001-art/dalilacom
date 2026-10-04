@@ -343,22 +343,20 @@ function currentMerchantFilter() {
 async function loadCategories() {
   const { data } = await api('GET', '/categories');
   const top = data || [];
+  // sections > professions > specialties: flatten the whole tree, remembering how deep each node is
   state.categoriesFlat = [];
-  for (const c of top) { state.categoriesFlat.push(c); for (const ch of (c.children || [])) state.categoriesFlat.push(ch); }
+  const walk = (nodes, depth) => nodes.forEach(c => { state.categoriesFlat.push({ ...c, depth }); walk(c.children || [], depth + 1); });
+  walk(top, 0);
 
   document.getElementById('cat-parent').innerHTML = '<option value="">— بدون —</option>' +
-    top.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    state.categoriesFlat.filter(c => c.depth < 2).map(c => `<option value="${c.id}">${'— '.repeat(c.depth)}${c.name}</option>`).join('');
 
-  const rows = [];
-  for (const c of top) {
-    rows.push(categoryRow(c, false));
-    for (const ch of (c.children || [])) rows.push(categoryRow(ch, true));
-  }
+  const rows = state.categoriesFlat.map(c => categoryRow(c, c.depth));
   document.getElementById('categories-body').innerHTML = rows.join('') || `<tr><td colspan="2" class="muted">لا يوجد تصنيفات بعد</td></tr>`;
 }
-function categoryRow(c, isChild) {
-  return `<tr class="${isChild ? 'child-row' : ''}">
-    <td><input class="inline-input" style="width:200px" id="cat-name-${c.id}" value="${c.name}" /></td>
+function categoryRow(c, depth) {
+  return `<tr class="${depth ? 'child-row' : ''}">
+    <td style="padding-inline-start:${12 + depth * 22}px"><input class="inline-input" style="width:200px" id="cat-name-${c.id}" value="${c.name}" /> <span class="muted">${c.merchantCount || 0}</span></td>
     <td>
       <button class="small" onclick="saveCategory('${c.id}')">💾 حفظ</button>
       <button class="small danger" onclick="deleteCategory('${c.id}')">🗑️ حذف</button>

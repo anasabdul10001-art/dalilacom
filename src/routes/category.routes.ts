@@ -4,17 +4,22 @@ import { Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { resolveLanguage } from "../lib/languages";
+import { categoryTreeFor, invalidateCategoryCache, searchCategories } from "../services/category.service";
 
 export const categoryRouter = Router();
 
-// Public: full hierarchy (top-level categories with their children), section 10
-categoryRouter.get("/", async (_req, res) => {
-  const categories = await prisma.category.findMany({
-    where: { parentId: null },
-    include: { children: true },
-    orderBy: { name: "asc" },
-  });
-  res.json(categories);
+// Public: the full section > profession > specialty tree, named in the requested language
+// (?lang=en or Accept-Language; Arabic when unknown), with how many approved places sit under each node.
+categoryRouter.get("/", async (req, res) => {
+  res.json(await categoryTreeFor(resolveLanguage(req)));
+});
+
+// Public: ranked categories for what the person typed — spelling-tolerant, any language, synonym-aware.
+categoryRouter.get("/search", async (req, res) => {
+  const parsed = z.object({ q: z.string().trim().min(1).max(60) }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await searchCategories(parsed.data.q, resolveLanguage(req), 10));
 });
 
 function slugify(name: string): string {
@@ -25,10 +30,28 @@ function slugify(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+const translationsSchema = z
+  .array(z.object({ lang: z.string().min(2).max(5), name: z.string().min(1).max(80).nullable().optional(), synonyms: z.array(z.string().min(1).max(60)).max(60).optional() }))
+  .optional();
+
 const createCategorySchema = z.object({
   name: z.string().min(2),
   parentId: z.string().uuid().optional(),
+  icon: z.string().max(8).nullable().optional(),
+  sortOrder: z.number().int().optional(),
+  translations: translationsSchema,
 });
+
+async function applyTranslations(categoryId: string, translations: z.infer<typeof translationsSchema>) {
+  for (const t of translations ?? []) {
+    const lang = t.lang.toLowerCase();
+    await prisma.categoryTranslation.upsert({
+      where: { categoryId_lang: { categoryId, lang } },
+      update: { ...(t.name !== undefined ? { name: t.name } : {}), ...(t.synonyms ? { synonyms: t.synonyms } : {}) },
+      create: { categoryId, lang, name: t.name ?? null, synonyms: t.synonyms ?? [] },
+    });
+  }
+}
 
 // Admin-managed, not hardcoded (section 10)
 categoryRouter.post("/", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
@@ -36,7 +59,7 @@ categoryRouter.post("/", requireAuth, requireRole(Role.ADMIN), async (req, res) 
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
   }
-  const { name, parentId } = parsed.data;
+  const { name, parentId, icon, sortOrder, translations } = parsed.data;
 
   if (parentId) {
     const parent = await prisma.category.findUnique({ where: { id: parentId } });
@@ -51,14 +74,19 @@ categoryRouter.post("/", requireAuth, requireRole(Role.ADMIN), async (req, res) 
   }
 
   const category = await prisma.category.create({
-    data: { name, slug, parentId },
+    data: { name, slug, parentId, ...(icon !== undefined ? { icon } : {}), sortOrder: sortOrder ?? 1000 }, // admin-created sections list after the built-in ones unless told otherwise
   });
+  await applyTranslations(category.id, translations);
+  invalidateCategoryCache();
   res.status(201).json(category);
 });
 
 const updateCategorySchema = z.object({
   name: z.string().min(2).optional(),
   parentId: z.string().uuid().nullable().optional(),
+  icon: z.string().max(8).nullable().optional(),
+  sortOrder: z.number().int().optional(),
+  translations: translationsSchema,
 });
 
 // Admin-managed edits (section 10) — slug is left untouched on rename since nothing else
@@ -84,7 +112,10 @@ categoryRouter.patch("/:id", requireAuth, requireRole(Role.ADMIN), async (req, r
     }
   }
 
-  const category = await prisma.category.update({ where: { id: existing.id }, data: parsed.data });
+  const { translations, ...fields } = parsed.data;
+  const category = await prisma.category.update({ where: { id: existing.id }, data: fields });
+  await applyTranslations(existing.id, translations);
+  invalidateCategoryCache();
   res.json(category);
 });
 

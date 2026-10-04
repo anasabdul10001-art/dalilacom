@@ -359,11 +359,11 @@ function doLogout() {
 /* ================= HOME SHELL ================= */
 
 const HOME_TABS = [
-  { id: "discover", label: "الخريطة", icon: "search" },
-  { id: "card", label: "بطاقتي", icon: "card" },
-  { id: "cart", label: "السلة", icon: "cart" },
-  { id: "orders", label: "طلباتي", icon: "orders" },
-  { id: "profile", label: "حسابي", icon: "user" },
+  { id: "discover", label: "tab.map", icon: "search" },
+  { id: "card", label: "tab.card", icon: "card" },
+  { id: "cart", label: "tab.cart", icon: "cart" },
+  { id: "orders", label: "tab.orders", icon: "orders" },
+  { id: "profile", label: "tab.account", icon: "user" },
 ];
 
 function screenHomeShell() {
@@ -378,9 +378,9 @@ function screenHomeShell() {
   return `
     <div>${body}</div>
     <div class="tabbar" id="home-tabbar">
-      ${HOME_TABS.map((t) => `
-        <button class="${S.homeTab === t.id ? "active" : ""}" onclick="setHomeTab('${t.id}')">
-          ${ICON[t.icon]}<span>${esc(t.label)}</span>
+      ${HOME_TABS.map((tab) => `
+        <button class="${S.homeTab === tab.id ? "active" : ""}" onclick="setHomeTab('${tab.id}')">
+          ${ICON[tab.icon]}<span>${esc(t(tab.label))}</span>
         </button>`).join("")}
     </div>
   `;
@@ -487,19 +487,20 @@ function renderQrOnly() {
 /* ---- Discover tab (map-first, usable without an account) ---- */
 
 const DAMASCUS = { lat: 33.5138, lng: 36.2765 }; // only the starting view when nothing else is known
-const DAY_LABEL = { sun: "الأحد", mon: "الإثنين", tue: "الثلاثاء", wed: "الأربعاء", thu: "الخميس", fri: "الجمعة", sat: "السبت" };
+// Day names follow the current language (read at use time, so switching language updates every screen).
+const DAY_LABEL = new Proxy({}, { get: (_, key) => (typeof key === "string" ? t("day." + key) : undefined) });
 const DAY_ORDER = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
 
-function fmtClock(t) {
-  const h = Number(t.slice(0, 2));
-  return `${h % 12 || 12}:${t.slice(3, 5)} ${h >= 12 ? "م" : "ص"}`;
+function fmtClock(time) {
+  const h = Number(time.slice(0, 2));
+  return `${h % 12 || 12}:${time.slice(3, 5)} ${h >= 12 ? t("time.pm") : t("time.am")}`;
 }
 
 function openBadge(st) {
   if (!st || !st.hasHours) return "";
-  if (st.isOpen) return `<span class="badge success">مفتوح · يسكّر ${fmtClock(st.closesAt)}</span>`;
-  const day = st.opensDay === "today" ? "اليوم" : st.opensDay === "tomorrow" ? "بكرا" : DAY_LABEL[st.opensDay] || "";
-  return st.opensAt ? `<span class="badge danger">مغلق · يفتح ${day} ${fmtClock(st.opensAt)}</span>` : `<span class="badge danger">مغلق</span>`;
+  if (st.isOpen) return `<span class="badge success">${esc(t("hours.openUntil", { time: fmtClock(st.closesAt) }))}</span>`;
+  const day = st.opensDay === "today" ? t("hours.today") : st.opensDay === "tomorrow" ? t("hours.tomorrow") : DAY_LABEL[st.opensDay] || "";
+  return st.opensAt ? `<span class="badge danger">${esc(t("hours.opensAt", { day, time: fmtClock(st.opensAt) }))}</span>` : `<span class="badge danger">${esc(t("hours.closed"))}</span>`;
 }
 
 function readRecent() {
@@ -517,7 +518,7 @@ function discoverState() {
       loading: true, query: "", categoryId: "", categories: [], merchants: [],
       openNow: false, discountsOnly: false, radiusKm: null,
       userLoc: null, locError: null, locAsked: false,
-      favIds: [], suggest: null, showSuggest: false, areaDirty: false, bounds: null,
+      favIds: [], suggest: null, showSuggest: false, areaDirty: false, bounds: null, browse: null,
     };
     loadCategories().then(() => searchMerchants());
     loadFavIds();
@@ -558,40 +559,43 @@ function tabDiscover() {
         <div class="map-search">
           <div class="searchbox">
             <span class="search-ico">🔍</span>
-            <input id="disc-q" placeholder="دوّر على محل أو خدمة..." value="${esc(d.query)}" autocomplete="off"
+            <input id="disc-q" placeholder="${esc(t("search.placeholder"))}" value="${esc(d.query)}" autocomplete="off"
               oninput="onDiscoverQuery(this.value)" onfocus="onDiscoverFocus()" onblur="onDiscoverBlur()" onkeydown="if(event.key==='Enter'){onDiscoverSubmit()}" />
             ${d.query ? `<button class="clear-x" onmousedown="onDiscoverClear()">✕</button>` : ""}
-            ${S.token ? "" : `<button class="login-pill" onclick="go('login')">دخول</button>`}
+            ${S.token ? "" : `<button class="login-pill" onclick="go('login')">${esc(t("login.pill"))}</button>`}
           </div>
           ${suggestHtml(d)}
         </div>
         <div class="float-chips">
-          <button class="chip ${!d.categoryId && !d.openNow && !d.discountsOnly ? "active" : ""}" onclick="onDiscoverReset()">الكل</button>
-          <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">🕒 مفتوح الآن</button>
-          <button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">🏷️ فيها حسم</button>
-          ${flattenCategories(d.categories).map((c) => `<button class="chip ${d.categoryId === c.id ? "active" : ""}" onclick="onDiscoverCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
+          <button class="chip ${!d.categoryId && !d.openNow && !d.discountsOnly ? "active" : ""}" onclick="onDiscoverReset()">${esc(t("filter.all"))}</button>
+          <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">${esc(t("filter.openNow"))}</button>
+          <button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">${esc(t("filter.discounts"))}</button>
+          ${categoryChipsHtml(d)}
         </div>
         ${d.locError ? `<div class="float-note">📍 ${esc(d.locError)}</div>` : ""}
       </div>
 
-      <button id="area-btn" class="area-btn" style="display:${d.areaDirty ? "block" : "none"}" onclick="searchThisArea()">🔍 ابحث بهالمنطقة</button>
-      <button class="map-fab" title="موقعي" onclick="requestDiscoverLocation(true)">📍</button>
-      <button class="map-fab theme-fab" title="${currentTheme() === "dark" ? "الوضع الفاتح" : "الوضع الداكن"}" onclick="toggleTheme()">${currentTheme() === "dark" ? "☀️" : "🌙"}</button>
+      <button id="area-btn" class="area-btn" style="display:${d.areaDirty ? "block" : "none"}" onclick="searchThisArea()">${esc(t("area.search"))}</button>
+      <button class="map-fab" title="${esc(t("fab.myLocation"))}" onclick="requestDiscoverLocation(true)">📍</button>
+      <button class="map-fab theme-fab" title="${esc(currentTheme() === "dark" ? t("fab.lightMode") : t("fab.darkMode"))}" onclick="toggleTheme()">${currentTheme() === "dark" ? "☀️" : "🌙"}</button>
+      <button class="map-fab lang-fab" title="${esc(t("fab.language"))}" onclick="toggleLangMenu()">🌐</button>
+      ${langMenuHtml()}
 
       <div class="sheet" id="sheet">
         <div class="sheet-handle" onpointerdown="sheetDragStart(event)" onclick="sheetToggle()"><span></span></div>
         <div class="sheet-head">
-          <strong>${d.userLoc ? "المحلات القريبة منك" : "دليل المحلات"}</strong>
-          <span class="badge info">${list.length} محل</span>
+          <strong>${esc(d.userLoc ? t("sheet.nearby") : t("sheet.directory"))}</strong>
+          <span class="badge info">${esc(t("sheet.count", { n: list.length }))}</span>
         </div>
         ${(d.userLoc || d.bounds) ? `<div class="sheet-chips">
-          ${d.bounds ? `<button class="chip active" onclick="clearSearchArea()">✕ مسح حدود المنطقة</button>` : ""}
-          ${d.userLoc ? [null, 2, 5, 10, 25].map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${r ? r + " كم" : "أي مسافة"}</button>`).join("") : ""}
+          ${d.bounds ? `<button class="chip active" onclick="clearSearchArea()">${esc(t("area.clear"))}</button>` : ""}
+          ${d.userLoc ? [null, 2, 5, 10, 25].map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${esc(r ? t("radius.km", { n: r }) : t("radius.any"))}</button>`).join("") : ""}
         </div>` : ""}
         <div class="sheet-list">
-          ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">${d.radiusKm ? `ما في محلات ضمن ${d.radiusKm} كم منك — جرّب مسافة أكبر` : "ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث"}</div>`)}
+          ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">${esc(d.radiusKm ? t("sheet.emptyRadius", { n: d.radiusKm }) : t("sheet.empty"))}</div>`)}
         </div>
       </div>
+      ${browseHtml(d)}
     </div>
   `;
 }
@@ -648,13 +652,13 @@ function suggestHtml(d) {
   if (!d.query.trim()) {
     const recent = readRecent();
     if (!recent.length) return "";
-    return `<div class="suggest-box"><div class="suggest-head">عمليات بحث سابقة</div>${recent.map((q) => `<div class="suggest-item" onmousedown="pickRecent('${esc(q).replace(/'/g, "&#39;")}')">🕘 ${esc(q)}</div>`).join("")}</div>`;
+    return `<div class="suggest-box"><div class="suggest-head">${esc(t("search.recent"))}</div>${recent.map((q) => `<div class="suggest-item" onmousedown="pickRecent('${esc(q).replace(/'/g, "&#39;")}')">🕘 ${esc(q)}</div>`).join("")}</div>`;
   }
   const s = d.suggest;
   if (!s || (!s.merchants.length && !s.categories.length)) return "";
   return `<div class="suggest-box">
-    ${s.categories.map((c) => `<div class="suggest-item" onmousedown="pickCategory('${c.id}')">🗂️ ${esc(c.name)}</div>`).join("")}
-    ${s.merchants.map((m) => `<div class="suggest-item" onmousedown="go('merchantDetail',{merchantId:'${m.id}'})">🏪 ${esc(m.businessName)}${m.category ? ` <span class="muted">· ${esc(m.category.name)}</span>` : ""}</div>`).join("")}
+    ${s.categories.map((c) => `<div class="suggest-item" onmousedown="pickCategory('${c.id}')">${esc(c.icon || "🗂️")} ${esc(c.path || c.name)}${c.merchantCount ? ` <span class="muted">· ${esc(t("browse.count", { n: c.merchantCount }))}</span>` : ""}</div>`).join("")}
+    ${s.merchants.map((m) => `<div class="suggest-item" onmousedown="go('merchantDetail',{merchantId:'${m.id}'})">🏪 ${esc(m.businessName)}${m.category ? ` <span class="muted">· ${esc(catName(m.category))}</span>` : ""}</div>`).join("")}
   </div>`;
 }
 
@@ -666,7 +670,7 @@ function onDiscoverQuery(v) {
   clearTimeout(suggestTimer);
   suggestTimer = setTimeout(async () => {
     if (!d.query.trim()) { d.suggest = null; return searchMerchants(); }
-    const { ok, data } = await api("GET", "/merchant/suggest?q=" + encodeURIComponent(d.query.trim()));
+    const { ok, data } = await api("GET", "/merchant/suggest?lang=" + LANG + "&q=" + encodeURIComponent(d.query.trim()));
     d.suggest = ok ? data : null;
     searchMerchants();
   }, 280);
@@ -684,7 +688,7 @@ function onDiscoverCategory(id) { S._discover.categoryId = S._discover.categoryI
 
 function requestDiscoverLocation(recenter) {
   const d = discoverState();
-  if (!navigator.geolocation) { d.locError = "المتصفح ما بيدعم تحديد الموقع"; return render(); }
+  if (!navigator.geolocation) { d.locError = t("loc.unsupported"); return render(); }
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       d.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -693,7 +697,7 @@ function requestDiscoverLocation(recenter) {
       render();
     },
     () => {
-      d.locError = "ما قدرنا نحدد موقعك — فعّل صلاحية الموقع من المتصفح لنعرض الأقرب إلك";
+      d.locError = t("loc.denied");
       render();
     },
     { enableHighAccuracy: true, timeout: 10000 },
@@ -839,11 +843,11 @@ function merchantRowHtml(m) {
       <div class="title-line">
         <div style="display:flex;align-items:center;gap:10px;min-width:0">
           ${avatarHtml(m.avatarUrl, m.businessName)}
-          <div style="min-width:0"><strong>${esc(m.businessName)}</strong><p class="muted" style="margin:0">${esc(m.category ? m.category.name : "")}${m.address ? " · " + esc(m.address) : ""}</p></div>
+          <div style="min-width:0"><strong>${esc(m.businessName)}</strong><p class="muted" style="margin:0">${esc(catName(m.category))}${m.address ? " · " + esc(m.address) : ""}</p></div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-          ${m.distanceKm != null ? `<span class="badge neutral">${m.distanceKm < 1 ? Math.round(m.distanceKm * 1000) + " م" : m.distanceKm.toFixed(1) + " كم"}</span>` : ""}
-          <button class="heart ${saved ? "on" : ""}" title="حفظ" onclick="event.stopPropagation();toggleFav('${m.id}')">${saved ? "♥" : "♡"}</button>
+          ${m.distanceKm != null ? `<span class="badge neutral">${m.distanceKm < 1 ? Math.round(m.distanceKm * 1000) + " " + esc(t("unit.m")) : m.distanceKm.toFixed(1) + " " + esc(t("unit.km"))}</span>` : ""}
+          <button class="heart ${saved ? "on" : ""}" title="${esc(t("card.save"))}" onclick="event.stopPropagation();toggleFav('${m.id}')">${saved ? "♥" : "♡"}</button>
         </div>
       </div>
       <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
@@ -851,14 +855,14 @@ function merchantRowHtml(m) {
         ${(m.discounts || []).map((dc) => `<span class="badge info">🏷️ ${esc(dc.title)} — ${dc.percent}%</span>`).join("")}
       </div>
       <div class="place-card-actions">
-        <button class="btn small" style="width:auto" onclick="event.stopPropagation();go('merchantDetail',{merchantId:'${m.id}'})">التفاصيل</button>
-        ${hasCoords ? `<button class="btn small outline" style="width:auto" onclick="event.stopPropagation();startRoute('${m.id}')">🧭 الاتجاهات</button>` : ""}
+        <button class="btn small" style="width:auto" onclick="event.stopPropagation();go('merchantDetail',{merchantId:'${m.id}'})">${esc(t("card.details"))}</button>
+        ${hasCoords ? `<button class="btn small outline" style="width:auto" onclick="event.stopPropagation();startRoute('${m.id}')">${esc(t("card.directions"))}</button>` : ""}
       </div>
     </div>`;
 }
 
 async function loadCategories() {
-  const { ok, data } = await api("GET", "/categories");
+  const { ok, data } = await api("GET", "/categories?lang=" + LANG);
   S._discover.categories = ok ? data : [];
 }
 
@@ -900,21 +904,17 @@ async function loadFavorites() {
 /* ---- guests: everything account-bound explains itself instead of failing ---- */
 
 function guestPrompt(tab) {
-  const copy = {
-    card: ["💳", "بطاقة دليلكم", "افتح حساب لتحصل على بطاقة الحسم الرقمية وتوفّر بكل محل على الخريطة.", ["حسم فوري عند أي تاجر مشترك", "كود QR يتجدّد لحمايتك", "سجل بكل حسوماتك"]],
-    cart: ["🛒", "سلة مشترياتك", "سجّل دخولك لتضيف منتجات وتكمل طلبك.", ["اطلب من عدة محلات بسلة وحدة", "أسعار خاصة للأعضاء"]],
-    orders: ["📦", "طلباتك", "سجّل دخولك لتتابع طلباتك وحالتها.", ["تتبّع كل طلب خطوة بخطوة", "إلغاء الطلب قبل الشحن"]],
-    profile: ["👤", "افتح حسابك", "الخريطة ودليل المحلات مفتوحين للكل. الحساب بتحتاجه إذا بدك بطاقة حسم أو تسجّل محلك كتاجر.", ["احصل على بطاقة الحسم", "سجّل محلك كتاجر وأضف منتجاتك وعروضك", "فعّل المجيب الآلي لمحادثات زبائنك"]],
-  }[tab];
+  const icons = { card: "💳", cart: "🛒", orders: "📦", profile: "👤" };
+  const perks = { card: 3, cart: 2, orders: 2, profile: 3 }[tab];
   return `
     <div class="guest-prompt">
-      <div class="guest-ico">${copy[0]}</div>
-      <h1 class="screen-title" style="margin:0">${copy[1]}</h1>
-      <p class="screen-sub">${copy[2]}</p>
-      <ul>${copy[3].map((p) => `<li>✓ ${esc(p)}</li>`).join("")}</ul>
-      <button class="btn" onclick="go('login')">تسجيل الدخول</button>
+      <div class="guest-ico">${icons[tab]}</div>
+      <h1 class="screen-title" style="margin:0">${esc(t(`guest.${tab}.title`))}</h1>
+      <p class="screen-sub">${esc(t(`guest.${tab}.sub`))}</p>
+      <ul>${Array.from({ length: perks }, (_, i) => `<li>✓ ${esc(t(`guest.${tab}.p${i + 1}`))}</li>`).join("")}</ul>
+      <button class="btn" onclick="go('login')">${esc(t("guest.login"))}</button>
       <div style="height:10px"></div>
-      <button class="btn outline" onclick="go('register')">إنشاء حساب جديد</button>
+      <button class="btn outline" onclick="go('register')">${esc(t("guest.register"))}</button>
     </div>`;
 }
 
@@ -1028,25 +1028,25 @@ function tabProfile() {
         if (S._profile == null) { S._profile = {}; loadProfile(); }
         const p = S._profile;
         return `<div style="display:flex;justify-content:center">${avatarHtml(p.avatarUrl, p.fullName, "huge")}</div>
-          <h1 class="screen-title" style="margin:10px 0 2px">${esc(p.fullName || "حسابي")}</h1>
+          <h1 class="screen-title" style="margin:10px 0 2px">${esc(p.fullName || t("profile.myAccount"))}</h1>
           ${p.bio ? `<p class="muted" style="margin:0 0 6px;max-width:260px">${esc(p.bio)}</p>` : ""}
-          <button class="link-btn" onclick="go('profileEdit')">✏️ تعديل ملفي الشخصي</button>`;
+          <button class="link-btn" onclick="go('profileEdit')">${esc(t("profile.edit"))}</button>`;
       })()}
       <div style="height:14px"></div>
       ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
       ${S.role === "MERCHANT"
-        ? `<button class="btn" style="max-width:240px" onclick="go('merchantMode')">وضع التاجر</button>`
-        : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">سجّل كتاجر</button>`}
+        ? `<button class="btn" style="max-width:240px" onclick="go('merchantMode')">${esc(t("profile.merchantMode"))}</button>`
+        : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`}
       <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('favorites')">♥ أماكني المحفوظة</button>
+      <button class="btn outline" style="max-width:240px" onclick="go('favorites')">${esc(t("profile.favorites"))}</button>
       <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">مسوّقياتي</button>
+      <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>
       <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('responder')">🤖 المجيب الآلي</button>
+      <button class="btn outline" style="max-width:240px" onclick="go('responder')">${esc(t("profile.responder"))}</button>
       <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('wallet')">💰 محفظتي</button>
+      <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
       <div style="height:14px"></div>
-      <button class="btn secondary" style="max-width:240px" onclick="doLogout()">تسجيل الخروج</button>
+      <button class="btn secondary" style="max-width:240px" onclick="doLogout()">${esc(t("profile.logout"))}</button>
     </div>
   `;
 }
@@ -1107,11 +1107,11 @@ function shareMerchant() {
   if (!m) return;
   const url = `${location.origin}${location.pathname}?merchant=${m.id}`;
   if (navigator.share) {
-    navigator.share({ title: m.businessName, text: `${m.businessName} على دليلكم`, url }).catch(() => {});
+    navigator.share({ title: m.businessName, text: t("place.shareText", { name: m.businessName }), url }).catch(() => {});
   } else if (navigator.clipboard) {
-    navigator.clipboard.writeText(url).then(() => toast("تم نسخ الرابط ✅"), () => prompt("انسخ الرابط:", url));
+    navigator.clipboard.writeText(url).then(() => toast(t("place.linkCopied")), () => prompt(t("place.copyLink"), url));
   } else {
-    prompt("انسخ الرابط:", url);
+    prompt(t("place.copyLink"), url);
   }
 }
 
@@ -1121,11 +1121,11 @@ function hoursTable(m) {
   // "Today" is the platform's day (Damascus), the same clock the server uses for open/closed.
   const todayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Damascus" })).getDay()];
   return `
-    <div class="section-title">ساعات العمل</div>
+    <div class="section-title">${esc(t("hours.title"))}</div>
     <div class="card hours-table">
       ${DAY_ORDER.map((day) => {
         const ranges = hours[day] || [];
-        const text = ranges.length ? ranges.map((r) => (r.open === r.close ? "24 ساعة" : `${fmtClock(r.open)} – ${fmtClock(r.close)}`)).join("، ") : "مغلق";
+        const text = ranges.length ? ranges.map((r) => (r.open === r.close ? t("hours.allDay") : `${fmtClock(r.open)} – ${fmtClock(r.close)}`)).join(t("hours.sep")) : t("hours.closed");
         return `<div class="hours-line ${day === todayKey ? "today" : ""}"><span>${DAY_LABEL[day]}</span><span class="${ranges.length ? "" : "muted"}">${text}</span></div>`;
       }).join("")}
     </div>`;
@@ -1138,7 +1138,7 @@ function screenMerchantDetail() {
   }
   const m = S._merchantDetail;
   if (m.loading) return backRow() + spinner();
-  if (!m.merchant) return backRow() + `<div class="error-banner">هذا المحل غير متوفر</div>`;
+  if (!m.merchant) return backRow() + `<div class="error-banner">${esc(t("place.notFound"))}</div>`;
   const x = m.merchant;
   const hasCoords = x.latitude != null && x.longitude != null;
   const phone = (x.phone || "").trim();
@@ -1150,30 +1150,30 @@ function screenMerchantDetail() {
       ${avatarHtml(x.avatarUrl, x.businessName, "big")}
       <div style="min-width:0">
         <h1 class="screen-title" style="margin:0">${esc(x.businessName)}</h1>
-        <p class="screen-sub" style="margin:2px 0 6px">${esc(x.category ? x.category.name : "")}${x.distanceKm != null ? " · " + x.distanceKm.toFixed(1) + " كم" : ""}</p>
+        <p class="screen-sub" style="margin:2px 0 6px">${esc(catName(x.category))}${x.distanceKm != null ? " · " + x.distanceKm.toFixed(1) + " " + esc(t("unit.km")) : ""}</p>
         ${openBadge(x.openStatus)}
       </div>
     </div>
     ${x.bio ? `<p class="place-bio">${esc(x.bio)}</p>` : ""}
     <div class="place-actions">
-      ${phone ? `<a href="tel:${esc(phone)}"><span>📞</span>اتصال</a>` : ""}
-      ${wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span>💬</span>واتساب</a>` : ""}
-      ${hasCoords ? `<button onclick="startRoute('${x.id}')"><span>🧭</span>الاتجاهات</button>` : ""}
-      <button onclick="shareMerchant()"><span>📤</span>مشاركة</button>
-      <button class="${saved ? "on" : ""}" onclick="toggleFav('${x.id}')"><span>${saved ? "♥" : "♡"}</span>${saved ? "محفوظ" : "حفظ"}</button>
+      ${phone ? `<a href="tel:${esc(phone)}"><span>📞</span>${esc(t("place.call"))}</a>` : ""}
+      ${wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span>💬</span>${esc(t("place.whatsapp"))}</a>` : ""}
+      ${hasCoords ? `<button onclick="startRoute('${x.id}')"><span>🧭</span>${esc(t("place.directions"))}</button>` : ""}
+      <button onclick="shareMerchant()"><span>📤</span>${esc(t("place.share"))}</button>
+      <button class="${saved ? "on" : ""}" onclick="toggleFav('${x.id}')"><span>${saved ? "♥" : "♡"}</span>${esc(saved ? t("place.saved") : t("place.save"))}</button>
     </div>
     ${x.address ? `<div class="place-row">📍 ${esc(x.address)}</div>` : ""}
-    ${(x.discounts || []).length ? `<div class="section-title">الحسوم</div>${x.discounts.map((d) => `<div class="badge info" style="margin-bottom:6px">🏷️ ${esc(d.title)} — ${d.percent}%</div>`).join("")}` : ""}
+    ${(x.discounts || []).length ? `<div class="section-title">${esc(t("place.discounts"))}</div>${x.discounts.map((d) => `<div class="badge info" style="margin-bottom:6px">🏷️ ${esc(d.title)} — ${d.percent}%</div>`).join("")}` : ""}
     ${hoursTable(x)}
-    <div class="section-title">المنتجات</div>
-    ${(m.products || []).length === 0 ? `<div class="empty-state">ما في منتجات بعد</div>` : m.products.map((p) => `
+    <div class="section-title">${esc(t("place.products"))}</div>
+    ${(m.products || []).length === 0 ? `<div class="empty-state">${esc(t("place.noProducts"))}</div>` : m.products.map((p) => `
       <div class="card clickable" onclick="go('productDetail', {productId:'${p.id}'})">
         <div class="title-line">
           <strong>${esc(p.name)}</strong>
-          ${(!p.isActive || p.stock <= 0) ? `<span class="badge danger">غير متوفر</span>` : ""}
+          ${(!p.isActive || p.stock <= 0) ? `<span class="badge danger">${esc(t("place.unavailable"))}</span>` : ""}
         </div>
         ${p.memberDiscountEnabled && p.memberPriceCents != null
-          ? `<p><span class="price strike">${fmt(p.priceCents)}</span> <span class="price" style="color:var(--primary)">${fmt(p.memberPriceCents)} لأعضاء دليلكم</span></p>`
+          ? `<p><span class="price strike">${fmt(p.priceCents)}</span> <span class="price" style="color:var(--primary)">${fmt(p.memberPriceCents)} ${esc(t("place.forMembers"))}</span></p>`
           : `<p class="price">${fmt(p.priceCents)}</p>`}
       </div>`).join("")}
   `;
@@ -1379,17 +1379,14 @@ async function cancelOrder() {
 /* ================= MERCHANT REGISTER ================= */
 
 function screenMerchantRegister() {
-  if (!S._merchReg) { S._merchReg = { categories: [] }; pickReset(null, null); api("GET", "/categories").then((r) => { S._merchReg.categories = r.ok ? r.data : []; render(); }); }
+  if (!S._merchReg) { S._merchReg = { categories: [] }; pickReset(null, null); api("GET", "/categories?lang=" + LANG).then((r) => { S._merchReg.categories = r.ok ? r.data : []; render(); }); }
   const m = S._merchReg;
   return `
     ${backRow()}
     <h1 class="screen-title">سجّل كتاجر</h1>
     <p class="screen-sub">بيصير حسابك تاجر بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</p>
     <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="اسم محلك" value="${esc(m.name || "")}" /></div>
-    <div class="section-title" style="margin-top:6px">التصنيف</div>
-    <div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
-      ${flattenCategories(m.categories).map((c) => `<button class="chip ${m.selectedCat === c.id ? "active" : ""}" onclick="selectMerchCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
-    </div>
+    ${categoryPickerHtml(m.categories, m.selectedCat, "selectMerchCategory")}
     <div class="field"><label>العنوان (اختياري)</label><input id="mr-address" placeholder="العنوان" value="${esc(m.address || "")}" /></div>
     <div class="row">
       <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="رقم الهاتف" value="${esc(m.phone || "")}" /></div>
@@ -1520,10 +1517,7 @@ function screenMerchantProfile() {
     <h1 class="screen-title">بيانات المحل ومكانه</h1>
     <p class="screen-sub">هي اللي بتظهر للزبائن على الخريطة وبصفحة محلك</p>
     <div class="field"><label>اسم المحل</label><input id="mp-name" value="${esc(m.name || "")}" /></div>
-    <div class="section-title" style="margin-top:6px">التصنيف</div>
-    <div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
-      ${flattenCategories(m.categories || []).map((c) => `<button class="chip ${m.categoryId === c.id ? "active" : ""}" onclick="mprofCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
-    </div>
+    ${categoryPickerHtml(m.categories || [], m.categoryId, "mprofCategory")}
     <div class="field"><label>العنوان</label><input id="mp-address" value="${esc(m.address || "")}" /></div>
     <div class="row">
       <div class="field"><label>الهاتف</label><input id="mp-phone" value="${esc(m.phone || "")}" /></div>
@@ -1537,7 +1531,7 @@ function screenMerchantProfile() {
 }
 
 async function loadMerchantProfile() {
-  const [me, cats] = await Promise.all([api("GET", "/merchant/me"), api("GET", "/categories")]);
+  const [me, cats] = await Promise.all([api("GET", "/merchant/me"), api("GET", "/categories?lang=" + LANG)]);
   const d = me.ok ? me.data : {};
   S._mprof = { loading: false, name: d.businessName, categoryId: d.categoryId, address: d.address, phone: d.phone, whatsapp: d.whatsapp, categories: cats.ok ? cats.data : [], msg: "" };
   pickReset(d.latitude != null ? d.latitude : null, d.longitude != null ? d.longitude : null);
@@ -1553,7 +1547,7 @@ function mprofCategory(id) { snapshotMprof(); S._mprof.categoryId = id; render()
 async function saveMerchantProfile() {
   snapshotMprof();
   const m = S._mprof;
-  const body = { businessName: (m.name || "").trim(), categoryId: m.categoryId, address: (m.address || "").trim() || null, phone: (m.phone || "").trim() || null, whatsapp: (m.whatsapp || "").replace(/\D/g, "") || null };
+  const body = { businessName: (m.name || "").trim(), ...(m.categoryId ? { categoryId: m.categoryId } : {}), address: (m.address || "").trim() || null, phone: (m.phone || "").trim() || null, whatsapp: (m.whatsapp || "").replace(/\D/g, "") || null };
   if (S._pick && S._pick.lat != null) { body.latitude = S._pick.lat; body.longitude = S._pick.lng; }
   S.error = null;
   const { ok, data } = await api("PATCH", "/merchant/me", body);
@@ -1597,11 +1591,11 @@ async function loadOnboarding() {
 
 function fmtDuration(seconds) {
   const m = Math.max(1, Math.round(seconds / 60));
-  if (m >= 60) return `${Math.floor(m / 60)} س ${m % 60} د`;
-  return m === 1 ? "دقيقة" : m === 2 ? "دقيقتان" : m <= 10 ? `${m} دقائق` : `${m} دقيقة`;
+  if (m >= 60) return t("dur.hm", { h: Math.floor(m / 60), m: m % 60 });
+  return m === 1 ? t("dur.min1") : m === 2 ? t("dur.min2") : m <= 10 ? t("dur.min3to10", { n: m }) : t("dur.min", { n: m });
 }
 function fmtDistance(meters) {
-  return meters < 1000 ? `${meters} م` : `${(meters / 1000).toFixed(1)} كم`;
+  return meters < 1000 ? `${meters} ${t("unit.m")}` : `${(meters / 1000).toFixed(1)} ${t("unit.km")}`;
 }
 
 function locateUser() {
@@ -1621,7 +1615,7 @@ async function startRoute(merchantId, mode) {
   if (!m || m.latitude == null) return;
   if (!d.userLoc) {
     try { d.userLoc = await locateUser(); S._centeredUser = true; }
-    catch (e) { return toast("فعّل صلاحية الموقع من المتصفح لنرسم لك الطريق، أو افتحه بخرائط جوجل"); }
+    catch (e) { return toast(t("route.needLocation")); }
   }
   S._route = { merchantId, mode: mode || "driving", name: m.businessName, dest: { lat: m.latitude, lng: m.longitude }, loading: true };
   d.selectedId = merchantId;
@@ -1631,7 +1625,7 @@ async function startRoute(merchantId, mode) {
   const { ok, data } = await api("GET", "/route?" + q.toString());
   if (!S._route) return; // cancelled meanwhile
   S._route.loading = false;
-  if (ok) S._route.data = data; else S._route.error = errMsg(data, "تعذّر حساب الطريق");
+  if (ok) S._route.data = data; else S._route.error = errMsg(data, t("route.failed"));
   render();
 }
 
@@ -1641,18 +1635,18 @@ function cancelRoute() { S._route = null; render(); }
 function routeBarHtml() {
   const r = S._route;
   if (!r) return "";
-  const body = r.loading ? `<span class="muted">عم نحسب الطريق...</span>`
+  const body = r.loading ? `<span class="muted">${esc(t("route.calculating"))}</span>`
     : r.error ? `<span style="color:var(--danger)">${esc(r.error)}</span>`
     : `<strong>${r.mode === "walking" ? "🚶" : "🚗"} ${fmtDuration(r.data.durationSeconds)}</strong> <span class="muted">· ${fmtDistance(r.data.distanceMeters)}</span>`;
   return `
     <div class="route-bar">
-      <div class="route-title"><span>إلى ${esc(r.name)}</span><button class="route-x" onclick="cancelRoute()">✕</button></div>
+      <div class="route-title"><span>${esc(t("route.to", { name: r.name }))}</span><button class="route-x" onclick="cancelRoute()">✕</button></div>
       <div class="route-row">
         <div>${body}</div>
         <div class="route-actions">
           <button class="chip ${r.mode === "driving" ? "active" : ""}" onclick="setRouteMode('driving')">🚗</button>
           <button class="chip ${r.mode === "walking" ? "active" : ""}" onclick="setRouteMode('walking')">🚶</button>
-          <a class="chip" href="${directionsUrl(r.dest.lat, r.dest.lng)}" target="_blank" rel="noopener">افتح بجوجل</a>
+          <a class="chip" href="${directionsUrl(r.dest.lat, r.dest.lng)}" target="_blank" rel="noopener">${esc(t("route.google"))}</a>
         </div>
       </div>
     </div>`;
@@ -1683,14 +1677,14 @@ async function loadAccountInfo() {
 function verifyBannerHtml() {
   const a = S.account;
   if (!a || a.emailVerified || !a.emailDeliveryEnabled) return "";
-  return `<div class="card" style="text-align:right;width:100%"><strong>✉️ بريدك غير موثّق</strong>
-    <p class="muted" style="margin:4px 0 8px">وثّق بريدك لتحمي حسابك وتقدر تسترجع كلمة السرّ.</p>
-    <button class="btn small outline" style="width:auto" onclick="resendVerification()">إعادة إرسال رابط التوثيق</button></div><div style="height:12px"></div>`;
+  return `<div class="card" style="text-align:right;width:100%"><strong>${esc(t("verify.title"))}</strong>
+    <p class="muted" style="margin:4px 0 8px">${esc(t("verify.sub"))}</p>
+    <button class="btn small outline" style="width:auto" onclick="resendVerification()">${esc(t("verify.resend"))}</button></div><div style="height:12px"></div>`;
 }
 
 async function resendVerification() {
   const { ok } = await api("POST", "/auth/resend-verification", { email: S.account.email });
-  toast(ok ? "أرسلنا رابط التوثيق لبريدك ✅" : "تعذّر الإرسال، جرّب بعد شوي");
+  toast(ok ? t("verify.sent") : t("verify.failed"));
 }
 
 /* ================= ACCOUNT PROFILE: photo + description ================= */
@@ -1818,6 +1812,123 @@ async function exportDocument(path) {
   const cleanup = () => { root.innerHTML = ""; document.title = previousTitle; window.removeEventListener("afterprint", cleanup); };
   window.addEventListener("afterprint", cleanup);
   window.print();
+}
+
+/* ================= SECTIONS BROWSER, CATEGORY PICKER, LANGUAGE ================= */
+
+// id -> { node, parent } for a category tree (sections > professions > specialties).
+function indexTree(tree) {
+  const map = new Map();
+  const walk = (nodes, parent) => nodes.forEach((n) => { map.set(n.id, { node: n, parent }); walk(n.children || [], n); });
+  walk(tree || [], null);
+  return map;
+}
+function catIndex() { return indexTree(discoverState().categories); }
+
+// The category's name in the current language (the places API returns the base Arabic name).
+function catName(category) {
+  if (!category) return "";
+  const hit = catIndex().get(category.id);
+  return hit ? hit.node.name : category.name;
+}
+
+function openBrowse() { discoverState().browse = { trail: [] }; render(); }
+function closeBrowse() { discoverState().browse = null; render(); }
+function browseInto(id) { discoverState().browse.trail.push(id); render(); }
+function browseBack() {
+  const b = discoverState().browse;
+  if (b.trail.length) { b.trail.pop(); render(); } else closeBrowse();
+}
+function selectCategory(id) {
+  const d = discoverState();
+  d.categoryId = id; d.browse = null; d.query = ""; d.suggest = null; d.showSuggest = false;
+  searchMerchants();
+}
+
+function browseHtml(d) {
+  if (!d.browse) return "";
+  const index = catIndex();
+  const currentId = d.browse.trail[d.browse.trail.length - 1];
+  const current = currentId ? index.get(currentId) : null;
+  const nodes = current ? current.node.children || [] : d.categories;
+  const crumbs = d.browse.trail.map((id) => index.get(id) && index.get(id).node.name).filter(Boolean);
+  const tile = (n) => {
+    const hasKids = (n.children || []).length > 0;
+    return `<button class="browse-tile ${n.merchantCount ? "" : "empty"}" onclick="${hasKids ? `browseInto('${n.id}')` : `selectCategory('${n.id}')`}">
+      <span class="bt-ico">${esc(n.icon || "📍")}</span>
+      <span class="bt-name">${esc(n.name)}</span>
+      <span class="bt-count">${n.merchantCount ? esc(t("browse.count", { n: n.merchantCount })) : esc(t("browse.soon"))}${hasKids ? " ›" : ""}</span>
+    </button>`;
+  };
+  return `
+    <div class="browse">
+      <div class="browse-head">
+        <button class="browse-back" onclick="browseBack()">${esc(t("browse.back"))}</button>
+        <div class="browse-title">${esc(crumbs.length ? crumbs.join(" › ") : t("browse.title"))}</div>
+        <button class="browse-x" title="${esc(t("browse.close"))}" onclick="closeBrowse()">✕</button>
+      </div>
+      <div class="browse-body">
+        ${current ? `<button class="browse-all" onclick="selectCategory('${current.node.id}')">${esc(current.node.icon || "")} ${esc(t("browse.all", { name: current.node.name }))} <span class="muted">· ${esc(t("browse.count", { n: current.node.merchantCount }))}</span></button>` : ""}
+        <div class="browse-grid">${nodes.map(tile).join("")}</div>
+      </div>
+    </div>`;
+}
+
+// The quick filter row: a button for the full browser, the chosen category (removable), then the sections.
+function categoryChipsHtml(d) {
+  const index = catIndex();
+  const picked = d.categoryId ? index.get(d.categoryId) : null;
+  const pickedChip = picked
+    ? `<button class="chip active" onclick="onDiscoverReset()">${esc(picked.node.icon || "")} ${esc(picked.node.name)} ✕</button>`
+    : "";
+  const sections = d.categories
+    .filter((c) => !picked || c.id !== picked.node.id)
+    .map((c) => `<button class="chip ${d.categoryId === c.id ? "active" : ""}" onclick="onDiscoverCategory('${c.id}')">${esc(c.icon || "")} ${esc(c.name)}</button>`)
+    .join("");
+  return `<button class="chip" onclick="openBrowse()">${esc(t("filter.sections"))}</button>${pickedChip}${sections}`;
+}
+
+// Section > profession > specialty as cascading selects, for the merchant forms. `pick(id)` receives the
+// most specific choice made so far ('' when cleared).
+function categoryPickerHtml(tree, selectedId, pick) {
+  const index = indexTree(tree);
+  const chain = [];
+  for (let e = selectedId ? index.get(selectedId) : null; e; e = e.parent ? index.get(e.parent.id) : null) chain.unshift(e.node);
+  const labels = ["picker.section", "picker.profession", "picker.specialty"];
+  let options = tree || [];
+  let parentId = "";
+  let html = "";
+  for (let depth = 0; depth < 3 && options.length; depth++) {
+    const chosen = chain[depth];
+    html += `<div class="field"><label>${esc(t(labels[depth]))}</label>
+      <select class="cat-select" onchange="${pick}(this.value || '${parentId}')">
+        <option value="">${esc(t("picker.choose"))}</option>
+        ${options.map((n) => `<option value="${n.id}" ${chosen && chosen.id === n.id ? "selected" : ""}>${esc((n.icon ? n.icon + " " : "") + n.name)}</option>`).join("")}
+      </select></div>`;
+    if (!chosen) break;
+    parentId = chosen.id;
+    options = chosen.children || [];
+  }
+  return html;
+}
+
+function toggleLangMenu() { S._langMenu = !S._langMenu; render(); }
+function langMenuHtml() {
+  if (!S._langMenu) return "";
+  return `<div class="lang-menu">${Object.entries(LANGS).map(([code, l]) => `<button class="${code === LANG ? "active" : ""}" onclick="setLang('${code}')">${esc(l.name)}</button>`).join("")}</div>`;
+}
+
+function setLang(code) {
+  if (!LANGS[code]) return;
+  LANG = code;
+  try { localStorage.setItem("dlk_lang", code); } catch (e) {}
+  applyLang();
+  S._langMenu = false;
+  if (S._discover) {
+    S._discover.suggest = null;
+    loadCategories().then(() => render()); // names come back in the new language
+  }
+  render();
 }
 
 /* ================= MERCHANT MODE SHELL ================= */
@@ -2132,7 +2243,7 @@ function screenProductEdit() {
 }
 
 async function initProductEdit(productId) {
-  const catsRes = await api("GET", "/categories");
+  const catsRes = await api("GET", "/categories?lang=" + LANG);
   const categories = catsRes.ok ? catsRes.data : [];
   if (!productId) {
     S._prodEdit = { ...S._prodEdit, loading: false, categories };

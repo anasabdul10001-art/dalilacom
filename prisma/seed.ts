@@ -1,4 +1,5 @@
 import { PrismaClient, Role } from "@prisma/client";
+import { seedCategories } from "./categories.seed";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -42,16 +43,9 @@ async function main() {
     console.log("Created Monthly membership plan");
   }
 
-  // A starter slice of the category list from section 10/31 — the admin can add more later.
-  const topLevelCategories = ["Restaurants", "Cafes", "Clothing", "Electronics", "Beauty", "Health"];
-  for (const name of topLevelCategories) {
-    const slug = name.toLowerCase();
-    const existingCategory = await prisma.category.findUnique({ where: { slug } });
-    if (!existingCategory) {
-      await prisma.category.create({ data: { name, slug } });
-      console.log(`Created category: ${name}`);
-    }
-  }
+  // Sections, professions and specialties (Arabic + English) — see prisma/categories.data.ts.
+  // The admin can add more categories any time; only the slugs defined in that file are refreshed here.
+  console.log(`Seeded ${await seedCategories(prisma)} categories`);
   // Channels the super admin offers by default. Meta ones are listed but can't be connected until a Meta
   // developer app exists and is approved; the admin can add more channels (e.g. generic webhooks) any time.
   const channels = [

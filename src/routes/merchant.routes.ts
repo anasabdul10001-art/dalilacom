@@ -4,6 +4,8 @@ import { MerchantApprovalStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { ownerProfileSelect, withOwnerProfile } from "../lib/profile";
+import { resolveLanguage } from "../lib/languages";
+import { categoryAndDescendantIds, searchCategories } from "../services/category.service";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { createBusinessFromMerchantProfile } from "../services/business.service";
 import { getDefaultCountry } from "../services/geo.service";
@@ -207,16 +209,24 @@ merchantRouter.get("/", async (req, res) => {
   const { q, categoryId, lat, lng, radiusKm, openNow, minLat, maxLat, minLng, maxLng } = parsed.data;
   const hasBox = minLat !== undefined && maxLat !== undefined && minLng !== undefined && maxLng !== undefined;
 
+  // Picking "doctors" must show every specialty under it; typing "dentist" / "اسنان" must reach the
+  // specialty (and everything beneath it) even when no shop has that word in its own name.
+  const categoryIds = categoryId ? await categoryAndDescendantIds(categoryId) : undefined;
+  const matchedCategoryIds = q
+    ? (await Promise.all((await searchCategories(q, resolveLanguage(req), 4)).filter((c) => c.score >= 60).map((c) => categoryAndDescendantIds(c.id)))).flat()
+    : [];
+
   const found = await prisma.merchantProfile.findMany({
     where: {
       approvalStatus: "APPROVED",
-      ...(categoryId ? { categoryId } : {}),
+      ...(categoryIds ? { categoryId: { in: categoryIds } } : {}),
       ...(q
         ? {
             OR: [
               { businessName: { contains: q, mode: "insensitive" } },
               { category: { name: { contains: q, mode: "insensitive" } } },
               { address: { contains: q, mode: "insensitive" } },
+              ...(matchedCategoryIds.length ? [{ categoryId: { in: matchedCategoryIds } }] : []),
             ],
           }
         : {}),
@@ -256,7 +266,8 @@ merchantRouter.get("/suggest", async (req, res) => {
       orderBy: { businessName: "asc" },
       take: 5,
     }),
-    prisma.category.findMany({ where: { name: { contains: q, mode: "insensitive" } }, select: { id: true, name: true }, orderBy: { name: "asc" }, take: 5 }),
+    // Sections / professions / specialties, spelling-tolerant and in any language, with their breadcrumb path.
+    searchCategories(q, resolveLanguage(req), 6),
   ]);
   res.json({ merchants, categories });
 });

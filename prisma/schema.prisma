@@ -193,12 +193,15 @@ model Category {
   name      String
   slug      String   @unique
   parentId  String?
+  icon      String? // emoji shown on browse tiles
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
-  parent    Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children  Category[]        @relation("CategoryHierarchy")
-  merchants MerchantProfile[]
-  products  Product[]
+  translations CategoryTranslation[]
+  parent       Category?             @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     Category[]            @relation("CategoryHierarchy")
+  merchants    MerchantProfile[]
+  products     Product[]
 
   businesses     Business[]
   productMasters ProductMaster[]
@@ -963,4 +966,19 @@ model UserAvatar {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// One row per category per extra language: the translated name and the words people actually type
+// (synonyms are searched in every language, so "dentist" finds the Arabic specialty too).
+// Category.name holds the default language (Arabic); a default-language row may exist for synonyms only.
+model CategoryTranslation {
+  id         String   @id @default(uuid())
+  categoryId String
+  lang       String
+  name       String?
+  synonyms   String[]
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, lang])
 }
