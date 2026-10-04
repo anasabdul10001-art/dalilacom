@@ -778,3 +778,21 @@ h1, h2, h3 {
 .btn.small { box-shadow: none; border-radius: 12px; }
 .screen-title { letter-spacing: -0.2px; }
 .badge { border-radius: 999px; }
+
+/* ---- frosted glass: floating controls let the map show through ---- */
+:root { --glass: color-mix(in srgb, var(--surface) 58%, transparent); --glass-edge: rgba(255, 255, 255, 0.45); }
+.map-top .searchbox,
+.float-chips .chip:not(.active),
+.float-note,
+.mapfull .map-fab,
+.mapfull .area-btn,
+.mapfull .leaflet-bar {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+  border: 1px solid var(--glass-edge);
+}
+.mapfull .leaflet-bar a { background: transparent; }
+.float-chips .chip.active { box-shadow: 0 6px 16px -6px rgba(186, 42, 52, 0.7); }
+.tabbar { background: color-mix(in srgb, var(--surface) 62%, transparent); border-color: var(--glass-edge); backdrop-filter: blur(18px) saturate(1.5); -webkit-backdrop-filter: blur(18px) saturate(1.5); }
+.sheet { background: color-mix(in srgb, var(--phone-bg) 90%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }

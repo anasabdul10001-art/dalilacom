@@ -226,9 +226,9 @@ fun DiscoverScreen(
                 Surface(
                     onClick = { viewModel.searchThisArea() },
                     shape = RoundedCornerShape(22.dp),
-                    color = MaterialTheme.colorScheme.surface,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
                     contentColor = MaterialTheme.colorScheme.primary,
-                    shadowElevation = 8.dp,
+                    shadowElevation = 4.dp,
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = innerPadding.calculateBottomPadding() + 16.dp),
                 ) {
                     Text("🔍 ابحث بهالمنطقة", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp))
@@ -240,7 +240,7 @@ fun DiscoverScreen(
                     requestLocation()
                     recenterTick++
                 },
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
                 contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 16.dp),
             ) { Icon(Icons.Filled.MyLocation, contentDescription = "موقعي") }
@@ -267,7 +267,7 @@ private fun SearchPill(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(28.dp), shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(28.dp), shadowElevation = 4.dp, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)) {
         TextField(
             value = query,
             onValueChange = onQueryChange,
@@ -335,8 +335,8 @@ private fun MapChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        shadowElevation = 4.dp,
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+        shadowElevation = 2.dp,
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
         contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
     ) {
         Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
@@ -355,8 +355,8 @@ private fun LocationNotice(status: LocationStatus, onRetry: () -> Unit) {
     Surface(
         modifier = Modifier.padding(horizontal = 12.dp),
         shape = RoundedCornerShape(14.dp),
-        shadowElevation = 4.dp,
-        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
     ) {
         Row(Modifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(message, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 10.dp))
