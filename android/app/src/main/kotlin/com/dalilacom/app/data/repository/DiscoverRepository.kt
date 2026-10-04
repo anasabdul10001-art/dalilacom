@@ -19,8 +19,11 @@ class DiscoverRepository(private val api: ApiService) {
         lat: Double? = null,
         lng: Double? = null,
         radiusKm: Double? = null,
+        bounds: MapBounds? = null,
     ): List<MerchantDto> {
-        val response = safeApiCall { api.searchMerchants(query, categoryId, lat, lng, radiusKm) } ?: return emptyList()
+        val response = safeApiCall {
+            api.searchMerchants(query, categoryId, lat, lng, radiusKm, bounds?.south, bounds?.north, bounds?.west, bounds?.east)
+        } ?: return emptyList()
         return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()
     }
 
@@ -35,3 +38,6 @@ class DiscoverRepository(private val api: ApiService) {
         return if (response.isSuccessful) response.body() else null
     }
 }
+
+/** The rectangle the map is showing — used for "search this area". */
+data class MapBounds(val north: Double, val south: Double, val east: Double, val west: Double)

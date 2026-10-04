@@ -4,7 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.CategoryDto
 import com.dalilacom.app.data.network.MerchantDto
+import com.dalilacom.app.data.network.SuggestResponse
 import com.dalilacom.app.data.repository.DiscoverRepository
+import com.dalilacom.app.data.repository.MapBounds
+import com.dalilacom.app.data.repository.PlacesRepository
+import com.dalilacom.app.data.store.SessionStore
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +28,7 @@ data class DiscoverUiState(
     val categories: List<CategoryDto> = emptyList(),
     val selectedCategoryId: String? = null,
     val query: String = "",
+    val openNow: Boolean = false,
     val radiusKm: Double? = null,
     val discountsOnly: Boolean = false,
     val allMerchants: List<MerchantDto> = emptyList(),
@@ -31,22 +38,71 @@ data class DiscoverUiState(
     val userLocation: Pair<Double, Double>? = null,
     val locationStatus: LocationStatus = LocationStatus.Idle,
     val locationRequested: Boolean = false,
+    val searchBounds: MapBounds? = null,
+    val areaDirty: Boolean = false,
+    val suggestions: SuggestResponse = SuggestResponse(),
+    val recentSearches: List<String> = emptyList(),
+    val searchFocused: Boolean = false,
+    val favoriteIds: Set<String> = emptySet(),
+    val message: String? = null,
 )
 
-class DiscoverViewModel(private val repository: DiscoverRepository) : ViewModel() {
+class DiscoverViewModel(
+    private val repository: DiscoverRepository,
+    private val places: PlacesRepository,
+    private val sessionStore: SessionStore,
+) : ViewModel() {
     private val _uiState = MutableStateFlow(DiscoverUiState())
     val uiState: StateFlow<DiscoverUiState> = _uiState.asStateFlow()
+    private var suggestJob: Job? = null
+    private var lastViewport: MapBounds? = null
 
     init {
         viewModelScope.launch {
             val categories = repository.getCategories()
-            _uiState.update { it.copy(categories = categories) }
+            _uiState.update { it.copy(categories = categories, recentSearches = sessionStore.getRecentSearches()) }
             search()
         }
+        refreshFavorites()
+    }
+
+    /** Saved-place hearts; empty (not an error) for guests. Call again after signing in. */
+    fun refreshFavorites() {
+        viewModelScope.launch { _uiState.update { it.copy(favoriteIds = places.favoriteIds()) } }
     }
 
     fun onQueryChange(query: String) {
         _uiState.update { it.copy(query = query) }
+        suggestJob?.cancel()
+        suggestJob = viewModelScope.launch {
+            delay(280)
+            val suggestions = if (query.isBlank()) SuggestResponse() else places.suggest(query.trim())
+            _uiState.update { it.copy(suggestions = suggestions) }
+            search()
+        }
+    }
+
+    fun onSearchFocus(focused: Boolean) = _uiState.update { it.copy(searchFocused = focused) }
+
+    fun submitSearch() {
+        val query = _uiState.value.query
+        viewModelScope.launch {
+            sessionStore.pushRecentSearch(query)
+            _uiState.update { it.copy(recentSearches = sessionStore.getRecentSearches(), searchFocused = false) }
+        }
+    }
+
+    fun pickRecent(query: String) {
+        _uiState.update { it.copy(query = query, searchFocused = false) }
+        viewModelScope.launch {
+            sessionStore.pushRecentSearch(query)
+            _uiState.update { it.copy(recentSearches = sessionStore.getRecentSearches()) }
+        }
+        search()
+    }
+
+    fun pickCategory(id: String) {
+        _uiState.update { it.copy(query = "", selectedCategoryId = id, searchFocused = false) }
         search()
     }
 
@@ -54,6 +110,13 @@ class DiscoverViewModel(private val repository: DiscoverRepository) : ViewModel(
         _uiState.update { it.copy(selectedCategoryId = categoryId) }
         search()
     }
+
+    fun resetFilters() {
+        _uiState.update { recompute(it.copy(selectedCategoryId = null, openNow = false, discountsOnly = false)) }
+        search()
+    }
+
+    fun onOpenNowChange(value: Boolean) = _uiState.update { recompute(it.copy(openNow = value)) }
 
     fun onRadiusSelected(radiusKm: Double?) = _uiState.update { recompute(it.copy(radiusKm = radiusKm)) }
 
@@ -70,7 +133,42 @@ class DiscoverViewModel(private val repository: DiscoverRepository) : ViewModel(
 
     fun onLocationUnavailable() = _uiState.update { it.copy(locationStatus = LocationStatus.Unavailable) }
 
-    /** Always loads the full directory (including merchants without coordinates); distance and radius are applied locally. */
+    /** The user dragged/zoomed the map: remember where, and offer "search this area". */
+    fun onViewportMoved(bounds: MapBounds) {
+        lastViewport = bounds
+        _uiState.update { if (it.areaDirty) it else it.copy(areaDirty = true) }
+    }
+
+    fun searchThisArea() {
+        val bounds = lastViewport ?: return
+        _uiState.update { it.copy(searchBounds = bounds) }
+        search()
+    }
+
+    fun clearSearchArea() {
+        _uiState.update { it.copy(searchBounds = null) }
+        search()
+    }
+
+    fun toggleFavorite(merchantId: String) {
+        val saved = merchantId in _uiState.value.favoriteIds
+        // Optimistic: flip the heart now, undo and explain if the server refuses (e.g. signed out).
+        _uiState.update { it.copy(favoriteIds = if (saved) it.favoriteIds - merchantId else it.favoriteIds + merchantId) }
+        viewModelScope.launch {
+            places.setSaved(merchantId, !saved).onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        favoriteIds = if (saved) it.favoriteIds + merchantId else it.favoriteIds - merchantId,
+                        message = error.message,
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearMessage() = _uiState.update { it.copy(message = null) }
+
+    /** Loads the directory (including merchants without coordinates); distance and radius are applied locally. */
     private fun search() {
         val state = _uiState.value
         viewModelScope.launch {
@@ -78,8 +176,9 @@ class DiscoverViewModel(private val repository: DiscoverRepository) : ViewModel(
             val results = repository.searchMerchants(
                 query = state.query.ifBlank { null },
                 categoryId = state.selectedCategoryId,
+                bounds = state.searchBounds,
             )
-            _uiState.update { recompute(it.copy(isLoading = false, allMerchants = results)) }
+            _uiState.update { recompute(it.copy(isLoading = false, allMerchants = results, areaDirty = false)) }
         }
     }
 
@@ -88,11 +187,10 @@ class DiscoverViewModel(private val repository: DiscoverRepository) : ViewModel(
         val withDistance = state.allMerchants.map { merchant ->
             val lat = merchant.latitude
             val lng = merchant.longitude
-            if (here != null && lat != null && lng != null) {
-                merchant.copy(distanceKm = haversineKm(here.first, here.second, lat, lng))
-            } else merchant
+            if (here != null && lat != null && lng != null) merchant.copy(distanceKm = haversineKm(here.first, here.second, lat, lng)) else merchant
         }
         val filtered = withDistance
+            .filter { !state.openNow || it.openStatus?.isOpen == true }
             .filter { !state.discountsOnly || it.discounts.isNotEmpty() }
             .filter { m -> state.radiusKm == null || here == null || (m.distanceKm != null && m.distanceKm <= state.radiusKm) }
             .sortedWith(compareBy({ it.distanceKm == null }, { it.distanceKm ?: 0.0 }, { it.businessName }))

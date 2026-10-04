@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
-import { MerchantApprovalStatus, Role } from "@prisma/client";
+import { MerchantApprovalStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { createBusinessFromMerchantProfile } from "../services/business.service";
 import { getDefaultCountry } from "../services/geo.service";
+import { computeOpenStatus, openingHoursSchema } from "../services/hours.service";
 
 export const merchantRouter = Router();
 
@@ -113,7 +114,18 @@ const searchMerchantsSchema = z.object({
   lat: z.coerce.number().optional(),
   lng: z.coerce.number().optional(),
   radiusKm: z.coerce.number().positive().optional(),
+  openNow: z.enum(["true", "false"]).optional(),
+  // "Search this area": only merchants inside the map's visible rectangle.
+  minLat: z.coerce.number().min(-90).max(90).optional(),
+  maxLat: z.coerce.number().min(-90).max(90).optional(),
+  minLng: z.coerce.number().min(-180).max(180).optional(),
+  maxLng: z.coerce.number().min(-180).max(180).optional(),
 });
+
+/** Opening hours are evaluated in the platform's (default country's) timezone. */
+async function platformTimeZone() {
+  return (await getDefaultCountry()).timezone ?? "UTC";
+}
 
 // Public: browse/search approved merchants (section 9/10/11 — discovery by category, name, and location)
 merchantRouter.get("/", async (req, res) => {
@@ -121,16 +133,31 @@ merchantRouter.get("/", async (req, res) => {
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
   }
-  const { q, categoryId, lat, lng, radiusKm } = parsed.data;
+  const { q, categoryId, lat, lng, radiusKm, openNow, minLat, maxLat, minLng, maxLng } = parsed.data;
+  const hasBox = minLat !== undefined && maxLat !== undefined && minLng !== undefined && maxLng !== undefined;
 
-  const merchants = await prisma.merchantProfile.findMany({
+  const found = await prisma.merchantProfile.findMany({
     where: {
       approvalStatus: "APPROVED",
       ...(categoryId ? { categoryId } : {}),
-      ...(q ? { businessName: { contains: q, mode: "insensitive" } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { businessName: { contains: q, mode: "insensitive" } },
+              { category: { name: { contains: q, mode: "insensitive" } } },
+              { address: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+      ...(hasBox ? { latitude: { gte: minLat, lte: maxLat }, longitude: { gte: minLng, lte: maxLng } } : {}),
     },
     include: { category: true, discounts: { where: { isActive: true } } },
   });
+
+  const tz = await platformTimeZone();
+  const now = new Date();
+  let merchants = found.map((m) => ({ ...m, openStatus: computeOpenStatus(m.openingHours, tz, now) }));
+  if (openNow === "true") merchants = merchants.filter((m) => m.openStatus.isOpen);
 
   // Nearest-first sorting when the customer's location is known (section 31 "Radius Selector").
   // Done in the app layer rather than PostGIS for now — fine at this data volume, revisit later.
@@ -146,6 +173,38 @@ merchantRouter.get("/", async (req, res) => {
   res.json(merchants);
 });
 
+// Public: type-ahead for the search box — a few matching merchants and categories.
+merchantRouter.get("/suggest", async (req, res) => {
+  const parsed = z.object({ q: z.string().trim().min(1).max(60) }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const { q } = parsed.data;
+  const [merchants, categories] = await Promise.all([
+    prisma.merchantProfile.findMany({
+      where: { approvalStatus: "APPROVED", businessName: { contains: q, mode: "insensitive" } },
+      select: { id: true, businessName: true, category: { select: { name: true } } },
+      orderBy: { businessName: "asc" },
+      take: 5,
+    }),
+    prisma.category.findMany({ where: { name: { contains: q, mode: "insensitive" } }, select: { id: true, name: true }, orderBy: { name: "asc" }, take: 5 }),
+  ]);
+  res.json({ merchants, categories });
+});
+
+const hoursBodySchema = z.object({ openingHours: openingHoursSchema.nullable() });
+
+// Merchant: set (or clear, with null) their weekly opening hours.
+merchantRouter.put("/me/hours", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const parsed = hoursBodySchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  const updated = await prisma.merchantProfile.update({
+    where: { id: merchant.id },
+    data: { openingHours: parsed.data.openingHours === null ? Prisma.JsonNull : parsed.data.openingHours },
+  });
+  res.json({ openingHours: updated.openingHours, openStatus: computeOpenStatus(updated.openingHours, await platformTimeZone()) });
+});
+
 // Public: a merchant's storefront profile (section 8)
 merchantRouter.get("/:id", async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
@@ -155,7 +214,7 @@ merchantRouter.get("/:id", async (req, res) => {
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
     return sendError(res, 404, "NOT_FOUND", "Merchant not found");
   }
-  res.json(merchant);
+  res.json({ ...merchant, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) });
 });
 
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {

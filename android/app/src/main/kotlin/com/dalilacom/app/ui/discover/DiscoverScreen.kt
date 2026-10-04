@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,14 +19,17 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Directions
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -57,19 +59,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.widget.Toast
 import com.dalilacom.app.data.network.MerchantDto
 import com.dalilacom.app.ui.ViewModelFactory
-import com.dalilacom.app.ui.theme.DeepRed
-import com.dalilacom.app.ui.theme.PrimaryRed
+import com.dalilacom.app.ui.common.Avatar
+import com.dalilacom.app.ui.common.OpenBadge
 import kotlinx.coroutines.launch
 
 /**
@@ -111,6 +113,13 @@ fun DiscoverScreen(
         if (!state.locationRequested) requestLocation()
     }
 
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessage()
+        }
+    }
+
     val sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.PartiallyExpanded, skipHiddenState = true)
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
 
@@ -125,6 +134,7 @@ fun DiscoverScreen(
                 state = state,
                 onMerchantClick = onMerchantClick,
                 onDirections = { merchant -> openDirections(context, merchant) },
+                onToggleSaved = { id -> if (isGuest) onLogin() else viewModel.toggleFavorite(id) },
             )
         },
     ) { innerPadding ->
@@ -137,6 +147,7 @@ fun DiscoverScreen(
                     viewModel.selectMerchant(id)
                     scope.launch { sheetState.partialExpand() }
                 },
+                onUserMoved = viewModel::onViewportMoved,
                 recenterTick = recenterTick,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -149,6 +160,8 @@ fun DiscoverScreen(
                     SearchPill(
                         query = state.query,
                         onQueryChange = viewModel::onQueryChange,
+                        onFocusChange = viewModel::onSearchFocus,
+                        onSubmit = viewModel::submitSearch,
                         modifier = Modifier.weight(1f),
                     )
                     if (isGuest) {
@@ -168,15 +181,19 @@ fun DiscoverScreen(
                         }
                     }
                 }
+                SuggestionsPanel(
+                    state = state,
+                    onMerchant = { id -> viewModel.onSearchFocus(false); onMerchantClick(id) },
+                    onCategory = viewModel::pickCategory,
+                    onRecent = viewModel::pickRecent,
+                )
                 Spacer(Modifier.height(8.dp))
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    item { MapChip("الكل", state.selectedCategoryId == null && !state.discountsOnly) {
-                        viewModel.onCategorySelected(null)
-                        if (state.discountsOnly) viewModel.onDiscountsOnlyChange(false)
-                    } }
+                    item { MapChip("الكل", state.selectedCategoryId == null && !state.discountsOnly && !state.openNow) { viewModel.resetFilters() } }
+                    item { MapChip("🕒 مفتوح الآن", state.openNow) { viewModel.onOpenNowChange(!state.openNow) } }
                     item { MapChip("🏷️ فيها حسم", state.discountsOnly) { viewModel.onDiscountsOnlyChange(!state.discountsOnly) } }
                     items(state.categories) { category ->
                         MapChip(category.name, state.selectedCategoryId == category.id) { viewModel.onCategorySelected(category.id) }
@@ -198,7 +215,24 @@ fun DiscoverScreen(
                         }
                     }
                 }
+                if (state.searchBounds != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.padding(horizontal = 12.dp)) { MapChip("✕ مسح حدود المنطقة", true) { viewModel.clearSearchArea() } }
+                }
                 LocationNotice(state.locationStatus, onRetry = { requestLocation() })
+            }
+
+            if (state.areaDirty) {
+                Surface(
+                    onClick = { viewModel.searchThisArea() },
+                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = innerPadding.calculateBottomPadding() + 16.dp),
+                ) {
+                    Text("🔍 ابحث بهالمنطقة", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp))
+                }
             }
 
             SmallFloatingActionButton(
@@ -226,7 +260,13 @@ private fun openDirections(context: android.content.Context, merchant: MerchantD
 }
 
 @Composable
-private fun SearchPill(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun SearchPill(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onFocusChange: (Boolean) -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Surface(modifier = modifier, shape = RoundedCornerShape(28.dp), shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
         TextField(
             value = query,
@@ -237,14 +277,56 @@ private fun SearchPill(query: String, onQueryChange: (String) -> Unit, modifier:
                 if (query.isNotEmpty()) IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Filled.Clear, contentDescription = "مسح") }
             },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSubmit() }),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
             ),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChange(it.isFocused) },
         )
+    }
+}
+
+@Composable
+private fun SuggestionsPanel(
+    state: DiscoverUiState,
+    onMerchant: (String) -> Unit,
+    onCategory: (String) -> Unit,
+    onRecent: (String) -> Unit,
+) {
+    if (!state.searchFocused) return
+    val typing = state.query.isNotBlank()
+    val rows: List<Triple<String, String, () -> Unit>> = if (typing) {
+        state.suggestions.categories.map { Triple("🗂️", it.name) { onCategory(it.id) } } +
+            state.suggestions.merchants.map { m ->
+                Triple("🏪", listOfNotNull(m.businessName, m.category?.name).joinToString(" · ")) { onMerchant(m.id) }
+            }
+    } else {
+        state.recentSearches.map { q -> Triple("🕘", q) { onRecent(q) } }
+    }
+    if (rows.isEmpty()) return
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(top = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 10.dp,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Column {
+            if (!typing) Text("عمليات بحث سابقة", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp, top = 10.dp, end = 14.dp))
+            rows.forEach { (icon, label, action) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = action).padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(icon)
+                    Spacer(Modifier.width(10.dp))
+                    Text(label, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
     }
 }
 
@@ -284,7 +366,12 @@ private fun LocationNotice(status: LocationStatus, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun DirectorySheet(state: DiscoverUiState, onMerchantClick: (String) -> Unit, onDirections: (MerchantDto) -> Unit) {
+private fun DirectorySheet(
+    state: DiscoverUiState,
+    onMerchantClick: (String) -> Unit,
+    onDirections: (MerchantDto) -> Unit,
+    onToggleSaved: (String) -> Unit,
+) {
     Column(Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
@@ -322,8 +409,10 @@ private fun DirectorySheet(state: DiscoverUiState, onMerchantClick: (String) -> 
                     MerchantCard(
                         merchant = merchant,
                         selected = merchant.id == state.selectedMerchantId,
+                        saved = merchant.id in state.favoriteIds,
                         onDetails = { onMerchantClick(merchant.id) },
                         onDirections = { onDirections(merchant) },
+                        onToggleSaved = { onToggleSaved(merchant.id) },
                     )
                 }
             }
@@ -332,7 +421,14 @@ private fun DirectorySheet(state: DiscoverUiState, onMerchantClick: (String) -> 
 }
 
 @Composable
-private fun MerchantCard(merchant: MerchantDto, selected: Boolean, onDetails: () -> Unit, onDirections: () -> Unit) {
+private fun MerchantCard(
+    merchant: MerchantDto,
+    selected: Boolean,
+    saved: Boolean,
+    onDetails: () -> Unit,
+    onDirections: () -> Unit,
+    onToggleSaved: () -> Unit,
+) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -342,12 +438,7 @@ private fun MerchantCard(merchant: MerchantDto, selected: Boolean, onDetails: ()
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(48.dp).clip(CircleShape).background(Brush.linearGradient(listOf(DeepRed, PrimaryRed))),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(merchant.businessName.take(1), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
+                Avatar(merchant.businessName)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(merchant.businessName, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -365,6 +456,17 @@ private fun MerchantCard(merchant: MerchantDto, selected: Boolean, onDetails: ()
                         )
                     }
                 }
+                IconButton(onClick = onToggleSaved) {
+                    Icon(
+                        if (saved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (saved) "إزالة من المحفوظات" else "حفظ",
+                        tint = if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (merchant.openStatus?.hasHours == true) {
+                Spacer(Modifier.height(8.dp))
+                OpenBadge(merchant.openStatus)
             }
             if (merchant.discounts.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))

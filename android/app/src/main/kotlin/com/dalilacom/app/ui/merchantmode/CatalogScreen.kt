@@ -30,7 +30,7 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.formatCents
 
 @Composable
-fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit) {
+fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit) {
     val viewModel: CatalogViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -38,7 +38,9 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text("الكتالوج", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.material3.OutlinedButton(onClick = onOpenHours, modifier = Modifier.fillMaxWidth()) { Text("🕒 ساعات العمل") }
+        Spacer(Modifier.height(12.dp))
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {

@@ -1,12 +1,22 @@
 package com.dalilacom.app.ui.discover
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Point
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -14,10 +24,15 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.dalilacom.app.data.network.MerchantDto
+import com.dalilacom.app.data.repository.MapBounds
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.io.File
@@ -25,22 +40,46 @@ import java.io.File
 private val DAMASCUS = GeoPoint(33.5138, 36.2765)
 
 private fun dot(context: Context, fill: Int, sizeDp: Int): GradientDrawable {
-    val px = (sizeDp * context.resources.displayMetrics.density).toInt()
+    val density = context.resources.displayMetrics.density
+    val px = (sizeDp * density).toInt()
     return GradientDrawable().apply {
         shape = GradientDrawable.OVAL
         setColor(fill)
-        setStroke((2 * context.resources.displayMetrics.density).toInt(), Color.WHITE)
+        setStroke((2 * density).toInt(), Color.WHITE)
         setSize(px, px)
     }
 }
 
-/** OpenStreetMap view (no API key needed) with the user's position and one pin per merchant. */
+private fun clusterIcon(context: Context, count: Int): BitmapDrawable {
+    val d = context.resources.displayMetrics.density
+    val size = (44 * d).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    paint.color = Color.WHITE
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+    paint.color = Color.parseColor("#BA2A34")
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 3 * d, paint)
+    paint.color = Color.WHITE
+    paint.textAlign = Paint.Align.CENTER
+    paint.textSize = 16 * d
+    paint.isFakeBoldText = true
+    canvas.drawText(count.toString(), size / 2f, size / 2f + 6 * d, paint)
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * OpenStreetMap view (no API key needed): the user's position, one pin per merchant, pins that
+ * are close together folded into numbered clusters (tap to zoom in), and a callback when the
+ * *user* (not the app) moves the map so the screen can offer "search this area".
+ */
 @Composable
 fun MerchantsMap(
     merchants: List<MerchantDto>,
     userLocation: Pair<Double, Double>?,
     selectedId: String?,
     onSelect: (String) -> Unit,
+    onUserMoved: (MapBounds) -> Unit,
     recenterTick: Int = 0,
     modifier: Modifier = Modifier,
 ) {
@@ -54,11 +93,96 @@ fun MerchantsMap(
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
-            zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             minZoomLevel = 4.0
             controller.setZoom(11.0)
             controller.setCenter(DAMASCUS)
         }
+    }
+    val handler = remember { Handler(Looper.getMainLooper()) }
+    val ignoreMovesUntil = remember { LongArray(1) }
+    fun programmatic(block: () -> Unit) {
+        ignoreMovesUntil[0] = SystemClock.uptimeMillis() + 1500
+        block()
+    }
+
+    val located = merchants.filter { it.latitude != null && it.longitude != null }
+    val latestMerchants by rememberUpdatedState(located)
+    val latestSelected by rememberUpdatedState(selectedId)
+    val latestUser by rememberUpdatedState(userLocation)
+    val latestOnSelect by rememberUpdatedState(onSelect)
+    val latestOnMoved by rememberUpdatedState(onUserMoved)
+
+    fun redraw(map: MapView) {
+        map.overlays.clear()
+        val measured = map.width > 0
+        if (!measured) map.post { if (map.width > 0) redraw(map) }
+        val cell = 72 * context.resources.displayMetrics.density
+        val groups = LinkedHashMap<Pair<Int, Int>, MutableList<MerchantDto>>()
+        val singles = mutableListOf<MerchantDto>()
+        for (merchant in latestMerchants) {
+            if (!measured || merchant.id == latestSelected) {
+                singles.add(merchant)
+                continue
+            }
+            val point = Point()
+            map.projection.toPixels(GeoPoint(merchant.latitude!!, merchant.longitude!!), point)
+            groups.getOrPut((point.x / cell).toInt() to (point.y / cell).toInt()) { mutableListOf() }.add(merchant)
+        }
+        for (group in groups.values) {
+            if (group.size == 1) {
+                singles.add(group[0])
+                continue
+            }
+            val points = group.map { GeoPoint(it.latitude!!, it.longitude!!) }
+            Marker(map).apply {
+                position = GeoPoint(points.map { it.latitude }.average(), points.map { it.longitude }.average())
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = clusterIcon(context, group.size)
+                setInfoWindow(null)
+                setOnMarkerClickListener { _, _ ->
+                    val box = BoundingBox.fromGeoPoints(points)
+                    programmatic {
+                        if (box.latitudeSpan < 1e-5 && box.longitudeSpan < 1e-5) map.controller.zoomIn()
+                        else map.zoomToBoundingBox(box.increaseByScale(1.4f), true, 80)
+                    }
+                    true
+                }
+                map.overlays.add(this)
+            }
+        }
+        for (merchant in singles) {
+            val hasDiscount = merchant.discounts.isNotEmpty()
+            val selected = merchant.id == latestSelected
+            Marker(map).apply {
+                position = GeoPoint(merchant.latitude!!, merchant.longitude!!)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = dot(
+                    context,
+                    when {
+                        selected -> Color.BLACK
+                        hasDiscount -> Color.parseColor("#BA2A34")
+                        else -> Color.parseColor("#777777")
+                    },
+                    if (selected) 26 else 20,
+                )
+                title = merchant.businessName
+                setInfoWindow(null)
+                setOnMarkerClickListener { _, _ -> latestOnSelect(merchant.id); true }
+                map.overlays.add(this)
+            }
+        }
+        latestUser?.let { (lat, lng) ->
+            Marker(map).apply {
+                position = GeoPoint(lat, lng)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = dot(context, Color.parseColor("#1E6FE0"), 18)
+                title = "موقعي"
+                setInfoWindow(null)
+                map.overlays.add(this)
+            }
+        }
+        map.invalidate()
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -70,72 +194,62 @@ fun MerchantsMap(
                 else -> Unit
             }
         }
+        val reportMove = Runnable {
+            if (SystemClock.uptimeMillis() > ignoreMovesUntil[0]) {
+                val box = mapView.boundingBox
+                latestOnMoved(MapBounds(box.latNorth, box.latSouth, box.lonEast, box.lonWest))
+            }
+        }
+        val redrawLater = Runnable { redraw(mapView) }
+        val listener = object : MapListener {
+            override fun onScroll(event: ScrollEvent?): Boolean {
+                handler.removeCallbacks(reportMove)
+                handler.postDelayed(reportMove, 500)
+                return false
+            }
+
+            override fun onZoom(event: ZoomEvent?): Boolean {
+                handler.removeCallbacks(redrawLater)
+                handler.postDelayed(redrawLater, 150)
+                handler.removeCallbacks(reportMove)
+                handler.postDelayed(reportMove, 500)
+                return false
+            }
+        }
+        mapView.addMapListener(listener)
         lifecycleOwner.lifecycle.addObserver(observer)
         mapView.onResume()
         onDispose {
+            handler.removeCallbacksAndMessages(null)
+            mapView.removeMapListener(listener)
             lifecycleOwner.lifecycle.removeObserver(observer)
             mapView.onPause()
             mapView.onDetach()
         }
     }
 
-    val located = merchants.filter { it.latitude != null && it.longitude != null }
-
-    // First GPS fix: jump to the user.
+    // First GPS fix (or the "my location" button): jump to the user.
     LaunchedEffect(userLocation, recenterTick) {
         userLocation?.let {
-            mapView.controller.setZoom(14.0)
-            mapView.controller.animateTo(GeoPoint(it.first, it.second))
+            programmatic {
+                mapView.controller.setZoom(14.0)
+                mapView.controller.animateTo(GeoPoint(it.first, it.second))
+            }
         }
     }
     // No location (yet): frame the merchants that do exist so the map is never empty.
     LaunchedEffect(located.map { it.id }, userLocation == null) {
         if (userLocation != null || located.isEmpty()) return@LaunchedEffect
         val points = located.map { GeoPoint(it.latitude!!, it.longitude!!) }
-        if (points.size == 1) {
-            mapView.controller.setZoom(14.0)
-            mapView.controller.setCenter(points.first())
-        } else {
-            mapView.post { mapView.zoomToBoundingBox(BoundingBox.fromGeoPoints(points), false, 90) }
+        programmatic {
+            if (points.size == 1) {
+                mapView.controller.setZoom(14.0)
+                mapView.controller.setCenter(points.first())
+            } else {
+                mapView.post { mapView.zoomToBoundingBox(BoundingBox.fromGeoPoints(points).increaseByScale(1.2f), false, 90) }
+            }
         }
     }
 
-    AndroidView(
-        modifier = modifier,
-        factory = { mapView },
-        update = { map ->
-            map.overlays.clear()
-            located.forEach { merchant ->
-                val hasDiscount = merchant.discounts.isNotEmpty()
-                val selected = merchant.id == selectedId
-                Marker(map).apply {
-                    position = GeoPoint(merchant.latitude!!, merchant.longitude!!)
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                    icon = dot(
-                        context,
-                        when {
-                            selected -> Color.BLACK
-                            hasDiscount -> Color.parseColor("#BA2A34")
-                            else -> Color.parseColor("#777777")
-                        },
-                        if (selected) 26 else 20,
-                    )
-                    title = merchant.businessName
-                    setOnMarkerClickListener { _, _ -> onSelect(merchant.id); true }
-                    map.overlays.add(this)
-                }
-            }
-            userLocation?.let { (lat, lng) ->
-                Marker(map).apply {
-                    position = GeoPoint(lat, lng)
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                    icon = dot(context, Color.parseColor("#1E6FE0"), 18)
-                    title = "موقعي"
-                    setInfoWindow(null)
-                    map.overlays.add(this)
-                }
-            }
-            map.invalidate()
-        },
-    )
+    AndroidView(modifier = modifier, factory = { mapView }, update = { map -> redraw(map) })
 }

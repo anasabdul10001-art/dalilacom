@@ -30,6 +30,7 @@ fun ProfileScreen(
     onLoggedOut: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
+    onOpenFavorites: () -> Unit,
     onOpenResponder: () -> Unit,
     onOpenWallet: () -> Unit,
 ) {
@@ -52,6 +53,8 @@ fun ProfileScreen(
             OutlinedButton(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text("سجّل كتاجر") }
         }
         Spacer(Modifier.height(16.dp))
+        OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text("♥ أماكني المحفوظة") }
+        Spacer(Modifier.height(8.dp))
         Button(onClick = onOpenResponder, modifier = Modifier.fillMaxWidth()) { Text("المجيب الآلي") }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onOpenWallet, modifier = Modifier.fillMaxWidth()) { Text("محفظتي") }

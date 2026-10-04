@@ -8,6 +8,7 @@ import com.dalilacom.app.data.repository.DiscoverRepository
 import com.dalilacom.app.data.repository.MembershipRepository
 import com.dalilacom.app.data.repository.MerchantRepository
 import com.dalilacom.app.data.repository.OrderRepository
+import com.dalilacom.app.data.repository.PlacesRepository
 import com.dalilacom.app.data.repository.ProductRepository
 import com.dalilacom.app.data.repository.ResponderRepository
 import com.dalilacom.app.data.store.SessionStore
@@ -27,4 +28,5 @@ class AppContainer(context: Context) {
     val orderRepository = OrderRepository(api)
     val merchantRepository = MerchantRepository(api, sessionStore)
     val responderRepository = ResponderRepository(api)
+    val placesRepository = PlacesRepository(api)
 }

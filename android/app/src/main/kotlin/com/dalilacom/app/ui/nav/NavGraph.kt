@@ -17,6 +17,8 @@ import com.dalilacom.app.ui.merchant.MerchantRegisterScreen
 import com.dalilacom.app.ui.merchantmode.MerchantModeShell
 import com.dalilacom.app.ui.merchantmode.ProductEditScreen
 import com.dalilacom.app.ui.orders.OrderDetailScreen
+import com.dalilacom.app.ui.places.FavoritesScreen
+import com.dalilacom.app.ui.places.HoursScreen
 import com.dalilacom.app.ui.product.ProductDetailScreen
 import com.dalilacom.app.ui.responder.ResponderScreen
 import com.dalilacom.app.ui.responder.WalletScreen
@@ -92,6 +94,12 @@ fun DalilacomNavGraph(container: AppContainer) {
                 onRegistered = { navController.popBackStack() },
                 onBack = { navController.popBackStack() },
             )
+        }
+        composable("favorites") {
+            FavoritesScreen(factory = factory, onBack = { navController.popBackStack() }, onMerchantClick = { id -> navController.navigate("merchant/$id") })
+        }
+        composable("merchantHours") {
+            HoursScreen(factory = factory, onBack = { navController.popBackStack() })
         }
         composable("responder") {
             ResponderScreen(factory = factory, onBack = { navController.popBackStack() }, onOpenWallet = { navController.navigate("wallet") })

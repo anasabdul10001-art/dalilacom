@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.map
  */
 class SessionStore(private val context: Context) {
     private val roleKey = stringPreferencesKey("user_role")
+    private val recentKey = stringPreferencesKey("recent_searches")
 
     val roleFlow: Flow<String?> = context.dalilacomDataStore.data.map { it[roleKey] }
 
@@ -28,5 +29,17 @@ class SessionStore(private val context: Context) {
 
     suspend fun clearRole() {
         runCatching { context.dalilacomDataStore.edit { it.remove(roleKey) } }
+    }
+
+    /** The last few things the user searched for on the map, newest first. */
+    suspend fun getRecentSearches(): List<String> = runCatching {
+        context.dalilacomDataStore.data.map { it[recentKey] }.first()
+    }.getOrNull()?.split("\n")?.filter { it.isNotBlank() }.orEmpty()
+
+    suspend fun pushRecentSearch(query: String) {
+        val q = query.trim()
+        if (q.isEmpty()) return
+        val updated = (listOf(q) + getRecentSearches().filter { it != q }).take(6)
+        runCatching { context.dalilacomDataStore.edit { it[recentKey] = updated.joinToString("\n") } }
     }
 }

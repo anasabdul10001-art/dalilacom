@@ -6,6 +6,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -41,7 +42,29 @@ interface ApiService {
         @Query("lat") lat: Double? = null,
         @Query("lng") lng: Double? = null,
         @Query("radiusKm") radiusKm: Double? = null,
+        @Query("minLat") minLat: Double? = null,
+        @Query("maxLat") maxLat: Double? = null,
+        @Query("minLng") minLng: Double? = null,
+        @Query("maxLng") maxLng: Double? = null,
     ): Response<List<MerchantDto>>
+
+    @GET("merchant/suggest")
+    suspend fun suggest(@Query("q") query: String): Response<SuggestResponse>
+
+    @PUT("merchant/me/hours")
+    suspend fun setHours(@Body body: SetHoursRequest): Response<HoursResponse>
+
+    @GET("favorites")
+    suspend fun getFavorites(): Response<List<MerchantDto>>
+
+    @GET("favorites/ids")
+    suspend fun getFavoriteIds(): Response<List<String>>
+
+    @PUT("favorites/{id}")
+    suspend fun saveFavorite(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @DELETE("favorites/{id}")
+    suspend fun removeFavorite(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
 
     @GET("products")
     suspend fun getProducts(@Query("merchantId") merchantId: String): Response<List<ProductDto>>

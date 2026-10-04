@@ -70,7 +70,44 @@ data class MerchantDto(
     val category: CategoryDto? = null,
     val discounts: List<DiscountDto> = emptyList(),
     val distanceKm: Double? = null,
+    val phone: String? = null,
+    val whatsapp: String? = null,
+    val openingHours: Map<String, List<HourRangeDto>>? = null,
+    val openStatus: OpenStatusDto? = null,
 )
+
+@Serializable
+data class HourRangeDto(val open: String, val close: String)
+
+@Serializable
+data class OpenStatusDto(
+    val hasHours: Boolean = false,
+    val isOpen: Boolean = false,
+    val closesAt: String? = null,
+    val opensAt: String? = null,
+    val opensDay: String? = null,
+)
+
+@Serializable
+data class SuggestMerchantDto(val id: String, val businessName: String, val category: CategoryRefDto? = null)
+
+@Serializable
+data class CategoryRefDto(val name: String)
+
+@Serializable
+data class SuggestCategoryDto(val id: String, val name: String)
+
+@Serializable
+data class SuggestResponse(
+    val merchants: List<SuggestMerchantDto> = emptyList(),
+    val categories: List<SuggestCategoryDto> = emptyList(),
+)
+
+@Serializable
+data class SetHoursRequest(val openingHours: Map<String, List<HourRangeDto>>?)
+
+@Serializable
+data class HoursResponse(val openStatus: OpenStatusDto? = null)
 
 @Serializable
 data class ProductDto(
@@ -215,6 +252,7 @@ data class MerchantMeDto(
     val businessName: String,
     val approvalStatus: String,
     val discounts: List<DiscountDto> = emptyList(),
+    val openingHours: Map<String, List<HourRangeDto>>? = null,
 )
 
 @Serializable

@@ -5,7 +5,7 @@ const S = {
   token: localStorage.getItem("dlk_token") || null,
   role: localStorage.getItem("dlk_role") || null,
   screen: S_initialScreen(),
-  homeTab: "home",
+  homeTab: "discover",
   merchantTab: "redeem",
   params: {},
   stack: [],
@@ -16,7 +16,7 @@ const S = {
 };
 
 function S_initialScreen() {
-  return localStorage.getItem("dlk_token") ? "home" : "login";
+  return "home";
 }
 
 /* ---------------- helpers ---------------- */
@@ -32,6 +32,7 @@ function fmt(cents) {
 function errMsg(data, fallback) {
   if (!data || !data.error) return fallback;
   if (typeof data.error === "string") return data.error;
+  if (data.error.code === "AUTH_MISSING_TOKEN") return "سجّل دخولك أول لتكمل";
   const fieldError = Object.values((data.error.details && data.error.details.fieldErrors) || {}).flat()[0];
   return fieldError || data.error.message || fallback;
 }
@@ -61,6 +62,7 @@ function setToken(token, role) {
   S.role = role;
   localStorage.setItem("dlk_token", token);
   localStorage.setItem("dlk_role", role);
+  if (S._discover) loadFavIds();
 }
 
 function clearToken() {
@@ -68,6 +70,8 @@ function clearToken() {
   S.role = null;
   localStorage.removeItem("dlk_token");
   localStorage.removeItem("dlk_role");
+  if (S._discover) S._discover.favIds = [];
+  S._favorites = null;
 }
 
 function stopQrLoop() {
@@ -124,8 +128,14 @@ function root() {
 async function render() {
   const el = root();
   if (!el) return;
+  const active = document.activeElement;
+  const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
   el.innerHTML = renderScreen();
   wireUpAfterRender();
+  if (keepFocus !== null) {
+    const input = document.getElementById("disc-q");
+    if (input) { input.focus(); try { input.setSelectionRange(keepFocus, keepFocus); } catch (e) {} }
+  }
 }
 
 function statusBadge(status) {
@@ -203,6 +213,8 @@ function renderScreen() {
     case "affiliateMine": return screenAffiliateMine();
     case "wallet": return screenWallet();
     case "responder": return screenResponder();
+    case "favorites": return screenFavorites();
+    case "merchantHours": return screenMerchantHours();
     default: return screenLogin();
   }
 }
@@ -304,23 +316,23 @@ async function doRegister() {
 function doLogout() {
   api("POST", "/auth/logout");
   clearToken();
-  reset("login");
+  S.homeTab = "discover";
+  reset("home");
 }
 
 /* ================= HOME SHELL ================= */
 
 const HOME_TABS = [
-  { id: "home", label: "الرئيسية", icon: "home" },
+  { id: "discover", label: "الخريطة", icon: "search" },
   { id: "card", label: "بطاقتي", icon: "card" },
-  { id: "discover", label: "اكتشف", icon: "search" },
   { id: "cart", label: "السلة", icon: "cart" },
   { id: "orders", label: "طلباتي", icon: "orders" },
   { id: "profile", label: "حسابي", icon: "user" },
 ];
 
 function screenHomeShell() {
-  const body = {
-    home: tabWelcome,
+  const needsAccount = ["card", "cart", "orders", "profile"].includes(S.homeTab) && !S.token;
+  const body = needsAccount ? guestPrompt(S.homeTab) : {
     card: tabCard,
     discover: tabDiscover,
     cart: tabCart,
@@ -334,18 +346,6 @@ function screenHomeShell() {
         <button class="${S.homeTab === t.id ? "active" : ""}" onclick="setHomeTab('${t.id}')">
           ${ICON[t.icon]}<span>${esc(t.label)}</span>
         </button>`).join("")}
-    </div>
-  `;
-}
-
-function tabWelcome() {
-  return `
-    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:60px">
-      <h1 class="screen-title">أهلًا فيك بدليلكم 👋</h1>
-      <p class="screen-sub">شوف بطاقتك، أو دور على تجار عندهم حسم قريبين منك</p>
-      <button class="btn" style="max-width:220px" onclick="setHomeTab('card')">بطاقتي</button>
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:220px" onclick="setHomeTab('discover')">اكتشف التجار</button>
     </div>
   `;
 }
@@ -448,154 +448,258 @@ function renderQrOnly() {
   }
 }
 
-/* ---- Discover tab ---- */
+/* ---- Discover tab (map-first, usable without an account) ---- */
 
-function tabDiscover() {
+const DAMASCUS = { lat: 33.5138, lng: 36.2765 }; // only the starting view when nothing else is known
+const DAY_LABEL = { sun: "الأحد", mon: "الإثنين", tue: "الثلاثاء", wed: "الأربعاء", thu: "الخميس", fri: "الجمعة", sat: "السبت" };
+const DAY_ORDER = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
+
+function fmtClock(t) {
+  const h = Number(t.slice(0, 2));
+  return `${h % 12 || 12}:${t.slice(3, 5)} ${h >= 12 ? "م" : "ص"}`;
+}
+
+function openBadge(st) {
+  if (!st || !st.hasHours) return "";
+  if (st.isOpen) return `<span class="badge success">مفتوح · يسكّر ${fmtClock(st.closesAt)}</span>`;
+  const day = st.opensDay === "today" ? "اليوم" : st.opensDay === "tomorrow" ? "بكرا" : DAY_LABEL[st.opensDay] || "";
+  return st.opensAt ? `<span class="badge danger">مغلق · يفتح ${day} ${fmtClock(st.opensAt)}</span>` : `<span class="badge danger">مغلق</span>`;
+}
+
+function readRecent() {
+  try { return JSON.parse(localStorage.getItem("dlk_recent") || "[]"); } catch (e) { return []; }
+}
+function pushRecent(q) {
+  q = (q || "").trim();
+  if (!q) return;
+  try { localStorage.setItem("dlk_recent", JSON.stringify([q, ...readRecent().filter((x) => x !== q)].slice(0, 6))); } catch (e) {}
+}
+
+function discoverState() {
   if (!S._discover) {
     S._discover = {
       loading: true, query: "", categoryId: "", categories: [], merchants: [],
-      view: "list", radiusKm: 10, discountsOnly: true, userLoc: null, locError: null,
-      mapMerchants: [], mapLoading: false,
+      openNow: false, discountsOnly: false, radiusKm: null,
+      userLoc: null, locError: null, locAsked: false,
+      favIds: [], suggest: null, showSuggest: false, areaDirty: false, bounds: null,
     };
     loadCategories().then(() => searchMerchants());
+    loadFavIds();
   }
-  const d = S._discover;
-  return `
-    <div class="title-line">
-      <h1 class="screen-title">اكتشف التجار</h1>
-      <div class="chip-row" style="margin-bottom:0">
-        <button class="chip ${d.view === "list" ? "active" : ""}" onclick="setDiscoverView('list')">قائمة</button>
-        <button class="chip ${d.view === "map" ? "active" : ""}" onclick="setDiscoverView('map')">🗺️ خريطة</button>
-      </div>
-    </div>
-    ${d.view === "list" ? discoverListView(d) : discoverMapView(d)}
-  `;
+  return S._discover;
 }
 
-function discoverListView(d) {
+// Filters, distance and ordering are applied client-side so toggling a chip never refetches.
+function visibleMerchants(d) {
+  let list = d.merchants.map((m) =>
+    d.userLoc && m.latitude != null && m.longitude != null
+      ? { ...m, distanceKm: haversineKm(d.userLoc.lat, d.userLoc.lng, m.latitude, m.longitude) }
+      : m);
+  if (d.openNow) list = list.filter((m) => m.openStatus && m.openStatus.isOpen);
+  if (d.discountsOnly) list = list.filter((m) => (m.discounts || []).length > 0);
+  if (d.radiusKm && d.userLoc) list = list.filter((m) => m.distanceKm != null && m.distanceKm <= d.radiusKm);
+  return list.sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9) || a.businessName.localeCompare(b.businessName));
+}
+
+function tabDiscover() {
+  const d = discoverState();
+  if (!d.locAsked) { d.locAsked = true; requestDiscoverLocation(); } // ask for the position as soon as the map opens
+  const list = visibleMerchants(d);
+  S._visible = list;
   return `
-    <div class="field"><input id="disc-q" placeholder="دور على اسم محل..." value="${esc(d.query)}" oninput="onDiscoverQuery(this.value)" /></div>
+    <div class="map-search">
+      <div class="searchbox">
+        <span class="search-ico">🔍</span>
+        <input id="disc-q" placeholder="دوّر على محل أو خدمة..." value="${esc(d.query)}" autocomplete="off"
+          oninput="onDiscoverQuery(this.value)" onfocus="onDiscoverFocus()" onblur="onDiscoverBlur()" onkeydown="if(event.key==='Enter'){onDiscoverSubmit()}" />
+        ${d.query ? `<button class="clear-x" onmousedown="onDiscoverClear()">✕</button>` : ""}
+        ${S.token ? "" : `<button class="login-pill" onclick="go('login')">دخول</button>`}
+      </div>
+      ${suggestHtml(d)}
+    </div>
     <div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
-      <button class="chip ${!d.categoryId ? "active" : ""}" onclick="onDiscoverCategory('')">الكل</button>
+      <button class="chip ${!d.categoryId && !d.openNow && !d.discountsOnly ? "active" : ""}" onclick="onDiscoverReset()">الكل</button>
+      <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">🕒 مفتوح الآن</button>
+      <button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">🏷️ فيها حسم</button>
       ${flattenCategories(d.categories).map((c) => `<button class="chip ${d.categoryId === c.id ? "active" : ""}" onclick="onDiscoverCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
     </div>
-    <div style="height:6px"></div>
-    ${d.loading ? spinner() : (d.merchants.length ? d.merchants.map(merchantRowHtml).join("") : `<div class="empty-state">ما في نتائج</div>`)}
-  `;
-}
-
-function discoverMapView(d) {
-  return `
-    <div class="chip-row">
-      <button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverDiscountsOnly()">🏷️ فيها حسم بس</button>
-      ${[1, 5, 10, 25].map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${r} كم</button>`).join("")}
-    </div>
+    ${d.userLoc ? `<div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
+      ${[null, 2, 5, 10, 25].map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${r ? r + " كم" : "أي مسافة"}</button>`).join("")}
+    </div>` : ""}
+    ${d.bounds ? `<div class="chip-row"><button class="chip active" onclick="clearSearchArea()">✕ مسح حدود المنطقة</button></div>` : ""}
     ${d.locError ? `<div class="error-banner">${esc(d.locError)}</div>` : ""}
-    <div id="discover-map" style="height:340px;border-radius:16px;overflow:hidden;border:1px solid var(--border)"></div>
-    <div style="height:8px"></div>
-    ${d.mapLoading
-      ? spinner()
-      : d.userLoc
-        ? `<p class="muted">${d.mapMerchants.length} محل ${d.discountsOnly ? "عندهم حسم" : ""} بمحيط ${d.radiusKm} كم</p>`
-        : `<div class="empty-state">فعّل صلاحية الموقع من المتصفح لنعرض أقرب المحلات</div>`}
+    <div class="map-wrap">
+      <div id="discover-map-slot" style="height:100%;width:100%"></div>
+      <button id="area-btn" class="area-btn" style="display:${d.areaDirty ? "block" : "none"}" onclick="searchThisArea()">🔍 ابحث بهالمنطقة</button>
+      <button class="map-fab" title="موقعي" onclick="requestDiscoverLocation(true)">📍</button>
+    </div>
+    <div class="title-line" style="margin-top:12px">
+      <strong>${d.userLoc ? "المحلات القريبة منك" : "دليل المحلات"}</strong>
+      <span class="badge info">${list.length} محل</span>
+    </div>
+    ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث</div>`)}
   `;
 }
 
-function setDiscoverView(view) {
-  S._discover.view = view;
-  render();
-  if (view === "map" && !S._discover.userLoc && !S._discover.locError) requestDiscoverLocation();
-}
-
-function toggleDiscoverDiscountsOnly() {
-  S._discover.discountsOnly = !S._discover.discountsOnly;
-  searchMerchantsForMap();
-}
-
-function setDiscoverRadius(km) {
-  S._discover.radiusKm = km;
-  searchMerchantsForMap();
-}
-
-function requestDiscoverLocation() {
-  if (!navigator.geolocation) {
-    S._discover.locError = "المتصفح ما بيدعم تحديد الموقع";
-    render();
-    return;
+function suggestHtml(d) {
+  if (!d.showSuggest) return "";
+  if (!d.query.trim()) {
+    const recent = readRecent();
+    if (!recent.length) return "";
+    return `<div class="suggest-box"><div class="suggest-head">عمليات بحث سابقة</div>${recent.map((q) => `<div class="suggest-item" onmousedown="pickRecent('${esc(q).replace(/'/g, "&#39;")}')">🕘 ${esc(q)}</div>`).join("")}</div>`;
   }
-  S._discover.mapLoading = true;
-  render();
+  const s = d.suggest;
+  if (!s || (!s.merchants.length && !s.categories.length)) return "";
+  return `<div class="suggest-box">
+    ${s.categories.map((c) => `<div class="suggest-item" onmousedown="pickCategory('${c.id}')">🗂️ ${esc(c.name)}</div>`).join("")}
+    ${s.merchants.map((m) => `<div class="suggest-item" onmousedown="go('merchantDetail',{merchantId:'${m.id}'})">🏪 ${esc(m.businessName)}${m.category ? ` <span class="muted">· ${esc(m.category.name)}</span>` : ""}</div>`).join("")}
+  </div>`;
+}
+
+let suggestTimer = null;
+function onDiscoverQuery(v) {
+  const d = S._discover;
+  d.query = v;
+  d.showSuggest = true;
+  clearTimeout(suggestTimer);
+  suggestTimer = setTimeout(async () => {
+    if (!d.query.trim()) { d.suggest = null; return searchMerchants(); }
+    const { ok, data } = await api("GET", "/merchant/suggest?q=" + encodeURIComponent(d.query.trim()));
+    d.suggest = ok ? data : null;
+    searchMerchants();
+  }, 280);
+}
+function onDiscoverFocus() { S._discover.showSuggest = true; render(); }
+function onDiscoverBlur() { setTimeout(() => { if (S._discover && S._discover.showSuggest) { S._discover.showSuggest = false; render(); } }, 200); }
+function onDiscoverSubmit() { pushRecent(S._discover.query); S._discover.showSuggest = false; render(); }
+function onDiscoverClear() { S._discover.query = ""; S._discover.suggest = null; searchMerchants(); }
+function pickRecent(q) { S._discover.query = q; S._discover.showSuggest = false; pushRecent(q); searchMerchants(); }
+function pickCategory(id) { S._discover.query = ""; S._discover.categoryId = id; S._discover.showSuggest = false; searchMerchants(); }
+function onDiscoverReset() { Object.assign(S._discover, { categoryId: "", openNow: false, discountsOnly: false }); searchMerchants(); }
+function toggleDiscoverFlag(flag) { S._discover[flag] = !S._discover[flag]; render(); }
+function setDiscoverRadius(km) { S._discover.radiusKm = km; render(); }
+function onDiscoverCategory(id) { S._discover.categoryId = S._discover.categoryId === id ? "" : id; searchMerchants(); }
+
+function requestDiscoverLocation(recenter) {
+  const d = discoverState();
+  if (!navigator.geolocation) { d.locError = "المتصفح ما بيدعم تحديد الموقع"; return render(); }
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      S._discover.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      S._discover.locError = null;
-      searchMerchantsForMap();
+      d.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      d.locError = null;
+      if (recenter) S._centeredUser = false;
+      render();
     },
     () => {
-      S._discover.mapLoading = false;
-      S._discover.locError = "ما قدرنا نحدد موقعك — تأكد من تفعيل صلاحية الموقع بالمتصفح";
+      d.locError = "ما قدرنا نحدد موقعك — فعّل صلاحية الموقع من المتصفح لنعرض الأقرب إلك";
       render();
     },
     { enableHighAccuracy: true, timeout: 10000 },
   );
 }
 
-async function searchMerchantsForMap() {
-  if (!S._discover.userLoc) return;
-  S._discover.mapLoading = true;
-  render();
-  const { lat, lng } = S._discover.userLoc;
-  const params = new URLSearchParams({ lat, lng, radiusKm: S._discover.radiusKm });
+async function searchMerchants() {
+  const d = S._discover;
+  d.loading = true; render();
+  const params = new URLSearchParams();
+  if (d.query) params.set("q", d.query);
+  if (d.categoryId) params.set("categoryId", d.categoryId);
+  if (d.bounds) Object.entries(d.bounds).forEach(([k, v]) => params.set(k, v));
   const { ok, data } = await api("GET", "/merchant?" + params.toString());
-  let list = ok ? data : [];
-  if (S._discover.discountsOnly) list = list.filter((m) => (m.discounts || []).length > 0);
-  S._discover.mapMerchants = list;
-  S._discover.mapLoading = false;
+  d.loading = false;
+  d.areaDirty = false;
+  d.merchants = ok ? data : [];
+  S._mapKey = "";
   render();
 }
 
+// "Search this area": reload with the rectangle the map is currently showing.
+function searchThisArea() {
+  if (!S._map) return;
+  const b = S._map.getBounds();
+  S._discover.bounds = { minLat: b.getSouth(), maxLat: b.getNorth(), minLng: b.getWest(), maxLng: b.getEast() };
+  searchMerchants();
+}
+function clearSearchArea() { S._discover.bounds = null; searchMerchants(); }
+
+/* ---- the map itself: one Leaflet instance, kept alive across re-renders ---- */
+
+function moveMap(fn) {
+  S._ignoreMoveUntil = Date.now() + 700;
+  fn();
+}
+
 function renderDiscoverMap() {
-  const el = document.getElementById("discover-map");
-  if (!el || typeof L === "undefined") return;
-  if (S._discoverMapInstance) {
-    S._discoverMapInstance.remove();
-    S._discoverMapInstance = null;
-  }
-  const center = S._discover.userLoc || { lat: 33.5138, lng: 36.2765 }; // Damascus, used only when location is unavailable
-  const map = L.map(el, { attributionControl: false }).setView([center.lat, center.lng], 13);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
-  L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
-
-  if (S._discover.userLoc) {
-    L.circleMarker([S._discover.userLoc.lat, S._discover.userLoc.lng], {
-      radius: 7, color: "#1565c0", fillColor: "#1565c0", fillOpacity: 0.9, weight: 2,
-    }).addTo(map).bindPopup("موقعك");
-  }
-
-  (S._discover.mapMerchants || []).forEach((m) => {
-    if (m.latitude == null || m.longitude == null) return;
-    const hasDiscount = (m.discounts || []).length > 0;
-    const icon = L.divIcon({
-      className: "",
-      html: `<div style="background:${hasDiscount ? "#ba2a34" : "#8a7a78"};color:#fff;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35)"><span style="transform:rotate(45deg);font-size:13px">${hasDiscount ? "🏷️" : "📍"}</span></div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 28],
+  const slot = document.getElementById("discover-map-slot");
+  if (!slot || typeof L === "undefined") return;
+  if (!S._map) {
+    const el = document.createElement("div");
+    el.style.cssText = "height:100%;width:100%";
+    S._mapEl = el;
+    const map = L.map(el, { attributionControl: false, zoomControl: false }).setView([DAMASCUS.lat, DAMASCUS.lng], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+    L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
+    L.control.zoom({ position: "topleft" }).addTo(map);
+    S._cluster = typeof L.markerClusterGroup === "function" ? L.markerClusterGroup({ maxClusterRadius: 50 }) : L.layerGroup();
+    map.addLayer(S._cluster);
+    S._userLayer = L.layerGroup().addTo(map);
+    map.on("moveend", () => {
+      if (Date.now() < (S._ignoreMoveUntil || 0)) return;
+      if (S._discover) S._discover.areaDirty = true;
+      const btn = document.getElementById("area-btn");
+      if (btn) btn.style.display = "block";
     });
-    const discountText = hasDiscount
-      ? m.discounts.map((dc) => `${esc(dc.title)} — ${dc.percent}%`).join("<br>")
-      : "بدون حسم حاليًا";
-    L.marker([m.latitude, m.longitude], { icon }).addTo(map).bindPopup(`
-      <div style="font-family:Tajawal,sans-serif;text-align:right;direction:rtl;min-width:150px">
-        <strong>${esc(m.businessName)}</strong><br>
-        ${m.distanceKm != null ? `<span style="color:#8a7a78;font-size:12px">${m.distanceKm.toFixed(1)} كم</span><br>` : ""}
-        <span style="color:#ba2a34;font-size:12px">${discountText}</span><br>
-        <button onclick="go('merchantDetail',{merchantId:'${m.id}'})" style="margin-top:6px;background:#ba2a34;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">افتح المحل</button>
-        <a href="${directionsUrl(m.latitude, m.longitude)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;margin-right:4px;background:#fff;color:#ba2a34;border:1px solid #ba2a34;border-radius:8px;padding:5px 10px;font-size:12px;text-decoration:none">🗺️ الاتجاهات</a>
-      </div>
-    `);
-  });
+    S._map = map;
+    S._mapKey = "";
+  }
+  slot.appendChild(S._mapEl); // re-parenting keeps the view, zoom and markers
+  S._map.invalidateSize();
+  syncMapMarkers();
+}
 
-  S._discoverMapInstance = map;
+function syncMapMarkers() {
+  const d = S._discover;
+  const map = S._map;
+  const located = (S._visible || []).filter((m) => m.latitude != null && m.longitude != null);
+
+  S._userLayer.clearLayers();
+  if (d.userLoc) {
+    L.circleMarker([d.userLoc.lat, d.userLoc.lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#1e6fe0", fillOpacity: 1 }).addTo(S._userLayer).bindPopup("موقعك");
+  }
+
+  const key = located.map((m) => m.id).join(",");
+  if (key !== S._mapKey) {
+    S._mapKey = key;
+    S._cluster.clearLayers();
+    located.forEach((m) => {
+      const hasDiscount = (m.discounts || []).length > 0;
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="background:${hasDiscount ? "#ba2a34" : "#8a7a78"};color:#fff;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35)"><span style="transform:rotate(45deg);font-size:13px">${hasDiscount ? "🏷️" : "📍"}</span></div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+      });
+      const discountText = hasDiscount ? m.discounts.map((dc) => `${esc(dc.title)} — ${dc.percent}%`).join("<br>") : "";
+      L.marker([m.latitude, m.longitude], { icon }).bindPopup(`
+        <div style="font-family:Tajawal,sans-serif;text-align:right;direction:rtl;min-width:160px">
+          <strong>${esc(m.businessName)}</strong><br>
+          ${m.distanceKm != null ? `<span style="color:#8a7a78;font-size:12px">${m.distanceKm.toFixed(1)} كم</span><br>` : ""}
+          ${openBadge(m.openStatus)}
+          ${discountText ? `<div style="color:#ba2a34;font-size:12px;margin-top:4px">${discountText}</div>` : ""}
+          <button onclick="go('merchantDetail',{merchantId:'${m.id}'})" style="margin-top:6px;background:#ba2a34;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">افتح المحل</button>
+          <a href="${directionsUrl(m.latitude, m.longitude)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;margin-right:4px;background:#fff;color:#ba2a34;border:1px solid #ba2a34;border-radius:8px;padding:5px 10px;font-size:12px;text-decoration:none">🧭 الاتجاهات</a>
+        </div>`).addTo(S._cluster);
+    });
+    // Nothing known about the user yet: frame the merchants instead of showing an empty map.
+    if (!d.userLoc && located.length && !S._fitted) {
+      S._fitted = true;
+      moveMap(() => map.fitBounds(L.latLngBounds(located.map((m) => [m.latitude, m.longitude])), { padding: [40, 40], maxZoom: 15, animate: false }));
+    }
+  }
+  if (d.userLoc && !S._centeredUser) {
+    S._centeredUser = true;
+    moveMap(() => map.setView([d.userLoc.lat, d.userLoc.lng], 14, { animate: false }));
+  }
 }
 
 function flattenCategories(cats) {
@@ -605,14 +709,23 @@ function flattenCategories(cats) {
 }
 
 function merchantRowHtml(m) {
+  const saved = S._discover && S._discover.favIds.includes(m.id);
   return `
     <div class="card clickable" onclick="go('merchantDetail', {merchantId:'${m.id}'})">
       <div class="title-line">
-        <strong>${esc(m.businessName)}</strong>
-        ${m.distanceKm != null ? `<span class="muted">${m.distanceKm.toFixed(1)} كم</span>` : ""}
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+          <div class="avatar">${esc((m.businessName || "?").slice(0, 1))}</div>
+          <div style="min-width:0"><strong>${esc(m.businessName)}</strong><p class="muted" style="margin:0">${esc(m.category ? m.category.name : "")}${m.address ? " · " + esc(m.address) : ""}</p></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          ${m.distanceKm != null ? `<span class="badge neutral">${m.distanceKm < 1 ? Math.round(m.distanceKm * 1000) + " م" : m.distanceKm.toFixed(1) + " كم"}</span>` : ""}
+          <button class="heart ${saved ? "on" : ""}" title="حفظ" onclick="event.stopPropagation();toggleFav('${m.id}')">${saved ? "♥" : "♡"}</button>
+        </div>
       </div>
-      <p class="muted">${esc(m.category ? m.category.name : "")}</p>
-      ${(m.discounts || []).map((dc) => `<div class="badge info" style="margin-top:4px">🏷️ ${esc(dc.title)} — ${dc.percent}%</div>`).join("")}
+      <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
+        ${openBadge(m.openStatus)}
+        ${(m.discounts || []).map((dc) => `<span class="badge info">🏷️ ${esc(dc.title)} — ${dc.percent}%</span>`).join("")}
+      </div>
     </div>`;
 }
 
@@ -621,26 +734,60 @@ async function loadCategories() {
   S._discover.categories = ok ? data : [];
 }
 
-let discoverDebounce = null;
-function onDiscoverQuery(v) {
-  S._discover.query = v;
-  clearTimeout(discoverDebounce);
-  discoverDebounce = setTimeout(searchMerchants, 350);
-}
-function onDiscoverCategory(id) {
-  S._discover.categoryId = id;
-  searchMerchants();
+/* ---- saved places ---- */
+
+async function loadFavIds() {
+  if (!S.token) return;
+  const { ok, data } = await api("GET", "/favorites/ids");
+  if (ok && S._discover) { S._discover.favIds = data; render(); }
 }
 
-async function searchMerchants() {
-  S._discover.loading = true; render();
-  const params = new URLSearchParams();
-  if (S._discover.query) params.set("q", S._discover.query);
-  if (S._discover.categoryId) params.set("categoryId", S._discover.categoryId);
-  const { ok, data } = await api("GET", "/merchant?" + params.toString());
-  S._discover.loading = false;
-  S._discover.merchants = ok ? data : [];
+async function toggleFav(id) {
+  if (!S.token) return go("login");
+  const d = discoverState();
+  const saved = d.favIds.includes(id);
+  d.favIds = saved ? d.favIds.filter((x) => x !== id) : [...d.favIds, id]; // optimistic
   render();
+  const { ok } = await api(saved ? "DELETE" : "PUT", "/favorites/" + id);
+  if (!ok) { d.favIds = saved ? [...d.favIds, id] : d.favIds.filter((x) => x !== id); render(); }
+  if (S._favorites) S._favorites = null;
+}
+
+function screenFavorites() {
+  if (!S._favorites) { S._favorites = { loading: true }; loadFavorites(); }
+  const f = S._favorites;
+  if (f.loading) return backRow() + spinner();
+  return `
+    ${backRow()}
+    <h1 class="screen-title">أماكني المحفوظة</h1>
+    ${f.list.length === 0 ? `<div class="empty-state">ما حفظت أي مكان بعد — اضغط ♡ على أي محل</div>` : f.list.map(merchantRowHtml).join("")}
+  `;
+}
+async function loadFavorites() {
+  const { ok, data } = await api("GET", "/favorites");
+  S._favorites = { loading: false, list: ok ? data : [] };
+  render();
+}
+
+/* ---- guests: everything account-bound explains itself instead of failing ---- */
+
+function guestPrompt(tab) {
+  const copy = {
+    card: ["💳", "بطاقة دليلكم", "افتح حساب لتحصل على بطاقة الحسم الرقمية وتوفّر بكل محل على الخريطة.", ["حسم فوري عند أي تاجر مشترك", "كود QR يتجدّد لحمايتك", "سجل بكل حسوماتك"]],
+    cart: ["🛒", "سلة مشترياتك", "سجّل دخولك لتضيف منتجات وتكمل طلبك.", ["اطلب من عدة محلات بسلة وحدة", "أسعار خاصة للأعضاء"]],
+    orders: ["📦", "طلباتك", "سجّل دخولك لتتابع طلباتك وحالتها.", ["تتبّع كل طلب خطوة بخطوة", "إلغاء الطلب قبل الشحن"]],
+    profile: ["👤", "افتح حسابك", "الخريطة ودليل المحلات مفتوحين للكل. الحساب بتحتاجه إذا بدك بطاقة حسم أو تسجّل محلك كتاجر.", ["احصل على بطاقة الحسم", "سجّل محلك كتاجر وأضف منتجاتك وعروضك", "فعّل المجيب الآلي لمحادثات زبائنك"]],
+  }[tab];
+  return `
+    <div class="guest-prompt">
+      <div class="guest-ico">${copy[0]}</div>
+      <h1 class="screen-title" style="margin:0">${copy[1]}</h1>
+      <p class="screen-sub">${copy[2]}</p>
+      <ul>${copy[3].map((p) => `<li>✓ ${esc(p)}</li>`).join("")}</ul>
+      <button class="btn" onclick="go('login')">تسجيل الدخول</button>
+      <div style="height:10px"></div>
+      <button class="btn outline" onclick="go('register')">إنشاء حساب جديد</button>
+    </div>`;
 }
 
 /* ---- Cart tab ---- */
@@ -755,6 +902,8 @@ function tabProfile() {
         ? `<button class="btn" style="max-width:240px" onclick="go('merchantMode')">وضع التاجر</button>`
         : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">سجّل كتاجر</button>`}
       <div style="height:10px"></div>
+      <button class="btn outline" style="max-width:240px" onclick="go('favorites')">♥ أماكني المحفوظة</button>
+      <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">مسوّقياتي</button>
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('responder')">🤖 المجيب الآلي</button>
@@ -809,6 +958,43 @@ async function loadAffiliateMine() {
 
 /* ================= MERCHANT DETAIL ================= */
 
+function toast(message) {
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = message;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+
+function shareMerchant() {
+  const m = S._merchantDetail && S._merchantDetail.merchant;
+  if (!m) return;
+  const url = `${location.origin}${location.pathname}?merchant=${m.id}`;
+  if (navigator.share) {
+    navigator.share({ title: m.businessName, text: `${m.businessName} على دليلكم`, url }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => toast("تم نسخ الرابط ✅"), () => prompt("انسخ الرابط:", url));
+  } else {
+    prompt("انسخ الرابط:", url);
+  }
+}
+
+function hoursTable(m) {
+  const hours = m.openingHours || {};
+  if (!m.openStatus || !m.openStatus.hasHours) return "";
+  // "Today" is the platform's day (Damascus), the same clock the server uses for open/closed.
+  const todayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Damascus" })).getDay()];
+  return `
+    <div class="section-title">ساعات العمل</div>
+    <div class="card hours-table">
+      ${DAY_ORDER.map((day) => {
+        const ranges = hours[day] || [];
+        const text = ranges.length ? ranges.map((r) => (r.open === r.close ? "24 ساعة" : `${fmtClock(r.open)} – ${fmtClock(r.close)}`)).join("، ") : "مغلق";
+        return `<div class="hours-line ${day === todayKey ? "today" : ""}"><span>${DAY_LABEL[day]}</span><span class="${ranges.length ? "" : "muted"}">${text}</span></div>`;
+      }).join("")}
+    </div>`;
+}
+
 function screenMerchantDetail() {
   if (!S._merchantDetail || S._merchantDetail.id !== S.params.merchantId) {
     S._merchantDetail = { id: S.params.merchantId, loading: true };
@@ -817,13 +1003,31 @@ function screenMerchantDetail() {
   const m = S._merchantDetail;
   if (m.loading) return backRow() + spinner();
   if (!m.merchant) return backRow() + `<div class="error-banner">هذا المحل غير متوفر</div>`;
-  const hasCoords = m.merchant.latitude != null && m.merchant.longitude != null;
+  const x = m.merchant;
+  const hasCoords = x.latitude != null && x.longitude != null;
+  const phone = (x.phone || "").trim();
+  const wa = (x.whatsapp || "").replace(/\D/g, "");
+  const saved = S._discover && S._discover.favIds.includes(x.id);
   return `
     ${backRow()}
-    <h1 class="screen-title">${esc(m.merchant.businessName)}</h1>
-    <p class="screen-sub">${esc(m.merchant.category ? m.merchant.category.name : "")}${m.merchant.address ? " · 📍 " + esc(m.merchant.address) : ""}${m.merchant.distanceKm != null ? " · " + m.merchant.distanceKm.toFixed(1) + " كم" : ""}</p>
-    ${hasCoords ? `<a class="btn outline" style="width:auto;display:inline-flex;margin-bottom:12px" href="${directionsUrl(m.merchant.latitude, m.merchant.longitude)}" target="_blank" rel="noopener">🗺️ الاتجاهات</a>` : ""}
-    ${(m.merchant.discounts || []).map((d) => `<div class="badge info" style="margin-bottom:6px">🏷️ ${esc(d.title)} — ${d.percent}%</div>`).join("")}
+    <div class="place-head">
+      <div class="avatar big">${esc((x.businessName || "?").slice(0, 1))}</div>
+      <div style="min-width:0">
+        <h1 class="screen-title" style="margin:0">${esc(x.businessName)}</h1>
+        <p class="screen-sub" style="margin:2px 0 6px">${esc(x.category ? x.category.name : "")}${x.distanceKm != null ? " · " + x.distanceKm.toFixed(1) + " كم" : ""}</p>
+        ${openBadge(x.openStatus)}
+      </div>
+    </div>
+    <div class="place-actions">
+      ${phone ? `<a href="tel:${esc(phone)}"><span>📞</span>اتصال</a>` : ""}
+      ${wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span>💬</span>واتساب</a>` : ""}
+      ${hasCoords ? `<a href="${directionsUrl(x.latitude, x.longitude)}" target="_blank" rel="noopener"><span>🧭</span>الاتجاهات</a>` : ""}
+      <button onclick="shareMerchant()"><span>📤</span>مشاركة</button>
+      <button class="${saved ? "on" : ""}" onclick="toggleFav('${x.id}')"><span>${saved ? "♥" : "♡"}</span>${saved ? "محفوظ" : "حفظ"}</button>
+    </div>
+    ${x.address ? `<div class="place-row">📍 ${esc(x.address)}</div>` : ""}
+    ${(x.discounts || []).length ? `<div class="section-title">الحسوم</div>${x.discounts.map((d) => `<div class="badge info" style="margin-bottom:6px">🏷️ ${esc(d.title)} — ${d.percent}%</div>`).join("")}` : ""}
+    ${hoursTable(x)}
     <div class="section-title">المنتجات</div>
     ${(m.products || []).length === 0 ? `<div class="empty-state">ما في منتجات بعد</div>` : m.products.map((p) => `
       <div class="card clickable" onclick="go('productDetail', {productId:'${p.id}'})">
@@ -836,6 +1040,74 @@ function screenMerchantDetail() {
           : `<p class="price">${fmt(p.priceCents)}</p>`}
       </div>`).join("")}
   `;
+}
+
+/* ---- merchant: opening hours editor ---- */
+
+function screenMerchantHours() {
+  if (!S._hours) { S._hours = { loading: true }; loadMerchantHours(); }
+  const h = S._hours;
+  if (h.loading) return backRow() + spinner();
+  return `
+    ${backRow()}
+    <h1 class="screen-title">ساعات العمل</h1>
+    <p class="screen-sub">حدّد أيام دوامك وأوقاته — بيظهر للزبائن «مفتوح الآن» أو «مغلق». إذا سكّرت بعد منتصف الليل اكتب وقت إغلاق أصغر من الفتح (مثلًا 18:00 – 02:00).</p>
+    ${errorBanner()}
+    ${DAY_ORDER.map((day) => {
+      const x = h.days[day];
+      return `<div class="card">
+        <label class="row" style="gap:8px;align-items:center;cursor:pointer">
+          <input type="checkbox" style="width:auto" ${x.on ? "checked" : ""} onchange="hoursSet('${day}','on',this.checked)" />
+          <strong>${DAY_LABEL[day]}</strong>${x.on ? "" : `<span class="muted">مغلق</span>`}
+        </label>
+        ${x.on ? `<div class="row" style="gap:8px;margin-top:8px">
+          <div class="field" style="flex:1;margin:0"><label>من</label><input type="time" value="${x.open}" onchange="hoursSet('${day}','open',this.value)" /></div>
+          <div class="field" style="flex:1;margin:0"><label>إلى</label><input type="time" value="${x.close}" onchange="hoursSet('${day}','close',this.value)" /></div>
+        </div>` : ""}
+      </div>`;
+    }).join("")}
+    <button class="btn outline" onclick="hoursCopyToAll()">نسخ أول يوم مفتوح لكل الأيام</button>
+    <div style="height:10px"></div>
+    <button class="btn" onclick="saveMerchantHours()">حفظ ساعات العمل</button>
+    ${h.msg ? `<p class="muted" style="text-align:center;margin-top:8px">${esc(h.msg)}</p>` : ""}
+  `;
+}
+
+async function loadMerchantHours() {
+  const { ok, data } = await api("GET", "/merchant/me");
+  const stored = (ok && data.openingHours) || {};
+  const days = {};
+  DAY_ORDER.forEach((day) => {
+    const first = (stored[day] || [])[0];
+    days[day] = { on: !!first, open: first ? first.open : "09:00", close: first ? first.close : "22:00" };
+  });
+  S._hours = { loading: false, days, msg: "" };
+  render();
+}
+
+function hoursSet(day, field, value) {
+  S._hours.days[day][field] = value;
+  S._hours.msg = "";
+  if (field === "on") render(); // every other field is already in state, so nothing typed is lost
+}
+
+function hoursCopyToAll() {
+  const firstOn = DAY_ORDER.map((d) => S._hours.days[d]).find((x) => x.on);
+  if (!firstOn) { S._hours.msg = "فعّل يوم واحد على الأقل أول"; return render(); }
+  DAY_ORDER.forEach((d) => { S._hours.days[d] = { on: true, open: firstOn.open, close: firstOn.close }; });
+  render();
+}
+
+async function saveMerchantHours() {
+  const openingHours = {};
+  DAY_ORDER.forEach((day) => {
+    const x = S._hours.days[day];
+    if (x.on && x.open && x.close) openingHours[day] = [{ open: x.open, close: x.close }];
+  });
+  const { ok, data } = await api("PUT", "/merchant/me/hours", { openingHours: Object.keys(openingHours).length ? openingHours : null });
+  S.error = null;
+  S._hours.msg = ok ? "✅ انحفظت ساعات العمل" : errMsg(data, "تعذّر الحفظ");
+  render();
 }
 
 function backRow() {
@@ -1179,6 +1451,7 @@ function tabCatalog() {
   if (c.loading) return `<h1 class="screen-title">الكتالوج</h1>${spinner()}`;
   return `
     <h1 class="screen-title">الكتالوج</h1>
+    <button class="btn outline" style="margin-bottom:12px" onclick="S._hours=null;go('merchantHours')">🕒 ساعات العمل</button>
     <div class="card">
       <div class="section-title" style="margin-top:0">الحسومات</div>
       ${(c.discounts || []).length ? c.discounts.map((d) => `<p style="color:var(--primary)">🏷️ ${esc(d.title)} — ${d.percent}%</p>`).join("") : `<p class="muted">ما في حسومات بعد</p>`}
@@ -1727,7 +2000,7 @@ function wireUpAfterRender() {
   if (S.screen === "home" && S.homeTab === "card" && S._card && S._card.memberNumber) {
     renderQrOnly();
   }
-  if (S.screen === "home" && S.homeTab === "discover" && S._discover && S._discover.view === "map") {
+  if (S.screen === "home" && S.homeTab === "discover" && S._discover) {
     renderDiscoverMap();
   }
 }
@@ -1748,6 +2021,19 @@ async function bootReferralCapture() {
   return true;
 }
 
+// A shared place link ("...?merchant=ID") opens that place's page directly — works for guests too.
+function bootMerchantLink() {
+  const id = new URLSearchParams(location.search).get("merchant");
+  if (!id) return false;
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  S.stack = [];
+  S.screen = "home";
+  S.homeTab = "discover";
+  S.params = {};
+  go("merchantDetail", { merchantId: id });
+  return true;
+}
+
 bootReferralCapture().then((handled) => {
-  if (!handled) render();
+  if (!handled && !bootMerchantLink()) render();
 });
