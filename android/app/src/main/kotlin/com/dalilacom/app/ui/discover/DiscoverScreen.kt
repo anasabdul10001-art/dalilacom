@@ -499,7 +499,7 @@ private fun MerchantCard(
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Avatar(merchant.businessName)
+                Avatar(merchant.businessName, imageUrl = merchant.avatarUrl)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(merchant.businessName, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -4,6 +4,7 @@ import { sendError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { getDefaultCountry } from "../services/geo.service";
 import { computeOpenStatus } from "../services/hours.service";
+import { ownerProfileSelect, withOwnerProfile } from "../lib/profile";
 
 export const favoritesRouter = Router();
 favoritesRouter.use(requireAuth);
@@ -12,12 +13,12 @@ favoritesRouter.use(requireAuth);
 favoritesRouter.get("/", async (req, res) => {
   const favorites = await prisma.favoriteMerchant.findMany({
     where: { userId: req.user!.id, merchant: { approvalStatus: "APPROVED" } },
-    include: { merchant: { include: { category: true, discounts: { where: { isActive: true } } } } },
+    include: { merchant: { include: { category: true, discounts: { where: { isActive: true } }, user: ownerProfileSelect } } },
     orderBy: { createdAt: "desc" },
   });
   const tz = (await getDefaultCountry()).timezone ?? "UTC";
   const now = new Date();
-  res.json(favorites.map((f) => ({ ...f.merchant, openStatus: computeOpenStatus(f.merchant.openingHours, tz, now), savedAt: f.createdAt })));
+  res.json(favorites.map((f) => ({ ...withOwnerProfile(f.merchant), openStatus: computeOpenStatus(f.merchant.openingHours, tz, now), savedAt: f.createdAt })));
 });
 
 // Just the ids, so any screen can show a filled heart without loading full places.

@@ -107,7 +107,7 @@ fun FavoritesScreen(factory: ViewModelFactory, onBack: () -> Unit, onMerchantCli
                         modifier = Modifier.fillMaxWidth().clickable { onMerchantClick(place.id) },
                     ) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Avatar(place.businessName)
+                            Avatar(place.businessName, imageUrl = place.avatarUrl)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(place.businessName, style = MaterialTheme.typography.titleMedium)

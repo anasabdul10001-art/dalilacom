@@ -21,6 +21,8 @@ import { businessRouter, branchRouter } from "./routes/business.routes";
 import { catalogRouter } from "./routes/catalog.routes";
 import { favoritesRouter } from "./routes/favorites.routes";
 import { routeRouter } from "./routes/route.routes";
+import { profileRouter } from "./routes/profile.routes";
+import { invoiceRouter } from "./routes/invoice.routes";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { ApiError, sendError, sendValidationError } from "./lib/apiError";
@@ -58,6 +60,8 @@ app.use("/branches", branchRouter);
 app.use("/catalog", catalogRouter);
 app.use("/favorites", favoritesRouter);
 app.use("/route", routeRouter);
+app.use("/profile", profileRouter);
+app.use("/invoices", invoiceRouter);
 
 app.use((_req, res) => {
   sendError(res, 404, "NOT_FOUND", "Not found");
@@ -72,6 +76,12 @@ app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   }
   if (err instanceof ZodError) {
     return sendValidationError(res, err);
+  }
+  // body-parser errors carry their own 4xx status (too large, malformed...) — don't report those as 500s.
+  const parserErr = err as { status?: number; type?: string } | null;
+  if (parserErr && parserErr.type && typeof parserErr.status === "number" && parserErr.status >= 400 && parserErr.status < 500) {
+    const tooLarge = parserErr.status === 413;
+    return sendError(res, parserErr.status, tooLarge ? "PAYLOAD_TOO_LARGE" : "BAD_REQUEST", tooLarge ? "الملف كبير جداً" : "طلب غير صالح");
   }
   console.error("Unhandled error:", err);
   return sendError(res, 500, "INTERNAL_ERROR", "حدث خطأ غير متوقع");

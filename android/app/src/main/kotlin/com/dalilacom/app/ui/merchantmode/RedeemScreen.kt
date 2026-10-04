@@ -32,7 +32,7 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
 @Composable
-fun RedeemScreen(factory: ViewModelFactory) {
+fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
     val viewModel: RedeemViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -119,6 +119,8 @@ fun RedeemScreen(factory: ViewModelFactory) {
                 Text("قيمة الحسم: ${formatCents(receipt.discountAmountCents)}")
                 Text("المبلغ النهائي: ${formatCents(receipt.finalAmountCents)}", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(20.dp))
+                OutlinedButton(onClick = { onExportReceipt(receipt.transactionRef) }, modifier = Modifier.fillMaxWidth()) { Text("📄 تصدير الإيصال PDF") }
+                Spacer(Modifier.height(8.dp))
                 Button(onClick = viewModel::reset, modifier = Modifier.fillMaxWidth()) { Text("عملية جديدة") }
             }
         }

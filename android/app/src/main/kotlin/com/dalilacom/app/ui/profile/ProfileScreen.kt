@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.dalilacom.app.data.network.MeResponse
+import com.dalilacom.app.data.network.ProfileDto
+import com.dalilacom.app.ui.common.Avatar
 import androidx.compose.ui.unit.dp
 import com.dalilacom.app.data.AppContainer
 import kotlinx.coroutines.launch
@@ -33,6 +35,7 @@ import kotlinx.coroutines.launch
 fun ProfileScreen(
     container: AppContainer,
     onLoggedOut: () -> Unit,
+    onEditProfile: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
     onOpenFavorites: () -> Unit,
@@ -42,11 +45,13 @@ fun ProfileScreen(
     val scope = rememberCoroutineScope()
     var role by remember { mutableStateOf<String?>(null) }
     var account by remember { mutableStateOf<MeResponse?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         role = container.sessionStore.getRole()
         account = container.authRepository.me()
+        profile = container.profileRepository.me()
     }
 
     Column(
@@ -54,7 +59,13 @@ fun ProfileScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("حسابي", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Avatar(profile?.fullName ?: "؟", size = 96.dp, imageUrl = profile?.avatarUrl)
+        Spacer(Modifier.height(10.dp))
+        Text(profile?.fullName ?: "حسابي", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        profile?.bio?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
+        TextButton(onClick = onEditProfile) { Text("✏️ تعديل ملفي الشخصي") }
         Spacer(Modifier.height(24.dp))
 
         // Only nag about verifying when the server can actually deliver the email.

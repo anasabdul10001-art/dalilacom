@@ -22,6 +22,7 @@ import com.dalilacom.app.ui.orders.OrderDetailScreen
 import com.dalilacom.app.ui.places.FavoritesScreen
 import com.dalilacom.app.ui.places.HoursScreen
 import com.dalilacom.app.ui.product.ProductDetailScreen
+import com.dalilacom.app.ui.profile.ProfileEditScreen
 import com.dalilacom.app.ui.responder.ResponderScreen
 import com.dalilacom.app.ui.responder.WalletScreen
 
@@ -108,6 +109,9 @@ fun DalilacomNavGraph(container: AppContainer) {
         }
         composable("favorites") {
             FavoritesScreen(factory = factory, onBack = { navController.popBackStack() }, onMerchantClick = { id -> navController.navigate("merchant/$id") })
+        }
+        composable("profileEdit") {
+            ProfileEditScreen(factory = factory, onBack = { navController.popBackStack() })
         }
         composable("merchantProfile") {
             MerchantProfileScreen(factory = factory, onBack = { navController.popBackStack() })

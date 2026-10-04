@@ -67,6 +67,9 @@ dependencies {
     // OpenStreetMap map view — no API key required.
     implementation("org.osmdroid:osmdroid-android:6.1.18")
 
+    // profile photos
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 

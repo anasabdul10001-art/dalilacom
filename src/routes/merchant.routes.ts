@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MerchantApprovalStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
+import { ownerProfileSelect, withOwnerProfile } from "../lib/profile";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { createBusinessFromMerchantProfile } from "../services/business.service";
 import { getDefaultCountry } from "../services/geo.service";
@@ -70,12 +71,12 @@ merchantRouter.post("/register", requireAuth, async (req, res) => {
 merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
     where: { userId: req.user!.id },
-    include: { discounts: true, _count: { select: { products: true } } },
+    include: { discounts: true, _count: { select: { products: true } }, user: ownerProfileSelect },
   });
   if (!merchant) {
     return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   }
-  const { _count, ...profile } = merchant;
+  const { _count, ...profile } = withOwnerProfile(merchant);
   // What still stands between this merchant and being found on the map — drives the setup checklist.
   res.json({
     ...profile,
@@ -221,12 +222,12 @@ merchantRouter.get("/", async (req, res) => {
         : {}),
       ...(hasBox ? { latitude: { gte: minLat, lte: maxLat }, longitude: { gte: minLng, lte: maxLng } } : {}),
     },
-    include: { category: true, discounts: { where: { isActive: true } } },
+    include: { category: true, discounts: { where: { isActive: true } }, user: ownerProfileSelect },
   });
 
   const tz = await platformTimeZone();
   const now = new Date();
-  let merchants = found.map((m) => ({ ...m, openStatus: computeOpenStatus(m.openingHours, tz, now) }));
+  let merchants = found.map((m) => ({ ...withOwnerProfile(m), openStatus: computeOpenStatus(m.openingHours, tz, now) }));
   if (openNow === "true") merchants = merchants.filter((m) => m.openStatus.isOpen);
 
   // Nearest-first sorting when the customer's location is known (section 31 "Radius Selector").
@@ -279,12 +280,12 @@ merchantRouter.put("/me/hours", requireAuth, requireRole(Role.MERCHANT), async (
 merchantRouter.get("/:id", async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
     where: { id: req.params.id },
-    include: { category: true, discounts: { where: { isActive: true } } },
+    include: { category: true, discounts: { where: { isActive: true } }, user: ownerProfileSelect },
   });
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
     return sendError(res, 404, "NOT_FOUND", "Merchant not found");
   }
-  res.json({ ...merchant, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) });
+  res.json({ ...withOwnerProfile(merchant), openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) });
 });
 
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {

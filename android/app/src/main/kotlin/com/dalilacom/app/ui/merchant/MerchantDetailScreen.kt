@@ -97,6 +97,9 @@ fun MerchantDetailScreen(
                 val merchant = state.merchant!!
                 LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp)) {
                     item { PlaceHeader(merchant) }
+                    merchant.bio?.takeIf { it.isNotBlank() }?.let { bio ->
+                        item { Spacer(Modifier.height(12.dp)); Text(bio, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
                     item { Spacer(Modifier.height(14.dp)); ActionRow(context, merchant, state.saved, viewModel::toggleSaved, onDirections) }
                     merchant.address?.let { address ->
                         item { Spacer(Modifier.height(12.dp)); Text("📍 $address", style = MaterialTheme.typography.bodyMedium) }
@@ -130,7 +133,7 @@ fun MerchantDetailScreen(
 @Composable
 private fun PlaceHeader(merchant: MerchantDto) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Avatar(merchant.businessName, size = 64.dp)
+        Avatar(merchant.businessName, size = 64.dp, imageUrl = merchant.avatarUrl)
         Spacer(Modifier.width(14.dp))
         Column {
             Text(merchant.businessName, style = MaterialTheme.typography.headlineSmall)

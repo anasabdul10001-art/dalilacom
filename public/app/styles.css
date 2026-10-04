@@ -814,3 +814,15 @@ h1, h2, h3 {
 /* ---- theme button + dark map tiles ---- */
 .mapfull .theme-fab { bottom: calc(var(--sheet-h, 232px) + 68px); }
 :root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
+
+/* ---- profile photo, description, printable documents ---- */
+img.avatar { object-fit: cover; background: var(--surface-alt); }
+.avatar.huge { width: 112px; height: 112px; font-size: 46px; border: 3px solid var(--surface); box-shadow: 0 8px 22px -10px rgba(0, 0, 0, 0.5); }
+.place-bio { margin: 12px 0 4px; color: var(--text-muted); font-size: 13.5px; line-height: 1.7; }
+.field textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); font: inherit; resize: vertical; }
+#print-root { display: none; }
+@media print {
+  body > *:not(#print-root) { display: none !important; }
+  #print-root { display: block !important; }
+  body { background: #fff !important; }
+}

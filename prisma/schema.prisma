@@ -50,20 +50,23 @@ enum AffiliateSourceType {
 }
 
 model User {
-  id              String   @id @default(uuid())
-  email           String   @unique
-  phone           String?  @unique
+  id              String    @id @default(uuid())
+  email           String    @unique
+  phone           String?   @unique
   passwordHash    String
   fullName        String
-  role            Role     @default(CUSTOMER)
-  tokenVersion    Int      @default(0) // bumped on logout / password reset to invalidate existing JWTs (section 56)
-  isEmailVerified Boolean  @default(false)
-  isDisabled      Boolean  @default(false) // admin-controlled kill switch, blocks login regardless of tokenVersion
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  role            Role      @default(CUSTOMER)
+  tokenVersion    Int       @default(0) // bumped on logout / password reset to invalidate existing JWTs (section 56)
+  isEmailVerified Boolean   @default(false)
+  isDisabled      Boolean   @default(false) // admin-controlled kill switch, blocks login regardless of tokenVersion
+  bio             String? // short public description shown on the account's profile / shop page
+  avatarUpdatedAt DateTime? // set when a profile photo exists; also the cache-busting version in its URL
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   memberships     Membership[]
   merchantProfile MerchantProfile?
+  avatar          UserAvatar?
   cart            Cart?
   orders          Order[]
   affiliateOf     MerchantAffiliate[] // merchants I market for
@@ -949,4 +952,15 @@ model FavoriteMerchant {
 
   @@unique([userId, merchantId])
   @@index([userId, createdAt])
+}
+
+// Profile photo bytes live in their own table so ordinary user lookups never drag them along.
+// Stored in Postgres (not on disk) because the host's filesystem is ephemeral.
+model UserAvatar {
+  userId    String   @id
+  mime      String
+  data      Bytes
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

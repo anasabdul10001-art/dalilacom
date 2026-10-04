@@ -1,5 +1,6 @@
 package com.dalilacom.app.data.network
 
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -16,6 +17,18 @@ interface ApiService {
 
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
+
+    @GET("profile/me")
+    suspend fun getProfile(): Response<ProfileDto>
+
+    @PATCH("profile/me")
+    suspend fun updateProfile(@Body body: UpdateProfileRequest): Response<ProfileDto>
+
+    @PUT("profile/avatar")
+    suspend fun uploadAvatar(@Body body: RequestBody): Response<ProfileDto>
+
+    @DELETE("profile/avatar")
+    suspend fun deleteAvatar(): Response<ProfileDto>
 
     @GET("auth/me")
     suspend fun me(): Response<MeResponse>

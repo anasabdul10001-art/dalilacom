@@ -24,6 +24,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.dalilacom.app.data.AppContainer
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.dalilacom.app.ui.common.DocumentPrinter
+import kotlinx.coroutines.launch
 import com.dalilacom.app.ui.common.ORDER_STATUS_TRANSITIONS
 import com.dalilacom.app.ui.common.formatCents
 import com.dalilacom.app.ui.common.orderStatusColor
@@ -37,6 +42,8 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
         },
     )
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         TextButton(onClick = onBack) { Text("‹ رجوع") }
@@ -72,6 +79,12 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
                 if (order.memberDiscountCents > 0) {
                     Text("وفّرت ${formatCents(order.memberDiscountCents)} بسعر أعضاء دليلكم", style = MaterialTheme.typography.bodySmall)
                 }
+
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/order/${order.id}", "فاتورة ${order.orderNumber}") } },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("📄 تصدير الفاتورة PDF") }
 
                 val canCancel = ORDER_STATUS_TRANSITIONS[order.status]?.contains("CANCELLED") == true
                 if (canCancel) {

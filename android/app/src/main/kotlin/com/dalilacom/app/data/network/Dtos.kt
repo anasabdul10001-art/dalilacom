@@ -12,6 +12,19 @@ data class LoginRequest(val email: String, val password: String)
 data class UserDto(val id: String, val email: String, val fullName: String, val role: String, val emailVerified: Boolean = false)
 
 @Serializable
+data class ProfileDto(
+    val id: String,
+    val email: String,
+    val fullName: String,
+    val role: String,
+    val bio: String? = null,
+    val avatarUrl: String? = null,
+)
+
+@Serializable
+data class UpdateProfileRequest(val fullName: String? = null, val bio: String? = null)
+
+@Serializable
 data class MeResponse(val user: UserDto, val emailDeliveryEnabled: Boolean = false)
 
 @Serializable
@@ -80,6 +93,8 @@ data class MerchantDto(
     val whatsapp: String? = null,
     val openingHours: Map<String, List<HourRangeDto>>? = null,
     val openStatus: OpenStatusDto? = null,
+    val bio: String? = null,
+    val avatarUrl: String? = null,
 )
 
 @Serializable

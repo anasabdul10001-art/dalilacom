@@ -13,6 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.dalilacom.app.data.network.absoluteUrl
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -80,13 +83,16 @@ fun OpenBadge(status: OpenStatusDto?, modifier: Modifier = Modifier) {
     }
 }
 
-/** Brand-gradient circle with the merchant's first letter. */
+/** The account's profile photo, or a brand-gradient circle with its first letter while there is none. */
 @Composable
-fun Avatar(name: String, size: Dp = 48.dp, modifier: Modifier = Modifier) {
+fun Avatar(name: String, size: Dp = 48.dp, modifier: Modifier = Modifier, imageUrl: String? = null) {
     Box(
         modifier = modifier.size(size).clip(CircleShape).background(Brush.linearGradient(listOf(DeepRed, PrimaryRed))),
         contentAlignment = Alignment.Center,
     ) {
         Text(name.take(1), color = Color.White, fontSize = (size.value * 0.42f).sp, fontWeight = FontWeight.Bold)
+        if (imageUrl != null) {
+            AsyncImage(model = absoluteUrl(imageUrl), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+        }
     }
 }

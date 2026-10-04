@@ -96,6 +96,7 @@ function clearToken() {
   S.account = null;
   S._onboarding = null;
   S._mprof = null;
+  S._profile = null;
 }
 
 function stopQrLoop() {
@@ -241,6 +242,7 @@ function renderScreen() {
     case "favorites": return screenFavorites();
     case "merchantHours": return screenMerchantHours();
     case "merchantProfile": return screenMerchantProfile();
+    case "profileEdit": return screenProfileEdit();
     default: return screenLogin();
   }
 }
@@ -836,7 +838,7 @@ function merchantRowHtml(m) {
     <div class="card place-card clickable ${selected ? "selected" : ""}" onclick="go('merchantDetail', {merchantId:'${m.id}'})">
       <div class="title-line">
         <div style="display:flex;align-items:center;gap:10px;min-width:0">
-          <div class="avatar">${esc((m.businessName || "?").slice(0, 1))}</div>
+          ${avatarHtml(m.avatarUrl, m.businessName)}
           <div style="min-width:0"><strong>${esc(m.businessName)}</strong><p class="muted" style="margin:0">${esc(m.category ? m.category.name : "")}${m.address ? " · " + esc(m.address) : ""}</p></div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
@@ -1022,8 +1024,15 @@ async function loadOrders() {
 function tabProfile() {
   return `
     <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:50px">
-      <h1 class="screen-title">حسابي</h1>
-      <div style="height:20px"></div>
+      ${(() => {
+        if (S._profile == null) { S._profile = {}; loadProfile(); }
+        const p = S._profile;
+        return `<div style="display:flex;justify-content:center">${avatarHtml(p.avatarUrl, p.fullName, "huge")}</div>
+          <h1 class="screen-title" style="margin:10px 0 2px">${esc(p.fullName || "حسابي")}</h1>
+          ${p.bio ? `<p class="muted" style="margin:0 0 6px;max-width:260px">${esc(p.bio)}</p>` : ""}
+          <button class="link-btn" onclick="go('profileEdit')">✏️ تعديل ملفي الشخصي</button>`;
+      })()}
+      <div style="height:14px"></div>
       ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
       ${S.role === "MERCHANT"
         ? `<button class="btn" style="max-width:240px" onclick="go('merchantMode')">وضع التاجر</button>`
@@ -1138,13 +1147,14 @@ function screenMerchantDetail() {
   return `
     ${backRow()}
     <div class="place-head">
-      <div class="avatar big">${esc((x.businessName || "?").slice(0, 1))}</div>
+      ${avatarHtml(x.avatarUrl, x.businessName, "big")}
       <div style="min-width:0">
         <h1 class="screen-title" style="margin:0">${esc(x.businessName)}</h1>
         <p class="screen-sub" style="margin:2px 0 6px">${esc(x.category ? x.category.name : "")}${x.distanceKm != null ? " · " + x.distanceKm.toFixed(1) + " كم" : ""}</p>
         ${openBadge(x.openStatus)}
       </div>
     </div>
+    ${x.bio ? `<p class="place-bio">${esc(x.bio)}</p>` : ""}
     <div class="place-actions">
       ${phone ? `<a href="tel:${esc(phone)}"><span>📞</span>اتصال</a>` : ""}
       ${wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span>💬</span>واتساب</a>` : ""}
@@ -1345,6 +1355,7 @@ function screenOrderDetail() {
     <div class="divider"></div>
     <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(ord.totalCents)}</span></div>
     ${ord.memberDiscountCents > 0 ? `<p class="muted">وفّرت ${fmt(ord.memberDiscountCents)} بسعر أعضاء دليلكم</p>` : ""}
+    <button class="btn outline" style="margin-top:10px" onclick="exportDocument('/invoices/order/${ord.id}')">📄 تصدير الفاتورة PDF</button>
     ${canCancel ? `<div style="height:16px"></div><button class="btn danger" ${S.busy ? "disabled" : ""} onclick="cancelOrder()">إلغاء الطلب</button>` : ""}
     ${errorBanner()}
   `;
@@ -1682,6 +1693,133 @@ async function resendVerification() {
   toast(ok ? "أرسلنا رابط التوثيق لبريدك ✅" : "تعذّر الإرسال، جرّب بعد شوي");
 }
 
+/* ================= ACCOUNT PROFILE: photo + description ================= */
+
+// A round profile photo, or the first letter of the name when there is none.
+function avatarHtml(url, name, cls) {
+  const extra = cls ? " " + cls : "";
+  return url
+    ? `<img class="avatar${extra}" src="${esc(url)}" alt="">`
+    : `<div class="avatar${extra}">${esc((name || "?").slice(0, 1))}</div>`;
+}
+
+async function loadProfile() {
+  const { ok, data } = await api("GET", "/profile/me");
+  S._profile = ok ? data : { failed: true };
+  render();
+}
+
+function screenProfileEdit() {
+  if (S._profile == null) { S._profile = {}; loadProfile(); }
+  if (S._profile.failed) return backRow() + `<div class="error-banner">تعذّر تحميل ملفك الشخصي — جرّب لاحقاً</div>`;
+  if (!S._profile.id) return backRow() + spinner();
+  const p = S._profile;
+  return `
+    ${backRow()}
+    <h1 class="screen-title">ملفي الشخصي</h1>
+    <div style="text-align:center;margin:8px 0 16px">
+      <div style="display:flex;justify-content:center">${avatarHtml(p.avatarUrl, p.fullName, "huge")}</div>
+      <div class="row" style="justify-content:center;gap:8px;margin-top:12px">
+        <label class="btn small outline" style="width:auto;cursor:pointer">📷 ${p.avatarUrl ? "تغيير الصورة" : "إضافة صورة"}<input type="file" accept="image/*" hidden onchange="uploadAvatar(this.files[0])" /></label>
+        ${p.avatarUrl ? `<button class="btn small outline" style="width:auto" onclick="removeAvatar()">حذف الصورة</button>` : ""}
+      </div>
+    </div>
+    <div class="field"><label>الاسم</label><input id="pf-name" value="${esc(p.fullName || "")}" /></div>
+    <div class="field"><label>نبذة عنك أو عن محلك (بتظهر للزبائن وعلى الفواتير)</label><textarea id="pf-bio" rows="4" maxlength="500">${esc(p.bio || "")}</textarea></div>
+    ${errorBanner()}
+    <button class="btn" onclick="saveProfile()">حفظ</button>
+    ${p.msg ? `<p class="muted" style="text-align:center;margin-top:8px">${esc(p.msg)}</p>` : ""}
+  `;
+}
+
+function snapshotProfile() {
+  const p = S._profile;
+  if (qs("pf-name")) p.fullName = qs("pf-name").value;
+  if (qs("pf-bio")) p.bio = qs("pf-bio").value;
+}
+
+async function saveProfile() {
+  snapshotProfile();
+  const p = S._profile;
+  S.error = null;
+  const { ok, data } = await api("PATCH", "/profile/me", { fullName: (p.fullName || "").trim(), bio: (p.bio || "").trim() || null });
+  if (ok) S._profile = { ...data, msg: "✅ انحفظ ملفك الشخصي" };
+  else { S.error = errMsg(data, "تعذّر الحفظ"); }
+  render();
+}
+
+// The photo is cropped to a centred square and shrunk to 512px before it is uploaded.
+// (Read as a data: URL — the page's CSP allows data: images but not blob: ones.)
+function squareJpeg(file, size) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode"));
+      img.onload = () => {
+        const side = Math.min(img.width, img.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = size;
+        canvas.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("encode"))), "image/jpeg", 0.86);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadAvatar(file) {
+  if (!file) return;
+  snapshotProfile();
+  S.error = null;
+  try {
+    const blob = await squareJpeg(file, 512);
+    const res = await fetch(API_BASE + "/profile/avatar", {
+      method: "PUT",
+      headers: { "Content-Type": "image/jpeg", Authorization: "Bearer " + S.token },
+      body: blob,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) S._profile = { ...S._profile, ...data, msg: "✅ انحفظت الصورة" };
+    else S.error = errMsg(data, "تعذّر رفع الصورة");
+  } catch (e) {
+    S.error = "تعذّرت قراءة الصورة — جرّب صورة ثانية";
+  }
+  render();
+}
+
+async function removeAvatar() {
+  snapshotProfile();
+  const { ok, data } = await api("DELETE", "/profile/avatar");
+  if (ok) S._profile = { ...S._profile, ...data, msg: "" };
+  render();
+}
+
+/* ================= PRINTABLE DOCUMENTS (invoice, receipt, ...) → PDF ================= */
+
+// The server builds the document (with the issuing account's name + photo). It is shown through the
+// browser's own print engine, which shapes Arabic correctly; choose "Save as PDF" to get the file.
+async function exportDocument(path) {
+  let res;
+  try { res = await fetch(API_BASE + path, { headers: { Authorization: "Bearer " + S.token } }); } catch (e) { return toast("تعذّر الاتصال بالسيرفر"); }
+  if (!res.ok) return toast("تعذّر تجهيز المستند");
+  const parsed = new DOMParser().parseFromString(await res.text(), "text/html");
+  const root = document.getElementById("print-root");
+  root.innerHTML = "";
+  const style = document.createElement("style");
+  style.textContent = parsed.querySelector("style").textContent;
+  root.appendChild(style);
+  root.appendChild(document.importNode(parsed.querySelector(".doc"), true));
+  const previousTitle = document.title;
+  document.title = parsed.title; // becomes the default file name of the saved PDF
+  await Promise.all([...root.querySelectorAll("img")].map((img) => (img.decode ? img.decode().catch(() => {}) : null)));
+  const cleanup = () => { root.innerHTML = ""; document.title = previousTitle; window.removeEventListener("afterprint", cleanup); };
+  window.addEventListener("afterprint", cleanup);
+  window.print();
+}
+
 /* ================= MERCHANT MODE SHELL ================= */
 
 const MERCHANT_TABS = [
@@ -1743,6 +1881,7 @@ function tabRedeem() {
       <div class="divider"></div>
       <div class="list-row"><strong>المبلغ النهائي</strong><span class="price" style="color:var(--primary)">${fmt(rec.finalAmountCents)}</span></div>
     </div>
+    <button class="btn outline" style="margin-bottom:10px" onclick="exportDocument('/invoices/discount/${esc(rec.transactionRef)}')">📄 تصدير الإيصال PDF</button>
     <button class="btn" onclick="resetRedeem()">عملية جديدة</button>
   `;
 }

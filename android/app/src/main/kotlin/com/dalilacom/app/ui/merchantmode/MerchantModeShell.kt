@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.ViewModelFactory
+import com.dalilacom.app.ui.common.DocumentPrinter
+import kotlinx.coroutines.launch
 
 private enum class MerchantTab(val label: String, val icon: ImageVector) {
     Redeem("تأكيد حسم", Icons.Filled.QrCodeScanner),
@@ -48,6 +50,8 @@ private enum class MerchantTab(val label: String, val icon: ImageVector) {
 fun MerchantModeShell(rootNavController: NavHostController, container: AppContainer) {
     var selectedTab by rememberSaveable { mutableStateOf(MerchantTab.Redeem) }
     val factory = remember { ViewModelFactory(container) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var onboarding by remember { mutableStateOf<OnboardingDto?>(null) }
     // Re-read when the tab changes (a discount or product may just have been added); coming back from the
     // hours/listing screens recomposes this shell, which reloads it too.
@@ -78,7 +82,9 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                 )
             }
             when (selectedTab) {
-                MerchantTab.Redeem -> RedeemScreen(factory)
+                MerchantTab.Redeem -> RedeemScreen(factory, onExportReceipt = { ref ->
+                    scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/discount/$ref", "إيصال حسم") }
+                })
                 MerchantTab.Orders -> MerchantOrdersScreen(factory)
                 MerchantTab.Catalog -> CatalogScreen(
                     factory = factory,
