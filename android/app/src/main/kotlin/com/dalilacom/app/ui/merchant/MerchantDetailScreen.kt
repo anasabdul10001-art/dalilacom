@@ -47,7 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.ui.res.stringResource
+import com.dalilacom.app.R
 import com.dalilacom.app.data.AppContainer
+import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.MerchantDto
 import com.dalilacom.app.data.network.ProductDto
 import com.dalilacom.app.ui.common.Avatar
@@ -88,7 +91,7 @@ fun MerchantDetailScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TextButton(onClick = onBack, modifier = Modifier.padding(horizontal = 8.dp)) { Text("‹ رجوع") }
+        TextButton(onClick = onBack, modifier = Modifier.padding(horizontal = 8.dp)) { Text(stringResource(R.string.back)) }
 
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -105,7 +108,7 @@ fun MerchantDetailScreen(
                         item { Spacer(Modifier.height(12.dp)); Text("📍 $address", style = MaterialTheme.typography.bodyMedium) }
                     }
                     if (merchant.discounts.isNotEmpty()) {
-                        item { SectionTitle("الحسوم") }
+                        item { SectionTitle(stringResource(R.string.place_discounts)) }
                         items(merchant.discounts, key = { it.id }) { discount ->
                             Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.padding(bottom = 6.dp)) {
                                 Text(
@@ -118,9 +121,9 @@ fun MerchantDetailScreen(
                         }
                     }
                     if (merchant.openStatus?.hasHours == true) item { HoursSection(merchant) }
-                    item { SectionTitle("المنتجات") }
+                    item { SectionTitle(stringResource(R.string.place_products)) }
                     if (state.products.isEmpty()) {
-                        item { Text("ما في منتجات بعد", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item { Text(stringResource(R.string.place_no_products), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     } else {
                         items(state.products, key = { it.id }) { product -> ProductRow(product, onClick = { onProductClick(product.id) }) }
                     }
@@ -156,15 +159,17 @@ private fun ActionRow(context: Context, merchant: MerchantDto, saved: Boolean, o
     val phone = merchant.phone?.trim().orEmpty()
     val whatsapp = merchant.whatsapp.orEmpty().filter { it.isDigit() }
     val hasLocation = merchant.latitude != null && merchant.longitude != null
+    val shareText = stringResource(R.string.place_share_text, merchant.businessName, "$SHARE_BASE${merchant.id}")
+    val shareChooser = stringResource(R.string.place_share_chooser)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        if (phone.isNotEmpty()) PlaceAction(Icons.Filled.Call, "اتصال", Modifier.weight(1f)) { launch(context, Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))) }
-        if (whatsapp.isNotEmpty()) PlaceAction(Icons.Filled.Chat, "واتساب", Modifier.weight(1f)) { launch(context, Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$whatsapp"))) }
-        if (hasLocation) PlaceAction(Icons.Filled.Directions, "الاتجاهات", Modifier.weight(1f)) { onDirections(merchant) }
-        PlaceAction(Icons.Filled.Share, "مشاركة", Modifier.weight(1f)) {
-            val text = "${merchant.businessName} على دليلكم\n$SHARE_BASE${merchant.id}"
-            launch(context, Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }, "مشاركة المحل"))
+        if (phone.isNotEmpty()) PlaceAction(Icons.Filled.Call, stringResource(R.string.place_call), Modifier.weight(1f)) { launch(context, Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))) }
+        if (whatsapp.isNotEmpty()) PlaceAction(Icons.Filled.Chat, stringResource(R.string.place_whatsapp), Modifier.weight(1f)) { launch(context, Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$whatsapp"))) }
+        if (hasLocation) PlaceAction(Icons.Filled.Directions, stringResource(R.string.place_directions), Modifier.weight(1f)) { onDirections(merchant) }
+        PlaceAction(Icons.Filled.Share, stringResource(R.string.place_share), Modifier.weight(1f)) {
+            val text = shareText
+            launch(context, Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }, shareChooser))
         }
-        PlaceAction(if (saved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, if (saved) "محفوظ" else "حفظ", Modifier.weight(1f), highlighted = saved, onClick = onToggleSaved)
+        PlaceAction(if (saved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, stringResource(if (saved) R.string.place_saved else R.string.place_save), Modifier.weight(1f), highlighted = saved, onClick = onToggleSaved)
     }
 }
 
@@ -202,12 +207,12 @@ private fun HoursSection(merchant: MerchantDto) {
         DayOfWeek.THURSDAY -> "thu"
         else -> "fri"
     }
-    SectionTitle("ساعات العمل")
+    SectionTitle(stringResource(R.string.hours_title))
     Surface(shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
             DAY_ORDER.forEach { day ->
                 val ranges = merchant.openingHours?.get(day).orEmpty()
-                val text = if (ranges.isEmpty()) "مغلق" else ranges.joinToString("، ") { if (it.open == it.close) "24 ساعة" else "${formatClock(it.open)} – ${formatClock(it.close)}" }
+                val text = if (ranges.isEmpty()) AppStrings.get(R.string.hours_closed) else ranges.joinToString(AppStrings.get(R.string.hours_separator)) { if (it.open == it.close) AppStrings.get(R.string.hours_all_day) else "${formatClock(it.open)} – ${formatClock(it.close)}" }
                 Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(DAY_LABEL[day].orEmpty(), fontWeight = if (day == today) FontWeight.Bold else FontWeight.Normal, color = if (day == today) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
                     Text(text, fontWeight = if (day == today) FontWeight.Bold else FontWeight.Normal, color = if (ranges.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else if (day == today) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
@@ -228,12 +233,12 @@ private fun ProductRow(product: ProductDto, onClick: () -> Unit) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(product.name, style = MaterialTheme.typography.titleMedium)
                 if (!product.isActive || product.stock <= 0) {
-                    Text("غير متوفر", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.place_unavailable), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             }
             if (product.memberDiscountEnabled && product.memberPriceCents != null) {
                 Text(
-                    "${formatCents(product.priceCents)}  →  ${formatCents(product.memberPriceCents)} لأعضاء دليلكم",
+                    stringResource(R.string.place_member_price, formatCents(product.priceCents), formatCents(product.memberPriceCents)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )

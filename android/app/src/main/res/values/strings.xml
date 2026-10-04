@@ -1,3 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Arabic is the default language. To add another language: create res/values-xx/strings.xml with the
+  same keys, then add one line to AppLanguages (ui/i18n/AppLanguages.kt). Nothing else changes.
+-->
 <resources>
     <string name="app_name">دليلكم</string>
+
+    <string name="tab_map">الخريطة</string>
+    <string name="tab_card">بطاقتي</string>
+    <string name="tab_cart">السلة</string>
+    <string name="tab_orders">طلباتي</string>
+    <string name="tab_account">حسابي</string>
+    <string name="back">‹ رجوع</string>
+
+    <string name="search_placeholder">دوّر على محل أو خدمة...</string>
+    <string name="search_recent">عمليات بحث سابقة</string>
+    <string name="search_clear">مسح</string>
+    <string name="login_pill">دخول</string>
+    <string name="filter_all">الكل</string>
+    <string name="filter_open_now">🕒 مفتوح الآن</string>
+    <string name="filter_discounts">🏷️ فيها حسم</string>
+    <string name="filter_sections">☰ الأقسام</string>
+    <string name="radius_any">أي مسافة</string>
+    <string name="radius_km">%1$d كم</string>
+    <string name="area_search">🔍 ابحث بهالمنطقة</string>
+    <string name="area_clear">✕ مسح حدود المنطقة</string>
+    <string name="fab_my_location">موقعي</string>
+    <string name="fab_language">اللغة</string>
+    <string name="loc_loading">عم نحدد موقعك...</string>
+    <string name="loc_denied">فعّل إذن الموقع لنعرض لك الأقرب إلك</string>
+    <string name="loc_unavailable">ما قدرنا نحدد موقعك — تأكد إن الـGPS شغّال</string>
+    <string name="loc_enable">تفعيل</string>
+    <string name="loc_route_failed">ما قدرنا نحدد موقعك لنرسم الطريق — فتحناه بخرائط جوجل</string>
+
+    <string name="sheet_nearby">المحلات القريبة منك</string>
+    <string name="sheet_directory">دليل المحلات</string>
+    <string name="sheet_count">%1$d محل</string>
+    <string name="sheet_loading">عم نحمّل المحلات...</string>
+    <string name="sheet_empty">ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث أو المسافة</string>
+    <string name="sheet_empty_radius">ما في محلات ضمن %1$d كم منك — جرّب مسافة أكبر</string>
+
+    <string name="card_details">التفاصيل</string>
+    <string name="card_directions">الاتجاهات</string>
+    <string name="card_save">حفظ</string>
+    <string name="card_unsave">إزالة من المحفوظات</string>
+    <string name="unit_m">%1$d م</string>
+    <string name="unit_km">%1$.1f كم</string>
+
+    <string name="place_call">اتصال</string>
+    <string name="place_whatsapp">واتساب</string>
+    <string name="place_directions">الاتجاهات</string>
+    <string name="place_share">مشاركة</string>
+    <string name="place_share_chooser">مشاركة المحل</string>
+    <string name="place_share_text">%1$s على دليلكم\n%2$s</string>
+    <string name="place_save">حفظ</string>
+    <string name="place_saved">محفوظ</string>
+    <string name="place_discounts">الحسوم</string>
+    <string name="place_products">المنتجات</string>
+    <string name="place_no_products">ما في منتجات بعد</string>
+    <string name="place_not_found">هذا المحل غير متوفر</string>
+    <string name="place_unavailable">غير متوفر</string>
+    <string name="place_member_price">%1$s  →  %2$s لأعضاء دليلكم</string>
+
+    <string name="hours_title">ساعات العمل</string>
+    <string name="hours_closed">مغلق</string>
+    <string name="hours_all_day">24 ساعة</string>
+    <string name="hours_separator">، </string>
+    <string name="hours_open_until">مفتوح · يسكّر %1$s</string>
+    <string name="hours_opens_at">مغلق · يفتح %1$s %2$s</string>
+    <string name="hours_today">اليوم</string>
+    <string name="hours_tomorrow">بكرا</string>
+    <string name="time_am">ص</string>
+    <string name="time_pm">م</string>
+    <string name="day_sat">السبت</string>
+    <string name="day_sun">الأحد</string>
+    <string name="day_mon">الإثنين</string>
+    <string name="day_tue">الثلاثاء</string>
+    <string name="day_wed">الأربعاء</string>
+    <string name="day_thu">الخميس</string>
+    <string name="day_fri">الجمعة</string>
+
+    <string name="route_to">إلى %1$s</string>
+    <string name="route_calculating">عم نحسب الطريق...</string>
+    <string name="route_failed">تعذّر حساب الطريق</string>
+    <string name="route_google">افتح بخرائط جوجل للملاحة الصوتية</string>
+    <string name="route_cancel">إلغاء المسار</string>
+    <string name="dur_min1">دقيقة</string>
+    <string name="dur_min2">دقيقتان</string>
+    <string name="dur_min3to10">%1$d دقائق</string>
+    <string name="dur_min">%1$d دقيقة</string>
+    <string name="dur_hm">%1$d س %2$d د</string>
+
+    <string name="profile_title">حسابي</string>
+    <string name="profile_edit">✏️ تعديل ملفي الشخصي</string>
+    <string name="profile_merchant_mode">وضع التاجر</string>
+    <string name="profile_register_merchant">سجّل كتاجر</string>
+    <string name="profile_favorites">♥ أماكني المحفوظة</string>
+    <string name="profile_responder">المجيب الآلي</string>
+    <string name="profile_wallet">محفظتي</string>
+    <string name="profile_logout">تسجيل الخروج</string>
+    <string name="verify_title">✉️ بريدك غير موثّق</string>
+    <string name="verify_sub">وثّق بريدك لتحمي حسابك وتقدر تسترجع كلمة السرّ.</string>
+    <string name="verify_resend">إعادة إرسال رابط التوثيق</string>
+    <string name="verify_sent">أرسلنا رابط التوثيق لبريدك ✅</string>
+    <string name="verify_failed">تعذّر الإرسال، جرّب بعد شوي</string>
+
+    <string name="guest_login">تسجيل الدخول</string>
+    <string name="guest_register">إنشاء حساب جديد</string>
+    <string name="guest_card_title">بطاقة دليلكم</string>
+    <string name="guest_card_sub">افتح حساب لتحصل على بطاقة الحسم الرقمية وتوفّر بكل محل على الخريطة.</string>
+    <string name="guest_card_p1">حسم فوري عند أي تاجر مشترك</string>
+    <string name="guest_card_p2">كود QR يتجدّد لحمايتك</string>
+    <string name="guest_card_p3">سجل بكل حسوماتك</string>
+    <string name="guest_cart_title">سلة مشترياتك</string>
+    <string name="guest_cart_sub">سجّل دخولك لتضيف منتجات وتكمل طلبك.</string>
+    <string name="guest_cart_p1">اطلب من عدة محلات بسلة وحدة</string>
+    <string name="guest_cart_p2">أسعار خاصة للأعضاء</string>
+    <string name="guest_orders_title">طلباتك</string>
+    <string name="guest_orders_sub">سجّل دخولك لتتابع طلباتك وحالتها.</string>
+    <string name="guest_orders_p1">تتبّع كل طلب خطوة بخطوة</string>
+    <string name="guest_orders_p2">إلغاء الطلب قبل الشحن</string>
+    <string name="guest_profile_title">افتح حسابك</string>
+    <string name="guest_profile_sub">الخريطة ودليل المحلات مفتوحين للكل. الحساب بتحتاجه إذا بدك بطاقة حسم أو تسجّل محلك كتاجر.</string>
+    <string name="guest_profile_p1">احصل على بطاقة الحسم</string>
+    <string name="guest_profile_p2">سجّل محلك كتاجر وأضف منتجاتك وعروضك</string>
+    <string name="guest_profile_p3">فعّل المجيب الآلي لمحادثات زبائنك</string>
+
+    <string name="browse_title">تصفّح الأقسام</string>
+    <string name="browse_all">كل %1$s</string>
+    <string name="browse_count">%1$d محل</string>
+    <string name="browse_soon">قريباً</string>
+    <string name="browse_close">إغلاق</string>
+    <string name="picker_section">القسم</string>
+    <string name="picker_profession">المهنة / النوع</string>
+    <string name="picker_specialty">التخصص</string>
+    <string name="picker_choose">اختر...</string>
+    <string name="lang_title">اللغة</string>
 </resources>

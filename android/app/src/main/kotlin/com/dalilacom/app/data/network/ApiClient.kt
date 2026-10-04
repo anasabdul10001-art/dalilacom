@@ -33,7 +33,7 @@ private class AuthInterceptor(private val tokenStore: TokenStore) : Interceptor 
 object ApiClient {
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun create(tokenStore: TokenStore): ApiService {
+    fun create(tokenStore: TokenStore, languageProvider: () -> String = { "ar" }): ApiService {
         val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
         val client = OkHttpClient.Builder()
             // The backend runs on Render's free tier, which spins the service down after
@@ -43,6 +43,7 @@ object ApiClient {
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
             .addInterceptor(AuthInterceptor(tokenStore))
+            .addInterceptor { chain -> chain.proceed(chain.request().newBuilder().header("Accept-Language", languageProvider()).build()) }
             .addInterceptor(logging)
             .build()
 

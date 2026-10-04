@@ -29,7 +29,10 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.dalilacom.app.R
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,12 +61,12 @@ import com.dalilacom.app.ui.profile.ProfileScreen
 import com.dalilacom.app.ui.theme.DeepRed
 import com.dalilacom.app.ui.theme.PrimaryRed
 
-private enum class HomeTab(val label: String, val icon: ImageVector) {
-    Discover("الخريطة", Icons.Filled.Map),
-    Card("بطاقتي", Icons.Filled.CreditCard),
-    Cart("السلة", Icons.Filled.ShoppingCart),
-    Orders("طلباتي", Icons.AutoMirrored.Filled.ListAlt),
-    Profile("حسابي", Icons.Filled.Person),
+private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) {
+    Discover(R.string.tab_map, Icons.Filled.Map),
+    Card(R.string.tab_card, Icons.Filled.CreditCard),
+    Cart(R.string.tab_cart, Icons.Filled.ShoppingCart),
+    Orders(R.string.tab_orders, Icons.AutoMirrored.Filled.ListAlt),
+    Profile(R.string.tab_account, Icons.Filled.Person),
 }
 
 @Composable
@@ -87,8 +90,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     NavigationBarItem(
                         selected = selectedTab == tab,
                         onClick = { selectedTab = tab },
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
-                        label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
+                        icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
+                        label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall) },
                     )
                 }
             }
@@ -101,6 +104,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     isGuest = isGuest,
                     pendingRoute = container.pendingRoute,
                     isDark = isDark,
+                    onSetLanguage = { code -> scope.launch { container.sessionStore.saveLanguage(code) } },
                     onToggleTheme = { scope.launch { container.sessionStore.saveTheme(if (isDark) "light" else "dark") } },
                     onLogin = { goLogin() },
                     onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
@@ -108,36 +112,36 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                 HomeTab.Card ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.CreditCard,
-                        title = "بطاقة دليلكم",
-                        subtitle = "افتح حساب لتحصل على بطاقة الحسم الرقمية وتوفّر بكل محل على الخريطة.",
-                        perks = listOf("حسم فوري عند أي تاجر مشترك", "كود QR يتجدّد لحمايتك", "سجل بكل حسوماتك"),
+                        title = stringResource(R.string.guest_card_title),
+                        subtitle = stringResource(R.string.guest_card_sub),
+                        perks = listOf(stringResource(R.string.guest_card_p1), stringResource(R.string.guest_card_p2), stringResource(R.string.guest_card_p3)),
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
                     ) else CardScreen(factory)
                 HomeTab.Cart ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.ShoppingCart,
-                        title = "سلة مشترياتك",
-                        subtitle = "سجّل دخولك لتضيف منتجات وتكمل طلبك.",
-                        perks = listOf("اطلب من عدة محلات بسلة وحدة", "أسعار خاصة للأعضاء"),
+                        title = stringResource(R.string.guest_cart_title),
+                        subtitle = stringResource(R.string.guest_cart_sub),
+                        perks = listOf(stringResource(R.string.guest_cart_p1), stringResource(R.string.guest_cart_p2)),
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
                     ) else CartScreen(factory, onCheckoutSuccess = { selectedTab = HomeTab.Orders })
                 HomeTab.Orders ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.AutoMirrored.Filled.ListAlt,
-                        title = "طلباتك",
-                        subtitle = "سجّل دخولك لتتابع طلباتك وحالتها.",
-                        perks = listOf("تتبّع كل طلب خطوة بخطوة", "إلغاء الطلب قبل الشحن"),
+                        title = stringResource(R.string.guest_orders_title),
+                        subtitle = stringResource(R.string.guest_orders_sub),
+                        perks = listOf(stringResource(R.string.guest_orders_p1), stringResource(R.string.guest_orders_p2)),
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
                     ) else OrdersScreen(factory, onOrderClick = { id -> rootNavController.navigate("order/$id") })
                 HomeTab.Profile ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.Person,
-                        title = "افتح حسابك",
-                        subtitle = "الخريطة ودليل المحلات مفتوحين للكل. الحساب بتحتاجه إذا بدك بطاقة حسم أو تسجّل محلك كتاجر.",
-                        perks = listOf("احصل على بطاقة الحسم", "سجّل محلك كتاجر وأضف منتجاتك وعروضك", "فعّل المجيب الآلي لمحادثات زبائنك"),
+                        title = stringResource(R.string.guest_profile_title),
+                        subtitle = stringResource(R.string.guest_profile_sub),
+                        perks = listOf(stringResource(R.string.guest_profile_p1), stringResource(R.string.guest_profile_p2), stringResource(R.string.guest_profile_p3)),
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
                     ) else ProfileScreen(
@@ -186,8 +190,8 @@ private fun AccountPrompt(
             }
         }
         Spacer(Modifier.height(28.dp))
-        Button(onClick = onLogin, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("تسجيل الدخول") }
+        Button(onClick = onLogin, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(stringResource(R.string.guest_login)) }
         Spacer(Modifier.height(10.dp))
-        OutlinedButton(onClick = onRegister, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("إنشاء حساب جديد") }
+        OutlinedButton(onClick = onRegister, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(stringResource(R.string.guest_register)) }
     }
 }

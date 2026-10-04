@@ -98,12 +98,13 @@ private val AppShapes = Shapes(
 @Composable
 fun DalilacomTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    rtl: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val colors = if (darkTheme) DarkColors else LightColors
     // All screens are Arabic today, so the whole UI is laid out right-to-left regardless of the
     // phone's language (a later localization pass will make this follow the device locale).
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
         MaterialTheme(colorScheme = colors, typography = AppTypography, shapes = AppShapes, content = content)
     }
 }

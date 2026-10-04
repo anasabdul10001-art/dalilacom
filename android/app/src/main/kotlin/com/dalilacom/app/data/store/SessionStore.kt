@@ -17,6 +17,16 @@ class SessionStore(private val context: Context) {
     private val roleKey = stringPreferencesKey("user_role")
     private val recentKey = stringPreferencesKey("recent_searches")
     private val themeKey = stringPreferencesKey("theme_mode")
+    private val languageKey = stringPreferencesKey("app_language")
+
+    /** The language the user picked; null = the default (Arabic). */
+    val languageFlow: Flow<String?> = context.dalilacomDataStore.data.map { it[languageKey] }
+
+    suspend fun getLanguage(): String? = runCatching { languageFlow.first() }.getOrNull()
+
+    suspend fun saveLanguage(code: String) {
+        runCatching { context.dalilacomDataStore.edit { it[languageKey] = code } }
+    }
 
     /** "light" or "dark" once the user picked one with the button; null = follow the phone. */
     val themeFlow: Flow<String?> = context.dalilacomDataStore.data.map { it[themeKey] }

@@ -56,6 +56,8 @@ data class DiscoverUiState(
     val searchFocused: Boolean = false,
     val favoriteIds: Set<String> = emptySet(),
     val route: RouteUi? = null,
+    /** Open sections browser: the ids of the nodes drilled into so far (empty = the top level). */
+    val browseTrail: List<String>? = null,
     val message: String? = null,
 )
 
@@ -114,7 +116,7 @@ class DiscoverViewModel(
     }
 
     fun pickCategory(id: String) {
-        _uiState.update { it.copy(query = "", selectedCategoryId = id, searchFocused = false) }
+        _uiState.update { it.copy(query = "", selectedCategoryId = id, searchFocused = false, browseTrail = null) }
         search()
     }
 
@@ -179,6 +181,14 @@ class DiscoverViewModel(
     }
 
     fun clearMessage() = _uiState.update { it.copy(message = null) }
+
+    fun openBrowse() = _uiState.update { it.copy(browseTrail = emptyList(), searchFocused = false) }
+    fun closeBrowse() = _uiState.update { it.copy(browseTrail = null) }
+    fun browseInto(id: String) = _uiState.update { state -> state.browseTrail?.let { state.copy(browseTrail = it + id) } ?: state }
+    fun browseBack() = _uiState.update { state ->
+        val trail = state.browseTrail
+        if (trail == null || trail.isEmpty()) state.copy(browseTrail = null) else state.copy(browseTrail = trail.dropLast(1))
+    }
 
     private var routeJob: Job? = null
 

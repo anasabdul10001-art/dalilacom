@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dalilacom</string>
+
+    <string name="tab_map">Map</string>
+    <string name="tab_card">My card</string>
+    <string name="tab_cart">Cart</string>
+    <string name="tab_orders">Orders</string>
+    <string name="tab_account">Account</string>
+    <string name="back">‹ Back</string>
+
+    <string name="search_placeholder">Search for a place or service...</string>
+    <string name="search_recent">Recent searches</string>
+    <string name="search_clear">Clear</string>
+    <string name="login_pill">Sign in</string>
+    <string name="filter_all">All</string>
+    <string name="filter_open_now">🕒 Open now</string>
+    <string name="filter_discounts">🏷️ Has discount</string>
+    <string name="filter_sections">☰ Categories</string>
+    <string name="radius_any">Any distance</string>
+    <string name="radius_km">%1$d km</string>
+    <string name="area_search">🔍 Search this area</string>
+    <string name="area_clear">✕ Clear area</string>
+    <string name="fab_my_location">My location</string>
+    <string name="fab_language">Language</string>
+    <string name="loc_loading">Finding your location...</string>
+    <string name="loc_denied">Allow location access to see what\'s nearest</string>
+    <string name="loc_unavailable">We couldn\'t find your location — make sure GPS is on</string>
+    <string name="loc_enable">Enable</string>
+    <string name="loc_route_failed">We couldn\'t get your location to draw the route — opened in Google Maps instead</string>
+
+    <string name="sheet_nearby">Places near you</string>
+    <string name="sheet_directory">Places directory</string>
+    <string name="sheet_count">%1$d places</string>
+    <string name="sheet_loading">Loading places...</string>
+    <string name="sheet_empty">No places match these filters — try changing your search or distance</string>
+    <string name="sheet_empty_radius">No places within %1$d km of you — try a larger distance</string>
+
+    <string name="card_details">Details</string>
+    <string name="card_directions">Directions</string>
+    <string name="card_save">Save</string>
+    <string name="card_unsave">Remove from saved</string>
+    <string name="unit_m">%1$d m</string>
+    <string name="unit_km">%1$.1f km</string>
+
+    <string name="place_call">Call</string>
+    <string name="place_whatsapp">WhatsApp</string>
+    <string name="place_directions">Directions</string>
+    <string name="place_share">Share</string>
+    <string name="place_share_chooser">Share this place</string>
+    <string name="place_share_text">%1$s on Dalilacom\n%2$s</string>
+    <string name="place_save">Save</string>
+    <string name="place_saved">Saved</string>
+    <string name="place_discounts">Discounts</string>
+    <string name="place_products">Products</string>
+    <string name="place_no_products">No products yet</string>
+    <string name="place_not_found">This place isn\'t available</string>
+    <string name="place_unavailable">Unavailable</string>
+    <string name="place_member_price">%1$s  →  %2$s for Dalilacom members</string>
+
+    <string name="hours_title">Opening hours</string>
+    <string name="hours_closed">Closed</string>
+    <string name="hours_all_day">24 hours</string>
+    <string name="hours_separator">, </string>
+    <string name="hours_open_until">Open · closes %1$s</string>
+    <string name="hours_opens_at">Closed · opens %1$s %2$s</string>
+    <string name="hours_today">today</string>
+    <string name="hours_tomorrow">tomorrow</string>
+    <string name="time_am">AM</string>
+    <string name="time_pm">PM</string>
+    <string name="day_sat">Saturday</string>
+    <string name="day_sun">Sunday</string>
+    <string name="day_mon">Monday</string>
+    <string name="day_tue">Tuesday</string>
+    <string name="day_wed">Wednesday</string>
+    <string name="day_thu">Thursday</string>
+    <string name="day_fri">Friday</string>
+
+    <string name="route_to">To %1$s</string>
+    <string name="route_calculating">Calculating the route...</string>
+    <string name="route_failed">Couldn\'t calculate the route</string>
+    <string name="route_google">Open in Google Maps for voice navigation</string>
+    <string name="route_cancel">Cancel route</string>
+    <string name="dur_min1">1 min</string>
+    <string name="dur_min2">2 min</string>
+    <string name="dur_min3to10">%1$d min</string>
+    <string name="dur_min">%1$d min</string>
+    <string name="dur_hm">%1$d h %2$d min</string>
+
+    <string name="profile_title">My account</string>
+    <string name="profile_edit">✏️ Edit my profile</string>
+    <string name="profile_merchant_mode">Merchant mode</string>
+    <string name="profile_register_merchant">Register as a merchant</string>
+    <string name="profile_favorites">♥ Saved places</string>
+    <string name="profile_responder">Auto-responder</string>
+    <string name="profile_wallet">My wallet</string>
+    <string name="profile_logout">Sign out</string>
+    <string name="verify_title">✉️ Email not verified</string>
+    <string name="verify_sub">Verify your email to protect your account and recover your password.</string>
+    <string name="verify_resend">Resend verification link</string>
+    <string name="verify_sent">We sent the verification link to your email ✅</string>
+    <string name="verify_failed">Couldn\'t send, try again shortly</string>
+
+    <string name="guest_login">Sign in</string>
+    <string name="guest_register">Create an account</string>
+    <string name="guest_card_title">Dalilacom card</string>
+    <string name="guest_card_sub">Open an account to get your digital discount card and save at every place on the map.</string>
+    <string name="guest_card_p1">Instant discount at any partner merchant</string>
+    <string name="guest_card_p2">A QR code that refreshes to protect you</string>
+    <string name="guest_card_p3">A record of all your savings</string>
+    <string name="guest_cart_title">Your cart</string>
+    <string name="guest_cart_sub">Sign in to add products and complete your order.</string>
+    <string name="guest_cart_p1">Order from several shops in one cart</string>
+    <string name="guest_cart_p2">Special member prices</string>
+    <string name="guest_orders_title">Your orders</string>
+    <string name="guest_orders_sub">Sign in to follow your orders and their status.</string>
+    <string name="guest_orders_p1">Track each order step by step</string>
+    <string name="guest_orders_p2">Cancel an order before it ships</string>
+    <string name="guest_profile_title">Open your account</string>
+    <string name="guest_profile_sub">The map and the directory are open to everyone. You only need an account for a discount card or to list your shop.</string>
+    <string name="guest_profile_p1">Get the discount card</string>
+    <string name="guest_profile_p2">List your shop and add your products and offers</string>
+    <string name="guest_profile_p3">Turn on the auto-responder for your customers\' messages</string>
+
+    <string name="browse_title">Browse categories</string>
+    <string name="browse_all">All %1$s</string>
+    <string name="browse_count">%1$d places</string>
+    <string name="browse_soon">Coming soon</string>
+    <string name="browse_close">Close</string>
+    <string name="picker_section">Category</string>
+    <string name="picker_profession">Profession / type</string>
+    <string name="picker_specialty">Specialty</string>
+    <string name="picker_choose">Choose...</string>
+    <string name="lang_title">Language</string>
+</resources>

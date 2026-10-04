@@ -1,6 +1,8 @@
 package com.dalilacom.app.ui.merchant
 
 import androidx.lifecycle.ViewModel
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.MerchantDto
 import com.dalilacom.app.data.network.ProductDto
@@ -35,7 +37,7 @@ class MerchantDetailViewModel(
         viewModelScope.launch {
             val merchant = discoverRepository.getMerchant(merchantId)
             if (merchant == null) {
-                _uiState.value = MerchantDetailUiState(isLoading = false, error = "هذا المحل غير متوفر")
+                _uiState.value = MerchantDetailUiState(isLoading = false, error = AppStrings.get(R.string.place_not_found))
                 return@launch
             }
             val products = productRepository.getProducts(merchantId)

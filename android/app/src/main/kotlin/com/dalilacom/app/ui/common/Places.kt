@@ -22,48 +22,55 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dalilacom.app.R
 import com.dalilacom.app.data.network.OpenStatusDto
+import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.ui.theme.DeepRed
 import com.dalilacom.app.ui.theme.PrimaryRed
 
 /** Week as people read it here: Saturday first. Keys match the backend's day keys. */
 val DAY_ORDER = listOf("sat", "sun", "mon", "tue", "wed", "thu", "fri")
-val DAY_LABEL = mapOf(
-    "sun" to "الأحد", "mon" to "الإثنين", "tue" to "الثلاثاء", "wed" to "الأربعاء",
-    "thu" to "الخميس", "fri" to "الجمعة", "sat" to "السبت",
-)
+/** Day names in the language on screen (read at use time). */
+val DAY_LABEL: Map<String, String>
+    get() = mapOf(
+        "sun" to AppStrings.get(R.string.day_sun), "mon" to AppStrings.get(R.string.day_mon),
+        "tue" to AppStrings.get(R.string.day_tue), "wed" to AppStrings.get(R.string.day_wed),
+        "thu" to AppStrings.get(R.string.day_thu), "fri" to AppStrings.get(R.string.day_fri),
+        "sat" to AppStrings.get(R.string.day_sat),
+    )
 
-/** 612 s -> "10 دقائق" */
+/** 612 s -> "10 دقائق" / "10 min" */
 fun formatDuration(seconds: Int): String {
     val minutes = maxOf(1, (seconds + 30) / 60)
-    if (minutes >= 60) return "${minutes / 60} س ${minutes % 60} د"
+    if (minutes >= 60) return AppStrings.get(R.string.dur_hm, minutes / 60, minutes % 60)
     return when {
-        minutes == 1 -> "دقيقة"
-        minutes == 2 -> "دقيقتان"
-        minutes <= 10 -> "$minutes دقائق"
-        else -> "$minutes دقيقة"
+        minutes == 1 -> AppStrings.get(R.string.dur_min1)
+        minutes == 2 -> AppStrings.get(R.string.dur_min2)
+        minutes <= 10 -> AppStrings.get(R.string.dur_min3to10, minutes)
+        else -> AppStrings.get(R.string.dur_min, minutes)
     }
 }
 
-fun formatDistance(meters: Int): String = if (meters < 1000) "$meters م" else "%.1f كم".format(meters / 1000.0)
+fun formatDistance(meters: Int): String =
+    if (meters < 1000) AppStrings.get(R.string.unit_m, meters) else AppStrings.get(R.string.unit_km, meters / 1000.0)
 
-/** "22:00" -> "10:00 م" */
+/** "22:00" -> "10:00 م" / "10:00 PM" */
 fun formatClock(hhmm: String): String {
     val hour = hhmm.take(2).toIntOrNull() ?: return hhmm
     val h12 = if (hour % 12 == 0) 12 else hour % 12
-    return "$h12:${hhmm.drop(3).take(2)} ${if (hour >= 12) "م" else "ص"}"
+    return "$h12:${hhmm.drop(3).take(2)} ${AppStrings.get(if (hour >= 12) R.string.time_pm else R.string.time_am)}"
 }
 
 /** The one-line "open / closed" text, or null when the merchant hasn't set hours. */
 fun openStatusText(status: OpenStatusDto?): Pair<String, Boolean>? {
     if (status == null || !status.hasHours) return null
-    if (status.isOpen) return "مفتوح · يسكّر ${status.closesAt?.let(::formatClock).orEmpty()}" to true
+    if (status.isOpen) return AppStrings.get(R.string.hours_open_until, status.closesAt?.let(::formatClock).orEmpty()) to true
     val day = when (status.opensDay) {
-        "today" -> "اليوم"
-        "tomorrow" -> "بكرا"
+        "today" -> AppStrings.get(R.string.hours_today)
+        "tomorrow" -> AppStrings.get(R.string.hours_tomorrow)
         else -> DAY_LABEL[status.opensDay].orEmpty()
     }
-    return (if (status.opensAt != null) "مغلق · يفتح $day ${formatClock(status.opensAt)}" else "مغلق") to false
+    return (if (status.opensAt != null) AppStrings.get(R.string.hours_opens_at, day, formatClock(status.opensAt)) else AppStrings.get(R.string.hours_closed)) to false
 }
 
 private val OpenGreen = Color(0xFF1E7E34)

@@ -34,6 +34,8 @@ import com.dalilacom.app.data.network.UpdateMerchantRequest
 import com.dalilacom.app.data.repository.DiscoverRepository
 import com.dalilacom.app.data.repository.MerchantRepository
 import com.dalilacom.app.ui.ViewModelFactory
+import com.dalilacom.app.data.network.CategoryDto
+import com.dalilacom.app.ui.common.CategoryPicker
 import com.dalilacom.app.ui.common.LocationPicker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +46,7 @@ import kotlinx.coroutines.launch
 data class MerchantProfileUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
-    val categoryOptions: List<CategoryOption> = emptyList(),
+    val categories: List<CategoryDto> = emptyList(),
     val businessName: String = "",
     val categoryId: String? = null,
     val address: String = "",
@@ -64,13 +66,11 @@ class MerchantProfileViewModel(
 
     init {
         viewModelScope.launch {
-            val options = discover.getCategories().flatMap { top ->
-                listOf(CategoryOption(top.id, top.name)) + top.children.map { CategoryOption(it.id, "${top.name} / ${it.name}") }
-            }
+            val categories = discover.getCategories()
             val me = merchants.getMerchantMe()
             _uiState.value = MerchantProfileUiState(
                 isLoading = false,
-                categoryOptions = options,
+                categories = categories,
                 businessName = me?.businessName.orEmpty(),
                 categoryId = me?.categoryId,
                 address = me?.address.orEmpty(),
@@ -82,7 +82,7 @@ class MerchantProfileViewModel(
     }
 
     fun onName(value: String) = _uiState.update { it.copy(businessName = value, message = null) }
-    fun onCategory(id: String) = _uiState.update { it.copy(categoryId = id, message = null) }
+    fun onCategory(id: String?) = _uiState.update { it.copy(categoryId = id, message = null) }
     fun onAddress(value: String) = _uiState.update { it.copy(address = value, message = null) }
     fun onPhone(value: String) = _uiState.update { it.copy(phone = value, message = null) }
     fun onWhatsapp(value: String) = _uiState.update { it.copy(whatsapp = value, message = null) }
@@ -141,17 +141,7 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
-            Text("التصنيف", style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(4.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.categoryOptions) { option ->
-                    FilterChip(
-                        selected = state.categoryId == option.id,
-                        onClick = { viewModel.onCategory(option.id) },
-                        label = { Text(option.label) },
-                    )
-                }
-            }
+            CategoryPicker(tree = state.categories, selectedId = state.categoryId, onSelect = viewModel::onCategory)
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(value = state.address, onValueChange = viewModel::onAddress, label = { Text("العنوان") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))

@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.ui.ViewModelFactory
+import com.dalilacom.app.ui.common.CategoryPicker
 import com.dalilacom.app.ui.common.LocationPicker
 
 @Composable
@@ -61,17 +62,7 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
         )
         Spacer(Modifier.height(12.dp))
 
-        Text("التصنيف", style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(4.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(state.categoryOptions) { option ->
-                FilterChip(
-                    selected = selectedCategoryId == option.id,
-                    onClick = { selectedCategoryId = option.id },
-                    label = { Text(option.label) },
-                )
-            }
-        }
+        CategoryPicker(tree = state.categories, selectedId = selectedCategoryId, onSelect = { selectedCategoryId = it })
         Spacer(Modifier.height(12.dp))
 
         OutlinedTextField(

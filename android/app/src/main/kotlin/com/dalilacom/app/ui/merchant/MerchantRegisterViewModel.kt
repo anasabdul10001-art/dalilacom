@@ -2,6 +2,7 @@ package com.dalilacom.app.ui.merchant
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dalilacom.app.data.network.CategoryDto
 import com.dalilacom.app.data.network.RegisterMerchantResponse
 import com.dalilacom.app.data.repository.DiscoverRepository
 import com.dalilacom.app.data.repository.MerchantRepository
@@ -13,7 +14,7 @@ import kotlinx.coroutines.launch
 data class CategoryOption(val id: String, val label: String)
 
 data class MerchantRegisterUiState(
-    val categoryOptions: List<CategoryOption> = emptyList(),
+    val categories: List<CategoryDto> = emptyList(),
     val isSubmitting: Boolean = false,
     val error: String? = null,
     val result: RegisterMerchantResponse? = null,
@@ -28,12 +29,7 @@ class MerchantRegisterViewModel(
 
     init {
         viewModelScope.launch {
-            val categories = discoverRepository.getCategories()
-            val options = categories.flatMap { top ->
-                listOf(CategoryOption(top.id, top.name)) +
-                    top.children.map { CategoryOption(it.id, "${top.name} / ${it.name}") }
-            }
-            _uiState.value = _uiState.value.copy(categoryOptions = options)
+            _uiState.value = _uiState.value.copy(categories = discoverRepository.getCategories())
         }
     }
 

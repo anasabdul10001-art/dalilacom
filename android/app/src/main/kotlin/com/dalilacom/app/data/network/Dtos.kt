@@ -69,6 +69,8 @@ data class CategoryDto(
     val id: String,
     val name: String,
     val slug: String,
+    val icon: String? = null,
+    val merchantCount: Int = 0,
     val children: List<CategoryDto> = emptyList(),
 )
 
@@ -116,7 +118,13 @@ data class SuggestMerchantDto(val id: String, val businessName: String, val cate
 data class CategoryRefDto(val name: String)
 
 @Serializable
-data class SuggestCategoryDto(val id: String, val name: String)
+data class SuggestCategoryDto(
+    val id: String,
+    val name: String,
+    val icon: String? = null,
+    val path: String? = null,
+    val merchantCount: Int = 0,
+)
 
 @Serializable
 data class SuggestResponse(

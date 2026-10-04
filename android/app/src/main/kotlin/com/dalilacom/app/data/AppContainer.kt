@@ -24,7 +24,7 @@ class AppContainer(context: Context) {
 
     val tokenStore = TokenStore(context.applicationContext)
     val sessionStore = SessionStore(context.applicationContext)
-    private val api = ApiClient.create(tokenStore)
+    private val api = ApiClient.create(tokenStore) { kotlinx.coroutines.runBlocking { sessionStore.getLanguage() } ?: "ar" }
 
     val authRepository = AuthRepository(api, tokenStore, sessionStore)
     val membershipRepository = MembershipRepository(api)

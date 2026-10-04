@@ -8,6 +8,16 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.res.stringResource
+import com.dalilacom.app.R
+import com.dalilacom.app.data.network.CategoryDto
+import com.dalilacom.app.ui.common.indexCategories
+import com.dalilacom.app.ui.i18n.AppLanguages
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -91,6 +101,7 @@ fun DiscoverScreen(
     pendingRoute: MutableStateFlow<RouteTarget?>,
     isDark: Boolean,
     onToggleTheme: () -> Unit,
+    onSetLanguage: (String) -> Unit,
     onLogin: () -> Unit,
     onMerchantClick: (String) -> Unit,
 ) {
@@ -100,6 +111,8 @@ fun DiscoverScreen(
     val scope = rememberCoroutineScope()
     var recenterTick by remember { mutableIntStateOf(0) }
     var radiusFitTick by remember { mutableIntStateOf(0) }
+    var languageMenuOpen by remember { mutableStateOf(false) }
+    val categoryIndex = remember(state.categories) { indexCategories(state.categories) }
 
     fun fetchLocation() {
         viewModel.markLocationRequested()
@@ -133,7 +146,7 @@ fun DiscoverScreen(
         if (routeWanted != null && (state.locationStatus == LocationStatus.Denied || state.locationStatus == LocationStatus.Unavailable)) {
             val target = routeWanted!!.first
             routeWanted = null
-            Toast.makeText(context, "ما قدرنا نحدد موقعك لنرسم الطريق — فتحناه بخرائط جوجل", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.loc_route_failed), Toast.LENGTH_LONG).show()
             openDirections(context, target.latitude, target.longitude)
         }
     }
@@ -160,6 +173,7 @@ fun DiscoverScreen(
     val sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.PartiallyExpanded, skipHiddenState = true)
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
 
+    Box(Modifier.fillMaxSize()) {
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = 210.dp,
@@ -228,7 +242,7 @@ fun DiscoverScreen(
                             shadowElevation = 6.dp,
                         ) {
                             Text(
-                                "دخول",
+                                stringResource(R.string.login_pill),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -247,11 +261,15 @@ fun DiscoverScreen(
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    item { MapChip("الكل", state.selectedCategoryId == null && !state.discountsOnly && !state.openNow) { viewModel.resetFilters() } }
-                    item { MapChip("🕒 مفتوح الآن", state.openNow) { viewModel.onOpenNowChange(!state.openNow) } }
-                    item { MapChip("🏷️ فيها حسم", state.discountsOnly) { viewModel.onDiscountsOnlyChange(!state.discountsOnly) } }
-                    items(state.categories) { category ->
-                        MapChip(category.name, state.selectedCategoryId == category.id) { viewModel.onCategorySelected(category.id) }
+                    item { MapChip(stringResource(R.string.filter_all), state.selectedCategoryId == null && !state.discountsOnly && !state.openNow) { viewModel.resetFilters() } }
+                    item { MapChip(stringResource(R.string.filter_open_now), state.openNow) { viewModel.onOpenNowChange(!state.openNow) } }
+                    item { MapChip(stringResource(R.string.filter_discounts), state.discountsOnly) { viewModel.onDiscountsOnlyChange(!state.discountsOnly) } }
+                    item { MapChip(stringResource(R.string.filter_sections), false) { viewModel.openBrowse() } }
+                    state.selectedCategoryId?.let { picked ->
+                        categoryIndex[picked]?.let { node -> item { MapChip("${node.icon.orEmpty()} ${node.name} ✕", true) { viewModel.onCategorySelected(null) } } }
+                    }
+                    items(state.categories.filter { it.id != state.selectedCategoryId }) { category ->
+                        MapChip("${category.icon.orEmpty()} ${category.name}".trim(), state.selectedCategoryId == category.id) { viewModel.onCategorySelected(category.id) }
                     }
                 }
                 if (route == null && state.userLocation != null) {
@@ -263,7 +281,7 @@ fun DiscoverScreen(
                         listOf<Double?>(null, 2.0, 5.0, 10.0, 25.0).forEach { radius ->
                             item {
                                 MapChip(
-                                    if (radius == null) "أي مسافة" else "${radius.toInt()} كم",
+                                    if (radius == null) stringResource(R.string.radius_any) else stringResource(R.string.radius_km, radius.toInt()),
                                     state.radiusKm == radius,
                                 ) { viewModel.onRadiusSelected(radius); radiusFitTick++ }
                             }
@@ -272,7 +290,7 @@ fun DiscoverScreen(
                 }
                 if (route == null && state.searchBounds != null) {
                     Spacer(Modifier.height(8.dp))
-                    Row(Modifier.padding(horizontal = 12.dp)) { MapChip("✕ مسح حدود المنطقة", true) { viewModel.clearSearchArea() } }
+                    Row(Modifier.padding(horizontal = 12.dp)) { MapChip(stringResource(R.string.area_clear), true) { viewModel.clearSearchArea() } }
                 }
                 LocationNotice(state.locationStatus, onRetry = { requestLocation() })
             }
@@ -286,7 +304,7 @@ fun DiscoverScreen(
                     shadowElevation = 4.dp,
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = innerPadding.calculateBottomPadding() + 16.dp),
                 ) {
-                    Text("🔍 ابحث بهالمنطقة", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp))
+                    Text(stringResource(R.string.area_search), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp))
                 }
             }
 
@@ -298,7 +316,7 @@ fun DiscoverScreen(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
                 contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 16.dp),
-            ) { Icon(Icons.Filled.MyLocation, contentDescription = "موقعي") }
+            ) { Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.fab_my_location)) }
 
             SmallFloatingActionButton(
                 onClick = onToggleTheme,
@@ -307,10 +325,35 @@ fun DiscoverScreen(
                 modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 72.dp),
             ) { Text(if (isDark) "☀️" else "🌙") }
 
+            Box(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 128.dp)) {
+                SmallFloatingActionButton(
+                    onClick = { languageMenuOpen = true },
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ) { Text("🌐") }
+                DropdownMenu(expanded = languageMenuOpen, onDismissRequest = { languageMenuOpen = false }) {
+                    AppLanguages.all.forEach { language ->
+                        DropdownMenuItem(text = { Text(language.nativeName) }, onClick = { languageMenuOpen = false; onSetLanguage(language.code) })
+                    }
+                }
+            }
+
             if (state.isLoading && state.allMerchants.isEmpty()) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
             }
         }
+    }
+
+    state.browseTrail?.let { trail ->
+        BrowseOverlay(
+            tree = state.categories,
+            trail = trail,
+            onInto = viewModel::browseInto,
+            onBack = viewModel::browseBack,
+            onClose = viewModel::closeBrowse,
+            onPick = viewModel::pickCategory,
+        )
+    }
     }
 }
 
@@ -332,10 +375,10 @@ private fun SearchPill(
         TextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text("دوّر على محل أو خدمة...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            placeholder = { Text(stringResource(R.string.search_placeholder), color = MaterialTheme.colorScheme.onSurfaceVariant) },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             trailingIcon = {
-                if (query.isNotEmpty()) IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Filled.Clear, contentDescription = "مسح") }
+                if (query.isNotEmpty()) IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.search_clear)) }
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -361,7 +404,7 @@ private fun SuggestionsPanel(
     if (!state.searchFocused) return
     val typing = state.query.isNotBlank()
     val rows: List<Triple<String, String, () -> Unit>> = if (typing) {
-        state.suggestions.categories.map { Triple("🗂️", it.name) { onCategory(it.id) } } +
+        state.suggestions.categories.map { Triple(it.icon ?: "🗂️", it.path ?: it.name) { onCategory(it.id) } } +
             state.suggestions.merchants.map { m ->
                 Triple("🏪", listOfNotNull(m.businessName, m.category?.name).joinToString(" · ")) { onMerchant(m.id) }
             }
@@ -376,7 +419,7 @@ private fun SuggestionsPanel(
         color = MaterialTheme.colorScheme.surface,
     ) {
         Column {
-            if (!typing) Text("عمليات بحث سابقة", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp, top = 10.dp, end = 14.dp))
+            if (!typing) Text(stringResource(R.string.search_recent), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp, top = 10.dp, end = 14.dp))
             rows.forEach { (icon, label, action) ->
                 Row(
                     modifier = Modifier.fillMaxWidth().clickable(onClick = action).padding(horizontal = 14.dp, vertical = 12.dp),
@@ -407,9 +450,9 @@ private fun MapChip(label: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun LocationNotice(status: LocationStatus, onRetry: () -> Unit) {
     val message = when (status) {
-        LocationStatus.Loading -> "عم نحدد موقعك..."
-        LocationStatus.Denied -> "فعّل إذن الموقع لنعرض لك الأقرب إلك"
-        LocationStatus.Unavailable -> "ما قدرنا نحدد موقعك — تأكد إن الـGPS شغّال"
+        LocationStatus.Loading -> stringResource(R.string.loc_loading)
+        LocationStatus.Denied -> stringResource(R.string.loc_denied)
+        LocationStatus.Unavailable -> stringResource(R.string.loc_unavailable)
         else -> return
     }
     Spacer(Modifier.height(8.dp))
@@ -421,7 +464,7 @@ private fun LocationNotice(status: LocationStatus, onRetry: () -> Unit) {
     ) {
         Row(Modifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(message, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 10.dp))
-            if (status != LocationStatus.Loading) TextButton(onClick = onRetry) { Text("تفعيل") }
+            if (status != LocationStatus.Loading) TextButton(onClick = onRetry) { Text(stringResource(R.string.loc_enable)) }
         }
     }
 }
@@ -440,12 +483,12 @@ private fun DirectorySheet(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                if (state.userLocation != null) "المحلات القريبة منك" else "دليل المحلات",
+                stringResource(if (state.userLocation != null) R.string.sheet_nearby else R.string.sheet_directory),
                 style = MaterialTheme.typography.titleMedium,
             )
             Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                 Text(
-                    "${state.merchants.size} محل",
+                    stringResource(R.string.sheet_count, state.merchants.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -454,13 +497,14 @@ private fun DirectorySheet(
         }
         if (state.merchants.isEmpty()) {
             Text(
-                if (state.isLoading) "عم نحمّل المحلات..." else if (state.radiusKm != null) "ما في محلات ضمن ${state.radiusKm.toInt()} كم منك — جرّب مسافة أكبر" else "ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث أو المسافة",
+                if (state.isLoading) stringResource(R.string.sheet_loading) else if (state.radiusKm != null) stringResource(R.string.sheet_empty_radius, state.radiusKm.toInt()) else stringResource(R.string.sheet_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(20.dp),
             )
         } else {
             val ordered = state.merchants.sortedBy { if (it.id == state.selectedMerchantId) 0 else 1 }
+            val categoryNames = remember(state.categories) { indexCategories(state.categories).mapValues { it.value.name } }
             LazyColumn(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 24.dp),
@@ -471,6 +515,7 @@ private fun DirectorySheet(
                         merchant = merchant,
                         selected = merchant.id == state.selectedMerchantId,
                         saved = merchant.id in state.favoriteIds,
+                        categoryName = categoryNames[merchant.category?.id],
                         onDetails = { onMerchantClick(merchant.id) },
                         onDirections = { onDirections(merchant) },
                         onToggleSaved = { onToggleSaved(merchant.id) },
@@ -486,6 +531,7 @@ private fun MerchantCard(
     merchant: MerchantDto,
     selected: Boolean,
     saved: Boolean,
+    categoryName: String?,
     onDetails: () -> Unit,
     onDirections: () -> Unit,
     onToggleSaved: () -> Unit,
@@ -503,7 +549,7 @@ private fun MerchantCard(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(merchant.businessName, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val subtitle = listOfNotNull(merchant.category?.name, merchant.address).joinToString(" • ")
+                    val subtitle = listOfNotNull(categoryName ?: merchant.category?.name, merchant.address).joinToString(" • ")
                     if (subtitle.isNotBlank()) {
                         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
@@ -511,7 +557,7 @@ private fun MerchantCard(
                 merchant.distanceKm?.let { distance ->
                     Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                         Text(
-                            if (distance < 1) "%.0f م".format(distance * 1000) else "%.1f كم".format(distance),
+                            if (distance < 1) stringResource(R.string.unit_m, (distance * 1000).toInt()) else stringResource(R.string.unit_km, distance),
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         )
@@ -520,7 +566,7 @@ private fun MerchantCard(
                 IconButton(onClick = onToggleSaved) {
                     Icon(
                         if (saved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = if (saved) "إزالة من المحفوظات" else "حفظ",
+                        contentDescription = stringResource(if (saved) R.string.card_unsave else R.string.card_save),
                         tint = if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -546,12 +592,12 @@ private fun MerchantCard(
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onDetails, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) { Text("التفاصيل") }
+                Button(onClick = onDetails, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) { Text(stringResource(R.string.card_details)) }
                 if (merchant.latitude != null && merchant.longitude != null) {
                     OutlinedButton(onClick = onDirections, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.Directions, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("الاتجاهات")
+                        Text(stringResource(R.string.card_directions))
                     }
                 }
             }
@@ -575,26 +621,87 @@ private fun RouteBar(
     ) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("إلى ${route.target.name}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) { Icon(Icons.Filled.Clear, contentDescription = "إلغاء المسار") }
+                Text(stringResource(R.string.route_to, route.target.name), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) { Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.route_cancel)) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 val data = route.data
                 when {
-                    route.isLoading -> Text("عم نحسب الطريق...", style = MaterialTheme.typography.bodyMedium)
+                    route.isLoading -> Text(stringResource(R.string.route_calculating), style = MaterialTheme.typography.bodyMedium)
                     data != null -> Text(
                         "${if (route.mode == "walking") "🚶" else "🚗"} ${formatDuration(data.durationSeconds)} · ${formatDistance(data.distanceMeters)}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
-                    else -> Text(route.error ?: "تعذّر حساب الطريق", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    else -> Text(route.error ?: stringResource(R.string.route_failed), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     MapChip("🚗", route.mode == "driving") { if (route.mode != "driving") onMode("driving") }
                     MapChip("🚶", route.mode == "walking") { if (route.mode != "walking") onMode("walking") }
                 }
             }
-            TextButton(onClick = onOpenGoogle) { Text("افتح بخرائط جوجل للملاحة الصوتية") }
+            TextButton(onClick = onOpenGoogle) { Text(stringResource(R.string.route_google)) }
+        }
+    }
+}
+
+/** Sections > professions > specialties as big tiles with counts; a leaf (or "All ...") picks the filter. */
+@Composable
+private fun BrowseOverlay(
+    tree: List<CategoryDto>,
+    trail: List<String>,
+    onInto: (String) -> Unit,
+    onBack: () -> Unit,
+    onClose: () -> Unit,
+    onPick: (String) -> Unit,
+) {
+    val index = remember(tree) { indexCategories(tree) }
+    val current = trail.lastOrNull()?.let { index[it] }
+    val nodes = current?.children ?: tree
+    val title = if (trail.isEmpty()) stringResource(R.string.browse_title) else trail.mapNotNull { index[it]?.name }.joinToString(" › ")
+
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) { Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.browse_close)) }
+            }
+            if (current != null) {
+                OutlinedButton(
+                    onClick = { onPick(current.id) },
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                ) { Text("${current.icon.orEmpty()} ${stringResource(R.string.browse_all, current.name)} · ${stringResource(R.string.browse_count, current.merchantCount)}") }
+                Spacer(Modifier.height(10.dp))
+            }
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                gridItems(nodes, key = { it.id }) { node ->
+                    val hasChildren = node.children.isNotEmpty()
+                    Surface(
+                        onClick = { if (hasChildren) onInto(node.id) else onPick(node.id) },
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 104.dp),
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(node.icon ?: "📍", fontSize = androidx.compose.ui.unit.TextUnit(28f, androidx.compose.ui.unit.TextUnitType.Sp))
+                            Text(node.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                (if (node.merchantCount > 0) stringResource(R.string.browse_count, node.merchantCount) else stringResource(R.string.browse_soon)) + if (hasChildren) " ›" else "",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
