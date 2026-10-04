@@ -48,8 +48,10 @@ async function api(method, path, body) {
     });
     const data = await res.json().catch(() => ({}));
     if (res.status === 401 && S.token) {
+      // An expired/revoked session drops the visitor back onto the (public) map, not a login wall.
       clearToken();
-      reset("login");
+      S.homeTab = "discover";
+      reset("home");
     }
     return { ok: res.ok, status: res.status, data };
   } catch (e) {
@@ -128,6 +130,7 @@ function root() {
 async function render() {
   const el = root();
   if (!el) return;
+  el.classList.toggle("map-mode", S.screen === "home" && S.homeTab === "discover");
   const active = document.activeElement;
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
   el.innerHTML = renderScreen();
@@ -501,44 +504,108 @@ function visibleMerchants(d) {
   return list.sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9) || a.businessName.localeCompare(b.businessName));
 }
 
+function sheetHeights() {
+  const H = (root() && root().clientHeight) || 640;
+  return { peek: 232, half: Math.round(H * 0.55), full: Math.max(320, H - 150) };
+}
+
 function tabDiscover() {
   const d = discoverState();
   if (!d.locAsked) { d.locAsked = true; requestDiscoverLocation(); } // ask for the position as soon as the map opens
   const list = visibleMerchants(d);
+  if (d.selectedId) list.sort((x, y) => (y.id === d.selectedId) - (x.id === d.selectedId));
   S._visible = list;
+  const sheetPx = sheetHeights()[S._sheet || "peek"];
   return `
-    <div class="map-search">
-      <div class="searchbox">
-        <span class="search-ico">🔍</span>
-        <input id="disc-q" placeholder="دوّر على محل أو خدمة..." value="${esc(d.query)}" autocomplete="off"
-          oninput="onDiscoverQuery(this.value)" onfocus="onDiscoverFocus()" onblur="onDiscoverBlur()" onkeydown="if(event.key==='Enter'){onDiscoverSubmit()}" />
-        ${d.query ? `<button class="clear-x" onmousedown="onDiscoverClear()">✕</button>` : ""}
-        ${S.token ? "" : `<button class="login-pill" onclick="go('login')">دخول</button>`}
+    <div class="mapfull" id="mapfull" style="--sheet-h:${sheetPx}px">
+      <div id="discover-map-slot"></div>
+
+      <div class="map-top">
+        <div class="map-search">
+          <div class="searchbox">
+            <span class="search-ico">🔍</span>
+            <input id="disc-q" placeholder="دوّر على محل أو خدمة..." value="${esc(d.query)}" autocomplete="off"
+              oninput="onDiscoverQuery(this.value)" onfocus="onDiscoverFocus()" onblur="onDiscoverBlur()" onkeydown="if(event.key==='Enter'){onDiscoverSubmit()}" />
+            ${d.query ? `<button class="clear-x" onmousedown="onDiscoverClear()">✕</button>` : ""}
+            ${S.token ? "" : `<button class="login-pill" onclick="go('login')">دخول</button>`}
+          </div>
+          ${suggestHtml(d)}
+        </div>
+        <div class="float-chips">
+          <button class="chip ${!d.categoryId && !d.openNow && !d.discountsOnly ? "active" : ""}" onclick="onDiscoverReset()">الكل</button>
+          <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">🕒 مفتوح الآن</button>
+          <button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">🏷️ فيها حسم</button>
+          ${flattenCategories(d.categories).map((c) => `<button class="chip ${d.categoryId === c.id ? "active" : ""}" onclick="onDiscoverCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
+        </div>
+        ${d.locError ? `<div class="float-note">📍 ${esc(d.locError)}</div>` : ""}
       </div>
-      ${suggestHtml(d)}
-    </div>
-    <div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
-      <button class="chip ${!d.categoryId && !d.openNow && !d.discountsOnly ? "active" : ""}" onclick="onDiscoverReset()">الكل</button>
-      <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">🕒 مفتوح الآن</button>
-      <button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">🏷️ فيها حسم</button>
-      ${flattenCategories(d.categories).map((c) => `<button class="chip ${d.categoryId === c.id ? "active" : ""}" onclick="onDiscoverCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
-    </div>
-    ${d.userLoc ? `<div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
-      ${[null, 2, 5, 10, 25].map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${r ? r + " كم" : "أي مسافة"}</button>`).join("")}
-    </div>` : ""}
-    ${d.bounds ? `<div class="chip-row"><button class="chip active" onclick="clearSearchArea()">✕ مسح حدود المنطقة</button></div>` : ""}
-    ${d.locError ? `<div class="error-banner">${esc(d.locError)}</div>` : ""}
-    <div class="map-wrap">
-      <div id="discover-map-slot" style="height:100%;width:100%"></div>
+
       <button id="area-btn" class="area-btn" style="display:${d.areaDirty ? "block" : "none"}" onclick="searchThisArea()">🔍 ابحث بهالمنطقة</button>
       <button class="map-fab" title="موقعي" onclick="requestDiscoverLocation(true)">📍</button>
+
+      <div class="sheet" id="sheet">
+        <div class="sheet-handle" onpointerdown="sheetDragStart(event)" onclick="sheetToggle()"><span></span></div>
+        <div class="sheet-head">
+          <strong>${d.userLoc ? "المحلات القريبة منك" : "دليل المحلات"}</strong>
+          <span class="badge info">${list.length} محل</span>
+        </div>
+        ${(d.userLoc || d.bounds) ? `<div class="sheet-chips">
+          ${d.bounds ? `<button class="chip active" onclick="clearSearchArea()">✕ مسح حدود المنطقة</button>` : ""}
+          ${d.userLoc ? [null, 2, 5, 10, 25].map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${r ? r + " كم" : "أي مسافة"}</button>`).join("") : ""}
+        </div>` : ""}
+        <div class="sheet-list">
+          ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث</div>`)}
+        </div>
+      </div>
     </div>
-    <div class="title-line" style="margin-top:12px">
-      <strong>${d.userLoc ? "المحلات القريبة منك" : "دليل المحلات"}</strong>
-      <span class="badge info">${list.length} محل</span>
-    </div>
-    ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث</div>`)}
   `;
+}
+
+// The sheet follows the finger and snaps to peek / half / full.
+function sheetDragStart(e) {
+  const box = document.getElementById("mapfull");
+  const sheet = document.getElementById("sheet");
+  if (!box || !sheet) return;
+  const heights = sheetHeights();
+  const startY = e.clientY;
+  const startH = sheet.getBoundingClientRect().height;
+  let moved = false;
+  sheet.classList.add("dragging");
+  const move = (ev) => {
+    const dy = ev.clientY - startY;
+    if (Math.abs(dy) > 6) moved = true;
+    box.style.setProperty("--sheet-h", Math.min(heights.full, Math.max(120, startH - dy)) + "px");
+  };
+  const up = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    sheet.classList.remove("dragging");
+    if (!moved) return;
+    const h = parseFloat(box.style.getPropertyValue("--sheet-h"));
+    S._sheet = Object.entries(heights).sort((a, b) => Math.abs(a[1] - h) - Math.abs(b[1] - h))[0][0];
+    box.style.setProperty("--sheet-h", heights[S._sheet] + "px");
+    S._sheetMoved = true;
+    setTimeout(() => { S._sheetMoved = false; }, 60);
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+}
+
+function sheetToggle() {
+  if (S._sheetMoved) return;
+  const order = ["peek", "half", "full"];
+  S._sheet = order[(order.indexOf(S._sheet || "peek") + 1) % 3];
+  const box = document.getElementById("mapfull");
+  if (box) box.style.setProperty("--sheet-h", sheetHeights()[S._sheet] + "px");
+}
+
+// Tapping a pin brings that place to the top of the sheet.
+function selectMerchant(id) {
+  S._discover.selectedId = id;
+  if (S._sheet === "full") S._sheet = "half";
+  render();
+  const list = document.querySelector(".sheet-list");
+  if (list) list.scrollTop = 0;
 }
 
 function suggestHtml(d) {
@@ -639,7 +706,7 @@ function renderDiscoverMap() {
     const map = L.map(el, { attributionControl: false, zoomControl: false }).setView([DAMASCUS.lat, DAMASCUS.lng], 11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
     L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
-    L.control.zoom({ position: "topleft" }).addTo(map);
+    L.control.zoom({ position: "topright" }).addTo(map);
     S._cluster = typeof L.markerClusterGroup === "function" ? L.markerClusterGroup({ maxClusterRadius: 50 }) : L.layerGroup();
     map.addLayer(S._cluster);
     S._userLayer = L.layerGroup().addTo(map);
@@ -667,28 +734,22 @@ function syncMapMarkers() {
     L.circleMarker([d.userLoc.lat, d.userLoc.lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#1e6fe0", fillOpacity: 1 }).addTo(S._userLayer).bindPopup("موقعك");
   }
 
-  const key = located.map((m) => m.id).join(",");
+  const key = located.map((m) => m.id).join(",") + "|" + (d.selectedId || "");
   if (key !== S._mapKey) {
     S._mapKey = key;
     S._cluster.clearLayers();
     located.forEach((m) => {
       const hasDiscount = (m.discounts || []).length > 0;
+      const selected = d.selectedId === m.id;
+      const size = selected ? 36 : 28;
+      const bg = selected ? "#111" : hasDiscount ? "#ba2a34" : "#8a7a78";
       const icon = L.divIcon({
         className: "",
-        html: `<div style="background:${hasDiscount ? "#ba2a34" : "#8a7a78"};color:#fff;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35)"><span style="transform:rotate(45deg);font-size:13px">${hasDiscount ? "🏷️" : "📍"}</span></div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
+        html: `<div style="background:${bg};color:#fff;width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.4);border:2px solid #fff"><span style="transform:rotate(45deg);font-size:${selected ? 16 : 13}px">${hasDiscount ? "🏷️" : "📍"}</span></div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size],
       });
-      const discountText = hasDiscount ? m.discounts.map((dc) => `${esc(dc.title)} — ${dc.percent}%`).join("<br>") : "";
-      L.marker([m.latitude, m.longitude], { icon }).bindPopup(`
-        <div style="font-family:Tajawal,sans-serif;text-align:right;direction:rtl;min-width:160px">
-          <strong>${esc(m.businessName)}</strong><br>
-          ${m.distanceKm != null ? `<span style="color:#8a7a78;font-size:12px">${m.distanceKm.toFixed(1)} كم</span><br>` : ""}
-          ${openBadge(m.openStatus)}
-          ${discountText ? `<div style="color:#ba2a34;font-size:12px;margin-top:4px">${discountText}</div>` : ""}
-          <button onclick="go('merchantDetail',{merchantId:'${m.id}'})" style="margin-top:6px;background:#ba2a34;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">افتح المحل</button>
-          <a href="${directionsUrl(m.latitude, m.longitude)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;margin-right:4px;background:#fff;color:#ba2a34;border:1px solid #ba2a34;border-radius:8px;padding:5px 10px;font-size:12px;text-decoration:none">🧭 الاتجاهات</a>
-        </div>`).addTo(S._cluster);
+      L.marker([m.latitude, m.longitude], { icon, zIndexOffset: selected ? 1000 : 0 }).on("click", () => selectMerchant(m.id)).addTo(S._cluster);
     });
     // Nothing known about the user yet: frame the merchants instead of showing an empty map.
     if (!d.userLoc && located.length && !S._fitted) {
@@ -710,8 +771,10 @@ function flattenCategories(cats) {
 
 function merchantRowHtml(m) {
   const saved = S._discover && S._discover.favIds.includes(m.id);
+  const selected = S._discover && S._discover.selectedId === m.id;
+  const hasCoords = m.latitude != null && m.longitude != null;
   return `
-    <div class="card clickable" onclick="go('merchantDetail', {merchantId:'${m.id}'})">
+    <div class="card place-card clickable ${selected ? "selected" : ""}" onclick="go('merchantDetail', {merchantId:'${m.id}'})">
       <div class="title-line">
         <div style="display:flex;align-items:center;gap:10px;min-width:0">
           <div class="avatar">${esc((m.businessName || "?").slice(0, 1))}</div>
@@ -722,9 +785,13 @@ function merchantRowHtml(m) {
           <button class="heart ${saved ? "on" : ""}" title="حفظ" onclick="event.stopPropagation();toggleFav('${m.id}')">${saved ? "♥" : "♡"}</button>
         </div>
       </div>
-      <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
         ${openBadge(m.openStatus)}
         ${(m.discounts || []).map((dc) => `<span class="badge info">🏷️ ${esc(dc.title)} — ${dc.percent}%</span>`).join("")}
+      </div>
+      <div class="place-card-actions">
+        <button class="btn small" style="width:auto" onclick="event.stopPropagation();go('merchantDetail',{merchantId:'${m.id}'})">التفاصيل</button>
+        ${hasCoords ? `<a class="btn small outline" style="width:auto" href="${directionsUrl(m.latitude, m.longitude)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🧭 الاتجاهات</a>` : ""}
       </div>
     </div>`;
 }

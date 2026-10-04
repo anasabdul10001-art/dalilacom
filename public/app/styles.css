@@ -727,3 +727,54 @@ h1, h2, h3 {
 .guest-prompt ul { list-style: none; padding: 0; margin: 4px 0 22px; text-align: right; color: var(--text); }
 .guest-prompt li { padding: 4px 0; }
 .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #1c1413; color: #fff; padding: 10px 18px; border-radius: 22px; z-index: 9999; font-size: 14px; }
+
+/* ================= modern pass: full-screen map with floating controls ================= */
+
+.screen-body.map-mode { padding: 0; overflow: hidden; position: relative; }
+.mapfull { position: absolute; inset: 0; overflow: hidden; }
+#discover-map-slot { position: absolute; inset: 0; z-index: 0; isolation: isolate; }
+
+.map-top { position: absolute; top: 10px; inset-inline: 10px; z-index: 30; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.map-top > * { pointer-events: auto; }
+.map-top .map-search { margin: 0; }
+.map-top .searchbox { box-shadow: 0 10px 28px -10px rgba(30, 10, 10, 0.55); border-color: transparent; padding: 3px 14px; }
+.float-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
+.float-chips::-webkit-scrollbar { display: none; }
+.float-chips .chip { border-color: transparent; background: var(--surface); color: var(--text); box-shadow: 0 6px 16px -6px rgba(30, 10, 10, 0.5); }
+.float-chips .chip.active { background: var(--primary); color: #fff; }
+.float-note { align-self: flex-start; background: var(--surface); color: var(--text); border-radius: 14px; padding: 8px 12px; font-size: 12px; box-shadow: 0 6px 16px -6px rgba(30, 10, 10, 0.5); max-width: 92%; }
+
+.mapfull .area-btn { top: 128px; }
+.mapfull .map-fab { bottom: calc(var(--sheet-h, 232px) + 14px); inset-inline-start: 12px; transition: bottom 0.25s; }
+.mapfull .leaflet-top.leaflet-right { top: 124px; }
+.mapfull .leaflet-bar { border: none; box-shadow: 0 6px 16px -6px rgba(30, 10, 10, 0.5); border-radius: 14px; overflow: hidden; }
+.mapfull .leaflet-bar a { color: var(--primary); }
+
+.sheet { position: absolute; inset-inline: 0; bottom: 0; z-index: 40; height: var(--sheet-h, 232px); display: flex; flex-direction: column; background: var(--phone-bg); border-radius: 28px 28px 0 0; box-shadow: 0 -14px 40px -12px rgba(30, 10, 10, 0.45); transition: height 0.25s ease; }
+.sheet.dragging { transition: none; }
+.sheet-handle { padding: 10px 0 6px; display: flex; justify-content: center; cursor: grab; touch-action: none; }
+.sheet-handle span { width: 44px; height: 5px; border-radius: 3px; background: var(--border); }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 0 18px 8px; }
+.sheet-head strong { font-family: "Cairo", "Tajawal", sans-serif; font-size: 16px; }
+.sheet-chips { display: flex; gap: 8px; overflow-x: auto; padding: 0 18px 8px; scrollbar-width: none; }
+.sheet-chips::-webkit-scrollbar { display: none; }
+.sheet-list { flex: 1; overflow-y: auto; padding: 4px 14px 110px; scrollbar-width: none; }
+.sheet-list::-webkit-scrollbar { display: none; }
+
+.place-card { border-radius: 20px; padding: 14px; }
+.place-card.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary) inset; }
+.place-card-actions { display: flex; gap: 8px; margin-top: 12px; }
+.place-card-actions .btn { flex: 1; width: auto; }
+
+/* floating, glassy bottom navigation */
+.tabbar { left: 12px; right: 12px; bottom: 12px; z-index: 100; border: 1px solid var(--border); border-radius: 26px; padding: 6px 6px; background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 14px 34px -12px rgba(30, 10, 10, 0.55); }
+.tabbar button { border-radius: 20px; padding: 7px 2px; transition: background 0.2s; }
+.tabbar button.active { background: color-mix(in srgb, var(--primary) 12%, transparent); }
+
+/* softer, rounder surfaces everywhere else */
+.card { border-radius: 20px; border-color: transparent; box-shadow: 0 1px 2px rgba(30, 10, 10, 0.05), 0 12px 30px -16px rgba(90, 14, 18, 0.28); }
+.btn { border-radius: 15px; }
+.btn:not(.outline):not(.secondary):not(.danger) { background: linear-gradient(135deg, var(--primary-deep) -60%, var(--primary) 70%); box-shadow: 0 10px 22px -10px rgba(186, 42, 52, 0.7); }
+.btn.small { box-shadow: none; border-radius: 12px; }
+.screen-title { letter-spacing: -0.2px; }
+.badge { border-radius: 999px; }
