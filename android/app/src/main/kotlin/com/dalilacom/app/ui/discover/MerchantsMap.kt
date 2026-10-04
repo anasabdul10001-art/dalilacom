@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
@@ -35,6 +36,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import java.io.File
 
 private val DAMASCUS = GeoPoint(33.5138, 36.2765)
@@ -81,6 +83,8 @@ fun MerchantsMap(
     onSelect: (String) -> Unit,
     onUserMoved: (MapBounds) -> Unit,
     recenterTick: Int = 0,
+    route: List<List<Double>>? = null,
+    routeWalking: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -112,9 +116,25 @@ fun MerchantsMap(
     val latestUser by rememberUpdatedState(userLocation)
     val latestOnSelect by rememberUpdatedState(onSelect)
     val latestOnMoved by rememberUpdatedState(onUserMoved)
+    val latestRoute by rememberUpdatedState(route)
+    val latestWalking by rememberUpdatedState(routeWalking)
 
     fun redraw(map: MapView) {
         map.overlays.clear()
+        // The road goes underneath the pins so the destination stays tappable.
+        latestRoute?.takeIf { it.size >= 2 }?.let { points ->
+            val density = context.resources.displayMetrics.density
+            map.overlays.add(
+                Polyline(map).apply {
+                    setPoints(points.map { GeoPoint(it[0], it[1]) })
+                    outlinePaint.color = if (latestWalking) Color.parseColor("#1E6FE0") else Color.parseColor("#BA2A34")
+                    outlinePaint.strokeWidth = 6 * density
+                    outlinePaint.strokeCap = Paint.Cap.ROUND
+                    outlinePaint.strokeJoin = Paint.Join.ROUND
+                    if (latestWalking) outlinePaint.pathEffect = DashPathEffect(floatArrayOf(1f, 12f * density), 0f)
+                },
+            )
+        }
         val measured = map.width > 0
         if (!measured) map.post { if (map.width > 0) redraw(map) }
         val cell = 72 * context.resources.displayMetrics.density
@@ -228,8 +248,15 @@ fun MerchantsMap(
         }
     }
 
+    // A new route: frame the whole way.
+    LaunchedEffect(route) {
+        val points = route?.takeIf { it.size >= 2 }?.map { GeoPoint(it[0], it[1]) } ?: return@LaunchedEffect
+        programmatic { mapView.post { mapView.zoomToBoundingBox(BoundingBox.fromGeoPoints(points).increaseByScale(1.3f), true, 100) } }
+    }
+
     // First GPS fix (or the "my location" button): jump to the user.
     LaunchedEffect(userLocation, recenterTick) {
+        if (latestRoute != null) return@LaunchedEffect // don't pull the camera off a route being shown
         userLocation?.let {
             programmatic {
                 mapView.controller.setZoom(14.0)

@@ -17,6 +17,21 @@ interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
 
+    @GET("auth/me")
+    suspend fun me(): Response<MeResponse>
+
+    @POST("auth/resend-verification")
+    suspend fun resendVerification(@Body body: ResendVerificationRequest): Response<MessageResponse>
+
+    @GET("route")
+    suspend fun route(
+        @Query("fromLat") fromLat: Double,
+        @Query("fromLng") fromLng: Double,
+        @Query("toLat") toLat: Double,
+        @Query("toLng") toLng: Double,
+        @Query("mode") mode: String,
+    ): Response<RouteDto>
+
     @POST("auth/logout")
     suspend fun logout(): Response<MessageResponse>
 
@@ -86,6 +101,9 @@ interface ApiService {
 
     @GET("merchant/me")
     suspend fun getMerchantMe(): Response<MerchantMeDto>
+
+    @PATCH("merchant/me")
+    suspend fun updateMerchantMe(@Body body: UpdateMerchantRequest): Response<MerchantMeDto>
 
     @POST("merchant/register")
     suspend fun registerMerchant(@Body body: RegisterMerchantRequest): Response<RegisterMerchantResponse>

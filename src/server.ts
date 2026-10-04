@@ -20,6 +20,7 @@ import { addressRouter } from "./routes/address.routes";
 import { businessRouter, branchRouter } from "./routes/business.routes";
 import { catalogRouter } from "./routes/catalog.routes";
 import { favoritesRouter } from "./routes/favorites.routes";
+import { routeRouter } from "./routes/route.routes";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { ApiError, sendError, sendValidationError } from "./lib/apiError";
@@ -56,6 +57,7 @@ app.use("/businesses", businessRouter);
 app.use("/branches", branchRouter);
 app.use("/catalog", catalogRouter);
 app.use("/favorites", favoritesRouter);
+app.use("/route", routeRouter);
 
 app.use((_req, res) => {
   sendError(res, 404, "NOT_FOUND", "Not found");

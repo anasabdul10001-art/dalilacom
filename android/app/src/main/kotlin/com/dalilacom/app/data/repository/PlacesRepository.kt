@@ -3,6 +3,7 @@ package com.dalilacom.app.data.repository
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.HourRangeDto
 import com.dalilacom.app.data.network.MerchantDto
+import com.dalilacom.app.data.network.RouteDto
 import com.dalilacom.app.data.network.SetHoursRequest
 import com.dalilacom.app.data.network.SuggestResponse
 import com.dalilacom.app.data.network.errorText
@@ -31,6 +32,15 @@ class PlacesRepository(private val api: ApiService) {
     suspend fun suggest(query: String): SuggestResponse {
         val response = safeApiCall { api.suggest(query) } ?: return SuggestResponse()
         return response.body()?.takeIf { response.isSuccessful } ?: SuggestResponse()
+    }
+
+    /** The road route from [from] to [to] ("driving" or "walking"), with distance and time. */
+    suspend fun route(from: Pair<Double, Double>, to: Pair<Double, Double>, mode: String): Result<RouteDto> {
+        val response = safeApiCall { api.route(from.first, from.second, to.first, to.second, mode) }
+            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body)
+        else Result.failure(Exception(errorText(response, "تعذّر حساب الطريق")))
     }
 
     suspend fun setHours(hours: Map<String, List<HourRangeDto>>?): Result<Unit> {

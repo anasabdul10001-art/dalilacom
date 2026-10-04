@@ -14,8 +14,13 @@ import com.dalilacom.app.data.repository.ResponderRepository
 import com.dalilacom.app.data.store.SessionStore
 import com.dalilacom.app.data.store.TokenStore
 
+/** A place the user asked directions to; handed from the place page to the map screen. */
+data class RouteTarget(val id: String, val name: String, val latitude: Double, val longitude: Double)
+
 /** Simple hand-rolled DI container — one instance shared across the app via MainActivity. */
 class AppContainer(context: Context) {
+    val pendingRoute = kotlinx.coroutines.flow.MutableStateFlow<RouteTarget?>(null)
+
     val tokenStore = TokenStore(context.applicationContext)
     val sessionStore = SessionStore(context.applicationContext)
     private val api = ApiClient.create(tokenStore)

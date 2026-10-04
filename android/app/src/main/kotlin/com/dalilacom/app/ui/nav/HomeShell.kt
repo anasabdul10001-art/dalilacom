@@ -31,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,6 +70,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     val factory = remember { ViewModelFactory(container) }
     var isGuest by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isGuest = !container.authRepository.hasStoredSession() }
+    val pendingRoute by container.pendingRoute.collectAsState()
+    LaunchedEffect(pendingRoute) { if (pendingRoute != null) selectedTab = HomeTab.Discover }
 
     val goLogin = { rootNavController.navigate("login") }
     val goRegister = { rootNavController.navigate("register") }
@@ -92,6 +95,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                 HomeTab.Discover -> DiscoverScreen(
                     factory = factory,
                     isGuest = isGuest,
+                    pendingRoute = container.pendingRoute,
                     onLogin = { goLogin() },
                     onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
                 )

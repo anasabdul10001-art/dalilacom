@@ -47,6 +47,7 @@ async function api(method, path, body) {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
+    if (method !== "GET" && res.ok && S._onboarding) S._onboarding.at = 0; // any write may change the setup checklist
     if (res.status === 401 && S.token) {
       // An expired/revoked session drops the visitor back onto the (public) map, not a login wall.
       clearToken();
@@ -74,6 +75,9 @@ function clearToken() {
   localStorage.removeItem("dlk_role");
   if (S._discover) S._discover.favIds = [];
   S._favorites = null;
+  S.account = null;
+  S._onboarding = null;
+  S._mprof = null;
 }
 
 function stopQrLoop() {
@@ -218,6 +222,7 @@ function renderScreen() {
     case "responder": return screenResponder();
     case "favorites": return screenFavorites();
     case "merchantHours": return screenMerchantHours();
+    case "merchantProfile": return screenMerchantProfile();
     default: return screenLogin();
   }
 }
@@ -525,10 +530,11 @@ function tabDiscover() {
   S._visible = list;
   const sheetPx = sheetHeights()[S._sheet || "peek"];
   return `
-    <div class="mapfull" id="mapfull" style="--sheet-h:${sheetPx}px">
+    <div class="mapfull ${S._route ? "routing" : ""}" id="mapfull" style="--sheet-h:${sheetPx}px">
       <div id="discover-map-slot"></div>
 
       <div class="map-top">
+        ${routeBarHtml()}
         <div class="map-search">
           <div class="searchbox">
             <span class="search-ico">🔍</span>
@@ -737,6 +743,7 @@ function syncMapMarkers() {
   const map = S._map;
   const located = (S._visible || []).filter((m) => m.latitude != null && m.longitude != null);
 
+  syncRouteLayer();
   S._userLayer.clearLayers();
   if (d.userLoc) {
     L.circleMarker([d.userLoc.lat, d.userLoc.lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#1e6fe0", fillOpacity: 1 }).addTo(S._userLayer).bindPopup("موقعك");
@@ -799,7 +806,7 @@ function merchantRowHtml(m) {
       </div>
       <div class="place-card-actions">
         <button class="btn small" style="width:auto" onclick="event.stopPropagation();go('merchantDetail',{merchantId:'${m.id}'})">التفاصيل</button>
-        ${hasCoords ? `<a class="btn small outline" style="width:auto" href="${directionsUrl(m.latitude, m.longitude)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🧭 الاتجاهات</a>` : ""}
+        ${hasCoords ? `<button class="btn small outline" style="width:auto" onclick="event.stopPropagation();startRoute('${m.id}')">🧭 الاتجاهات</button>` : ""}
       </div>
     </div>`;
 }
@@ -973,6 +980,7 @@ function tabProfile() {
     <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:50px">
       <h1 class="screen-title">حسابي</h1>
       <div style="height:20px"></div>
+      ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
       ${S.role === "MERCHANT"
         ? `<button class="btn" style="max-width:240px" onclick="go('merchantMode')">وضع التاجر</button>`
         : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">سجّل كتاجر</button>`}
@@ -1096,7 +1104,7 @@ function screenMerchantDetail() {
     <div class="place-actions">
       ${phone ? `<a href="tel:${esc(phone)}"><span>📞</span>اتصال</a>` : ""}
       ${wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span>💬</span>واتساب</a>` : ""}
-      ${hasCoords ? `<a href="${directionsUrl(x.latitude, x.longitude)}" target="_blank" rel="noopener"><span>🧭</span>الاتجاهات</a>` : ""}
+      ${hasCoords ? `<button onclick="startRoute('${x.id}')"><span>🧭</span>الاتجاهات</button>` : ""}
       <button onclick="shareMerchant()"><span>📤</span>مشاركة</button>
       <button class="${saved ? "on" : ""}" onclick="toggleFav('${x.id}')"><span>${saved ? "♥" : "♡"}</span>${saved ? "محفوظ" : "حفظ"}</button>
     </div>
@@ -1316,19 +1324,23 @@ async function cancelOrder() {
 /* ================= MERCHANT REGISTER ================= */
 
 function screenMerchantRegister() {
-  if (!S._merchReg) { S._merchReg = { categories: [] }; api("GET", "/categories").then((r) => { S._merchReg.categories = r.ok ? r.data : []; render(); }); }
+  if (!S._merchReg) { S._merchReg = { categories: [] }; pickReset(null, null); api("GET", "/categories").then((r) => { S._merchReg.categories = r.ok ? r.data : []; render(); }); }
   const m = S._merchReg;
   return `
     ${backRow()}
     <h1 class="screen-title">سجّل كتاجر</h1>
-    <p class="screen-sub">بيصير حسابك تاجر بعد موافقة الأدمن</p>
+    <p class="screen-sub">بيصير حسابك تاجر بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</p>
     <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="اسم محلك" value="${esc(m.name || "")}" /></div>
     <div class="section-title" style="margin-top:6px">التصنيف</div>
     <div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
       ${flattenCategories(m.categories).map((c) => `<button class="chip ${m.selectedCat === c.id ? "active" : ""}" onclick="selectMerchCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
     </div>
     <div class="field"><label>العنوان (اختياري)</label><input id="mr-address" placeholder="العنوان" value="${esc(m.address || "")}" /></div>
-    <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="رقم الهاتف" value="${esc(m.phone || "")}" /></div>
+    <div class="row">
+      <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="رقم الهاتف" value="${esc(m.phone || "")}" /></div>
+      <div class="field"><label>واتساب (اختياري)</label><input id="mr-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
+    </div>
+    ${pickerHtml()}
     ${errorBanner()}
     <button class="btn" ${S.busy ? "disabled" : ""} onclick="submitMerchantRegister()">سجّل</button>
   `;
@@ -1339,6 +1351,7 @@ function snapshotMerchRegDraft() {
   m.name = qs("mr-name") ? qs("mr-name").value : m.name;
   m.address = qs("mr-address") ? qs("mr-address").value : m.address;
   m.phone = qs("mr-phone") ? qs("mr-phone").value : m.phone;
+  m.whatsapp = qs("mr-whatsapp") ? qs("mr-whatsapp").value : m.whatsapp;
 }
 
 function selectMerchCategory(id) {
@@ -1354,18 +1367,275 @@ async function submitMerchantRegister() {
   if (!businessName || !categoryId) { S.error = "عبّي اسم المحل واختر تصنيف"; return render(); }
   const address = qs("mr-address").value.trim();
   const phone = qs("mr-phone").value.trim();
+  const whatsapp = (qs("mr-whatsapp").value || "").replace(/\D/g, "");
+  const pin = S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
   S.busy = true; render();
-  const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined });
+  const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined, whatsapp: whatsapp || undefined, ...pin });
   S.busy = false;
   if (ok) {
     S.role = "MERCHANT";
     localStorage.setItem("dlk_role", "MERCHANT");
     S._merchReg = null;
+    S._onboarding = null;
     back();
   } else {
     S.error = errMsg(data, "تعذّر تسجيل حساب التاجر");
     render();
   }
+}
+
+/* ---- merchant: pin the shop on the map ---- */
+
+// One Leaflet instance kept alive across re-renders (re-parented into #pick-slot each time).
+function pickerHtml() {
+  const p = S._pick || {};
+  return `
+    <div class="field">
+      <label>مكان محلك على الخريطة — بهالطريقة بيلاقيك الزبائن</label>
+      <div id="pick-slot" class="pick-map"></div>
+      <div class="row" style="margin-top:6px;gap:8px;align-items:center">
+        <button class="btn small outline" style="width:auto;flex:none" onclick="pickUseMyLocation()">📍 استخدم موقعي الحالي</button>
+        <span id="pick-coords" class="muted" style="font-size:12px">${p.lat != null ? p.lat.toFixed(5) + "، " + p.lng.toFixed(5) : "اضغط على الخريطة لتحديد المكان"}</span>
+      </div>
+    </div>`;
+}
+
+function pickSet(lat, lng, recenter) {
+  S._pick = { lat, lng };
+  if (S._pickMap) {
+    if (!S._pickMarker) {
+      S._pickMarker = L.marker([lat, lng], { draggable: true }).addTo(S._pickMap);
+      S._pickMarker.on("dragend", () => { const ll = S._pickMarker.getLatLng(); pickSet(ll.lat, ll.lng, false); });
+    } else {
+      S._pickMarker.setLatLng([lat, lng]);
+    }
+    if (recenter) S._pickMap.setView([lat, lng], 16);
+  }
+  const el = document.getElementById("pick-coords");
+  if (el) el.textContent = lat.toFixed(5) + "، " + lng.toFixed(5);
+}
+
+function renderPicker() {
+  const slot = document.getElementById("pick-slot");
+  if (!slot || typeof L === "undefined") return;
+  if (!S._pickMap) {
+    const el = document.createElement("div");
+    el.style.cssText = "height:100%;width:100%";
+    S._pickEl = el;
+    const map = L.map(el, { attributionControl: false }).setView([DAMASCUS.lat, DAMASCUS.lng], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+    map.on("click", (e) => pickSet(e.latlng.lat, e.latlng.lng, false));
+    S._pickMap = map;
+  }
+  slot.appendChild(S._pickEl);
+  S._pickMap.invalidateSize();
+  const p = S._pick || {};
+  if (p.lat != null) {
+    pickSet(p.lat, p.lng, !S._pickCentered);
+    S._pickCentered = true;
+  } else if (S._pickMarker) {
+    S._pickMap.removeLayer(S._pickMarker);
+    S._pickMarker = null;
+  }
+}
+
+function pickReset(lat, lng) {
+  S._pick = lat != null ? { lat, lng } : {};
+  S._pickCentered = false;
+  if (S._pickMap && S._pickMarker) { S._pickMap.removeLayer(S._pickMarker); S._pickMarker = null; }
+}
+
+function pickUseMyLocation() {
+  if (!navigator.geolocation) return toast("المتصفح ما بيدعم تحديد الموقع");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => pickSet(pos.coords.latitude, pos.coords.longitude, true),
+    () => toast("ما قدرنا نحدد موقعك — اضغط على الخريطة لتحدده بإيدك"),
+    { enableHighAccuracy: true, timeout: 10000 },
+  );
+}
+
+/* ---- merchant: edit the public listing ---- */
+
+function screenMerchantProfile() {
+  if (!S._mprof) { S._mprof = { loading: true }; loadMerchantProfile(); }
+  const m = S._mprof;
+  if (m.loading) return backRow() + spinner();
+  return `
+    ${backRow()}
+    <h1 class="screen-title">بيانات المحل ومكانه</h1>
+    <p class="screen-sub">هي اللي بتظهر للزبائن على الخريطة وبصفحة محلك</p>
+    <div class="field"><label>اسم المحل</label><input id="mp-name" value="${esc(m.name || "")}" /></div>
+    <div class="section-title" style="margin-top:6px">التصنيف</div>
+    <div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
+      ${flattenCategories(m.categories || []).map((c) => `<button class="chip ${m.categoryId === c.id ? "active" : ""}" onclick="mprofCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
+    </div>
+    <div class="field"><label>العنوان</label><input id="mp-address" value="${esc(m.address || "")}" /></div>
+    <div class="row">
+      <div class="field"><label>الهاتف</label><input id="mp-phone" value="${esc(m.phone || "")}" /></div>
+      <div class="field"><label>واتساب (مع رمز الدولة)</label><input id="mp-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
+    </div>
+    ${pickerHtml()}
+    ${errorBanner()}
+    <button class="btn" onclick="saveMerchantProfile()">حفظ</button>
+    ${m.msg ? `<p class="muted" style="text-align:center;margin-top:8px">${esc(m.msg)}</p>` : ""}
+  `;
+}
+
+async function loadMerchantProfile() {
+  const [me, cats] = await Promise.all([api("GET", "/merchant/me"), api("GET", "/categories")]);
+  const d = me.ok ? me.data : {};
+  S._mprof = { loading: false, name: d.businessName, categoryId: d.categoryId, address: d.address, phone: d.phone, whatsapp: d.whatsapp, categories: cats.ok ? cats.data : [], msg: "" };
+  pickReset(d.latitude != null ? d.latitude : null, d.longitude != null ? d.longitude : null);
+  render();
+}
+
+function snapshotMprof() {
+  const m = S._mprof;
+  [["name", "mp-name"], ["address", "mp-address"], ["phone", "mp-phone"], ["whatsapp", "mp-whatsapp"]].forEach(([k, id]) => { if (qs(id)) m[k] = qs(id).value; });
+}
+function mprofCategory(id) { snapshotMprof(); S._mprof.categoryId = id; render(); }
+
+async function saveMerchantProfile() {
+  snapshotMprof();
+  const m = S._mprof;
+  const body = { businessName: (m.name || "").trim(), categoryId: m.categoryId, address: (m.address || "").trim() || null, phone: (m.phone || "").trim() || null, whatsapp: (m.whatsapp || "").replace(/\D/g, "") || null };
+  if (S._pick && S._pick.lat != null) { body.latitude = S._pick.lat; body.longitude = S._pick.lng; }
+  S.error = null;
+  const { ok, data } = await api("PATCH", "/merchant/me", body);
+  m.msg = ok ? "✅ انحفظت بيانات المحل" : "";
+  if (!ok) S.error = errMsg(data, "تعذّر الحفظ");
+  S._onboarding = null;
+  render();
+}
+
+/* ---- merchant: what's left before the shop shows up on the map ---- */
+
+function merchantChecklistHtml() {
+  if (!S._onboarding) S._onboarding = { steps: null, at: 0 };
+  const o = S._onboarding;
+  if (!o.fetching && Date.now() - o.at > 15000) { o.fetching = true; loadOnboarding(); }
+  if (!o.steps) return "";
+  const done = Object.values(o.steps).filter(Boolean).length;
+  if (done === 5 && o.steps.approved) return "";
+  const item = (ok, label, action) => `<div class="check-item ${ok ? "ok" : ""}" ${ok ? "" : `onclick="${action}"`}><span>${ok ? "✅" : "⬜"}</span> ${label}</div>`;
+  return `
+    <div class="card checklist">
+      <div class="title-line"><strong>جهّز محلك ليظهر للزبائن</strong><span class="badge ${o.steps.approved ? "success" : "warning"}">${done}/5</span></div>
+      ${o.steps.approved ? "" : `<p class="muted" style="margin:4px 0 8px">⏳ طلبك بانتظار موافقة الإدارة — ما رح يظهر محلك على الخريطة قبلها.</p>`}
+      ${item(o.steps.location, "حدّد مكان محلك على الخريطة", "S._mprof=null;go('merchantProfile')")}
+      ${item(o.steps.hours, "حدّد ساعات العمل", "S._hours=null;go('merchantHours')")}
+      ${item(o.steps.discount, "أضف حسم للأعضاء", "setMerchantTab('catalog')")}
+      ${item(o.steps.product, "أضف أول منتج", "setMerchantTab('catalog')")}
+      ${item(o.steps.approved, "موافقة الإدارة", "")}
+    </div>`;
+}
+
+async function loadOnboarding() {
+  const { ok, data } = await api("GET", "/merchant/me");
+  const prev = S._onboarding && S._onboarding.steps;
+  const steps = ok ? data.onboarding : prev;
+  S._onboarding = { steps, at: Date.now(), fetching: false };
+  if (JSON.stringify(steps) !== JSON.stringify(prev)) render();
+}
+
+/* ---- in-app route: the road, distance and time, drawn on the map ---- */
+
+function fmtDuration(seconds) {
+  const m = Math.max(1, Math.round(seconds / 60));
+  if (m >= 60) return `${Math.floor(m / 60)} س ${m % 60} د`;
+  return m === 1 ? "دقيقة" : m === 2 ? "دقيقتان" : m <= 10 ? `${m} دقائق` : `${m} دقيقة`;
+}
+function fmtDistance(meters) {
+  return meters < 1000 ? `${meters} م` : `${(meters / 1000).toFixed(1)} كم`;
+}
+
+function locateUser() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("unsupported"));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      reject,
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  });
+}
+
+async function startRoute(merchantId, mode) {
+  const d = discoverState();
+  const m = d.merchants.find((x) => x.id === merchantId) || (S._merchantDetail && S._merchantDetail.merchant);
+  if (!m || m.latitude == null) return;
+  if (!d.userLoc) {
+    try { d.userLoc = await locateUser(); S._centeredUser = true; }
+    catch (e) { return toast("فعّل صلاحية الموقع من المتصفح لنرسم لك الطريق، أو افتحه بخرائط جوجل"); }
+  }
+  S._route = { merchantId, mode: mode || "driving", name: m.businessName, dest: { lat: m.latitude, lng: m.longitude }, loading: true };
+  d.selectedId = merchantId;
+  S.stack = []; S.screen = "home"; S.params = {}; S.homeTab = "discover"; S._sheet = "peek";
+  render();
+  const q = new URLSearchParams({ fromLat: d.userLoc.lat, fromLng: d.userLoc.lng, toLat: m.latitude, toLng: m.longitude, mode: S._route.mode });
+  const { ok, data } = await api("GET", "/route?" + q.toString());
+  if (!S._route) return; // cancelled meanwhile
+  S._route.loading = false;
+  if (ok) S._route.data = data; else S._route.error = errMsg(data, "تعذّر حساب الطريق");
+  render();
+}
+
+function setRouteMode(mode) { if (S._route && S._route.mode !== mode) startRoute(S._route.merchantId, mode); }
+function cancelRoute() { S._route = null; render(); }
+
+function routeBarHtml() {
+  const r = S._route;
+  if (!r) return "";
+  const body = r.loading ? `<span class="muted">عم نحسب الطريق...</span>`
+    : r.error ? `<span style="color:var(--danger)">${esc(r.error)}</span>`
+    : `<strong>${r.mode === "walking" ? "🚶" : "🚗"} ${fmtDuration(r.data.durationSeconds)}</strong> <span class="muted">· ${fmtDistance(r.data.distanceMeters)}</span>`;
+  return `
+    <div class="route-bar">
+      <div class="route-title"><span>إلى ${esc(r.name)}</span><button class="route-x" onclick="cancelRoute()">✕</button></div>
+      <div class="route-row">
+        <div>${body}</div>
+        <div class="route-actions">
+          <button class="chip ${r.mode === "driving" ? "active" : ""}" onclick="setRouteMode('driving')">🚗</button>
+          <button class="chip ${r.mode === "walking" ? "active" : ""}" onclick="setRouteMode('walking')">🚶</button>
+          <a class="chip" href="${directionsUrl(r.dest.lat, r.dest.lng)}" target="_blank" rel="noopener">افتح بجوجل</a>
+        </div>
+      </div>
+    </div>`;
+}
+
+function syncRouteLayer() {
+  const map = S._map;
+  if (!map) return;
+  const r = S._route;
+  const key = r && r.data ? `${r.merchantId}|${r.mode}|${r.data.distanceMeters}` : "";
+  if (key === S._routeDrawn) return;
+  S._routeDrawn = key;
+  if (S._routeLayer) { map.removeLayer(S._routeLayer); S._routeLayer = null; }
+  if (!r || !r.data || !r.data.geometry.length) return;
+  S._routeLayer = L.polyline(r.data.geometry, { color: r.mode === "walking" ? "#1e6fe0" : "#ba2a34", weight: 6, opacity: 0.9, dashArray: r.mode === "walking" ? "1 10" : null, lineCap: "round" }).addTo(map);
+  moveMap(() => map.fitBounds(S._routeLayer.getBounds(), { padding: [50, 50], animate: false }));
+}
+
+/* ---- account: email verification nudge (only when mail can actually be delivered) ---- */
+
+async function loadAccountInfo() {
+  if (!S.token) return;
+  const { ok, data } = await api("GET", "/auth/me");
+  S.account = ok ? { email: data.user.email, emailVerified: data.user.emailVerified, emailDeliveryEnabled: data.emailDeliveryEnabled } : {};
+  render();
+}
+
+function verifyBannerHtml() {
+  const a = S.account;
+  if (!a || a.emailVerified || !a.emailDeliveryEnabled) return "";
+  return `<div class="card" style="text-align:right;width:100%"><strong>✉️ بريدك غير موثّق</strong>
+    <p class="muted" style="margin:4px 0 8px">وثّق بريدك لتحمي حسابك وتقدر تسترجع كلمة السرّ.</p>
+    <button class="btn small outline" style="width:auto" onclick="resendVerification()">إعادة إرسال رابط التوثيق</button></div><div style="height:12px"></div>`;
+}
+
+async function resendVerification() {
+  const { ok } = await api("POST", "/auth/resend-verification", { email: S.account.email });
+  toast(ok ? "أرسلنا رابط التوثيق لبريدك ✅" : "تعذّر الإرسال، جرّب بعد شوي");
 }
 
 /* ================= MERCHANT MODE SHELL ================= */
@@ -1380,6 +1650,7 @@ function screenMerchantModeShell() {
   const body = { redeem: tabRedeem, orders: tabMerchantOrders, catalog: tabCatalog }[S.merchantTab]();
   return `
     <button class="back-btn" onclick="back()">‹ رجوع لحساب الزبون</button>
+    ${merchantChecklistHtml()}
     <div>${body}</div>
     <div class="tabbar">
       ${MERCHANT_TABS.map((t) => `
@@ -1526,7 +1797,10 @@ function tabCatalog() {
   if (c.loading) return `<h1 class="screen-title">الكتالوج</h1>${spinner()}`;
   return `
     <h1 class="screen-title">الكتالوج</h1>
-    <button class="btn outline" style="margin-bottom:12px" onclick="S._hours=null;go('merchantHours')">🕒 ساعات العمل</button>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn outline" onclick="S._mprof=null;go('merchantProfile')">📍 بيانات المحل ومكانه</button>
+      <button class="btn outline" onclick="S._hours=null;go('merchantHours')">🕒 ساعات العمل</button>
+    </div>
     <div class="card">
       <div class="section-title" style="margin-top:0">الحسومات</div>
       ${(c.discounts || []).length ? c.discounts.map((d) => `<p style="color:var(--primary)">🏷️ ${esc(d.title)} — ${d.percent}%</p>`).join("") : `<p class="muted">ما في حسومات بعد</p>`}
@@ -2078,6 +2352,7 @@ function wireUpAfterRender() {
   if (S.screen === "home" && S.homeTab === "discover" && S._discover) {
     renderDiscoverMap();
   }
+  if (S.screen === "merchantRegister" || S.screen === "merchantProfile") renderPicker();
 }
 
 // A merchant's affiliate shares a link like "...?product=ID&ref=CODE" — opening it tracks the

@@ -108,7 +108,7 @@
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>اسم المحل</th><th>المالك</th><th>الإيميل</th><th>التصنيف</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+          <thead><tr><th>اسم المحل</th><th>المالك</th><th>الإيميل</th><th>التصنيف</th><th>الحالة</th><th>الموقع على الخريطة</th><th>إجراءات</th></tr></thead>
           <tbody id="merchants-body"></tbody>
         </table>
       </div>
@@ -314,11 +314,14 @@ async function loadMerchants(status) {
       <td class="muted">${m.user.email}</td>
       <td>${m.category ? m.category.name : '—'}</td>
       <td><span class="badge ${m.approvalStatus}">${statusLabel(m.approvalStatus)}</span></td>
+      <td>${m.latitude != null && m.longitude != null
+        ? `<a href="https://www.google.com/maps?q=${Number(m.latitude)},${Number(m.longitude)}" target="_blank" rel="noopener">📍 عرض</a>`
+        : `<span class="muted" title="بدون موقع لا يظهر المحل على الخريطة">⚠️ غير محدد</span>`}</td>
       <td>${m.approvalStatus === 'PENDING' ? `
         <button class="small" onclick="approveMerchant('${m.id}')">✅ موافقة</button>
         <button class="small danger" onclick="rejectMerchant('${m.id}')">❌ رفض</button>
       ` : ''}</td>
-    </tr>`).join('') || `<tr><td colspan="6" class="muted">لا يوجد تجار بهذه الحالة</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="7" class="muted">لا يوجد تجار بهذه الحالة</td></tr>`;
 }
 function statusLabel(s) { return { PENDING: 'بانتظار الموافقة', APPROVED: 'معتمد', REJECTED: 'مرفوض' }[s] || s; }
 async function approveMerchant(id) {

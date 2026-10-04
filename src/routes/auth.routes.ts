@@ -132,6 +132,15 @@ authRouter.post("/login", loginRateLimiter, async (req, res) => {
   return res.json({ token, user: publicUserShape(user) });
 });
 
+/* ---------------- current user ---------------- */
+
+// The signed-in user's own profile, including whether their email is verified yet.
+authRouter.get("/me", requireAuth, async (req, res) => {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
+  // emailDeliveryEnabled lets clients avoid offering "resend verification" while no mail provider is configured.
+  res.json({ user: publicUserShape(user), emailDeliveryEnabled: !!process.env.SMTP_HOST });
+});
+
 /* ---------------- logout ---------------- */
 
 // Bumping tokenVersion invalidates this JWT (and every other JWT already issued to this

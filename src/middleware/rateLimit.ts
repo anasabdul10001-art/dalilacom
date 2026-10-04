@@ -30,3 +30,4 @@ export const verifyEmailRateLimiter = makeLimiter("AUTH_VERIFY_EMAIL", 20, 15);
 export const resendVerificationRateLimiter = makeLimiter("AUTH_RESEND_VERIFICATION", 5, 15);
 export const qrRedeemRateLimiter = makeLimiter("QR_REDEEM", 30, 1);
 export const qrVerifyRateLimiter = makeLimiter("QR_VERIFY", 60, 1);
+export const routeRateLimiter = makeLimiter("ROUTE", 40, 1);

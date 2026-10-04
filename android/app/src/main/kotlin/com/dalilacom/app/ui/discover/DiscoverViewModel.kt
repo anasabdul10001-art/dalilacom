@@ -2,8 +2,10 @@ package com.dalilacom.app.ui.discover
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dalilacom.app.data.RouteTarget
 import com.dalilacom.app.data.network.CategoryDto
 import com.dalilacom.app.data.network.MerchantDto
+import com.dalilacom.app.data.network.RouteDto
 import com.dalilacom.app.data.network.SuggestResponse
 import com.dalilacom.app.data.repository.DiscoverRepository
 import com.dalilacom.app.data.repository.MapBounds
@@ -22,6 +24,15 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 enum class LocationStatus { Idle, Loading, Ready, Denied, Unavailable }
+
+/** A route being shown on the map: where to, by what means, and what the server answered. */
+data class RouteUi(
+    val target: RouteTarget,
+    val mode: String = "driving",
+    val isLoading: Boolean = true,
+    val data: RouteDto? = null,
+    val error: String? = null,
+)
 
 data class DiscoverUiState(
     val isLoading: Boolean = true,
@@ -44,6 +55,7 @@ data class DiscoverUiState(
     val recentSearches: List<String> = emptyList(),
     val searchFocused: Boolean = false,
     val favoriteIds: Set<String> = emptySet(),
+    val route: RouteUi? = null,
     val message: String? = null,
 )
 
@@ -167,6 +179,27 @@ class DiscoverViewModel(
     }
 
     fun clearMessage() = _uiState.update { it.copy(message = null) }
+
+    private var routeJob: Job? = null
+
+    /** Draws the road to [target] from [from]; switching [mode] just calls this again. */
+    fun startRoute(target: RouteTarget, mode: String, from: Pair<Double, Double>) {
+        routeJob?.cancel()
+        _uiState.update { it.copy(route = RouteUi(target, mode), selectedMerchantId = target.id) }
+        routeJob = viewModelScope.launch {
+            val result = places.route(from, target.latitude to target.longitude, mode)
+            _uiState.update { state ->
+                val current = state.route
+                if (current == null || current.target.id != target.id || current.mode != mode) state
+                else state.copy(route = current.copy(isLoading = false, data = result.getOrNull(), error = result.exceptionOrNull()?.message))
+            }
+        }
+    }
+
+    fun cancelRoute() {
+        routeJob?.cancel()
+        _uiState.update { it.copy(route = null) }
+    }
 
     /** Loads the directory (including merchants without coordinates); distance and radius are applied locally. */
     private fun search() {

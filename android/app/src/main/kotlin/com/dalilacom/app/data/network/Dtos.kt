@@ -9,7 +9,13 @@ data class RegisterRequest(val email: String, val password: String, val fullName
 data class LoginRequest(val email: String, val password: String)
 
 @Serializable
-data class UserDto(val id: String, val email: String, val fullName: String, val role: String)
+data class UserDto(val id: String, val email: String, val fullName: String, val role: String, val emailVerified: Boolean = false)
+
+@Serializable
+data class MeResponse(val user: UserDto, val emailDeliveryEnabled: Boolean = false)
+
+@Serializable
+data class ResendVerificationRequest(val email: String)
 
 @Serializable
 data class AuthResponse(val token: String, val user: UserDto)
@@ -190,6 +196,9 @@ data class RegisterMerchantRequest(
     val categoryId: String,
     val address: String? = null,
     val phone: String? = null,
+    val whatsapp: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )
 
 @Serializable
@@ -251,8 +260,48 @@ data class MerchantMeDto(
     val id: String,
     val businessName: String,
     val approvalStatus: String,
+    val categoryId: String? = null,
+    val address: String? = null,
+    val phone: String? = null,
+    val whatsapp: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val discounts: List<DiscountDto> = emptyList(),
     val openingHours: Map<String, List<HourRangeDto>>? = null,
+    val onboarding: OnboardingDto? = null,
+)
+
+/** What still stands between a merchant and being found on the map. */
+@Serializable
+data class OnboardingDto(
+    val approved: Boolean = false,
+    val location: Boolean = false,
+    val hours: Boolean = false,
+    val discount: Boolean = false,
+    val product: Boolean = false,
+) {
+    val doneCount get() = listOf(approved, location, hours, discount, product).count { it }
+    val complete get() = doneCount == 5
+}
+
+@Serializable
+data class UpdateMerchantRequest(
+    val businessName: String? = null,
+    val categoryId: String? = null,
+    val address: String? = null,
+    val phone: String? = null,
+    val whatsapp: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+)
+
+/** Road route from the server: points are [lat, lng]. */
+@Serializable
+data class RouteDto(
+    val mode: String = "driving",
+    val distanceMeters: Int,
+    val durationSeconds: Int,
+    val geometry: List<List<Double>> = emptyList(),
 )
 
 @Serializable

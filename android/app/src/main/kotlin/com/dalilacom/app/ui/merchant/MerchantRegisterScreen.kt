@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -27,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.ui.ViewModelFactory
+import com.dalilacom.app.ui.common.LocationPicker
 
 @Composable
 fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, onBack: () -> Unit) {
@@ -36,16 +39,18 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
     var businessName by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var whatsapp by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
+    var location by remember { mutableStateOf<Pair<Double, Double>?>(null) }
 
     LaunchedEffect(state.result) {
         if (state.result != null) onRegistered()
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
         TextButton(onClick = onBack) { Text("‹ رجوع") }
         Text("سجّل كتاجر", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-        Text("بيصير حسابك تاجر بعد موافقة الأدمن", style = MaterialTheme.typography.bodyMedium)
+        Text("بيصير حسابك تاجر بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة", style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(20.dp))
 
         OutlinedTextField(
@@ -82,13 +87,22 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             label = { Text("الهاتف (اختياري)") },
             modifier = Modifier.fillMaxWidth(),
         )
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = whatsapp,
+            onValueChange = { whatsapp = it },
+            label = { Text("واتساب (اختياري، مع رمز الدولة)") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(16.dp))
+        LocationPicker(value = location, onChange = { location = it })
         Spacer(Modifier.height(20.dp))
 
         if (state.isSubmitting) {
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.register(businessName.trim(), selectedCategoryId, address.trim(), phone.trim()) },
+                onClick = { viewModel.register(businessName.trim(), selectedCategoryId, address.trim(), phone.trim(), whatsapp, location) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("سجّل") }
         }

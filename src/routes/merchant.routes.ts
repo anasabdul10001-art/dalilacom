@@ -10,15 +10,23 @@ import { computeOpenStatus, openingHoursSchema } from "../services/hours.service
 
 export const merchantRouter = Router();
 
-const registerMerchantSchema = z.object({
-  businessName: z.string().min(2),
-  categoryId: z.string().uuid(),
-  address: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-  phone: z.string().optional(),
-  whatsapp: z.string().optional(),
-});
+const coordinates = {
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
+};
+const bothOrNeitherCoordinate = (d: { latitude?: number | null; longitude?: number | null }) =>
+  (d.latitude === undefined || d.latitude === null) === (d.longitude === undefined || d.longitude === null);
+
+const registerMerchantSchema = z
+  .object({
+    businessName: z.string().min(2),
+    categoryId: z.string().uuid(),
+    address: z.string().optional(),
+    ...coordinates,
+    phone: z.string().optional(),
+    whatsapp: z.string().optional(),
+  })
+  .refine(bothOrNeitherCoordinate, { message: "latitude and longitude must be provided together" });
 
 // A regular user turns their account into a merchant account (pending admin approval — section 63)
 merchantRouter.post("/register", requireAuth, async (req, res) => {
@@ -62,12 +70,74 @@ merchantRouter.post("/register", requireAuth, async (req, res) => {
 merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
     where: { userId: req.user!.id },
-    include: { discounts: true },
+    include: { discounts: true, _count: { select: { products: true } } },
   });
   if (!merchant) {
     return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   }
-  res.json(merchant);
+  const { _count, ...profile } = merchant;
+  // What still stands between this merchant and being found on the map — drives the setup checklist.
+  res.json({
+    ...profile,
+    onboarding: {
+      approved: merchant.approvalStatus === "APPROVED",
+      location: merchant.latitude !== null && merchant.longitude !== null,
+      hours: computeOpenStatus(merchant.openingHours, "UTC").hasHours,
+      discount: merchant.discounts.some((d) => d.isActive),
+      product: _count.products > 0,
+    },
+  });
+});
+
+const updateMerchantSchema = z
+  .object({
+    businessName: z.string().min(2).optional(),
+    categoryId: z.string().uuid().optional(),
+    address: z.string().max(200).nullable().optional(),
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
+    phone: z.string().max(40).nullable().optional(),
+    whatsapp: z.string().max(40).nullable().optional(),
+  })
+  .refine(bothOrNeitherCoordinate, { message: "latitude and longitude must be provided together" });
+
+// Merchant: edit the public listing (name, category, address, pin on the map, contacts). The mirrored
+// Business/main Branch rows from the Phase 1B dual-write are kept in step in the same transaction.
+merchantRouter.patch("/me", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const parsed = updateMerchantSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const existing = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!existing) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  if (parsed.data.categoryId && !(await prisma.category.findUnique({ where: { id: parsed.data.categoryId } }))) {
+    return sendError(res, 404, "NOT_FOUND", "Category not found");
+  }
+  const data = parsed.data;
+  const updated = await prisma.$transaction(async (tx) => {
+    const profile = await tx.merchantProfile.update({ where: { id: existing.id }, data });
+    await tx.business.updateMany({
+      where: { legacyMerchantProfileId: existing.id },
+      data: {
+        ...(data.businessName ? { name: data.businessName } : {}),
+        ...(data.categoryId ? { categoryId: data.categoryId } : {}),
+        ...(data.phone !== undefined ? { phone: data.phone } : {}),
+        ...(data.whatsapp !== undefined ? { whatsapp: data.whatsapp } : {}),
+        ...(data.latitude !== undefined ? { latitude: data.latitude, longitude: data.longitude } : {}),
+      },
+    });
+    if (data.latitude !== undefined || data.phone !== undefined || data.whatsapp !== undefined || data.businessName) {
+      await tx.branch.updateMany({
+        where: { isMain: true, business: { legacyMerchantProfileId: existing.id } },
+        data: {
+          ...(data.businessName ? { name: data.businessName } : {}),
+          ...(data.phone !== undefined ? { phone: data.phone } : {}),
+          ...(data.whatsapp !== undefined ? { whatsapp: data.whatsapp } : {}),
+          ...(data.latitude !== undefined ? { latitude: data.latitude, longitude: data.longitude } : {}),
+        },
+      });
+    }
+    return profile;
+  });
+  res.json(updated);
 });
 
 // Admin: list merchants awaiting manual review (section 14/63)

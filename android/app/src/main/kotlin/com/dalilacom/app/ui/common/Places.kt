@@ -30,6 +30,20 @@ val DAY_LABEL = mapOf(
     "thu" to "الخميس", "fri" to "الجمعة", "sat" to "السبت",
 )
 
+/** 612 s -> "10 دقائق" */
+fun formatDuration(seconds: Int): String {
+    val minutes = maxOf(1, (seconds + 30) / 60)
+    if (minutes >= 60) return "${minutes / 60} س ${minutes % 60} د"
+    return when {
+        minutes == 1 -> "دقيقة"
+        minutes == 2 -> "دقيقتان"
+        minutes <= 10 -> "$minutes دقائق"
+        else -> "$minutes دقيقة"
+    }
+}
+
+fun formatDistance(meters: Int): String = if (meters < 1000) "$meters م" else "%.1f كم".format(meters / 1000.0)
+
 /** "22:00" -> "10:00 م" */
 fun formatClock(hhmm: String): String {
     val hour = hhmm.take(2).toIntOrNull() ?: return hhmm

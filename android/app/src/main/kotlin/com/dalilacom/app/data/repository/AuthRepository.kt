@@ -3,6 +3,8 @@ package com.dalilacom.app.data.repository
 import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.LoginRequest
+import com.dalilacom.app.data.network.MeResponse
+import com.dalilacom.app.data.network.ResendVerificationRequest
 import com.dalilacom.app.data.network.RegisterRequest
 import com.dalilacom.app.data.network.UserDto
 import com.dalilacom.app.data.network.safeApiCall
@@ -39,6 +41,15 @@ class AuthRepository(
             Result.failure(Exception(if (response.code() == 401) "بيانات الدخول غير صحيحة" else errorText(response, "تعذّر تسجيل الدخول")))
         }
     }
+
+    /** The signed-in user (with email-verification state), or null when offline / signed out. */
+    suspend fun me(): MeResponse? {
+        val response = safeApiCall { api.me() } ?: return null
+        return if (response.isSuccessful) response.body() else null
+    }
+
+    suspend fun resendVerification(email: String): Boolean =
+        safeApiCall { api.resendVerification(ResendVerificationRequest(email)) }?.isSuccessful == true
 
     suspend fun logout() {
         runCatching { api.logout() }

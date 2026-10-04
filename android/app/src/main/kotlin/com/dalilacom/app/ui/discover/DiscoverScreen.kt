@@ -54,6 +54,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -68,10 +69,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
+import com.dalilacom.app.data.RouteTarget
 import com.dalilacom.app.data.network.MerchantDto
 import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.Avatar
 import com.dalilacom.app.ui.common.OpenBadge
+import com.dalilacom.app.ui.common.formatDistance
+import com.dalilacom.app.ui.common.formatDuration
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -83,6 +88,7 @@ import kotlinx.coroutines.launch
 fun DiscoverScreen(
     factory: ViewModelFactory,
     isGuest: Boolean,
+    pendingRoute: MutableStateFlow<RouteTarget?>,
     onLogin: () -> Unit,
     onMerchantClick: (String) -> Unit,
 ) {
@@ -106,6 +112,34 @@ fun DiscoverScreen(
 
     fun requestLocation() {
         if (LocationHelper.hasPermission(context)) fetchLocation() else permissionLauncher.launch(LocationHelper.PERMISSIONS)
+    }
+
+    // "Directions" from anywhere: we need the user's position first, then the server draws the road.
+    var routeWanted by remember { mutableStateOf<Pair<RouteTarget, String>?>(null) }
+    fun beginRoute(target: RouteTarget, mode: String) {
+        routeWanted = target to mode
+        if (state.userLocation == null) requestLocation()
+    }
+    LaunchedEffect(routeWanted, state.userLocation) {
+        val wanted = routeWanted ?: return@LaunchedEffect
+        val here = state.userLocation ?: return@LaunchedEffect
+        routeWanted = null
+        viewModel.startRoute(wanted.first, wanted.second, here)
+    }
+    LaunchedEffect(state.locationStatus) {
+        if (routeWanted != null && (state.locationStatus == LocationStatus.Denied || state.locationStatus == LocationStatus.Unavailable)) {
+            val target = routeWanted!!.first
+            routeWanted = null
+            Toast.makeText(context, "ما قدرنا نحدد موقعك لنرسم الطريق — فتحناه بخرائط جوجل", Toast.LENGTH_LONG).show()
+            openDirections(context, target.latitude, target.longitude)
+        }
+    }
+    val pending by pendingRoute.collectAsState()
+    LaunchedEffect(pending) {
+        pending?.let {
+            pendingRoute.value = null
+            beginRoute(it, "driving")
+        }
     }
 
     // Ask for the user's position as soon as the map opens — once per app session, not on every tab switch.
@@ -133,7 +167,11 @@ fun DiscoverScreen(
             DirectorySheet(
                 state = state,
                 onMerchantClick = onMerchantClick,
-                onDirections = { merchant -> openDirections(context, merchant) },
+                onDirections = { merchant ->
+                    val lat = merchant.latitude
+                    val lng = merchant.longitude
+                    if (lat != null && lng != null) beginRoute(RouteTarget(merchant.id, merchant.businessName, lat, lng), "driving")
+                },
                 onToggleSaved = { id -> if (isGuest) onLogin() else viewModel.toggleFavorite(id) },
             )
         },
@@ -149,11 +187,23 @@ fun DiscoverScreen(
                 },
                 onUserMoved = viewModel::onViewportMoved,
                 recenterTick = recenterTick,
+                route = state.route?.data?.geometry,
+                routeWalking = state.route?.mode == "walking",
                 modifier = Modifier.fillMaxSize(),
             )
 
+            val route = state.route
+            if (route != null) {
+                RouteBar(
+                    route = route,
+                    onMode = { mode -> beginRoute(route.target, mode) },
+                    onClose = viewModel::cancelRoute,
+                    onOpenGoogle = { openDirections(context, route.target.latitude, route.target.longitude) },
+                    modifier = Modifier.padding(top = 10.dp, start = 12.dp, end = 12.dp),
+                )
+            }
             Column(Modifier.fillMaxWidth().padding(top = 10.dp)) {
-                Row(
+                if (route == null) Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -181,14 +231,14 @@ fun DiscoverScreen(
                         }
                     }
                 }
-                SuggestionsPanel(
+                if (route == null) SuggestionsPanel(
                     state = state,
                     onMerchant = { id -> viewModel.onSearchFocus(false); onMerchantClick(id) },
                     onCategory = viewModel::pickCategory,
                     onRecent = viewModel::pickRecent,
                 )
-                Spacer(Modifier.height(8.dp))
-                LazyRow(
+                if (route == null) Spacer(Modifier.height(8.dp))
+                if (route == null) LazyRow(
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -199,7 +249,7 @@ fun DiscoverScreen(
                         MapChip(category.name, state.selectedCategoryId == category.id) { viewModel.onCategorySelected(category.id) }
                     }
                 }
-                if (state.userLocation != null) {
+                if (route == null && state.userLocation != null) {
                     Spacer(Modifier.height(8.dp))
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 12.dp),
@@ -215,7 +265,7 @@ fun DiscoverScreen(
                         }
                     }
                 }
-                if (state.searchBounds != null) {
+                if (route == null && state.searchBounds != null) {
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.padding(horizontal = 12.dp)) { MapChip("✕ مسح حدود المنطقة", true) { viewModel.clearSearchArea() } }
                 }
@@ -252,9 +302,8 @@ fun DiscoverScreen(
     }
 }
 
-private fun openDirections(context: android.content.Context, merchant: MerchantDto) {
-    val lat = merchant.latitude ?: return
-    val lng = merchant.longitude ?: return
+/** Hands over to Google Maps (or any maps app) for real turn-by-turn navigation. */
+private fun openDirections(context: android.content.Context, lat: Double, lng: Double) {
     val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$lat,$lng")
     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
 }
@@ -494,6 +543,46 @@ private fun MerchantCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RouteBar(
+    route: RouteUi,
+    onMode: (String) -> Unit,
+    onClose: () -> Unit,
+    onOpenGoogle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        shadowElevation = 6.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+    ) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("إلى ${route.target.name}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) { Icon(Icons.Filled.Clear, contentDescription = "إلغاء المسار") }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                val data = route.data
+                when {
+                    route.isLoading -> Text("عم نحسب الطريق...", style = MaterialTheme.typography.bodyMedium)
+                    data != null -> Text(
+                        "${if (route.mode == "walking") "🚶" else "🚗"} ${formatDuration(data.durationSeconds)} · ${formatDistance(data.distanceMeters)}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    else -> Text(route.error ?: "تعذّر حساب الطريق", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    MapChip("🚗", route.mode == "driving") { if (route.mode != "driving") onMode("driving") }
+                    MapChip("🚶", route.mode == "walking") { if (route.mode != "walking") onMode("walking") }
+                }
+            }
+            TextButton(onClick = onOpenGoogle) { Text("افتح بخرائط جوجل للملاحة الصوتية") }
         }
     }
 }

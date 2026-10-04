@@ -37,14 +37,17 @@ class MerchantRegisterViewModel(
         }
     }
 
-    fun register(businessName: String, categoryId: String?, address: String, phone: String) {
+    fun register(businessName: String, categoryId: String?, address: String, phone: String, whatsapp: String, location: Pair<Double, Double>?) {
         if (businessName.isBlank() || categoryId == null) {
             _uiState.value = _uiState.value.copy(error = "عبّي اسم المحل واختر تصنيف")
             return
         }
         _uiState.value = _uiState.value.copy(isSubmitting = true, error = null)
         viewModelScope.launch {
-            merchantRepository.registerMerchant(businessName, categoryId, address.ifBlank { null }, phone.ifBlank { null })
+            merchantRepository.registerMerchant(
+                businessName, categoryId, address.ifBlank { null }, phone.ifBlank { null },
+                whatsapp.filter { it.isDigit() }.ifBlank { null }, location,
+            )
                 .onSuccess { _uiState.value = _uiState.value.copy(isSubmitting = false, result = it) }
                 .onFailure { _uiState.value = _uiState.value.copy(isSubmitting = false, error = it.message) }
         }

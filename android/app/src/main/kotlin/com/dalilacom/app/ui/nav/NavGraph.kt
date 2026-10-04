@@ -12,7 +12,9 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.auth.LoginScreen
 import com.dalilacom.app.ui.auth.RegisterScreen
 import com.dalilacom.app.ui.auth.SplashScreen
+import com.dalilacom.app.data.RouteTarget
 import com.dalilacom.app.ui.merchant.MerchantDetailScreen
+import com.dalilacom.app.ui.merchant.MerchantProfileScreen
 import com.dalilacom.app.ui.merchant.MerchantRegisterScreen
 import com.dalilacom.app.ui.merchantmode.MerchantModeShell
 import com.dalilacom.app.ui.merchantmode.ProductEditScreen
@@ -68,6 +70,15 @@ fun DalilacomNavGraph(container: AppContainer) {
                 container = container,
                 merchantId = merchantId,
                 onProductClick = { productId -> navController.navigate("product/$productId") },
+                onDirections = { m ->
+                    // Hand the destination to the map screen, which draws the route in-app.
+                    val lat = m.latitude
+                    val lng = m.longitude
+                    if (lat != null && lng != null) {
+                        container.pendingRoute.value = RouteTarget(m.id, m.businessName, lat, lng)
+                        navController.popBackStack("home", inclusive = false)
+                    }
+                },
                 onBack = { navController.popBackStack() },
             )
         }
@@ -97,6 +108,9 @@ fun DalilacomNavGraph(container: AppContainer) {
         }
         composable("favorites") {
             FavoritesScreen(factory = factory, onBack = { navController.popBackStack() }, onMerchantClick = { id -> navController.navigate("merchant/$id") })
+        }
+        composable("merchantProfile") {
+            MerchantProfileScreen(factory = factory, onBack = { navController.popBackStack() })
         }
         composable("merchantHours") {
             HoursScreen(factory = factory, onBack = { navController.popBackStack() })

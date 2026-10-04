@@ -796,3 +796,17 @@ h1, h2, h3 {
 .float-chips .chip.active { box-shadow: 0 6px 16px -6px rgba(186, 42, 52, 0.7); }
 .tabbar { background: color-mix(in srgb, var(--surface) 62%, transparent); border-color: var(--glass-edge); backdrop-filter: blur(18px) saturate(1.5); -webkit-backdrop-filter: blur(18px) saturate(1.5); }
 .sheet { background: color-mix(in srgb, var(--phone-bg) 90%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+
+/* ---- location picker, setup checklist, in-app route ---- */
+.pick-map { height: 220px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); isolation: isolate; }
+.checklist .check-item { padding: 8px 4px; border-top: 1px solid var(--border); cursor: pointer; font-size: 13.5px; }
+.checklist .check-item.ok { cursor: default; color: var(--text-muted); }
+.route-bar { background: var(--glass, var(--surface)); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid var(--glass-edge, var(--border)); border-radius: 18px; padding: 10px 12px; box-shadow: 0 10px 28px -10px rgba(30, 10, 10, 0.55); }
+.route-title { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.route-x { border: none; background: transparent; font-size: 16px; line-height: 1; padding: 2px 6px; cursor: pointer; color: var(--text-muted); }
+.mapfull.routing .map-search, .mapfull.routing .float-chips, .mapfull.routing .float-note { display: none; }
+.mapfull.routing .area-btn { top: 150px; }
+.mapfull.routing .leaflet-top.leaflet-right { top: 146px; }
+.route-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.route-actions { display: flex; gap: 6px; align-items: center; }
+.route-actions .chip { padding: 6px 11px; text-decoration: none; display: inline-flex; }

@@ -9,6 +9,7 @@ import com.dalilacom.app.data.network.RedeemRequest
 import com.dalilacom.app.data.network.RedeemResponse
 import com.dalilacom.app.data.network.RegisterMerchantRequest
 import com.dalilacom.app.data.network.RegisterMerchantResponse
+import com.dalilacom.app.data.network.UpdateMerchantRequest
 import com.dalilacom.app.data.network.VerifyRedeemRequest
 import com.dalilacom.app.data.network.VerifyResponse
 import com.dalilacom.app.data.network.safeApiCall
@@ -23,8 +24,12 @@ class MerchantRepository(
         categoryId: String,
         address: String?,
         phone: String?,
+        whatsapp: String? = null,
+        location: Pair<Double, Double>? = null,
     ): Result<RegisterMerchantResponse> {
-        val response = safeApiCall { api.registerMerchant(RegisterMerchantRequest(businessName, categoryId, address, phone)) }
+        val response = safeApiCall {
+            api.registerMerchant(RegisterMerchantRequest(businessName, categoryId, address, phone, whatsapp, location?.first, location?.second))
+        }
             ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
@@ -65,6 +70,15 @@ class MerchantRepository(
     suspend fun getMerchantMe(): MerchantMeDto? {
         val response = safeApiCall { api.getMerchantMe() } ?: return null
         return if (response.isSuccessful) response.body() else null
+    }
+
+    /** Edits the public listing: name, category, address, contacts and the pin on the map. */
+    suspend fun updateListing(request: UpdateMerchantRequest): Result<MerchantMeDto> {
+        val response = safeApiCall { api.updateMerchantMe(request) }
+            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body)
+        else Result.failure(Exception(errorText(response, "تعذّر حفظ بيانات المحل")))
     }
 
     suspend fun addDiscount(title: String, percent: Int): Result<DiscountDto> {

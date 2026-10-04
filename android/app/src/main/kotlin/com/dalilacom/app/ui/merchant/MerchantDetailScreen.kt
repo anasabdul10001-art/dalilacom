@@ -67,6 +67,7 @@ fun MerchantDetailScreen(
     container: AppContainer,
     merchantId: String,
     onProductClick: (String) -> Unit,
+    onDirections: (MerchantDto) -> Unit,
     onBack: () -> Unit,
 ) {
     val viewModel: MerchantDetailViewModel = viewModel(
@@ -96,7 +97,7 @@ fun MerchantDetailScreen(
                 val merchant = state.merchant!!
                 LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp)) {
                     item { PlaceHeader(merchant) }
-                    item { Spacer(Modifier.height(14.dp)); ActionRow(context, merchant, state.saved, viewModel::toggleSaved) }
+                    item { Spacer(Modifier.height(14.dp)); ActionRow(context, merchant, state.saved, viewModel::toggleSaved, onDirections) }
                     merchant.address?.let { address ->
                         item { Spacer(Modifier.height(12.dp)); Text("📍 $address", style = MaterialTheme.typography.bodyMedium) }
                     }
@@ -148,16 +149,14 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun ActionRow(context: Context, merchant: MerchantDto, saved: Boolean, onToggleSaved: () -> Unit) {
+private fun ActionRow(context: Context, merchant: MerchantDto, saved: Boolean, onToggleSaved: () -> Unit, onDirections: (MerchantDto) -> Unit) {
     val phone = merchant.phone?.trim().orEmpty()
     val whatsapp = merchant.whatsapp.orEmpty().filter { it.isDigit() }
     val hasLocation = merchant.latitude != null && merchant.longitude != null
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         if (phone.isNotEmpty()) PlaceAction(Icons.Filled.Call, "اتصال", Modifier.weight(1f)) { launch(context, Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))) }
         if (whatsapp.isNotEmpty()) PlaceAction(Icons.Filled.Chat, "واتساب", Modifier.weight(1f)) { launch(context, Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$whatsapp"))) }
-        if (hasLocation) PlaceAction(Icons.Filled.Directions, "الاتجاهات", Modifier.weight(1f)) {
-            launch(context, Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${merchant.latitude},${merchant.longitude}")))
-        }
+        if (hasLocation) PlaceAction(Icons.Filled.Directions, "الاتجاهات", Modifier.weight(1f)) { onDirections(merchant) }
         PlaceAction(Icons.Filled.Share, "مشاركة", Modifier.weight(1f)) {
             val text = "${merchant.businessName} على دليلكم\n$SHARE_BASE${merchant.id}"
             launch(context, Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }, "مشاركة المحل"))
