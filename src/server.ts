@@ -1,7 +1,6 @@
 import "dotenv/config";
 import path from "path";
 import express, { NextFunction, Request, Response } from "express";
-import cors from "cors";
 import { ZodError } from "zod";
 import { authRouter } from "./routes/auth.routes";
 import { membershipRouter } from "./routes/membership.routes";
@@ -22,13 +21,13 @@ import { businessRouter, branchRouter } from "./routes/business.routes";
 import { catalogRouter } from "./routes/catalog.routes";
 import { favoritesRouter } from "./routes/favorites.routes";
 import { securityHeaders } from "./lib/securityHeaders";
-import { corsOptions } from "./lib/corsConfig";
+import { corsMiddleware } from "./lib/corsConfig";
 import { ApiError, sendError, sendValidationError } from "./lib/apiError";
 
 const app = express();
 app.set("trust proxy", 1); // Render sits behind a proxy — needed for correct req.ip / X-Forwarded-For
 app.use(securityHeaders);
-app.use(cors(corsOptions));
+app.use(corsMiddleware);
 // rawBody is kept only so Meta webhook signatures can be verified against the exact bytes sent.
 app.use(express.json({ verify: (req, _res, buf) => { (req as any).rawBody = buf; } }));
 
