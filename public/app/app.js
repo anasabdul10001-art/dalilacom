@@ -232,9 +232,16 @@ function errorBanner() {
 
 /* ================= AUTH ================= */
 
+// Login/register are reachable by guests from the map, so they always offer a way back to it.
+function backToMap() {
+  S.homeTab = "discover";
+  reset("home");
+}
+
 function screenLogin() {
   const draft = S.params.draft || {};
   return `
+    <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
     <h1 class="screen-title">تسجيل الدخول</h1>
     <p class="screen-sub">أهلًا فيك بدليلكم — دخّل بياناتك</p>
     <div class="field"><label>الإيميل</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
@@ -266,6 +273,7 @@ function screenRegister() {
   const intent = S.params.intent || "CUSTOMER";
   const draft = S.params.draft || {};
   return `
+    <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
     <h1 class="screen-title">إنشاء حساب جديد</h1>
     <p class="screen-sub">بدك تسجّل كـ:</p>
     <div class="chip-row">
