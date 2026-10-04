@@ -16,6 +16,14 @@ import kotlinx.coroutines.flow.map
 class SessionStore(private val context: Context) {
     private val roleKey = stringPreferencesKey("user_role")
     private val recentKey = stringPreferencesKey("recent_searches")
+    private val themeKey = stringPreferencesKey("theme_mode")
+
+    /** "light" or "dark" once the user picked one with the button; null = follow the phone. */
+    val themeFlow: Flow<String?> = context.dalilacomDataStore.data.map { it[themeKey] }
+
+    suspend fun saveTheme(mode: String) {
+        runCatching { context.dalilacomDataStore.edit { it[themeKey] = mode } }
+    }
 
     val roleFlow: Flow<String?> = context.dalilacomDataStore.data.map { it[roleKey] }
 

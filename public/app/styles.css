@@ -810,3 +810,7 @@ h1, h2, h3 {
 .route-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .route-actions { display: flex; gap: 6px; align-items: center; }
 .route-actions .chip { padding: 6px 11px; text-decoration: none; display: inline-flex; }
+
+/* ---- theme button + dark map tiles ---- */
+.mapfull .theme-fab { bottom: calc(var(--sheet-h, 232px) + 68px); }
+:root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }

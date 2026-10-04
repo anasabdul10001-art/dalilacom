@@ -89,6 +89,8 @@ fun DiscoverScreen(
     factory: ViewModelFactory,
     isGuest: Boolean,
     pendingRoute: MutableStateFlow<RouteTarget?>,
+    isDark: Boolean,
+    onToggleTheme: () -> Unit,
     onLogin: () -> Unit,
     onMerchantClick: (String) -> Unit,
 ) {
@@ -297,6 +299,13 @@ fun DiscoverScreen(
                 contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 16.dp),
             ) { Icon(Icons.Filled.MyLocation, contentDescription = "موقعي") }
+
+            SmallFloatingActionButton(
+                onClick = onToggleTheme,
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                contentColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 72.dp),
+            ) { Text(if (isDark) "☀️" else "🌙") }
 
             if (state.isLoading && state.allMerchants.isEmpty()) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)

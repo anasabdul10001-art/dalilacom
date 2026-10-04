@@ -19,6 +19,24 @@ function S_initialScreen() {
   return "home";
 }
 
+/* ---------------- light / dark mode ---------------- */
+
+// Follows the device until the user picks one with the button; the pick is remembered.
+const darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+function currentTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem("dlk_theme"); } catch (e) {}
+  return saved === "light" || saved === "dark" ? saved : darkQuery && darkQuery.matches ? "dark" : "light";
+}
+function applyTheme() { document.documentElement.setAttribute("data-theme", currentTheme()); }
+function toggleTheme() {
+  try { localStorage.setItem("dlk_theme", currentTheme() === "dark" ? "light" : "dark"); } catch (e) {}
+  applyTheme();
+  render();
+}
+applyTheme();
+if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener("change", () => { applyTheme(); render(); });
+
 /* ---------------- helpers ---------------- */
 
 function esc(s) {
@@ -556,6 +574,7 @@ function tabDiscover() {
 
       <button id="area-btn" class="area-btn" style="display:${d.areaDirty ? "block" : "none"}" onclick="searchThisArea()">🔍 ابحث بهالمنطقة</button>
       <button class="map-fab" title="موقعي" onclick="requestDiscoverLocation(true)">📍</button>
+      <button class="map-fab theme-fab" title="${currentTheme() === "dark" ? "الوضع الفاتح" : "الوضع الداكن"}" onclick="toggleTheme()">${currentTheme() === "dark" ? "☀️" : "🌙"}</button>
 
       <div class="sheet" id="sheet">
         <div class="sheet-handle" onpointerdown="sheetDragStart(event)" onclick="sheetToggle()"><span></span></div>

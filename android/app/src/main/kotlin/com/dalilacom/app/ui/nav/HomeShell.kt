@@ -42,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -71,6 +73,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     var isGuest by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isGuest = !container.authRepository.hasStoredSession() }
     val pendingRoute by container.pendingRoute.collectAsState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     LaunchedEffect(pendingRoute) { if (pendingRoute != null) selectedTab = HomeTab.Discover }
 
     val goLogin = { rootNavController.navigate("login") }
@@ -96,6 +100,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     factory = factory,
                     isGuest = isGuest,
                     pendingRoute = container.pendingRoute,
+                    isDark = isDark,
+                    onToggleTheme = { scope.launch { container.sessionStore.saveTheme(if (isDark) "light" else "dark") } },
                     onLogin = { goLogin() },
                     onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
                 )
