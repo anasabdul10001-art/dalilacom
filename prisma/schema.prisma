@@ -90,6 +90,7 @@ model User {
 
   notifications           Notification[]
   notificationPreferences NotificationPreference[]
+  metaOAuthSessions       MetaOAuthSession[]
 }
 
 // Only a SHA-256 hash of the raw token is ever stored — the raw value exists only in the
@@ -1063,4 +1064,21 @@ model NotificationPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, type])
+}
+
+// A merchant half-way through "log in with Facebook" (section 7/23). The Facebook callback discovers
+// their Pages, and this row carries the encrypted page tokens until they pick which Page (or linked
+// Instagram account) to connect. Short-lived and single-use: completing the flow consumes it, and an
+// expired one is worthless because the page tokens inside it are only ever read through readSession().
+model MetaOAuthSession {
+  id         String    @id @default(uuid()) // the handle handed back to the app or browser
+  userId     String
+  pagesEnc   String // encrypted JSON: [{ id, name, pageAccessToken, instagramAccountId?, instagramUsername? }]
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

@@ -9,8 +9,12 @@ import { drivers } from "../services/channels";
 import { getSettings } from "../services/settings.service";
 import { InsufficientBalanceError } from "../services/wallet.service";
 import { activate, AlreadyRunningError, getSubscription, isRunning, pay, sendThroughConnection } from "../services/responder.service";
+import { metaOAuthRouter } from "./metaOAuth.routes";
 
 export const responderRouter = Router();
+
+// "Log in with Facebook" so a merchant never has to paste a Page token (section 7/23).
+responderRouter.use("/meta", metaOAuthRouter);
 
 // What a user must supply to connect each kind of channel (the UI renders these as form fields).
 const CREDENTIAL_FIELDS = {
