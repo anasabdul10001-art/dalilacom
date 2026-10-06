@@ -1,5 +1,7 @@
 // Replies written by an AI provider. The keys live only in the server environment — never in any client.
 // Groq is tried first (fast and free); Anthropic is the fallback.
+import { prisma } from "../prisma";
+
 export function aiAvailable(): boolean {
   return Boolean(process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY);
 }
@@ -57,16 +59,75 @@ function recordAttempt(provider: Provider): void {
   usage[provider].attempts += 1;
 }
 
+/**
+ * Fire-and-forget durable copy of one counted attempt. Deliberately not awaited and never rethrown:
+ * these counters are diagnostics, so a slow or unreachable database must not delay or break a reply.
+ */
+function persistUsage(provider: Provider, success: boolean): void {
+  const now = new Date();
+  prisma.aiProviderUsage
+    .upsert({
+      where: { provider },
+      create: {
+        provider,
+        attempts: 1,
+        successes: success ? 1 : 0,
+        failures: success ? 0 : 1,
+        lastUsedAt: success ? now : null,
+      },
+      update: {
+        attempts: { increment: 1 },
+        ...(success ? { successes: { increment: 1 }, lastUsedAt: now } : { failures: { increment: 1 } }),
+      },
+    })
+    .catch(() => {
+      /* ignore: the in-memory counters still tell the story for this process */
+    });
+}
+
 /** Records the outcome of an attempt and passes the answer through untouched. */
 function recordAnswer(provider: Provider, text: string | null): string | null {
   if (text) {
     usage[provider].successes += 1;
     lastProvider = provider;
     lastUsedAt = new Date().toISOString();
+    persistUsage(provider, true);
     return text;
   }
   usage[provider].failures += 1;
+  persistUsage(provider, false);
   return null;
+}
+
+/**
+ * The same counters, read back from the database, so they survive a deploy or a free-tier sleep.
+ * Returns null when the database cannot be reached, letting the admin endpoint say "unknown"
+ * instead of failing.
+ */
+export async function aiTotals(): Promise<{
+  groq: ProviderUsage;
+  anthropic: ProviderUsage;
+  lastProvider: Provider | null;
+  lastUsedAt: string | null;
+} | null> {
+  try {
+    const rows = await prisma.aiProviderUsage.findMany();
+    const pick = (provider: Provider): ProviderUsage => {
+      const row = rows.find((r) => r.provider === provider);
+      return { attempts: row?.attempts ?? 0, successes: row?.successes ?? 0, failures: row?.failures ?? 0 };
+    };
+    const answered = rows
+      .filter((r) => r.lastUsedAt !== null)
+      .sort((a, b) => (b.lastUsedAt as Date).getTime() - (a.lastUsedAt as Date).getTime())[0];
+    return {
+      groq: pick("groq"),
+      anthropic: pick("anthropic"),
+      lastProvider: (answered?.provider as Provider | undefined) ?? null,
+      lastUsedAt: answered?.lastUsedAt?.toISOString() ?? null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function classifyIntent(message: string): Promise<string | null> {

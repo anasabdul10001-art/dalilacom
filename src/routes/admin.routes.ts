@@ -6,7 +6,7 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
-import { aiProviderStatus, aiUsage } from "../services/ai.service";
+import { aiProviderStatus, aiTotals, aiUsage } from "../services/ai.service";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole(Role.ADMIN));
@@ -168,6 +168,10 @@ adminRouter.get("/responder/subscriptions", async (_req, res) => {
 
 /* ---------------- AI provider check (booleans + counters only — no keys, no message text) ---------------- */
 
-adminRouter.get("/ai-status", (_req, res) => {
-  res.json({ ...aiProviderStatus(), usage: aiUsage() });
+adminRouter.get("/ai-status", async (_req, res) => {
+  res.json({
+    ...aiProviderStatus(),
+    usage: aiUsage(), // this process, exact
+    usageTotals: await aiTotals(), // durable, survives deploys; null if the database is unreachable
+  });
 });

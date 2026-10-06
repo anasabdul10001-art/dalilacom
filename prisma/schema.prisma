@@ -982,3 +982,16 @@ model CategoryTranslation {
 
   @@unique([categoryId, lang])
 }
+
+// Durable AI provider counters, one row per provider, so "did Groq actually answer?" survives a
+// deploy or a free-tier sleep. ai.service.ts writes these best-effort: a failed write is swallowed
+// and can never break a customer reply, which is why GET /admin/ai-status reports them separately
+// from the exact in-memory counters of the running process.
+model AiProviderUsage {
+  provider   String    @id
+  attempts   Int       @default(0)
+  successes  Int       @default(0)
+  failures   Int       @default(0)
+  lastUsedAt DateTime?
+  updatedAt  DateTime  @updatedAt
+}

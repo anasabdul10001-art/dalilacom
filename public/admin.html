@@ -205,17 +205,30 @@
     <!-- AI PROVIDER STATUS -->
     <div class="section" id="section-ai" style="display:none">
       <h2>حالة الذكاء الاصطناعي</h2>
-      <p class="subtitle">أي مزوّد مضبوط على السيرفر، ومين فعليًا جاوب. الأرقام من ذاكرة الخدمة الحالية — تتصفّر مع كل نشر أو نوم للخطة المجانية.</p>
+      <p class="subtitle">أي مزوّد مضبوط على السيرفر، ومين فعليًا جاوب — من ذاكرة الخدمة الحالية ومن قاعدة البيانات.</p>
       <div class="card">
         <button class="small" onclick="loadAiStatus()">🔄 تحديث</button>
         <span id="ai-msg" class="muted" style="margin-right:10px"></span>
+        <p class="muted" style="margin-top:14px">المزوّد المُجرَّب أولًا: <b id="ai-active">—</b></p>
+      </div>
+      <div class="card">
+        <h3>الجلسة الحالية</h3>
+        <p class="muted">أرقام الخدمة الشغّالة هلق بالضبط — تتصفّر مع كل نشر أو نوم للخطة المجانية.</p>
         <table style="margin-top:12px">
           <thead><tr><th>المزوّد</th><th>المفتاح مضبوط؟</th><th>محاولات</th><th>نجاح</th><th>فشل</th></tr></thead>
-          <tbody id="ai-body"></tbody>
+          <tbody id="ai-session-body"></tbody>
         </table>
-        <p class="muted" style="margin-top:14px">المزوّد المُجرَّب أولًا: <b id="ai-active">—</b></p>
-        <p class="muted">آخر مزوّد جاوب فعلًا: <b id="ai-last">—</b> — <b id="ai-last-at">—</b></p>
+        <p class="muted" style="margin-top:14px">آخر مزوّد جاوب فعلًا: <b id="ai-last">—</b> — <b id="ai-last-at">—</b></p>
         <p class="muted">إذا كل الأرقام أصفار، معناها ما مرّ ولا ردّ على المجيب الآلي بعد — مو عطل.</p>
+      </div>
+      <div class="card">
+        <h3>الإجمالي المحفوظ</h3>
+        <p class="muted">محفوظ بقاعدة البيانات — بيبقى بعد كل النشرات وإعادة التشغيل.</p>
+        <table style="margin-top:12px">
+          <thead><tr><th>المزوّد</th><th>المفتاح مضبوط؟</th><th>محاولات</th><th>نجاح</th><th>فشل</th></tr></thead>
+          <tbody id="ai-totals-body"></tbody>
+        </table>
+        <p class="muted" style="margin-top:14px" id="ai-totals-note"></p>
       </div>
     </div>
 
@@ -325,21 +338,39 @@ function showSection(name) {
 async function loadAiStatus() {
   const { ok, data } = await api('GET', '/admin/ai-status');
   if (!ok) { logout(); return; }
-  const rows = [
-    { label: 'Groq — llama-3.3-70b-versatile', configured: data.groqConfigured, u: data.usage.groq },
-    { label: 'Anthropic — Claude (احتياطي)', configured: data.anthropicConfigured, u: data.usage.anthropic },
+
+  const providers = [
+    { key: 'groq', label: 'Groq — llama-3.3-70b-versatile', configured: data.groqConfigured },
+    { key: 'anthropic', label: 'Anthropic — Claude (احتياطي)', configured: data.anthropicConfigured },
   ];
-  document.getElementById('ai-body').innerHTML = rows.map(r => `
-    <tr>
-      <td>${r.label}</td>
-      <td><span class="badge ${r.configured ? 'APPROVED' : 'REJECTED'}">${r.configured ? 'نعم' : 'لا'}</span></td>
-      <td>${r.u.attempts}</td>
-      <td>${r.u.successes}</td>
-      <td>${r.u.failures}</td>
-    </tr>`).join('');
+  const rows = (usage) => providers.map(p => {
+    const u = usage[p.key];
+    return `
+      <tr>
+        <td>${p.label}</td>
+        <td><span class="badge ${p.configured ? 'APPROVED' : 'REJECTED'}">${p.configured ? 'نعم' : 'لا'}</span></td>
+        <td>${u.attempts}</td>
+        <td>${u.successes}</td>
+        <td>${u.failures}</td>
+      </tr>`;
+  }).join('');
+
+  document.getElementById('ai-session-body').innerHTML = rows(data.usage);
   document.getElementById('ai-active').textContent = data.activeProvider || 'لا يوجد أي مزوّد مضبوط';
   document.getElementById('ai-last').textContent = data.usage.lastProvider || '—';
   document.getElementById('ai-last-at').textContent = data.usage.lastUsedAt ? new Date(data.usage.lastUsedAt).toLocaleString() : 'لا ردّ بعد';
+
+  const totals = data.usageTotals;
+  if (totals) {
+    document.getElementById('ai-totals-body').innerHTML = rows(totals);
+    document.getElementById('ai-totals-note').textContent = totals.lastUsedAt
+      ? `آخر جواب مسجّل: ${totals.lastProvider} — ${new Date(totals.lastUsedAt).toLocaleString()}`
+      : 'ما في ولا جواب مسجّل بعد';
+  } else {
+    document.getElementById('ai-totals-body').innerHTML = '<tr><td colspan="5" class="muted">غير متاح — تعذّر الوصول لقاعدة البيانات</td></tr>';
+    document.getElementById('ai-totals-note').textContent = '';
+  }
+
   document.getElementById('ai-msg').textContent = 'آخر تحديث ' + new Date().toLocaleTimeString();
 }
 
