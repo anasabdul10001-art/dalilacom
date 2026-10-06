@@ -1,6 +1,7 @@
-// Replies written by Claude. The key lives only in the server environment — never in any client.
+// Replies written by an AI provider. The keys live only in the server environment — never in any client.
+// Groq is tried first (fast and free); Anthropic is the fallback.
 export function aiAvailable(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY);
 }
 
 export async function classifyIntent(message: string): Promise<string | null> {
@@ -32,8 +33,44 @@ export async function generateReply(opts: {
   return ask(system, opts.message, 400);
 }
 
+// Groq speaks the OpenAI chat-completions shape. No key -> no request at all, so an
+// Anthropic-only deployment never pays for a doomed Groq round trip.
+async function askGroq(system: string, user: string, maxTokens: number): Promise<string | null> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        max_tokens: maxTokens,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    return body.choices?.[0]?.message?.content?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 async function ask(system: string, user: string, maxTokens: number): Promise<string | null> {
   if (!aiAvailable()) return null;
+
+  const groq = await askGroq(system, user, maxTokens);
+  if (groq) return groq;
+
+  // Fallback needs its own key check: aiAvailable() is true when only Groq is configured,
+  // and sending Anthropic a request with an undefined key would fail anyway.
+  if (!process.env.ANTHROPIC_API_KEY) return null;
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

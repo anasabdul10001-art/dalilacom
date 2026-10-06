@@ -22,6 +22,9 @@ services:
         value: "https://dalilacom-api.onrender.com"
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Tried before Anthropic (see src/services/ai.service.ts). Leave unset to keep using Anthropic only.
+      - key: GROQ_API_KEY
+        sync: false
       # Set once in the Render dashboard to bootstrap the first admin (never generated/committed —
       # section: Admin Credentials). Leave unset after the admin exists; use /auth/forgot-password
       # to change the password afterwards.
