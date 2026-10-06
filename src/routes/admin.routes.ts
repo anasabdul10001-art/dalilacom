@@ -147,8 +147,10 @@ adminRouter.post("/wallet/adjust", async (req, res) => {
   const user = await prisma.user.findUnique({ where: { email: parsed.data.userEmail } });
   if (!user) return sendError(res, 404, "NOT_FOUND", "No user with that email");
   try {
-    const balance = await prisma.$transaction((tx) => adjustBalance(tx, user.id, parsed.data.amount, "ADJUSTMENT", parsed.data.note));
-    res.json({ userId: user.id, balance });
+    const { balance, transactionId } = await prisma.$transaction((tx) =>
+      adjustBalance(tx, user.id, parsed.data.amount, "ADJUSTMENT", parsed.data.note),
+    );
+    res.json({ userId: user.id, balance, transactionId });
   } catch (err) {
     if (err instanceof InsufficientBalanceError) return sendError(res, 409, "CONFLICT", "الرصيد ما بيكفي للخصم");
     throw err;

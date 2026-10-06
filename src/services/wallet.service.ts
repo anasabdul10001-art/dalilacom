@@ -6,21 +6,25 @@ export class InsufficientBalanceError extends Error {
   }
 }
 
-/** Every balance change goes through here, inside the caller's transaction, so wallet and ledger never drift. */
+/**
+ * Every balance change goes through here, inside the caller's transaction, so wallet and ledger never
+ * drift. Returns the new balance and the id of the ledger row it wrote, so the caller can reference
+ * the payment it just made (e.g. a membership stores which transaction bought it).
+ */
 export async function adjustBalance(
   tx: Prisma.TransactionClient,
   userId: string,
   amount: number,
   type: WalletTxType,
   ref?: string,
-) {
+): Promise<{ balance: number; transactionId: string }> {
   const wallet = await tx.wallet.upsert({ where: { userId }, update: {}, create: { userId } });
   if (amount < 0 && wallet.balance < -amount) {
     throw new InsufficientBalanceError(wallet.balance, -amount);
   }
   const updated = await tx.wallet.update({ where: { userId }, data: { balance: { increment: amount } } });
-  await tx.walletTransaction.create({ data: { userId, type, amount, ref } });
-  return updated.balance;
+  const created = await tx.walletTransaction.create({ data: { userId, type, amount, ref } });
+  return { balance: updated.balance, transactionId: created.id };
 }
 
 // USDT on the TRON network (TRC20) — official USDT contract.

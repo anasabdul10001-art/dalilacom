@@ -161,6 +161,11 @@ model MembershipPlan {
   durationDays Int
   priceCents   Int
   currency     String   @default("EUR")
+  // What subscribing actually costs in wallet credits (the wallet's own unit, section 51). priceCents
+  // is the price shown to the customer in `currency`; this is the amount debited. Null on a plan whose
+  // priceCents > 0 means the admin has not priced it in credits yet, and subscribing is refused rather
+  // than converting currencies with a rate nobody set (sections 24/60/64).
+  priceCredits Int?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -179,6 +184,10 @@ model Membership {
   endDate              DateTime
   qrSecret             String // per-membership secret used to derive rotating QR tokens (section 62)
   lastRedeemedTimeStep BigInt? // replay-protection watermark for QR redemption
+  // What this membership actually cost when it was bought (a snapshot, so a later price change
+  // doesn't rewrite history) and the wallet-ledger row that paid for it (section 58 accounting).
+  creditsPaid          Int              @default(0)
+  paidTransactionId    String?
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
@@ -440,6 +449,7 @@ model PlatformSetting {
 enum WalletTxType {
   TOPUP
   SUBSCRIPTION
+  MEMBERSHIP // a customer membership was bought out of the wallet balance
   ADJUSTMENT
 }
 

@@ -148,14 +148,16 @@
         <div class="row">
           <div><label>السعر (سنت)</label><input id="plan-price" value="999" /></div>
           <div><label>العملة</label><input id="plan-currency" value="EUR" /></div>
+          <div><label>السعر بالكوينز (المخصوم من المحفظة)</label><input id="plan-credits" placeholder="مثال: 1000" /></div>
         </div>
         <button style="margin-top:12px" onclick="addPlan()">إضافة</button>
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>الاسم</th><th>المدة</th><th>السعر</th><th>العملة</th><th>الحالة</th><th></th></tr></thead>
+          <thead><tr><th>الاسم</th><th>المدة</th><th>السعر</th><th>العملة</th><th>السعر بالكوينز</th><th>الحالة</th><th></th></tr></thead>
           <tbody id="plans-body"></tbody>
         </table>
+        <p class="muted" style="margin-top:10px">الباقة اللي سعرها أكبر من صفر ولازم يكون لها سعر بالكوينز، وإلا ما بيقدر حدا يشترك فيها. الباقة اللي سعرها صفر مجانية وبتتفعّل فورًا.</p>
       </div>
     </div>
 
@@ -473,20 +475,25 @@ async function loadPlans() {
       <td><input class="inline-input" id="plan-duration-${p.id}" value="${p.durationDays}" /> يوم</td>
       <td><input class="inline-input" id="plan-price-${p.id}" value="${money(p.priceCents)}" /></td>
       <td><input class="inline-input" style="width:60px" id="plan-currency-${p.id}" value="${p.currency}" /></td>
+      <td><input class="inline-input" style="width:90px" id="plan-credits-${p.id}" value="${p.priceCredits ?? ''}" placeholder="غير مضبوط" />
+        ${p.priceCents > 0 && p.priceCredits == null ? '<span class="badge REJECTED" title="ما حدا بيقدر يشترك بهي الباقة">ما في سعر</span>' : ''}</td>
       <td><span class="badge ${p.isActive ? 'active' : 'inactive'}">${p.isActive ? 'فعالة' : 'معطّلة'}</span></td>
       <td>
         <button class="small" onclick="savePlan('${p.id}')">💾 حفظ</button>
         <button class="small secondary" onclick="togglePlan('${p.id}', ${p.isActive})">${p.isActive ? 'تعطيل' : 'تفعيل'}</button>
       </td>
-    </tr>`).join('') || `<tr><td colspan="6" class="muted">لا يوجد خطط بعد</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="7" class="muted">لا يوجد خطط بعد</td></tr>`;
 }
 async function addPlan() {
   const name = document.getElementById('plan-name').value.trim();
   const durationDays = parseInt(document.getElementById('plan-duration').value, 10);
   const priceCents = parseInt(document.getElementById('plan-price').value, 10);
   const currency = document.getElementById('plan-currency').value.trim() || 'EUR';
+  const creditsRaw = document.getElementById('plan-credits').value.trim();
+  const priceCredits = creditsRaw === '' ? null : parseInt(creditsRaw, 10);
   if (!name || !durationDays) return;
-  const { ok, data } = await api('POST', '/membership/plans', { name, durationDays, priceCents, currency });
+  if (priceCredits !== null && (!Number.isInteger(priceCredits) || priceCredits < 0)) { alert('السعر بالكوينز لازم يكون رقم صحيح'); return; }
+  const { ok, data } = await api('POST', '/membership/plans', { name, durationDays, priceCents, currency, priceCredits });
   if (!ok) { alert(errText(data, 'خطأ')); return; }
   document.getElementById('plan-name').value = '';
   loadPlans();
@@ -496,7 +503,10 @@ async function savePlan(id) {
   const durationDays = parseInt(document.getElementById('plan-duration-' + id).value, 10);
   const priceCents = Math.round(parseFloat(document.getElementById('plan-price-' + id).value) * 100);
   const currency = document.getElementById('plan-currency-' + id).value.trim();
-  const { ok, data } = await api('PATCH', '/membership/plans/' + id, { name, durationDays, priceCents, currency });
+  const creditsRaw = document.getElementById('plan-credits-' + id).value.trim();
+  const priceCredits = creditsRaw === '' ? null : parseInt(creditsRaw, 10);
+  if (priceCredits !== null && (!Number.isInteger(priceCredits) || priceCredits < 0)) { alert('السعر بالكوينز لازم يكون رقم صحيح'); return; }
+  const { ok, data } = await api('PATCH', '/membership/plans/' + id, { name, durationDays, priceCents, currency, priceCredits });
   if (!ok) alert(errText(data, 'تعذّر الحفظ'));
   loadPlans();
 }

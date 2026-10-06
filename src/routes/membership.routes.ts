@@ -6,6 +6,8 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { Role } from "@prisma/client";
 import { notifyExpiringMembership } from "../services/notification.service";
+import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
+import { getSettings } from "../services/settings.service";
 
 export const membershipRouter = Router();
 
@@ -24,6 +26,9 @@ const createPlanSchema = z.object({
   durationDays: z.number().int().positive(),
   priceCents: z.number().int().nonnegative(),
   currency: z.string().length(3).default("EUR"),
+  // What the wallet is debited on subscribe. Null/omitted on a priced plan means "not priced in
+  // credits yet", and subscribing is refused until the admin sets it.
+  priceCredits: z.number().int().nonnegative().nullable().optional(),
 });
 
 membershipRouter.post("/plans", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
@@ -46,6 +51,7 @@ const updatePlanSchema = z.object({
   durationDays: z.number().int().positive().optional(),
   priceCents: z.number().int().nonnegative().optional(),
   currency: z.string().length(3).optional(),
+  priceCredits: z.number().int().nonnegative().nullable().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -86,19 +92,60 @@ membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
     return sendError(res, 409, "CONFLICT", "User already has an active membership");
   }
 
+  // A plan that costs money must also say what it costs in wallet credits (section 51/60). Refusing
+  // is deliberate: converting `currency` to credits would invent an exchange rate nobody configured.
+  // A plan priced 0 is free and activates directly, which is how sections 24/61 allow 0 pricing.
+  const charge = plan.priceCents > 0 ? plan.priceCredits : 0;
+  if (charge === null || charge === undefined) {
+    const { creditName } = await getSettings();
+    return sendError(
+      res,
+      409,
+      "PLAN_PRICING_NOT_CONFIGURED",
+      `سعر هذه الباقة غير مضبوط بعد — لازم الأدمن يحدد سعرها بوحدة ${creditName}.`,
+    );
+  }
+
   const startDate = new Date();
   const endDate = new Date(startDate.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
 
-  const membership = await prisma.membership.create({
-    data: {
-      userId: req.user!.id,
-      planId: plan.id,
-      memberNumber: generateMemberNumber(),
-      qrSecret: crypto.randomBytes(32).toString("hex"),
-      startDate,
-      endDate,
-    },
-  });
+  let membership;
+  let walletBalance: number | null = null;
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Charging happens inside the same transaction as the membership, so a membership can never
+      // exist without the payment that bought it — and a debit can never survive a failed create.
+      const paid =
+        charge > 0 ? await adjustBalance(tx, req.user!.id, -charge, "MEMBERSHIP", `membership:${plan.name}`) : null;
+
+      const created = await tx.membership.create({
+        data: {
+          userId: req.user!.id,
+          planId: plan.id,
+          memberNumber: generateMemberNumber(),
+          qrSecret: crypto.randomBytes(32).toString("hex"),
+          startDate,
+          endDate,
+          creditsPaid: charge,
+          paidTransactionId: paid?.transactionId ?? null,
+        },
+      });
+      return { created, balance: paid?.balance ?? null };
+    });
+    membership = result.created;
+    walletBalance = result.balance;
+  } catch (err) {
+    if (err instanceof InsufficientBalanceError) {
+      return sendError(
+        res,
+        409,
+        "INSUFFICIENT_BALANCE",
+        `رصيدك ${err.balance} والاشتراك بدو ${err.needed}. اشحن محفظتك أولًا.`,
+        { balance: err.balance, needed: err.needed },
+      );
+    }
+    throw err;
+  }
 
   res.status(201).json({
     id: membership.id,
@@ -106,6 +153,9 @@ membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
     status: membership.status,
     startDate: membership.startDate,
     endDate: membership.endDate,
+    creditsPaid: membership.creditsPaid,
+    paidTransactionId: membership.paidTransactionId,
+    walletBalance,
   });
 });
 
@@ -130,6 +180,7 @@ membershipRouter.get("/me", requireAuth, async (req, res) => {
     status: isExpired ? "EXPIRED" : membership.status,
     startDate: membership.startDate,
     endDate: membership.endDate,
+    creditsPaid: membership.creditsPaid,
     plan: { name: membership.plan.name, durationDays: membership.plan.durationDays },
   });
 });

@@ -291,13 +291,25 @@ function renderCustomerStatus() {
 // ---- membership ----
 async function loadPlans() {
   const { data } = await api('GET', '/membership/plans');
-  document.getElementById('plans-list').innerHTML = data.map(p =>
-    `<div class="item">${p.name} — ${p.durationDays} يوم — ${money(p.priceCents)}
-     <button class="small" onclick="subscribe('${p.id}')">اشترك</button></div>`).join('') || '<div class="muted">لا يوجد خطط</div>';
+  document.getElementById('plans-list').innerHTML = data.map(p => {
+    // priceCredits is what the wallet is actually debited; without it on a priced plan nobody can subscribe.
+    const price = p.priceCents > 0
+      ? (p.priceCredits == null ? '⚠️ السعر بالكوينز غير مضبوط' : `${p.priceCredits} كوين`)
+      : 'مجانية';
+    return `<div class="item">${p.name} — ${p.durationDays} يوم — ${money(p.priceCents)} — <b>${price}</b>
+     <button class="small" onclick="subscribe('${p.id}')">اشترك</button></div>`;
+  }).join('') || '<div class="muted">لا يوجد خطط</div>';
 }
 async function subscribe(planId) {
   const { ok, data } = await api('POST', '/membership/subscribe', { planId }, state.customerToken);
-  if (ok) document.getElementById('membership-info').textContent = `✅ ${data.memberNumber} — ينتهي ${new Date(data.endDate).toLocaleDateString()}`;
+  if (ok) {
+    document.getElementById('membership-info').textContent =
+      `✅ ${data.memberNumber} — ينتهي ${new Date(data.endDate).toLocaleDateString()}` +
+      (data.creditsPaid ? ` — مدفوع ${data.creditsPaid} كوين (الرصيد: ${data.walletBalance})` : ' — مجانية');
+  } else {
+    log('خطأ بالاشتراك', data);
+    alert(errText(data, 'تعذّر الاشتراك'));
+  }
 }
 async function showQr() {
   const { ok, data } = await api('GET', '/qr/mine', null, state.customerToken);
