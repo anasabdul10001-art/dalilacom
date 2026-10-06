@@ -6,6 +6,7 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
+import { aiProviderStatus } from "../services/ai.service";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole(Role.ADMIN));
@@ -163,4 +164,10 @@ adminRouter.get("/responder/subscriptions", async (_req, res) => {
       take: 200,
     }),
   );
+});
+
+/* ---------------- AI provider check (booleans only — proves which provider the server would use) ---------------- */
+
+adminRouter.get("/ai-status", (_req, res) => {
+  res.json(aiProviderStatus());
 });

@@ -4,6 +4,24 @@ export function aiAvailable(): boolean {
   return Boolean(process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY);
 }
 
+/**
+ * Which providers are configured, and which one a call would actually use first (ask() always tries
+ * Groq before Anthropic). Booleans only — this backs the admin sanity check, it never returns a key.
+ */
+export function aiProviderStatus(): {
+  groqConfigured: boolean;
+  anthropicConfigured: boolean;
+  activeProvider: "groq" | "anthropic" | null;
+} {
+  const groqConfigured = Boolean(process.env.GROQ_API_KEY);
+  const anthropicConfigured = Boolean(process.env.ANTHROPIC_API_KEY);
+  return {
+    groqConfigured,
+    anthropicConfigured,
+    activeProvider: groqConfigured ? "groq" : anthropicConfigured ? "anthropic" : null,
+  };
+}
+
 export async function classifyIntent(message: string): Promise<string | null> {
   const text = await ask(
     "Classify the customer message into exactly one word: purchase, inquiry, complaint, praise, other. Reply with the single word only.",
