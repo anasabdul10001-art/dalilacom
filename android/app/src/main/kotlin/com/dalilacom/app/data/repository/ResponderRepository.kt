@@ -3,6 +3,7 @@ package com.dalilacom.app.data.repository
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.CreateRuleRequest
 import com.dalilacom.app.data.network.ConnectRequest
+import com.dalilacom.app.data.network.MetaOAuthCompleteRequest
 import com.dalilacom.app.data.network.ProfileRequest
 import com.dalilacom.app.data.network.SendReplyRequest
 import com.dalilacom.app.data.network.ToggleRequest
@@ -46,6 +47,13 @@ class ResponderRepository(private val api: ApiService) {
     suspend fun inbox() = call("تعذّر تحميل الوارد") { api.getResponderInbox() }
     suspend fun sendReply(id: String, reply: String) =
         call("تعذّر إرسال الرد") { api.sendInboxReply(id, SendReplyRequest(reply)) }
+
+    // ---- Facebook Login (no Page token is ever typed by the merchant) ----
+    suspend fun metaStatus() = call("تعذّر تحميل حالة الربط بفيسبوك") { api.getMetaOAuthStatus() }
+    suspend fun metaStart() = call("تعذّر بدء الربط بفيسبوك") { api.startMetaOAuth() }
+    suspend fun metaSession(sessionId: String) = call("تعذّر تحميل صفحاتك") { api.getMetaOAuthSession(sessionId) }
+    suspend fun metaComplete(sessionId: String, pageId: String, driver: String) =
+        call("تعذّر ربط الصفحة") { api.completeMetaOAuth(MetaOAuthCompleteRequest(sessionId, pageId, driver)) }
 
     suspend fun wallet() = call("تعذّر تحميل المحفظة") { api.getWallet() }
     suspend fun walletMethods() = call("تعذّر تحميل طرق الدفع") { api.getWalletMethods() }

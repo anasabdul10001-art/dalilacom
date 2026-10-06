@@ -129,3 +129,39 @@ data class PostDto(
     val url: String? = null,
     val image: String? = null,
 )
+
+/* ---------------- "Log in with Facebook" so a merchant never pastes a Page token (section 7/23) ---------------- */
+
+@Serializable
+data class MetaOAuthStatusDto(
+    val available: Boolean = false,
+    val responderRunning: Boolean = false,
+    val redirectUri: String = "",
+    val scopes: List<String> = emptyList(),
+    val deepLink: String = "",
+)
+
+@Serializable
+data class MetaOAuthStartDto(
+    val url: String,
+    val redirectUri: String = "",
+    val scopes: List<String> = emptyList(),
+    val expiresInMinutes: Int = 15,
+)
+
+@Serializable
+data class MetaPageDto(
+    val id: String,
+    val name: String = "",
+    val hasInstagram: Boolean = false,
+    val instagramUsername: String? = null,
+)
+
+@Serializable
+data class MetaOAuthSessionDto(val sessionId: String, val pages: List<MetaPageDto> = emptyList())
+
+@Serializable
+data class MetaOAuthCompleteRequest(val sessionId: String, val pageId: String, val driver: String = "FACEBOOK")
+
+@Serializable
+data class MetaConnectionDto(val id: String, val externalAccountId: String? = null)

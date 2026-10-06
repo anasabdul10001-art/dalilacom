@@ -205,6 +205,19 @@ interface ApiService {
     @POST("responder/inbox/{id}/send")
     suspend fun sendInboxReply(@Path("id") id: String, @Body body: SendReplyRequest): Response<kotlinx.serialization.json.JsonElement>
 
+    // Facebook Login: the merchant signs in to Facebook here instead of pasting a Page token.
+    @GET("responder/meta/oauth/status")
+    suspend fun getMetaOAuthStatus(): Response<MetaOAuthStatusDto>
+
+    @GET("responder/meta/oauth/start")
+    suspend fun startMetaOAuth(): Response<MetaOAuthStartDto>
+
+    @GET("responder/meta/oauth/session/{id}")
+    suspend fun getMetaOAuthSession(@Path("id") id: String): Response<MetaOAuthSessionDto>
+
+    @POST("responder/meta/oauth/complete")
+    suspend fun completeMetaOAuth(@Body body: MetaOAuthCompleteRequest): Response<MetaConnectionDto>
+
     @GET("wallet")
     suspend fun getWallet(): Response<WalletDto>
 

@@ -6,6 +6,8 @@ import com.dalilacom.app.data.network.ChannelDto
 import com.dalilacom.app.data.network.ConnectionDto
 import com.dalilacom.app.data.network.CreateRuleRequest
 import com.dalilacom.app.data.network.InboxItemDto
+import com.dalilacom.app.data.network.MetaOAuthStatusDto
+import com.dalilacom.app.data.network.MetaPageDto
 import com.dalilacom.app.data.network.PostDto
 import com.dalilacom.app.data.network.ResponderStatusDto
 import com.dalilacom.app.data.network.RuleDto
@@ -32,6 +34,14 @@ data class ResponderUiState(
     val postsLoading: Boolean = false,
     val postsConnectionId: String? = null,
     val selectedPostIds: Set<String> = emptySet(),
+    // Facebook Login state: the status tells us whether the feature is configured at all, metaAuthUrl
+    // is a URL the screen must open in a browser, and metaPages is the picker once the browser hands
+    // the flow back to the app.
+    val metaStatus: MetaOAuthStatusDto? = null,
+    val metaAuthUrl: String? = null,
+    val metaSessionId: String? = null,
+    val metaPages: List<MetaPageDto> = emptyList(),
+    val metaLoading: Boolean = false,
 )
 
 class ResponderViewModel(private val repository: ResponderRepository) : ViewModel() {
@@ -52,6 +62,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
             val connections = repository.connections().getOrNull().orEmpty()
             val rules = repository.rules().getOrNull().orEmpty()
             val inbox = repository.inbox().getOrNull().orEmpty()
+            val metaStatus = repository.metaStatus().getOrNull()
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -61,6 +72,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
                     connections = connections,
                     rules = rules,
                     inbox = inbox,
+                    metaStatus = metaStatus ?: it.metaStatus,
                 )
             }
         }
@@ -131,6 +143,73 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
     }
 
     fun deleteRule(id: String) = act("تم حذف القاعدة") { repository.deleteRule(id) }
+
+    /* ---------------- Facebook Login (section 7/23) ---------------- */
+
+    /** Asks the server for a Facebook dialog URL; the screen opens it in a browser. */
+    fun startMetaOAuth() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(metaLoading = true, error = null, info = null, metaPages = emptyList()) }
+            val result = repository.metaStart()
+            _uiState.update {
+                it.copy(
+                    metaLoading = false,
+                    metaAuthUrl = result.getOrNull()?.url,
+                    error = result.exceptionOrNull()?.message,
+                )
+            }
+        }
+    }
+
+    /** The URL was handed to the browser — clear it so a recomposition doesn't open it twice. */
+    fun consumeMetaAuthUrl() = _uiState.update { it.copy(metaAuthUrl = null) }
+
+    /** The app path: the browser came back with a session id, so the picker happens in the app. */
+    fun loadMetaSession(sessionId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(metaLoading = true, metaSessionId = sessionId, error = null, info = null) }
+            val result = repository.metaSession(sessionId)
+            _uiState.update {
+                it.copy(
+                    metaLoading = false,
+                    metaPages = result.getOrNull()?.pages.orEmpty(),
+                    metaSessionId = result.getOrNull()?.sessionId ?: sessionId,
+                    error = result.exceptionOrNull()?.message,
+                )
+            }
+        }
+    }
+
+    fun completeMetaOAuth(pageId: String, driver: String) {
+        val sessionId = _uiState.value.metaSessionId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(metaLoading = true, error = null, info = null) }
+            val result = repository.metaComplete(sessionId, pageId, driver)
+            val failure = result.exceptionOrNull()
+            _uiState.update {
+                it.copy(
+                    metaLoading = false,
+                    error = failure?.message,
+                    info = if (failure == null) "تم ربط الصفحة ✅" else null,
+                    metaPages = if (failure == null) emptyList() else it.metaPages,
+                )
+            }
+            if (failure == null) refresh()
+        }
+    }
+
+    fun clearMetaPages() = _uiState.update { it.copy(metaPages = emptyList(), metaSessionId = null) }
+
+    /** Back from the browser through the dalilacom:// deep link: report it and reload the channels. */
+    fun onMetaReturned(ok: Boolean, connectionId: String?) {
+        _uiState.update {
+            it.copy(
+                info = if (ok) "تم ربط فيسبوك ✅" else null,
+                error = if (ok) null else "ما تم ربط الصفحة — جرّب من جديد",
+            )
+        }
+        if (ok && connectionId != null) refresh()
+    }
 
     fun sendReply(id: String, reply: String) {
         if (reply.isBlank()) return

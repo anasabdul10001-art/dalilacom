@@ -1,5 +1,8 @@
 package com.dalilacom.app.ui.responder
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +29,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,12 +37,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.dalilacom.app.data.network.ChannelDto
 import com.dalilacom.app.data.network.InboxItemDto
+import com.dalilacom.app.data.network.MetaPageDto
 import com.dalilacom.app.data.network.ResponderStatusDto
 import com.dalilacom.app.ui.ViewModelFactory
 
@@ -58,10 +63,40 @@ private fun interactionLabel(status: String) = when (status) {
     else -> "تم التجاهل"
 }
 
+/** Opens the Facebook dialog in the phone's browser — no WebView, no extra dependency. */
+private fun openInBrowser(context: Context, url: String) {
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
 @Composable
-fun ResponderScreen(factory: ViewModelFactory, onBack: () -> Unit, onOpenWallet: () -> Unit) {
+fun ResponderScreen(
+    factory: ViewModelFactory,
+    onBack: () -> Unit,
+    onOpenWallet: () -> Unit,
+    /** Come back from the browser through dalilacom://responder/meta (null unless we were sent there). */
+    metaOk: Boolean? = null,
+    metaConnectionId: String? = null,
+    /** Several Pages: the server sent the session so the merchant picks inside the app. */
+    metaSessionId: String? = null,
+) {
     val viewModel: ResponderViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // The browser handed the flow back: either it already connected a Page, or it wants the app to pick one.
+    LaunchedEffect(metaOk, metaConnectionId) {
+        if (metaOk != null) viewModel.onMetaReturned(metaOk, metaConnectionId)
+    }
+    LaunchedEffect(metaSessionId) {
+        metaSessionId?.let { viewModel.loadMetaSession(it) }
+    }
+    // A start request produced a dialog URL: open it, then forget it so a redraw doesn't reopen it.
+    LaunchedEffect(state.metaAuthUrl) {
+        state.metaAuthUrl?.let {
+            openInBrowser(context, it)
+            viewModel.consumeMetaAuthUrl()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -93,7 +128,7 @@ fun ResponderScreen(factory: ViewModelFactory, onBack: () -> Unit, onOpenWallet:
 
             when (state.tab) {
                 0 -> OverviewTab(state.status, state.isBusy, onActivate = viewModel::activateOrRenew, onSaveProfile = viewModel::saveProfile)
-                1 -> ChannelsTab(state.channels, state.connections, state.isBusy, viewModel)
+                1 -> ChannelsTab(state, viewModel)
                 2 -> RulesTab(state, viewModel)
                 else -> InboxTab(state.inbox, state.isBusy, onSend = viewModel::sendReply)
             }
@@ -142,11 +177,16 @@ private fun OverviewTab(
 
 @Composable
 private fun ChannelsTab(
-    channels: List<ChannelDto>,
-    connections: List<com.dalilacom.app.data.network.ConnectionDto>,
-    busy: Boolean,
+    state: ResponderUiState,
     viewModel: ResponderViewModel,
 ) {
+    val channels = state.channels
+    val connections = state.connections
+    val busy = state.isBusy
+
+    FacebookCard(state, viewModel)
+
+    Spacer(Modifier.height(16.dp))
     Text("قنوات التواصل المتاحة", style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(8.dp))
     channels.forEach { channel ->
@@ -162,7 +202,17 @@ private fun ChannelsTab(
                         Text("قريبًا", color = MaterialTheme.colorScheme.outline)
                     }
                 }
+                // Facebook and Instagram are meant to be connected by signing in, not by pasting a
+                // token — the fields stay available as a manual fallback only.
                 if (expanded && channel.connectable) {
+                    if (channel.key == "facebook" || channel.key == "instagram") {
+                        Text(
+                            "الأفضل تربطها بزرّ «ربط فيسبوك» فوق — بلا لصق توكن. الحقول تحت للربط اليدوي إذا احتجت.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                    }
                     channel.fields.forEach { field ->
                         OutlinedTextField(
                             value = values.value[field.key].orEmpty(),
@@ -194,6 +244,76 @@ private fun ChannelsTab(
                     Switch(checked = connection.isActive, onCheckedChange = { viewModel.toggleConnection(connection.id, it) })
                 }
                 connection.hookUrl?.let { Text("رابط الاستقبال: $it", style = MaterialTheme.typography.bodySmall) }
+            }
+        }
+    }
+}
+
+/**
+ * "Log in with Facebook" (section 7/23): the merchant signs in to Facebook, grants access to a Page,
+ * and we store the Page token ourselves — nothing is copied out of the Meta dashboard.
+ */
+@Composable
+private fun FacebookCard(state: ResponderUiState, viewModel: ResponderViewModel) {
+    val status = state.metaStatus
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text("ربط فيسبوك", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "سجّل دخولك بفيسبوك واختر الصفحة اللي بيشتغل عليها المجيب الآلي — بلا نسخ أي توكن.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
+            Spacer(Modifier.height(10.dp))
+
+            when {
+                status == null -> Text("تعذّر تحميل حالة الربط، جرّب التحديث.")
+                !status.available -> Text(
+                    "الربط بفيسبوك مو مفعّل على السيرفر بعد (بدو تطبيق Meta وموافقة على الصلاحيات). " +
+                        "بعد ما يتفعّل بيصير هالزر يفتح صفحة فيسبوك مباشرة.",
+                    color = MaterialTheme.colorScheme.error,
+                )
+                !status.responderRunning -> Text("فعّل المجيب الآلي أول (تجربة أو اشتراك) وبعدها بيربط.", color = MaterialTheme.colorScheme.error)
+                else -> {
+                    Button(
+                        onClick = { viewModel.startMetaOAuth() },
+                        enabled = !state.metaLoading && !state.isBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("ربط فيسبوك") }
+                }
+            }
+
+            if (state.metaLoading) {
+                Spacer(Modifier.height(10.dp))
+                CircularProgressIndicator()
+            }
+
+            // The browser came back with several Pages: pick one here, inside the app.
+            if (state.metaPages.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Text("اختر الصفحة", style = MaterialTheme.typography.titleSmall)
+                state.metaPages.forEach { page: MetaPageDto ->
+                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(page.name.ifBlank { page.id }, style = MaterialTheme.typography.bodyLarge)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                                Button(
+                                    onClick = { viewModel.completeMetaOAuth(page.id, "FACEBOOK") },
+                                    enabled = !state.metaLoading,
+                                ) { Text("ربط الصفحة") }
+                                if (page.hasInstagram) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.completeMetaOAuth(page.id, "INSTAGRAM") },
+                                        enabled = !state.metaLoading,
+                                    ) {
+                                        Text(page.instagramUsername?.let { "ربط إنستغرام (@$it)" } ?: "ربط إنستغرام")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                TextButton(onClick = { viewModel.clearMetaPages() }) { Text("إلغاء") }
             }
         }
     }

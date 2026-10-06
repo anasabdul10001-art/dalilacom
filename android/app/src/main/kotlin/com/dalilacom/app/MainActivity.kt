@@ -1,5 +1,6 @@
 package com.dalilacom.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -23,8 +25,12 @@ import com.dalilacom.app.ui.theme.DalilacomTheme
 import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
+    /** Set when the Facebook login browser sends the merchant back through dalilacom://responder/meta. */
+    private val deepLink = mutableStateOf<Intent?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        deepLink.value = metaReturnIntent(intent)
         val container = AppContainer(applicationContext)
         // Read the saved language before the first frame so the app never flashes in the wrong one.
         val initialLanguage = runBlocking { container.sessionStore.getLanguage() }
@@ -48,11 +54,21 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(LocalContext provides localized, LocalConfiguration provides localized.configuration) {
                     DalilacomTheme(darkTheme = dark, rtl = language.rtl) {
                         Surface(modifier = Modifier.fillMaxSize()) {
-                            DalilacomNavGraph(container)
+                            DalilacomNavGraph(container, deepLink.value)
                         }
                     }
                 }
             }
         }
     }
+
+    /** singleTask: returning from the browser reuses this activity instead of creating a second one. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        deepLink.value = metaReturnIntent(intent)
+    }
+
+    private fun metaReturnIntent(intent: Intent?): Intent? =
+        intent?.takeIf { it.data?.scheme == "dalilacom" }
 }

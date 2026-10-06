@@ -1,12 +1,15 @@
 package com.dalilacom.app.ui.nav
 
+import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.auth.LoginScreen
@@ -27,9 +30,17 @@ import com.dalilacom.app.ui.responder.ResponderScreen
 import com.dalilacom.app.ui.responder.WalletScreen
 
 @Composable
-fun DalilacomNavGraph(container: AppContainer) {
+fun DalilacomNavGraph(container: AppContainer, deepLinkIntent: Intent? = null) {
     val navController = rememberNavController()
     val factory = remember { ViewModelFactory(container) }
+
+    // Back from the Facebook login browser (dalilacom://responder/meta...). Only useful once the
+    // merchant is signed in — on a cold start from the browser there is no session yet, so we skip it
+    // and let the normal splash flow run; the connection itself is already saved on the server.
+    LaunchedEffect(deepLinkIntent) {
+        val incoming = deepLinkIntent ?: return@LaunchedEffect
+        if (container.tokenStore.getToken() != null) navController.handleDeepLink(incoming)
+    }
 
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
@@ -119,8 +130,30 @@ fun DalilacomNavGraph(container: AppContainer) {
         composable("merchantHours") {
             HoursScreen(factory = factory, onBack = { navController.popBackStack() })
         }
-        composable("responder") {
-            ResponderScreen(factory = factory, onBack = { navController.popBackStack() }, onOpenWallet = { navController.navigate("wallet") })
+        composable(
+            "responder",
+            // Three shapes, matching exactly what the server's appDeepLink() can send: a connected
+            // Page, a failure, or a session for the in-app picker. Listed separately so a missing
+            // query parameter never stops the link from matching.
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "dalilacom://responder/meta?ok={ok}&connectionId={connectionId}" },
+                navDeepLink { uriPattern = "dalilacom://responder/meta?ok={ok}" },
+                navDeepLink { uriPattern = "dalilacom://responder/meta?session={session}" },
+            ),
+            arguments = listOf(
+                navArgument("ok") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("connectionId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("session") { type = NavType.StringType; nullable = true; defaultValue = null },
+            ),
+        ) { entry ->
+            ResponderScreen(
+                factory = factory,
+                onBack = { navController.popBackStack() },
+                onOpenWallet = { navController.navigate("wallet") },
+                metaOk = entry.arguments?.getString("ok")?.let { it == "1" },
+                metaConnectionId = entry.arguments?.getString("connectionId"),
+                metaSessionId = entry.arguments?.getString("session"),
+            )
         }
         composable("wallet") {
             WalletScreen(factory = factory, onBack = { navController.popBackStack() })
