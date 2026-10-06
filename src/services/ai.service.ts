@@ -22,6 +22,53 @@ export function aiProviderStatus(): {
   };
 }
 
+type Provider = "groq" | "anthropic";
+type ProviderUsage = { attempts: number; successes: number; failures: number };
+
+// Per-process counters: Render restarts the service on every deploy and a free instance sleeps after
+// ~15 idle minutes, so read these as "since this process started", never as lifetime totals.
+const usage: Record<Provider, ProviderUsage> = {
+  groq: { attempts: 0, successes: 0, failures: 0 },
+  anthropic: { attempts: 0, successes: 0, failures: 0 },
+};
+let lastProvider: Provider | null = null;
+let lastUsedAt: string | null = null;
+
+/**
+ * Real provider traffic this process has seen — what turns "is Groq actually answering?" from an
+ * inference into a number. Surfaced by GET /admin/ai-status. Counters only, never any message text.
+ */
+export function aiUsage(): {
+  groq: ProviderUsage;
+  anthropic: ProviderUsage;
+  lastProvider: Provider | null;
+  lastUsedAt: string | null;
+} {
+  return {
+    groq: { ...usage.groq },
+    anthropic: { ...usage.anthropic },
+    lastProvider,
+    lastUsedAt,
+  };
+}
+
+/** An attempt is only counted once a request is really about to be sent (the key check comes first). */
+function recordAttempt(provider: Provider): void {
+  usage[provider].attempts += 1;
+}
+
+/** Records the outcome of an attempt and passes the answer through untouched. */
+function recordAnswer(provider: Provider, text: string | null): string | null {
+  if (text) {
+    usage[provider].successes += 1;
+    lastProvider = provider;
+    lastUsedAt = new Date().toISOString();
+    return text;
+  }
+  usage[provider].failures += 1;
+  return null;
+}
+
 export async function classifyIntent(message: string): Promise<string | null> {
   const text = await ask(
     "Classify the customer message into exactly one word: purchase, inquiry, complaint, praise, other. Reply with the single word only.",
@@ -56,6 +103,7 @@ export async function generateReply(opts: {
 async function askGroq(system: string, user: string, maxTokens: number): Promise<string | null> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return null;
+  recordAttempt("groq");
   try {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -72,11 +120,11 @@ async function askGroq(system: string, user: string, maxTokens: number): Promise
         ],
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return recordAnswer("groq", null);
     const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    return body.choices?.[0]?.message?.content?.trim() || null;
+    return recordAnswer("groq", body.choices?.[0]?.message?.content?.trim() || null);
   } catch {
-    return null;
+    return recordAnswer("groq", null);
   }
 }
 
@@ -89,6 +137,7 @@ async function ask(system: string, user: string, maxTokens: number): Promise<str
   // Fallback needs its own key check: aiAvailable() is true when only Groq is configured,
   // and sending Anthropic a request with an undefined key would fail anyway.
   if (!process.env.ANTHROPIC_API_KEY) return null;
+  recordAttempt("anthropic");
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -104,10 +153,10 @@ async function ask(system: string, user: string, maxTokens: number): Promise<str
         messages: [{ role: "user", content: user }],
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return recordAnswer("anthropic", null);
     const body = (await res.json()) as { content?: { type: string; text?: string }[] };
-    return body.content?.find((c) => c.type === "text")?.text?.trim() ?? null;
+    return recordAnswer("anthropic", body.content?.find((c) => c.type === "text")?.text?.trim() ?? null);
   } catch {
-    return null;
+    return recordAnswer("anthropic", null);
   }
 }
