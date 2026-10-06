@@ -7,6 +7,7 @@ import { requireAuth, requireRole } from "../middleware/auth";
 import { generateCurrentCode, findMatchingTimeStep } from "../services/qr.service";
 import { isMembershipActive } from "../services/membership.service";
 import { recordAffiliateCommissionIfReferred } from "../services/affiliate.service";
+import { notify } from "../services/notification.service";
 import { qrRedeemRateLimiter, qrVerifyRateLimiter } from "../middleware/rateLimit";
 
 export const qrRouter = Router();
@@ -147,6 +148,21 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
   if (!transaction) {
     return sendError(res, 409, "CONFLICT", "This code was already redeemed");
   }
+
+  // The member is told their discount went through (section 13). After the transaction, so a
+  // notification problem can never undo a completed discount.
+  await notify({
+    userId: membership.userId,
+    type: "DISCOUNT_RECEIVED",
+    title: `تم تطبيق الحسم عند ${merchant.businessName} 🎉`,
+    body: `نسبة الحسم ${transaction.discountPercent}% — المبلغ النهائي بعد الحسم صار جاهز على الفاتورة.`,
+    data: {
+      transactionRef: transaction.transactionRef,
+      merchantId: merchant.id,
+      discountPercent: transaction.discountPercent,
+      finalAmountCents: transaction.finalAmountCents,
+    },
+  });
 
   res.status(201).json({
     transactionRef: transaction.transactionRef,

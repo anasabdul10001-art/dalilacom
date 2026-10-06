@@ -87,6 +87,9 @@ model User {
   addresses         Address[]
   businessMembers   BusinessMember[]
   favoriteMerchants FavoriteMerchant[]
+
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
 }
 
 // Only a SHA-256 hash of the raw token is ever stored — the raw value exists only in the
@@ -994,4 +997,60 @@ model AiProviderUsage {
   failures   Int       @default(0)
   lastUsedAt DateTime?
   updatedAt  DateTime  @updatedAt
+}
+
+// How each notification type reaches one user (section 87): full (in-app + email), in-app only,
+// or off. A missing row means the default, FULL.
+enum NotificationMode {
+  FULL
+  IN_APP_ONLY
+  OFF
+}
+
+// Section 13 + 87. Types marked WIRED have a real trigger in the code today; the reserved ones are
+// declared so a user can already store a preference, and they start firing when their feature lands
+// (followers/section 37, chat/section 7, bookings/section 67, price drop/section 83, geo/section 76).
+enum NotificationType {
+  ORDER_PLACED // WIRED — checkout tells the customer their order is in
+  ORDER_STATUS // WIRED — the merchant moves the order, or the customer cancels it
+  DISCOUNT_RECEIVED // WIRED — a merchant redeemed the member's QR code (section 34)
+  MEMBERSHIP_EXPIRING // WIRED — produced lazily while the membership is close to expiring
+  NEW_OFFER // reserved — needs the Follow model (section 37)
+  NEW_PRODUCT // reserved — needs the Follow model (section 37)
+  CHAT_MESSAGE // reserved — chat is not built yet (section 7)
+  BOOKING_REMINDER // reserved — bookings are not built yet (section 67)
+  PRICE_DROP // reserved — price tracking is not built yet (section 83)
+  GEO_NEARBY // reserved — geo push is not built yet (section 76)
+  PERSONALIZED_OFFER // reserved (section 13)
+  SYSTEM // admin/system announcements
+}
+
+// One row per thing a user has to be told about (section 13). Only notification.service.ts writes
+// these, because it is also what applies the preferences above.
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  data      Json? // payload for the client, e.g. { orderId } or { transactionRef }
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+// Section 87: one row per (user, type) the user has customised. Absence means FULL.
+model NotificationPreference {
+  id     String           @id @default(uuid())
+  userId String
+  type   NotificationType
+  mode   NotificationMode @default(FULL)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
 }

@@ -23,6 +23,7 @@ import { favoritesRouter } from "./routes/favorites.routes";
 import { routeRouter } from "./routes/route.routes";
 import { profileRouter } from "./routes/profile.routes";
 import { invoiceRouter } from "./routes/invoice.routes";
+import { notificationRouter } from "./routes/notification.routes";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { ApiError, sendError, sendValidationError } from "./lib/apiError";
@@ -62,6 +63,7 @@ app.use("/favorites", favoritesRouter);
 app.use("/route", routeRouter);
 app.use("/profile", profileRouter);
 app.use("/invoices", invoiceRouter);
+app.use("/notifications", notificationRouter);
 
 app.use((_req, res) => {
   sendError(res, 404, "NOT_FOUND", "Not found");

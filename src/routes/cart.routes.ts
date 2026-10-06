@@ -6,6 +6,7 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { getActiveMembership } from "../services/membership.service";
 import { recordAffiliateCommissionIfReferred } from "../services/affiliate.service";
+import { notify } from "../services/notification.service";
 
 export const cartRouter = Router();
 
@@ -208,6 +209,18 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
       return createdOrders;
     });
+
+    // Outside the transaction on purpose (section 13): a checkout must succeed even if the
+    // confirmation notification cannot be written. One order per merchant, so one notification each.
+    for (const order of orders) {
+      await notify({
+        userId,
+        type: "ORDER_PLACED",
+        title: "تم استلام طلبك ✅",
+        body: `طلبك ${order.orderNumber} وصل للتاجر. رح يوصلك تحديث كل ما تتغير حالته.`,
+        data: { orderId: order.id, orderNumber: order.orderNumber, merchantId: order.merchantId },
+      });
+    }
 
     res.status(201).json(orders);
   } catch (err) {

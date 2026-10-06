@@ -4,6 +4,17 @@ import { OrderStatus, Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { notify } from "../services/notification.service";
+
+/** Customer-facing wording for each order state (section 13: "تغيير حالة الطلب"). */
+const STATUS_MESSAGE: Record<OrderStatus, string> = {
+  PENDING: "طلبك وصل وبانتظار تأكيد التاجر.",
+  CONFIRMED: "التاجر أكّد طلبك وبلّش يجهّزو.",
+  PREPARING: "طلبك عم يتحضّر هلق.",
+  SHIPPED: "طلبك انطلق للتوصيل 🚚",
+  DELIVERED: "طلبك وصل! منتمنى تكون التجربة حلوة ⭐",
+  CANCELLED: "تم إلغاء طلبك.",
+};
 
 export const orderRouter = Router();
 
@@ -101,6 +112,16 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), async 
     });
   });
 
+  // After the transaction, best-effort (section 13): the status change is what matters, the
+  // notification must never be able to roll it back.
+  await notify({
+    userId: order.userId,
+    type: "ORDER_STATUS",
+    title: status === "CANCELLED" ? "تم إلغاء طلبك" : `تحديث على طلبك: ${status}`,
+    body: STATUS_MESSAGE[status],
+    data: { orderId: order.id, orderNumber: order.orderNumber, status },
+  });
+
   res.json(updated);
 });
 
@@ -121,6 +142,21 @@ orderRouter.post("/:id/cancel", requireAuth, async (req, res) => {
     }
     return tx.order.update({ where: { id: order.id }, data: { status: "CANCELLED" } });
   });
+
+  // The merchant is the one who needs to hear about a customer cancellation (section 13).
+  const merchantOwner = await prisma.merchantProfile.findUnique({
+    where: { id: order.merchantId },
+    select: { userId: true },
+  });
+  if (merchantOwner) {
+    await notify({
+      userId: merchantOwner.userId,
+      type: "ORDER_STATUS",
+      title: "الزبون ألغى طلبًا",
+      body: `تم إلغاء الطلب ${order.orderNumber} من قبل الزبون، والمخزون رجع.`,
+      data: { orderId: order.id, orderNumber: order.orderNumber, status: "CANCELLED" },
+    });
+  }
 
   res.json(updated);
 });

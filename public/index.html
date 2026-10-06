@@ -101,6 +101,16 @@
     <button onclick="loadMyOrders()">تحديث الطلبات</button>
     <div id="my-orders"></div>
   </div>
+
+  <div class="card">
+    <h3>🔔 إشعاراتي</h3>
+    <button onclick="loadNotifications()">تحديث الإشعارات</button>
+    <button class="secondary" onclick="markAllNotificationsRead()">تعليم الكل كمقروء</button>
+    <span id="notif-unread" class="muted" style="margin-right:8px"></span>
+    <div id="notif-list" style="margin-top:10px"></div>
+    <b style="display:block;margin-top:16px">تفضيلات الإشعارات (القسم 87)</b>
+    <div id="notif-prefs"></div>
+  </div>
 </div>
 
 <!-- MERCHANT -->
@@ -359,6 +369,50 @@ async function loadMyOrders() {
 async function cancelOrder(id) {
   await api('POST', '/orders/' + id + '/cancel', null, state.customerToken);
   loadMyOrders();
+}
+
+// ---- notifications (section 13 + 87) ----
+async function loadNotifications() {
+  if (!state.customerToken) { log('إشعاراتي', { error: 'سجّل دخول كزبون أولًا' }); return; }
+  const { ok, data } = await api('GET', '/notifications', null, state.customerToken);
+  if (!ok) { log('إشعاراتي', data); return; }
+  document.getElementById('notif-unread').textContent = data.unread ? `(${data.unread} غير مقروء)` : '(لا جديد)';
+  document.getElementById('notif-list').innerHTML = data.items.length
+    ? data.items.map(n => `
+      <div class="item"${n.readAt ? ' style="opacity:.55"' : ''}>
+        <b>${n.title}</b> <span class="muted">${new Date(n.createdAt).toLocaleString()}</span>
+        <div class="muted">${n.body || ''}</div>
+        ${n.readAt ? '' : `<button class="small secondary" onclick="markNotificationRead('${n.id}')">تعليم كمقروء</button>`}
+      </div>`).join('')
+    : '<div class="muted">ما في إشعارات بعد — اعمل طلب من السلة أو استخدم حسم بالـQR وشوف كيف بيوصل.</div>';
+  await loadNotificationPrefs();
+}
+async function markNotificationRead(id) {
+  await api('POST', '/notifications/' + id + '/read', null, state.customerToken);
+  loadNotifications();
+}
+async function markAllNotificationsRead() {
+  if (!state.customerToken) { log('إشعاراتي', { error: 'سجّل دخول كزبون أولًا' }); return; }
+  const { ok, data } = await api('POST', '/notifications/read-all', null, state.customerToken);
+  if (ok) log('تعليم الكل كمقروء', data);
+  loadNotifications();
+}
+async function loadNotificationPrefs() {
+  const { ok, data } = await api('GET', '/notifications/preferences', null, state.customerToken);
+  if (!ok) return;
+  document.getElementById('notif-prefs').innerHTML =
+    '<table><thead><tr><th>النوع</th><th>كيف بيوصل</th></tr></thead><tbody>' +
+    data.map(p => `<tr><td>${p.type}</td><td>
+      <select onchange="saveNotificationPref('${p.type}', this.value)">
+        <option value="FULL"${p.mode === 'FULL' ? ' selected' : ''}>كامل — داخل التطبيق + إيميل</option>
+        <option value="IN_APP_ONLY"${p.mode === 'IN_APP_ONLY' ? ' selected' : ''}>داخل التطبيق فقط</option>
+        <option value="OFF"${p.mode === 'OFF' ? ' selected' : ''}>معطّل</option>
+      </select></td></tr>`).join('') +
+    '</tbody></table>';
+}
+async function saveNotificationPref(type, mode) {
+  const { ok, data } = await api('PUT', '/notifications/preferences', { preferences: [{ type, mode }] }, state.customerToken);
+  log(ok ? 'تم حفظ تفضيل الإشعار' : 'خطأ بتفضيل الإشعار', ok ? { type, mode } : data);
 }
 
 // ---- merchant auth ----

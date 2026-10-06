@@ -5,6 +5,7 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { Role } from "@prisma/client";
+import { notifyExpiringMembership } from "../services/notification.service";
 
 export const membershipRouter = Router();
 
@@ -119,6 +120,11 @@ membershipRouter.get("/me", requireAuth, async (req, res) => {
   }
 
   const isExpired = membership.endDate.getTime() < Date.now();
+
+  // Checking the card is a natural moment to warn about a nearby end date (section 13). Lazily
+  // produced because this deployment has no scheduler; de-duplicated to once a day in the service.
+  if (!isExpired) await notifyExpiringMembership(req.user!.id).catch(() => null);
+
   res.json({
     memberNumber: membership.memberNumber,
     status: isExpired ? "EXPIRED" : membership.status,
