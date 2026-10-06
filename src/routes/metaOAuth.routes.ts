@@ -29,9 +29,11 @@ async function responderRunning(userId: string): Promise<boolean> {
   return isRunning(sub.status);
 }
 
-function page(title: string, body: string, deepLink?: string): string {
+function page(title: string, body: string, deepLink?: string, autoRedirect = true): string {
   const link = deepLink
-    ? `<p><a class="btn" href="${deepLink}">ارجع إلى تطبيق دليلكم</a></p><script>setTimeout(function(){location.href=${JSON.stringify(deepLink)}},1200)</script>`
+    ? `<p><a class="btn" href="${deepLink}">${autoRedirect ? "ارجع إلى تطبيق دليلكم" : "افتح تطبيق دليلكم لاختيار الصفحة"}</a></p>${
+        autoRedirect ? `<script>setTimeout(function(){location.href=${JSON.stringify(deepLink)}},1200)</script>` : ""
+      }`
     : "";
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title><style>
@@ -141,6 +143,10 @@ metaOAuthRouter.get("/oauth/callback", async (req, res) => {
     page(
       "اختر الصفحة اللي بدك تربطها",
       `${rows}<p class="muted">الربط صالح 15 دقيقة. إذا ما لقيت صفحتك، تأكد إنك منحت صلاحية الوصول لصفحاتك.</p>`,
+      // No auto-redirect here: the merchant may prefer to pick right here in the browser. The button
+      // hands the session to the app so it can show its own picker instead.
+      appDeepLink({ session: sessionId }),
+      false,
     ),
   );
 });

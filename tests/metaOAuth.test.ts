@@ -215,11 +215,15 @@ describe("Facebook Login: the callback", () => {
     expect(res.text).toContain("مطعم الياسمين");
     expect(res.text).toContain("ربط إنستغرام");
     expect(res.text).toContain("@yasmin");
+    // The app gets the session id so it can present its own picker instead of the browser list.
+    const sessionId = sessionIdFrom(res.text);
+    expect(res.text).toContain(`dalilacom://responder/meta?session=${sessionId}`);
+    // Unlike the single-Page case, this page must NOT bounce the browser into the app by itself.
+    expect(res.text).not.toContain("setTimeout");
 
     // Nothing is connected until the merchant picks.
     expect(await prisma.channelConnection.count({ where: { userId, externalAccountId: PAGE_B } })).toBe(0);
 
-    const sessionId = sessionIdFrom(res.text);
     const complete = await request(app)
       .post("/responder/meta/oauth/complete")
       .set("Authorization", token)
