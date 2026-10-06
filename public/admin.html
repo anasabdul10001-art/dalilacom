@@ -90,6 +90,7 @@
     <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
     <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 خطط العضوية</div>
     <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
+    <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
     <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
     <div class="logout" onclick="changePassword()">🔑 تغيير كلمة السر</div>
     <div class="logout" onclick="logout()">⏻ تسجيل خروج</div>
@@ -201,6 +202,23 @@
       </div>
     </div>
 
+    <!-- AI PROVIDER STATUS -->
+    <div class="section" id="section-ai" style="display:none">
+      <h2>حالة الذكاء الاصطناعي</h2>
+      <p class="subtitle">أي مزوّد مضبوط على السيرفر، ومين فعليًا جاوب. الأرقام من ذاكرة الخدمة الحالية — تتصفّر مع كل نشر أو نوم للخطة المجانية.</p>
+      <div class="card">
+        <button class="small" onclick="loadAiStatus()">🔄 تحديث</button>
+        <span id="ai-msg" class="muted" style="margin-right:10px"></span>
+        <table style="margin-top:12px">
+          <thead><tr><th>المزوّد</th><th>المفتاح مضبوط؟</th><th>محاولات</th><th>نجاح</th><th>فشل</th></tr></thead>
+          <tbody id="ai-body"></tbody>
+        </table>
+        <p class="muted" style="margin-top:14px">المزوّد المُجرَّب أولًا: <b id="ai-active">—</b></p>
+        <p class="muted">آخر مزوّد جاوب فعلًا: <b id="ai-last">—</b> — <b id="ai-last-at">—</b></p>
+        <p class="muted">إذا كل الأرقام أصفار، معناها ما مرّ ولا ردّ على المجيب الآلي بعد — مو عطل.</p>
+      </div>
+    </div>
+
     <!-- TOP-UPS -->
     <div class="section" id="section-topups" style="display:none">
       <h2>طلبات الشحن</h2>
@@ -293,6 +311,7 @@ function enterApp() {
   loadCategories();
   loadPlans();
   loadResponderAdmin();
+  loadAiStatus();
   loadTopups('PENDING');
 }
 
@@ -300,6 +319,28 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- AI provider status ----
+async function loadAiStatus() {
+  const { ok, data } = await api('GET', '/admin/ai-status');
+  if (!ok) { logout(); return; }
+  const rows = [
+    { label: 'Groq — llama-3.3-70b-versatile', configured: data.groqConfigured, u: data.usage.groq },
+    { label: 'Anthropic — Claude (احتياطي)', configured: data.anthropicConfigured, u: data.usage.anthropic },
+  ];
+  document.getElementById('ai-body').innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.label}</td>
+      <td><span class="badge ${r.configured ? 'APPROVED' : 'REJECTED'}">${r.configured ? 'نعم' : 'لا'}</span></td>
+      <td>${r.u.attempts}</td>
+      <td>${r.u.successes}</td>
+      <td>${r.u.failures}</td>
+    </tr>`).join('');
+  document.getElementById('ai-active').textContent = data.activeProvider || 'لا يوجد أي مزوّد مضبوط';
+  document.getElementById('ai-last').textContent = data.usage.lastProvider || '—';
+  document.getElementById('ai-last-at').textContent = data.usage.lastUsedAt ? new Date(data.usage.lastUsedAt).toLocaleString() : 'لا ردّ بعد';
+  document.getElementById('ai-msg').textContent = 'آخر تحديث ' + new Date().toLocaleTimeString();
 }
 
 // ---- merchants ----
