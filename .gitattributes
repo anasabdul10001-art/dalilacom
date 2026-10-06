@@ -1,0 +1,10 @@
+# Line endings are load-bearing here: a CRLF `gradlew` fails on Linux with "bad interpreter", and a
+# line-ending-converted Gradle wrapper jar is corrupt. Stating the rules beats depending on whatever
+# `core.autocrlf` each machine happens to use.
+android/gradlew text eol=lf
+*.sh text eol=lf
+gradlew.bat text eol=crlf
+
+*.jar binary
+*.apk binary
+*.aab binary

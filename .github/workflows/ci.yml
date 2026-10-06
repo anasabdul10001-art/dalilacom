@@ -65,3 +65,33 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  android:
+    runs-on: ubuntu-latest
+    # The Android app had no wrapper and no CI job, so a broken Kotlin file was only ever found by
+    # whoever happened to build locally. This job builds the same artefact they install.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-34 build-tools;34.0.0"
+
+      # chmod because the executable bit on gradlew is not something Windows can set.
+      - name: Build the debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dalilacom-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
