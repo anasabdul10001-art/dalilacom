@@ -1,4 +1,7 @@
 import crypto from "crypto";
+import fs from "fs";
+import os from "os";
+import path from "path";
 import request from "supertest";
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { app } from "../src/server";
@@ -62,6 +65,21 @@ describe("Admin push status and test", () => {
     const res = await request(app).get("/admin/push-status").set(auth);
     expect(res.body).toMatchObject({ configured: true, invalid: false, projectId: "proj-ok", authenticated: true, error: null });
     expect(JSON.stringify(res.body)).not.toContain("PRIVATE KEY");
+  });
+
+  it("also finds the key when it was added as a Render secret file instead of a variable", async () => {
+    const { auth } = await admin();
+    const file = path.join(os.tmpdir(), `fb-key-${crypto.randomBytes(6).toString("hex")}.json`);
+    fs.writeFileSync(file, fakeServiceAccount("proj-file"));
+    process.env.FIREBASE_SERVICE_ACCOUNT_FILE = file;
+    try {
+      fetchStub.mockResolvedValueOnce(json({ access_token: "access-f", expires_in: 3600 }));
+      const res = await request(app).get("/admin/push-status").set(auth);
+      expect(res.body).toMatchObject({ configured: true, projectId: "proj-file", authenticated: true });
+    } finally {
+      delete process.env.FIREBASE_SERVICE_ACCOUNT_FILE;
+      fs.rmSync(file, { force: true });
+    }
   });
 
   it("reports why Google refused the key", async () => {

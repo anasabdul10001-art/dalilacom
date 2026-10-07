@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import jwt from "jsonwebtoken";
 import { prisma } from "../prisma";
 
@@ -28,8 +30,28 @@ const SCOPE = "https://www.googleapis.com/auth/firebase.messaging";
 /** Must match the channel the Android app creates, or the phone drops the notification. */
 export const ANDROID_CHANNEL_ID = "dalilacom_default";
 
+/**
+ * The key arrives either as the FIREBASE_SERVICE_ACCOUNT_JSON variable or as a Render "Secret File" of the same name
+ * (mounted at /etc/secrets/ and in the app's root) — both are the owner's way of pasting the same file, so both work.
+ */
+function rawServiceAccount(): string | undefined {
+  const fromEnv = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (fromEnv) return fromEnv;
+  const candidates = [process.env.FIREBASE_SERVICE_ACCOUNT_FILE, "/etc/secrets/FIREBASE_SERVICE_ACCOUNT_JSON", path.join(process.cwd(), "FIREBASE_SERVICE_ACCOUNT_JSON")];
+  for (const file of candidates) {
+    if (!file) continue;
+    try {
+      const text = fs.readFileSync(file, "utf8");
+      if (text.trim()) return text;
+    } catch {
+      /* not there: try the next place */
+    }
+  }
+  return undefined;
+}
+
 function serviceAccount(): ServiceAccount | null {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const raw = rawServiceAccount();
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<ServiceAccount>;
@@ -154,7 +176,7 @@ export async function pushStatus(): Promise<PushStatus> {
   const account = serviceAccount();
   const [devices, groups] = await Promise.all([prisma.deviceToken.count(), prisma.deviceToken.groupBy({ by: ["userId"] })]);
   const base = { devices, usersWithDevices: groups.length };
-  if (!account) return { ...base, configured: false, invalid: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, projectId: null, authenticated: null, error: null };
+  if (!account) return { ...base, configured: false, invalid: !!rawServiceAccount(), projectId: null, authenticated: null, error: null };
   try {
     resetPushTokenCache();
     await accessToken(account);
