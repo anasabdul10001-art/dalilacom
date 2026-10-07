@@ -158,6 +158,7 @@ async function render() {
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
   el.innerHTML = renderScreen();
   wireUpAfterRender();
+  trDom(el); // translate the rendered Arabic when another language is on
   if (keepFocus !== null) {
     const input = document.getElementById("disc-q");
     if (input) { input.focus(); try { input.setSelectionRange(keepFocus, keepFocus); } catch (e) {} }
@@ -468,7 +469,7 @@ async function startQrLoop() {
       remaining -= 1;
       S._card.secondsRemaining = remaining;
       const el = document.querySelector(".countdown");
-      if (el) el.textContent = `بيتجدد خلال ${remaining} ثانية`;
+      if (el) el.textContent = tr(`بيتجدد خلال ${remaining} ثانية`);
       if (remaining <= 0) clearInterval(S.qrTick);
     }, 1000);
     S.qrTimer = setTimeout(tick, data.expiresInSeconds * 1000);
@@ -1102,7 +1103,7 @@ async function loadAffiliateMine() {
 function toast(message) {
   const el = document.createElement("div");
   el.className = "toast";
-  el.textContent = message;
+  el.textContent = tr(message);
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2200);
 }
@@ -2425,12 +2426,14 @@ function onTopupMethod() {
   const m = S._wallet.methods;
   const usdt = sel.value === "USDT_TRC20";
   qs("tp-amount-row").style.display = usdt ? "none" : "block";
-  qs("tp-ref-label").textContent = usdt ? "رقم التحويل (txid — 64 خانة)" : "رقم العملية";
+  qs("tp-ref-label").textContent = tr(usdt ? "رقم التحويل (txid — 64 خانة)" : "رقم العملية");
   if (usdt) {
     qs("tp-hint").innerHTML = `حوّل USDT عبر شبكة <b>TRC20</b> لهالعنوان، وبعدين الصق الـ txid — بنتحقق من الشبكة تلقائيًا وبينضاف الرصيد فورًا:<br><b style="direction:ltr;display:block;overflow-wrap:anywhere;user-select:all">${esc(m.usdtTrc20Address)}</b>`;
+    trDom(qs("tp-hint"));
   } else {
     const l = (m.localWallets || []).find((x) => x.key === sel.value);
     qs("tp-hint").innerHTML = l ? `حوّل لحساب <b style="user-select:all">${esc(l.accountNumber)}</b>${l.instructions ? " — " + esc(l.instructions) : ""}<br>بعد التحويل دخّل رقم العملية والمبلغ، والإدارة بتأكد وبيضاف رصيدك.` : "";
+    trDom(qs("tp-hint"));
   }
 }
 
