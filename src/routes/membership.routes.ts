@@ -71,6 +71,10 @@ membershipRouter.patch("/plans/:id", requireAuth, requireRole(Role.ADMIN), async
   res.json(plan);
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** A card can be renewed this long before it ends (the same window the expiry reminder uses). */
+const RENEW_WINDOW_DAYS = 7;
+
 function generateMemberNumber(): string {
   // 10-digit numeric member number, e.g. DLK-3849201573
   const n = crypto.randomInt(1_000_000_000, 9_999_999_999);
@@ -90,19 +94,22 @@ membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
     return sendError(res, 404, "NOT_FOUND", "Plan not found");
   }
 
-  const existingActive = await prisma.membership.findFirst({
-    where: { userId: req.user!.id, status: "ACTIVE" },
-  });
-  if (existingActive) {
+  // The person's card, if they ever had one. A card still running with more than RENEW_WINDOW_DAYS left cannot be
+  // bought again; one that is close to its end — or already over — is renewed in place (same number, same QR).
+  const current = await prisma.membership.findFirst({ where: { userId: req.user!.id, status: { not: "CANCELLED" } }, orderBy: { createdAt: "desc" } });
+  const msLeft = current ? current.endDate.getTime() - Date.now() : 0;
+  if (current && current.status === "ACTIVE" && msLeft > RENEW_WINDOW_DAYS * DAY_MS) {
     return sendError(res, 409, "CONFLICT", "User already has an active membership");
   }
+  // The free period is offered once per account, with the first card only.
+  const trial = !current && plan.trialDays > 0;
 
   // A plan that costs money must also say what it costs in wallet credits (section 51/60). Refusing
   // is deliberate: converting `currency` to credits would invent an exchange rate nobody configured.
   // A plan priced 0 is free and activates directly, which is how sections 24/61 allow 0 pricing.
   // The price is the one this customer's country is shown on the pricing page (section 64).
   const buyer = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { countryCode: true } });
-  const charge = await creditsChargeFor(plan, buyer?.countryCode ?? null);
+  const charge = trial ? 0 : await creditsChargeFor(plan, buyer?.countryCode ?? null);
   if (charge === null || charge === undefined) {
     const { creditName } = await getSettings();
     return sendError(
@@ -113,8 +120,10 @@ membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
     );
   }
 
-  const startDate = new Date();
-  const endDate = new Date(startDate.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const runsUntil = current && msLeft > 0 ? current.endDate : now; // renewing early adds to what is left
+  const startDate = current ? current.startDate : now;
+  const endDate = new Date((current ? runsUntil : now).getTime() + (trial ? plan.trialDays : plan.durationDays) * DAY_MS);
 
   let membership;
   let walletBalance: number | null = null;
@@ -125,18 +134,31 @@ membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
       const paid =
         charge > 0 ? await adjustBalance(tx, req.user!.id, -charge, "MEMBERSHIP", `membership:${plan.name}`) : null;
 
-      const created = await tx.membership.create({
-        data: {
-          userId: req.user!.id,
-          planId: plan.id,
-          memberNumber: generateMemberNumber(),
-          qrSecret: crypto.randomBytes(32).toString("hex"),
-          startDate,
-          endDate,
-          creditsPaid: charge,
-          paidTransactionId: paid?.transactionId ?? null,
-        },
-      });
+      const created = current
+        ? await tx.membership.update({
+            where: { id: current.id },
+            data: {
+              planId: plan.id,
+              status: "ACTIVE",
+              endDate,
+              isTrial: false,
+              creditsPaid: current.creditsPaid + charge,
+              paidTransactionId: paid?.transactionId ?? current.paidTransactionId,
+            },
+          })
+        : await tx.membership.create({
+            data: {
+              userId: req.user!.id,
+              planId: plan.id,
+              memberNumber: generateMemberNumber(),
+              qrSecret: crypto.randomBytes(32).toString("hex"),
+              startDate,
+              endDate,
+              creditsPaid: charge,
+              paidTransactionId: paid?.transactionId ?? null,
+              isTrial: trial,
+            },
+          });
       return { created, balance: paid?.balance ?? null };
     });
     membership = result.created;
@@ -162,6 +184,7 @@ membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
     endDate: membership.endDate,
     creditsPaid: membership.creditsPaid,
     paidTransactionId: membership.paidTransactionId,
+    isTrial: membership.isTrial,
     walletBalance,
   });
 });
@@ -188,6 +211,7 @@ membershipRouter.get("/me", requireAuth, async (req, res) => {
     startDate: membership.startDate,
     endDate: membership.endDate,
     creditsPaid: membership.creditsPaid,
+    isTrial: membership.isTrial,
     plan: { name: membership.plan.name, durationDays: membership.plan.durationDays },
   });
 });

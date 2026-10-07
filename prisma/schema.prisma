@@ -275,6 +275,8 @@ model Membership {
   // doesn't rewrite history) and the wallet-ledger row that paid for it (section 58 accounting).
   creditsPaid          Int              @default(0)
   paidTransactionId    String?
+  // The first period was a free trial (once per account, from the plan's trialDays); a renewal makes it a paid one.
+  isTrial              Boolean          @default(false)
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
