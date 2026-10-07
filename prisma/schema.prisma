@@ -103,6 +103,8 @@ model User {
   notifications           Notification[]
   deviceTokens            DeviceToken[]
   broadcasts              Broadcast[]
+  socialIdentities        SocialIdentity[]
+  loginTickets            LoginTicket[]
   notificationPreferences NotificationPreference[]
   metaOAuthSessions       MetaOAuthSession[]
 }
@@ -1223,4 +1225,32 @@ model Broadcast {
 
   @@index([senderId, createdAt])
   @@index([status, createdAt])
+}
+
+// "Continue with Google / Facebook": which outside account belongs to which Dalilacom account.
+model SocialIdentity {
+  id             String   @id @default(uuid())
+  userId         String
+  provider       String // GOOGLE | FACEBOOK
+  providerUserId String
+  email          String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+// A one-time pass the server hands the app/web page after a successful social sign-in, so the real session token never
+// travels in a URL. Valid for a minute, spent by the first exchange.
+model LoginTicket {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

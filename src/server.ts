@@ -26,6 +26,7 @@ import { invoiceRouter } from "./routes/invoice.routes";
 import { notificationRouter } from "./routes/notification.routes";
 import { planRouter } from "./routes/plan.routes";
 import { broadcastRouter } from "./routes/broadcast.routes";
+import { socialRouter } from "./routes/social.routes";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { localizeResponses } from "./lib/localize";
@@ -45,6 +46,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 // API by hand; not the final Android/product UI (section 18).
 app.use(express.static(path.join(__dirname, "..", "public")));
 
+app.use("/auth/social", socialRouter);
 app.use("/auth", authRouter);
 app.use("/membership", membershipRouter);
 app.use("/merchant", merchantRouter);

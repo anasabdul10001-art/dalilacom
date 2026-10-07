@@ -8,6 +8,8 @@ import com.dalilacom.app.data.network.LoginRequest
 import com.dalilacom.app.data.network.MeResponse
 import com.dalilacom.app.data.network.ResendVerificationRequest
 import com.dalilacom.app.data.network.RegisterRequest
+import com.dalilacom.app.data.network.SocialExchangeRequest
+import com.dalilacom.app.data.network.SocialProvidersDto
 import com.dalilacom.app.data.network.UserDto
 import com.dalilacom.app.data.network.safeApiCall
 import com.dalilacom.app.data.store.SessionStore
@@ -41,6 +43,24 @@ class AuthRepository(
             Result.success(body.user)
         } else {
             Result.failure(Exception(if (response.code() == 401) AppStrings.get(R.string.s_3ea19382) else errorText(response, AppStrings.get(R.string.s_8562adb5))))
+        }
+    }
+
+    /** Which "Continue with ..." buttons the server can serve right now. */
+    suspend fun socialProviders(): SocialProvidersDto =
+        safeApiCall { api.socialProviders() }?.takeIf { it.isSuccessful }?.body() ?: SocialProvidersDto()
+
+    /** The one-time ticket the browser brought back, traded for a normal session. */
+    suspend fun socialExchange(ticket: String): Result<UserDto> {
+        val response = safeApiCall { api.socialExchange(SocialExchangeRequest(ticket)) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) {
+            tokenStore.saveToken(body.token)
+            sessionStore.saveRole(body.user.role)
+            Result.success(body.user)
+        } else {
+            Result.failure(Exception(AppStrings.get(R.string.social_failed)))
         }
     }
 

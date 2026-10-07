@@ -79,6 +79,14 @@ DICT.en = {
   "pricing.renewTitle": "Renew membership",
   "pricing.renewSub": "Pick the plan to renew with \u2014 you keep the same card.",
   "pricing.renew": "Renew",
+  "social.google": "Continue with Google",
+  "social.facebook": "Continue with Facebook",
+  "social.or": "or",
+  "social.failed": "Could not sign in with that account, please try again",
+  "social.error.CANCELLED": "You cancelled the sign-in",
+  "social.error.EMAIL_IN_USE": "An account with this email already exists \u2014 sign in with your password first",
+  "social.error.NO_EMAIL": "That account did not share its email with us, so we cannot create an account",
+  "social.error.ACCOUNT_DISABLED": "This account is disabled, please contact support",
 };
 
 // English phrase table for the web preview — gettext-style: each key is the Arabic text exactly as it appears on screen.

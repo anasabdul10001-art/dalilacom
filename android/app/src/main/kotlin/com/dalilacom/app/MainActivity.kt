@@ -21,6 +21,7 @@ import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.ui.i18n.LocalizedContext
 import com.dalilacom.app.ui.nav.DalilacomNavGraph
 import com.dalilacom.app.ui.nav.NotificationRoutes
+import com.dalilacom.app.ui.nav.SocialReturn
 import com.dalilacom.app.ui.theme.DalilacomTheme
 import kotlinx.coroutines.runBlocking
 
@@ -31,10 +32,14 @@ class MainActivity : ComponentActivity() {
     /** Set when a push was tapped: the screen it is about (see NotificationRoutes). */
     private val notificationRoute = mutableStateOf<String?>(null)
 
+    /** Set when the browser comes back from a Google/Facebook sign-in through dalilacom://auth/social. */
+    private val socialReturn = mutableStateOf<SocialReturn?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         deepLink.value = metaReturnIntent(intent)
         notificationRoute.value = NotificationRoutes.fromIntent(intent)
+        socialReturn.value = SocialReturn.from(intent)
         val container = (application as DalilacomApp).container
         // Read the saved language before the first frame so the app never flashes in the wrong one.
         val initialLanguage = runBlocking { container.sessionStore.getLanguage() }
@@ -62,7 +67,12 @@ class MainActivity : ComponentActivity() {
                             DalilacomNavGraph(
                                 container,
                                 deepLink.value,
-                                notificationRoute.value,
+                                notificationRoute = notificationRoute.value,
+                                socialReturn = socialReturn.value,
+                                onSocialReturnConsumed = {
+                                    socialReturn.value = null
+                                    this@MainActivity.intent.data = null
+                                },
                                 onNotificationRouteConsumed = {
                                     notificationRoute.value = null
                                     NotificationRoutes.consume(this@MainActivity.intent)
@@ -81,6 +91,7 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         deepLink.value = metaReturnIntent(intent)
         notificationRoute.value = NotificationRoutes.fromIntent(intent)
+        socialReturn.value = SocialReturn.from(intent)
     }
 
     private fun metaReturnIntent(intent: Intent?): Intent? =

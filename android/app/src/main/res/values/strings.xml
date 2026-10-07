@@ -186,6 +186,15 @@
     <string name="pricing_renew_title">تجديد العضوية</string>
     <string name="pricing_renew_sub">اختر الخطة اللي بدك تجدّد فيها — بتكمّل بنفس بطاقتك.</string>
     <string name="pricing_renew">جدّد</string>
+    <string name="social_google">المتابعة بحساب Google</string>
+    <string name="social_facebook">المتابعة بحساب فيسبوك</string>
+    <string name="social_or">أو</string>
+    <string name="social_failed">تعذّر تسجيل الدخول بالحساب الخارجي، جرّب مرة ثانية</string>
+    <string name="social_error_cancelled">ألغيت تسجيل الدخول</string>
+    <string name="social_error_email_in_use">في حساب بنفس الإيميل — سجّل دخول بكلمة السر أولًا</string>
+    <string name="social_error_no_email">الحساب ما شارك إيميله معنا، فما فينا نفتح لك حساب</string>
+    <string name="social_error_disabled">هذا الحساب معطّل، تواصل مع الدعم</string>
+    <string name="social_back_to_login">رجوع لتسجيل الدخول</string>
 
     <!-- texts with numbers / names inside; positional arguments keep the word order right in every language -->
     <string name="fmt_plan_line">%1$d يوم — %2$s %3$s</string>

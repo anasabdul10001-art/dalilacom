@@ -854,3 +854,6 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
 
 .intro-card h2 { margin: 0 0 6px; color: var(--primary); font-size: 18px; }
 .intro-card p { margin: 6px 0; }
+
+.social-or { text-align: center; color: var(--text-muted); margin: 14px 0 8px; font-size: 13px; }
+.social-btn { display: block; text-align: center; text-decoration: none; margin-bottom: 8px; }

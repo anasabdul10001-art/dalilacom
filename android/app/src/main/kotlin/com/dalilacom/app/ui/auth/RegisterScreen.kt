@@ -127,6 +127,8 @@ fun RegisterScreen(
         }
 
         Spacer(Modifier.height(12.dp))
+        SocialButtons(viewModel)
+        Spacer(Modifier.height(12.dp))
         TextButton(onClick = onNavigateToLogin) {
             Text(AppStrings.get(R.string.s_d97a32ee))
         }

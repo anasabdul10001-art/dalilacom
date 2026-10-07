@@ -286,6 +286,45 @@ function backToMap() {
   reset("home");
 }
 
+/* ---- Continue with Google / Facebook: the server runs the sign-in, this page only opens its link ---- */
+
+function socialButtonsHtml() {
+  if (!S._social) {
+    S._social = { loaded: false, google: false, facebook: false };
+    api("GET", "/auth/social/providers").then(({ ok, data }) => {
+      S._social = { loaded: true, google: ok && data.google, facebook: ok && data.facebook };
+      if (S._social.google || S._social.facebook) render();
+    });
+  }
+  const p = S._social;
+  if (!p.google && !p.facebook) return "";
+  const link = (provider, key) => `<a class="btn outline social-btn" href="/auth/social/${provider}/start?platform=web&lang=${encodeURIComponent(LANG)}">${esc(t(key))}</a>`;
+  return `<div class="social-or">${esc(t("social.or"))}</div>${p.google ? link("google", "social.google") : ""}${p.facebook ? link("facebook", "social.facebook") : ""}`;
+}
+
+/** Back from the provider: a one-time ticket becomes a session, or the reason it did not work is shown on the login screen. */
+async function bootSocialReturn() {
+  const q = new URLSearchParams(location.search);
+  const ticket = q.get("ticket");
+  const failure = q.get("social_error");
+  if (!ticket && !failure) return false;
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  if (ticket) {
+    const { ok, data } = await api("POST", "/auth/social/exchange", { ticket });
+    if (ok) {
+      setToken(data.token, data.user.role);
+      reset("home");
+      return true;
+    }
+  }
+  S.stack = [];
+  S.screen = "login";
+  S.params = {};
+  S.error = t("social.error." + failure) !== "social.error." + failure ? t("social.error." + failure) : t("social.failed");
+  render();
+  return true;
+}
+
 function screenLogin() {
   const draft = S.params.draft || {};
   return `
@@ -297,6 +336,7 @@ function screenLogin() {
     <div class="field"><label>كلمة السر</label><input id="f-password" type="password" placeholder="••••••••" value="${esc(draft.password || "")}" /></div>
     ${errorBanner()}
     <button class="btn" onclick="doLogin()">دخول</button>
+    ${socialButtonsHtml()}
     <button class="link-btn" onclick="reset('register')">ما عندك حساب؟ سجل واحد جديد</button>
   `;
 }
@@ -335,6 +375,7 @@ function screenRegister() {
     <div class="field"><label>كلمة السر (8 أحرف على الأقل)</label><input id="f-password" type="password" placeholder="••••••••" value="${esc(draft.password || "")}" /></div>
     ${errorBanner()}
     <button class="btn" onclick="doRegister()">إنشاء الحساب</button>
+    ${socialButtonsHtml()}
     <button class="link-btn" onclick="reset('login')">عندك حساب أصلًا؟ سجل دخول</button>
   `;
 }
@@ -2902,6 +2943,9 @@ function bootMerchantLink() {
   return true;
 }
 
-bootReferralCapture().then((handled) => {
-  if (!handled && !bootMerchantLink()) render();
+bootSocialReturn().then((social) => {
+  if (social) return;
+  bootReferralCapture().then((handled) => {
+    if (!handled && !bootMerchantLink()) render();
+  });
 });

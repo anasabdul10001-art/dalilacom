@@ -182,6 +182,15 @@
     <string name="pricing_renew_title">Renew membership</string>
     <string name="pricing_renew_sub">Pick the plan to renew with — you keep the same card.</string>
     <string name="pricing_renew">Renew</string>
+    <string name="social_google">Continue with Google</string>
+    <string name="social_facebook">Continue with Facebook</string>
+    <string name="social_or">or</string>
+    <string name="social_failed">Could not sign in with that account, please try again</string>
+    <string name="social_error_cancelled">You cancelled the sign-in</string>
+    <string name="social_error_email_in_use">An account with this email already exists — sign in with your password first</string>
+    <string name="social_error_no_email">That account did not share its email with us, so we cannot create an account</string>
+    <string name="social_error_disabled">This account is disabled, please contact support</string>
+    <string name="social_back_to_login">Back to sign in</string>
 
     <!-- texts with numbers / names inside; positional arguments keep the word order right in every language -->
     <string name="fmt_plan_line">%1$d days — %2$s %3$s</string>

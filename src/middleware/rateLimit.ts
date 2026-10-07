@@ -23,6 +23,7 @@ function makeLimiter(name: string, defaultMax: number, defaultWindowMinutes: num
 }
 
 export const loginRateLimiter = makeLimiter("AUTH_LOGIN", 10, 15);
+export const socialLoginRateLimiter = makeLimiter("AUTH_SOCIAL", 40, 15);
 export const registerRateLimiter = makeLimiter("AUTH_REGISTER", 10, 60);
 export const forgotPasswordRateLimiter = makeLimiter("AUTH_FORGOT_PASSWORD", 5, 15);
 export const resetPasswordRateLimiter = makeLimiter("AUTH_RESET_PASSWORD", 10, 15);

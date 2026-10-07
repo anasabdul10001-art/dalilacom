@@ -34,6 +34,12 @@ data class ResendVerificationRequest(val email: String)
 data class AuthResponse(val token: String, val user: UserDto)
 
 @Serializable
+data class SocialProvidersDto(val google: Boolean = false, val facebook: Boolean = false)
+
+@Serializable
+data class SocialExchangeRequest(val ticket: String)
+
+@Serializable
 data class MessageResponse(val message: String? = null, val error: String? = null)
 
 @Serializable

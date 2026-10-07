@@ -15,6 +15,7 @@ import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.auth.LoginScreen
 import com.dalilacom.app.ui.auth.RegisterScreen
+import com.dalilacom.app.ui.auth.SocialReturnScreen
 import com.dalilacom.app.ui.auth.SplashScreen
 import com.dalilacom.app.data.RouteTarget
 import com.dalilacom.app.ui.merchant.MerchantDetailScreen
@@ -38,6 +39,8 @@ fun DalilacomNavGraph(
     deepLinkIntent: Intent? = null,
     notificationRoute: String? = null,
     onNotificationRouteConsumed: () -> Unit = {},
+    socialReturn: SocialReturn? = null,
+    onSocialReturnConsumed: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     val factory = remember { ViewModelFactory(container) }
@@ -60,12 +63,35 @@ fun DalilacomNavGraph(
         onNotificationRouteConsumed()
     }
 
+    // Back from a Google/Facebook sign-in: once home is up, trade the ticket for a session.
+    LaunchedEffect(socialReturn) {
+        val back = socialReturn ?: return@LaunchedEffect
+        navController.currentBackStackEntryFlow.first { it.destination.route == "home" }
+        navController.navigate("socialReturn?ticket=${android.net.Uri.encode(back.ticket.orEmpty())}&error=${android.net.Uri.encode(back.error.orEmpty())}")
+        onSocialReturnConsumed()
+    }
+
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(
                 authRepository = container.authRepository,
                 onHasSession = { navController.navigate("home") { popUpTo(0) } },
                 onNoSession = { navController.navigate("home") { popUpTo(0) } }, // guests land on the map/directory
+            )
+        }
+        composable(
+            "socialReturn?ticket={ticket}&error={error}",
+            arguments = listOf(
+                navArgument("ticket") { type = NavType.StringType; defaultValue = "" },
+                navArgument("error") { type = NavType.StringType; defaultValue = "" },
+            ),
+        ) { entry ->
+            SocialReturnScreen(
+                factory = factory,
+                ticket = entry.arguments?.getString("ticket")?.takeIf { it.isNotBlank() },
+                error = entry.arguments?.getString("error")?.takeIf { it.isNotBlank() },
+                onSignedIn = { navController.navigate("home") { popUpTo(0) } },
+                onBack = { navController.navigate("login") { popUpTo(0) } },
             )
         }
         composable("login") {

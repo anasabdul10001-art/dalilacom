@@ -78,4 +78,12 @@ DICT.ar = {
   "pricing.renewTitle": "تجديد العضوية",
   "pricing.renewSub": "اختر الخطة اللي بدك تجدّد فيها — بتكمّل بنفس بطاقتك.",
   "pricing.renew": "جدّد",
+  "social.google": "المتابعة بحساب Google",
+  "social.facebook": "المتابعة بحساب فيسبوك",
+  "social.or": "أو",
+  "social.failed": "تعذّر تسجيل الدخول بالحساب الخارجي، جرّب مرة ثانية",
+  "social.error.CANCELLED": "ألغيت تسجيل الدخول",
+  "social.error.EMAIL_IN_USE": "في حساب بنفس الإيميل — سجّل دخول بكلمة السر أولًا",
+  "social.error.NO_EMAIL": "الحساب ما شارك إيميله معنا، فما فينا نفتح لك حساب",
+  "social.error.ACCOUNT_DISABLED": "هذا الحساب معطّل، تواصل مع الدعم",
 };

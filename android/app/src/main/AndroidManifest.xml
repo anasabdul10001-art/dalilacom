@@ -38,6 +38,15 @@
                 <data android:scheme="dalilacom" android:host="responder" android:pathPrefix="/meta" />
             </intent-filter>
 
+            <!-- Back from a Google / Facebook sign-in: the server's callback page sends the browser here with a
+                 one-time ticket (dalilacom://auth/social?ticket=...) or the reason it failed (?social_error=...). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dalilacom" android:host="auth" android:pathPrefix="/social" />
+            </intent-filter>
+
             <!-- Tapping a push notification opens the in-app inbox. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

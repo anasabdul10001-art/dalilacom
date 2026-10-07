@@ -124,6 +124,7 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                     ) { Text(AppStrings.get(R.string.s_c9cbc8b2), style = MaterialTheme.typography.titleSmall) }
                 }
+                SocialButtons(viewModel)
             }
         }
 

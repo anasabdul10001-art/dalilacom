@@ -19,6 +19,12 @@ interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
 
+    @GET("auth/social/providers")
+    suspend fun socialProviders(): Response<SocialProvidersDto>
+
+    @POST("auth/social/exchange")
+    suspend fun socialExchange(@Body body: SocialExchangeRequest): Response<AuthResponse>
+
     @GET("profile/me")
     suspend fun getProfile(): Response<ProfileDto>
 
