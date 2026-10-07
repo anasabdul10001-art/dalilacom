@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.orders
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,13 +48,13 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
     val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        TextButton(onClick = onBack) { Text("‹ رجوع") }
+        TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
 
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            state.order == null -> Text(state.error ?: "الطلب غير موجود", color = MaterialTheme.colorScheme.error)
+            state.order == null -> Text(state.error ?: AppStrings.get(R.string.s_6e3a209c), color = MaterialTheme.colorScheme.error)
             else -> {
                 val order = state.order!!
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -60,10 +62,10 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
                     Text(orderStatusLabel(order.status), color = orderStatusColor(order.status), style = MaterialTheme.typography.titleMedium)
                 }
                 order.merchant?.let { Text(it.businessName, style = MaterialTheme.typography.bodyMedium) }
-                order.cancelReason?.let { Text("سبب الإلغاء: $it", style = MaterialTheme.typography.bodySmall) }
+                order.cancelReason?.let { Text(AppStrings.get(R.string.fmt_cancel_reason, it), style = MaterialTheme.typography.bodySmall) }
 
                 Spacer(Modifier.height(16.dp))
-                Text("المنتجات", style = MaterialTheme.typography.titleMedium)
+                Text(AppStrings.get(R.string.s_6793a69f), style = MaterialTheme.typography.titleMedium)
                 order.items.forEach { item ->
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("${item.productName} × ${item.quantity}")
@@ -73,24 +75,24 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
 
                 Spacer(Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("الإجمالي", style = MaterialTheme.typography.titleMedium)
+                    Text(AppStrings.get(R.string.s_413c51af), style = MaterialTheme.typography.titleMedium)
                     Text(formatCents(order.totalCents), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 if (order.memberDiscountCents > 0) {
-                    Text("وفّرت ${formatCents(order.memberDiscountCents)} بسعر أعضاء دليلكم", style = MaterialTheme.typography.bodySmall)
+                    Text(AppStrings.get(R.string.fmt_saved, formatCents(order.memberDiscountCents)), style = MaterialTheme.typography.bodySmall)
                 }
 
                 Spacer(Modifier.height(12.dp))
                 OutlinedButton(
-                    onClick = { scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/order/${order.id}", "فاتورة ${order.orderNumber}") } },
+                    onClick = { scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/order/${order.id}", AppStrings.get(R.string.fmt_invoice_job, order.orderNumber)) } },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("📄 تصدير الفاتورة PDF") }
+                ) { Text(AppStrings.get(R.string.s_c2cbfa91)) }
 
                 val canCancel = ORDER_STATUS_TRANSITIONS[order.status]?.contains("CANCELLED") == true
                 if (canCancel) {
                     Spacer(Modifier.height(20.dp))
                     Button(onClick = viewModel::cancel, enabled = !state.isCancelling, modifier = Modifier.fillMaxWidth()) {
-                        Text("إلغاء الطلب")
+                        Text(AppStrings.get(R.string.s_b4bbf18b))
                     }
                 }
 

@@ -1,5 +1,7 @@
 package com.dalilacom.app.data.repository
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.CatalogDto
 import com.dalilacom.app.data.network.errorText
@@ -13,19 +15,19 @@ class MembershipRepository(private val api: ApiService) {
 
     suspend fun getPlans(): Result<List<MembershipPlanDto>> {
         val response = safeApiCall { api.getPlans() }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         return Result.success(response.body().takeIf { response.isSuccessful } ?: emptyList())
     }
 
     suspend fun subscribe(planId: String): Result<MembershipDto> {
         val response = safeApiCall { api.subscribe(SubscribeRequest(planId)) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
             Result.success(body)
         } else {
             // The server says why (not enough wallet credit, price not set...) — show that, not a generic failure.
-            Result.failure(Exception(errorText(response, "تعذّر الاشتراك بالعضوية")))
+            Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_99ca558f))))
         }
     }
 

@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.RedeemResponse
@@ -33,7 +35,7 @@ class RedeemViewModel(private val repository: MerchantRepository) : ViewModel() 
         if (parts.size == 2) {
             _uiState.value = _uiState.value.copy(memberNumber = parts[0], code = parts[1], error = null)
         } else {
-            _uiState.value = _uiState.value.copy(error = "الكود الممسوح غير صالح")
+            _uiState.value = _uiState.value.copy(error = AppStrings.get(R.string.s_8970aed0))
         }
     }
 
@@ -52,7 +54,7 @@ class RedeemViewModel(private val repository: MerchantRepository) : ViewModel() 
     fun verify() {
         val state = _uiState.value
         if (state.memberNumber.isBlank() || state.code.length != 6) {
-            _uiState.value = state.copy(error = "دخّل رقم العضوية والكود المكوّن من 6 أرقام")
+            _uiState.value = state.copy(error = AppStrings.get(R.string.s_48e7fe4b))
             return
         }
         _uiState.value = state.copy(isLoading = true, error = null)
@@ -74,7 +76,7 @@ class RedeemViewModel(private val repository: MerchantRepository) : ViewModel() 
         val state = _uiState.value
         val billCents = state.billAmountText.replace(",", ".").toDoubleOrNull()?.times(100)?.toInt()
         if (billCents == null || billCents <= 0) {
-            _uiState.value = state.copy(error = "دخّل قيمة فاتورة صحيحة")
+            _uiState.value = state.copy(error = AppStrings.get(R.string.s_33093b21))
             return
         }
         _uiState.value = state.copy(isLoading = true, error = null)

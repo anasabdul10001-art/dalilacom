@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.responder
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -47,20 +49,20 @@ import com.dalilacom.app.data.network.MetaPageDto
 import com.dalilacom.app.data.network.ResponderStatusDto
 import com.dalilacom.app.ui.ViewModelFactory
 
-private val TAB_TITLES = listOf("نظرة عامة", "القنوات", "القواعد", "الوارد")
+private val TAB_TITLES get() = listOf(AppStrings.get(R.string.s_90a91c96), AppStrings.get(R.string.s_53655660), AppStrings.get(R.string.s_b642dd5a), AppStrings.get(R.string.s_a3e7dfc4))
 
 private fun statusLabel(status: String) = when (status) {
-    "TRIAL" -> "تجربة مجانية"
-    "ACTIVE" -> "فعّال"
-    "EXPIRED" -> "منتهي"
-    else -> "غير مفعّل"
+    "TRIAL" -> AppStrings.get(R.string.s_4e387930)
+    "ACTIVE" -> AppStrings.get(R.string.s_89a4c18a)
+    "EXPIRED" -> AppStrings.get(R.string.s_a6ed2a71)
+    else -> AppStrings.get(R.string.s_439b0d4e)
 }
 
 private fun interactionLabel(status: String) = when (status) {
-    "SENT" -> "تم الرد"
-    "NEEDS_REVIEW" -> "بانتظار ردك"
-    "FAILED" -> "فشل الإرسال"
-    else -> "تم التجاهل"
+    "SENT" -> AppStrings.get(R.string.s_a549b16b)
+    "NEEDS_REVIEW" -> AppStrings.get(R.string.s_4b028e52)
+    "FAILED" -> AppStrings.get(R.string.s_ee5aea07)
+    else -> AppStrings.get(R.string.s_d7359b3c)
 }
 
 /** Opens the Facebook dialog in the phone's browser — no WebView, no extra dependency. */
@@ -103,8 +105,8 @@ fun ResponderScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onBack) { Text("رجوع") }
-            Text("المجيب الآلي", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_328ddce5)) }
+            Text(AppStrings.get(R.string.s_2136e58d), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         }
         TabRow(selectedTabIndex = state.tab) {
             TAB_TITLES.forEachIndexed { index, title ->
@@ -122,7 +124,7 @@ fun ResponderScreen(
             state.info?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             if (state.needsTopUp) {
                 Spacer(Modifier.height(6.dp))
-                OutlinedButton(onClick = onOpenWallet) { Text("شحن المحفظة") }
+                OutlinedButton(onClick = onOpenWallet) { Text(AppStrings.get(R.string.s_f85fd2a4)) }
             }
             if (state.error != null || state.info != null) Spacer(Modifier.height(10.dp))
 
@@ -144,22 +146,22 @@ private fun OverviewTab(
     onSaveProfile: (String, String) -> Unit,
 ) {
     if (status == null) {
-        Text("تعذّر تحميل الحالة، اسحب للرجوع وحاول من جديد")
+        Text(AppStrings.get(R.string.s_8c818f60))
         return
     }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Text("الحالة: ${statusLabel(status.status)}", style = MaterialTheme.typography.titleMedium)
+            Text(AppStrings.get(R.string.fmt_status, statusLabel(status.status)), style = MaterialTheme.typography.titleMedium)
             val until = (if (status.status == "TRIAL") status.trialEndsAt else status.periodEnd)?.take(10)
-            if (until != null && status.running) Text("ينتهي بتاريخ $until")
-            Text("رصيدك: ${status.balance} ${status.creditName}")
-            Text("السعر: ${status.price} ${status.creditName} كل ${status.periodDays} يوم")
-            if (status.aiReplyLimit > 0) Text("ردود الذكاء الاصطناعي: ${status.aiRepliesUsed} من ${status.aiReplyLimit}")
+            if (until != null && status.running) Text(AppStrings.get(R.string.fmt_ends_on, until))
+            Text(AppStrings.get(R.string.fmt_your_balance, status.balance, status.creditName))
+            Text(AppStrings.get(R.string.fmt_price_every, status.price, status.creditName, status.periodDays))
+            if (status.aiReplyLimit > 0) Text(AppStrings.get(R.string.fmt_ai_replies, status.aiRepliesUsed, status.aiReplyLimit))
             Spacer(Modifier.height(12.dp))
             val label = when {
-                !status.running && status.status != "EXPIRED" && status.trialAvailable -> "ابدأ التجربة المجانية (${status.trialDays} يوم)"
-                !status.running && status.status != "EXPIRED" -> "اشترك — ${status.price} ${status.creditName}"
-                else -> "جدّد الاشتراك — ${status.price} ${status.creditName}"
+                !status.running && status.status != "EXPIRED" && status.trialAvailable -> AppStrings.get(R.string.fmt_start_trial, status.trialDays)
+                !status.running && status.status != "EXPIRED" -> AppStrings.get(R.string.fmt_subscribe_price, status.price, status.creditName)
+                else -> AppStrings.get(R.string.fmt_renew_price, status.price, status.creditName)
             }
             Button(onClick = onActivate, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(label) }
         }
@@ -168,11 +170,11 @@ private fun OverviewTab(
     Spacer(Modifier.height(16.dp))
     var description by remember(status.businessDescription) { mutableStateOf(status.businessDescription.orEmpty()) }
     var tone by remember(status.tone) { mutableStateOf(status.tone.orEmpty()) }
-    Text("عن نشاطك (يستخدمها الذكاء الاصطناعي بالرد)", style = MaterialTheme.typography.titleSmall)
-    OutlinedTextField(description, { description = it }, label = { Text("وصف النشاط") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-    OutlinedTextField(tone, { tone = it }, label = { Text("نبرة الرد (مثال: ودّية ومختصرة)") }, modifier = Modifier.fillMaxWidth())
+    Text(AppStrings.get(R.string.s_dc09c826), style = MaterialTheme.typography.titleSmall)
+    OutlinedTextField(description, { description = it }, label = { Text(AppStrings.get(R.string.s_04230bfd)) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+    OutlinedTextField(tone, { tone = it }, label = { Text(AppStrings.get(R.string.s_6d05e053)) }, modifier = Modifier.fillMaxWidth())
     Spacer(Modifier.height(8.dp))
-    OutlinedButton(onClick = { onSaveProfile(description, tone) }, enabled = !busy) { Text("حفظ") }
+    OutlinedButton(onClick = { onSaveProfile(description, tone) }, enabled = !busy) { Text(AppStrings.get(R.string.s_56ee6e0d)) }
 }
 
 @Composable
@@ -187,7 +189,7 @@ private fun ChannelsTab(
     FacebookCard(state, viewModel)
 
     Spacer(Modifier.height(16.dp))
-    Text("قنوات التواصل المتاحة", style = MaterialTheme.typography.titleMedium)
+    Text(AppStrings.get(R.string.s_53bd39b7), style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(8.dp))
     channels.forEach { channel ->
         var expanded by remember { mutableStateOf(false) }
@@ -197,9 +199,9 @@ private fun ChannelsTab(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(channel.name, style = MaterialTheme.typography.titleSmall)
                     if (channel.connectable) {
-                        TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "إغلاق" else "ربط") }
+                        TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) AppStrings.get(R.string.s_5bf826c5) else AppStrings.get(R.string.s_c91b0e1d)) }
                     } else {
-                        Text("قريبًا", color = MaterialTheme.colorScheme.outline)
+                        Text(AppStrings.get(R.string.s_f008af11), color = MaterialTheme.colorScheme.outline)
                     }
                 }
                 // Facebook and Instagram are meant to be connected by signing in, not by pasting a
@@ -207,7 +209,7 @@ private fun ChannelsTab(
                 if (expanded && channel.connectable) {
                     if (channel.key == "facebook" || channel.key == "instagram") {
                         Text(
-                            "الأفضل تربطها بزرّ «ربط فيسبوك» فوق — بلا لصق توكن. الحقول تحت للربط اليدوي إذا احتجت.",
+                            AppStrings.get(R.string.s_a26cb7f2),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
                         )
@@ -227,15 +229,15 @@ private fun ChannelsTab(
                     Button(
                         onClick = { viewModel.connect(channel.id, values.value.filterValues { it.isNotBlank() }) },
                         enabled = !busy,
-                    ) { Text("ربط القناة") }
+                    ) { Text(AppStrings.get(R.string.s_2a837234)) }
                 }
             }
         }
     }
 
     Spacer(Modifier.height(16.dp))
-    Text("قنواتي المربوطة", style = MaterialTheme.typography.titleMedium)
-    if (connections.isEmpty()) Text("ما في قنوات مربوطة بعد", color = MaterialTheme.colorScheme.outline)
+    Text(AppStrings.get(R.string.s_1be55892), style = MaterialTheme.typography.titleMedium)
+    if (connections.isEmpty()) Text(AppStrings.get(R.string.s_57833160), color = MaterialTheme.colorScheme.outline)
     connections.forEach { connection ->
         Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             Column(Modifier.padding(12.dp)) {
@@ -243,7 +245,7 @@ private fun ChannelsTab(
                     Text("${connection.channel}${connection.externalAccountId?.let { " — $it" } ?: ""}")
                     Switch(checked = connection.isActive, onCheckedChange = { viewModel.toggleConnection(connection.id, it) })
                 }
-                connection.hookUrl?.let { Text("رابط الاستقبال: $it", style = MaterialTheme.typography.bodySmall) }
+                connection.hookUrl?.let { Text(AppStrings.get(R.string.fmt_hook_url, it), style = MaterialTheme.typography.bodySmall) }
             }
         }
     }
@@ -258,28 +260,28 @@ private fun FacebookCard(state: ResponderUiState, viewModel: ResponderViewModel)
     val status = state.metaStatus
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Text("ربط فيسبوك", style = MaterialTheme.typography.titleMedium)
+            Text(AppStrings.get(R.string.s_9aa19dc9), style = MaterialTheme.typography.titleMedium)
             Text(
-                "سجّل دخولك بفيسبوك واختر الصفحة اللي بيشتغل عليها المجيب الآلي — بلا نسخ أي توكن.",
+                AppStrings.get(R.string.s_8c7eace2),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
             )
             Spacer(Modifier.height(10.dp))
 
             when {
-                status == null -> Text("تعذّر تحميل حالة الربط، جرّب التحديث.")
+                status == null -> Text(AppStrings.get(R.string.s_d036d6bd))
                 !status.available -> Text(
-                    "الربط بفيسبوك مو مفعّل على السيرفر بعد (بدو تطبيق Meta وموافقة على الصلاحيات). " +
-                        "بعد ما يتفعّل بيصير هالزر يفتح صفحة فيسبوك مباشرة.",
+                    AppStrings.get(R.string.s_b89a6549) +
+                        AppStrings.get(R.string.s_a3836012),
                     color = MaterialTheme.colorScheme.error,
                 )
-                !status.responderRunning -> Text("فعّل المجيب الآلي أول (تجربة أو اشتراك) وبعدها بيربط.", color = MaterialTheme.colorScheme.error)
+                !status.responderRunning -> Text(AppStrings.get(R.string.s_cd1c71a4), color = MaterialTheme.colorScheme.error)
                 else -> {
                     Button(
                         onClick = { viewModel.startMetaOAuth() },
                         enabled = !state.metaLoading && !state.isBusy,
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text("ربط فيسبوك") }
+                    ) { Text(AppStrings.get(R.string.s_9aa19dc9)) }
                 }
             }
 
@@ -291,7 +293,7 @@ private fun FacebookCard(state: ResponderUiState, viewModel: ResponderViewModel)
             // The browser came back with several Pages: pick one here, inside the app.
             if (state.metaPages.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
-                Text("اختر الصفحة", style = MaterialTheme.typography.titleSmall)
+                Text(AppStrings.get(R.string.s_6310b20d), style = MaterialTheme.typography.titleSmall)
                 state.metaPages.forEach { page: MetaPageDto ->
                     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         Column(Modifier.padding(12.dp)) {
@@ -300,20 +302,20 @@ private fun FacebookCard(state: ResponderUiState, viewModel: ResponderViewModel)
                                 Button(
                                     onClick = { viewModel.completeMetaOAuth(page.id, "FACEBOOK") },
                                     enabled = !state.metaLoading,
-                                ) { Text("ربط الصفحة") }
+                                ) { Text(AppStrings.get(R.string.s_21019a65)) }
                                 if (page.hasInstagram) {
                                     OutlinedButton(
                                         onClick = { viewModel.completeMetaOAuth(page.id, "INSTAGRAM") },
                                         enabled = !state.metaLoading,
                                     ) {
-                                        Text(page.instagramUsername?.let { "ربط إنستغرام (@$it)" } ?: "ربط إنستغرام")
+                                        Text(page.instagramUsername?.let { AppStrings.get(R.string.fmt_connect_ig, it) } ?: AppStrings.get(R.string.s_02cdc94a))
                                     }
                                 }
                             }
                         }
                     }
                 }
-                TextButton(onClick = { viewModel.clearMetaPages() }) { Text("إلغاء") }
+                TextButton(onClick = { viewModel.clearMetaPages() }) { Text(AppStrings.get(R.string.s_e776b020)) }
             }
         }
     }
@@ -329,24 +331,24 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
     var template by remember { mutableStateOf("") }
     var instructions by remember { mutableStateOf("") }
 
-    Text("قاعدة رد جديدة", style = MaterialTheme.typography.titleMedium)
-    OutlinedTextField(name, { name = it }, label = { Text("اسم القاعدة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-    OutlinedTextField(keywords, { keywords = it }, label = { Text("كلمات مفتاحية (مفصولة بفاصلة)") }, modifier = Modifier.fillMaxWidth())
+    Text(AppStrings.get(R.string.s_c9fbbd3c), style = MaterialTheme.typography.titleMedium)
+    OutlinedTextField(name, { name = it }, label = { Text(AppStrings.get(R.string.s_5ffc2bb8)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+    OutlinedTextField(keywords, { keywords = it }, label = { Text(AppStrings.get(R.string.s_d82b4deb)) }, modifier = Modifier.fillMaxWidth())
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
-        FilterChip(selected = mode == "FIXED", onClick = { mode = "FIXED" }, label = { Text("رد ثابت") })
-        FilterChip(selected = mode == "AI", onClick = { mode = "AI" }, label = { Text("ذكاء اصطناعي") })
+        FilterChip(selected = mode == "FIXED", onClick = { mode = "FIXED" }, label = { Text(AppStrings.get(R.string.s_38ceca24)) })
+        FilterChip(selected = mode == "AI", onClick = { mode = "AI" }, label = { Text(AppStrings.get(R.string.s_ec6d9289)) })
     }
     if (mode == "FIXED") {
-        OutlinedTextField(template, { template = it }, label = { Text("نص الرد (استخدم {name} لاسم الزبون)") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OutlinedTextField(template, { template = it }, label = { Text(AppStrings.get(R.string.s_a5e584ae)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
     } else {
-        OutlinedTextField(instructions, { instructions = it }, label = { Text("تعليمات للذكاء الاصطناعي") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
-        OutlinedTextField(template, { template = it }, label = { Text("رد احتياطي إذا الذكاء الاصطناعي غير متاح (اختياري)") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(instructions, { instructions = it }, label = { Text(AppStrings.get(R.string.s_54b49c02)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OutlinedTextField(template, { template = it }, label = { Text(AppStrings.get(R.string.s_faa866bc)) }, modifier = Modifier.fillMaxWidth())
     }
     val socialConnections = state.connections.filter { it.supportsPosts }
     if (socialConnections.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))
-        Text("منشورات محددة (فيسبوك / إنستغرام)", style = MaterialTheme.typography.titleSmall)
-        Text("اتركها فاضية لتنطبق القاعدة على كل شي، أو اختر منشورات لتردّ على التعليقات عليها فقط.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Text(AppStrings.get(R.string.s_ca70f840), style = MaterialTheme.typography.titleSmall)
+        Text(AppStrings.get(R.string.s_e0501ddf), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
             socialConnections.forEach { connection ->
                 FilterChip(
@@ -370,7 +372,7 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
             }
         }
         if (state.selectedPostIds.isNotEmpty()) {
-            Text("📌 ${state.selectedPostIds.size} منشور محدد", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+            Text(AppStrings.get(R.string.fmt_posts_selected, state.selectedPostIds.size), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
         }
     }
 
@@ -381,11 +383,11 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
             name = ""; keywords = ""; template = ""; instructions = ""
         },
         enabled = !busy,
-    ) { Text("إضافة القاعدة") }
+    ) { Text(AppStrings.get(R.string.s_7f9255f4)) }
 
     Spacer(Modifier.height(16.dp))
-    Text("قواعدي", style = MaterialTheme.typography.titleMedium)
-    if (rules.isEmpty()) Text("ما عندك قواعد بعد", color = MaterialTheme.colorScheme.outline)
+    Text(AppStrings.get(R.string.s_b045d443), style = MaterialTheme.typography.titleMedium)
+    if (rules.isEmpty()) Text(AppStrings.get(R.string.s_c33c7465), color = MaterialTheme.colorScheme.outline)
     rules.forEach { rule ->
         Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             Column(Modifier.padding(12.dp)) {
@@ -393,10 +395,10 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
                     Text(rule.name, style = MaterialTheme.typography.titleSmall)
                     Switch(checked = rule.isActive, onCheckedChange = { viewModel.toggleRule(rule.id, it) })
                 }
-                Text("الكلمات: ${rule.keywords.joinToString("، ")}", style = MaterialTheme.typography.bodySmall)
-                if (rule.postIds.isNotEmpty()) Text("📌 محصورة بـ ${rule.postIds.size} منشور", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                Text(if (rule.mode == "AI") "ذكاء اصطناعي" else "رد ثابت: ${rule.replyTemplate}", style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { viewModel.deleteRule(rule.id) }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+                Text(AppStrings.get(R.string.fmt_keywords, rule.keywords.joinToString(AppStrings.get(R.string.list_separator))), style = MaterialTheme.typography.bodySmall)
+                if (rule.postIds.isNotEmpty()) Text(AppStrings.get(R.string.fmt_limited_posts, rule.postIds.size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Text(if (rule.mode == "AI") AppStrings.get(R.string.s_ec6d9289) else AppStrings.get(R.string.fmt_fixed_reply, rule.replyTemplate.orEmpty()), style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { viewModel.deleteRule(rule.id) }) { Text(AppStrings.get(R.string.s_2d2bbdc2), color = MaterialTheme.colorScheme.error) }
             }
         }
     }
@@ -404,10 +406,10 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
 
 @Composable
 private fun InboxTab(inbox: List<InboxItemDto>, busy: Boolean, onSend: (String, String) -> Unit) {
-    Text("الرسائل الواردة", style = MaterialTheme.typography.titleMedium)
-    Text("الشكاوى ما بينرد عليها تلقائيًا أبدًا، بتظهر هون لتردّ عليها أنت.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+    Text(AppStrings.get(R.string.s_a6f73674), style = MaterialTheme.typography.titleMedium)
+    Text(AppStrings.get(R.string.s_f542f592), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
     Spacer(Modifier.height(8.dp))
-    if (inbox.isEmpty()) Text("ما في رسائل بعد", color = MaterialTheme.colorScheme.outline)
+    if (inbox.isEmpty()) Text(AppStrings.get(R.string.s_7b3296cc), color = MaterialTheme.colorScheme.outline)
     inbox.forEach { item ->
         var reply by remember(item.id) { mutableStateOf("") }
         Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -417,10 +419,10 @@ private fun InboxTab(inbox: List<InboxItemDto>, busy: Boolean, onSend: (String, 
                     Text(interactionLabel(item.status), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
                 Text(item.message)
-                item.reply?.let { Text("الرد: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                item.reply?.let { Text(AppStrings.get(R.string.fmt_reply, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
                 if (item.status == "NEEDS_REVIEW" || item.status == "FAILED") {
-                    OutlinedTextField(reply, { reply = it }, label = { Text("اكتب ردك") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions.Default)
-                    Button(onClick = { onSend(item.id, reply) }, enabled = !busy && reply.isNotBlank()) { Text("إرسال") }
+                    OutlinedTextField(reply, { reply = it }, label = { Text(AppStrings.get(R.string.s_47428e01)) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions.Default)
+                    Button(onClick = { onSend(item.id, reply) }, enabled = !busy && reply.isNotBlank()) { Text(AppStrings.get(R.string.s_90cf87a4)) }
                 }
             }
         }

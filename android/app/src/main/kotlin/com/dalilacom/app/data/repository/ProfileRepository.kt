@@ -1,5 +1,7 @@
 package com.dalilacom.app.data.repository
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.ProfileDto
 import com.dalilacom.app.data.network.UpdateProfileRequest
@@ -18,16 +20,16 @@ class ProfileRepository(private val api: ApiService) {
     }
 
     suspend fun update(fullName: String, bio: String): Result<ProfileDto> =
-        result("تعذّر حفظ الملف الشخصي") { api.updateProfile(UpdateProfileRequest(fullName.trim(), bio.trim().ifBlank { null })) }
+        result(AppStrings.get(R.string.s_ca575cfb)) { api.updateProfile(UpdateProfileRequest(fullName.trim(), bio.trim().ifBlank { null })) }
 
     /** [jpeg] is already cropped to a square and shrunk (see ImageUtil). */
     suspend fun uploadAvatar(jpeg: ByteArray): Result<ProfileDto> =
-        result("تعذّر رفع الصورة") { api.uploadAvatar(jpeg.toRequestBody("image/jpeg".toMediaType())) }
+        result(AppStrings.get(R.string.s_e78265a1)) { api.uploadAvatar(jpeg.toRequestBody("image/jpeg".toMediaType())) }
 
-    suspend fun removeAvatar(): Result<ProfileDto> = result("تعذّر حذف الصورة") { api.deleteAvatar() }
+    suspend fun removeAvatar(): Result<ProfileDto> = result(AppStrings.get(R.string.s_347c4ba8)) { api.deleteAvatar() }
 
     private suspend fun result(fallback: String, call: suspend () -> retrofit2.Response<ProfileDto>): Result<ProfileDto> {
-        val response = safeApiCall { call() } ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+        val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, fallback)))
     }

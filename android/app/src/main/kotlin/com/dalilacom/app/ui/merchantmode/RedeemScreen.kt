@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -57,26 +59,26 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("تأكيد حسم", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Text(AppStrings.get(R.string.s_d9724d06), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(16.dp))
 
         when (state.phase) {
             RedeemPhase.INPUT -> {
-                Button(onClick = ::launchScan, modifier = Modifier.fillMaxWidth()) { Text("امسح الكود 📷") }
+                Button(onClick = ::launchScan, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_f353c2e2)) }
                 Spacer(Modifier.height(12.dp))
-                Text("أو دخّل بيانات العضوية يدويًا", style = MaterialTheme.typography.bodySmall)
+                Text(AppStrings.get(R.string.s_9a2547dd), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = state.memberNumber,
                     onValueChange = viewModel::onMemberNumberChange,
-                    label = { Text("رقم العضوية") },
+                    label = { Text(AppStrings.get(R.string.s_8522fb76)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = state.code,
                     onValueChange = viewModel::onCodeChange,
-                    label = { Text("الكود (6 أرقام)") },
+                    label = { Text(AppStrings.get(R.string.s_ed8f478b)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -84,18 +86,18 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
                 if (state.isLoading) {
                     CircularProgressIndicator()
                 } else {
-                    Button(onClick = viewModel::verify, modifier = Modifier.fillMaxWidth()) { Text("تحقق") }
+                    Button(onClick = viewModel::verify, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_fe79250b)) }
                 }
             }
 
             RedeemPhase.VERIFIED -> {
-                Text("العضو: ${state.memberName}", style = MaterialTheme.typography.titleMedium)
-                Text("نسبة الحسم: ${state.discountPercent}%", color = MaterialTheme.colorScheme.primary)
+                Text(AppStrings.get(R.string.fmt_member, state.memberName.orEmpty()), style = MaterialTheme.typography.titleMedium)
+                Text(AppStrings.get(R.string.fmt_discount_pct, state.discountPercent), color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = state.billAmountText,
                     onValueChange = viewModel::onBillAmountChange,
-                    label = { Text("قيمة الفاتورة") },
+                    label = { Text(AppStrings.get(R.string.s_c89ae688)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -103,25 +105,25 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
                 if (state.isLoading) {
                     CircularProgressIndicator()
                 } else {
-                    Button(onClick = viewModel::confirmRedeem, modifier = Modifier.fillMaxWidth()) { Text("تأكيد الحسم") }
+                    Button(onClick = viewModel::confirmRedeem, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_0b149b76)) }
                     Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = viewModel::reset, modifier = Modifier.fillMaxWidth()) { Text("إلغاء") }
+                    OutlinedButton(onClick = viewModel::reset, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_e776b020)) }
                 }
             }
 
             RedeemPhase.DONE -> {
                 val receipt = state.receipt!!
-                Text("تم تأكيد الحسم ✓", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+                Text(AppStrings.get(R.string.s_af7715dd), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(12.dp))
-                Text("رقم العملية: ${receipt.transactionRef}")
-                Text("قيمة الفاتورة: ${formatCents(receipt.billAmountCents)}")
-                Text("نسبة الحسم: ${receipt.discountPercent}%")
-                Text("قيمة الحسم: ${formatCents(receipt.discountAmountCents)}")
-                Text("المبلغ النهائي: ${formatCents(receipt.finalAmountCents)}", style = MaterialTheme.typography.titleMedium)
+                Text(AppStrings.get(R.string.fmt_tx_ref, receipt.transactionRef))
+                Text(AppStrings.get(R.string.fmt_bill_amount, formatCents(receipt.billAmountCents)))
+                Text(AppStrings.get(R.string.fmt_discount_pct, receipt.discountPercent))
+                Text(AppStrings.get(R.string.fmt_discount_amount, formatCents(receipt.discountAmountCents)))
+                Text(AppStrings.get(R.string.fmt_final_amount, formatCents(receipt.finalAmountCents)), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(20.dp))
-                OutlinedButton(onClick = { onExportReceipt(receipt.transactionRef) }, modifier = Modifier.fillMaxWidth()) { Text("📄 تصدير الإيصال PDF") }
+                OutlinedButton(onClick = { onExportReceipt(receipt.transactionRef) }, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_064be38d)) }
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = viewModel::reset, modifier = Modifier.fillMaxWidth()) { Text("عملية جديدة") }
+                Button(onClick = viewModel::reset, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_e644dc4b)) }
             }
         }
 

@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchant
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.CategoryDto
@@ -35,7 +37,7 @@ class MerchantRegisterViewModel(
 
     fun register(businessName: String, categoryId: String?, address: String, phone: String, whatsapp: String, location: Pair<Double, Double>?) {
         if (businessName.isBlank() || categoryId == null) {
-            _uiState.value = _uiState.value.copy(error = "عبّي اسم المحل واختر تصنيف")
+            _uiState.value = _uiState.value.copy(error = AppStrings.get(R.string.s_d5a3c41f))
             return
         }
         _uiState.value = _uiState.value.copy(isSubmitting = true, error = null)

@@ -1,5 +1,7 @@
 package com.dalilacom.app.data.repository
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.CreateProductRequest
@@ -28,23 +30,23 @@ class ProductRepository(private val api: ApiService) {
 
     suspend fun createProduct(body: CreateProductRequest): Result<ProductDto> {
         val response = safeApiCall { api.createProduct(body) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val result = response.body()
         return if (response.isSuccessful && result != null) {
             Result.success(result)
         } else {
-            Result.failure(Exception(errorText(response, "تعذّرت إضافة المنتج")))
+            Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_9b5be5df))))
         }
     }
 
     suspend fun updateProduct(id: String, body: UpdateProductRequest): Result<ProductDto> {
         val response = safeApiCall { api.updateProduct(id, body) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val result = response.body()
         return if (response.isSuccessful && result != null) {
             Result.success(result)
         } else {
-            Result.failure(Exception(errorText(response, "تعذّر حفظ المنتج")))
+            Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_341d926d))))
         }
     }
 }

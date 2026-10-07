@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.cart
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,14 +47,14 @@ fun CartScreen(factory: ViewModelFactory, onCheckoutSuccess: () -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("سلتي", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Text(AppStrings.get(R.string.s_3fc7c056), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(12.dp))
 
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            state.items.isEmpty() -> Text("سلتك فاضية", style = MaterialTheme.typography.bodyMedium)
+            state.items.isEmpty() -> Text(AppStrings.get(R.string.s_dc26b57d), style = MaterialTheme.typography.bodyMedium)
             else -> {
                 LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                     items(state.items, key = { it.id }) { item ->
@@ -66,7 +68,7 @@ fun CartScreen(factory: ViewModelFactory, onCheckoutSuccess: () -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("الإجمالي", style = MaterialTheme.typography.titleMedium)
+                    Text(AppStrings.get(R.string.s_413c51af), style = MaterialTheme.typography.titleMedium)
                     Text(
                         formatCents(state.totalCents),
                         style = MaterialTheme.typography.titleMedium,
@@ -75,7 +77,7 @@ fun CartScreen(factory: ViewModelFactory, onCheckoutSuccess: () -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
                 Button(onClick = viewModel::checkout, modifier = Modifier.fillMaxWidth()) {
-                    Text("إتمام الطلب")
+                    Text(AppStrings.get(R.string.s_9a40a38b))
                 }
             }
         }
@@ -102,7 +104,7 @@ private fun CartItemRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(item.product.name, style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = onRemove) { Text("حذف") }
+                TextButton(onClick = onRemove) { Text(AppStrings.get(R.string.s_2d2bbdc2)) }
             }
             Text(item.product.merchant.businessName, style = MaterialTheme.typography.bodySmall)
 

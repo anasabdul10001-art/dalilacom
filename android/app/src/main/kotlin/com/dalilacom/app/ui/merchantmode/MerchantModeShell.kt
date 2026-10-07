@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,10 +42,10 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.DocumentPrinter
 import kotlinx.coroutines.launch
 
-private enum class MerchantTab(val label: String, val icon: ImageVector) {
-    Redeem("تأكيد حسم", Icons.Filled.QrCodeScanner),
-    Orders("طلبات واردة", Icons.AutoMirrored.Filled.ListAlt),
-    Catalog("الكتالوج", Icons.Filled.Inventory2),
+private enum class MerchantTab(@androidx.annotation.StringRes val labelRes: Int, val icon: ImageVector) {
+    Redeem(R.string.s_d9724d06, Icons.Filled.QrCodeScanner),
+    Orders(R.string.s_c5ffc332, Icons.AutoMirrored.Filled.ListAlt),
+    Catalog(R.string.s_d766cb06, Icons.Filled.Inventory2),
 }
 
 @Composable
@@ -64,15 +66,15 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                     NavigationBarItem(
                         selected = selectedTab == tab,
                         onClick = { selectedTab = tab },
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
-                        label = { Text(tab.label) },
+                        icon = { Icon(tab.icon, contentDescription = androidx.compose.ui.res.stringResource(tab.labelRes)) },
+                        label = { Text(androidx.compose.ui.res.stringResource(tab.labelRes)) },
                     )
                 }
             }
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            TextButton(onClick = { rootNavController.popBackStack() }) { Text("‹ رجوع لحساب الزبون") }
+            TextButton(onClick = { rootNavController.popBackStack() }) { Text(AppStrings.get(R.string.s_a24110f8)) }
             onboarding?.takeUnless { it.complete }?.let { steps ->
                 SetupChecklist(
                     steps = steps,
@@ -83,7 +85,7 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
             }
             when (selectedTab) {
                 MerchantTab.Redeem -> RedeemScreen(factory, onExportReceipt = { ref ->
-                    scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/discount/$ref", "إيصال حسم") }
+                    scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/discount/$ref", AppStrings.get(R.string.s_153612e1)) }
                 })
                 MerchantTab.Orders -> MerchantOrdersScreen(factory)
                 MerchantTab.Catalog -> CatalogScreen(
@@ -108,23 +110,23 @@ private fun SetupChecklist(steps: OnboardingDto, onLocation: () -> Unit, onHours
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("جهّز محلك ليظهر للزبائن", style = MaterialTheme.typography.titleSmall)
+                Text(AppStrings.get(R.string.s_0c6c1d53), style = MaterialTheme.typography.titleSmall)
                 Text("${steps.doneCount}/5", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
             if (!steps.approved) {
                 Text(
-                    "⏳ طلبك بانتظار موافقة الإدارة — ما رح يظهر محلك على الخريطة قبلها.",
+                    AppStrings.get(R.string.s_79e32d1f),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
             Spacer(Modifier.height(6.dp))
-            ChecklistItem(steps.location, "حدّد مكان محلك على الخريطة", onLocation)
-            ChecklistItem(steps.hours, "حدّد ساعات العمل", onHours)
-            ChecklistItem(steps.discount, "أضف حسم للأعضاء", onCatalog)
-            ChecklistItem(steps.product, "أضف أول منتج", onCatalog)
-            ChecklistItem(steps.approved, "موافقة الإدارة", null)
+            ChecklistItem(steps.location, AppStrings.get(R.string.s_04c5e56f), onLocation)
+            ChecklistItem(steps.hours, AppStrings.get(R.string.s_004f489c), onHours)
+            ChecklistItem(steps.discount, AppStrings.get(R.string.s_9855a904), onCatalog)
+            ChecklistItem(steps.product, AppStrings.get(R.string.s_47352f90), onCatalog)
+            ChecklistItem(steps.approved, AppStrings.get(R.string.s_ab03953f), null)
         }
     }
 }

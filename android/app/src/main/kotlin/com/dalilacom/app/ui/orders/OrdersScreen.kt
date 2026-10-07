@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.orders
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,14 +42,14 @@ fun OrdersScreen(factory: ViewModelFactory, onOrderClick: (String) -> Unit) {
     LaunchedEffect(Unit) { viewModel.refresh() }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("طلباتي", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Text(AppStrings.get(R.string.s_00246e91), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(12.dp))
 
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            state.orders.isEmpty() -> Text("ما عندك طلبات بعد", style = MaterialTheme.typography.bodyMedium)
+            state.orders.isEmpty() -> Text(AppStrings.get(R.string.s_01f05ae9), style = MaterialTheme.typography.bodyMedium)
             else -> LazyColumn {
                 items(state.orders, key = { it.id }) { order ->
                     OrderRow(order, onClick = { onOrderClick(order.id) })

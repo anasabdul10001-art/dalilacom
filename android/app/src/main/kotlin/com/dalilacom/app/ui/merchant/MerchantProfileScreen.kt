@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchant
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,7 +93,7 @@ class MerchantProfileViewModel(
     fun save() {
         val s = _uiState.value
         if (s.businessName.trim().length < 2) {
-            _uiState.update { it.copy(message = "اكتب اسم المحل", isError = true) }
+            _uiState.update { it.copy(message = AppStrings.get(R.string.s_f835f24d), isError = true) }
             return
         }
         viewModelScope.launch {
@@ -111,7 +113,7 @@ class MerchantProfileViewModel(
                 it.copy(
                     isSaving = false,
                     isError = result.isFailure,
-                    message = result.exceptionOrNull()?.message ?: "✅ انحفظت بيانات المحل",
+                    message = result.exceptionOrNull()?.message ?: AppStrings.get(R.string.s_997f9752),
                 )
             }
         }
@@ -126,8 +128,8 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ رجوع") }
-            Text("بيانات المحل ومكانه", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
+            Text(AppStrings.get(R.string.s_e2e9f99a), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         }
         if (state.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -137,27 +139,27 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             OutlinedTextField(
                 value = state.businessName,
                 onValueChange = viewModel::onName,
-                label = { Text("اسم المحل") },
+                label = { Text(AppStrings.get(R.string.s_59539fc9)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
             CategoryPicker(tree = state.categories, selectedId = state.categoryId, onSelect = viewModel::onCategory)
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(value = state.address, onValueChange = viewModel::onAddress, label = { Text("العنوان") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = state.address, onValueChange = viewModel::onAddress, label = { Text(AppStrings.get(R.string.s_baffa49c)) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(value = state.phone, onValueChange = viewModel::onPhone, label = { Text("الهاتف") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = state.phone, onValueChange = viewModel::onPhone, label = { Text(AppStrings.get(R.string.s_760c65a1)) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = state.whatsapp,
                 onValueChange = viewModel::onWhatsapp,
-                label = { Text("واتساب (مع رمز الدولة، مثل 9639xxxxxxxx)") },
+                label = { Text(AppStrings.get(R.string.s_1bef7f7d)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(16.dp))
             LocationPicker(value = state.location, onChange = viewModel::onLocation)
             Spacer(Modifier.height(16.dp))
             Button(onClick = viewModel::save, enabled = !state.isSaving, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Text("حفظ")
+                Text(AppStrings.get(R.string.s_56ee6e0d))
             }
             state.message?.let {
                 Spacer(Modifier.height(8.dp))

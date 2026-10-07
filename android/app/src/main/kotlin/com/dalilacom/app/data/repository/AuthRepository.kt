@@ -1,5 +1,7 @@
 package com.dalilacom.app.data.repository
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.LoginRequest
@@ -18,7 +20,7 @@ class AuthRepository(
 ) {
     suspend fun register(email: String, password: String, fullName: String): Result<UserDto> {
         val response = safeApiCall { api.register(RegisterRequest(email, password, fullName)) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
             tokenStore.saveToken(body.token)
@@ -31,14 +33,14 @@ class AuthRepository(
 
     suspend fun login(email: String, password: String): Result<UserDto> {
         val response = safeApiCall { api.login(LoginRequest(email, password)) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
             tokenStore.saveToken(body.token)
             sessionStore.saveRole(body.user.role)
             Result.success(body.user)
         } else {
-            Result.failure(Exception(if (response.code() == 401) "بيانات الدخول غير صحيحة" else errorText(response, "تعذّر تسجيل الدخول")))
+            Result.failure(Exception(if (response.code() == 401) AppStrings.get(R.string.s_3ea19382) else errorText(response, AppStrings.get(R.string.s_8562adb5))))
         }
     }
 

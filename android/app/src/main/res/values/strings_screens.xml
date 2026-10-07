@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Texts of the screens, keyed by a hash of the Arabic source. Same keys in every language; rename a key when you next touch its screen. (Arabic = default) -->
+<resources>
+    <string name="s_00246e91" formatted="false">طلباتي</string>
+    <string name="s_004f489c" formatted="false">حدّد ساعات العمل</string>
+    <string name="s_01f05ae9" formatted="false">ما عندك طلبات بعد</string>
+    <string name="s_0224de46" formatted="false">تم ربط القناة</string>
+    <string name="s_02cdc94a" formatted="false">ربط إنستغرام</string>
+    <string name="s_04230bfd" formatted="false">وصف النشاط</string>
+    <string name="s_04c5e56f" formatted="false">حدّد مكان محلك على الخريطة</string>
+    <string name="s_064be38d" formatted="false">📄 تصدير الإيصال PDF</string>
+    <string name="s_06a4e0cc" formatted="false">تعذّر تحميل المحفظة</string>
+    <string name="s_073f5f4b" formatted="false">الهاتف (اختياري)</string>
+    <string name="s_0a2bc37f" formatted="false">وصل طلب الشحن، بانتظار تأكيد الإدارة</string>
+    <string name="s_0a92494e" formatted="false">الاسم</string>
+    <string name="s_0b149b76" formatted="false">تأكيد الحسم</string>
+    <string name="s_0b9aea6f" formatted="false">تعذّر تعديل الكمية</string>
+    <string name="s_0be90459" formatted="false">ساعات العمل</string>
+    <string name="s_0c05c599" formatted="false">تعذّر إرسال الرد</string>
+    <string name="s_0c6c1d53" formatted="false">جهّز محلك ليظهر للزبائن</string>
+    <string name="s_0ccab856" formatted="false">ما أعطيت إذن الموقع — اضغط على الخريطة لتحدد مكان المحل</string>
+    <string name="s_0e1bedb9" formatted="false">أماكني المحفوظة</string>
+    <string name="s_10ceb09f" formatted="false">بدك تسجّل كـ:</string>
+    <string name="s_14293463" formatted="false">غير متوفر حاليًا</string>
+    <string name="s_14737605" formatted="false">تمت إضافة القاعدة</string>
+    <string name="s_153612e1" formatted="false">إيصال حسم</string>
+    <string name="s_1699cdea" formatted="false">إضافة حسم</string>
+    <string name="s_18d994f4" formatted="false">منتج جديد</string>
+    <string name="s_1aa879ba" formatted="false">سعر العضو</string>
+    <string name="s_1b98cbb3" formatted="false">ما في حسومات بعد</string>
+    <string name="s_1be55892" formatted="false">قنواتي المربوطة</string>
+    <string name="s_1bef7f7d" formatted="false">واتساب (مع رمز الدولة، مثل 9639xxxxxxxx)</string>
+    <string name="s_1dbf1d4a" formatted="false">دخّل الإيميل وكلمة السر</string>
+    <string name="s_1e3477e2" formatted="false">رح نطلب منك بيانات محلك بعد إنشاء الحساب</string>
+    <string name="s_21019a65" formatted="false">ربط الصفحة</string>
+    <string name="s_2136e58d" formatted="false">المجيب الآلي</string>
+    <string name="s_21a1bc3f" formatted="false">الوصف (اختياري)</string>
+    <string name="s_221bae78" formatted="false">تعذّر تحميل الحالة</string>
+    <string name="s_222d012d" formatted="false">حفظ ساعات العمل</string>
+    <string name="s_23e47d75" formatted="false">مكان محلك على الخريطة</string>
+    <string name="s_249b177e" formatted="false">الدليل الشامل لمدينتك</string>
+    <string name="s_261429f0" formatted="false">+ منتج جديد</string>
+    <string name="s_2a837234" formatted="false">ربط القناة</string>
+    <string name="s_2d2bbdc2" formatted="false">حذف</string>
+    <string name="s_2e1a34c3" formatted="false">،</string>
+    <string name="s_2e3f9ed4" formatted="false">حوّل USDT (شبكة TRC20) لهذا العنوان، وبعدها الصق رقم العملية (txid) — بيتأكد منه السيرفر تلقائيًا:</string>
+    <string name="s_2f1a3ab7" formatted="false">حدّد أيام دوامك وأوقاته — بيظهر للزبائن «مفتوح الآن» أو «مغلق». إذا سكّرت بعد منتصف الليل اختر وقت إغلاق أصغر من الفتح (مثلًا 6:00 م – 2:00 ص).</string>
+    <string name="s_305fe0fc" formatted="false">اشترك بخطة عشان تفعّل بطاقتك الرقمية</string>
+    <string name="s_328ddce5" formatted="false">رجوع</string>
+    <string name="s_33093b21" formatted="false">دخّل قيمة فاتورة صحيحة</string>
+    <string name="s_341d926d" formatted="false">تعذّر حفظ المنتج</string>
+    <string name="s_347c4ba8" formatted="false">تعذّر حذف الصورة</string>
+    <string name="s_38ceca24" formatted="false">رد ثابت</string>
+    <string name="s_3bb9ad91" formatted="false">سجّل دخولك أول لتكمل</string>
+    <string name="s_3ea19382" formatted="false">بيانات الدخول غير صحيحة</string>
+    <string name="s_3f8e51fe" formatted="false">بطاقتي</string>
+    <string name="s_3fc7c056" formatted="false">سلتي</string>
+    <string name="s_41066d88" formatted="false">سجّل</string>
+    <string name="s_413c51af" formatted="false">الإجمالي</string>
+    <string name="s_41b05461" formatted="false">نشط</string>
+    <string name="s_42186a14" formatted="false">حذف الصورة</string>
+    <string name="s_424fa77c" formatted="false">تعذّر حذف المنتج</string>
+    <string name="s_43010e9c" formatted="false">تعذّر حفظ بيانات المحل</string>
+    <string name="s_432dc00c" formatted="false">تعذّر تحميل المنتج</string>
+    <string name="s_439b0d4e" formatted="false">غير مفعّل</string>
+    <string name="s_44048fac" formatted="false">مؤكد</string>
+    <string name="s_46242623" formatted="false">اكتب اسمك</string>
+    <string name="s_471a369e" formatted="false">تعذّرت إضافة القاعدة</string>
+    <string name="s_47228890" formatted="false">تعذّر الحذف</string>
+    <string name="s_47352f90" formatted="false">أضف أول منتج</string>
+    <string name="s_47428e01" formatted="false">اكتب ردك</string>
+    <string name="s_48e7fe4b" formatted="false">دخّل رقم العضوية والكود المكوّن من 6 أرقام</string>
+    <string name="s_4a3ccec5" formatted="false">🕒 ساعات العمل</string>
+    <string name="s_4b028e52" formatted="false">بانتظار ردك</string>
+    <string name="s_4b860f78" formatted="false">كلمة السر (8 أحرف على الأقل)</string>
+    <string name="s_4d977cf7" formatted="false">رقم العملية (txid)</string>
+    <string name="s_4e387930" formatted="false">تجربة مجانية</string>
+    <string name="s_5059c36f" formatted="false">واتساب (اختياري، مع رمز الدولة)</string>
+    <string name="s_51963665" formatted="false">الكود الحالي</string>
+    <string name="s_51ed1058" formatted="false">اختر طريقة الدفع واكتب رقم العملية</string>
+    <string name="s_53655660" formatted="false">القنوات</string>
+    <string name="s_53bd39b7" formatted="false">قنوات التواصل المتاحة</string>
+    <string name="s_54b49c02" formatted="false">تعليمات للذكاء الاصطناعي</string>
+    <string name="s_55cf1553" formatted="false">تعذّر بدء الربط بفيسبوك</string>
+    <string name="s_56be3fdb" formatted="false">اكتب اسم القاعدة وكلمة مفتاحية وحدة على الأقل</string>
+    <string name="s_56ee6e0d" formatted="false">حفظ</string>
+    <string name="s_571d102a" formatted="false">لسا ما حدّدت المكان</string>
+    <string name="s_57833160" formatted="false">ما في قنوات مربوطة بعد</string>
+    <string name="s_58c8a282" formatted="false">زائر</string>
+    <string name="s_59539fc9" formatted="false">اسم المحل</string>
+    <string name="s_5bf826c5" formatted="false">إغلاق</string>
+    <string name="s_5f05466a" formatted="false">ملغى</string>
+    <string name="s_5f10f855" formatted="false">تعذّر تحميل طرق الدفع</string>
+    <string name="s_5ffc2bb8" formatted="false">اسم القاعدة</string>
+    <string name="s_60e251d0" formatted="false">ما عندك حساب؟ افتح حساب جديد</string>
+    <string name="s_615e65ba" formatted="false">SKU (اختياري)</string>
+    <string name="s_621e568d" formatted="false">شحن</string>
+    <string name="s_625e3fc7" formatted="false">تاجر</string>
+    <string name="s_6310b20d" formatted="false">اختر الصفحة</string>
+    <string name="s_64cf6641" formatted="false">ملفي الشخصي</string>
+    <string name="s_6617ed19" formatted="false">ما قدرنا نحدد موقعك — اضغط على الخريطة لتحدده بإيدك</string>
+    <string name="s_66414100" formatted="false">تم الشحن وإضافة الرصيد</string>
+    <string name="s_67636cc3" formatted="false">إرسال طلب الشحن</string>
+    <string name="s_676f8348" formatted="false">تعذّر تسجيل حساب التاجر</string>
+    <string name="s_6793a69f" formatted="false">المنتجات</string>
+    <string name="s_69bbe90d" formatted="false">ما في منتجات بعد</string>
+    <string name="s_69c86923" formatted="false">‹ رجوع</string>
+    <string name="s_6c21e27c" formatted="false">صار خطأ</string>
+    <string name="s_6d05e053" formatted="false">نبرة الرد (مثال: ودّية ومختصرة)</string>
+    <string name="s_6e274458" formatted="false">تعذّر ربط الصفحة</string>
+    <string name="s_6e3a209c" formatted="false">الطلب غير موجود</string>
+    <string name="s_7009c3b0" formatted="false">%.5f، %.5f</string>
+    <string name="s_70a771db" formatted="false">تعذّر تأكيد الحسم</string>
+    <string name="s_7121fbcc" formatted="false">تم ربط فيسبوك ✅</string>
+    <string name="s_746ec1bd" formatted="false">سعر العضو لازم يكون أقل من السعر الأصلي</string>
+    <string name="s_749f9cfe" formatted="false">سجّل كتاجر</string>
+    <string name="s_760c65a1" formatted="false">الهاتف</string>
+    <string name="s_77eb6cfd" formatted="false">نبذة عنك أو عن محلك (بتظهر للزبائن وعلى الفواتير)</string>
+    <string name="s_79e32d1f" formatted="false">⏳ طلبك بانتظار موافقة الإدارة — ما رح يظهر محلك على الخريطة قبلها.</string>
+    <string name="s_79e3c383" formatted="false">تعذّر حفظ ساعات العمل</string>
+    <string name="s_7b3296cc" formatted="false">ما في رسائل بعد</string>
+    <string name="s_7c75fec5" formatted="false">التصنيف</string>
+    <string name="s_7d943798" formatted="false">ما في طلبات بعد</string>
+    <string name="s_7ef9f7a4" formatted="false">تمت الإضافة للسلة ✓</string>
+    <string name="s_7f9255f4" formatted="false">إضافة القاعدة</string>
+    <string name="s_7feb59f4" formatted="false">دليلكم</string>
+    <string name="s_8008e7e0" formatted="false">📍 بيانات المحل ومكانه</string>
+    <string name="s_8522fb76" formatted="false">رقم العضوية</string>
+    <string name="s_8562adb5" formatted="false">تعذّر تسجيل الدخول</string>
+    <string name="s_860f094a" formatted="false">تعذّر إتمام الطلب</string>
+    <string name="s_864c0780" formatted="false">اسم المنتج</string>
+    <string name="s_8970aed0" formatted="false">الكود الممسوح غير صالح</string>
+    <string name="s_89a4c18a" formatted="false">فعّال</string>
+    <string name="s_8a3cd750" formatted="false">بدء التحضير</string>
+    <string name="s_8a942763" formatted="false">📷 إضافة صورة</string>
+    <string name="s_8aed060f" formatted="false">قيد الانتظار</string>
+    <string name="s_8bf6ddd2" formatted="false">اشترك</string>
+    <string name="s_8c6117b6" formatted="false">تسجيل الدخول</string>
+    <string name="s_8c7eace2" formatted="false">سجّل دخولك بفيسبوك واختر الصفحة اللي بيشتغل عليها المجيب الآلي — بلا نسخ أي توكن.</string>
+    <string name="s_8c7ec7a1" formatted="false">استخدم موقعي الحالي</string>
+    <string name="s_8c818f60" formatted="false">تعذّر تحميل الحالة، اسحب للرجوع وحاول من جديد</string>
+    <string name="s_8d0496d3" formatted="false">تأكد من اسم المنتج والسعر والمخزون</string>
+    <string name="s_8f2679b1" formatted="false">طرق الشحن غير مفعّلة حاليًا — تواصل مع الإدارة</string>
+    <string name="s_90a91c96" formatted="false">نظرة عامة</string>
+    <string name="s_90cf87a4" formatted="false">إرسال</string>
+    <string name="s_911aafd4" formatted="false">تأكيد</string>
+    <string name="s_92dc656f" formatted="false">تعذّر تجهيز المستند</string>
+    <string name="s_935d8234" formatted="false">سبب الإلغاء</string>
+    <string name="s_937c3091" formatted="false">تم تجديد الاشتراك</string>
+    <string name="s_93a7f5f0" formatted="false">روح للسلة</string>
+    <string name="s_96a2838a" formatted="false">دخّل عنوان الحسم ونسبة بين 1 و100</string>
+    <string name="s_97b1b92d" formatted="false">بهالطريقة بيلاقيك الزبائن — اضغط على الخريطة لتضع الدبّوس مكان محلك.</string>
+    <string name="s_9855a904" formatted="false">أضف حسم للأعضاء</string>
+    <string name="s_98bd1e1e" formatted="false">تعذّر الحفظ</string>
+    <string name="s_98df46fb" formatted="false">تراجع</string>
+    <string name="s_997f9752" formatted="false">✅ انحفظت بيانات المحل</string>
+    <string name="s_99ca558f" formatted="false">تعذّر الاشتراك بالعضوية</string>
+    <string name="s_9a2547dd" formatted="false">أو دخّل بيانات العضوية يدويًا</string>
+    <string name="s_9a40a38b" formatted="false">إتمام الطلب</string>
+    <string name="s_9aa19dc9" formatted="false">ربط فيسبوك</string>
+    <string name="s_9b30f06e" formatted="false">نسبة %</string>
+    <string name="s_9b5be5df" formatted="false">تعذّرت إضافة المنتج</string>
+    <string name="s_9cb17c57" formatted="false">ما في حركات بعد</string>
+    <string name="s_a0b697cb" formatted="false">تعديل المنتج</string>
+    <string name="s_a1ec84ae" formatted="false">تم حفظ بيانات النشاط</string>
+    <string name="s_a24110f8" formatted="false">‹ رجوع لحساب الزبون</string>
+    <string name="s_a26cb7f2" formatted="false">الأفضل تربطها بزرّ «ربط فيسبوك» فوق — بلا لصق توكن. الحقول تحت للربط اليدوي إذا احتجت.</string>
+    <string name="s_a2750cc7" formatted="false">رصيدك</string>
+    <string name="s_a2daab91" formatted="false">المنتج نشط</string>
+    <string name="s_a2e93da9" formatted="false">السبب</string>
+    <string name="s_a3836012" formatted="false">بعد ما يتفعّل بيصير هالزر يفتح صفحة فيسبوك مباشرة.</string>
+    <string name="s_a3ac8fb2" formatted="false">تعذّرت قراءة الصورة — جرّب صورة ثانية</string>
+    <string name="s_a3e249b8" formatted="false">تعذّر تحميل القواعد</string>
+    <string name="s_a3e7dfc4" formatted="false">الوارد</string>
+    <string name="s_a40a6e99" formatted="false">إنشاء الحساب</string>
+    <string name="s_a4409754" formatted="false">تعذّر تحميل حالة الربط بفيسبوك</string>
+    <string name="s_a549b16b" formatted="false">تم الرد</string>
+    <string name="s_a5e584ae" formatted="false">نص الرد (استخدم {name} لاسم الزبون)</string>
+    <string name="s_a5f6da27" formatted="false">تعذّر جلب المنشورات</string>
+    <string name="s_a652e16c" formatted="false">هذا المنتج غير متوفر</string>
+    <string name="s_a6a44b5b" formatted="false">قيد التحضير</string>
+    <string name="s_a6ed2a71" formatted="false">منتهي</string>
+    <string name="s_a6f73674" formatted="false">الرسائل الواردة</string>
+    <string name="s_a860cf2b" formatted="false">موقعي</string>
+    <string name="s_ab03953f" formatted="false">موافقة الإدارة</string>
+    <string name="s_ac634572" formatted="false">✅ انحفظ ملفك الشخصي</string>
+    <string name="s_ada6e57a" formatted="false">تعذّر تحميل ملفك الشخصي</string>
+    <string name="s_af7715dd" formatted="false">تم تأكيد الحسم ✓</string>
+    <string name="s_afabc0f2" formatted="false">تعذّر إرسال طلب الشحن</string>
+    <string name="s_b045d443" formatted="false">قواعدي</string>
+    <string name="s_b257b4e1" formatted="false">إزالة</string>
+    <string name="s_b4bbf18b" formatted="false">إلغاء الطلب</string>
+    <string name="s_b4f76c3a" formatted="false">تعديل</string>
+    <string name="s_b6066a1e" formatted="false">رقم عملية التحويل</string>
+    <string name="s_b642dd5a" formatted="false">القواعد</string>
+    <string name="s_b6aa0c7d" formatted="false">السعر</string>
+    <string name="s_b89a6549" formatted="false">الربط بفيسبوك مو مفعّل على السيرفر بعد (بدو تطبيق Meta وموافقة على الصلاحيات). </string>
+    <string name="s_baffa49c" formatted="false">العنوان</string>
+    <string name="s_bb31982c" formatted="false">نسخ أول يوم مفتوح لكل الأيام</string>
+    <string name="s_bb6cc0f4" formatted="false">إنشاء حساب جديد</string>
+    <string name="s_bb8520e6" formatted="false">الحسومات</string>
+    <string name="s_bc12337c" formatted="false">تعذّر تحميل الاتصالات</string>
+    <string name="s_bdb567d9" formatted="false">تعذّر إلغاء الطلب</string>
+    <string name="s_beb6f577" formatted="false">الكود غير صالح أو منتهي</string>
+    <string name="s_c03965c6" formatted="false">بيصير حسابك تاجر بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</string>
+    <string name="s_c2cbfa91" formatted="false">📄 تصدير الفاتورة PDF</string>
+    <string name="s_c31663d5" formatted="false">محفظتي</string>
+    <string name="s_c33c7465" formatted="false">ما عندك قواعد بعد</string>
+    <string name="s_c4973dca" formatted="false">تعذّرت إضافة الحسم</string>
+    <string name="s_c5324447" formatted="false">عبّي كل الحقول أول</string>
+    <string name="s_c5822564" formatted="false">اشتراك</string>
+    <string name="s_c5ffc332" formatted="false">طلبات واردة</string>
+    <string name="s_c758841f" formatted="false">ما تم ربط الصفحة — جرّب من جديد</string>
+    <string name="s_c7a401f5" formatted="false">تعذّر جلب الكود</string>
+    <string name="s_c89ae688" formatted="false">قيمة الفاتورة</string>
+    <string name="s_c91b0e1d" formatted="false">ربط</string>
+    <string name="s_c9cbc8b2" formatted="false">دخول</string>
+    <string name="s_c9fbbd3c" formatted="false">قاعدة رد جديدة</string>
+    <string name="s_ca575cfb" formatted="false">تعذّر حفظ الملف الشخصي</string>
+    <string name="s_ca70f840" formatted="false">منشورات محددة (فيسبوك / إنستغرام)</string>
+    <string name="s_cbc18737" formatted="false">غير نشط</string>
+    <string name="s_cc6b3855" formatted="false">الإيميل</string>
+    <string name="s_cd1c71a4" formatted="false">فعّل المجيب الآلي أول (تجربة أو اشتراك) وبعدها بيربط.</string>
+    <string name="s_cdffc53b" formatted="false">تعذّر تحديث حالة الطلب</string>
+    <string name="s_d036d6bd" formatted="false">تعذّر تحميل حالة الربط، جرّب التحديث.</string>
+    <string name="s_d12fa511" formatted="false">أضف للسلة</string>
+    <string name="s_d14862b0" formatted="false">؟</string>
+    <string name="s_d1feb875" formatted="false">تأكيد الطلب</string>
+    <string name="s_d2cbe1d2" formatted="false">رجوع للخريطة بدون حساب</string>
+    <string name="s_d3f3e653" formatted="false">تم حذف القاعدة</string>
+    <string name="s_d556272b" formatted="false">تعذّر الاتصال بالسيرفر، تحقق من الإنترنت</string>
+    <string name="s_d59687ba" formatted="false">مغلق</string>
+    <string name="s_d5a3c41f" formatted="false">عبّي اسم المحل واختر تصنيف</string>
+    <string name="s_d685576e" formatted="false">تعذّر تحميل صفحاتك</string>
+    <string name="s_d697a2b1" formatted="false">المخزون</string>
+    <string name="s_d7359b3c" formatted="false">تم التجاهل</string>
+    <string name="s_d766cb06" formatted="false">الكتالوج</string>
+    <string name="s_d82b4deb" formatted="false">كلمات مفتاحية (مفصولة بفاصلة)</string>
+    <string name="s_d9724d06" formatted="false">تأكيد حسم</string>
+    <string name="s_d97a32ee" formatted="false">عندك حساب أصلاً؟ سجل دخول</string>
+    <string name="s_da0717d9" formatted="false">تعذّر التفعيل</string>
+    <string name="s_da1e9875" formatted="false">شحن الرصيد</string>
+    <string name="s_daaa4ebe" formatted="false">تعذّر التجديد</string>
+    <string name="s_db4175ae" formatted="false">كلمة السر</string>
+    <string name="s_dc09c826" formatted="false">عن نشاطك (يستخدمها الذكاء الاصطناعي بالرد)</string>
+    <string name="s_dc26b57d" formatted="false">سلتك فاضية</string>
+    <string name="s_ddb9dbdc" formatted="false">العنوان (اختياري)</string>
+    <string name="s_de747706" formatted="false">عنوان الحسم</string>
+    <string name="s_e0501ddf" formatted="false">اتركها فاضية لتنطبق القاعدة على كل شي، أو اختر منشورات لتردّ على التعليقات عليها فقط.</string>
+    <string name="s_e172f208" formatted="false">✅ انحفظت ساعات العمل</string>
+    <string name="s_e19b16bd" formatted="false">الاسم الكامل</string>
+    <string name="s_e2e9f99a" formatted="false">بيانات المحل ومكانه</string>
+    <string name="s_e470027c" formatted="false">تم إرسال الرد</string>
+    <string name="s_e50b0785" formatted="false">المبلغ اللي حوّلته</string>
+    <string name="s_e51fe37e" formatted="false">تعذّر تحميل القنوات</string>
+    <string name="s_e644dc4b" formatted="false">عملية جديدة</string>
+    <string name="s_e776b020" formatted="false">إلغاء</string>
+    <string name="s_e78265a1" formatted="false">تعذّر رفع الصورة</string>
+    <string name="s_e7e5f1a0" formatted="false">ما عندك عضوية بعد</string>
+    <string name="s_e947849f" formatted="false">تعذّر حساب الطريق</string>
+    <string name="s_ea16c0e6" formatted="false">تم التسليم</string>
+    <string name="s_eb92a991" formatted="false">تعذّرت إضافة المنتج للسلة</string>
+    <string name="s_ec6d9289" formatted="false">ذكاء اصطناعي</string>
+    <string name="s_ed8f478b" formatted="false">الكود (6 أرقام)</string>
+    <string name="s_ee5aea07" formatted="false">فشل الإرسال</string>
+    <string name="s_eecf189f" formatted="false">سجّل دخولك أول</string>
+    <string name="s_ef73b75f" formatted="false">تم ربط الصفحة ✅</string>
+    <string name="s_ef8d4234" formatted="false">✅ انحفظت الصورة</string>
+    <string name="s_f008af11" formatted="false">قريبًا</string>
+    <string name="s_f1b27ce2" formatted="false">فعّل يوم واحد على الأقل أول</string>
+    <string name="s_f353c2e2" formatted="false">امسح الكود 📷</string>
+    <string name="s_f542f592" formatted="false">الشكاوى ما بينرد عليها تلقائيًا أبدًا، بتظهر هون لتردّ عليها أنت.</string>
+    <string name="s_f5f6d8c4" formatted="false">تعذّر ربط القناة</string>
+    <string name="s_f6b288e4" formatted="false">حسم أعضاء دليلكم</string>
+    <string name="s_f79140d3" formatted="false">تم الشحن</string>
+    <string name="s_f835f24d" formatted="false">اكتب اسم المحل</string>
+    <string name="s_f85fd2a4" formatted="false">شحن المحفظة</string>
+    <string name="s_f90416a9" formatted="false">📷 تغيير الصورة</string>
+    <string name="s_f90ad780" formatted="false">ما حفظت أي مكان بعد — اضغط ♡ على أي محل بالخريطة.</string>
+    <string name="s_f96a754e" formatted="false">الرصيد</string>
+    <string name="s_faa866bc" formatted="false">رد احتياطي إذا الذكاء الاصطناعي غير متاح (اختياري)</string>
+    <string name="s_fd85c447" formatted="false">تم التفعيل</string>
+    <string name="s_fd98f999" formatted="false">تعذّر التعديل</string>
+    <string name="s_fdc54283" formatted="false">تعذّر تحميل الوارد</string>
+    <string name="s_fe29f439" formatted="false">آخر الحركات</string>
+    <string name="s_fe79250b" formatted="false">تحقق</string>
+</resources>

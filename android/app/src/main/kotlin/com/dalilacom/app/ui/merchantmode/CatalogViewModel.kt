@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.DiscountDto
@@ -57,7 +59,7 @@ class CatalogViewModel(
         val state = _uiState.value
         val percent = state.discountPercent.toIntOrNull()
         if (state.discountTitle.isBlank() || percent == null || percent !in 1..100) {
-            _uiState.value = state.copy(error = "دخّل عنوان الحسم ونسبة بين 1 و100")
+            _uiState.value = state.copy(error = AppStrings.get(R.string.s_96a2838a))
             return
         }
         _uiState.value = state.copy(isAddingDiscount = true, error = null)

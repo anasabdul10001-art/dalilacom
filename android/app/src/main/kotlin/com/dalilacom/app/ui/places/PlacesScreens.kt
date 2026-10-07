@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.places
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import android.app.TimePickerDialog
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -89,13 +91,13 @@ fun FavoritesScreen(factory: ViewModelFactory, onBack: () -> Unit, onMerchantCli
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ رجوع") }
-            Text("أماكني المحفوظة", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
+            Text(AppStrings.get(R.string.s_0e1bedb9), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         }
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             state.places.isEmpty() -> Text(
-                "ما حفظت أي مكان بعد — اضغط ♡ على أي محل بالخريطة.",
+                AppStrings.get(R.string.s_f90ad780),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(24.dp),
             )
@@ -118,7 +120,7 @@ fun FavoritesScreen(factory: ViewModelFactory, onBack: () -> Unit, onMerchantCli
                                 }
                             }
                             IconButton(onClick = { viewModel.remove(place.id) }) {
-                                Icon(Icons.Filled.Favorite, contentDescription = "إزالة", tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Filled.Favorite, contentDescription = AppStrings.get(R.string.s_b257b4e1), tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
@@ -164,7 +166,7 @@ class HoursViewModel(private val merchants: MerchantRepository, private val plac
     fun copyFirstOpenDayToAll() {
         val first = DAY_ORDER.map { _uiState.value.days.getValue(it) }.firstOrNull { it.on }
         if (first == null) {
-            _uiState.update { it.copy(message = "فعّل يوم واحد على الأقل أول") }
+            _uiState.update { it.copy(message = AppStrings.get(R.string.s_f1b27ce2)) }
             return
         }
         _uiState.update { it.copy(days = DAY_ORDER.associateWith { first.copy(on = true) }, message = null) }
@@ -178,7 +180,7 @@ class HoursViewModel(private val merchants: MerchantRepository, private val plac
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, message = null) }
             val result = places.setHours(hours.ifEmpty { null })
-            _uiState.update { it.copy(isSaving = false, message = result.exceptionOrNull()?.message ?: "✅ انحفظت ساعات العمل") }
+            _uiState.update { it.copy(isSaving = false, message = result.exceptionOrNull()?.message ?: AppStrings.get(R.string.s_e172f208)) }
         }
     }
 }
@@ -201,8 +203,8 @@ fun HoursScreen(factory: ViewModelFactory, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ رجوع") }
-            Text("ساعات العمل", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
+            Text(AppStrings.get(R.string.s_0be90459), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         }
         if (state.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -210,7 +212,7 @@ fun HoursScreen(factory: ViewModelFactory, onBack: () -> Unit) {
         }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Text(
-                "حدّد أيام دوامك وأوقاته — بيظهر للزبائن «مفتوح الآن» أو «مغلق». إذا سكّرت بعد منتصف الليل اختر وقت إغلاق أصغر من الفتح (مثلًا 6:00 م – 2:00 ص).",
+                AppStrings.get(R.string.s_2f1a3ab7),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -229,20 +231,20 @@ fun HoursScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                         }
                         if (x.on) {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 6.dp)) {
-                                OutlinedButton(onClick = { pickTime(x.open) { viewModel.setOpen(day, it) } }, modifier = Modifier.weight(1f)) { Text("من ${formatClock(x.open)}") }
-                                OutlinedButton(onClick = { pickTime(x.close) { viewModel.setClose(day, it) } }, modifier = Modifier.weight(1f)) { Text("إلى ${formatClock(x.close)}") }
+                                OutlinedButton(onClick = { pickTime(x.open) { viewModel.setOpen(day, it) } }, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.fmt_from, formatClock(x.open))) }
+                                OutlinedButton(onClick = { pickTime(x.close) { viewModel.setClose(day, it) } }, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.fmt_to, formatClock(x.close))) }
                             }
                         } else {
-                            Text("مغلق", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(AppStrings.get(R.string.s_d59687ba), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
             Spacer(Modifier.height(12.dp))
-            OutlinedButton(onClick = viewModel::copyFirstOpenDayToAll, modifier = Modifier.fillMaxWidth()) { Text("نسخ أول يوم مفتوح لكل الأيام") }
+            OutlinedButton(onClick = viewModel::copyFirstOpenDayToAll, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_bb31982c)) }
             Spacer(Modifier.height(8.dp))
             Button(onClick = viewModel::save, enabled = !state.isSaving, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Text("حفظ ساعات العمل")
+                Text(AppStrings.get(R.string.s_222d012d))
             }
             state.message?.let {
                 Spacer(Modifier.height(8.dp))

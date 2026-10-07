@@ -1,5 +1,6 @@
 package com.dalilacom.app.ui.profile
 
+import com.dalilacom.app.ui.i18n.AppStrings
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,7 +66,7 @@ fun ProfileScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Avatar(profile?.fullName ?: "؟", size = 96.dp, imageUrl = profile?.avatarUrl)
+        Avatar(profile?.fullName ?: AppStrings.get(R.string.s_d14862b0), size = 96.dp, imageUrl = profile?.avatarUrl)
         Spacer(Modifier.height(10.dp))
         Text(profile?.fullName ?: stringResource(R.string.profile_title), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         profile?.bio?.takeIf { it.isNotBlank() }?.let {

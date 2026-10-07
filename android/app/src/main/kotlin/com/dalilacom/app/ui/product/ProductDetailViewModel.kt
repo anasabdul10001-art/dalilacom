@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.product
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.ProductDto
@@ -31,7 +33,7 @@ class ProductDetailViewModel(
         viewModelScope.launch {
             val product = productRepository.getProduct(productId)
             _uiState.value = if (product == null) {
-                ProductDetailUiState(isLoading = false, error = "هذا المنتج غير متوفر")
+                ProductDetailUiState(isLoading = false, error = AppStrings.get(R.string.s_a652e16c))
             } else {
                 ProductDetailUiState(isLoading = false, product = product)
             }

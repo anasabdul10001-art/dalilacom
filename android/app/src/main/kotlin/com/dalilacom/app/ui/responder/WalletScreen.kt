@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.responder
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,9 +34,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.ui.ViewModelFactory
 
 private fun txLabel(type: String) = when (type) {
-    "TOPUP" -> "شحن"
-    "SUBSCRIPTION" -> "اشتراك"
-    else -> "تعديل"
+    "TOPUP" -> AppStrings.get(R.string.s_621e568d)
+    "SUBSCRIPTION" -> AppStrings.get(R.string.s_c5822564)
+    else -> AppStrings.get(R.string.s_b4f76c3a)
 }
 
 @Composable
@@ -47,8 +49,8 @@ fun WalletScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onBack) { Text("رجوع") }
-            Text("محفظتي", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_328ddce5)) }
+            Text(AppStrings.get(R.string.s_c31663d5), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         }
 
         if (state.isLoading && state.wallet == null) {
@@ -68,19 +70,19 @@ fun WalletScreen(factory: ViewModelFactory, onBack: () -> Unit) {
 
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("الرصيد", style = MaterialTheme.typography.bodyMedium)
+                    Text(AppStrings.get(R.string.s_f96a754e), style = MaterialTheme.typography.bodyMedium)
                     Text("${wallet?.balance ?: 0} ${wallet?.creditName.orEmpty()}", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
                 }
             }
 
             Spacer(Modifier.height(16.dp))
-            Text("شحن الرصيد", style = MaterialTheme.typography.titleMedium)
+            Text(AppStrings.get(R.string.s_da1e9875), style = MaterialTheme.typography.titleMedium)
             val options = buildList {
                 if (!methods?.usdtTrc20Address.isNullOrBlank()) add("USDT_TRC20" to "USDT (TRC20)")
                 methods?.localWallets?.forEach { add(it.key to it.label) }
             }
             if (options.isEmpty()) {
-                Text("طرق الشحن غير مفعّلة حاليًا — تواصل مع الإدارة", color = MaterialTheme.colorScheme.outline)
+                Text(AppStrings.get(R.string.s_8f2679b1), color = MaterialTheme.colorScheme.outline)
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
                     options.forEach { (key, label) ->
@@ -88,31 +90,31 @@ fun WalletScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                     }
                 }
                 if (method == "USDT_TRC20") {
-                    Text("حوّل USDT (شبكة TRC20) لهذا العنوان، وبعدها الصق رقم العملية (txid) — بيتأكد منه السيرفر تلقائيًا:", style = MaterialTheme.typography.bodySmall)
+                    Text(AppStrings.get(R.string.s_2e3f9ed4), style = MaterialTheme.typography.bodySmall)
                     Text(methods?.usdtTrc20Address.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                     Text("1 USD = ${methods?.creditsPerUsd?.toInt() ?: 0} ${methods?.creditName.orEmpty()}", style = MaterialTheme.typography.bodySmall)
                 } else {
                     methods?.localWallets?.firstOrNull { it.key == method }?.let {
-                        Text("حوّل على الحساب: ${it.accountNumber}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(AppStrings.get(R.string.fmt_transfer_to, it.accountNumber), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                         it.instructions?.takeIf { text -> text.isNotBlank() }?.let { text -> Text(text, style = MaterialTheme.typography.bodySmall) }
                     }
                 }
                 if (method.isNotEmpty()) {
-                    OutlinedTextField(reference, { reference = it }, label = { Text(if (method == "USDT_TRC20") "رقم العملية (txid)" else "رقم عملية التحويل") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(reference, { reference = it }, label = { Text(if (method == "USDT_TRC20") AppStrings.get(R.string.s_4d977cf7) else AppStrings.get(R.string.s_b6066a1e)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     if (method != "USDT_TRC20") {
-                        OutlinedTextField(amount, { amount = it }, label = { Text("المبلغ اللي حوّلته") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(amount, { amount = it }, label = { Text(AppStrings.get(R.string.s_e50b0785)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     }
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = { viewModel.submitTopUp(method, reference, amount); reference = "" },
                         enabled = !state.isBusy,
-                    ) { Text("إرسال طلب الشحن") }
+                    ) { Text(AppStrings.get(R.string.s_67636cc3)) }
                 }
             }
 
             Spacer(Modifier.height(20.dp))
-            Text("آخر الحركات", style = MaterialTheme.typography.titleMedium)
-            if (wallet?.transactions.isNullOrEmpty()) Text("ما في حركات بعد", color = MaterialTheme.colorScheme.outline)
+            Text(AppStrings.get(R.string.s_fe29f439), style = MaterialTheme.typography.titleMedium)
+            if (wallet?.transactions.isNullOrEmpty()) Text(AppStrings.get(R.string.s_9cb17c57), color = MaterialTheme.colorScheme.outline)
             wallet?.transactions?.forEach { tx ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(txLabel(tx.type))

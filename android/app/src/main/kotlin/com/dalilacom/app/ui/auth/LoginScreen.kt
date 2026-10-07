@@ -1,5 +1,6 @@
 package com.dalilacom.app.ui.auth
 
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -76,11 +77,11 @@ fun LoginScreen(
                     modifier = Modifier.size(92.dp).clip(CircleShape).background(Color.White),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = "دليلكم", modifier = Modifier.size(92.dp))
+                    Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = AppStrings.get(R.string.s_7feb59f4), modifier = Modifier.size(92.dp))
                 }
                 Spacer(Modifier.height(14.dp))
-                Text("دليلكم", style = MaterialTheme.typography.headlineLarge, color = Color.White)
-                Text("الدليل الشامل لمدينتك", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
+                Text(AppStrings.get(R.string.s_7feb59f4), style = MaterialTheme.typography.headlineLarge, color = Color.White)
+                Text(AppStrings.get(R.string.s_249b177e), style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
             }
         }
 
@@ -91,11 +92,11 @@ fun LoginScreen(
             color = MaterialTheme.colorScheme.surface,
         ) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("تسجيل الدخول", style = MaterialTheme.typography.titleLarge)
+                Text(AppStrings.get(R.string.s_8c6117b6), style = MaterialTheme.typography.titleLarge)
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("الإيميل") },
+                    label = { Text(AppStrings.get(R.string.s_cc6b3855)) },
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -104,7 +105,7 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("كلمة السر") },
+                    label = { Text(AppStrings.get(R.string.s_db4175ae)) },
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
                     visualTransformation = PasswordVisualTransformation(),
@@ -121,14 +122,14 @@ fun LoginScreen(
                         onClick = { viewModel.login(email.trim(), password) },
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                    ) { Text("دخول", style = MaterialTheme.typography.titleSmall) }
+                    ) { Text(AppStrings.get(R.string.s_c9cbc8b2), style = MaterialTheme.typography.titleSmall) }
                 }
             }
         }
 
         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            TextButton(onClick = onNavigateToRegister) { Text("ما عندك حساب؟ افتح حساب جديد") }
-            TextButton(onClick = onBrowseAsGuest) { Text("رجوع للخريطة بدون حساب", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            TextButton(onClick = onNavigateToRegister) { Text(AppStrings.get(R.string.s_60e251d0)) }
+            TextButton(onClick = onBrowseAsGuest) { Text(AppStrings.get(R.string.s_d2cbe1d2), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }

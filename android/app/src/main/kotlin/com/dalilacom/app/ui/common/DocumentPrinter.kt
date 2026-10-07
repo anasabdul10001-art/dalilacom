@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.common
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import android.content.Context
 import android.print.PrintAttributes
 import android.print.PrintManager
@@ -24,7 +26,7 @@ object DocumentPrinter {
     suspend fun export(context: Context, tokenStore: TokenStore, path: String, jobName: String) {
         val token = tokenStore.getToken()
         if (token == null) {
-            Toast.makeText(context, "سجّل دخولك أول", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, AppStrings.get(R.string.s_eecf189f), Toast.LENGTH_SHORT).show()
             return
         }
         val webView = WebView(context)
@@ -38,7 +40,7 @@ object DocumentPrinter {
 
             override fun onPageFinished(view: WebView, url: String?) {
                 if (failed) {
-                    Toast.makeText(context, "تعذّر تجهيز المستند", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, AppStrings.get(R.string.s_92dc656f), Toast.LENGTH_SHORT).show()
                     keepAlive = null
                     return
                 }

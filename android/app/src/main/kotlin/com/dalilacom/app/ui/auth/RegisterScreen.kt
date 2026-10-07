@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.auth
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,27 +60,27 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("إنشاء حساب جديد", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Text(AppStrings.get(R.string.s_bb6cc0f4), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(16.dp))
 
-        Text("بدك تسجّل كـ:", style = MaterialTheme.typography.bodyMedium)
+        Text(AppStrings.get(R.string.s_10ceb09f), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = signupIntent == SignupIntent.CUSTOMER,
                 onClick = { signupIntent = SignupIntent.CUSTOMER },
-                label = { Text("زائر") },
+                label = { Text(AppStrings.get(R.string.s_58c8a282)) },
             )
             FilterChip(
                 selected = signupIntent == SignupIntent.MERCHANT,
                 onClick = { signupIntent = SignupIntent.MERCHANT },
-                label = { Text("تاجر") },
+                label = { Text(AppStrings.get(R.string.s_625e3fc7)) },
             )
         }
         if (signupIntent == SignupIntent.MERCHANT) {
             Spacer(Modifier.height(6.dp))
             Text(
-                "رح نطلب منك بيانات محلك بعد إنشاء الحساب",
+                AppStrings.get(R.string.s_1e3477e2),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -88,14 +90,14 @@ fun RegisterScreen(
         OutlinedTextField(
             value = fullName,
             onValueChange = { fullName = it },
-            label = { Text("الاسم الكامل") },
+            label = { Text(AppStrings.get(R.string.s_e19b16bd)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("الإيميل") },
+            label = { Text(AppStrings.get(R.string.s_cc6b3855)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -103,7 +105,7 @@ fun RegisterScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("كلمة السر (8 أحرف على الأقل)") },
+            label = { Text(AppStrings.get(R.string.s_4b860f78)) },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth(),
@@ -121,12 +123,12 @@ fun RegisterScreen(
             Button(
                 onClick = { viewModel.register(email.trim(), password, fullName.trim()) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("إنشاء الحساب") }
+            ) { Text(AppStrings.get(R.string.s_a40a6e99)) }
         }
 
         Spacer(Modifier.height(12.dp))
         TextButton(onClick = onNavigateToLogin) {
-            Text("عندك حساب أصلاً؟ سجل دخول")
+            Text(AppStrings.get(R.string.s_d97a32ee))
         }
     }
 }

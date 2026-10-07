@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchant
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -49,15 +51,15 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
     }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-        TextButton(onClick = onBack) { Text("‹ رجوع") }
-        Text("سجّل كتاجر", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-        Text("بيصير حسابك تاجر بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة", style = MaterialTheme.typography.bodyMedium)
+        TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
+        Text(AppStrings.get(R.string.s_749f9cfe), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Text(AppStrings.get(R.string.s_c03965c6), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(20.dp))
 
         OutlinedTextField(
             value = businessName,
             onValueChange = { businessName = it },
-            label = { Text("اسم المحل") },
+            label = { Text(AppStrings.get(R.string.s_59539fc9)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
@@ -68,21 +70,21 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
         OutlinedTextField(
             value = address,
             onValueChange = { address = it },
-            label = { Text("العنوان (اختياري)") },
+            label = { Text(AppStrings.get(R.string.s_ddb9dbdc)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = phone,
             onValueChange = { phone = it },
-            label = { Text("الهاتف (اختياري)") },
+            label = { Text(AppStrings.get(R.string.s_073f5f4b)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = whatsapp,
             onValueChange = { whatsapp = it },
-            label = { Text("واتساب (اختياري، مع رمز الدولة)") },
+            label = { Text(AppStrings.get(R.string.s_5059c36f)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(16.dp))
@@ -95,7 +97,7 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             Button(
                 onClick = { viewModel.register(businessName.trim(), selectedCategoryId, address.trim(), phone.trim(), whatsapp, location) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("سجّل") }
+            ) { Text(AppStrings.get(R.string.s_41066d88)) }
         }
 
         state.error?.let {

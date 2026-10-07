@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,9 +51,9 @@ fun ProductEditScreen(
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        TextButton(onClick = onBack) { Text("‹ رجوع") }
+        TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
         Text(
-            if (state.isNew) "منتج جديد" else "تعديل المنتج",
+            if (state.isNew) AppStrings.get(R.string.s_18d994f4) else AppStrings.get(R.string.s_a0b697cb),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -63,14 +65,14 @@ fun ProductEditScreen(
             OutlinedTextField(
                 value = state.name,
                 onValueChange = viewModel::onNameChange,
-                label = { Text("اسم المنتج") },
+                label = { Text(AppStrings.get(R.string.s_864c0780)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = state.description,
                 onValueChange = viewModel::onDescriptionChange,
-                label = { Text("الوصف (اختياري)") },
+                label = { Text(AppStrings.get(R.string.s_21a1bc3f)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(10.dp))
@@ -78,13 +80,13 @@ fun ProductEditScreen(
                 OutlinedTextField(
                     value = state.priceText,
                     onValueChange = viewModel::onPriceChange,
-                    label = { Text("السعر") },
+                    label = { Text(AppStrings.get(R.string.s_b6aa0c7d)) },
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
                     value = state.stockText,
                     onValueChange = viewModel::onStockChange,
-                    label = { Text("المخزون") },
+                    label = { Text(AppStrings.get(R.string.s_d697a2b1)) },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -92,12 +94,12 @@ fun ProductEditScreen(
             OutlinedTextField(
                 value = state.sku,
                 onValueChange = viewModel::onSkuChange,
-                label = { Text("SKU (اختياري)") },
+                label = { Text(AppStrings.get(R.string.s_615e65ba)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(16.dp))
 
-            Text("التصنيف", style = MaterialTheme.typography.bodyMedium)
+            Text(AppStrings.get(R.string.s_7c75fec5), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(4.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(state.categoryOptions) { option ->
@@ -113,7 +115,7 @@ fun ProductEditScreen(
             Spacer(Modifier.height(16.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("حسم أعضاء دليلكم", modifier = Modifier.weight(1f))
+                Text(AppStrings.get(R.string.s_f6b288e4), modifier = Modifier.weight(1f))
                 Switch(checked = state.memberDiscountEnabled, onCheckedChange = viewModel::onMemberDiscountToggle)
             }
             if (state.memberDiscountEnabled) {
@@ -121,7 +123,7 @@ fun ProductEditScreen(
                 OutlinedTextField(
                     value = state.memberPriceText,
                     onValueChange = viewModel::onMemberPriceChange,
-                    label = { Text("سعر العضو") },
+                    label = { Text(AppStrings.get(R.string.s_1aa879ba)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -129,14 +131,14 @@ fun ProductEditScreen(
             if (!state.isNew) {
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("المنتج نشط", modifier = Modifier.weight(1f))
+                    Text(AppStrings.get(R.string.s_a2daab91), modifier = Modifier.weight(1f))
                     Switch(checked = state.isActive, onCheckedChange = viewModel::onActiveToggle)
                 }
             }
 
             Spacer(Modifier.height(20.dp))
             Button(onClick = viewModel::save, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) {
-                Text("حفظ")
+                Text(AppStrings.get(R.string.s_56ee6e0d))
             }
         }
 

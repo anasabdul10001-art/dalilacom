@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Texts of the screens, keyed by a hash of the Arabic source. Same keys in every language; rename a key when you next touch its screen. (English) -->
+<resources>
+    <string name="s_00246e91" formatted="false">My orders</string>
+    <string name="s_004f489c" formatted="false">Set your opening hours</string>
+    <string name="s_01f05ae9" formatted="false">You have no orders yet</string>
+    <string name="s_0224de46" formatted="false">Channel connected</string>
+    <string name="s_02cdc94a" formatted="false">Connect Instagram</string>
+    <string name="s_04230bfd" formatted="false">Business description</string>
+    <string name="s_04c5e56f" formatted="false">Set your shop\'s location on the map</string>
+    <string name="s_064be38d" formatted="false">📄 Export receipt (PDF)</string>
+    <string name="s_06a4e0cc" formatted="false">Couldn\'t load the wallet</string>
+    <string name="s_073f5f4b" formatted="false">Phone (optional)</string>
+    <string name="s_0a2bc37f" formatted="false">Top-up request received — waiting for admin confirmation</string>
+    <string name="s_0a92494e" formatted="false">Name</string>
+    <string name="s_0b149b76" formatted="false">Confirm discount</string>
+    <string name="s_0b9aea6f" formatted="false">Couldn\'t change the quantity</string>
+    <string name="s_0be90459" formatted="false">Opening hours</string>
+    <string name="s_0c05c599" formatted="false">Couldn\'t send the reply</string>
+    <string name="s_0c6c1d53" formatted="false">Get your shop ready to appear to customers</string>
+    <string name="s_0ccab856" formatted="false">Location permission wasn\'t granted — tap the map to set the shop\'s location</string>
+    <string name="s_0e1bedb9" formatted="false">My saved places</string>
+    <string name="s_10ceb09f" formatted="false">Register as:</string>
+    <string name="s_14293463" formatted="false">Currently unavailable</string>
+    <string name="s_14737605" formatted="false">Rule added</string>
+    <string name="s_153612e1" formatted="false">Discount receipt</string>
+    <string name="s_1699cdea" formatted="false">Add discount</string>
+    <string name="s_18d994f4" formatted="false">New product</string>
+    <string name="s_1aa879ba" formatted="false">Member price</string>
+    <string name="s_1b98cbb3" formatted="false">No discounts yet</string>
+    <string name="s_1be55892" formatted="false">My connected channels</string>
+    <string name="s_1bef7f7d" formatted="false">WhatsApp (with country code, e.g. 9639xxxxxxxx)</string>
+    <string name="s_1dbf1d4a" formatted="false">Enter your email and password</string>
+    <string name="s_1e3477e2" formatted="false">We\'ll ask for your shop\'s details after you create the account</string>
+    <string name="s_21019a65" formatted="false">Connect the page</string>
+    <string name="s_2136e58d" formatted="false">Auto-responder</string>
+    <string name="s_21a1bc3f" formatted="false">Description (optional)</string>
+    <string name="s_221bae78" formatted="false">Couldn\'t load the status</string>
+    <string name="s_222d012d" formatted="false">Save opening hours</string>
+    <string name="s_23e47d75" formatted="false">Your shop\'s place on the map</string>
+    <string name="s_249b177e" formatted="false">The complete guide to your city</string>
+    <string name="s_261429f0" formatted="false">+ New product</string>
+    <string name="s_2a837234" formatted="false">Connect the channel</string>
+    <string name="s_2d2bbdc2" formatted="false">Delete</string>
+    <string name="s_2e1a34c3" formatted="false">,</string>
+    <string name="s_2e3f9ed4" formatted="false">Transfer USDT (TRC20 network) to this address, then paste the transaction ID (txid) — the server verifies it automatically:</string>
+    <string name="s_2f1a3ab7" formatted="false">Set your working days and hours — customers see \"Open now\" or \"Closed\". If you close after midnight, pick a closing time earlier than the opening time (for example 6:00 PM – 2:00 AM).</string>
+    <string name="s_305fe0fc" formatted="false">Subscribe to a plan to activate your digital card</string>
+    <string name="s_328ddce5" formatted="false">Back</string>
+    <string name="s_33093b21" formatted="false">Enter a valid bill amount</string>
+    <string name="s_341d926d" formatted="false">Couldn\'t save the product</string>
+    <string name="s_347c4ba8" formatted="false">Couldn\'t remove the photo</string>
+    <string name="s_38ceca24" formatted="false">Fixed reply</string>
+    <string name="s_3bb9ad91" formatted="false">Sign in first to continue</string>
+    <string name="s_3ea19382" formatted="false">Incorrect sign-in details</string>
+    <string name="s_3f8e51fe" formatted="false">My card</string>
+    <string name="s_3fc7c056" formatted="false">My cart</string>
+    <string name="s_41066d88" formatted="false">Register</string>
+    <string name="s_413c51af" formatted="false">Total</string>
+    <string name="s_41b05461" formatted="false">Active</string>
+    <string name="s_42186a14" formatted="false">Remove photo</string>
+    <string name="s_424fa77c" formatted="false">Couldn\'t delete the product</string>
+    <string name="s_43010e9c" formatted="false">Couldn\'t save the shop details</string>
+    <string name="s_432dc00c" formatted="false">Couldn\'t load the product</string>
+    <string name="s_439b0d4e" formatted="false">Not activated</string>
+    <string name="s_44048fac" formatted="false">Confirmed</string>
+    <string name="s_46242623" formatted="false">Enter your name</string>
+    <string name="s_471a369e" formatted="false">Couldn\'t add the rule</string>
+    <string name="s_47228890" formatted="false">Couldn\'t delete</string>
+    <string name="s_47352f90" formatted="false">Add your first product</string>
+    <string name="s_47428e01" formatted="false">Write your reply</string>
+    <string name="s_48e7fe4b" formatted="false">Enter the membership number and the 6-digit code</string>
+    <string name="s_4a3ccec5" formatted="false">🕒 Opening hours</string>
+    <string name="s_4b028e52" formatted="false">Waiting for your reply</string>
+    <string name="s_4b860f78" formatted="false">Password (at least 8 characters)</string>
+    <string name="s_4d977cf7" formatted="false">Transaction ID (txid)</string>
+    <string name="s_4e387930" formatted="false">Free trial</string>
+    <string name="s_5059c36f" formatted="false">WhatsApp (optional, with country code)</string>
+    <string name="s_51963665" formatted="false">Current code</string>
+    <string name="s_51ed1058" formatted="false">Choose the payment method and enter the transaction number</string>
+    <string name="s_53655660" formatted="false">Channels</string>
+    <string name="s_53bd39b7" formatted="false">Available channels</string>
+    <string name="s_54b49c02" formatted="false">Instructions for the AI</string>
+    <string name="s_55cf1553" formatted="false">Couldn\'t start connecting to Facebook</string>
+    <string name="s_56be3fdb" formatted="false">Enter a rule name and at least one keyword</string>
+    <string name="s_56ee6e0d" formatted="false">Save</string>
+    <string name="s_571d102a" formatted="false">You haven\'t set the location yet</string>
+    <string name="s_57833160" formatted="false">No connected channels yet</string>
+    <string name="s_58c8a282" formatted="false">Visitor</string>
+    <string name="s_59539fc9" formatted="false">Shop name</string>
+    <string name="s_5bf826c5" formatted="false">Close</string>
+    <string name="s_5f05466a" formatted="false">Cancelled</string>
+    <string name="s_5f10f855" formatted="false">Couldn\'t load the payment methods</string>
+    <string name="s_5ffc2bb8" formatted="false">Rule name</string>
+    <string name="s_60e251d0" formatted="false">Don\'t have an account? Create one</string>
+    <string name="s_615e65ba" formatted="false">SKU (optional)</string>
+    <string name="s_621e568d" formatted="false">Top up</string>
+    <string name="s_625e3fc7" formatted="false">Merchant</string>
+    <string name="s_6310b20d" formatted="false">Choose the page</string>
+    <string name="s_64cf6641" formatted="false">My profile</string>
+    <string name="s_6617ed19" formatted="false">We couldn\'t get your location — tap the map to set it by hand</string>
+    <string name="s_66414100" formatted="false">Topped up and balance added</string>
+    <string name="s_67636cc3" formatted="false">Send top-up request</string>
+    <string name="s_676f8348" formatted="false">Couldn\'t register the merchant account</string>
+    <string name="s_6793a69f" formatted="false">Products</string>
+    <string name="s_69bbe90d" formatted="false">No products yet</string>
+    <string name="s_69c86923" formatted="false">‹ Back</string>
+    <string name="s_6c21e27c" formatted="false">Something went wrong</string>
+    <string name="s_6d05e053" formatted="false">Reply tone (for example: friendly and brief)</string>
+    <string name="s_6e274458" formatted="false">Couldn\'t connect the page</string>
+    <string name="s_6e3a209c" formatted="false">Order not found</string>
+    <string name="s_7009c3b0" formatted="false">%1$.5f, %2$.5f</string>
+    <string name="s_70a771db" formatted="false">Couldn\'t confirm the discount</string>
+    <string name="s_7121fbcc" formatted="false">Facebook connected ✅</string>
+    <string name="s_746ec1bd" formatted="false">The member price must be lower than the regular price</string>
+    <string name="s_749f9cfe" formatted="false">Register as a merchant</string>
+    <string name="s_760c65a1" formatted="false">Phone</string>
+    <string name="s_77eb6cfd" formatted="false">About you or your shop (shown to customers and on invoices)</string>
+    <string name="s_79e32d1f" formatted="false">⏳ Your request is waiting for admin approval — your shop won\'t appear on the map before that.</string>
+    <string name="s_79e3c383" formatted="false">Couldn\'t save the opening hours</string>
+    <string name="s_7b3296cc" formatted="false">No messages yet</string>
+    <string name="s_7c75fec5" formatted="false">Category</string>
+    <string name="s_7d943798" formatted="false">No orders yet</string>
+    <string name="s_7ef9f7a4" formatted="false">Added to the cart ✓</string>
+    <string name="s_7f9255f4" formatted="false">Add rule</string>
+    <string name="s_7feb59f4" formatted="false">Dalilacom</string>
+    <string name="s_8008e7e0" formatted="false">📍 Shop details &amp; location</string>
+    <string name="s_8522fb76" formatted="false">Membership number</string>
+    <string name="s_8562adb5" formatted="false">Couldn\'t sign in</string>
+    <string name="s_860f094a" formatted="false">Couldn\'t place the order</string>
+    <string name="s_864c0780" formatted="false">Product name</string>
+    <string name="s_8970aed0" formatted="false">The scanned code isn\'t valid</string>
+    <string name="s_89a4c18a" formatted="false">Active</string>
+    <string name="s_8a3cd750" formatted="false">Start preparing</string>
+    <string name="s_8a942763" formatted="false">📷 Add a photo</string>
+    <string name="s_8aed060f" formatted="false">Pending</string>
+    <string name="s_8bf6ddd2" formatted="false">Subscribe</string>
+    <string name="s_8c6117b6" formatted="false">Sign in</string>
+    <string name="s_8c7eace2" formatted="false">Sign in with Facebook and choose the page the auto-responder will work on — no token copying.</string>
+    <string name="s_8c7ec7a1" formatted="false">Use my current location</string>
+    <string name="s_8c818f60" formatted="false">Couldn\'t load the status — go back and try again</string>
+    <string name="s_8d0496d3" formatted="false">Check the product name, price and stock</string>
+    <string name="s_8f2679b1" formatted="false">Top-up methods aren\'t enabled right now — contact the admin</string>
+    <string name="s_90a91c96" formatted="false">Overview</string>
+    <string name="s_90cf87a4" formatted="false">Send</string>
+    <string name="s_911aafd4" formatted="false">Confirm</string>
+    <string name="s_92dc656f" formatted="false">Couldn\'t prepare the document</string>
+    <string name="s_935d8234" formatted="false">Reason for cancelling</string>
+    <string name="s_937c3091" formatted="false">Subscription renewed</string>
+    <string name="s_93a7f5f0" formatted="false">Go to the cart</string>
+    <string name="s_96a2838a" formatted="false">Enter a discount title and a percentage between 1 and 100</string>
+    <string name="s_97b1b92d" formatted="false">This is how customers find you — tap the map to drop the pin where your shop is.</string>
+    <string name="s_9855a904" formatted="false">Add a member discount</string>
+    <string name="s_98bd1e1e" formatted="false">Couldn\'t save</string>
+    <string name="s_98df46fb" formatted="false">Undo</string>
+    <string name="s_997f9752" formatted="false">✅ Shop details saved</string>
+    <string name="s_99ca558f" formatted="false">Couldn\'t subscribe to the membership</string>
+    <string name="s_9a2547dd" formatted="false">Or enter the membership details by hand</string>
+    <string name="s_9a40a38b" formatted="false">Place order</string>
+    <string name="s_9aa19dc9" formatted="false">Connect Facebook</string>
+    <string name="s_9b30f06e" formatted="false">Percentage %</string>
+    <string name="s_9b5be5df" formatted="false">Couldn\'t add the product</string>
+    <string name="s_9cb17c57" formatted="false">No transactions yet</string>
+    <string name="s_a0b697cb" formatted="false">Edit product</string>
+    <string name="s_a1ec84ae" formatted="false">Business details saved</string>
+    <string name="s_a24110f8" formatted="false">‹ Back to customer account</string>
+    <string name="s_a26cb7f2" formatted="false">It\'s best to connect with the \"Connect Facebook\" button above — no token pasting. The fields below are for manual connection if you need them.</string>
+    <string name="s_a2750cc7" formatted="false">Your balance</string>
+    <string name="s_a2daab91" formatted="false">Product is active</string>
+    <string name="s_a2e93da9" formatted="false">Reason</string>
+    <string name="s_a3836012" formatted="false">Once it\'s active, this button opens the Facebook page directly.</string>
+    <string name="s_a3ac8fb2" formatted="false">Couldn\'t read the photo — try another one</string>
+    <string name="s_a3e249b8" formatted="false">Couldn\'t load the rules</string>
+    <string name="s_a3e7dfc4" formatted="false">Inbox</string>
+    <string name="s_a40a6e99" formatted="false">Create account</string>
+    <string name="s_a4409754" formatted="false">Couldn\'t load the Facebook connection status</string>
+    <string name="s_a549b16b" formatted="false">Replied</string>
+    <string name="s_a5e584ae" formatted="false">Reply text (use {name} for the customer\'s name)</string>
+    <string name="s_a5f6da27" formatted="false">Couldn\'t fetch the posts</string>
+    <string name="s_a652e16c" formatted="false">This product isn\'t available</string>
+    <string name="s_a6a44b5b" formatted="false">Preparing</string>
+    <string name="s_a6ed2a71" formatted="false">Expired</string>
+    <string name="s_a6f73674" formatted="false">Incoming messages</string>
+    <string name="s_a860cf2b" formatted="false">My location</string>
+    <string name="s_ab03953f" formatted="false">Admin approval</string>
+    <string name="s_ac634572" formatted="false">✅ Your profile was saved</string>
+    <string name="s_ada6e57a" formatted="false">Couldn\'t load your profile</string>
+    <string name="s_af7715dd" formatted="false">Discount confirmed ✓</string>
+    <string name="s_afabc0f2" formatted="false">Couldn\'t send the top-up request</string>
+    <string name="s_b045d443" formatted="false">My rules</string>
+    <string name="s_b257b4e1" formatted="false">Remove</string>
+    <string name="s_b4bbf18b" formatted="false">Cancel order</string>
+    <string name="s_b4f76c3a" formatted="false">Edit</string>
+    <string name="s_b6066a1e" formatted="false">Transfer transaction number</string>
+    <string name="s_b642dd5a" formatted="false">Rules</string>
+    <string name="s_b6aa0c7d" formatted="false">Price</string>
+    <string name="s_b89a6549" formatted="false">Facebook connection isn\'t enabled on the server yet (it needs a Meta app and permission approval).</string>
+    <string name="s_baffa49c" formatted="false">Address</string>
+    <string name="s_bb31982c" formatted="false">Copy the first open day to all days</string>
+    <string name="s_bb6cc0f4" formatted="false">Create a new account</string>
+    <string name="s_bb8520e6" formatted="false">Discounts</string>
+    <string name="s_bc12337c" formatted="false">Couldn\'t load the connections</string>
+    <string name="s_bdb567d9" formatted="false">Couldn\'t cancel the order</string>
+    <string name="s_beb6f577" formatted="false">The code is invalid or expired</string>
+    <string name="s_c03965c6" formatted="false">Your account becomes a merchant account after admin approval, then your shop appears on the map</string>
+    <string name="s_c2cbfa91" formatted="false">📄 Export invoice (PDF)</string>
+    <string name="s_c31663d5" formatted="false">My wallet</string>
+    <string name="s_c33c7465" formatted="false">You have no rules yet</string>
+    <string name="s_c4973dca" formatted="false">Couldn\'t add the discount</string>
+    <string name="s_c5324447" formatted="false">Fill in every field first</string>
+    <string name="s_c5822564" formatted="false">Subscription</string>
+    <string name="s_c5ffc332" formatted="false">Incoming orders</string>
+    <string name="s_c758841f" formatted="false">The page wasn\'t connected — try again</string>
+    <string name="s_c7a401f5" formatted="false">Couldn\'t fetch the code</string>
+    <string name="s_c89ae688" formatted="false">Bill amount</string>
+    <string name="s_c91b0e1d" formatted="false">Connect</string>
+    <string name="s_c9cbc8b2" formatted="false">Sign in</string>
+    <string name="s_c9fbbd3c" formatted="false">New reply rule</string>
+    <string name="s_ca575cfb" formatted="false">Couldn\'t save the profile</string>
+    <string name="s_ca70f840" formatted="false">Specific posts (Facebook / Instagram)</string>
+    <string name="s_cbc18737" formatted="false">Inactive</string>
+    <string name="s_cc6b3855" formatted="false">Email</string>
+    <string name="s_cd1c71a4" formatted="false">Activate the auto-responder first (trial or subscription), then it can connect.</string>
+    <string name="s_cdffc53b" formatted="false">Couldn\'t update the order status</string>
+    <string name="s_d036d6bd" formatted="false">Couldn\'t load the connection status — try refreshing.</string>
+    <string name="s_d12fa511" formatted="false">Add to cart</string>
+    <string name="s_d14862b0" formatted="false">\?</string>
+    <string name="s_d1feb875" formatted="false">Confirm order</string>
+    <string name="s_d2cbe1d2" formatted="false">Back to the map without an account</string>
+    <string name="s_d3f3e653" formatted="false">Rule deleted</string>
+    <string name="s_d556272b" formatted="false">Couldn\'t reach the server — check your internet connection</string>
+    <string name="s_d59687ba" formatted="false">Closed</string>
+    <string name="s_d5a3c41f" formatted="false">Enter the shop name and choose a category</string>
+    <string name="s_d685576e" formatted="false">Couldn\'t load your pages</string>
+    <string name="s_d697a2b1" formatted="false">Stock</string>
+    <string name="s_d7359b3c" formatted="false">Ignored</string>
+    <string name="s_d766cb06" formatted="false">Catalogue</string>
+    <string name="s_d82b4deb" formatted="false">Keywords (comma-separated)</string>
+    <string name="s_d9724d06" formatted="false">Confirm discount</string>
+    <string name="s_d97a32ee" formatted="false">Already have an account? Sign in</string>
+    <string name="s_da0717d9" formatted="false">Couldn\'t activate</string>
+    <string name="s_da1e9875" formatted="false">Top up balance</string>
+    <string name="s_daaa4ebe" formatted="false">Couldn\'t renew</string>
+    <string name="s_db4175ae" formatted="false">Password</string>
+    <string name="s_dc09c826" formatted="false">About your business (the AI uses it when replying)</string>
+    <string name="s_dc26b57d" formatted="false">Your cart is empty</string>
+    <string name="s_ddb9dbdc" formatted="false">Address (optional)</string>
+    <string name="s_de747706" formatted="false">Discount title</string>
+    <string name="s_e0501ddf" formatted="false">Leave it empty to apply the rule to everything, or pick posts so it only replies to comments on them.</string>
+    <string name="s_e172f208" formatted="false">✅ Opening hours saved</string>
+    <string name="s_e19b16bd" formatted="false">Full name</string>
+    <string name="s_e2e9f99a" formatted="false">Shop details &amp; location</string>
+    <string name="s_e470027c" formatted="false">Reply sent</string>
+    <string name="s_e50b0785" formatted="false">Amount you transferred</string>
+    <string name="s_e51fe37e" formatted="false">Couldn\'t load the channels</string>
+    <string name="s_e644dc4b" formatted="false">New transaction</string>
+    <string name="s_e776b020" formatted="false">Cancel</string>
+    <string name="s_e78265a1" formatted="false">Couldn\'t upload the photo</string>
+    <string name="s_e7e5f1a0" formatted="false">You don\'t have a membership yet</string>
+    <string name="s_e947849f" formatted="false">Couldn\'t calculate the route</string>
+    <string name="s_ea16c0e6" formatted="false">Delivered</string>
+    <string name="s_eb92a991" formatted="false">Couldn\'t add the product to the cart</string>
+    <string name="s_ec6d9289" formatted="false">AI</string>
+    <string name="s_ed8f478b" formatted="false">Code (6 digits)</string>
+    <string name="s_ee5aea07" formatted="false">Sending failed</string>
+    <string name="s_eecf189f" formatted="false">Sign in first</string>
+    <string name="s_ef73b75f" formatted="false">Page connected ✅</string>
+    <string name="s_ef8d4234" formatted="false">✅ Photo saved</string>
+    <string name="s_f008af11" formatted="false">Coming soon</string>
+    <string name="s_f1b27ce2" formatted="false">Turn on at least one day first</string>
+    <string name="s_f353c2e2" formatted="false">Scan the code 📷</string>
+    <string name="s_f542f592" formatted="false">Complaints are never answered automatically — they show up here for you to reply.</string>
+    <string name="s_f5f6d8c4" formatted="false">Couldn\'t connect the channel</string>
+    <string name="s_f6b288e4" formatted="false">Dalilacom member discount</string>
+    <string name="s_f79140d3" formatted="false">Shipped</string>
+    <string name="s_f835f24d" formatted="false">Enter the shop name</string>
+    <string name="s_f85fd2a4" formatted="false">Top up wallet</string>
+    <string name="s_f90416a9" formatted="false">📷 Change photo</string>
+    <string name="s_f90ad780" formatted="false">You haven\'t saved any place yet — tap ♡ on any shop on the map.</string>
+    <string name="s_f96a754e" formatted="false">Balance</string>
+    <string name="s_faa866bc" formatted="false">Fallback reply if the AI isn\'t available (optional)</string>
+    <string name="s_fd85c447" formatted="false">Activated</string>
+    <string name="s_fd98f999" formatted="false">Couldn\'t edit</string>
+    <string name="s_fdc54283" formatted="false">Couldn\'t load the inbox</string>
+    <string name="s_fe29f439" formatted="false">Recent transactions</string>
+    <string name="s_fe79250b" formatted="false">Verify</string>
+</resources>

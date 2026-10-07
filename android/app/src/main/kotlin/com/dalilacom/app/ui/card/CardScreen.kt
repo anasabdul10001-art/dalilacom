@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.card
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,9 +61,9 @@ private fun NoMembershipContent(state: CardUiState, onSubscribe: (String) -> Uni
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("ما عندك عضوية بعد", style = MaterialTheme.typography.titleLarge)
+        Text(AppStrings.get(R.string.s_e7e5f1a0), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
-        Text("اشترك بخطة عشان تفعّل بطاقتك الرقمية", style = MaterialTheme.typography.bodyMedium)
+        Text(AppStrings.get(R.string.s_305fe0fc), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(20.dp))
 
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
@@ -73,9 +75,9 @@ private fun NoMembershipContent(state: CardUiState, onSubscribe: (String) -> Uni
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(plan.name, style = MaterialTheme.typography.titleMedium)
-                        Text("${plan.durationDays} يوم — ${plan.priceCents / 100.0} ${plan.currency}")
+                        Text(AppStrings.get(R.string.fmt_plan_line, plan.durationDays, plan.priceCents / 100.0, plan.currency))
                         Spacer(Modifier.height(8.dp))
-                        Button(onClick = { onSubscribe(plan.id) }) { Text("اشترك") }
+                        Button(onClick = { onSubscribe(plan.id) }) { Text(AppStrings.get(R.string.s_8bf6ddd2)) }
                     }
                 }
             }
@@ -97,7 +99,7 @@ private fun MembershipCardContent(state: CardUiState) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text("بطاقتي", style = MaterialTheme.typography.headlineSmall, color = PrimaryRed)
+        Text(AppStrings.get(R.string.s_3f8e51fe), style = MaterialTheme.typography.headlineSmall, color = PrimaryRed)
         Spacer(Modifier.height(16.dp))
 
         Card(
@@ -129,7 +131,7 @@ private fun MembershipCardContent(state: CardUiState) {
                 modifier = Modifier.size(200.dp),
             )
             Spacer(Modifier.height(16.dp))
-            Text("الكود الحالي", style = MaterialTheme.typography.bodyMedium)
+            Text(AppStrings.get(R.string.s_51963665), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(8.dp))
             Text(
                 text = code.chunked(1).joinToString(" "),
@@ -138,7 +140,7 @@ private fun MembershipCardContent(state: CardUiState) {
                 color = PrimaryRed,
             )
             Spacer(Modifier.height(8.dp))
-            Text("بيتجدد خلال ${state.secondsRemaining} ثانية", style = MaterialTheme.typography.bodySmall)
+            Text(AppStrings.get(R.string.fmt_qr_refresh, state.secondsRemaining ?: 0), style = MaterialTheme.typography.bodySmall)
         }
 
         state.error?.let {

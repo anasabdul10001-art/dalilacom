@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,20 +39,20 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
     LaunchedEffect(Unit) { viewModel.refresh() }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("الكتالوج", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Text(AppStrings.get(R.string.s_d766cb06), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.OutlinedButton(onClick = onOpenProfile, modifier = Modifier.weight(1f)) { Text("📍 بيانات المحل ومكانه") }
-            androidx.compose.material3.OutlinedButton(onClick = onOpenHours, modifier = Modifier.weight(1f)) { Text("🕒 ساعات العمل") }
+            androidx.compose.material3.OutlinedButton(onClick = onOpenProfile, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.s_8008e7e0)) }
+            androidx.compose.material3.OutlinedButton(onClick = onOpenHours, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.s_4a3ccec5)) }
         }
         Spacer(Modifier.height(12.dp))
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
-                Text("الحسومات", style = MaterialTheme.typography.titleMedium)
+                Text(AppStrings.get(R.string.s_bb8520e6), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
                 if (state.discounts.isEmpty()) {
-                    Text("ما في حسومات بعد", style = MaterialTheme.typography.bodySmall)
+                    Text(AppStrings.get(R.string.s_1b98cbb3), style = MaterialTheme.typography.bodySmall)
                 } else {
                     state.discounts.forEach { discount ->
                         Text("🏷️ ${discount.title} — ${discount.percent}%", color = MaterialTheme.colorScheme.primary)
@@ -61,18 +63,18 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
                     OutlinedTextField(
                         value = state.discountTitle,
                         onValueChange = viewModel::onDiscountTitleChange,
-                        label = { Text("عنوان الحسم") },
+                        label = { Text(AppStrings.get(R.string.s_de747706)) },
                         modifier = Modifier.weight(2f),
                     )
                     OutlinedTextField(
                         value = state.discountPercent,
                         onValueChange = viewModel::onDiscountPercentChange,
-                        label = { Text("نسبة %") },
+                        label = { Text(AppStrings.get(R.string.s_9b30f06e)) },
                         modifier = Modifier.weight(1f),
                     )
                 }
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = viewModel::addDiscount, enabled = !state.isAddingDiscount) { Text("إضافة حسم") }
+                Button(onClick = viewModel::addDiscount, enabled = !state.isAddingDiscount) { Text(AppStrings.get(R.string.s_1699cdea)) }
             }
         }
 
@@ -82,14 +84,14 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("المنتجات", style = MaterialTheme.typography.titleMedium)
-            Button(onClick = onAddProduct) { Text("+ منتج جديد") }
+            Text(AppStrings.get(R.string.s_6793a69f), style = MaterialTheme.typography.titleMedium)
+            Button(onClick = onAddProduct) { Text(AppStrings.get(R.string.s_261429f0)) }
         }
         Spacer(Modifier.height(8.dp))
 
         when {
             state.isLoading -> CircularProgressIndicator()
-            state.products.isEmpty() -> Text("ما في منتجات بعد", style = MaterialTheme.typography.bodyMedium)
+            state.products.isEmpty() -> Text(AppStrings.get(R.string.s_69bbe90d), style = MaterialTheme.typography.bodyMedium)
             else -> state.products.forEach { product ->
                 CatalogProductRow(product, onClick = { onProductClick(product.id) })
             }
@@ -109,12 +111,12 @@ private fun CatalogProductRow(product: ProductDto, onClick: () -> Unit) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(product.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    if (product.isActive) "نشط" else "غير نشط",
+                    if (product.isActive) AppStrings.get(R.string.s_41b05461) else AppStrings.get(R.string.s_cbc18737),
                     color = if (product.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Text("${formatCents(product.priceCents)} — مخزون: ${product.stock}", style = MaterialTheme.typography.bodySmall)
+            Text(AppStrings.get(R.string.fmt_price_stock, formatCents(product.priceCents), product.stock), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.responder
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.WalletDto
@@ -47,7 +49,7 @@ class WalletViewModel(private val repository: ResponderRepository) : ViewModel()
     fun submitTopUp(method: String, reference: String, amount: String) {
         val parsedAmount = amount.trim().replace(",", ".").toDoubleOrNull()
         if (method.isBlank() || reference.isBlank()) {
-            _uiState.update { it.copy(error = "اختر طريقة الدفع واكتب رقم العملية", info = null) }
+            _uiState.update { it.copy(error = AppStrings.get(R.string.s_51ed1058), info = null) }
             return
         }
         viewModelScope.launch {
@@ -61,8 +63,8 @@ class WalletViewModel(private val repository: ResponderRepository) : ViewModel()
                     error = failure?.message,
                     info = when {
                         failure != null -> null
-                        topUp?.status == "APPROVED" -> "تم الشحن وإضافة الرصيد"
-                        else -> "وصل طلب الشحن، بانتظار تأكيد الإدارة"
+                        topUp?.status == "APPROVED" -> AppStrings.get(R.string.s_66414100)
+                        else -> AppStrings.get(R.string.s_0a2bc37f)
                     },
                 )
             }

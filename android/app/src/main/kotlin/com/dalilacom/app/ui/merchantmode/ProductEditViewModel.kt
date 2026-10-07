@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.CreateProductRequest
@@ -51,7 +53,7 @@ class ProductEditViewModel(
             }
             val product = productRepository.getProduct(productId)
             if (product == null) {
-                _uiState.value = _uiState.value.copy(isLoading = false, categoryOptions = options, error = "تعذّر تحميل المنتج")
+                _uiState.value = _uiState.value.copy(isLoading = false, categoryOptions = options, error = AppStrings.get(R.string.s_432dc00c))
                 return@launch
             }
             _uiState.value = _uiState.value.copy(
@@ -85,14 +87,14 @@ class ProductEditViewModel(
         val priceCents = state.priceText.replace(",", ".").toDoubleOrNull()?.times(100)?.toInt()
         val stock = state.stockText.toIntOrNull()
         if (state.name.isBlank() || priceCents == null || priceCents <= 0 || stock == null || stock < 0) {
-            _uiState.value = state.copy(error = "تأكد من اسم المنتج والسعر والمخزون")
+            _uiState.value = state.copy(error = AppStrings.get(R.string.s_8d0496d3))
             return
         }
         var memberPriceCents: Int? = null
         if (state.memberDiscountEnabled) {
             memberPriceCents = state.memberPriceText.replace(",", ".").toDoubleOrNull()?.times(100)?.toInt()
             if (memberPriceCents == null || memberPriceCents <= 0 || memberPriceCents >= priceCents) {
-                _uiState.value = state.copy(error = "سعر العضو لازم يكون أقل من السعر الأصلي")
+                _uiState.value = state.copy(error = AppStrings.get(R.string.s_746ec1bd))
                 return
             }
         }

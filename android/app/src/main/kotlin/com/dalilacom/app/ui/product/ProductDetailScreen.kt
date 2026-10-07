@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.product
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,7 +45,7 @@ fun ProductDetailScreen(
     val state by viewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        TextButton(onClick = onBack) { Text("‹ رجوع") }
+        TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
 
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -65,7 +67,7 @@ fun ProductDetailScreen(
                             textDecoration = TextDecoration.LineThrough,
                         )
                         Text(
-                            "  ${formatCents(product.memberPriceCents)} — سعر أعضاء دليلكم",
+                            "  " + AppStrings.get(R.string.fmt_member_price_only, formatCents(product.memberPriceCents)),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -77,9 +79,9 @@ fun ProductDetailScreen(
                 Spacer(Modifier.height(8.dp))
                 val available = product.isActive && product.stock > 0
                 if (!available) {
-                    Text("غير متوفر حاليًا", color = MaterialTheme.colorScheme.error)
+                    Text(AppStrings.get(R.string.s_14293463), color = MaterialTheme.colorScheme.error)
                 } else {
-                    Text("المتوفر بالمخزون: ${product.stock}", style = MaterialTheme.typography.bodySmall)
+                    Text(AppStrings.get(R.string.fmt_in_stock, product.stock), style = MaterialTheme.typography.bodySmall)
                 }
 
                 Spacer(Modifier.height(20.dp))
@@ -95,12 +97,12 @@ fun ProductDetailScreen(
                         onClick = viewModel::addToCart,
                         enabled = !state.isAddingToCart,
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text("أضف للسلة") }
+                    ) { Text(AppStrings.get(R.string.s_d12fa511)) }
 
                     if (state.addedToCart) {
                         Spacer(Modifier.height(8.dp))
-                        Text("تمت الإضافة للسلة ✓", color = MaterialTheme.colorScheme.primary)
-                        TextButton(onClick = onGoToCart) { Text("روح للسلة") }
+                        Text(AppStrings.get(R.string.s_7ef9f7a4), color = MaterialTheme.colorScheme.primary)
+                        TextButton(onClick = onGoToCart) { Text(AppStrings.get(R.string.s_93a7f5f0)) }
                     }
                 }
 

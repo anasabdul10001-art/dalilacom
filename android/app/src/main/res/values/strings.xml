@@ -171,4 +171,39 @@
     <string name="pricing_subscribe">اشترك</string>
     <string name="pricing_empty">ما في باقات متاحة حاليًا</string>
     <string name="pricing_subscribed">تم الاشتراك ✅</string>
+
+    <!-- texts with numbers / names inside; positional arguments keep the word order right in every language -->
+    <string name="fmt_plan_line">%1$d يوم — %2$s %3$s</string>
+    <string name="fmt_qr_refresh">بيتجدد خلال %1$d ثانية</string>
+    <string name="fmt_price_stock">%1$s — مخزون: %2$d</string>
+    <string name="fmt_member">العضو: %1$s</string>
+    <string name="fmt_discount_pct">نسبة الحسم: %1$d%%</string>
+    <string name="fmt_tx_ref">رقم العملية: %1$s</string>
+    <string name="fmt_bill_amount">قيمة الفاتورة: %1$s</string>
+    <string name="fmt_discount_amount">قيمة الحسم: %1$s</string>
+    <string name="fmt_final_amount">المبلغ النهائي: %1$s</string>
+    <string name="fmt_cancel_reason">سبب الإلغاء: %1$s</string>
+    <string name="fmt_saved">وفّرت %1$s بسعر أعضاء دليلكم</string>
+    <string name="fmt_invoice_job">فاتورة %1$s</string>
+    <string name="fmt_from">من %1$s</string>
+    <string name="fmt_to">إلى %1$s</string>
+    <string name="fmt_member_price_only">%1$s — سعر أعضاء دليلكم</string>
+    <string name="fmt_in_stock">المتوفر بالمخزون: %1$d</string>
+    <string name="fmt_status">الحالة: %1$s</string>
+    <string name="fmt_ends_on">ينتهي بتاريخ %1$s</string>
+    <string name="fmt_your_balance">رصيدك: %1$s %2$s</string>
+    <string name="fmt_price_every">السعر: %1$s %2$s كل %3$d يوم</string>
+    <string name="fmt_ai_replies">ردود الذكاء الاصطناعي: %1$d من %2$d</string>
+    <string name="fmt_start_trial">ابدأ التجربة المجانية (%1$d يوم)</string>
+    <string name="fmt_subscribe_price">اشترك — %1$s %2$s</string>
+    <string name="fmt_renew_price">جدّد الاشتراك — %1$s %2$s</string>
+    <string name="fmt_hook_url">رابط الاستقبال: %1$s</string>
+    <string name="fmt_connect_ig">ربط إنستغرام (@%1$s)</string>
+    <string name="fmt_posts_selected">📌 %1$d منشور محدد</string>
+    <string name="fmt_keywords">الكلمات: %1$s</string>
+    <string name="fmt_limited_posts">📌 محصورة بـ %1$d منشور</string>
+    <string name="fmt_fixed_reply">رد ثابت: %1$s</string>
+    <string name="fmt_reply">الرد: %1$s</string>
+    <string name="fmt_transfer_to">حوّل على الحساب: %1$s</string>
+    <string name="list_separator">، </string>
 </resources>

@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.common
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -124,7 +126,7 @@ fun LocationPicker(
         scope.launch {
             val here = LocationHelper.current(context)
             if (here == null) {
-                Toast.makeText(context, "ما قدرنا نحدد موقعك — اضغط على الخريطة لتحدده بإيدك", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, AppStrings.get(R.string.s_6617ed19), Toast.LENGTH_LONG).show()
             } else {
                 latestOnChange(here)
                 recenterTick++
@@ -134,13 +136,13 @@ fun LocationPicker(
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         if (grants.values.any { it }) useCurrentLocation()
-        else Toast.makeText(context, "ما أعطيت إذن الموقع — اضغط على الخريطة لتحدد مكان المحل", Toast.LENGTH_LONG).show()
+        else Toast.makeText(context, AppStrings.get(R.string.s_0ccab856), Toast.LENGTH_LONG).show()
     }
 
     Column(modifier) {
-        Text("مكان محلك على الخريطة", style = MaterialTheme.typography.titleSmall)
+        Text(AppStrings.get(R.string.s_23e47d75), style = MaterialTheme.typography.titleSmall)
         Text(
-            "بهالطريقة بيلاقيك الزبائن — اضغط على الخريطة لتضع الدبّوس مكان محلك.",
+            AppStrings.get(R.string.s_97b1b92d),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -195,11 +197,11 @@ fun LocationPicker(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
-                Text("استخدم موقعي الحالي")
+                Text(AppStrings.get(R.string.s_8c7ec7a1))
             }
             Spacer(Modifier.width(10.dp))
             Text(
-                value?.let { "%.5f، %.5f".format(it.first, it.second) } ?: "لسا ما حدّدت المكان",
+                value?.let { AppStrings.get(R.string.s_7009c3b0).format(it.first, it.second) } ?: AppStrings.get(R.string.s_571d102a),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

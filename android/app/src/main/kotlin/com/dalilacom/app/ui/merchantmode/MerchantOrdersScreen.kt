@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,14 +51,14 @@ fun MerchantOrdersScreen(factory: ViewModelFactory) {
     LaunchedEffect(Unit) { viewModel.refresh() }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("طلبات واردة", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Text(AppStrings.get(R.string.s_c5ffc332), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(12.dp))
 
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            state.orders.isEmpty() -> Text("ما في طلبات بعد", style = MaterialTheme.typography.bodyMedium)
+            state.orders.isEmpty() -> Text(AppStrings.get(R.string.s_7d943798), style = MaterialTheme.typography.bodyMedium)
             else -> LazyColumn {
                 items(state.orders, key = { it.id }) { order ->
                     MerchantOrderRow(
@@ -78,12 +80,12 @@ fun MerchantOrdersScreen(factory: ViewModelFactory) {
     if (targetOrderId != null) {
         AlertDialog(
             onDismissRequest = { cancellingOrderId = null },
-            title = { Text("سبب الإلغاء") },
+            title = { Text(AppStrings.get(R.string.s_935d8234)) },
             text = {
                 OutlinedTextField(
                     value = cancelReason,
                     onValueChange = { cancelReason = it },
-                    label = { Text("السبب") },
+                    label = { Text(AppStrings.get(R.string.s_a2e93da9)) },
                 )
             },
             confirmButton = {
@@ -92,10 +94,10 @@ fun MerchantOrdersScreen(factory: ViewModelFactory) {
                         viewModel.cancelWithReason(targetOrderId, cancelReason.trim())
                         cancellingOrderId = null
                     }
-                }) { Text("تأكيد") }
+                }) { Text(AppStrings.get(R.string.s_911aafd4)) }
             },
             dismissButton = {
-                TextButton(onClick = { cancellingOrderId = null }) { Text("تراجع") }
+                TextButton(onClick = { cancellingOrderId = null }) { Text(AppStrings.get(R.string.s_98df46fb)) }
             },
         )
     }
@@ -120,7 +122,7 @@ private fun MerchantOrderRow(order: OrderDto, onAdvance: (String) -> Unit, onReq
                         Button(onClick = { onAdvance(next) }) { Text(orderActionLabel(next)) }
                     }
                     if (nextStatuses.contains("CANCELLED")) {
-                        OutlinedButton(onClick = onRequestCancel) { Text("إلغاء") }
+                        OutlinedButton(onClick = onRequestCancel) { Text(AppStrings.get(R.string.s_e776b020)) }
                     }
                 }
             }

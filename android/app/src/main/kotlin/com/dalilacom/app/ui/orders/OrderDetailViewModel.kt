@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.orders
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.OrderDto
@@ -32,7 +34,7 @@ class OrderDetailViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             val order = repository.getOrder(orderId)
             _uiState.value = if (order == null) {
-                OrderDetailUiState(isLoading = false, error = "الطلب غير موجود")
+                OrderDetailUiState(isLoading = false, error = AppStrings.get(R.string.s_6e3a209c))
             } else {
                 OrderDetailUiState(isLoading = false, order = order)
             }

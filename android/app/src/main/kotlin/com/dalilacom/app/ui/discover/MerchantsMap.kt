@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.discover
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -215,7 +217,7 @@ fun MerchantsMap(
                 position = GeoPoint(lat, lng)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 icon = dot(context, Color.parseColor("#1E6FE0"), 18)
-                title = "موقعي"
+                title = AppStrings.get(R.string.s_a860cf2b)
                 setInfoWindow(null)
                 map.overlays.add(this)
             }

@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.card
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.MembershipPlanDto
@@ -66,7 +68,7 @@ class CardViewModel(private val repository: MembershipRepository) : ViewModel() 
             while (true) {
                 val qr = repository.getMyQrCode()
                 if (qr == null) {
-                    _uiState.value = _uiState.value.copy(error = "تعذّر جلب الكود")
+                    _uiState.value = _uiState.value.copy(error = AppStrings.get(R.string.s_c7a401f5))
                     return@launch
                 }
                 _uiState.value = _uiState.value.copy(code = qr.code, secondsRemaining = qr.expiresInSeconds)

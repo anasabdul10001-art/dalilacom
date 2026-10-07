@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.profile
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -62,7 +64,7 @@ class ProfileEditViewModel(private val profiles: ProfileRepository) : ViewModel(
         viewModelScope.launch {
             val me = profiles.me()
             _uiState.value = if (me == null) {
-                ProfileEditUiState(isLoading = false, message = "تعذّر تحميل ملفك الشخصي", isError = true)
+                ProfileEditUiState(isLoading = false, message = AppStrings.get(R.string.s_ada6e57a), isError = true)
             } else {
                 ProfileEditUiState(isLoading = false, fullName = me.fullName, bio = me.bio.orEmpty(), avatarUrl = me.avatarUrl)
             }
@@ -75,26 +77,26 @@ class ProfileEditViewModel(private val profiles: ProfileRepository) : ViewModel(
     fun save() {
         val s = _uiState.value
         if (s.fullName.trim().length < 2) {
-            _uiState.update { it.copy(message = "اكتب اسمك", isError = true) }
+            _uiState.update { it.copy(message = AppStrings.get(R.string.s_46242623), isError = true) }
             return
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isBusy = true, message = null) }
             val result = profiles.update(s.fullName, s.bio)
-            _uiState.update { it.copy(isBusy = false, isError = result.isFailure, message = result.exceptionOrNull()?.message ?: "✅ انحفظ ملفك الشخصي") }
+            _uiState.update { it.copy(isBusy = false, isError = result.isFailure, message = result.exceptionOrNull()?.message ?: AppStrings.get(R.string.s_ac634572)) }
         }
     }
 
     fun uploadPhoto(jpeg: ByteArray?) {
         if (jpeg == null) {
-            _uiState.update { it.copy(message = "تعذّرت قراءة الصورة — جرّب صورة ثانية", isError = true) }
+            _uiState.update { it.copy(message = AppStrings.get(R.string.s_a3ac8fb2), isError = true) }
             return
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isBusy = true, message = null) }
             val result = profiles.uploadAvatar(jpeg)
             _uiState.update {
-                it.copy(isBusy = false, isError = result.isFailure, avatarUrl = result.getOrNull()?.avatarUrl ?: it.avatarUrl, message = result.exceptionOrNull()?.message ?: "✅ انحفظت الصورة")
+                it.copy(isBusy = false, isError = result.isFailure, avatarUrl = result.getOrNull()?.avatarUrl ?: it.avatarUrl, message = result.exceptionOrNull()?.message ?: AppStrings.get(R.string.s_ef8d4234))
             }
         }
     }
@@ -121,8 +123,8 @@ fun ProfileEditScreen(factory: ViewModelFactory, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ رجوع") }
-            Text("ملفي الشخصي", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
+            Text(AppStrings.get(R.string.s_64cf6641), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         }
         if (state.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -133,24 +135,24 @@ fun ProfileEditScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { picker.launch("image/*") }, enabled = !state.isBusy, shape = RoundedCornerShape(12.dp)) {
-                    Text(if (state.avatarUrl == null) "📷 إضافة صورة" else "📷 تغيير الصورة")
+                    Text(if (state.avatarUrl == null) AppStrings.get(R.string.s_8a942763) else AppStrings.get(R.string.s_f90416a9))
                 }
                 if (state.avatarUrl != null) {
-                    OutlinedButton(onClick = viewModel::removePhoto, enabled = !state.isBusy, shape = RoundedCornerShape(12.dp)) { Text("حذف الصورة") }
+                    OutlinedButton(onClick = viewModel::removePhoto, enabled = !state.isBusy, shape = RoundedCornerShape(12.dp)) { Text(AppStrings.get(R.string.s_42186a14)) }
                 }
             }
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(value = state.fullName, onValueChange = viewModel::onName, label = { Text("الاسم") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = state.fullName, onValueChange = viewModel::onName, label = { Text(AppStrings.get(R.string.s_0a92494e)) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = state.bio,
                 onValueChange = viewModel::onBio,
-                label = { Text("نبذة عنك أو عن محلك (بتظهر للزبائن وعلى الفواتير)") },
+                label = { Text(AppStrings.get(R.string.s_77eb6cfd)) },
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(16.dp))
-            Button(onClick = viewModel::save, enabled = !state.isBusy, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("حفظ") }
+            Button(onClick = viewModel::save, enabled = !state.isBusy, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(AppStrings.get(R.string.s_56ee6e0d)) }
             state.message?.let {
                 Spacer(Modifier.height(8.dp))
                 Text(it, color = if (state.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)

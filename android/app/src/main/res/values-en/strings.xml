@@ -167,4 +167,39 @@
     <string name="pricing_subscribe">Subscribe</string>
     <string name="pricing_empty">No plans available right now</string>
     <string name="pricing_subscribed">Subscribed ✅</string>
+
+    <!-- texts with numbers / names inside; positional arguments keep the word order right in every language -->
+    <string name="fmt_plan_line">%1$d days — %2$s %3$s</string>
+    <string name="fmt_qr_refresh">Refreshes in %1$d s</string>
+    <string name="fmt_price_stock">%1$s — stock: %2$d</string>
+    <string name="fmt_member">Member: %1$s</string>
+    <string name="fmt_discount_pct">Discount percentage: %1$d%%</string>
+    <string name="fmt_tx_ref">Transaction number: %1$s</string>
+    <string name="fmt_bill_amount">Bill amount: %1$s</string>
+    <string name="fmt_discount_amount">Discount amount: %1$s</string>
+    <string name="fmt_final_amount">Final amount: %1$s</string>
+    <string name="fmt_cancel_reason">Cancellation reason: %1$s</string>
+    <string name="fmt_saved">You saved %1$s with Dalilacom member pricing</string>
+    <string name="fmt_invoice_job">Invoice %1$s</string>
+    <string name="fmt_from">From %1$s</string>
+    <string name="fmt_to">To %1$s</string>
+    <string name="fmt_member_price_only">%1$s — Dalilacom member price</string>
+    <string name="fmt_in_stock">In stock: %1$d</string>
+    <string name="fmt_status">Status: %1$s</string>
+    <string name="fmt_ends_on">Ends on %1$s</string>
+    <string name="fmt_your_balance">Your balance: %1$s %2$s</string>
+    <string name="fmt_price_every">Price: %1$s %2$s every %3$d days</string>
+    <string name="fmt_ai_replies">AI replies: %1$d of %2$d</string>
+    <string name="fmt_start_trial">Start the free trial (%1$d days)</string>
+    <string name="fmt_subscribe_price">Subscribe — %1$s %2$s</string>
+    <string name="fmt_renew_price">Renew subscription — %1$s %2$s</string>
+    <string name="fmt_hook_url">Receiving link: %1$s</string>
+    <string name="fmt_connect_ig">Connect Instagram (@%1$s)</string>
+    <string name="fmt_posts_selected">📌 %1$d posts selected</string>
+    <string name="fmt_keywords">Keywords: %1$s</string>
+    <string name="fmt_limited_posts">📌 limited to %1$d posts</string>
+    <string name="fmt_fixed_reply">Fixed reply: %1$s</string>
+    <string name="fmt_reply">Reply: %1$s</string>
+    <string name="fmt_transfer_to">Transfer to account: %1$s</string>
+    <string name="list_separator">, </string>
 </resources>

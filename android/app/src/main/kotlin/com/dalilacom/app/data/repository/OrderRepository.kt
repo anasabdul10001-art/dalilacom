@@ -1,5 +1,7 @@
 package com.dalilacom.app.data.repository
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.OrderDto
@@ -26,23 +28,23 @@ class OrderRepository(private val api: ApiService) {
 
     suspend fun updateStatus(id: String, status: String, cancelReason: String? = null): Result<OrderDto> {
         val response = safeApiCall { api.updateOrderStatus(id, UpdateOrderStatusRequest(status, cancelReason)) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
             Result.success(body)
         } else {
-            Result.failure(Exception(errorText(response, "تعذّر تحديث حالة الطلب")))
+            Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_cdffc53b))))
         }
     }
 
     suspend fun cancel(id: String): Result<OrderDto> {
         val response = safeApiCall { api.cancelOrder(id) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
             Result.success(body)
         } else {
-            Result.failure(Exception(errorText(response, "تعذّر إلغاء الطلب")))
+            Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_bdb567d9))))
         }
     }
 }

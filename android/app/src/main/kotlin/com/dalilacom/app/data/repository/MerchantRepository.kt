@@ -1,5 +1,7 @@
 package com.dalilacom.app.data.repository
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.CreateDiscountRequest
@@ -30,7 +32,7 @@ class MerchantRepository(
         val response = safeApiCall {
             api.registerMerchant(RegisterMerchantRequest(businessName, categoryId, address, phone, whatsapp, location?.first, location?.second))
         }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
             // The server switched this account's role to MERCHANT; mirror that locally right
@@ -39,29 +41,29 @@ class MerchantRepository(
             sessionStore.saveRole("MERCHANT")
             Result.success(body)
         } else {
-            Result.failure(Exception(errorText(response, "تعذّر تسجيل حساب التاجر")))
+            Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_676f8348))))
         }
     }
 
     suspend fun verifyMember(memberNumber: String, code: String): Result<VerifyResponse> {
         val response = safeApiCall { api.verifyMember(VerifyRedeemRequest(memberNumber, code)) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
             Result.success(body)
         } else {
-            Result.failure(Exception(errorText(response, "الكود غير صالح أو منتهي")))
+            Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_beb6f577))))
         }
     }
 
     suspend fun redeem(memberNumber: String, code: String, billAmountCents: Int): Result<RedeemResponse> {
         val response = safeApiCall { api.redeemDiscount(RedeemRequest(memberNumber, code, billAmountCents)) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
             Result.success(body)
         } else {
-            Result.failure(Exception(errorText(response, "تعذّر تأكيد الحسم")))
+            Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_70a771db))))
         }
     }
 
@@ -75,20 +77,20 @@ class MerchantRepository(
     /** Edits the public listing: name, category, address, contacts and the pin on the map. */
     suspend fun updateListing(request: UpdateMerchantRequest): Result<MerchantMeDto> {
         val response = safeApiCall { api.updateMerchantMe(request) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body)
-        else Result.failure(Exception(errorText(response, "تعذّر حفظ بيانات المحل")))
+        else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
     }
 
     suspend fun addDiscount(title: String, percent: Int): Result<DiscountDto> {
         val response = safeApiCall { api.addDiscount(CreateDiscountRequest(title, percent)) }
-            ?: return Result.failure(Exception("تعذّر الاتصال بالسيرفر، تحقق من الإنترنت"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {
             Result.success(body)
         } else {
-            Result.failure(Exception(errorText(response, "تعذّرت إضافة الحسم")))
+            Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_c4973dca))))
         }
     }
 }

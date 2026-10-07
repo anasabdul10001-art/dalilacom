@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.responder
 
+import com.dalilacom.app.R
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.ChannelDto
@@ -87,7 +89,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
                 it.copy(
                     isBusy = false,
                     error = failure?.message,
-                    needsTopUp = failure?.message?.contains("رصيدك") == true,
+                    needsTopUp = failure?.message?.contains(AppStrings.get(R.string.s_a2750cc7)) == true,
                     info = if (failure == null) success else null,
                 )
             }
@@ -101,27 +103,27 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
     fun activateOrRenew() {
         val status = _uiState.value.status ?: return
         val isFirstActivation = !status.running && status.status != "EXPIRED"
-        act(if (isFirstActivation) "تم التفعيل" else "تم تجديد الاشتراك") {
+        act(if (isFirstActivation) AppStrings.get(R.string.s_fd85c447) else AppStrings.get(R.string.s_937c3091)) {
             if (isFirstActivation) repository.activate() else repository.renew()
         }
     }
 
     fun saveProfile(description: String, tone: String) =
-        act("تم حفظ بيانات النشاط") { repository.saveProfile(description.trim(), tone.trim()) }
+        act(AppStrings.get(R.string.s_a1ec84ae)) { repository.saveProfile(description.trim(), tone.trim()) }
 
     fun connect(channelId: String, credentials: Map<String, String>) =
-        act("تم ربط القناة") { repository.connect(channelId, credentials) }
+        act(AppStrings.get(R.string.s_0224de46)) { repository.connect(channelId, credentials) }
 
     fun toggleConnection(id: String, active: Boolean) = act(null) { repository.toggleConnection(id, active) }
 
     fun addRule(name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String) {
-        val list = keywords.split(",", "،").map { it.trim() }.filter { it.isNotEmpty() }
+        val list = keywords.split(",", AppStrings.get(R.string.s_2e1a34c3)).map { it.trim() }.filter { it.isNotEmpty() }
         if (name.isBlank() || list.isEmpty()) {
-            _uiState.update { it.copy(error = "اكتب اسم القاعدة وكلمة مفتاحية وحدة على الأقل", info = null) }
+            _uiState.update { it.copy(error = AppStrings.get(R.string.s_56be3fdb), info = null) }
             return
         }
         val postIds = _uiState.value.selectedPostIds.toList()
-        act("تمت إضافة القاعدة") {
+        act(AppStrings.get(R.string.s_14737605)) {
             repository.createRule(CreateRuleRequest(name.trim(), list, mode, replyTemplate.trim(), aiInstructions.trim(), postIds))
                 .also { if (it.isSuccess) clearPostPicker() }
         }
@@ -142,7 +144,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         it.copy(selectedPostIds = if (id in it.selectedPostIds) it.selectedPostIds - id else it.selectedPostIds + id)
     }
 
-    fun deleteRule(id: String) = act("تم حذف القاعدة") { repository.deleteRule(id) }
+    fun deleteRule(id: String) = act(AppStrings.get(R.string.s_d3f3e653)) { repository.deleteRule(id) }
 
     /* ---------------- Facebook Login (section 7/23) ---------------- */
 
@@ -190,7 +192,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
                 it.copy(
                     metaLoading = false,
                     error = failure?.message,
-                    info = if (failure == null) "تم ربط الصفحة ✅" else null,
+                    info = if (failure == null) AppStrings.get(R.string.s_ef73b75f) else null,
                     metaPages = if (failure == null) emptyList() else it.metaPages,
                 )
             }
@@ -204,8 +206,8 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
     fun onMetaReturned(ok: Boolean, connectionId: String?) {
         _uiState.update {
             it.copy(
-                info = if (ok) "تم ربط فيسبوك ✅" else null,
-                error = if (ok) null else "ما تم ربط الصفحة — جرّب من جديد",
+                info = if (ok) AppStrings.get(R.string.s_7121fbcc) else null,
+                error = if (ok) null else AppStrings.get(R.string.s_c758841f),
             )
         }
         if (ok && connectionId != null) refresh()
@@ -213,6 +215,6 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
 
     fun sendReply(id: String, reply: String) {
         if (reply.isBlank()) return
-        act("تم إرسال الرد") { repository.sendReply(id, reply.trim()) }
+        act(AppStrings.get(R.string.s_e470027c)) { repository.sendReply(id, reply.trim()) }
     }
 }
