@@ -132,11 +132,13 @@ describe("Facebook comments and post targeting", () => {
     expect(item?.status).toBe("SKIPPED");
   });
 
-  it("never auto-replies to a complaint, even on a targeted post", async () => {
+  it("answers a complaint only with the holding message (a real person will follow up), never a rule's template, even on a targeted post", async () => {
     const event = commentEvent({ message: "السعر غالي ومنتجكم سيء" });
     const before = calls.filter((c) => c.method === "POST").length;
     await deliver(event);
-    expect(calls.filter((c) => c.method === "POST").length).toBe(before);
+    const posts = calls.filter((c) => c.method === "POST").slice(before);
+    expect(posts).toHaveLength(1);
+    expect(JSON.stringify(posts[0].body)).toContain("رح يتواصل معك قريبًا");
     const item = await prisma.responderInteraction.findFirst({ where: { userId, externalId: (event.entry[0].changes[0].value as any).comment_id } });
     expect(item?.status).toBe("NEEDS_REVIEW");
   });

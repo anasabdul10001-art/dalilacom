@@ -27,6 +27,7 @@ import { notificationRouter } from "./routes/notification.routes";
 import { planRouter } from "./routes/plan.routes";
 import { broadcastRouter } from "./routes/broadcast.routes";
 import { socialRouter } from "./routes/social.routes";
+import { legalRouter } from "./routes/legal.routes";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { localizeResponses } from "./lib/localize";
@@ -47,6 +48,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 app.use("/auth/social", socialRouter);
+app.use("/legal", legalRouter);
 app.use("/auth", authRouter);
 app.use("/membership", membershipRouter);
 app.use("/merchant", merchantRouter);

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>حذف البيانات — دليلكم | Data Deletion — Dalilacom</title>
+<link rel="icon" href="/brand/favicon.ico" sizes="any">
+<style>
+  :root { --red: #ba2a34; --text: #1b1212; --muted: #6b5755; --bg: #faf6f5; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Tahoma, "Segoe UI", Arial, sans-serif; line-height: 1.8; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 18px 60px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  header img { width: 52px; height: 52px; object-fit: contain; }
+  h1 { color: var(--red); margin: 0; font-size: 26px; }
+  h2 { color: var(--red); margin-top: 26px; font-size: 19px; }
+  .box { background: #fff; border: 1px solid #eadcda; border-radius: 14px; padding: 14px 18px; margin: 14px 0; }
+  section.en { direction: ltr; text-align: left; border-top: 3px solid var(--red); margin-top: 40px; padding-top: 10px; }
+  a { color: var(--red); }
+  code { background: #f3e9e7; padding: 2px 6px; border-radius: 6px; direction: ltr; unicode-bidi: embed; }
+</style>
+</head>
+<body>
+<main>
+<header><img src="/brand/logo.png" alt="DALILACOM"><h1>حذف البيانات</h1></header>
+<div class="box" id="status" style="display:none"></div>
+
+<p>من حقك تطلب حذف حسابك وبياناتك من «دليلكم» في أي وقت.</p>
+
+<h2>كيف تطلب الحذف</h2>
+<ol>
+  <li>أرسل رسالة إلى <a href="mailto:dalilacomsy@gmail.com?subject=Delete%20my%20data">dalilacomsy@gmail.com</a> من البريد المسجّل في حسابك، بعنوان «حذف بياناتي».</li>
+  <li>سنؤكد هوية صاحب الحساب ثم نحذف حسابك وبياناتك الشخصية خلال 30 يومًا (ما عدا ما يلزم قانونيًا مثل سجلات المعاملات والفواتير).</li>
+</ol>
+
+<h2>إذا سجّلت الدخول بفيسبوك</h2>
+<p>تقدر تزيل التطبيق من إعدادات فيسبوك (الإعدادات ← التطبيقات والمواقع ← دليلكم ← إزالة). عندها يصلنا طلب حذف تلقائي، ونفك ارتباط حسابك بفيسبوك فورًا، ونحذف باقي البيانات مثل ما فوق.</p>
+
+<h2>إذا ربطت صفحة أو حسابًا للمجيب الآلي</h2>
+<p>تقدر تعطّل الاتصال من شاشة المجيب الآلي في أي لحظة. ولإلغاء صلاحيات «دليلكم» نهائيًا من فيسبوك أو إنستغرام: الإعدادات ← التطبيقات والمواقع (أو «تكاملات الأعمال») ← دليلكم ← إزالة.</p>
+
+<h2>لإيقاف مشاركة الموقع فقط</h2>
+<p>من الملف الشخصي في التطبيق أطفئ «السماح للمتاجر القريبة بإرسال عروضها لي»، فنمسح موقعك المخزّن.</p>
+
+<section class="en" lang="en">
+<h1 style="font-size:24px">Data Deletion</h1>
+<p>You can ask us to delete your account and data from DALILACOM at any time.</p>
+
+<h2>How to request deletion</h2>
+<ol>
+  <li>Email <a href="mailto:dalilacomsy@gmail.com?subject=Delete%20my%20data">dalilacomsy@gmail.com</a> from the address registered on your account, with the subject "Delete my data".</li>
+  <li>We will confirm the account owner's identity and then delete your account and personal data within 30 days (except what we must keep by law, such as transaction records and invoices).</li>
+</ol>
+
+<h2>If you signed in with Facebook</h2>
+<p>You can remove the app in Facebook settings (Settings → Apps and Websites → DALILACOM → Remove). We then receive an automatic deletion request, unlink your account from Facebook immediately, and delete the rest of the data as above.</p>
+
+<h2>If you connected a Page or account to the auto-responder</h2>
+<p>You can disable the connection from the auto-responder screen at any time. To revoke DALILACOM's access completely: Settings → Apps and Websites (or "Business Integrations") → DALILACOM → Remove.</p>
+
+<h2>To stop sharing your location only</h2>
+<p>In the app's profile turn off "Let nearby shops send me their offers"; the stored location is deleted.</p>
+</section>
+</main>
+<script>
+  // Facebook sends people here with ?code=... after an automatic deletion request.
+  const code = new URLSearchParams(location.search).get("code");
+  if (code) {
+    const box = document.getElementById("status");
+    box.style.display = "block";
+    box.textContent = "تم استلام طلب الحذف ✅ رمز التأكيد: " + code + "  |  Deletion request received ✅ Confirmation code: " + code;
+  }
+</script>
+</body>
+</html>

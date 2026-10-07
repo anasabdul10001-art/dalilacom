@@ -170,13 +170,14 @@ describe("Answering customers", () => {
     expect(sentReplies).toHaveLength(1);
   });
 
-  it("holds a complaint for a person, tells the owner once an hour, and lets the owner answer it by hand", async () => {
+  it("answers a complaint with a holding message when the AI cannot settle it, keeps it for a person, and tells the owner once an hour", async () => {
     const owner = await running("respcomplaint");
     await rule(owner, { keywords: ["شكوى", "سعر"] });
 
     await customerSays(owner.hook, "عندي شكوى على الطلب");
     await customerSays(owner.hook, "ولسا عندي شكوى!"); // same conversation, same hour
-    expect(sentReplies).toHaveLength(0); // never answered automatically, even though a rule matches
+    // never ignored, and never a rule's cheerful template: the customer is told a real person will follow up
+    expect(sentReplies.map((r) => r.body.text)).toEqual([expect.stringContaining("رح يتواصل معك قريبًا"), expect.stringContaining("رح يتواصل معك قريبًا")]);
     const waiting = (await inbox(owner, "NEEDS_REVIEW")).body;
     expect(waiting).toHaveLength(2);
     expect(waiting[0]).toMatchObject({ intent: "complaint", reason: "complaint" });
@@ -188,12 +189,44 @@ describe("Answering customers", () => {
     await customerSays(owner.hook, "شكوى ثانية", "chat-7"); // another conversation: another notice
     expect((await notices(owner.id)).filter((n) => n.title.includes("شكوى"))).toHaveLength(2);
 
+    sentReplies.length = 0;
     const answered = await request(app).post(`/responder/inbox/${waiting[0].id}/send`).set(owner.auth).send({ reply: "نعتذر منك، رح نتواصل معك" });
     expect(answered.status).toBe(200);
     expect(sentReplies).toEqual([{ url: REPLY_URL, body: { conversationRef: "chat-1", text: "نعتذر منك، رح نتواصل معك" } }]);
     expect((await request(app).post(`/responder/inbox/${waiting[0].id}/send`).set(owner.auth).send({ reply: "again" })).status).toBe(409); // no longer waiting
     const stranger = await account("respstranger");
     expect((await request(app).post(`/responder/inbox/${waiting[1].id}/send`).set(stranger.auth).send({ reply: "hi" })).status).toBe(404);
+  });
+
+  it("settles a complaint from the shop's own knowledge when it can, and hands over to a person when it cannot", async () => {
+    const owner = await running("respcomplaintai", "MERCHANT");
+    const category = await prisma.category.upsert({ where: { slug: "resp-test-cat" }, update: {}, create: { name: "Responder Test", slug: "resp-test-cat" } });
+    const shop = await prisma.merchantProfile.create({ data: { userId: owner.id, businessName: "متجر الشكاوى", categoryId: category.id, approvalStatus: "APPROVED", address: "شارع الاختبار", phone: "0999" } });
+    await prisma.product.create({ data: { merchantId: shop.id, name: "قهوة", priceCents: 500, stock: 3 } });
+    process.env.GROQ_API_KEY = "test-groq-key";
+
+    // 1) the shop's information settles it: answered, marked sent, and the owner still hears about it
+    aiAnswer = JSON.stringify({ reply: "نعتذر! محلنا بشارع الاختبار ودوامنا حتى 9", handoff: false });
+    await customerSays(owner.hook, "عندي شكوى: وين محلكم؟", "c-1");
+    expect(sentReplies.at(-1)!.body.text).toBe("نعتذر! محلنا بشارع الاختبار ودوامنا حتى 9");
+    expect((await inbox(owner, "SENT")).body[0]).toMatchObject({ reason: "complaint", intent: "complaint", status: "SENT" });
+    const call = aiCalls.filter((c) => c.system.startsWith("A customer sent a complaint")).at(-1)!;
+    expect(call.system).toContain("Address: شارع الاختبار");
+    expect(call.system).toContain("Never promise a refund");
+    expect((await notices(owner.id)).some((n) => n.title.includes("تم الرد عليها"))).toBe(true);
+
+    // 2) it cannot be settled: the AI says a person will follow up, and the message waits in the inbox
+    aiAnswer = JSON.stringify({ reply: "نعتذر منك، رح يتواصل معك أحد من فريقنا قريبًا", handoff: true });
+    await customerSays(owner.hook, "شكوى: طلبي ما وصل وبدي حقي", "c-2");
+    expect(sentReplies.at(-1)!.body.text).toBe("نعتذر منك، رح يتواصل معك أحد من فريقنا قريبًا");
+    expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ reason: "complaint", reply: "نعتذر منك، رح يتواصل معك أحد من فريقنا قريبًا" });
+    expect((await notices(owner.id)).some((n) => n.title.includes("بانتظار ردّك"))).toBe(true);
+
+    // 3) an answer that is not what was asked for (no JSON) is never sent as written: the holding message goes instead
+    aiAnswer = "أكيد رح نعوضك بمبلغ كبير!";
+    await customerSays(owner.hook, "شكوى كبيرة", "c-3");
+    expect(sentReplies.at(-1)!.body.text).toContain("رح يتواصل معك قريبًا");
+    expect(sentReplies.at(-1)!.body.text).not.toContain("نعوضك");
   });
 
   it("does nothing while the subscription is not running, and says a failed send needs a person", async () => {

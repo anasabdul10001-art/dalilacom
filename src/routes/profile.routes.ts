@@ -5,6 +5,8 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { avatarUrl } from "../lib/profile";
 import { isSupportedLanguage } from "../lib/languages";
+import bcrypt from "bcryptjs";
+import { anonymizeAccount } from "../services/accountDeletion.service";
 
 export const profileRouter = Router();
 
@@ -29,6 +31,25 @@ async function profileOf(userId: string) {
 
 profileRouter.get("/me", requireAuth, async (req, res) => {
   res.json(await profileOf(req.user!.id));
+});
+
+const deleteAccountSchema = z.object({ confirm: z.literal(true), password: z.string().optional() });
+
+/**
+ * "Delete my account": everything personal is removed at once (see accountDeletion.service) and every session ends. A
+ * password account must repeat its password; an account that signs in through Google/Facebook has none to repeat.
+ */
+profileRouter.delete("/me", requireAuth, async (req, res) => {
+  const parsed = deleteAccountSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { passwordHash: true, socialIdentities: { select: { id: true } } } });
+  if (user.socialIdentities.length === 0) {
+    if (!parsed.data.password || !(await bcrypt.compare(parsed.data.password, user.passwordHash))) {
+      return sendError(res, 401, "AUTH_INVALID_CREDENTIALS", "كلمة السر غير صحيحة");
+    }
+  }
+  await anonymizeAccount(req.user!.id);
+  res.json({ ok: true });
 });
 
 const updateProfileSchema = z.object({

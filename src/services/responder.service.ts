@@ -3,7 +3,7 @@ import { prisma } from "../prisma";
 import { decryptJson } from "./crypto.service";
 import { drivers } from "./channels";
 import { IncomingMessage } from "./channels/types";
-import { aiAvailable, classifyIntent, generateReply } from "./ai.service";
+import { aiAvailable, answerComplaint, classifyIntent, generateReply } from "./ai.service";
 import { adjustBalance } from "./wallet.service";
 import { getSettings } from "./settings.service";
 import { notify } from "./notification.service";
@@ -99,6 +99,9 @@ export async function pay(userId: string, role: Role): Promise<ActivationResult>
   });
 }
 
+/** Sent when the AI cannot (or may not) settle a complaint: the customer is never left unanswered. */
+const COMPLAINT_HOLDING_REPLY = "نعتذر منك على هالإزعاج 🙏 وصلت رسالتك لفريقنا، وحدا من الفريق رح يتواصل معك قريبًا.";
+
 const COMPLAINT_WORDS = [
   "شكوى", "شكوي", "سيء", "سيئ", "مشكلة", "زفت", "نصب", "احتيال", "استرجاع",
   "complaint", "terrible", "worst", "refund", "scam", "broken",
@@ -175,7 +178,8 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
   };
   const record = async (data: Outcome) => {
     const row = await prisma.responderInteraction.create({ data: { ...base, ...data } });
-    if (data.status === "NEEDS_REVIEW" || data.status === "FAILED") await tellAboutMessage(userId, msg, data);
+    // A complaint always reaches the owner, even when it was answered; anything else only when it waits for a person.
+    if (data.status === "NEEDS_REVIEW" || data.status === "FAILED" || data.reason === "complaint") await tellAboutMessage(userId, msg, data);
     return row;
   };
 
@@ -192,8 +196,28 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
   const limit = settings.responder.monthlyAiReplyLimit;
   let intent: string | null = looksLikeComplaint(msg.text) ? "complaint" : null;
   if (!intent && aiAvailable() && (await aiQuotaLeft(userId, limit))) intent = await classifyIntent(msg.text);
-  // Complaints are never answered automatically — they always wait for a person.
-  if (intent === "complaint") return record({ status: "NEEDS_REVIEW", intent, reason: "complaint" });
+  // A complaint is answered from what the shop knows; when that does not settle it, the customer is told that a real
+  // person will contact them soon and the message waits in the inbox. The owner is told either way.
+  if (intent === "complaint") {
+    let answer = null as Awaited<ReturnType<typeof answerComplaint>>;
+    if (aiAvailable() && (await consumeAi(userId, limit))) {
+      answer = await answerComplaint({
+        message: msg.text,
+        businessDescription: sub.businessDescription,
+        tone: sub.tone,
+        businessInfo: await businessInfoFor(userId),
+        history: await historyFor(connection.id, msg.conversationRef),
+      });
+    }
+    const complaintReply = answer?.reply ?? COMPLAINT_HOLDING_REPLY;
+    const needsPerson = !answer || answer.handoff;
+    try {
+      await sendThroughConnection(connection, complaintReply, msg.conversationRef);
+      return record({ status: needsPerson ? "NEEDS_REVIEW" : "SENT", intent, reply: complaintReply, reason: "complaint" });
+    } catch (err) {
+      return record({ status: "FAILED", intent, reply: complaintReply, reason: err instanceof Error ? err.message : "send_failed" });
+    }
+  }
 
   const lower = msg.text.toLowerCase();
   const rules = await prisma.responderRule.findMany({ where: { userId, isActive: true }, orderBy: { createdAt: "asc" } });
@@ -255,7 +279,12 @@ async function tellAboutMessage(userId: string, msg: IncomingMessage, outcome: O
     select: { id: true },
   });
   if (recent) return;
-  const title = outcome.status === "FAILED" ? "تعذّر إرسال رد تلقائي" : outcome.reason === "complaint" ? "شكوى بانتظار ردّك" : "رسالة تحتاج ردّك";
+  const title =
+    outcome.status === "FAILED"
+      ? "تعذّر إرسال رد تلقائي"
+      : outcome.reason === "complaint"
+        ? outcome.status === "SENT" ? "وصلتك شكوى وتم الرد عليها تلقائيًا" : "شكوى بانتظار ردّك"
+        : "رسالة تحتاج ردّك";
   await tell(userId, title, `${msg.authorName}: ${msg.text.slice(0, 90)}`, { reason: "review", conversationRef: msg.conversationRef });
 }
 
