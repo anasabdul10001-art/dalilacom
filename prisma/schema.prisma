@@ -546,6 +546,7 @@ enum WalletTxType {
   TOPUP
   SUBSCRIPTION
   MEMBERSHIP // a customer membership was bought out of the wallet balance
+  BROADCAST // a shop paid for an announcement (or got the money back when it was refused)
   ADJUSTMENT
 }
 
@@ -1224,6 +1225,7 @@ model Broadcast {
   reviewNote   String? // why it was rejected
   reviewedById String?
   reviewedAt   DateTime?
+  creditsCharged Int     @default(0) // what the shop paid for it (0 = covered by its plan); refunded if refused
   createdAt    DateTime @default(now())
 
   sender User @relation(fields: [senderId], references: [id])

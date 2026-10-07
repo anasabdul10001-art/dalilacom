@@ -59,6 +59,8 @@ data class PromoUiState(
     val discounts: List<DiscountDto> = emptyList(),
     val history: List<BroadcastDto> = emptyList(),
     val info: String? = null,
+    /** Set after the first press when this announcement is paid: the second press confirms the charge. */
+    val confirmPrice: Int? = null,
     val error: String? = null,
     val busy: Boolean = false,
 )
@@ -102,7 +104,10 @@ class PromoViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(busy = true, error = null) }
             broadcasts.preview(radiusKm(), _uiState.value.followers)
-                .onSuccess { r -> _uiState.update { it.copy(busy = false, info = AppStrings.get(R.string.fmt_promo_count, r.count, r.remainingThisMonth ?: 0, r.limit ?: 0)) } }
+                .onSuccess { r ->
+                    val cost = if (r.price > 0) " — " + AppStrings.get(R.string.fmt_promo_cost, r.price, r.balance ?: 0) else ""
+                    _uiState.update { it.copy(busy = false, info = AppStrings.get(R.string.fmt_promo_count, r.count, r.remainingThisMonth ?: 0, r.limit ?: 0) + cost) }
+                }
                 .onFailure { e -> _uiState.update { it.copy(busy = false, info = null, error = e.message) } }
         }
     }
@@ -113,6 +118,13 @@ class PromoViewModel(
         if (state.title.isBlank() || state.body.isBlank()) return _uiState.update { it.copy(error = AppStrings.get(R.string.promo_enter_text)) }
         viewModelScope.launch {
             _uiState.update { it.copy(busy = true, error = null) }
+            // Beyond the plan's included announcements each one is paid from the wallet: say so, and charge on the second press.
+            val price = broadcasts.preview(radiusKm(), state.followers).getOrNull()?.price ?: 0
+            if (price > 0 && state.confirmPrice != price) {
+                _uiState.update { it.copy(busy = false, confirmPrice = price, info = AppStrings.get(R.string.fmt_promo_confirm_pay, price)) }
+                return@launch
+            }
+            _uiState.update { it.copy(confirmPrice = null) }
             broadcasts.send(BroadcastRequest(state.title.trim(), state.body.trim(), radiusKm = if (state.followers) null else radiusKm(), followers = if (state.followers) true else null, productId = state.productId, discountId = state.discountId))
                 .onSuccess { r ->
                     val rejected = r.status == "REJECTED"
@@ -201,6 +213,7 @@ private fun HistoryRow(b: BroadcastDto) {
             }
             Text(b.body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (b.status == "SENT") Text(AppStrings.get(R.string.fmt_promo_reached, b.delivered), style = MaterialTheme.typography.bodySmall)
+            if (b.creditsCharged > 0) Text(AppStrings.get(if (b.status == "REJECTED") R.string.fmt_promo_refunded else R.string.fmt_promo_paid, b.creditsCharged), style = MaterialTheme.typography.bodySmall)
             if (b.status == "REJECTED" && !b.reviewNote.isNullOrBlank()) {
                 Spacer(Modifier.height(2.dp))
                 Text(AppStrings.get(R.string.fmt_promo_reason, b.reviewNote), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)

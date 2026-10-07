@@ -199,6 +199,11 @@
     <string name="profile_share_location_sub">يرسل التطبيق موقعك التقريبي (بدقة نحو كيلومتر) أثناء استخدام الخريطة. تقدر توقفه بأي وقت وبنمسح الموقع.</string>
     <string name="promo_audience_radius">حول محلي</string>
     <string name="promo_audience_followers">متابعيّ</string>
+    <string name="promo_err_balance">رصيد محفظتك لا يكفي لهذا الإعلان — اشحن المحفظة أولًا</string>
+    <string name="fmt_promo_cost">تكلفة هذا الإعلان %1$d من رصيدك (رصيدك %2$d)</string>
+    <string name="fmt_promo_confirm_pay">سيُخصم %1$d من رصيد محفظتك. اضغط «أرسل للمراجعة» مرة ثانية للتأكيد</string>
+    <string name="fmt_promo_paid">دفعت %1$d</string>
+    <string name="fmt_promo_refunded">أُعيد لمحفظتك %1$d</string>
     <string name="promo_tab">إعلاناتي</string>
     <string name="promo_title">إعلاناتي</string>
     <string name="promo_sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</string>

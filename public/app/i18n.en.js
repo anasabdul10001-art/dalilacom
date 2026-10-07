@@ -392,8 +392,10 @@ PHRASES.en = {
   "متابعيّ": "My followers",
   "وصلت لحد إعلانات باقتك هذا الشهر": "You reached your plan's announcement limit for this month",
   "المسافة أكبر من المسموح لمتجرك": "The distance is larger than your shop is allowed",
+  "رصيد محفظتك لا يكفي لهذا الإعلان — اشحن المحفظة أولًا": "Your wallet balance is not enough for this announcement \u2014 top up first",
 };
 PATTERNS.en = [
+  [/^تكلفة هذا الإعلان (\d+) من رصيدك \(رصيدك (\d+)\)$/, "This one costs $1 from your balance (you have $2)"],
   [/^بيتجدد خلال (\d+) ثانية$/, "Refreshes in $1 s"],
   [/^(\d+) يوم$/, "$1 days"],
   [/^عمولتك: (.+?)% من كل عملية$/, "Your commission: $1% of each transaction"],
@@ -428,5 +430,8 @@ PATTERNS.en = [
   [/^رُفض الإعلان: (.*)$/, "Announcement rejected: $1"],
   [/^السبب: (.+)$/, "Reason: $1"],
   [/^سيصل لنحو (\d+) شخص — المتبقّي لك هذا الشهر: (\d+) من (\d+)$/, "It will reach about $1 people \u2014 announcements left for you this month: $2 of $3"],
+  [/^سيصل لنحو (\d+) شخص — المتبقّي لك هذا الشهر: (\d+) من (\d+) — تكلفة هذا الإعلان (\d+) من رصيدك \(رصيدك (\d+)\)$/, "It will reach about $1 people \u2014 announcements left for you this month: $2 of $3 \u2014 this one costs $4 from your balance (you have $5)"],
+  [/^سيُخصم (\d+) من رصيد محفظتك لهذا الإعلان\. متابعة؟$/, "$1 will be taken from your wallet for this announcement. Continue?"],
+  [/^(دفعت|أُعيد لمحفظتك) (\d+)$/, (m) => `${m[1] === "دفعت" ? "Paid" : "Refunded to your wallet"} ${m[2]}`],
 ];
 WORDS.en = { "دليلكم كوين": "Dalilacom Credits" };

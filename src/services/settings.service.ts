@@ -27,6 +27,8 @@ export interface PlatformSettings {
     merchantDefaultMonthly: number;
     maxRadiusKm: number;
     merchantMaxAudience: number;
+    /** What one announcement costs a shop, in wallet credits, once its plan's included announcements are used (0 = not for sale). */
+    pricePerAnnouncement: number;
   };
 }
 
@@ -35,7 +37,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   creditsPerUsd: 100,
   responder: { priceCustomer: 500, priceMerchant: 1000, periodDays: 30, trialDays: 7, monthlyAiReplyLimit: 500 },
   payment: { usdtTrc20Address: "", localWallets: [] },
-  broadcasts: { merchantDefaultMonthly: 10, maxRadiusKm: 50, merchantMaxAudience: 2000 },
+  broadcasts: { merchantDefaultMonthly: 10, maxRadiusKm: 50, merchantMaxAudience: 2000, pricePerAnnouncement: 0 },
 };
 
 export async function getSettings(): Promise<PlatformSettings> {

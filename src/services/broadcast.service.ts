@@ -3,6 +3,7 @@ import { prisma } from "../prisma";
 import { notify } from "./notification.service";
 import { screenAnnouncement } from "./ai.service";
 import { getSettings } from "./settings.service";
+import { adjustBalance, InsufficientBalanceError } from "./wallet.service";
 
 /**
  * One announcement may not fan out to more people than this: narrow the area instead of paging a whole platform.
@@ -139,8 +140,10 @@ interface Resolved {
   target: BroadcastTarget;
   scope: Scope;
   cap: number;
-  /** Announcements this shop may send per month (null for the admin: no quota). */
+  /** Announcements this shop's plan (or the default) includes per month (null for the admin: no quota). */
   quota: number | null;
+  /** What each announcement beyond the included ones costs, in wallet credits (0 = not for sale). */
+  price: number;
   merchant: { id: string; businessName: string } | null;
   product: { id: string; name: string } | null;
   discount: { id: string; title: string } | null;
@@ -150,7 +153,7 @@ interface Resolved {
 async function resolve(sender: Sender, target: BroadcastTarget, message?: BroadcastMessage): Promise<Resolved> {
   if (sender.role === Role.ADMIN) {
     if (message?.productId || message?.discountId) throw new BroadcastError(400, "BAD_ATTACHMENT", "Only a merchant can attach a product or an offer");
-    return { target, scope: scopeOf(target), cap: MAX_ADMIN_RECIPIENTS, quota: null, merchant: null, product: null, discount: null };
+    return { target, scope: scopeOf(target), cap: MAX_ADMIN_RECIPIENTS, quota: null, price: 0, merchant: null, product: null, discount: null };
   }
   if (sender.role !== Role.MERCHANT) throw new BroadcastError(403, "FORBIDDEN", "Forbidden");
 
@@ -184,7 +187,7 @@ async function resolve(sender: Sender, target: BroadcastTarget, message?: Broadc
 
   // the plan the super admin gave this shop decides the quota; with no plan, the platform default applies
   const quota = merchant.plan?.monthlyBroadcastLimit ?? broadcasts.merchantDefaultMonthly;
-  return { target: resolved, scope: scopeOf(resolved), cap: broadcasts.merchantMaxAudience, quota, merchant, product, discount };
+  return { target: resolved, scope: scopeOf(resolved), cap: broadcasts.merchantMaxAudience, quota, price: broadcasts.pricePerAnnouncement, merchant, product, discount };
 }
 
 /** Announcements this account has used in the last 30 days (refused ones never reached anyone, so they are free). */
@@ -200,17 +203,24 @@ const audienceOptions = (r: Resolved, sender: Sender) => ({ exclude: r.merchant 
 export interface BroadcastPreview {
   count: number;
   cap: number;
-  /** Merchants only: the monthly quota and what is left of it (null for the admin). */
+  /** Merchants only: the announcements the plan includes per month and what is left of them (null for the admin). */
   limit: number | null;
   remainingThisMonth: number | null;
+  /** What sending one now would cost, in wallet credits (0 when the plan still covers it). */
+  price: number;
+  /** The shop's wallet balance, so the screen can say "top up first" before anything is typed. */
+  balance: number | null;
 }
 
 /** How many people an announcement would reach, before anything is sent. */
 export async function previewBroadcast(sender: Sender, target: BroadcastTarget): Promise<BroadcastPreview> {
   const r = await resolve(sender, target);
   const count = (await audienceUserIds(r.target, audienceOptions(r, sender))).length;
-  const remainingThisMonth = r.quota === null ? null : Math.max(0, r.quota - (await usedThisMonth(sender.id)));
-  return { count, cap: r.cap, limit: r.quota, remainingThisMonth };
+  const used = r.quota === null ? 0 : await usedThisMonth(sender.id);
+  const remainingThisMonth = r.quota === null ? null : Math.max(0, r.quota - used);
+  const price = r.quota === null || used < r.quota ? 0 : r.price;
+  const balance = r.merchant ? ((await prisma.wallet.findUnique({ where: { userId: sender.id }, select: { balance: true } }))?.balance ?? 0) : null;
+  return { count, cap: r.cap, limit: r.quota, remainingThisMonth, price, balance };
 }
 
 export interface BroadcastResult {
@@ -304,7 +314,11 @@ export async function submitBroadcast(sender: Sender, target: BroadcastTarget, m
     return { id: row.id, status: "SENT", ...sent };
   }
 
-  if (r.quota !== null && (await usedThisMonth(sender.id)) >= r.quota) {
+  // The plan's included announcements are free; beyond them each one is bought with wallet credits when the super admin set
+  // a price, and refused when not.
+  const covered = r.quota !== null && (await usedThisMonth(sender.id)) < r.quota;
+  const price = covered ? 0 : r.price;
+  if (!covered && price <= 0) {
     throw new BroadcastError(429, "BROADCAST_LIMIT", `Your plan allows ${r.quota} announcements per month`);
   }
   const estimate = (await audienceUserIds(r.target, audienceOptions(r, sender))).length;
@@ -319,16 +333,29 @@ export async function submitBroadcast(sender: Sender, target: BroadcastTarget, m
     return { id: row.id, status: "REJECTED", targeted: estimate, delivered: 0, reasons };
   }
 
-  const row = await prisma.broadcast.create({
-    data: {
-      ...rowData(sender, r, message),
-      targeted: estimate,
-      delivered: 0,
-      status: "PENDING_REVIEW",
-      aiVerdict: screening?.verdict ?? null,
-      aiReasons: screening?.reasons ?? undefined,
-    },
-  });
+  // Paid after the AI screen (a refused text costs nothing), in one step with the announcement itself.
+  let row: Row;
+  try {
+    row = await prisma.$transaction(async (tx) => {
+      if (price > 0) await adjustBalance(tx, sender.id, -price, "BROADCAST", "announcement");
+      return tx.broadcast.create({
+        data: {
+          ...rowData(sender, r, message),
+          targeted: estimate,
+          delivered: 0,
+          status: "PENDING_REVIEW",
+          aiVerdict: screening?.verdict ?? null,
+          aiReasons: screening?.reasons ?? undefined,
+          creditsCharged: price,
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof InsufficientBalanceError) {
+      throw new BroadcastError(409, "INSUFFICIENT_BALANCE", `Your balance is ${err.balance} and this announcement costs ${err.needed}. Top up your wallet first.`);
+    }
+    throw err;
+  }
   await tellAdmins("إعلان جديد بانتظار المراجعة", `${r.merchant.businessName}: ${message.title}`);
   return { id: row.id, status: "PENDING_REVIEW", targeted: estimate, delivered: 0 };
 }
@@ -360,9 +387,14 @@ export async function approveBroadcast(id: string, admin: Sender): Promise<Broad
 /** An admin refuses it, with the reason the merchant will read. */
 export async function rejectBroadcast(id: string, admin: Sender, reason: string): Promise<BroadcastResult> {
   const row = await pendingRow(id);
-  const claimed = await prisma.broadcast.updateMany({
-    where: { id, status: "PENDING_REVIEW" },
-    data: { status: "REJECTED", reviewNote: reason, reviewedById: admin.id, reviewedAt: new Date() },
+  // Refused = the shop gets its money back, in the same step that marks it refused (so it can only happen once).
+  const claimed = await prisma.$transaction(async (tx) => {
+    const marked = await tx.broadcast.updateMany({
+      where: { id, status: "PENDING_REVIEW" },
+      data: { status: "REJECTED", reviewNote: reason, reviewedById: admin.id, reviewedAt: new Date() },
+    });
+    if (marked.count > 0 && row.creditsCharged > 0) await adjustBalance(tx, row.senderId, row.creditsCharged, "BROADCAST", `refund:${id}`);
+    return marked;
   });
   if (claimed.count === 0) throw new BroadcastError(409, "ALREADY_REVIEWED", "This announcement was already reviewed");
   await notify({ userId: row.senderId, type: "SYSTEM", title: "تم رفض إعلانك", body: `السبب: ${reason}`, data: { kind: "BROADCAST_REVIEW", broadcastId: id }, email: false });

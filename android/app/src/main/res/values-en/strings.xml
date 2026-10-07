@@ -195,6 +195,11 @@
     <string name="profile_share_location_sub">The app shares your approximate position (about 1 km accuracy) while you use the map. You can turn it off any time and it is deleted.</string>
     <string name="promo_audience_radius">Around my shop</string>
     <string name="promo_audience_followers">My followers</string>
+    <string name="promo_err_balance">Your wallet balance is not enough for this announcement — top up first</string>
+    <string name="fmt_promo_cost">This one costs %1$d from your balance (you have %2$d)</string>
+    <string name="fmt_promo_confirm_pay">%1$d will be taken from your wallet. Press \u201cSend for review\u201d again to confirm</string>
+    <string name="fmt_promo_paid">Paid %1$d</string>
+    <string name="fmt_promo_refunded">Refunded to your wallet %1$d</string>
     <string name="promo_tab">My announcements</string>
     <string name="promo_title">My announcements</string>
     <string name="promo_sub">Send a notification to people around your shop — the Dalilacom team reviews it before anyone receives it</string>

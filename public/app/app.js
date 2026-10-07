@@ -2134,6 +2134,7 @@ const PROMO_ERRORS = {
   BROADCAST_LIMIT: "وصلت لحد إعلانات باقتك هذا الشهر",
   MERCHANT_NOT_APPROVED: "لازم تتم الموافقة على محلك أولًا",
   AUDIENCE_TOO_LARGE: "الجمهور كبير جدًا — صغّر المسافة",
+  INSUFFICIENT_BALANCE: "رصيد محفظتك لا يكفي لهذا الإعلان — اشحن المحفظة أولًا",
 };
 
 function promoError(data, fallback) {
@@ -2174,6 +2175,7 @@ function tabPromo() {
             <span class="badge ${b.status === "SENT" ? "success" : "neutral"}">${esc(PROMO_STATUS[b.status] || b.status)}</span></div>
           <p class="muted">${esc(b.body)}</p>
           ${b.status === "SENT" ? `<p class="muted">وصل إلى ${b.delivered} شخص</p>` : ""}
+          ${b.creditsCharged > 0 ? `<p class="muted">${b.status === "REJECTED" ? "أُعيد لمحفظتك" : "دفعت"} ${b.creditsCharged}</p>` : ""}
           ${b.status === "REJECTED" && b.reviewNote ? `<p class="muted">السبب: ${esc(b.reviewNote)}</p>` : ""}
         </div>`).join("") : `<p class="muted">لا إعلانات بعد</p>`}
     </div>
@@ -2212,7 +2214,10 @@ async function promoPreview() {
   const p = S._promo;
   if (target) {
     const { ok, data } = await api("POST", "/broadcasts/preview", target);
-    if (ok) p.info = `سيصل لنحو ${data.count} شخص — المتبقّي لك هذا الشهر: ${data.remainingThisMonth} من ${data.limit}`;
+    if (ok) {
+      const cost = data.price > 0 ? `تكلفة هذا الإعلان ${data.price} من رصيدك (رصيدك ${data.balance})` : "";
+      p.info = `سيصل لنحو ${data.count} شخص — المتبقّي لك هذا الشهر: ${data.remainingThisMonth} من ${data.limit}` + (cost ? " — " + cost : "");
+    }
     else { p.info = null; p.error = promoError(data, "تعذّر الحساب"); }
   }
   render();
@@ -2223,6 +2228,9 @@ async function promoSend() {
   const p = S._promo;
   if (target && (!p.title.trim() || !p.body.trim())) p.error = "اكتب العنوان والنص";
   if (target && !p.error) {
+    // beyond the plan's included announcements each one is paid from the wallet: say so before it is taken
+    const quote = await api("POST", "/broadcasts/preview", target);
+    if (quote.ok && quote.data.price > 0 && !confirm(`سيُخصم ${quote.data.price} من رصيد محفظتك لهذا الإعلان. متابعة؟`)) { render(); return; }
     const body = { ...target, title: p.title.trim(), body: p.body.trim() };
     if (p.productId) body.productId = p.productId;
     if (p.discountId) body.discountId = p.discountId;

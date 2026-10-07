@@ -236,9 +236,11 @@
 
       <div class="card">
         <h3>حدود إعلانات التجار</h3>
-        <p class="muted">عدد الإعلانات بالشهر يحدّده نوع اشتراك المتجر (حقل «حد الرسائل الجماعية بالشهر» بباقات التجار، وتعيّن الباقة لكل متجر من قسم التجار). المتجر بلا باقة يأخذ الرقم الافتراضي هون. الصفر يعني ممنوع.</p>
+        <p class="muted">الإعلانات المُضمَّنة بباقة المتجر مجانية، وكل إعلان بعدها بيُخصم سعره من محفظة المتجر (وبيرجع له إذا انرفض). عدد الإعلانات بالشهر يحدّده نوع اشتراك المتجر (حقل «حد الرسائل الجماعية بالشهر» بباقات التجار، وتعيّن الباقة لكل متجر من قسم التجار). المتجر بلا باقة يأخذ الرقم الافتراضي هون. الصفر يعني ممنوع.</p>
         <label>الرقم الافتراضي لإعلانات المتجر بالشهر</label>
         <input id="bc-limit-default" inputmode="numeric" />
+        <label>سعر الإعلان الواحد بعد المُضمَّن بالباقة (بوحدات دليلكم كوين، الصفر = غير معروض للبيع)</label>
+        <input id="bc-limit-price" inputmode="numeric" />
         <label>أبعد مسافة يقدر المتجر يوصلها (كم)</label>
         <input id="bc-limit-radius" inputmode="decimal" />
         <label>أكبر جمهور لإعلان واحد من متجر</label>
@@ -463,6 +465,7 @@ async function loadBroadcasts() {
   if (!pending.ok) return;
   if (settings.ok && settings.data.broadcasts) {
     document.getElementById('bc-limit-default').value = settings.data.broadcasts.merchantDefaultMonthly;
+    document.getElementById('bc-limit-price').value = settings.data.broadcasts.pricePerAnnouncement;
     document.getElementById('bc-limit-radius').value = settings.data.broadcasts.maxRadiusKm;
     document.getElementById('bc-limit-audience').value = settings.data.broadcasts.merchantMaxAudience;
   }
@@ -488,7 +491,7 @@ async function loadBroadcasts() {
     document.getElementById('bc-history-body').innerHTML = all.data.length ? all.data.map(b => {
       const st = BC_STATUS[b.status] || ['inactive', b.status];
       const sender = (b.sender && b.sender.merchantProfile && b.sender.merchantProfile.businessName) || (b.senderRole === 'ADMIN' ? 'الإدارة' : '—');
-      return `<tr><td>${new Date(b.createdAt).toLocaleString()}</td><td>${esc(sender)}</td><td>${esc(b.title)}</td><td><span class="badge ${st[0]}">${st[1]}</span>${b.reviewNote ? '<br><small class="muted">' + esc(b.reviewNote) + '</small>' : ''}</td><td>${b.status === 'SENT' ? esc(b.delivered) + ' / ' + esc(b.targeted) : '—'}</td></tr>`;
+      return `<tr><td>${new Date(b.createdAt).toLocaleString()}</td><td>${esc(sender)}</td><td>${esc(b.title)}</td><td><span class="badge ${st[0]}">${st[1]}</span>${b.reviewNote ? '<br><small class="muted">' + esc(b.reviewNote) + '</small>' : ''}</td><td>${b.status === 'SENT' ? esc(b.delivered) + ' / ' + esc(b.targeted) : '—'}${b.creditsCharged ? '<br><small class="muted">💰 ' + esc(b.creditsCharged) + '</small>' : ''}</td></tr>`;
     }).join('') : '<tr><td colspan="5" class="muted">لا إعلانات بعد</td></tr>';
   }
 
@@ -504,11 +507,12 @@ async function saveBroadcastLimits() {
   const merchantDefaultMonthly = Math.trunc(num('bc-limit-default'));
   const maxRadiusKm = num('bc-limit-radius');
   const merchantMaxAudience = Math.trunc(num('bc-limit-audience'));
-  if (![merchantDefaultMonthly, maxRadiusKm, merchantMaxAudience].every(Number.isFinite) || merchantDefaultMonthly < 0 || maxRadiusKm <= 0 || merchantMaxAudience <= 0) {
+  const pricePerAnnouncement = Math.trunc(num('bc-limit-price'));
+  if (![merchantDefaultMonthly, maxRadiusKm, merchantMaxAudience, pricePerAnnouncement].every(Number.isFinite) || merchantDefaultMonthly < 0 || pricePerAnnouncement < 0 || maxRadiusKm <= 0 || merchantMaxAudience <= 0) {
     msg.textContent = 'تأكد من الأرقام';
     return;
   }
-  const { ok, data } = await api('PUT', '/admin/settings', { broadcasts: { merchantDefaultMonthly, maxRadiusKm, merchantMaxAudience } });
+  const { ok, data } = await api('PUT', '/admin/settings', { broadcasts: { merchantDefaultMonthly, maxRadiusKm, merchantMaxAudience, pricePerAnnouncement } });
   msg.textContent = ok ? 'تم الحفظ ✅' : errText(data, 'تعذّر الحفظ');
 }
 

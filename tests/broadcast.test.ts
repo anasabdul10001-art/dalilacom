@@ -6,6 +6,7 @@ import { prisma } from "../src/prisma";
 import { emailService } from "../src/services/email.service";
 import { freeIsoCode2, uniqueEmail } from "./helpers";
 import { resetAiProviderState } from "../src/services/ai.service";
+import { adjustBalance } from "../src/services/wallet.service";
 
 const sendSpy = vi.spyOn(emailService, "send").mockResolvedValue();
 beforeEach(() => {
@@ -152,7 +153,7 @@ describe("A merchant's announcement around their shop — reviewed before anyone
     const boss = await admin();
 
     const preview = await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ radiusKm: 5 });
-    expect(preview.body).toEqual({ count: 2, cap: 2000, limit: 10, remainingThisMonth: 10 }); // the platform default, no plan assigned
+    expect(preview.body).toEqual({ count: 2, cap: 2000, limit: 10, remainingThisMonth: 10, price: 0, balance: 0 }); // the platform default, no plan assigned
 
     const submitted = await request(app).post("/broadcasts").set(shop.owner.auth).send({ radiusKm: 5, title: "وصل جديد", body: "تعال شوف", productId: shop.productId });
     expect(submitted.status).toBe(201);
@@ -342,5 +343,94 @@ describe("What the super admin decides: quotas, distance and followers", () => {
     // followers are a shop's thing, and cannot be combined with another target
     expect((await request(app).post("/broadcasts/preview").set(boss.auth).send({ followers: true })).body.error.code).toBe("BAD_TARGET");
     expect((await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ followers: true, radiusKm: 5 })).body.error.code).toBe("BAD_TARGET");
+  });
+});
+
+describe("Announcements beyond the plan are paid, at the price the super admin sets", () => {
+  const lat = -45 + Math.random() * 5;
+  const lng = -120 + Math.random() * 10;
+  const balanceOf = (userId: string) => prisma.wallet.findUnique({ where: { userId } }).then((w) => w?.balance ?? 0);
+  const credit = (userId: string, amount: number) => prisma.$transaction((tx) => adjustBalance(tx, userId, amount, "TOPUP", "test-credit"));
+
+  it("the plan's included announcements are free, then each one is charged — refused for lack of balance, refunded when refused", async () => {
+    const boss = await admin();
+    const shop = await approvedShop(lat, lng);
+    const plan = await prisma.servicePlan.create({ data: { name: `Paid ${Date.now()}`, service: "MERCHANT_ACCOUNT", durationDays: 30, priceCents: 0, monthlyBroadcastLimit: 1 } });
+    await request(app).put(`/admin/merchants/${shop.merchantId}/plan`).set(boss.auth).send({ planId: plan.id });
+    const before = (await request(app).get("/admin/settings").set(boss.auth)).body.broadcasts;
+    expect(before.pricePerAnnouncement).toBe(0); // not for sale until the admin says so
+    const send = (extra: object = {}) => request(app).post("/broadcasts").set(shop.owner.auth).send({ radiusKm: 1, title: "عرض", body: "نص", ...extra });
+    const row = (id: string) => prisma.broadcast.findUniqueOrThrow({ where: { id } });
+
+    try {
+      await request(app).put("/admin/settings").set(boss.auth).send({ broadcasts: { pricePerAnnouncement: 4 } });
+
+      const included = await send();
+      expect(included.status).toBe(201);
+      expect((await row(included.body.id)).creditsCharged).toBe(0);
+      expect(await balanceOf(shop.owner.id)).toBe(0);
+
+      // the plan's one is used up: the next costs 4 — and the screen can say so before anything is sent
+      const preview = await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ radiusKm: 1 });
+      expect(preview.body).toMatchObject({ limit: 1, remainingThisMonth: 0, price: 4, balance: 0 });
+      const poor = await send();
+      expect(poor.status).toBe(409);
+      expect(poor.body.error.code).toBe("INSUFFICIENT_BALANCE");
+      expect(await prisma.broadcast.count({ where: { senderId: shop.owner.id } })).toBe(1); // nothing was created, nothing charged
+
+      await credit(shop.owner.id, 10);
+      const paid = await send();
+      expect(paid.status).toBe(201);
+      expect((await row(paid.body.id)).creditsCharged).toBe(4);
+      expect(await balanceOf(shop.owner.id)).toBe(6);
+      expect(await prisma.walletTransaction.count({ where: { userId: shop.owner.id, type: "BROADCAST", amount: -4 } })).toBe(1);
+
+      // the admin refuses it: the money comes back, once
+      const refused = await request(app).post(`/broadcasts/${paid.body.id}/reject`).set(boss.auth).send({ reason: "غير مناسب" });
+      expect(refused.status).toBe(200);
+      expect(await balanceOf(shop.owner.id)).toBe(10);
+      expect((await request(app).post(`/broadcasts/${paid.body.id}/reject`).set(boss.auth).send({ reason: "again" })).status).toBe(409);
+      expect(await balanceOf(shop.owner.id)).toBe(10);
+      expect(await prisma.walletTransaction.count({ where: { userId: shop.owner.id, type: "BROADCAST", amount: 4 } })).toBe(1);
+      expect((await request(app).get("/broadcasts").set(shop.owner.auth)).body.find((b: { id: string }) => b.id === paid.body.id)).toMatchObject({ status: "REJECTED", creditsCharged: 4 });
+
+      // approved ones keep what was paid
+      const again = await send();
+      await request(app).post(`/broadcasts/${again.body.id}/approve`).set(boss.auth);
+      expect(await balanceOf(shop.owner.id)).toBe(6);
+
+      // with no price, going beyond the plan is simply refused (as before)
+      await request(app).put("/admin/settings").set(boss.auth).send({ broadcasts: { pricePerAnnouncement: 0 } });
+      expect((await send()).body.error.code).toBe("BROADCAST_LIMIT");
+    } finally {
+      await request(app).put("/admin/settings").set(boss.auth).send({ broadcasts: before });
+    }
+  });
+
+  it("a text the AI refuses costs nothing, and with no included announcements every one is paid", async () => {
+    const boss = await admin();
+    const shop = await approvedShop(lat, lng);
+    const plan = await prisma.servicePlan.create({ data: { name: `AllPaid ${Date.now()}`, service: "MERCHANT_ACCOUNT", durationDays: 30, priceCents: 0, monthlyBroadcastLimit: 0 } });
+    await request(app).put(`/admin/merchants/${shop.merchantId}/plan`).set(boss.auth).send({ planId: plan.id });
+    const before = (await request(app).get("/admin/settings").set(boss.auth)).body.broadcasts;
+    await credit(shop.owner.id, 10);
+    process.env.GROQ_API_KEY = "test-groq-key";
+    try {
+      await request(app).put("/admin/settings").set(boss.auth).send({ broadcasts: { pricePerAnnouncement: 3 } });
+      vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"verdict":"BLOCK","reasons":["مضلل"]}' } }] }), { status: 200 }));
+      const blocked = await request(app).post("/broadcasts").set(shop.owner.auth).send({ radiusKm: 1, title: "x", body: "y" });
+      expect(blocked.body.status).toBe("REJECTED");
+      expect(await balanceOf(shop.owner.id)).toBe(10);
+
+      vi.unstubAllGlobals();
+      delete process.env.GROQ_API_KEY;
+      const ok = await request(app).post("/broadcasts").set(shop.owner.auth).send({ radiusKm: 1, title: "x", body: "y" });
+      expect(ok.status).toBe(201);
+      expect(await balanceOf(shop.owner.id)).toBe(7); // no included announcements: paid from the first one
+    } finally {
+      vi.unstubAllGlobals();
+      delete process.env.GROQ_API_KEY;
+      await request(app).put("/admin/settings").set(boss.auth).send({ broadcasts: before });
+    }
   });
 });

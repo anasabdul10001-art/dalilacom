@@ -49,6 +49,7 @@ class BroadcastRepository(private val api: ApiService) {
             "BROADCAST_LIMIT" -> AppStrings.get(R.string.promo_err_limit)
             "MERCHANT_NOT_APPROVED" -> AppStrings.get(R.string.promo_err_not_approved)
             "AUDIENCE_TOO_LARGE" -> AppStrings.get(R.string.promo_err_audience)
+            "INSUFFICIENT_BALANCE" -> AppStrings.get(R.string.promo_err_balance)
             else -> errorText(response, AppStrings.get(R.string.promo_err_generic))
         }
     }

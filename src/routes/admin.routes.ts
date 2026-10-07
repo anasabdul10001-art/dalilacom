@@ -34,6 +34,7 @@ const settingsSchema = z.object({
       merchantDefaultMonthly: z.number().int().nonnegative().max(100000),
       maxRadiusKm: z.number().positive().max(20000),
       merchantMaxAudience: z.number().int().positive().max(1000000),
+      pricePerAnnouncement: z.number().int().nonnegative().max(10000000),
     })
     .partial()
     .optional(),
