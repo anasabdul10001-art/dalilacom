@@ -25,6 +25,7 @@ import com.dalilacom.app.ui.notifications.NotificationsScreen
 import com.dalilacom.app.ui.orders.OrderDetailScreen
 import com.dalilacom.app.ui.places.FavoritesScreen
 import com.dalilacom.app.ui.places.HoursScreen
+import com.dalilacom.app.ui.pricing.PricingScreen
 import com.dalilacom.app.ui.product.ProductDetailScreen
 import com.dalilacom.app.ui.profile.ProfileEditScreen
 import com.dalilacom.app.ui.responder.ResponderScreen
@@ -127,6 +128,14 @@ fun DalilacomNavGraph(container: AppContainer, deepLinkIntent: Intent? = null) {
             deepLinks = listOf(navDeepLink { uriPattern = "dalilacom://app/notifications" }),
         ) {
             NotificationsScreen(factory = factory, onBack = { navController.popBackStack() })
+        }
+        composable("pricing") {
+            PricingScreen(
+                factory = factory,
+                isSignedIn = { container.authRepository.hasStoredSession() },
+                onLogin = { navController.navigate("login") },
+                onBack = { navController.popBackStack() },
+            )
         }
         composable("profileEdit") {
             ProfileEditScreen(factory = factory, onBack = { navController.popBackStack() })

@@ -76,6 +76,9 @@ interface ApiService {
     @GET("membership/plans")
     suspend fun getPlans(): Response<List<MembershipPlanDto>>
 
+    @GET("plans/catalog")
+    suspend fun getCatalog(): Response<CatalogDto>
+
     @POST("membership/subscribe")
     suspend fun subscribe(@Body body: SubscribeRequest): Response<MembershipDto>
 

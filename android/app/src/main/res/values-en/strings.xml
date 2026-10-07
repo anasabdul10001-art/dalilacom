@@ -149,4 +149,22 @@
     <string name="notif_mode_full">Full</string>
     <string name="notif_mode_in_app">In-app only</string>
     <string name="notif_mode_off">Off</string>
+
+    <string name="pricing_title">Plans &amp; pricing</string>
+    <string name="pricing_sub">Every Dalilacom service and its price — the price you see is the one for your country.</string>
+    <string name="pricing_link">💳 Plans &amp; pricing</string>
+    <string name="service_membership">Customer membership (discount card)</string>
+    <string name="service_merchant">Merchant plans</string>
+    <string name="service_responder_customer">Auto-responder — customers</string>
+    <string name="service_responder_merchant">Auto-responder — merchants</string>
+    <string name="pricing_free">Free</string>
+    <string name="pricing_not_priced">Price not set yet</string>
+    <string name="pricing_credits">%1$d %2$s</string>
+    <string name="pricing_days">%1$d days</string>
+    <string name="pricing_trial">%1$d-day free trial</string>
+    <string name="pricing_your_country">Your country\'s price</string>
+    <string name="pricing_broadcasts">%1$d follower broadcasts per month</string>
+    <string name="pricing_subscribe">Subscribe</string>
+    <string name="pricing_empty">No plans available right now</string>
+    <string name="pricing_subscribed">Subscribed ✅</string>
 </resources>

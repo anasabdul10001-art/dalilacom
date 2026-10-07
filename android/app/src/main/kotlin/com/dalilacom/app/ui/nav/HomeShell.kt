@@ -29,6 +29,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -128,6 +129,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         title = stringResource(R.string.guest_card_title),
                         subtitle = stringResource(R.string.guest_card_sub),
                         perks = listOf(stringResource(R.string.guest_card_p1), stringResource(R.string.guest_card_p2), stringResource(R.string.guest_card_p3)),
+                        onPricing = { rootNavController.navigate("pricing") },
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
                     ) else CardScreen(factory)
@@ -155,6 +157,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         title = stringResource(R.string.guest_profile_title),
                         subtitle = stringResource(R.string.guest_profile_sub),
                         perks = listOf(stringResource(R.string.guest_profile_p1), stringResource(R.string.guest_profile_p2), stringResource(R.string.guest_profile_p3)),
+                        onPricing = { rootNavController.navigate("pricing") },
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
                     ) else ProfileScreen(
@@ -164,6 +167,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onOpenMerchantMode = { rootNavController.navigate("merchantMode") },
                         onEditProfile = { rootNavController.navigate("profileEdit") },
                         onOpenNotifications = { rootNavController.navigate("notifications") },
+                        onOpenPricing = { rootNavController.navigate("pricing") },
                         onOpenFavorites = { rootNavController.navigate("favorites") },
                         onOpenResponder = { rootNavController.navigate("responder") },
                         onOpenWallet = { rootNavController.navigate("wallet") },
@@ -181,6 +185,7 @@ private fun AccountPrompt(
     perks: List<String>,
     onLogin: () -> Unit,
     onRegister: () -> Unit,
+    onPricing: (() -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(28.dp),
@@ -207,5 +212,8 @@ private fun AccountPrompt(
         Button(onClick = onLogin, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(stringResource(R.string.guest_login)) }
         Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick = onRegister, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(stringResource(R.string.guest_register)) }
+        if (onPricing != null) {
+            TextButton(onClick = onPricing) { Text(stringResource(R.string.pricing_link)) }
+        }
     }
 }

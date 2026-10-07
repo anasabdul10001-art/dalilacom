@@ -14,6 +14,7 @@ import com.dalilacom.app.ui.merchantmode.MerchantOrdersViewModel
 import com.dalilacom.app.ui.merchantmode.RedeemViewModel
 import com.dalilacom.app.ui.notifications.NotificationsViewModel
 import com.dalilacom.app.ui.orders.OrdersViewModel
+import com.dalilacom.app.ui.pricing.PricingViewModel
 import com.dalilacom.app.ui.places.FavoritesViewModel
 import com.dalilacom.app.ui.places.HoursViewModel
 import com.dalilacom.app.ui.profile.ProfileEditViewModel
@@ -42,6 +43,7 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
         HoursViewModel::class.java -> HoursViewModel(container.merchantRepository, container.placesRepository) as T
         ProfileEditViewModel::class.java -> ProfileEditViewModel(container.profileRepository) as T
         NotificationsViewModel::class.java -> NotificationsViewModel(container.notificationRepository) as T
+        PricingViewModel::class.java -> PricingViewModel(container.membershipRepository) as T
         else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }

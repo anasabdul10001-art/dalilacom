@@ -153,4 +153,22 @@
     <string name="notif_mode_full">كامل</string>
     <string name="notif_mode_in_app">داخل التطبيق</string>
     <string name="notif_mode_off">مطفأ</string>
+
+    <string name="pricing_title">الباقات والأسعار</string>
+    <string name="pricing_sub">كل خدمات دليلكم بأسعارها — والسعر اللي بتشوفه هو سعر بلدك.</string>
+    <string name="pricing_link">💳 الباقات والأسعار</string>
+    <string name="service_membership">عضوية الزبون (بطاقة الحسم)</string>
+    <string name="service_merchant">باقات التاجر</string>
+    <string name="service_responder_customer">المجيب الآلي — للزبائن</string>
+    <string name="service_responder_merchant">المجيب الآلي — للتجار</string>
+    <string name="pricing_free">مجاني</string>
+    <string name="pricing_not_priced">السعر غير محدد بعد</string>
+    <string name="pricing_credits">%1$d %2$s</string>
+    <string name="pricing_days">%1$d يوم</string>
+    <string name="pricing_trial">تجربة مجانية %1$d يوم</string>
+    <string name="pricing_your_country">سعر بلدك</string>
+    <string name="pricing_broadcasts">%1$d رسالة جماعية بالشهر</string>
+    <string name="pricing_subscribe">اشترك</string>
+    <string name="pricing_empty">ما في باقات متاحة حاليًا</string>
+    <string name="pricing_subscribed">تم الاشتراك ✅</string>
 </resources>

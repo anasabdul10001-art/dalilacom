@@ -1,6 +1,8 @@
 package com.dalilacom.app.data.repository
 
 import com.dalilacom.app.data.network.ApiService
+import com.dalilacom.app.data.network.CatalogDto
+import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.MembershipDto
 import com.dalilacom.app.data.network.MembershipPlanDto
 import com.dalilacom.app.data.network.QrCodeDto
@@ -22,8 +24,15 @@ class MembershipRepository(private val api: ApiService) {
         return if (response.isSuccessful && body != null) {
             Result.success(body)
         } else {
-            Result.failure(Exception("تعذّر الاشتراك بالعضوية"))
+            // The server says why (not enough wallet credit, price not set...) — show that, not a generic failure.
+            Result.failure(Exception(errorText(response, "تعذّر الاشتراك بالعضوية")))
         }
+    }
+
+    /** The whole pricing page, with prices resolved for the signed-in account's country. Null when offline. */
+    suspend fun getCatalog(): CatalogDto? {
+        val response = safeApiCall { api.getCatalog() } ?: return null
+        return if (response.isSuccessful) response.body() else null
     }
 
     /** Returns null when the customer has no membership yet — that's a normal state, not an error. */

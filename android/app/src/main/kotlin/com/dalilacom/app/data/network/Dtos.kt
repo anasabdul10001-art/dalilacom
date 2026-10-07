@@ -359,3 +359,27 @@ data class DeviceRequest(val token: String)
 
 @Serializable
 data class UnregisterDeviceRequest(val token: String)
+
+@Serializable
+data class PlanFeatureDto(val text: String, val included: Boolean = true)
+
+@Serializable
+data class CatalogPlanDto(
+    val id: String,
+    val service: String,
+    val name: String,
+    val description: String? = null,
+    val durationDays: Int,
+    val trialDays: Int = 0,
+    val priceCredits: Int? = null,
+    val priceFrom: String = "default",
+    val monthlyBroadcastLimit: Int? = null,
+    val features: List<PlanFeatureDto> = emptyList(),
+    val source: String = "catalog",
+)
+
+@Serializable
+data class CatalogServiceDto(val service: String, val plans: List<CatalogPlanDto> = emptyList())
+
+@Serializable
+data class CatalogDto(val creditName: String = "", val countryCode: String? = null, val services: List<CatalogServiceDto> = emptyList())

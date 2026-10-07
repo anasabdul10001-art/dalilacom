@@ -39,6 +39,7 @@ fun ProfileScreen(
     onLoggedOut: () -> Unit,
     onEditProfile: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenPricing: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
     onOpenFavorites: () -> Unit,
@@ -99,6 +100,8 @@ fun ProfileScreen(
         OutlinedButton(onClick = onOpenNotifications, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_notifications) + if (unread > 0) " ($unread)" else "")
         }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onOpenPricing, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pricing_link)) }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
         Spacer(Modifier.height(8.dp))
