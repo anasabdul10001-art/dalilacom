@@ -63,6 +63,8 @@
   .inline-input { width: 90px; padding: 4px 6px; font-size: 12px; }
   .error-banner { background: #fdecea; color: #b71c1c; padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
   .muted { color: #999; font-size: 13px; }
+  .plan-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; }
 </style>
 </head>
 <body>
@@ -88,7 +90,7 @@
     <h2>🅳 دليلكم</h2>
     <div class="nav-item active" data-section="merchants" onclick="showSection('merchants')">🏪 التجار</div>
     <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
-    <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 خطط العضوية</div>
+    <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 الباقات والأسعار</div>
     <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
     <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
@@ -137,27 +139,44 @@
 
     <!-- PLANS -->
     <div class="section" id="section-plans" style="display:none">
-      <h2>خطط العضوية</h2>
-      <p class="subtitle">الأسعار والمدد قابلة للتعديل الكامل، وممكن تكون مجانية (0)</p>
+      <h2>الباقات والأسعار والضريبة</h2>
+      <p class="subtitle">كل شي تباع به المنصة بمكان واحد: الباقة وسعرها ومواصفاتها وسعر خاص لكل بلد، ونسبة الضريبة المطبوعة على الفواتير.</p>
+
       <div class="card">
-        <h3>إضافة خطة جديدة</h3>
+        <h3>إضافة باقة جديدة</h3>
         <div class="row">
-          <div><label>الاسم</label><input id="plan-name" placeholder="Monthly" /></div>
-          <div><label>المدة (يوم)</label><input id="plan-duration" value="30" /></div>
+          <div><label>نوع الخدمة</label>
+            <select id="np-service">
+              <option value="MEMBERSHIP">عضوية الزبون (بطاقة الحسم)</option>
+              <option value="MERCHANT_ACCOUNT">باقة التاجر</option>
+            </select></div>
+          <div><label>الاسم</label><input id="np-name" placeholder="Monthly" /></div>
         </div>
         <div class="row">
-          <div><label>السعر (سنت)</label><input id="plan-price" value="999" /></div>
-          <div><label>العملة</label><input id="plan-currency" value="EUR" /></div>
-          <div><label>السعر بالكوينز (المخصوم من المحفظة)</label><input id="plan-credits" placeholder="مثال: 1000" /></div>
+          <div><label>المدة (يوم)</label><input id="np-duration" value="30" /></div>
+          <div><label>أيام التجربة المجانية</label><input id="np-trial" value="0" /></div>
+          <div><label>السعر (بالعملة)</label><input id="np-price" value="9.99" /></div>
+          <div><label>العملة</label><input id="np-currency" value="EUR" /></div>
+          <div><label>السعر بالكوينز</label><input id="np-credits" placeholder="مثال: 1000" /></div>
         </div>
-        <button style="margin-top:12px" onclick="addPlan()">إضافة</button>
+        <button style="margin-top:12px" onclick="addServicePlan()">إضافة</button>
       </div>
+
+      <div id="plans-list"></div>
+
       <div class="card">
-        <table>
-          <thead><tr><th>الاسم</th><th>المدة</th><th>السعر</th><th>العملة</th><th>السعر بالكوينز</th><th>الحالة</th><th></th></tr></thead>
-          <tbody id="plans-body"></tbody>
+        <h3>نسب الضريبة (VAT)</h3>
+        <p class="muted" style="margin-top:0">الأسعار شاملة الضريبة: الفاتورة بتفصل جزء الضريبة من الإجمالي وما بتزيد عليه. ما بتطلع أي ضريبة على الفاتورة إلا إذا ضبطت نسبة لبلد الزبون أو نسبة افتراضية.</p>
+        <div class="row">
+          <div><label>البلد</label><select id="tx-country"></select></div>
+          <div><label>الاسم المطبوع على الفاتورة</label><input id="tx-name" placeholder="VAT 19%" /></div>
+          <div><label>النسبة %</label><input id="tx-percent" placeholder="19" /></div>
+        </div>
+        <button style="margin-top:12px" onclick="saveTaxRate()">حفظ النسبة</button>
+        <table style="margin-top:16px">
+          <thead><tr><th>البلد</th><th>الاسم</th><th>النسبة</th><th></th></tr></thead>
+          <tbody id="tax-body"></tbody>
         </table>
-        <p class="muted" style="margin-top:10px">الباقة اللي سعرها أكبر من صفر ولازم يكون لها سعر بالكوينز، وإلا ما بيقدر حدا يشترك فيها. الباقة اللي سعرها صفر مجانية وبتتفعّل فورًا.</p>
       </div>
     </div>
 
@@ -465,54 +484,222 @@ async function deleteCategory(id) {
   loadCategories();
 }
 
-// ---- plans ----
+// ---- plans, country prices, tax ----
+const SERVICE_LABEL = {
+  MEMBERSHIP: 'عضوية الزبون',
+  MERCHANT_ACCOUNT: 'باقة التاجر',
+  RESPONDER_CUSTOMER: 'المجيب الآلي — زبون',
+  RESPONDER_MERCHANT: 'المجيب الآلي — تاجر',
+};
+const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT'];
+let planCountries = [];
+
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 async function loadPlans() {
-  const { ok, data } = await api('GET', '/membership/plans/all');
-  if (!ok) return;
-  document.getElementById('plans-body').innerHTML = (data || []).map(p => `
-    <tr>
-      <td><input class="inline-input" style="width:120px" id="plan-name-${p.id}" value="${p.name}" /></td>
-      <td><input class="inline-input" id="plan-duration-${p.id}" value="${p.durationDays}" /> يوم</td>
-      <td><input class="inline-input" id="plan-price-${p.id}" value="${money(p.priceCents)}" /></td>
-      <td><input class="inline-input" style="width:60px" id="plan-currency-${p.id}" value="${p.currency}" /></td>
-      <td><input class="inline-input" style="width:90px" id="plan-credits-${p.id}" value="${p.priceCredits ?? ''}" placeholder="غير مضبوط" />
-        ${p.priceCents > 0 && p.priceCredits == null ? '<span class="badge REJECTED" title="ما حدا بيقدر يشترك بهي الباقة">ما في سعر</span>' : ''}</td>
-      <td><span class="badge ${p.isActive ? 'active' : 'inactive'}">${p.isActive ? 'فعالة' : 'معطّلة'}</span></td>
-      <td>
-        <button class="small" onclick="savePlan('${p.id}')">💾 حفظ</button>
-        <button class="small secondary" onclick="togglePlan('${p.id}', ${p.isActive})">${p.isActive ? 'تعطيل' : 'تفعيل'}</button>
-      </td>
-    </tr>`).join('') || `<tr><td colspan="7" class="muted">لا يوجد خطط بعد</td></tr>`;
+  const [plansRes, countriesRes] = await Promise.all([api('GET', '/plans/admin'), api('GET', '/geo/countries')]);
+  if (!plansRes.ok) return;
+  planCountries = countriesRes.ok ? countriesRes.data : [];
+  state.plans = plansRes.data || [];
+  renderPlans();
+  loadTaxRates();
 }
-async function addPlan() {
-  const name = document.getElementById('plan-name').value.trim();
-  const durationDays = parseInt(document.getElementById('plan-duration').value, 10);
-  const priceCents = parseInt(document.getElementById('plan-price').value, 10);
-  const currency = document.getElementById('plan-currency').value.trim() || 'EUR';
-  const creditsRaw = document.getElementById('plan-credits').value.trim();
-  const priceCredits = creditsRaw === '' ? null : parseInt(creditsRaw, 10);
-  if (!name || !durationDays) return;
-  if (priceCredits !== null && (!Number.isInteger(priceCredits) || priceCredits < 0)) { alert('السعر بالكوينز لازم يكون رقم صحيح'); return; }
-  const { ok, data } = await api('POST', '/membership/plans', { name, durationDays, priceCents, currency, priceCredits });
+
+function countryOptions(selectedId, withDefault) {
+  return (withDefault ? `<option value="">— الافتراضي لكل البلدان —</option>` : '') +
+    planCountries.map(c => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${escHtml(c.name)} (${escHtml(c.isoCode2)})</option>`).join('');
+}
+
+function priceRowHtml(p) {
+  p = p || {};
+  return `<div class="pp-row row" style="align-items:flex-end;margin-bottom:6px">
+    <div><label>البلد</label><select class="pp-country">${countryOptions(p.countryId, false)}</select></div>
+    <div><label>بالكوينز</label><input class="pp-credits" value="${p.priceCredits ?? ''}" /></div>
+    <div><label>بالعملة (اختياري)</label><input class="pp-cash" value="${p.cashAmountCents != null ? money(p.cashAmountCents) : ''}" /></div>
+    <div><label>رمز العملة</label><input class="pp-cur" maxlength="3" value="${escHtml(p.currencyCode || '')}" /></div>
+    <div style="flex:0 0 auto"><label>فعّال</label><input type="checkbox" class="pp-active" style="width:auto" ${p.isActive === false ? '' : 'checked'} /></div>
+    <div style="flex:0 0 auto"><button class="small danger" onclick="this.closest('.pp-row').remove()">✕</button></div>
+  </div>`;
+}
+
+function addPriceRow(planId) {
+  document.getElementById('pp-' + planId).insertAdjacentHTML('beforeend', priceRowHtml());
+}
+
+function planCardHtml(p) {
+  const isMerchant = p.service === 'MERCHANT_ACCOUNT';
+  const features = (p.features || []).map(f => (f.included ? '✔ ' : '✘ ') + f.text).join('\n');
+  const needsCredits = p.priceCents > 0 && p.priceCredits == null;
+  return `<div class="card plan-card">
+    <div class="plan-head">
+      <strong>${escHtml(p.name)}</strong>
+      <span class="badge PENDING">${SERVICE_LABEL[p.service] || p.service}</span>
+      <span class="badge ${p.isActive ? 'active' : 'inactive'}">${p.isActive ? 'فعالة' : 'معطّلة'}</span>
+      <span class="muted">${p._count ? p._count.memberships : 0} عضوية</span>
+      ${needsCredits ? '<span class="badge REJECTED" title="ما حدا بيقدر يشترك بهي الباقة">ما في سعر بالكوينز</span>' : ''}
+    </div>
+    <div class="row">
+      <div><label>الاسم</label><input id="pl-name-${p.id}" value="${escHtml(p.name)}" /></div>
+      <div><label>وصف قصير</label><input id="pl-desc-${p.id}" value="${escHtml(p.description || '')}" /></div>
+    </div>
+    <div class="row">
+      <div><label>المدة (يوم)</label><input id="pl-duration-${p.id}" value="${p.durationDays}" /></div>
+      <div><label>أيام التجربة</label><input id="pl-trial-${p.id}" value="${p.trialDays}" /></div>
+      <div><label>ترتيب العرض</label><input id="pl-sort-${p.id}" value="${p.sortOrder}" /></div>
+      ${isMerchant ? `<div><label>حد الرسائل الجماعية بالشهر</label><input id="pl-broadcast-${p.id}" value="${p.monthlyBroadcastLimit ?? ''}" /></div>` : ''}
+    </div>
+    <div class="row">
+      <div><label>السعر (بالعملة)</label><input id="pl-price-${p.id}" value="${money(p.priceCents)}" /></div>
+      <div><label>العملة</label><input id="pl-currency-${p.id}" maxlength="3" value="${escHtml(p.currency)}" /></div>
+      <div><label>السعر بالكوينز (المخصوم من المحفظة)</label><input id="pl-credits-${p.id}" value="${p.priceCredits ?? ''}" placeholder="غير مضبوط" /></div>
+    </div>
+    <label>المواصفات — بند بكل سطر، وابدأ السطر بـ ✘ إذا البند غير مشمول</label>
+    <textarea id="pl-features-${p.id}" rows="4" placeholder="✔ 500 رد ذكي بالشهر&#10;✘ رسائل جماعية">${escHtml(features)}</textarea>
+    <label>أسعار خاصة بالبلدان (الباقة بتنباع بسعرها الأساسي لأي بلد ما إلو سطر هون)</label>
+    <div id="pp-${p.id}">${(p.prices || []).map(priceRowHtml).join('')}</div>
+    <button class="small secondary" onclick="addPriceRow('${p.id}')">+ إضافة بلد</button>
+    <div style="margin-top:14px">
+      <button onclick="savePlanFull('${p.id}')">💾 حفظ الباقة</button>
+      <button class="secondary" onclick="togglePlanActive('${p.id}', ${p.isActive})">${p.isActive ? 'تعطيل' : 'تفعيل'}</button>
+      <button class="danger" onclick="removePlan('${p.id}')">🗑️ حذف</button>
+    </div>
+  </div>`;
+}
+
+function renderPlans() {
+  const plans = state.plans || [];
+  const html = SERVICE_ORDER.map(service => {
+    const group = plans.filter(p => p.service === service);
+    if (!group.length) return '';
+    return `<h3 style="margin:24px 0 10px">${SERVICE_LABEL[service]}</h3>${group.map(planCardHtml).join('')}`;
+  }).join('');
+  document.getElementById('plans-list').innerHTML = html || '<div class="card muted">لا يوجد باقات بعد</div>';
+}
+
+function parseNonNegInt(raw, label) {
+  const n = parseInt(String(raw).trim(), 10);
+  if (!Number.isInteger(n) || n < 0) { alert(label + ' لازم يكون رقم صحيح'); return null; }
+  return n;
+}
+
+async function addServicePlan() {
+  const name = document.getElementById('np-name').value.trim();
+  const durationDays = parseInt(document.getElementById('np-duration').value, 10);
+  const trialDays = parseNonNegInt(document.getElementById('np-trial').value || '0', 'أيام التجربة');
+  const priceCents = Math.round(parseFloat(document.getElementById('np-price').value) * 100);
+  const currency = (document.getElementById('np-currency').value.trim() || 'EUR').toUpperCase();
+  const creditsRaw = document.getElementById('np-credits').value.trim();
+  const priceCredits = creditsRaw === '' ? null : parseNonNegInt(creditsRaw, 'السعر بالكوينز');
+  if (!name || !durationDays || trialDays === null || !Number.isFinite(priceCents) || (creditsRaw !== '' && priceCredits === null)) return;
+  const { ok, data } = await api('POST', '/plans', {
+    service: document.getElementById('np-service').value, name, durationDays, trialDays, priceCents, currency, priceCredits,
+  });
   if (!ok) { alert(errText(data, 'خطأ')); return; }
-  document.getElementById('plan-name').value = '';
+  document.getElementById('np-name').value = '';
   loadPlans();
 }
-async function savePlan(id) {
-  const name = document.getElementById('plan-name-' + id).value.trim();
-  const durationDays = parseInt(document.getElementById('plan-duration-' + id).value, 10);
-  const priceCents = Math.round(parseFloat(document.getElementById('plan-price-' + id).value) * 100);
-  const currency = document.getElementById('plan-currency-' + id).value.trim();
-  const creditsRaw = document.getElementById('plan-credits-' + id).value.trim();
-  const priceCredits = creditsRaw === '' ? null : parseInt(creditsRaw, 10);
-  if (priceCredits !== null && (!Number.isInteger(priceCredits) || priceCredits < 0)) { alert('السعر بالكوينز لازم يكون رقم صحيح'); return; }
-  const { ok, data } = await api('PATCH', '/membership/plans/' + id, { name, durationDays, priceCents, currency, priceCredits });
-  if (!ok) alert(errText(data, 'تعذّر الحفظ'));
+
+function readFeatures(id) {
+  return document.getElementById('pl-features-' + id).value.split('\n').map(l => l.trim()).filter(Boolean).map(line => ({
+    included: !line.startsWith('✘'),
+    text: line.replace(/^[✔✘]\s*/, '').slice(0, 200),
+  })).filter(f => f.text);
+}
+
+function readCountryPrices(id) {
+  const rows = [...document.querySelectorAll('#pp-' + id + ' .pp-row')];
+  const out = [];
+  for (const row of rows) {
+    const countryId = row.querySelector('.pp-country').value;
+    const credits = parseNonNegInt(row.querySelector('.pp-credits').value, 'سعر البلد بالكوينز');
+    if (!countryId || credits === null) return null;
+    const cash = row.querySelector('.pp-cash').value.trim();
+    const cur = row.querySelector('.pp-cur').value.trim().toUpperCase();
+    out.push({
+      countryId, priceCredits: credits,
+      cashAmountCents: cash === '' ? null : Math.round(parseFloat(cash) * 100),
+      currencyCode: cur.length === 3 ? cur : null,
+      isActive: row.querySelector('.pp-active').checked,
+    });
+  }
+  return out;
+}
+
+async function savePlanFull(id) {
+  const get = k => document.getElementById(`pl-${k}-${id}`);
+  const plan = state.plans.find(p => p.id === id);
+  const creditsRaw = get('credits').value.trim();
+  const priceCredits = creditsRaw === '' ? null : parseNonNegInt(creditsRaw, 'السعر بالكوينز');
+  const durationDays = parseInt(get('duration').value, 10);
+  const trialDays = parseNonNegInt(get('trial').value, 'أيام التجربة');
+  const sortOrder = parseInt(get('sort').value, 10);
+  const priceCents = Math.round(parseFloat(get('price').value) * 100);
+  if ((creditsRaw !== '' && priceCredits === null) || trialDays === null || !durationDays || !Number.isFinite(priceCents) || !Number.isFinite(sortOrder)) return;
+  const prices = readCountryPrices(id);
+  if (prices === null) return;
+  if (new Set(prices.map(p => p.countryId)).size !== prices.length) { alert('كل بلد مرة وحدة بس'); return; }
+
+  const body = {
+    name: get('name').value.trim(), description: get('desc').value.trim() || null,
+    durationDays, trialDays, sortOrder, priceCents, currency: get('currency').value.trim().toUpperCase(), priceCredits,
+  };
+  if (plan.service === 'MERCHANT_ACCOUNT') {
+    const raw = get('broadcast').value.trim();
+    body.monthlyBroadcastLimit = raw === '' ? null : parseNonNegInt(raw, 'حد الرسائل الجماعية');
+    if (raw !== '' && body.monthlyBroadcastLimit === null) return;
+  }
+  const saved = await api('PATCH', '/plans/' + id, body);
+  if (!saved.ok) { alert(errText(saved.data, 'تعذّر الحفظ')); return; }
+  const f = await api('PUT', `/plans/${id}/features`, { features: readFeatures(id) });
+  if (!f.ok) { alert(errText(f.data, 'تعذّر حفظ المواصفات')); return; }
+  const p = await api('PUT', `/plans/${id}/prices`, { prices });
+  if (!p.ok) { alert(errText(p.data, 'تعذّر حفظ أسعار البلدان')); return; }
   loadPlans();
 }
-async function togglePlan(id, current) {
-  await api('PATCH', '/membership/plans/' + id, { isActive: !current });
+
+async function togglePlanActive(id, current) {
+  await api('PATCH', '/plans/' + id, { isActive: !current });
   loadPlans();
+}
+
+async function removePlan(id) {
+  if (!confirm('حذف هذه الباقة نهائيًا؟')) return;
+  const { ok, data } = await api('DELETE', '/plans/' + id);
+  if (!ok) { alert(errText(data, 'تعذّر الحذف')); return; }
+  loadPlans();
+}
+
+async function loadTaxRates() {
+  const { ok, data } = await api('GET', '/plans/tax-rates');
+  if (!ok) return;
+  document.getElementById('tx-country').innerHTML = countryOptions(null, true);
+  document.getElementById('tax-body').innerHTML = (data || []).map(r => `
+    <tr>
+      <td>${r.country ? escHtml(r.country.name) + ' (' + escHtml(r.country.isoCode2) + ')' : '<strong>الافتراضي لكل البلدان</strong>'}</td>
+      <td>${escHtml(r.name)}</td>
+      <td>${(r.percentBps / 100).toFixed(2)}%</td>
+      <td><button class="small danger" onclick="removeTaxRate('${r.id}')">🗑️ حذف</button></td>
+    </tr>`).join('') || `<tr><td colspan="4" class="muted">ما في نسب ضريبة — الفواتير بتطلع بدون ضريبة</td></tr>`;
+}
+
+async function saveTaxRate() {
+  const countryId = document.getElementById('tx-country').value || null;
+  const name = document.getElementById('tx-name').value.trim();
+  const percent = parseFloat(document.getElementById('tx-percent').value);
+  if (!name || !Number.isFinite(percent) || percent < 0 || percent > 100) { alert('اكتب اسم النسبة ونسبة بين 0 و 100'); return; }
+  const { ok, data } = await api('PUT', '/plans/tax-rates', { countryId, name, percentBps: Math.round(percent * 100) });
+  if (!ok) { alert(errText(data, 'تعذّر الحفظ')); return; }
+  document.getElementById('tx-name').value = '';
+  document.getElementById('tx-percent').value = '';
+  loadTaxRates();
+}
+
+async function removeTaxRate(id) {
+  if (!confirm('حذف هذه النسبة؟')) return;
+  await api('DELETE', '/plans/tax-rates/' + id);
+  loadTaxRates();
 }
 
 // ---- responder / payments ----
