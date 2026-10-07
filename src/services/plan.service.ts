@@ -1,6 +1,8 @@
 import { Prisma, ServiceKind } from "@prisma/client";
 import { prisma } from "../prisma";
 import { getSettings } from "./settings.service";
+import { DEFAULT_LANGUAGE } from "../lib/languages";
+import { translateText } from "../i18n";
 
 /**
  * The pricing catalogue (sections 24/60/64).
@@ -81,7 +83,7 @@ function priceFor(plan: PlanWithPrices, countryId: string | null) {
  * The whole catalogue, with prices resolved for one country.
  * `countryCode` is an ISO-2 code (the signed-in account's own, or the client's guess for guests).
  */
-export async function getCatalog(countryCode: string | null): Promise<Catalog> {
+export async function getCatalog(countryCode: string | null, lang: string = DEFAULT_LANGUAGE): Promise<Catalog> {
   const settings = await getSettings();
   const country = countryCode
     ? await prisma.country.findUnique({ where: { isoCode2: countryCode.toUpperCase() }, select: { id: true } })
@@ -122,7 +124,7 @@ export async function getCatalog(countryCode: string | null): Promise<Catalog> {
   const responder = settings.responder;
   const responderFeature: CatalogFeature[] =
     responder.monthlyAiReplyLimit > 0
-      ? [{ text: `${responder.monthlyAiReplyLimit} رد ذكاء اصطناعي شهريًا`, included: true }]
+      ? [{ text: translateText(`${responder.monthlyAiReplyLimit} رد ذكاء اصطناعي شهريًا`, lang), included: true }]
       : [];
   const fromSettings = (service: ServiceKind, priceCredits: number, name: string): CatalogPlan => ({
     id: `settings:${service}`,
@@ -144,8 +146,8 @@ export async function getCatalog(countryCode: string | null): Promise<Catalog> {
 
   const all = [
     ...fromCatalog,
-    fromSettings("RESPONDER_CUSTOMER", responder.priceCustomer, "المجيب الآلي — زبون"),
-    fromSettings("RESPONDER_MERCHANT", responder.priceMerchant, "المجيب الآلي — تاجر"),
+    fromSettings("RESPONDER_CUSTOMER", responder.priceCustomer, translateText("المجيب الآلي — زبون", lang)),
+    fromSettings("RESPONDER_MERCHANT", responder.priceMerchant, translateText("المجيب الآلي — تاجر", lang)),
   ];
 
   const services: CatalogService[] = SERVICE_ORDER.map((service) => ({
@@ -154,7 +156,7 @@ export async function getCatalog(countryCode: string | null): Promise<Catalog> {
   })).filter((group) => group.plans.length > 0);
 
   return {
-    creditName: settings.creditName,
+    creditName: translateText(settings.creditName, lang),
     creditsPerUsd: settings.creditsPerUsd,
     countryCode: countryCode ? countryCode.toUpperCase() : null,
     services,

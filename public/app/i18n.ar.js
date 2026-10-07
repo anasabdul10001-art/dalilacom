@@ -1,0 +1,68 @@
+// Arabic — the source language of the app. Every key here must exist in every other language's DICT.
+LANGS.ar = { name: "العربية", dir: "rtl" };
+DICT.ar = {
+  "tab.map": "الخريطة", "tab.card": "بطاقتي", "tab.cart": "السلة", "tab.orders": "طلباتي", "tab.account": "حسابي",
+
+  "search.placeholder": "دوّر على محل أو خدمة...",
+  "search.recent": "عمليات بحث سابقة",
+  "login.pill": "دخول",
+  "filter.all": "الكل", "filter.openNow": "🕒 مفتوح الآن", "filter.discounts": "🏷️ فيها حسم", "filter.sections": "☰ الأقسام",
+  "radius.any": "أي مسافة", "radius.km": "{n} كم",
+  "area.search": "🔍 ابحث بهالمنطقة", "area.clear": "✕ مسح حدود المنطقة",
+  "fab.myLocation": "موقعي", "fab.darkMode": "الوضع الداكن", "fab.lightMode": "الوضع الفاتح", "fab.language": "اللغة",
+  "loc.unsupported": "المتصفح ما بيدعم تحديد الموقع",
+  "loc.denied": "ما قدرنا نحدد موقعك — فعّل صلاحية الموقع من المتصفح لنعرض الأقرب إلك",
+
+  "sheet.nearby": "المحلات القريبة منك", "sheet.directory": "دليل المحلات", "sheet.count": "{n} محل",
+  "sheet.empty": "ما لقينا محلات بهالفلاتر — جرّب تغيّر البحث",
+  "sheet.emptyRadius": "ما في محلات ضمن {n} كم منك — جرّب مسافة أكبر",
+
+  "card.details": "التفاصيل", "card.directions": "🧭 الاتجاهات", "card.save": "حفظ",
+  "unit.m": "م", "unit.km": "كم",
+
+  "place.call": "اتصال", "place.whatsapp": "واتساب", "place.directions": "الاتجاهات", "place.share": "مشاركة",
+  "place.save": "حفظ", "place.saved": "محفوظ", "place.discounts": "الحسوم", "place.products": "المنتجات",
+  "place.noProducts": "ما في منتجات بعد", "place.notFound": "هذا المحل غير متوفر", "place.unavailable": "غير متوفر",
+  "place.forMembers": "لأعضاء دليلكم", "place.linkCopied": "تم نسخ الرابط ✅", "place.copyLink": "انسخ الرابط:",
+  "place.shareText": "{name} على دليلكم",
+
+  "hours.title": "ساعات العمل", "hours.closed": "مغلق", "hours.allDay": "24 ساعة", "hours.sep": "، ",
+  "hours.openUntil": "مفتوح · يسكّر {time}", "hours.opensAt": "مغلق · يفتح {day} {time}",
+  "hours.today": "اليوم", "hours.tomorrow": "بكرا", "time.am": "ص", "time.pm": "م",
+  "day.sat": "السبت", "day.sun": "الأحد", "day.mon": "الإثنين", "day.tue": "الثلاثاء", "day.wed": "الأربعاء", "day.thu": "الخميس", "day.fri": "الجمعة",
+
+  "route.to": "إلى {name}", "route.calculating": "عم نحسب الطريق...", "route.google": "افتح بجوجل",
+  "route.failed": "تعذّر حساب الطريق", "route.needLocation": "فعّل صلاحية الموقع من المتصفح لنرسم لك الطريق، أو افتحه بخرائط جوجل",
+  "dur.min1": "دقيقة", "dur.min2": "دقيقتان", "dur.min3to10": "{n} دقائق", "dur.min": "{n} دقيقة", "dur.hm": "{h} س {m} د",
+
+  "profile.edit": "✏️ تعديل ملفي الشخصي", "profile.myAccount": "حسابي",
+  "profile.merchantMode": "وضع التاجر", "profile.registerMerchant": "سجّل كتاجر",
+  "profile.favorites": "♥ أماكني المحفوظة", "profile.affiliates": "مسوّقياتي", "profile.responder": "🤖 المجيب الآلي",
+  "profile.wallet": "💰 محفظتي", "profile.logout": "تسجيل الخروج",
+  "verify.title": "✉️ بريدك غير موثّق", "verify.sub": "وثّق بريدك لتحمي حسابك وتقدر تسترجع كلمة السرّ.",
+  "verify.resend": "إعادة إرسال رابط التوثيق", "verify.sent": "أرسلنا رابط التوثيق لبريدك ✅", "verify.failed": "تعذّر الإرسال، جرّب بعد شوي",
+
+  "guest.login": "تسجيل الدخول", "guest.register": "إنشاء حساب جديد",
+  "guest.card.title": "بطاقة دليلكم", "guest.card.sub": "افتح حساب لتحصل على بطاقة الحسم الرقمية وتوفّر بكل محل على الخريطة.",
+  "guest.card.p1": "حسم فوري عند أي تاجر مشترك", "guest.card.p2": "كود QR يتجدّد لحمايتك", "guest.card.p3": "سجل بكل حسوماتك",
+  "guest.cart.title": "سلة مشترياتك", "guest.cart.sub": "سجّل دخولك لتضيف منتجات وتكمل طلبك.",
+  "guest.cart.p1": "اطلب من عدة محلات بسلة وحدة", "guest.cart.p2": "أسعار خاصة للأعضاء",
+  "guest.orders.title": "طلباتك", "guest.orders.sub": "سجّل دخولك لتتابع طلباتك وحالتها.",
+  "guest.orders.p1": "تتبّع كل طلب خطوة بخطوة", "guest.orders.p2": "إلغاء الطلب قبل الشحن",
+  "guest.profile.title": "افتح حسابك", "guest.profile.sub": "الخريطة ودليل المحلات مفتوحين للكل. الحساب بتحتاجه إذا بدك بطاقة حسم أو تسجّل محلك كتاجر.",
+  "guest.profile.p1": "احصل على بطاقة الحسم", "guest.profile.p2": "سجّل محلك كتاجر وأضف منتجاتك وعروضك", "guest.profile.p3": "فعّل المجيب الآلي لمحادثات زبائنك",
+
+  "browse.title": "تصفّح الأقسام", "browse.all": "كل {name}", "browse.count": "{n} محل", "browse.soon": "قريباً",
+  "browse.back": "‹ رجوع", "browse.close": "إغلاق",
+  "picker.section": "القسم", "picker.profession": "المهنة / النوع", "picker.specialty": "التخصص", "picker.choose": "اختر...",
+  "lang.title": "اللغة",
+
+  "pricing.title": "الباقات والأسعار", "pricing.sub": "كل خدمات دليلكم بأسعارها — والسعر اللي بتشوفه هو سعر بلدك.",
+  "pricing.link": "💳 الباقات والأسعار",
+  "service.MEMBERSHIP": "عضوية الزبون (بطاقة الحسم)", "service.MERCHANT_ACCOUNT": "باقات التاجر",
+  "service.RESPONDER_CUSTOMER": "المجيب الآلي — للزبائن", "service.RESPONDER_MERCHANT": "المجيب الآلي — للتجار",
+  "pricing.free": "مجاني", "pricing.notPriced": "السعر غير محدد بعد", "pricing.credits": "{n} {credit}",
+  "pricing.days": "{n} يوم", "pricing.trial": "تجربة مجانية {n} يوم", "pricing.yourCountry": "سعر بلدك",
+  "pricing.broadcasts": "{n} رسالة جماعية بالشهر", "pricing.subscribe": "اشترك", "pricing.empty": "ما في باقات متاحة حاليًا",
+  "pricing.subscribed": "تم الاشتراك ✅", "pricing.failed": "تعذّر الاشتراك",
+};

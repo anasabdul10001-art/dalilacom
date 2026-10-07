@@ -1,6 +1,8 @@
 // Same-origin — this page is served by the API itself (public/app/), so no CORS/base-URL needed.
 const API_BASE = "";
 
+initLanguage(); // language files are loaded by now (index.html order)
+
 const S = {
   token: localStorage.getItem("dlk_token") || null,
   role: localStorage.getItem("dlk_role") || null,
@@ -56,7 +58,8 @@ function errMsg(data, fallback) {
 }
 
 async function api(method, path, body) {
-  const headers = { "Content-Type": "application/json" };
+  // The server answers (errors, pages, names) in the app's language, not the browser's.
+  const headers = { "Content-Type": "application/json", "Accept-Language": LANG };
   if (S.token) headers["Authorization"] = "Bearer " + S.token;
   try {
     const res = await fetch(API_BASE + path, {
@@ -84,6 +87,12 @@ function setToken(token, role) {
   localStorage.setItem("dlk_token", token);
   localStorage.setItem("dlk_role", role);
   if (S._discover) loadFavIds();
+  saveAccountLanguage(); // push notifications and emails are written in this language
+}
+
+function saveAccountLanguage() {
+  if (!S.token) return;
+  api("PATCH", "/profile/me", { language: LANG }).catch(() => {});
 }
 
 function clearToken() {
@@ -1803,7 +1812,7 @@ async function removeAvatar() {
 // browser's own print engine, which shapes Arabic correctly; choose "Save as PDF" to get the file.
 async function exportDocument(path) {
   let res;
-  try { res = await fetch(API_BASE + path, { headers: { Authorization: "Bearer " + S.token } }); } catch (e) { return toast("تعذّر الاتصال بالسيرفر"); }
+  try { res = await fetch(API_BASE + path, { headers: { Authorization: "Bearer " + S.token, "Accept-Language": LANG } }); } catch (e) { return toast("تعذّر الاتصال بالسيرفر"); }
   if (!res.ok) return toast("تعذّر تجهيز المستند");
   const parsed = new DOMParser().parseFromString(await res.text(), "text/html");
   const root = document.getElementById("print-root");
@@ -1930,6 +1939,7 @@ function setLang(code) {
   try { localStorage.setItem("dlk_lang", code); } catch (e) {}
   applyLang();
   S._langMenu = false;
+  saveAccountLanguage();
   if (S._discover) {
     S._discover.suggest = null;
     loadCategories().then(() => render()); // names come back in the new language

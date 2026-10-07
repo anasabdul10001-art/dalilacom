@@ -18,8 +18,10 @@ object AppLanguages {
     const val DEFAULT = "ar"
 
     val all = listOf(
+        // <languages> — `npm run i18n:add` appends here
         AppLanguage("ar", "العربية", rtl = true),
         AppLanguage("en", "English", rtl = false),
+        // </languages>
     )
 
     fun find(code: String?): AppLanguage = all.firstOrNull { it.code == code } ?: all.first { it.code == DEFAULT }
@@ -29,6 +31,10 @@ object AppLanguages {
 object AppStrings {
     @Volatile
     var resources: Resources? = null
+
+    /** The code of the language on screen ("ar", "en"...), for what must be told to the server. */
+    @Volatile
+    var language: String = AppLanguages.DEFAULT
 
     fun get(@StringRes id: Int, vararg args: Any): String {
         val res = resources ?: return ""

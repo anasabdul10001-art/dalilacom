@@ -13,6 +13,8 @@ import {
   unreadCount,
 } from "../services/notification.service";
 import { registerDevice, unregisterDevice } from "../services/push.service";
+import { resolveLanguage } from "../lib/languages";
+import { translateText } from "../i18n";
 
 export const notificationRouter = Router();
 notificationRouter.use(requireAuth);
@@ -27,7 +29,8 @@ notificationRouter.get("/", async (req, res) => {
     take: req.query.take ? Number(req.query.take) : undefined,
     skip: req.query.skip ? Number(req.query.skip) : undefined,
   });
-  res.json({ items, unread });
+  const lang = resolveLanguage(req);
+  res.json({ items: items.map((n) => ({ ...n, title: translateText(n.title, lang), body: n.body ? translateText(n.body, lang) : n.body })), unread });
 });
 
 // Cheap enough to poll for the badge on every app foreground.

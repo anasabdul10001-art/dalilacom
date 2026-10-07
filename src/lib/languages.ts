@@ -6,8 +6,10 @@ import type { Request } from "express";
  * The default is also the language stored on the base rows (Category.name is Arabic).
  */
 export const SUPPORTED_LANGUAGES = [
+  // <languages> — `npm run i18n:add` appends here
   { code: "ar", name: "العربية", dir: "rtl" },
   { code: "en", name: "English", dir: "ltr" },
+  // </languages>
 ] as const;
 
 export const DEFAULT_LANGUAGE = "ar";

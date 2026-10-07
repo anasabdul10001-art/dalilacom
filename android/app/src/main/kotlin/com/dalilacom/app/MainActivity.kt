@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
             val baseContext = LocalContext.current
             val localized = remember(language.code) { LocalizedContext(baseContext, language) }
             AppStrings.resources = localized.resources
+            AppStrings.language = language.code
 
             // Switching language rebuilds the UI tree (key) so every screen and helper picks up the new texts and direction.
             key(language.code) {

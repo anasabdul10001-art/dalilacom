@@ -2,6 +2,8 @@ import { NotificationMode, NotificationType, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { emailService } from "./email.service";
 import { sendPushToUser } from "./push.service";
+import { DEFAULT_LANGUAGE } from "../lib/languages";
+import { translateText } from "../i18n";
 
 /** Every type the app knows about, in the order the preferences screen lists them (section 87). */
 export const NOTIFICATION_TYPES = Object.values(NotificationType);
@@ -57,18 +59,24 @@ export async function notify(input: NotifyInput): Promise<NotifyResult> {
 
   if (mode !== NotificationMode.FULL) return { mode, created, emailed: false };
 
+  // The inbox keeps the Arabic original (it is translated for whoever reads it); push and email are written in
+  // the recipient's own language, which the app saves on the account whenever the user switches.
+  const recipient = await prisma.user.findUnique({ where: { id: input.userId }, select: { email: true, language: true } }).catch(() => null);
+  const lang = recipient?.language ?? DEFAULT_LANGUAGE;
+  const title = translateText(input.title, lang);
+  const body = input.body ? translateText(input.body, lang) : input.body;
+
   // FULL = inbox + push + email. Push is best-effort (it never throws) and does nothing without Firebase configured.
   await sendPushToUser(input.userId, {
-    title: input.title,
-    body: input.body,
+    title,
+    body,
     data: { type: input.type, ...(input.data && typeof input.data === "object" && !Array.isArray(input.data) ? (input.data as Record<string, unknown>) : {}) },
   });
 
   let emailed = false;
   try {
-    const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { email: true } });
-    if (user?.email) {
-      await emailService.send({ to: user.email, subject: input.title, text: input.body ?? input.title });
+    if (recipient?.email) {
+      await emailService.send({ to: recipient.email, subject: title, text: body ?? title });
       emailed = true;
     }
   } catch {

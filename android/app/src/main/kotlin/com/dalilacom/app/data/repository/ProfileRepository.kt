@@ -22,6 +22,11 @@ class ProfileRepository(private val api: ApiService) {
     suspend fun update(fullName: String, bio: String): Result<ProfileDto> =
         result(AppStrings.get(R.string.s_ca575cfb)) { api.updateProfile(UpdateProfileRequest(fullName.trim(), bio.trim().ifBlank { null })) }
 
+    /** Tells the server which language this account reads, so push notifications and emails match. Silent on failure. */
+    suspend fun setLanguage(code: String) {
+        safeApiCall { api.updateProfile(UpdateProfileRequest(language = code)) }
+    }
+
     /** [jpeg] is already cropped to a square and shrunk (see ImageUtil). */
     suspend fun uploadAvatar(jpeg: ByteArray): Result<ProfileDto> =
         result(AppStrings.get(R.string.s_e78265a1)) { api.uploadAvatar(jpeg.toRequestBody("image/jpeg".toMediaType())) }

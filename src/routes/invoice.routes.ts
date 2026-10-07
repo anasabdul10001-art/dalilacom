@@ -2,6 +2,7 @@ import { Response, Router } from "express";
 import { prisma } from "../prisma";
 import { sendError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
+import { resolveLanguage } from "../lib/languages";
 import { avatarUrl } from "../lib/profile";
 import { DocumentData, formatMoney, renderDocumentHtml } from "../lib/documents";
 import { taxRateFor } from "../services/plan.service";
@@ -34,9 +35,10 @@ function issuerOf(m: MerchantForDoc) {
   return { name: m.businessName, avatarUrl: avatarUrl(m.user.id, m.user.avatarUpdatedAt), bio: m.user.bio, phone: m.phone, address: m.address };
 }
 
-function sendHtml(res: Response, doc: DocumentData) {
+function sendHtml(res: Response, doc: DocumentData, lang: string) {
   res.set({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-  res.send(renderDocumentHtml(doc));
+  res.locals.htmlLocalized = true; // renderDocumentHtml translated the labels itself and leaves user data alone
+  res.send(renderDocumentHtml(doc, lang));
 }
 
 // The customer or the owning merchant can print an order's invoice; it always carries the merchant's name + photo.
@@ -59,7 +61,7 @@ invoiceRouter.get("/order/:id", async (req, res) => {
     issuer: issuerOf(order.merchant),
     recipient: { label: "العميل", name: order.user.fullName, taxId: order.user.vatNumber },
     status: ORDER_STATUS_AR[order.status] ?? order.status,
-    rows: order.items.map((i) => ({ label: i.productName, qty: i.quantity, amount: formatMoney(i.unitPriceCents * i.quantity) })),
+    rows: order.items.map((i) => ({ label: i.productName, qty: i.quantity, amount: formatMoney(i.unitPriceCents * i.quantity), literal: true })),
     totals: [
       { label: "المجموع", value: formatMoney(order.subtotalCents) },
       ...(order.memberDiscountCents > 0 ? [{ label: "حسم أعضاء دليلكم", value: `− ${formatMoney(order.memberDiscountCents)}` }] : []),
@@ -72,7 +74,7 @@ invoiceRouter.get("/order/:id", async (req, res) => {
         : []),
     ],
     footnote: "شكراً لتعاملكم معنا — صدرت هذه الفاتورة عبر منصة دليلكم",
-  });
+  }, resolveLanguage(req));
 });
 
 // A confirmed discount (QR) transaction: the member or the merchant who confirmed it.
@@ -96,5 +98,5 @@ invoiceRouter.get("/discount/:ref", async (req, res) => {
     ],
     totals: [{ label: "المبلغ النهائي", value: formatMoney(tx.finalAmountCents), strong: true }],
     footnote: "صدر هذا الإيصال عبر منصة دليلكم",
-  });
+  }, resolveLanguage(req));
 });

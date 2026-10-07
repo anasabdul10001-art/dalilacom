@@ -16,6 +16,8 @@ export interface CategorySeed {
   /** extra search words, "|"-separated, per language */
   synAr?: string;
   synEn?: string;
+  /** other languages: `tr: { de: { name: "Zahnarzt", syn: "zahnarzt|zähne" } }` (see docs/I18N.md) */
+  tr?: Record<string, { name: string; syn?: string }>;
   children?: CategorySeed[];
 }
 

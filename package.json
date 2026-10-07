@@ -14,7 +14,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
-    "backfill:1b": "tsx prisma/backfill-1b.ts"
+    "backfill:1b": "tsx prisma/backfill-1b.ts",
+    "i18n:add": "tsx scripts/i18n.ts add",
+    "i18n:check": "tsx scripts/i18n.ts check"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",

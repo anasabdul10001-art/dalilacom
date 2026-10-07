@@ -48,6 +48,8 @@ object DocumentPrinter {
                 manager.print(jobName, view.createPrintDocumentAdapter(jobName), PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).build())
             }
         }
-        webView.loadUrl(BASE_URL.trimEnd('/') + "/" + path.trimStart('/'), mapOf("Authorization" to "Bearer $token"))
+        // ?lang= makes the printed document come out in the language of the app
+        val separator = if (path.contains("?")) "&" else "?"
+        webView.loadUrl(BASE_URL.trimEnd('/') + "/" + path.trimStart('/') + "${separator}lang=${AppStrings.language}", mapOf("Authorization" to "Bearer $token"))
     }
 }

@@ -1,3 +1,5 @@
+import { resolveLanguage } from "../lib/languages";
+import { translateText } from "../i18n";
 import { Router } from "express";
 import crypto from "crypto";
 import { z } from "zod";
@@ -100,15 +102,16 @@ responderRouter.patch("/profile", requireAuth, async (req, res) => {
 
 /* ---------------- channels & connections ---------------- */
 
-responderRouter.get("/channels", requireAuth, async (_req, res) => {
+responderRouter.get("/channels", requireAuth, async (req, res) => {
+  const lang = resolveLanguage(req);
   const channels = await prisma.socialChannel.findMany({ where: { isEnabled: true }, orderBy: { createdAt: "asc" } });
   res.json(
     channels.map((c) => ({
       id: c.id,
       key: c.key,
-      name: c.name,
+      name: translateText(c.name, lang),
       connectable: c.driver !== "META_PENDING",
-      fields: CREDENTIAL_FIELDS[c.driver],
+      fields: CREDENTIAL_FIELDS[c.driver].map((f) => ({ ...f, label: translateText(f.label, lang) })),
     })),
   );
 });

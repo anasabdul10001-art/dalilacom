@@ -16,3 +16,6 @@ android/.cxx/
 *.apk
 *.aab
 
+
+# scratch copy made by tests/i18nTooling.test.ts
+tmp-i18n-sandbox/

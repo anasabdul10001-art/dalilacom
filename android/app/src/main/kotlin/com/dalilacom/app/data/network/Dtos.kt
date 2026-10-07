@@ -22,7 +22,7 @@ data class ProfileDto(
 )
 
 @Serializable
-data class UpdateProfileRequest(val fullName: String? = null, val bio: String? = null)
+data class UpdateProfileRequest(val fullName: String? = null, val bio: String? = null, val language: String? = null)
 
 @Serializable
 data class MeResponse(val user: UserDto, val emailDeliveryEnabled: Boolean = false)

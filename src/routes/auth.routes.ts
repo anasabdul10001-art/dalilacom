@@ -5,6 +5,8 @@ import { prisma } from "../prisma";
 import { signAuthToken } from "../utils/jwt";
 import { requireAuth } from "../middleware/auth";
 import { sendError, sendValidationError } from "../lib/apiError";
+import { DEFAULT_LANGUAGE, resolveLanguage } from "../lib/languages";
+import { translateText } from "../i18n";
 import { generateRawToken, hashToken } from "../services/token.service";
 import { emailService } from "../services/email.service";
 import { logSecurityEvent } from "../services/securityEvent.service";
@@ -34,14 +36,14 @@ async function issueVerificationToken(userId: string) {
   return raw;
 }
 
-async function sendVerificationEmail(to: string, rawToken: string) {
+async function sendVerificationEmail(to: string, rawToken: string, lang: string = DEFAULT_LANGUAGE) {
   const base = process.env.PUBLIC_BASE_URL ?? "";
   const link = `${base}/auth/verify-email?token=${rawToken}`;
   try {
     await emailService.send({
       to,
-      subject: "تأكيد بريدك الإلكتروني — دليلكم",
-      text: `مرحبًا،\n\nلتفعيل حسابك على دليلكم اضغط الرابط التالي (صالح لمدة ${EMAIL_VERIFICATION_TTL_MS / 3_600_000} ساعة):\n${link}\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة.`,
+      subject: translateText("تأكيد بريدك الإلكتروني — دليلكم", lang),
+      text: translateText(`مرحبًا،\n\nلتفعيل حسابك على دليلكم اضغط الرابط التالي (صالح لمدة ${EMAIL_VERIFICATION_TTL_MS / 3_600_000} ساعة):\n${link}\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة.`, lang),
     });
   } catch (err) {
     // Verification email failing to send must never fail registration itself — the user can
@@ -50,14 +52,14 @@ async function sendVerificationEmail(to: string, rawToken: string) {
   }
 }
 
-async function sendResetEmail(to: string, rawToken: string) {
+async function sendResetEmail(to: string, rawToken: string, lang: string = DEFAULT_LANGUAGE) {
   const base = process.env.PUBLIC_BASE_URL ?? "";
   const link = `${base}/reset-password.html?token=${rawToken}`;
   try {
     await emailService.send({
       to,
-      subject: "إعادة تعيين كلمة السر — دليلكم",
-      text: `مرحبًا،\n\nطلب أحدهم إعادة تعيين كلمة سر حسابك على دليلكم. إذا كنت أنت، اضغط الرابط التالي (صالح لمدة ${PASSWORD_RESET_TTL_MS / 60_000} دقيقة):\n${link}\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة — كلمة سرك لن تتغيّر.`,
+      subject: translateText("إعادة تعيين كلمة السر — دليلكم", lang),
+      text: translateText(`مرحبًا،\n\nطلب أحدهم إعادة تعيين كلمة سر حسابك على دليلكم. إذا كنت أنت، اضغط الرابط التالي (صالح لمدة ${PASSWORD_RESET_TTL_MS / 60_000} دقيقة):\n${link}\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة — كلمة سرك لن تتغيّر.`, lang),
     });
   } catch (err) {
     console.error("Failed to send password reset email:", err instanceof Error ? err.message : err);
@@ -85,11 +87,11 @@ authRouter.post("/register", registerRateLimiter, async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({
-    data: { email, phone, passwordHash, fullName },
+    data: { email, phone, passwordHash, fullName, language: resolveLanguage(req) },
   });
 
   const rawToken = await issueVerificationToken(user.id);
-  await sendVerificationEmail(user.email, rawToken);
+  await sendVerificationEmail(user.email, rawToken, resolveLanguage(req));
   await logSecurityEvent({ userId: user.id, type: "REGISTER", req });
 
   // Registration signs the user in immediately (email verification is tracked but does not yet
@@ -216,7 +218,7 @@ authRouter.post("/resend-verification", resendVerificationRateLimiter, async (re
   if (user && !user.isEmailVerified && !user.isDisabled) {
     await prisma.emailVerificationToken.updateMany({ where: { userId: user.id, consumedAt: null }, data: { consumedAt: new Date() } });
     const rawToken = await issueVerificationToken(user.id);
-    await sendVerificationEmail(user.email, rawToken);
+    await sendVerificationEmail(user.email, rawToken, resolveLanguage(req));
     await logSecurityEvent({ userId: user.id, type: "EMAIL_VERIFICATION_REQUESTED", req });
   }
   // Same response whether or not the account exists/needs it — no account enumeration.
@@ -238,7 +240,7 @@ authRouter.post("/forgot-password", forgotPasswordRateLimiter, async (req, res) 
     await prisma.passwordResetToken.create({
       data: { userId: user.id, tokenHash: hash, expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS) },
     });
-    await sendResetEmail(user.email, raw);
+    await sendResetEmail(user.email, raw, resolveLanguage(req));
     await logSecurityEvent({ userId: user.id, type: "PASSWORD_RESET_REQUESTED", req });
   }
   // Deliberately identical response regardless of whether the email exists (section: Password Reset).

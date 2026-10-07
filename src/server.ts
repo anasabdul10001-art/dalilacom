@@ -27,12 +27,14 @@ import { notificationRouter } from "./routes/notification.routes";
 import { planRouter } from "./routes/plan.routes";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
+import { localizeResponses } from "./lib/localize";
 import { ApiError, sendError, sendValidationError } from "./lib/apiError";
 
 const app = express();
 app.set("trust proxy", 1); // Render sits behind a proxy — needed for correct req.ip / X-Forwarded-For
 app.use(securityHeaders);
 app.use(corsMiddleware);
+app.use(localizeResponses);
 // rawBody is kept only so Meta webhook signatures can be verified against the exact bytes sent.
 app.use(express.json({ verify: (req, _res, buf) => { (req as any).rawBody = buf; } }));
 

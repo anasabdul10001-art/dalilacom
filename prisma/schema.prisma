@@ -60,6 +60,7 @@ model User {
   isEmailVerified Boolean   @default(false)
   isDisabled      Boolean   @default(false) // admin-controlled kill switch, blocks login regardless of tokenVersion
   bio             String? // short public description shown on the account's profile / shop page
+  language        String? // preferred language (ar, en, ...): what push notifications and emails are written in
   // Country/city used for per-country pricing and tax (sections 64/58). Deliberately a plain ISO-2
   // code rather than a relation: it is set from the account's own claims/address and never needs a
   // join to render a price. `cityId` points at a GeoUnit.

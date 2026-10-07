@@ -88,6 +88,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
             notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
         container.notificationRepository.registerCurrentDevice()
+        container.profileRepository.setLanguage(com.dalilacom.app.ui.i18n.AppStrings.language)
     }
     val pendingRoute by container.pendingRoute.collectAsState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()

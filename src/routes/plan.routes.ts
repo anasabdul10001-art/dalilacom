@@ -4,6 +4,7 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { verifyAuthToken } from "../utils/jwt";
+import { resolveLanguage } from "../lib/languages";
 import { Role, ServiceKind } from "@prisma/client";
 import {
   deletePlan,
@@ -41,7 +42,7 @@ async function countryFor(req: { headers: Record<string, unknown>; query: Record
 
 // Public: the whole pricing page in one call (sections 24/60).
 planRouter.get("/catalog", async (req, res) => {
-  res.json(await getCatalog(await countryFor(req as never)));
+  res.json(await getCatalog(await countryFor(req as never), resolveLanguage(req)));
 });
 
 /* ---------------- admin: plans, specifications, country prices, tax rates ---------------- */

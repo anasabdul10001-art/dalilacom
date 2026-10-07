@@ -1,3 +1,73 @@
+// English. A language file registers itself: LANGS (name + direction), DICT (the keyed texts),
+// PHRASES / PATTERNS / WORDS (the gettext-style table for everything else). See docs/I18N.md.
+LANGS.en = { name: "English", dir: "ltr" };
+DICT.en = {
+  "tab.map": "Map", "tab.card": "My card", "tab.cart": "Cart", "tab.orders": "Orders", "tab.account": "Account",
+
+  "search.placeholder": "Search for a place or service...",
+  "search.recent": "Recent searches",
+  "login.pill": "Sign in",
+  "filter.all": "All", "filter.openNow": "🕒 Open now", "filter.discounts": "🏷️ Has discount", "filter.sections": "☰ Categories",
+  "radius.any": "Any distance", "radius.km": "{n} km",
+  "area.search": "🔍 Search this area", "area.clear": "✕ Clear area",
+  "fab.myLocation": "My location", "fab.darkMode": "Dark mode", "fab.lightMode": "Light mode", "fab.language": "Language",
+  "loc.unsupported": "This browser doesn't support location",
+  "loc.denied": "We couldn't get your location — allow location access in the browser to see what's nearest",
+
+  "sheet.nearby": "Places near you", "sheet.directory": "Places directory", "sheet.count": "{n} places",
+  "sheet.empty": "No places match these filters — try changing your search",
+  "sheet.emptyRadius": "No places within {n} km of you — try a larger distance",
+
+  "card.details": "Details", "card.directions": "🧭 Directions", "card.save": "Save",
+  "unit.m": "m", "unit.km": "km",
+
+  "place.call": "Call", "place.whatsapp": "WhatsApp", "place.directions": "Directions", "place.share": "Share",
+  "place.save": "Save", "place.saved": "Saved", "place.discounts": "Discounts", "place.products": "Products",
+  "place.noProducts": "No products yet", "place.notFound": "This place isn't available", "place.unavailable": "Unavailable",
+  "place.forMembers": "for Dalilacom members", "place.linkCopied": "Link copied ✅", "place.copyLink": "Copy the link:",
+  "place.shareText": "{name} on Dalilacom",
+
+  "hours.title": "Opening hours", "hours.closed": "Closed", "hours.allDay": "24 hours", "hours.sep": ", ",
+  "hours.openUntil": "Open · closes {time}", "hours.opensAt": "Closed · opens {day} {time}",
+  "hours.today": "today", "hours.tomorrow": "tomorrow", "time.am": "AM", "time.pm": "PM",
+  "day.sat": "Saturday", "day.sun": "Sunday", "day.mon": "Monday", "day.tue": "Tuesday", "day.wed": "Wednesday", "day.thu": "Thursday", "day.fri": "Friday",
+
+  "route.to": "To {name}", "route.calculating": "Calculating the route...", "route.google": "Open in Google Maps",
+  "route.failed": "Couldn't calculate the route", "route.needLocation": "Allow location access to draw the route, or open it in Google Maps",
+  "dur.min1": "1 min", "dur.min2": "2 min", "dur.min3to10": "{n} min", "dur.min": "{n} min", "dur.hm": "{h} h {m} min",
+
+  "profile.edit": "✏️ Edit my profile", "profile.myAccount": "My account",
+  "profile.merchantMode": "Merchant mode", "profile.registerMerchant": "Register as a merchant",
+  "profile.favorites": "♥ Saved places", "profile.affiliates": "My affiliations", "profile.responder": "🤖 Auto-responder",
+  "profile.wallet": "💰 My wallet", "profile.logout": "Sign out",
+  "verify.title": "✉️ Email not verified", "verify.sub": "Verify your email to protect your account and recover your password.",
+  "verify.resend": "Resend verification link", "verify.sent": "We sent the verification link to your email ✅", "verify.failed": "Couldn't send, try again shortly",
+
+  "guest.login": "Sign in", "guest.register": "Create an account",
+  "guest.card.title": "Dalilacom card", "guest.card.sub": "Open an account to get your digital discount card and save at every place on the map.",
+  "guest.card.p1": "Instant discount at any partner merchant", "guest.card.p2": "A QR code that refreshes to protect you", "guest.card.p3": "A record of all your savings",
+  "guest.cart.title": "Your cart", "guest.cart.sub": "Sign in to add products and complete your order.",
+  "guest.cart.p1": "Order from several shops in one cart", "guest.cart.p2": "Special member prices",
+  "guest.orders.title": "Your orders", "guest.orders.sub": "Sign in to follow your orders and their status.",
+  "guest.orders.p1": "Track each order step by step", "guest.orders.p2": "Cancel an order before it ships",
+  "guest.profile.title": "Open your account", "guest.profile.sub": "The map and the directory are open to everyone. You only need an account for a discount card or to list your shop.",
+  "guest.profile.p1": "Get the discount card", "guest.profile.p2": "List your shop and add your products and offers", "guest.profile.p3": "Turn on the auto-responder for your customers' messages",
+
+  "browse.title": "Browse categories", "browse.all": "All {name}", "browse.count": "{n} places", "browse.soon": "Coming soon",
+  "browse.back": "‹ Back", "browse.close": "Close",
+  "picker.section": "Category", "picker.profession": "Profession / type", "picker.specialty": "Specialty", "picker.choose": "Choose...",
+  "lang.title": "Language",
+
+  "pricing.title": "Plans & pricing", "pricing.sub": "Every Dalilacom service and its price — the price you see is the one for your country.",
+  "pricing.link": "💳 Plans & pricing",
+  "service.MEMBERSHIP": "Customer membership (discount card)", "service.MERCHANT_ACCOUNT": "Merchant plans",
+  "service.RESPONDER_CUSTOMER": "Auto-responder — customers", "service.RESPONDER_MERCHANT": "Auto-responder — merchants",
+  "pricing.free": "Free", "pricing.notPriced": "Price not set yet", "pricing.credits": "{n} {credit}",
+  "pricing.days": "{n} days", "pricing.trial": "{n}-day free trial", "pricing.yourCountry": "Your country's price",
+  "pricing.broadcasts": "{n} follower broadcasts per month", "pricing.subscribe": "Subscribe", "pricing.empty": "No plans available right now",
+  "pricing.subscribed": "Subscribed ✅", "pricing.failed": "Couldn't subscribe",
+};
+
 // English phrase table for the web preview — gettext-style: each key is the Arabic text exactly as it appears on screen.
 // To add a language, copy this file (e.g. i18n.de.js), translate the values, keep the keys, and load it in index.html.
 // PHRASES = whole texts; PATTERNS = texts with numbers or names inside (regex -> replacement or function).
@@ -293,7 +363,7 @@ PATTERNS.en = [
   [/^فعّل مقابل (.+) \/ (\d+) يوم$/, "Activate for $1 / $2 days"],
   [/^جدّد (\d+) يوم إضافي \((.+)\)$/, "Renew for $1 more days ($2)"],
   [/^اشترك من هلق \((.+)\)$/, "Subscribe now ($1)"],
-  [/^(.*) \(المطلوب (\d+)، رصيدك (\d+)\)$/, (m) => `${tr(m[1])} (needed ${m[2]}, your balance ${m[3]})`],
+  [/^(.*?)\s*\(المطلوب (\d+)، رصيدك (\d+)\)$/, (m) => `${m[1] ? tr(m[1]) + " " : ""}(needed ${m[2]}, your balance ${m[3]})`],
   [/^(.*?) · ردود AI هالفترة: (\d+)\/(\d+)$/, "$1 · AI replies this period: $2/$3"],
   [/^كلمات: (.+?)( · 📌 محصورة بـ (\d+) منشور)?$/, (m) => `Keywords: ${m[1].replace(/،\s*/g, ", ")}${m[3] ? ` · 📌 limited to ${m[3]} posts` : ""}`],
   [/^الرد: (.+)$/, "Reply: $1"],

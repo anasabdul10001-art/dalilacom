@@ -4,6 +4,7 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { avatarUrl } from "../lib/profile";
+import { isSupportedLanguage } from "../lib/languages";
 
 export const profileRouter = Router();
 
@@ -21,9 +22,9 @@ function sniffImageMime(buf: Buffer): "image/jpeg" | "image/png" | "image/webp" 
 async function profileOf(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { id: true, email: true, fullName: true, role: true, bio: true, avatarUpdatedAt: true },
+    select: { id: true, email: true, fullName: true, role: true, bio: true, language: true, avatarUpdatedAt: true },
   });
-  return { id: user.id, email: user.email, fullName: user.fullName, role: user.role, bio: user.bio, avatarUrl: avatarUrl(user.id, user.avatarUpdatedAt) };
+  return { id: user.id, email: user.email, fullName: user.fullName, role: user.role, bio: user.bio, language: user.language, avatarUrl: avatarUrl(user.id, user.avatarUpdatedAt) };
 }
 
 profileRouter.get("/me", requireAuth, async (req, res) => {
@@ -33,6 +34,8 @@ profileRouter.get("/me", requireAuth, async (req, res) => {
 const updateProfileSchema = z.object({
   fullName: z.string().trim().min(2).max(80).optional(),
   bio: z.string().trim().max(500).nullable().optional(),
+  // The language push notifications and emails are written in (set by the app when the user switches).
+  language: z.string().refine(isSupportedLanguage, "unsupported language").optional(),
   // Drives per-country pricing and the VAT rate on invoices (sections 64/58). ISO-2, e.g. "DE".
   countryCode: z.string().trim().length(2).toUpperCase().nullable().optional(),
   cityId: z.string().uuid().nullable().optional(),
@@ -42,12 +45,13 @@ const updateProfileSchema = z.object({
 profileRouter.patch("/me", requireAuth, async (req, res) => {
   const parsed = updateProfileSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const { fullName, bio, countryCode, cityId, vatNumber } = parsed.data;
+  const { fullName, bio, language, countryCode, cityId, vatNumber } = parsed.data;
   await prisma.user.update({
     where: { id: req.user!.id },
     data: {
       ...(fullName !== undefined ? { fullName } : {}),
       ...(bio !== undefined ? { bio: bio || null } : {}),
+      ...(language !== undefined ? { language } : {}),
       ...(countryCode !== undefined ? { countryCode: countryCode || null } : {}),
       ...(cityId !== undefined ? { cityId: cityId || null } : {}),
       ...(vatNumber !== undefined ? { vatNumber: vatNumber || null } : {}),
