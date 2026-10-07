@@ -65,6 +65,7 @@ class DiscoverViewModel(
     private val repository: DiscoverRepository,
     private val places: PlacesRepository,
     private val sessionStore: SessionStore,
+    private val profileRepository: com.dalilacom.app.data.repository.ProfileRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(DiscoverUiState())
     val uiState: StateFlow<DiscoverUiState> = _uiState.asStateFlow()
@@ -140,8 +141,11 @@ class DiscoverViewModel(
 
     fun markLocationRequested() = _uiState.update { it.copy(locationRequested = true, locationStatus = LocationStatus.Loading) }
 
-    fun onLocation(location: Pair<Double, Double>) =
+    fun onLocation(location: Pair<Double, Double>) {
         _uiState.update { recompute(it.copy(userLocation = location, locationStatus = LocationStatus.Ready)) }
+        // Only for someone who opted in (profile switch): shops nearby can then reach them. Guests have no account to tell.
+        viewModelScope.launch { if (sessionStore.getShareLocation()) profileRepository.reportLocation(location.first, location.second) }
+    }
 
     fun onLocationDenied() = _uiState.update { it.copy(locationStatus = LocationStatus.Denied) }
 

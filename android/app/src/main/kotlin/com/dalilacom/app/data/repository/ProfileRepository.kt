@@ -3,6 +3,7 @@ package com.dalilacom.app.data.repository
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.ApiService
+import com.dalilacom.app.data.network.LocationRequest
 import com.dalilacom.app.data.network.ProfileDto
 import com.dalilacom.app.data.network.UpdateProfileRequest
 import com.dalilacom.app.data.network.errorText
@@ -25,6 +26,16 @@ class ProfileRepository(private val api: ApiService) {
     /** Tells the server which language this account reads, so push notifications and emails match. Silent on failure. */
     suspend fun setLanguage(code: String) {
         safeApiCall { api.updateProfile(UpdateProfileRequest(language = code)) }
+    }
+
+    /** The person opted in: tell the server roughly where they are (it rounds to ~1 km). Silent on failure. */
+    suspend fun reportLocation(latitude: Double, longitude: Double) {
+        safeApiCall { api.putLocation(LocationRequest(latitude, longitude)) }
+    }
+
+    /** The person opted out: the server forgets the position it kept. */
+    suspend fun forgetLocation() {
+        safeApiCall { api.deleteLocation() }
     }
 
     /** [jpeg] is already cropped to a square and shrunk (see ImageUtil). */

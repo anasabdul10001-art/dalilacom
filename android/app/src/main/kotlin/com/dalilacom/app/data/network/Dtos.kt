@@ -25,6 +25,9 @@ data class ProfileDto(
 data class UpdateProfileRequest(val fullName: String? = null, val bio: String? = null, val language: String? = null)
 
 @Serializable
+data class LocationRequest(val latitude: Double, val longitude: Double)
+
+@Serializable
 data class MeResponse(val user: UserDto, val emailDeliveryEnabled: Boolean = false)
 
 @Serializable
@@ -32,6 +35,30 @@ data class ResendVerificationRequest(val email: String)
 
 @Serializable
 data class AuthResponse(val token: String, val user: UserDto)
+
+@Serializable
+data class BroadcastPreviewRequest(val radiusKm: Double)
+
+@Serializable
+data class BroadcastPreviewDto(val count: Int = 0, val cap: Int = 0, val remainingToday: Int? = null)
+
+@Serializable
+data class BroadcastRequest(val radiusKm: Double, val title: String, val body: String, val productId: String? = null, val discountId: String? = null)
+
+@Serializable
+data class BroadcastResultDto(val id: String = "", val status: String = "", val targeted: Int = 0, val delivered: Int = 0, val reasons: List<String> = emptyList())
+
+@Serializable
+data class BroadcastDto(
+    val id: String,
+    val title: String,
+    val body: String,
+    val status: String,
+    val targeted: Int = 0,
+    val delivered: Int = 0,
+    val reviewNote: String? = null,
+    val createdAt: String = "",
+)
 
 @Serializable
 data class SocialProvidersDto(val google: Boolean = false, val facebook: Boolean = false)

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -46,6 +47,7 @@ private enum class MerchantTab(@androidx.annotation.StringRes val labelRes: Int,
     Redeem(R.string.s_d9724d06, Icons.Filled.QrCodeScanner),
     Orders(R.string.s_c5ffc332, Icons.AutoMirrored.Filled.ListAlt),
     Catalog(R.string.s_d766cb06, Icons.Filled.Inventory2),
+    Promo(R.string.promo_tab, Icons.Filled.Campaign),
 }
 
 @Composable
@@ -88,6 +90,7 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                     scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/discount/$ref", AppStrings.get(R.string.s_153612e1)) }
                 })
                 MerchantTab.Orders -> MerchantOrdersScreen(factory)
+                MerchantTab.Promo -> PromoScreen(factory)
                 MerchantTab.Catalog -> CatalogScreen(
                     factory = factory,
                     onProductClick = { id -> rootNavController.navigate("merchantProduct?productId=$id") },

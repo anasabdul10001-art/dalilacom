@@ -17,6 +17,7 @@ import com.dalilacom.app.ui.orders.OrdersViewModel
 import com.dalilacom.app.ui.pricing.PricingViewModel
 import com.dalilacom.app.ui.places.FavoritesViewModel
 import com.dalilacom.app.ui.places.HoursViewModel
+import com.dalilacom.app.ui.merchantmode.PromoViewModel
 import com.dalilacom.app.ui.profile.ProfileEditViewModel
 import com.dalilacom.app.ui.responder.ResponderViewModel
 import com.dalilacom.app.ui.responder.WalletViewModel
@@ -27,7 +28,7 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when (modelClass) {
         AuthViewModel::class.java -> AuthViewModel(container.authRepository) as T
         CardViewModel::class.java -> CardViewModel(container.membershipRepository) as T
-        DiscoverViewModel::class.java -> DiscoverViewModel(container.discoverRepository, container.placesRepository, container.sessionStore) as T
+        DiscoverViewModel::class.java -> DiscoverViewModel(container.discoverRepository, container.placesRepository, container.sessionStore, container.profileRepository) as T
         CartViewModel::class.java -> CartViewModel(container.cartRepository) as T
         OrdersViewModel::class.java -> OrdersViewModel(container.orderRepository) as T
         MerchantRegisterViewModel::class.java ->
@@ -44,6 +45,7 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
         ProfileEditViewModel::class.java -> ProfileEditViewModel(container.profileRepository) as T
         NotificationsViewModel::class.java -> NotificationsViewModel(container.notificationRepository) as T
         PricingViewModel::class.java -> PricingViewModel(container.membershipRepository) as T
+        PromoViewModel::class.java -> PromoViewModel(container.broadcastRepository, container.merchantRepository, container.productRepository) as T
         else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }

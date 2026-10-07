@@ -33,6 +33,9 @@ import com.dalilacom.app.ui.common.Avatar
 import androidx.compose.ui.unit.dp
 import com.dalilacom.app.data.AppContainer
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Row
+import androidx.compose.runtime.collectAsState
+import androidx.compose.material3.Switch
 
 @Composable
 fun ProfileScreen(
@@ -99,6 +102,25 @@ fun ProfileScreen(
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = onOpenNotifications, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_notifications) + if (unread > 0) " ($unread)" else "")
+        }
+        Spacer(Modifier.height(12.dp))
+        // Opt-in: with this on, the app tells the server roughly where the person is (while the map is in use) so shops
+        // nearby can send them offers. Off by default; switching it off makes the server forget the position.
+        val shareLocation by container.sessionStore.shareLocationFlow.collectAsState(initial = false)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.profile_share_location), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.profile_share_location_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(
+                checked = shareLocation,
+                onCheckedChange = { on ->
+                    scope.launch {
+                        container.sessionStore.setShareLocation(on)
+                        if (!on) container.profileRepository.forgetLocation()
+                    }
+                },
+            )
         }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }

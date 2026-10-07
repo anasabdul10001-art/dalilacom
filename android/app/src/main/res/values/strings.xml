@@ -195,6 +195,36 @@
     <string name="social_error_no_email">الحساب ما شارك إيميله معنا، فما فينا نفتح لك حساب</string>
     <string name="social_error_disabled">هذا الحساب معطّل، تواصل مع الدعم</string>
     <string name="social_back_to_login">رجوع لتسجيل الدخول</string>
+    <string name="profile_share_location">السماح للمتاجر القريبة بإرسال عروضها لي</string>
+    <string name="profile_share_location_sub">يرسل التطبيق موقعك التقريبي (بدقة نحو كيلومتر) أثناء استخدام الخريطة. تقدر توقفه بأي وقت وبنمسح الموقع.</string>
+    <string name="promo_tab">إعلاناتي</string>
+    <string name="promo_title">إعلاناتي</string>
+    <string name="promo_sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</string>
+    <string name="promo_radius">المسافة حول محلك (كم)</string>
+    <string name="promo_title_label">العنوان</string>
+    <string name="promo_body_label">النص</string>
+    <string name="promo_attach_product">إرفاق منتج (اختياري)</string>
+    <string name="promo_attach_offer">إرفاق عرض (اختياري)</string>
+    <string name="promo_preview_btn">كم شخص سيصل؟</string>
+    <string name="promo_send_btn">أرسل للمراجعة</string>
+    <string name="promo_history">إعلاناتك السابقة</string>
+    <string name="promo_empty">لا إعلانات بعد</string>
+    <string name="promo_status_pending">بانتظار مراجعة دليلكم</string>
+    <string name="promo_status_sent">تم النشر</string>
+    <string name="promo_status_rejected">مرفوض</string>
+    <string name="promo_sent_for_review">وصل الإعلان لفريق دليلكم للمراجعة، وسيُنشر فور الموافقة</string>
+    <string name="promo_enter_radius">اكتب المسافة بالكيلومتر</string>
+    <string name="promo_enter_text">اكتب العنوان والنص</string>
+    <string name="promo_err_no_location">حدّد موقع محلك أولًا من «بيانات المحل ومكانه»</string>
+    <string name="promo_err_radius">أكبر مسافة مسموحة 50 كم</string>
+    <string name="promo_err_limit">وصلت للحد اليومي: 3 إعلانات باليوم</string>
+    <string name="promo_err_not_approved">لازم تتم الموافقة على محلك أولًا</string>
+    <string name="promo_err_audience">الجمهور كبير جدًا — صغّر المسافة</string>
+    <string name="promo_err_generic">تعذّر تنفيذ الطلب</string>
+    <string name="fmt_promo_count">سيصل لنحو %1$d شخص — المتبقّي لك اليوم: %2$d إعلانات</string>
+    <string name="fmt_promo_rejected_now">رُفض الإعلان: %1$s</string>
+    <string name="fmt_promo_reached">وصل إلى %1$d شخص</string>
+    <string name="fmt_promo_reason">السبب: %1$s</string>
 
     <!-- texts with numbers / names inside; positional arguments keep the word order right in every language -->
     <string name="fmt_plan_line">%1$d يوم — %2$s %3$s</string>

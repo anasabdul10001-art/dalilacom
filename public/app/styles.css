@@ -857,3 +857,6 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
 
 .social-or { text-align: center; color: var(--text-muted); margin: 14px 0 8px; font-size: 13px; }
 .social-btn { display: block; text-align: center; text-decoration: none; margin-bottom: 8px; }
+
+.switch-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; cursor: pointer; }
+.switch-row input { width: 18px; height: 18px; }

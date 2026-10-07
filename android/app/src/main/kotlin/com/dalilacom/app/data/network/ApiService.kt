@@ -19,6 +19,21 @@ interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
 
+    @PUT("profile/location")
+    suspend fun putLocation(@Body body: LocationRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @DELETE("profile/location")
+    suspend fun deleteLocation(): Response<kotlinx.serialization.json.JsonElement>
+
+    @POST("broadcasts/preview")
+    suspend fun previewBroadcast(@Body body: BroadcastPreviewRequest): Response<BroadcastPreviewDto>
+
+    @POST("broadcasts")
+    suspend fun sendBroadcast(@Body body: BroadcastRequest): Response<BroadcastResultDto>
+
+    @GET("broadcasts")
+    suspend fun getBroadcasts(): Response<List<BroadcastDto>>
+
     @GET("auth/social/providers")
     suspend fun socialProviders(): Response<SocialProvidersDto>
 

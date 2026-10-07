@@ -755,6 +755,22 @@ function toggleDiscoverFlag(flag) { S._discover[flag] = !S._discover[flag]; rend
 function setDiscoverRadius(km) { S._discover.radiusKm = km; S._radiusFit = true; render(); }
 function onDiscoverCategory(id) { S._discover.categoryId = S._discover.categoryId === id ? "" : id; searchMerchants(); }
 
+/* The person's own opt-in to let nearby shops reach them: the page tells the server roughly where they are only while it is on. */
+function shareLocationOn() {
+  try { return localStorage.getItem("dlk_share_loc") === "1"; } catch (e) { return false; }
+}
+
+function reportLocation(loc) {
+  if (S.token && shareLocationOn()) api("PUT", "/profile/location", { latitude: loc.lat, longitude: loc.lng });
+}
+
+async function setShareLocation(on) {
+  try { localStorage.setItem("dlk_share_loc", on ? "1" : "0"); } catch (e) {}
+  if (on) { if (S._discover && S._discover.userLoc) reportLocation(S._discover.userLoc); }
+  else await api("DELETE", "/profile/location");
+  render();
+}
+
 function requestDiscoverLocation(recenter) {
   const d = discoverState();
   if (!navigator.geolocation) { d.locError = t("loc.unsupported"); return render(); }
@@ -762,6 +778,7 @@ function requestDiscoverLocation(recenter) {
     (pos) => {
       d.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       d.locError = null;
+      reportLocation(d.userLoc);
       if (recenter) S._centeredUser = false;
       render();
     },
@@ -1107,6 +1124,8 @@ function tabProfile() {
         ? `<button class="btn" style="max-width:240px" onclick="go('merchantMode')">${esc(t("profile.merchantMode"))}</button>`
         : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`}
       <div style="height:10px"></div>
+      <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
+      <p class="muted" style="margin:0 0 10px">${esc(t("profile.shareLocationSub"))}</p>
       <button class="btn outline" style="max-width:240px" onclick="go('favorites')">${esc(t("profile.favorites"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>

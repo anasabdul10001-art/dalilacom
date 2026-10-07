@@ -18,6 +18,16 @@ class SessionStore(private val context: Context) {
     private val recentKey = stringPreferencesKey("recent_searches")
     private val themeKey = stringPreferencesKey("theme_mode")
     private val languageKey = stringPreferencesKey("app_language")
+    private val shareLocationKey = androidx.datastore.preferences.core.booleanPreferencesKey("share_location")
+
+    /** The person's own opt-in to let nearby shops reach them: the app reports its position to the server only while this is on. */
+    val shareLocationFlow: Flow<Boolean> = context.dalilacomDataStore.data.map { it[shareLocationKey] ?: false }
+
+    suspend fun getShareLocation(): Boolean = runCatching { shareLocationFlow.first() }.getOrDefault(false)
+
+    suspend fun setShareLocation(on: Boolean) {
+        runCatching { context.dalilacomDataStore.edit { it[shareLocationKey] = on } }
+    }
 
     /** The language the user picked; null = the default (Arabic). */
     val languageFlow: Flow<String?> = context.dalilacomDataStore.data.map { it[languageKey] }
