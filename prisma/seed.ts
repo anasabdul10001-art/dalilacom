@@ -1,6 +1,6 @@
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { seedCategories } from "./categories.seed";
-import bcrypt from "bcryptjs";
+import { ensureSuperAdmin } from "./admin.seed";
 
 const prisma = new PrismaClient();
 
@@ -11,22 +11,8 @@ async function main() {
   const adminEmail = process.env.SUPER_ADMIN_EMAIL;
   const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
   if (adminEmail && adminPassword) {
-    const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
-    if (!existingAdmin) {
-      if (adminPassword.length < 12) {
-        throw new Error("SUPER_ADMIN_PASSWORD must be at least 12 characters");
-      }
-      await prisma.user.create({
-        data: {
-          email: adminEmail,
-          passwordHash: await bcrypt.hash(adminPassword, 12),
-          fullName: "Dalilacom Admin",
-          role: Role.ADMIN,
-          isEmailVerified: true,
-        },
-      });
-      console.log(`Created admin user: ${adminEmail} (password not logged)`);
-    }
+    const outcome = await ensureSuperAdmin(prisma, adminEmail, adminPassword);
+    console.log(`Admin ${adminEmail}: ${outcome} (password not logged)`);
   } else {
     console.warn(
       "SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD not set — skipping admin bootstrap. " +
