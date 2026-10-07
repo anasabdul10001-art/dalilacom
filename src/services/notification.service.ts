@@ -1,6 +1,7 @@
 import { NotificationMode, NotificationType, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { emailService } from "./email.service";
+import { sendPushToUser } from "./push.service";
 
 /** Every type the app knows about, in the order the preferences screen lists them (section 87). */
 export const NOTIFICATION_TYPES = Object.values(NotificationType);
@@ -55,6 +56,13 @@ export async function notify(input: NotifyInput): Promise<NotifyResult> {
   }
 
   if (mode !== NotificationMode.FULL) return { mode, created, emailed: false };
+
+  // FULL = inbox + push + email. Push is best-effort (it never throws) and does nothing without Firebase configured.
+  await sendPushToUser(input.userId, {
+    title: input.title,
+    body: input.body,
+    data: { type: input.type, ...(input.data && typeof input.data === "object" && !Array.isArray(input.data) ? (input.data as Record<string, unknown>) : {}) },
+  });
 
   let emailed = false;
   try {

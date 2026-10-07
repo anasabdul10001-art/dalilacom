@@ -132,4 +132,21 @@
     <string name="picker_specialty">Specialty</string>
     <string name="picker_choose">Choose...</string>
     <string name="lang_title">Language</string>
+
+    <string name="push_channel_name">Dalilacom notifications</string>
+    <string name="push_channel_description">Orders, discounts and membership expiry</string>
+    <string name="profile_notifications">🔔 Notifications</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_mark_all">Mark all as read</string>
+    <string name="notifications_failed">Couldn\'t load notifications, try again shortly</string>
+    <string name="notifications_empty">No notifications yet</string>
+    <string name="notifications_settings">Notification settings</string>
+    <string name="notifications_settings_hint">Full: in the app, on your phone and by email · In-app only · Off. Tap the button to change the mode.</string>
+    <string name="notif_type_order_placed">Order confirmation</string>
+    <string name="notif_type_order_status">Order status change</string>
+    <string name="notif_type_discount">New discount</string>
+    <string name="notif_type_membership">Membership about to expire</string>
+    <string name="notif_mode_full">Full</string>
+    <string name="notif_mode_in_app">In-app only</string>
+    <string name="notif_mode_off">Off</string>
 </resources>

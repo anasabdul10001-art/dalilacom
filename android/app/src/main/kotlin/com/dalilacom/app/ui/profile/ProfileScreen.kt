@@ -38,6 +38,7 @@ fun ProfileScreen(
     container: AppContainer,
     onLoggedOut: () -> Unit,
     onEditProfile: () -> Unit,
+    onOpenNotifications: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
     onOpenFavorites: () -> Unit,
@@ -48,12 +49,14 @@ fun ProfileScreen(
     var role by remember { mutableStateOf<String?>(null) }
     var account by remember { mutableStateOf<MeResponse?>(null) }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var unread by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         role = container.sessionStore.getRole()
         account = container.authRepository.me()
         profile = container.profileRepository.me()
+        unread = container.notificationRepository.unreadCount()
     }
 
     Column(
@@ -93,6 +96,10 @@ fun ProfileScreen(
             OutlinedButton(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_register_merchant)) }
         }
         Spacer(Modifier.height(16.dp))
+        OutlinedButton(onClick = onOpenNotifications, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.profile_notifications) + if (unread > 0) " ($unread)" else "")
+        }
+        Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
         Spacer(Modifier.height(8.dp))
         Button(onClick = onOpenResponder, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_responder)) }
@@ -102,6 +109,7 @@ fun ProfileScreen(
 
         Button(onClick = {
             scope.launch {
+                container.notificationRepository.unregisterCurrentDevice() // before the session is gone
                 container.authRepository.logout()
                 onLoggedOut()
             }

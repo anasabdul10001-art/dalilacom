@@ -6,9 +6,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
+        android:name=".DalilacomApp"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="true"
@@ -35,6 +37,22 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="dalilacom" android:host="responder" android:pathPrefix="/meta" />
             </intent-filter>
+
+            <!-- Tapping a push notification opens the in-app inbox. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dalilacom" android:host="app" android:pathPrefix="/notifications" />
+            </intent-filter>
         </activity>
+
+        <service
+            android:name=".push.DalilacomMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

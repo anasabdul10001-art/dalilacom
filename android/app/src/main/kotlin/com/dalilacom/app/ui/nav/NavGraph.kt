@@ -21,6 +21,7 @@ import com.dalilacom.app.ui.merchant.MerchantProfileScreen
 import com.dalilacom.app.ui.merchant.MerchantRegisterScreen
 import com.dalilacom.app.ui.merchantmode.MerchantModeShell
 import com.dalilacom.app.ui.merchantmode.ProductEditScreen
+import com.dalilacom.app.ui.notifications.NotificationsScreen
 import com.dalilacom.app.ui.orders.OrderDetailScreen
 import com.dalilacom.app.ui.places.FavoritesScreen
 import com.dalilacom.app.ui.places.HoursScreen
@@ -120,6 +121,12 @@ fun DalilacomNavGraph(container: AppContainer, deepLinkIntent: Intent? = null) {
         }
         composable("favorites") {
             FavoritesScreen(factory = factory, onBack = { navController.popBackStack() }, onMerchantClick = { id -> navController.navigate("merchant/$id") })
+        }
+        composable(
+            "notifications",
+            deepLinks = listOf(navDeepLink { uriPattern = "dalilacom://app/notifications" }),
+        ) {
+            NotificationsScreen(factory = factory, onBack = { navController.popBackStack() })
         }
         composable("profileEdit") {
             ProfileEditScreen(factory = factory, onBack = { navController.popBackStack() })

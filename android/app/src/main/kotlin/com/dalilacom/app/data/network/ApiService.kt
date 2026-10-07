@@ -5,6 +5,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -29,6 +30,30 @@ interface ApiService {
 
     @DELETE("profile/avatar")
     suspend fun deleteAvatar(): Response<ProfileDto>
+
+    @GET("notifications")
+    suspend fun getNotifications(@Query("take") take: Int = 50): Response<NotificationsResponse>
+
+    @GET("notifications/unread-count")
+    suspend fun getUnreadCount(): Response<UnreadCountDto>
+
+    @POST("notifications/{id}/read")
+    suspend fun markNotificationRead(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @POST("notifications/read-all")
+    suspend fun markAllNotificationsRead(): Response<kotlinx.serialization.json.JsonElement>
+
+    @GET("notifications/preferences")
+    suspend fun getNotificationPreferences(): Response<List<NotificationPreferenceDto>>
+
+    @PUT("notifications/preferences")
+    suspend fun setNotificationPreferences(@Body body: NotificationPreferencesRequest): Response<List<NotificationPreferenceDto>>
+
+    @POST("notifications/devices")
+    suspend fun registerDevice(@Body body: DeviceRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @HTTP(method = "DELETE", path = "notifications/devices", hasBody = true)
+    suspend fun unregisterDevice(@Body body: UnregisterDeviceRequest): Response<kotlinx.serialization.json.JsonElement>
 
     @GET("auth/me")
     suspend fun me(): Response<MeResponse>

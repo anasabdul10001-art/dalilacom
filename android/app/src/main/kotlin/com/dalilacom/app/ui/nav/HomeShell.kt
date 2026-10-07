@@ -75,6 +75,19 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     val factory = remember { ViewModelFactory(container) }
     var isGuest by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isGuest = !container.authRepository.hasStoredSession() }
+
+    // Push notifications: ask Android 13+ for permission once signed in, then tell the server this phone's token.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val notificationPermission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(isGuest) {
+        if (!container.authRepository.hasStoredSession()) return@LaunchedEffect
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+        container.notificationRepository.registerCurrentDevice()
+    }
     val pendingRoute by container.pendingRoute.collectAsState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -150,6 +163,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onRegisterMerchant = { rootNavController.navigate("merchantRegister") },
                         onOpenMerchantMode = { rootNavController.navigate("merchantMode") },
                         onEditProfile = { rootNavController.navigate("profileEdit") },
+                        onOpenNotifications = { rootNavController.navigate("notifications") },
                         onOpenFavorites = { rootNavController.navigate("favorites") },
                         onOpenResponder = { rootNavController.navigate("responder") },
                         onOpenWallet = { rootNavController.navigate("wallet") },

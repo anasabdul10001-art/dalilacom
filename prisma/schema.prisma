@@ -95,6 +95,7 @@ model User {
   favoriteMerchants FavoriteMerchant[]
 
   notifications           Notification[]
+  deviceTokens            DeviceToken[]
   notificationPreferences NotificationPreference[]
   metaOAuthSessions       MetaOAuthSession[]
 }
@@ -175,26 +176,26 @@ enum ServiceKind {
 // One service plan a customer or merchant can subscribe to. This is the single source of truth for
 // prices, duration, trial and what the plan includes (Admin-managed, section 24/60/61).
 model ServicePlan {
-  id           String      @id @default(uuid())
-  service      ServiceKind @default(MEMBERSHIP)
-  name         String
-  description  String?
-  durationDays Int
-  trialDays    Int         @default(0) // free trial days before the first charge (0 = none, section 61)
-  priceCents   Int
-  currency     String      @default("EUR")
+  id                    String      @id @default(uuid())
+  service               ServiceKind @default(MEMBERSHIP)
+  name                  String
+  description           String?
+  durationDays          Int
+  trialDays             Int         @default(0) // free trial days before the first charge (0 = none, section 61)
+  priceCents            Int
+  currency              String      @default("EUR")
   // What subscribing actually costs in wallet credits (the wallet's own unit, section 51). priceCents
   // is the price shown to the customer in `currency`; this is the amount debited. Null on a plan whose
   // priceCents > 0 means the admin has not priced it in credits yet, and subscribing is refused rather
   // than converting currencies with a rate nobody set (sections 24/60/64).
-  priceCredits Int?
+  priceCredits          Int?
   // Merchant plans only: how many follower broadcasts this plan allows per period (section 37/76).
   // Null means "not applicable" for that kind of service.
   monthlyBroadcastLimit Int?
-  sortOrder    Int         @default(0) // display order on the pricing page (lower first)
-  isActive     Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  sortOrder             Int         @default(0) // display order on the pricing page (lower first)
+  isActive              Boolean     @default(true)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
   memberships Membership[]
   features    PlanFeature[]
@@ -1134,6 +1135,22 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+}
+
+// A phone that can receive push notifications (Firebase Cloud Messaging). One user can have several
+// devices; the FCM token is unique, so a token that moves to another account (shared phone, re-login)
+// is re-pointed instead of delivering the old owner's notifications to the new one.
+model DeviceToken {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   @unique
+  platform   String   @default("android")
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // Section 87: one row per (user, type) the user has customised. Absence means FULL.

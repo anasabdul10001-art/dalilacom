@@ -329,3 +329,33 @@ data class RouteDto(
 
 @Serializable
 data class CreateDiscountRequest(val title: String, val percent: Int)
+
+
+@Serializable
+data class NotificationDto(
+    val id: String,
+    val type: String,
+    val title: String,
+    val body: String? = null,
+    val data: kotlinx.serialization.json.JsonElement? = null,
+    val readAt: String? = null,
+    val createdAt: String,
+)
+
+@Serializable
+data class NotificationsResponse(val items: List<NotificationDto> = emptyList(), val unread: Int = 0)
+
+@Serializable
+data class UnreadCountDto(val unread: Int = 0)
+
+@Serializable
+data class NotificationPreferenceDto(val type: String, val mode: String)
+
+@Serializable
+data class NotificationPreferencesRequest(val preferences: List<NotificationPreferenceDto>)
+
+@Serializable
+data class DeviceRequest(val token: String)
+
+@Serializable
+data class UnregisterDeviceRequest(val token: String)

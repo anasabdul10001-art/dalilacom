@@ -12,6 +12,7 @@ import {
   setPreferences,
   unreadCount,
 } from "../services/notification.service";
+import { registerDevice, unregisterDevice } from "../services/push.service";
 
 export const notificationRouter = Router();
 notificationRouter.use(requireAuth);
@@ -56,6 +57,23 @@ notificationRouter.put("/preferences", async (req, res) => {
   const duplicate = new Set(parsed.data.preferences.map((p) => p.type)).size !== parsed.data.preferences.length;
   if (duplicate) return sendError(res, 400, "BAD_REQUEST", "كل نوع إشعار مرة واحدة بس");
   res.json(await setPreferences(req.user!.id, parsed.data.preferences));
+});
+
+// The phone's FCM token, so it can receive push notifications. Called after sign-in and whenever Firebase rotates the token.
+const deviceSchema = z.object({ token: z.string().min(20).max(4096), platform: z.enum(["android", "ios", "web"]).default("android") });
+
+notificationRouter.post("/devices", async (req, res) => {
+  const parsed = deviceSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await registerDevice(req.user!.id, parsed.data.token, parsed.data.platform);
+  res.status(201).json({ registered: true });
+});
+
+// Sign-out: stop pushing this account's notifications to this phone.
+notificationRouter.delete("/devices", async (req, res) => {
+  const parsed = z.object({ token: z.string().min(20).max(4096) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json({ removed: await unregisterDevice(req.user!.id, parsed.data.token) });
 });
 
 notificationRouter.post("/read-all", async (req, res) => {

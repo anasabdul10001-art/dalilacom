@@ -136,4 +136,21 @@
     <string name="picker_specialty">التخصص</string>
     <string name="picker_choose">اختر...</string>
     <string name="lang_title">اللغة</string>
+
+    <string name="push_channel_name">إشعارات دليلكم</string>
+    <string name="push_channel_description">الطلبات والحسوم وانتهاء العضوية</string>
+    <string name="profile_notifications">🔔 الإشعارات</string>
+    <string name="notifications_title">الإشعارات</string>
+    <string name="notifications_mark_all">اعتبرها كلها مقروءة</string>
+    <string name="notifications_failed">تعذّر تحميل الإشعارات، جرّب بعد شوي</string>
+    <string name="notifications_empty">ما في إشعارات بعد</string>
+    <string name="notifications_settings">إعدادات الإشعارات</string>
+    <string name="notifications_settings_hint">الكامل: بالتطبيق وعلى الموبايل وبالبريد · داخل التطبيق فقط · مطفأ. اضغط على الزر لتغيير الوضع.</string>
+    <string name="notif_type_order_placed">تأكيد الطلب</string>
+    <string name="notif_type_order_status">تغيّر حالة الطلب</string>
+    <string name="notif_type_discount">حسم جديد</string>
+    <string name="notif_type_membership">قرب انتهاء العضوية</string>
+    <string name="notif_mode_full">كامل</string>
+    <string name="notif_mode_in_app">داخل التطبيق</string>
+    <string name="notif_mode_off">مطفأ</string>
 </resources>

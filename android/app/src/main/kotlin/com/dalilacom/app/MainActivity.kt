@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.i18n.AppLanguages
 import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.ui.i18n.LocalizedContext
@@ -31,7 +30,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         deepLink.value = metaReturnIntent(intent)
-        val container = AppContainer(applicationContext)
+        val container = (application as DalilacomApp).container
         // Read the saved language before the first frame so the app never flashes in the wrong one.
         val initialLanguage = runBlocking { container.sessionStore.getLanguage() }
 

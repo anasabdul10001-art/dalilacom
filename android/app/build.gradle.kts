@@ -4,6 +4,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// Firebase needs android/app/google-services.json (Firebase console -> Project settings -> Your apps).
+// It is optional: without it the app builds and runs normally, just without push notifications.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.dalilacom.app"
     compileSdk = 34
@@ -69,6 +75,10 @@ dependencies {
 
     // profile photos
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // push notifications
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+    implementation("com.google.firebase:firebase-messaging")
 
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
