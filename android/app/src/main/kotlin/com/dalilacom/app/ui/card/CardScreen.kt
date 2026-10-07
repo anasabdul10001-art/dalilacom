@@ -24,6 +24,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import com.dalilacom.app.ui.pricing.PlanCard
+import com.dalilacom.app.ui.pricing.ServiceWelcome
+import com.dalilacom.app.ui.pricing.planPriceText
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -38,7 +44,7 @@ import com.dalilacom.app.ui.theme.DeepRed
 import com.dalilacom.app.ui.theme.PrimaryRed
 
 @Composable
-fun CardScreen(factory: ViewModelFactory) {
+fun CardScreen(factory: ViewModelFactory, onRenew: () -> Unit = {}) {
     val viewModel: CardViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -48,13 +54,15 @@ fun CardScreen(factory: ViewModelFactory) {
                 CircularProgressIndicator()
             }
             state.memberNumber == null -> NoMembershipContent(state, onSubscribe = viewModel::subscribe)
-            else -> MembershipCardContent(state)
+            else -> MembershipCardContent(state, onRenew)
         }
     }
 }
 
 @Composable
 private fun NoMembershipContent(state: CardUiState, onSubscribe: (String) -> Unit) {
+    val catalog = state.catalog
+    val plans = catalog?.services?.firstOrNull { it.service == "MEMBERSHIP" }?.plans.orEmpty()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -62,23 +70,31 @@ private fun NoMembershipContent(state: CardUiState, onSubscribe: (String) -> Uni
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(AppStrings.get(R.string.s_e7e5f1a0), style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(8.dp))
-        Text(AppStrings.get(R.string.s_305fe0fc), style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
 
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(state.availablePlans) { plan ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(plan.name, style = MaterialTheme.typography.titleMedium)
-                        Text(AppStrings.get(R.string.fmt_plan_line, plan.durationDays, plan.priceCents / 100.0, plan.currency))
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { onSubscribe(plan.id) }) { Text(AppStrings.get(R.string.s_8bf6ddd2)) }
-                    }
+        if (catalog == null || plans.isEmpty()) {
+            Text(AppStrings.get(R.string.pricing_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            // The welcome speaks about the plan with a free period when there is one, otherwise the first plan.
+            val lead = plans.firstOrNull { it.trialDays > 0 } ?: plans.first()
+            LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                item {
+                    ServiceWelcome(
+                        title = AppStrings.get(R.string.intro_card_title),
+                        body = AppStrings.get(R.string.intro_card_body),
+                        trialDays = lead.trialDays,
+                        price = planPriceText(lead, catalog.creditName),
+                        periodDays = lead.durationDays,
+                    )
+                }
+                items(plans, key = { it.id }) { plan ->
+                    PlanCard(
+                        plan = plan,
+                        creditName = catalog.creditName,
+                        actionLabel = if (plan.source == "catalog" && plan.priceCredits != null) AppStrings.get(if (plan.trialDays > 0) R.string.intro_continue else R.string.pricing_subscribe) else null,
+                        busy = false,
+                        onAction = { onSubscribe(plan.id) },
+                    )
                 }
             }
         }
@@ -91,7 +107,7 @@ private fun NoMembershipContent(state: CardUiState, onSubscribe: (String) -> Uni
 }
 
 @Composable
-private fun MembershipCardContent(state: CardUiState) {
+private fun MembershipCardContent(state: CardUiState, onRenew: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -101,6 +117,30 @@ private fun MembershipCardContent(state: CardUiState) {
     ) {
         Text(AppStrings.get(R.string.s_3f8e51fe), style = MaterialTheme.typography.headlineSmall, color = PrimaryRed)
         Spacer(Modifier.height(16.dp))
+
+        // The free period, the last days of a paid one, or an ended card: say so and offer to renew from the plans.
+        val daysLeft = remember(state.validUntil) {
+            runCatching { ChronoUnit.DAYS.between(Instant.now(), Instant.parse(state.validUntil)).toInt() + 1 }.getOrNull()
+        }
+        val expired = state.membershipStatus == "EXPIRED"
+        val notice = when {
+            expired -> AppStrings.get(R.string.card_expired)
+            daysLeft != null && state.isTrial -> AppStrings.get(R.string.card_trial_left, maxOf(daysLeft, 0))
+            daysLeft != null && daysLeft <= 7 -> AppStrings.get(R.string.card_ends_soon, maxOf(daysLeft, 0))
+            else -> null
+        }
+        if (notice != null) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(notice, style = MaterialTheme.typography.titleMedium)
+                    if (expired || (daysLeft != null && daysLeft <= 7)) {
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = onRenew) { Text(AppStrings.get(R.string.card_renew)) }
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
 
         Card(
             shape = RoundedCornerShape(20.dp),

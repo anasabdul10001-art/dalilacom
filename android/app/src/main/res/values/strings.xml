@@ -171,6 +171,21 @@
     <string name="pricing_subscribe">اشترك</string>
     <string name="pricing_empty">ما في باقات متاحة حاليًا</string>
     <string name="pricing_subscribed">تم الاشتراك ✅</string>
+    <string name="intro_card_title">أهلًا بك في بطاقة دليلكم 👋</string>
+    <string name="intro_card_body">بطاقة رقمية تعطيك حسومات عند المتاجر المشاركة، بس تعرض رمزك على التاجر.</string>
+    <string name="intro_trial">جرّب الخدمة مجانًا لمدة %1$d يوم. بعدها %2$s كل %3$d يوم.</string>
+    <string name="intro_no_trial">الاشتراك %1$s كل %2$d يوم.</string>
+    <string name="intro_after_continue">بتبدأ تستخدم الخدمة مجانًا، ولما تنتهي المدة بتجدّد من الخطط المتاحة.</string>
+    <string name="intro_continue">متابعة</string>
+    <string name="intro_responder_title">أهلًا بك في المجيب الآلي 👋</string>
+    <string name="intro_responder_body">رد ذكي على رسائل زبائنك على قنواتك، حتى وأنت مشغول.</string>
+    <string name="card_trial_left">فترتك المجانية تنتهي بعد %1$d يوم</string>
+    <string name="card_ends_soon">بطاقتك تنتهي بعد %1$d يوم</string>
+    <string name="card_expired">انتهت صلاحية بطاقتك</string>
+    <string name="card_renew">جدّد من الخطط المتاحة</string>
+    <string name="pricing_renew_title">تجديد العضوية</string>
+    <string name="pricing_renew_sub">اختر الخطة اللي بدك تجدّد فيها — بتكمّل بنفس بطاقتك.</string>
+    <string name="pricing_renew">جدّد</string>
 
     <!-- texts with numbers / names inside; positional arguments keep the word order right in every language -->
     <string name="fmt_plan_line">%1$d يوم — %2$s %3$s</string>

@@ -48,6 +48,7 @@ import com.dalilacom.app.data.network.InboxItemDto
 import com.dalilacom.app.data.network.MetaPageDto
 import com.dalilacom.app.data.network.ResponderStatusDto
 import com.dalilacom.app.ui.ViewModelFactory
+import com.dalilacom.app.ui.pricing.ServiceWelcome
 
 private val TAB_TITLES get() = listOf(AppStrings.get(R.string.s_90a91c96), AppStrings.get(R.string.s_53655660), AppStrings.get(R.string.s_b642dd5a), AppStrings.get(R.string.s_a3e7dfc4))
 
@@ -149,6 +150,18 @@ private fun OverviewTab(
         Text(AppStrings.get(R.string.s_8c818f60))
         return
     }
+    // First visit: the service's own welcome — the free period and the price after it — before the status.
+    val firstVisit = !status.running && status.status != "EXPIRED"
+    if (firstVisit) {
+        ServiceWelcome(
+            title = AppStrings.get(R.string.intro_responder_title),
+            body = AppStrings.get(R.string.intro_responder_body),
+            trialDays = if (status.trialAvailable) status.trialDays else 0,
+            price = "${status.price} ${status.creditName}",
+            periodDays = status.periodDays,
+        )
+        Spacer(Modifier.height(12.dp))
+    }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(AppStrings.get(R.string.fmt_status, statusLabel(status.status)), style = MaterialTheme.typography.titleMedium)
@@ -159,7 +172,7 @@ private fun OverviewTab(
             if (status.aiReplyLimit > 0) Text(AppStrings.get(R.string.fmt_ai_replies, status.aiRepliesUsed, status.aiReplyLimit))
             Spacer(Modifier.height(12.dp))
             val label = when {
-                !status.running && status.status != "EXPIRED" && status.trialAvailable -> AppStrings.get(R.string.fmt_start_trial, status.trialDays)
+                !status.running && status.status != "EXPIRED" && status.trialAvailable -> AppStrings.get(R.string.intro_continue)
                 !status.running && status.status != "EXPIRED" -> AppStrings.get(R.string.fmt_subscribe_price, status.price, status.creditName)
                 else -> AppStrings.get(R.string.fmt_renew_price, status.price, status.creditName)
             }

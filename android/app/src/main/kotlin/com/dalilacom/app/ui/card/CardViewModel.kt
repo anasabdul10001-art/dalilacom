@@ -4,7 +4,7 @@ import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dalilacom.app.data.network.MembershipPlanDto
+import com.dalilacom.app.data.network.CatalogDto
 import com.dalilacom.app.data.repository.MembershipRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,7 +20,9 @@ data class CardUiState(
     val validUntil: String? = null,
     val code: String? = null,
     val secondsRemaining: Int = 0,
-    val availablePlans: List<MembershipPlanDto> = emptyList(),
+    val isTrial: Boolean = false,
+    /** Prices for the welcome shown before the first subscription (the card's own plans only are used). */
+    val catalog: CatalogDto? = null,
     val error: String? = null,
 )
 
@@ -39,8 +41,7 @@ class CardViewModel(private val repository: MembershipRepository) : ViewModel() 
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             val membership = repository.getMyMembership()
             if (membership == null) {
-                val plans = repository.getPlans().getOrDefault(emptyList())
-                _uiState.value = CardUiState(isLoading = false, availablePlans = plans)
+                _uiState.value = CardUiState(isLoading = false, catalog = repository.getCatalog())
                 return@launch
             }
             _uiState.value = _uiState.value.copy(
@@ -48,6 +49,7 @@ class CardViewModel(private val repository: MembershipRepository) : ViewModel() 
                 memberNumber = membership.memberNumber,
                 membershipStatus = membership.status,
                 validUntil = membership.endDate,
+                isTrial = membership.isTrial,
             )
             startCodeLoop()
         }

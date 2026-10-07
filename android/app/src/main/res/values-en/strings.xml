@@ -167,6 +167,21 @@
     <string name="pricing_subscribe">Subscribe</string>
     <string name="pricing_empty">No plans available right now</string>
     <string name="pricing_subscribed">Subscribed ✅</string>
+    <string name="intro_card_title">Welcome to the Dalilacom card 👋</string>
+    <string name="intro_card_body">A digital card that gives you discounts at participating shops — just show your code to the merchant.</string>
+    <string name="intro_trial">Try the service free for %1$d days. After that %2$s every %3$d days.</string>
+    <string name="intro_no_trial">Subscription: %1$s every %2$d days.</string>
+    <string name="intro_after_continue">You start using the service for free, and when the period ends you renew from the available plans.</string>
+    <string name="intro_continue">Continue</string>
+    <string name="intro_responder_title">Welcome to the auto-responder 👋</string>
+    <string name="intro_responder_body">Smart replies to messages from your customers on your channels, even when you are busy.</string>
+    <string name="card_trial_left">Your free period ends in %1$d days</string>
+    <string name="card_ends_soon">Your card ends in %1$d days</string>
+    <string name="card_expired">Your card has expired</string>
+    <string name="card_renew">Renew from the available plans</string>
+    <string name="pricing_renew_title">Renew membership</string>
+    <string name="pricing_renew_sub">Pick the plan to renew with — you keep the same card.</string>
+    <string name="pricing_renew">Renew</string>
 
     <!-- texts with numbers / names inside; positional arguments keep the word order right in every language -->
     <string name="fmt_plan_line">%1$d days — %2$s %3$s</string>

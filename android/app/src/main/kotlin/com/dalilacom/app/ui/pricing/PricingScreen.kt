@@ -39,7 +39,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.R
 import com.dalilacom.app.data.network.CatalogDto
-import com.dalilacom.app.data.network.CatalogPlanDto
 import com.dalilacom.app.data.repository.MembershipRepository
 import com.dalilacom.app.ui.ViewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,14 +77,7 @@ class PricingViewModel(private val memberships: MembershipRepository) : ViewMode
     fun messageShown() = _uiState.update { it.copy(message = null) }
 }
 
-private fun serviceTitle(service: String): Int = when (service) {
-    "MEMBERSHIP" -> R.string.service_membership
-    "MERCHANT_ACCOUNT" -> R.string.service_merchant
-    "RESPONDER_CUSTOMER" -> R.string.service_responder_customer
-    else -> R.string.service_responder_merchant
-}
-
-/** Every service and plan with the price for the customer's country, and a subscribe button on memberships. */
+/** The membership renewal page: only the card's plans (every service shows its own prices inside the service itself). */
 @Composable
 fun PricingScreen(factory: ViewModelFactory, isSignedIn: suspend () -> Boolean, onLogin: () -> Unit, onBack: () -> Unit) {
     val viewModel: PricingViewModel = viewModel(factory = factory)
@@ -101,72 +93,31 @@ fun PricingScreen(factory: ViewModelFactory, isSignedIn: suspend () -> Boolean, 
             viewModel.messageShown()
         }
     }
+    LaunchedEffect(state.subscribed) { if (state.subscribed) onBack() }
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
-            Text(stringResource(R.string.pricing_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.pricing_renew_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         }
         val catalog = state.catalog
+        val plans = catalog?.services?.firstOrNull { it.service == "MEMBERSHIP" }?.plans.orEmpty()
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            catalog == null || catalog.services.isEmpty() -> Text(stringResource(R.string.pricing_empty), modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            catalog == null || plans.isEmpty() -> Text(stringResource(R.string.pricing_empty), modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                item { Text(stringResource(R.string.pricing_sub), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                catalog.services.forEach { group ->
-                    item { Text(stringResource(serviceTitle(group.service)), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp)) }
-                    group.plans.forEach { plan ->
-                        item(key = plan.id) {
-                            PlanCard(
-                                plan = plan,
-                                creditName = catalog.creditName,
-                                canSubscribe = group.service == "MEMBERSHIP" && plan.source == "catalog" && plan.priceCredits != null,
-                                busy = state.subscribingPlanId == plan.id,
-                                onSubscribe = { if (signedIn) viewModel.subscribe(plan.id, subscribedText) else onLogin() },
-                            )
-                        }
+                item { Text(stringResource(R.string.pricing_renew_sub), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                plans.forEach { plan ->
+                    item(key = plan.id) {
+                        PlanCard(
+                            plan = plan,
+                            creditName = catalog.creditName,
+                            actionLabel = if (plan.source == "catalog" && plan.priceCredits != null) stringResource(R.string.pricing_renew) else null,
+                            busy = state.subscribingPlanId == plan.id,
+                            onAction = { if (signedIn) viewModel.subscribe(plan.id, subscribedText) else onLogin() },
+                        )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlanCard(plan: CatalogPlanDto, creditName: String, canSubscribe: Boolean, busy: Boolean, onSubscribe: () -> Unit) {
-    val price = when (plan.priceCredits) {
-        null -> stringResource(R.string.pricing_not_priced)
-        0 -> stringResource(R.string.pricing_free)
-        else -> stringResource(R.string.pricing_credits, plan.priceCredits, creditName)
-    }
-    val facts = buildList {
-        add(stringResource(R.string.pricing_days, plan.durationDays))
-        if (plan.trialDays > 0) add(stringResource(R.string.pricing_trial, plan.trialDays))
-        if (plan.priceFrom == "country") add(stringResource(R.string.pricing_your_country))
-        plan.monthlyBroadcastLimit?.takeIf { it > 0 }?.let { add(stringResource(R.string.pricing_broadcasts, it)) }
-    }
-    Surface(shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(plan.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Text(price, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-            }
-            plan.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            Text(facts.joinToString(" • "), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
-            if (plan.features.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                plan.features.forEach { feature ->
-                    Text(
-                        (if (feature.included) "✔ " else "✘ ") + feature.text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (feature.included) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                        textDecoration = if (feature.included) null else TextDecoration.LineThrough,
-                    )
-                }
-            }
-            if (canSubscribe) {
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = onSubscribe, enabled = !busy, shape = RoundedCornerShape(12.dp)) { Text(stringResource(R.string.pricing_subscribe)) }
             }
         }
     }

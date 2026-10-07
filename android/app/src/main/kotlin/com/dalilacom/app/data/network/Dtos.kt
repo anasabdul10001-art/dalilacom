@@ -55,6 +55,7 @@ data class MembershipDto(
     val status: String,
     val startDate: String,
     val endDate: String,
+    val isTrial: Boolean = false,
 )
 
 @Serializable
