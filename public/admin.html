@@ -96,6 +96,7 @@
     <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
     <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 الباقات والأسعار</div>
     <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
+    <div class="nav-item" data-section="broadcasts" onclick="showSection('broadcasts')">📣 الإعلانات <span id="bc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
     <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
@@ -225,6 +226,54 @@
       <div class="card">
         <h3>الاشتراكات</h3>
         <table><thead><tr><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>ينتهي</th></tr></thead><tbody id="subs-body"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ANNOUNCEMENTS (broadcast by place) -->
+    <div class="section" id="section-broadcasts" style="display:none">
+      <h2>الإعلانات</h2>
+      <p class="subtitle">أرسل إشعارًا لكل من في بلد أو منطقة أو مدينة أو حي، وراجع إعلانات التجار قبل نشرها.</p>
+
+      <div class="card">
+        <h3>إعلانات التجار بانتظار المراجعة</h3>
+        <p class="muted">لا يصل أي إعلان من تاجر لأحد قبل موافقتك. الفحص الآلي توصية فقط — القرار لك.</p>
+        <table style="margin-top:12px">
+          <thead><tr><th>المتجر</th><th>الإعلان</th><th>الفحص الآلي</th><th>الجمهور</th><th></th></tr></thead>
+          <tbody id="bc-pending-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>إرسال إعلان جديد</h3>
+        <label>البلد</label>
+        <select id="bc-country" onchange="bcPickCountry()"><option value="">— اختر بلدًا —</option></select>
+        <label>المنطقة (اختياري)</label>
+        <select id="bc-region" onchange="bcPickRegion()" disabled><option value="">— كل البلد —</option></select>
+        <label>المدينة (اختياري)</label>
+        <select id="bc-city" onchange="bcPickCity()" disabled><option value="">— كل المنطقة —</option></select>
+        <label>الحي (اختياري)</label>
+        <select id="bc-area" onchange="bcPreview()" disabled><option value="">— كل المدينة —</option></select>
+        <label>لمن؟</label>
+        <select id="bc-role" onchange="bcPreview()">
+          <option value="">الجميع</option>
+          <option value="CUSTOMER">الزبائن فقط</option>
+          <option value="MERCHANT">التجار فقط</option>
+        </select>
+        <p id="bc-count" class="muted" style="margin:10px 0"></p>
+        <label>العنوان</label>
+        <input id="bc-title" maxlength="100" />
+        <label>النص</label>
+        <textarea id="bc-body" maxlength="500" rows="3"></textarea>
+        <button style="margin-top:12px" onclick="bcSend()">📣 أرسل الآن</button>
+        <span id="bc-msg" class="muted" style="margin-right:10px"></span>
+      </div>
+
+      <div class="card">
+        <h3>السجل</h3>
+        <table>
+          <thead><tr><th>التاريخ</th><th>المرسل</th><th>العنوان</th><th>الحالة</th><th>وصل لـ</th></tr></thead>
+          <tbody id="bc-history-body"></tbody>
+        </table>
       </div>
     </div>
 
@@ -376,6 +425,7 @@ function enterApp() {
   loadPlans();
   loadResponderAdmin();
   loadPushStatus();
+  loadBroadcasts();
   loadAiStatus();
   loadTopups('PENDING');
 }
@@ -384,6 +434,124 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- Announcements ----
+const BC_STATUS = { PENDING_REVIEW: ['PENDING', 'بانتظار المراجعة'], SENT: ['APPROVED', 'أُرسل'], REJECTED: ['REJECTED', 'مرفوض'] };
+const AI_VERDICT = { OK: 'سليم', REVIEW: 'يحتاج انتباهك', BLOCK: 'مخالف' };
+
+async function loadBroadcasts() {
+  const [pending, all, countries] = await Promise.all([
+    api('GET', '/broadcasts?status=PENDING_REVIEW'),
+    api('GET', '/broadcasts'),
+    api('GET', '/geo/countries'),
+  ]);
+  if (!pending.ok) return;
+  const count = document.getElementById('bc-pending-count');
+  count.textContent = pending.data.length;
+  count.style.display = pending.data.length ? 'inline-block' : 'none';
+
+  document.getElementById('bc-pending-body').innerHTML = pending.data.length ? pending.data.map(b => {
+    const shop = (b.sender && b.sender.merchantProfile && b.sender.merchantProfile.businessName) || (b.sender && b.sender.email) || '—';
+    const reasons = Array.isArray(b.aiReasons) && b.aiReasons.length ? '<br><small class="muted">' + b.aiReasons.map(esc).join(' — ') + '</small>' : '';
+    const verdict = b.aiVerdict ? `<span class="badge ${b.aiVerdict === 'OK' ? 'APPROVED' : 'PENDING'}">${AI_VERDICT[b.aiVerdict]}</span>${reasons}` : '<span class="muted">لم يُفحص آليًا</span>';
+    const where = b.scope === 'RADIUS' ? `ضمن ${esc(b.radiusKm)} كم` : 'منطقة محدّدة';
+    return `<tr>
+      <td>${esc(shop)}</td>
+      <td><b>${esc(b.title)}</b><br>${esc(b.body)}${b.productId ? '<br><small class="muted">🛍️ مرفق منتج</small>' : ''}${b.discountId ? '<br><small class="muted">🏷️ مرفق عرض</small>' : ''}</td>
+      <td>${verdict}</td>
+      <td>${where} — نحو ${esc(b.targeted)}</td>
+      <td style="white-space:nowrap"><button class="small" onclick="bcApprove('${esc(b.id)}')">✓ نشر</button> <button class="small" style="background:#777" onclick="bcReject('${esc(b.id)}')">✕ رفض</button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" class="muted">لا شيء بانتظار المراجعة</td></tr>';
+
+  if (all.ok) {
+    document.getElementById('bc-history-body').innerHTML = all.data.length ? all.data.map(b => {
+      const st = BC_STATUS[b.status] || ['inactive', b.status];
+      const sender = (b.sender && b.sender.merchantProfile && b.sender.merchantProfile.businessName) || (b.senderRole === 'ADMIN' ? 'الإدارة' : '—');
+      return `<tr><td>${new Date(b.createdAt).toLocaleString()}</td><td>${esc(sender)}</td><td>${esc(b.title)}</td><td><span class="badge ${st[0]}">${st[1]}</span>${b.reviewNote ? '<br><small class="muted">' + esc(b.reviewNote) + '</small>' : ''}</td><td>${b.status === 'SENT' ? esc(b.delivered) + ' / ' + esc(b.targeted) : '—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="5" class="muted">لا إعلانات بعد</td></tr>';
+  }
+
+  const select = document.getElementById('bc-country');
+  if (countries.ok && select.options.length <= 1) {
+    countries.data.forEach(c => select.add(new Option(c.nameArabic || c.name, c.id)));
+  }
+}
+
+async function bcFill(selectId, params, placeholder) {
+  const select = document.getElementById(selectId);
+  select.length = 1;
+  select.options[0].text = placeholder;
+  select.disabled = true;
+  if (!params) return;
+  const { ok, data } = await api('GET', '/geo/units?' + new URLSearchParams(params));
+  if (ok && data.length) { data.forEach(u => select.add(new Option(u.nameArabic || u.name, u.id))); select.disabled = false; }
+}
+
+async function bcPickCountry() {
+  const id = document.getElementById('bc-country').value;
+  await bcFill('bc-region', id && { countryId: id, level: 'REGION' }, '— كل البلد —');
+  await bcFill('bc-city', null, '— كل المنطقة —');
+  await bcFill('bc-area', null, '— كل المدينة —');
+  bcPreview();
+}
+async function bcPickRegion() {
+  const id = document.getElementById('bc-region').value;
+  await bcFill('bc-city', id && { parentId: id }, '— كل المنطقة —');
+  await bcFill('bc-area', null, '— كل المدينة —');
+  bcPreview();
+}
+async function bcPickCity() {
+  const id = document.getElementById('bc-city').value;
+  await bcFill('bc-area', id && { parentId: id }, '— كل المدينة —');
+  bcPreview();
+}
+
+/** The most specific thing chosen: an area, else a city, else a region, else the whole country. */
+function bcTarget() {
+  const v = (id) => document.getElementById(id).value;
+  const country = v('bc-country');
+  if (!country) return null;
+  const unit = v('bc-area') || v('bc-city') || v('bc-region');
+  const target = unit ? { geoUnitId: unit } : { countryId: country };
+  if (v('bc-role')) target.role = v('bc-role');
+  return target;
+}
+
+async function bcPreview() {
+  const out = document.getElementById('bc-count');
+  const target = bcTarget();
+  if (!target) { out.textContent = ''; return; }
+  const { ok, data } = await api('POST', '/broadcasts/preview', target);
+  out.textContent = ok ? `سيصل إلى نحو ${data.count} شخص (الحد الأقصى ${data.cap}).` : errText(data, 'تعذّر الحساب');
+}
+
+async function bcSend() {
+  const msg = document.getElementById('bc-msg');
+  const target = bcTarget();
+  const title = document.getElementById('bc-title').value.trim();
+  const body = document.getElementById('bc-body').value.trim();
+  if (!target) { msg.textContent = 'اختر البلد أولًا'; return; }
+  if (!title || !body) { msg.textContent = 'اكتب العنوان والنص'; return; }
+  if (!confirm('سيصل هذا الإشعار فورًا للجمهور المحدّد. متابعة؟')) return;
+  const { ok, data } = await api('POST', '/broadcasts', { ...target, title, body });
+  msg.textContent = ok ? `أُرسل: وصل إلى ${data.delivered} من ${data.targeted}` : errText(data, 'تعذّر الإرسال');
+  if (ok) { document.getElementById('bc-title').value = ''; document.getElementById('bc-body').value = ''; loadBroadcasts(); }
+}
+
+async function bcApprove(id) {
+  if (!confirm('نشر هذا الإعلان الآن لجمهوره؟')) return;
+  const { ok, data } = await api('POST', '/broadcasts/' + id + '/approve');
+  if (!ok) alert(errText(data, 'تعذّر النشر'));
+  loadBroadcasts();
+}
+async function bcReject(id) {
+  const reason = prompt('سبب الرفض (سيقرأه التاجر):');
+  if (!reason || reason.trim().length < 3) return;
+  const { ok, data } = await api('POST', '/broadcasts/' + id + '/reject', { reason: reason.trim() });
+  if (!ok) alert(errText(data, 'تعذّر الرفض'));
+  loadBroadcasts();
 }
 
 // ---- Push notifications status ----
