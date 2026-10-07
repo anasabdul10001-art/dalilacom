@@ -418,21 +418,23 @@ function tabCard() {
   const c = S._card;
   if (c.loading) return spinner();
   if (!c.memberNumber) {
+    const group = ((c.catalog && c.catalog.services) || []).find((g) => g.service === "MEMBERSHIP");
     return `
       <h1 class="screen-title">بطاقتي</h1>
-      <p class="screen-sub">ما عندك عضوية بعد — اشترك بخطة عشان تفعّل بطاقتك الرقمية</p>
-      ${(c.plans || []).map((p) => `
-        <div class="card">
-          <div class="title-line"><strong>${esc(p.name)}</strong><span class="price">${fmt(p.priceCents)}</span></div>
-          <p class="muted">${p.durationDays} يوم</p>
-          <button class="link-btn" style="padding:0" onclick="S._pricing=null;go('pricing')">${esc(t("pricing.link"))}</button>
-          <button class="btn small" onclick="subscribePlan('${p.id}')">اشترك</button>
-        </div>`).join("") || `<div class="empty-state">لا يوجد خطط متاحة حاليًا</div>`}
+      ${serviceIntroHtml(group ? group.plans : [], c.catalog ? c.catalog.creditName : "", "card", "subscribePlan")}
       ${errorBanner()}
     `;
   }
+  const left = c.endDate ? Math.ceil((new Date(c.endDate).getTime() - Date.now()) / 86400000) : null;
+  const renewBtn = `<button class="btn small" onclick="openRenew()">${esc(t("card.renew"))}</button>`;
+  const statusCard = c.status === "EXPIRED"
+    ? `<div class="card"><strong>${esc(t("card.expired"))}</strong><div style="height:8px"></div>${renewBtn}</div>`
+    : left !== null && (c.isTrial || left <= 7)
+      ? `<div class="card"><strong>${esc(t(c.isTrial ? "card.trialLeft" : "card.endsSoon", { n: Math.max(left, 0) }))}</strong>${left <= 7 ? `<div style="height:8px"></div>${renewBtn}` : ""}</div>`
+      : "";
   return `
     <h1 class="screen-title">بطاقتي</h1>
+    ${statusCard}
     <div class="member-card">
       <div class="label">DALILACOM MEMBER</div>
       <div class="label" style="margin-top:10px">Member ID</div>
@@ -453,17 +455,18 @@ async function loadCardIfNeeded() {
   S._card = { loading: true };
   const me = await api("GET", "/membership/me");
   if (!me.ok) {
-    const plans = await api("GET", "/membership/plans");
-    S._card = { loading: false, plans: plans.ok ? plans.data : [] };
+    const catalog = await api("GET", "/plans/catalog");
+    S._card = { loading: false, catalog: catalog.ok ? catalog.data : null };
     render();
     return;
   }
-  S._card = { loading: false, memberNumber: me.data.memberNumber, validUntil: me.data.endDate };
+  S._card = { loading: false, memberNumber: me.data.memberNumber, validUntil: me.data.endDate, endDate: me.data.endDate, status: me.data.status, isTrial: !!me.data.isTrial };
   render();
   startQrLoop();
 }
 
 async function subscribePlan(planId) {
+  if (!S.token) return go("login");
   S.busy = true; render();
   const { ok, data } = await api("POST", "/membership/subscribe", { planId });
   S.busy = false;
@@ -940,7 +943,6 @@ function guestPrompt(tab) {
       <button class="btn" onclick="go('login')">${esc(t("guest.login"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" onclick="go('register')">${esc(t("guest.register"))}</button>
-      ${tab === "card" || tab === "profile" ? `<div style="height:10px"></div><button class="link-btn" onclick="S._pricing=null;go('pricing')">${esc(t("pricing.link"))}</button>` : ""}
     </div>`;
 }
 
@@ -1063,8 +1065,6 @@ function tabProfile() {
       ${S.role === "MERCHANT"
         ? `<button class="btn" style="max-width:240px" onclick="go('merchantMode')">${esc(t("profile.merchantMode"))}</button>`
         : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`}
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="S._pricing=null;go('pricing')">${esc(t("pricing.link"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('favorites')">${esc(t("profile.favorites"))}</button>
       <div style="height:10px"></div>
@@ -1962,32 +1962,62 @@ function setLang(code) {
 
 /* ================= PRICING PAGE ================= */
 
+/** What a plan costs, in the wallet's own unit. */
+function planPriceText(plan, credit) {
+  return plan.priceCredits === null ? t("pricing.notPriced") : plan.priceCredits === 0 ? t("pricing.free") : t("pricing.credits", { n: plan.priceCredits, credit });
+}
+
+function planCardHtml(plan, credit, action) {
+  return `<div class="card plan-card">
+    <div class="title-line"><strong>${esc(plan.name)}</strong><span class="price">${esc(planPriceText(plan, credit))}</span></div>
+    ${plan.description ? `<p class="muted" style="margin:2px 0 6px">${esc(plan.description)}</p>` : ""}
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">
+      <span class="badge neutral">${esc(t("pricing.days", { n: plan.durationDays }))}</span>
+      ${plan.trialDays > 0 ? `<span class="badge success">${esc(t("pricing.trial", { n: plan.trialDays }))}</span>` : ""}
+      ${plan.priceFrom === "country" ? `<span class="badge info">${esc(t("pricing.yourCountry"))}</span>` : ""}
+      ${plan.monthlyBroadcastLimit ? `<span class="badge neutral">${esc(t("pricing.broadcasts", { n: plan.monthlyBroadcastLimit }))}</span>` : ""}
+    </div>
+    ${plan.features.length ? `<ul class="plan-features">${plan.features.map((f) => `<li class="${f.included ? "" : "off"}">${f.included ? "\u2714" : "\u2718"} ${esc(f.text)}</li>`).join("")}</ul>` : ""}
+    ${action ? `<button class="btn small" ${S.busy ? "disabled" : ""} onclick="${action.fn}('${plan.id}')">${esc(action.label)}</button>` : ""}
+  </div>`;
+}
+
+/**
+ * A service's own welcome: what it is, the free period and the price after it, then the plans. "Continue" starts the
+ * free period (the server grants it once per account); when it ends the person renews from the same plans.
+ */
+function serviceIntroHtml(plans, credit, kind, fn) {
+  if (!plans.length) return `<div class="empty-state">${esc(t("pricing.empty"))}</div>`;
+  const lead = plans.find((p) => p.trialDays > 0) || plans[0];
+  const price = planPriceText(lead, credit);
+  const line = lead.trialDays > 0
+    ? t("intro.trial", { n: lead.trialDays, price, days: lead.durationDays })
+    : t("intro.noTrial", { price, days: lead.durationDays });
+  return `
+    <div class="card intro-card">
+      <h2>${esc(t(`intro.${kind}.title`))}</h2>
+      <p>${esc(t(`intro.${kind}.body`))}</p>
+      <p><strong>${esc(line)}</strong></p>
+      ${lead.trialDays > 0 ? `<p class="muted">${esc(t("intro.afterContinue"))}</p>` : ""}
+    </div>
+    ${plans.map((plan) => planCardHtml(plan, credit, plan.priceCredits === null ? null : { fn, label: t(plan.trialDays > 0 ? "intro.continue" : "pricing.subscribe") })).join("")}`;
+}
+
+/** The card's own renewal page: only the membership plans, nothing else. */
+function openRenew() {
+  S._pricing = null;
+  go("pricing");
+}
+
 function screenPricing() {
   if (!S._pricing) { S._pricing = { loading: true }; loadPricing(); }
   const p = S._pricing;
-  const header = `${backRow()}<h1 class="screen-title">${esc(t("pricing.title"))}</h1><p class="screen-sub">${esc(t("pricing.sub"))}</p>`;
+  const header = `${backRow()}<h1 class="screen-title">${esc(t("pricing.renewTitle"))}</h1><p class="screen-sub">${esc(t("pricing.renewSub"))}</p>`;
   if (p.loading) return header + spinner();
-  const services = (p.catalog && p.catalog.services) || [];
-  if (!services.length) return header + `<div class="empty-state">${esc(t("pricing.empty"))}</div>`;
+  const group = ((p.catalog && p.catalog.services) || []).find((g) => g.service === "MEMBERSHIP");
+  if (!group || !group.plans.length) return header + `<div class="empty-state">${esc(t("pricing.empty"))}</div>`;
   const credit = p.catalog.creditName;
-  return header + services.map((group) => `
-    <div class="section-title">${esc(t("service." + group.service))}</div>
-    ${group.plans.map((plan) => {
-      const price = plan.priceCredits === null ? t("pricing.notPriced") : plan.priceCredits === 0 ? t("pricing.free") : t("pricing.credits", { n: plan.priceCredits, credit });
-      const canBuy = group.service === "MEMBERSHIP" && plan.source === "catalog" && plan.priceCredits !== null;
-      return `<div class="card plan-card">
-        <div class="title-line"><strong>${esc(plan.name)}</strong><span class="price">${esc(price)}</span></div>
-        ${plan.description ? `<p class="muted" style="margin:2px 0 6px">${esc(plan.description)}</p>` : ""}
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">
-          <span class="badge neutral">${esc(t("pricing.days", { n: plan.durationDays }))}</span>
-          ${plan.trialDays > 0 ? `<span class="badge success">${esc(t("pricing.trial", { n: plan.trialDays }))}</span>` : ""}
-          ${plan.priceFrom === "country" ? `<span class="badge info">${esc(t("pricing.yourCountry"))}</span>` : ""}
-          ${plan.monthlyBroadcastLimit ? `<span class="badge neutral">${esc(t("pricing.broadcasts", { n: plan.monthlyBroadcastLimit }))}</span>` : ""}
-        </div>
-        ${plan.features.length ? `<ul class="plan-features">${plan.features.map((f) => `<li class="${f.included ? "" : "off"}">${f.included ? "✔" : "✘"} ${esc(f.text)}</li>`).join("")}</ul>` : ""}
-        ${canBuy ? `<button class="btn small" ${S.busy ? "disabled" : ""} onclick="subscribeFromPricing('${plan.id}')">${esc(t("pricing.subscribe"))}</button>` : ""}
-      </div>`;
-    }).join("")}`).join("") + errorBanner();
+  return header + group.plans.map((plan) => planCardHtml(plan, credit, plan.source === "catalog" && plan.priceCredits !== null ? { fn: "subscribeFromPricing", label: t("pricing.renew") } : null)).join("") + errorBanner();
 }
 
 async function loadPricing() {

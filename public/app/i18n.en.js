@@ -66,6 +66,19 @@ DICT.en = {
   "pricing.days": "{n} days", "pricing.trial": "{n}-day free trial", "pricing.yourCountry": "Your country's price",
   "pricing.broadcasts": "{n} follower broadcasts per month", "pricing.subscribe": "Subscribe", "pricing.empty": "No plans available right now",
   "pricing.subscribed": "Subscribed ✅", "pricing.failed": "Couldn't subscribe",
+  "intro.card.title": "Welcome to the Dalilacom card \ud83d\udc4b",
+  "intro.card.body": "A digital card that gives you discounts at participating shops \u2014 just show your code to the merchant.",
+  "intro.trial": "Try the service free for {n} days. After that {price} every {days} days.",
+  "intro.noTrial": "Subscription: {price} every {days} days.",
+  "intro.afterContinue": "You start using the service for free, and when the period ends you renew from the available plans.",
+  "intro.continue": "Continue",
+  "card.trialLeft": "Your free period ends in {n} days",
+  "card.endsSoon": "Your card ends in {n} days",
+  "card.expired": "Your card has expired",
+  "card.renew": "Renew from the available plans",
+  "pricing.renewTitle": "Renew membership",
+  "pricing.renewSub": "Pick the plan to renew with \u2014 you keep the same card.",
+  "pricing.renew": "Renew",
 };
 
 // English phrase table for the web preview — gettext-style: each key is the Arabic text exactly as it appears on screen.

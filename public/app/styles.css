@@ -851,3 +851,6 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
 /* ---- pricing page ---- */
 .plan-features { list-style: none; margin: 8px 0 10px; padding: 0; font-size: 13.5px; line-height: 1.9; }
 .plan-features li.off { color: var(--text-muted); text-decoration: line-through; opacity: 0.8; }
+
+.intro-card h2 { margin: 0 0 6px; color: var(--primary); font-size: 18px; }
+.intro-card p { margin: 6px 0; }
