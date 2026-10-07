@@ -29,6 +29,14 @@ const settingsSchema = z.object({
     })
     .partial()
     .optional(),
+  broadcasts: z
+    .object({
+      merchantDefaultMonthly: z.number().int().nonnegative().max(100000),
+      maxRadiusKm: z.number().positive().max(20000),
+      merchantMaxAudience: z.number().int().positive().max(1000000),
+    })
+    .partial()
+    .optional(),
   payment: z
     .object({
       usdtTrc20Address: z.string().trim().regex(/^(T[1-9A-HJ-NP-Za-km-z]{33})?$/, "عنوان TRON غير صالح").optional(),
@@ -58,6 +66,21 @@ adminRouter.put("/settings", async (req, res) => {
     return sendError(res, 400, "BAD_REQUEST", "مفاتيح المحافظ لازم تكون فريدة ومو USDT_TRC20");
   }
   res.json(await saveSettings(parsed.data as any));
+});
+
+/* ---------------- a shop's plan decides how many announcements it may send ---------------- */
+
+adminRouter.put("/merchants/:id/plan", async (req, res) => {
+  const parsed = z.object({ planId: z.string().uuid().nullable() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const merchant = await prisma.merchantProfile.findUnique({ where: { id: req.params.id }, select: { id: true } });
+  if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant not found");
+  if (parsed.data.planId) {
+    const plan = await prisma.servicePlan.findUnique({ where: { id: parsed.data.planId }, select: { service: true, isActive: true } });
+    if (!plan || plan.service !== "MERCHANT_ACCOUNT") return sendError(res, 400, "BAD_REQUEST", "Choose one of the merchant plans");
+  }
+  const updated = await prisma.merchantProfile.update({ where: { id: merchant.id }, data: { planId: parsed.data.planId }, select: { id: true, planId: true } });
+  res.json(updated);
 });
 
 /* ---------------- social channels (super admin can add new ones without code) ---------------- */

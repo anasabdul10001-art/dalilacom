@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 
 data class PromoUiState(
     val isLoading: Boolean = true,
+    val followers: Boolean = false,
     val radius: String = "5",
     val title: String = "",
     val body: String = "",
@@ -85,6 +86,7 @@ class PromoViewModel(
     }
 
     fun onRadius(value: String) = _uiState.update { it.copy(radius = value, error = null) }
+    fun onFollowers(on: Boolean) = _uiState.update { it.copy(followers = on, error = null, info = null) }
     fun onTitle(value: String) = _uiState.update { it.copy(title = value, error = null) }
     fun onBody(value: String) = _uiState.update { it.copy(body = value, error = null) }
     fun pickProduct(id: String?) = _uiState.update { it.copy(productId = if (it.productId == id) null else id) }
@@ -92,23 +94,26 @@ class PromoViewModel(
 
     private fun radiusKm(): Double? = _uiState.value.radius.parseDecimal()?.takeIf { it > 0 }
 
+    /** Followers need no distance; around the shop does. */
+    private fun distanceMissing(): Boolean = !_uiState.value.followers && radiusKm() == null
+
     fun preview() {
-        val radius = radiusKm() ?: return _uiState.update { it.copy(error = AppStrings.get(R.string.promo_enter_radius)) }
+        if (distanceMissing()) return _uiState.update { it.copy(error = AppStrings.get(R.string.promo_enter_radius)) }
         viewModelScope.launch {
             _uiState.update { it.copy(busy = true, error = null) }
-            broadcasts.preview(radius)
-                .onSuccess { r -> _uiState.update { it.copy(busy = false, info = AppStrings.get(R.string.fmt_promo_count, r.count, r.remainingToday ?: 0)) } }
+            broadcasts.preview(radiusKm(), _uiState.value.followers)
+                .onSuccess { r -> _uiState.update { it.copy(busy = false, info = AppStrings.get(R.string.fmt_promo_count, r.count, r.remainingThisMonth ?: 0, r.limit ?: 0)) } }
                 .onFailure { e -> _uiState.update { it.copy(busy = false, info = null, error = e.message) } }
         }
     }
 
     fun send() {
         val state = _uiState.value
-        val radius = radiusKm() ?: return _uiState.update { it.copy(error = AppStrings.get(R.string.promo_enter_radius)) }
+        if (distanceMissing()) return _uiState.update { it.copy(error = AppStrings.get(R.string.promo_enter_radius)) }
         if (state.title.isBlank() || state.body.isBlank()) return _uiState.update { it.copy(error = AppStrings.get(R.string.promo_enter_text)) }
         viewModelScope.launch {
             _uiState.update { it.copy(busy = true, error = null) }
-            broadcasts.send(BroadcastRequest(radius, state.title.trim(), state.body.trim(), state.productId, state.discountId))
+            broadcasts.send(BroadcastRequest(state.title.trim(), state.body.trim(), radiusKm = if (state.followers) null else radiusKm(), followers = if (state.followers) true else null, productId = state.productId, discountId = state.discountId))
                 .onSuccess { r ->
                     val rejected = r.status == "REJECTED"
                     _uiState.update {
@@ -140,6 +145,12 @@ fun PromoScreen(factory: ViewModelFactory) {
             Text(AppStrings.get(R.string.promo_sub), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = !state.followers, onClick = { viewModel.onFollowers(false) }, label = { Text(AppStrings.get(R.string.promo_audience_radius)) })
+                FilterChip(selected = state.followers, onClick = { viewModel.onFollowers(true) }, label = { Text(AppStrings.get(R.string.promo_audience_followers)) })
+            }
+        }
+        if (!state.followers) item {
             OutlinedTextField(
                 state.radius, viewModel::onRadius, label = { Text(AppStrings.get(R.string.promo_radius)) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),

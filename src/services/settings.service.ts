@@ -22,6 +22,12 @@ export interface PlatformSettings {
     usdtTrc20Address: string;
     localWallets: LocalWallet[];
   };
+  /** Merchants' announcements (broadcast.service): what a shop may do when no plan says otherwise. */
+  broadcasts: {
+    merchantDefaultMonthly: number;
+    maxRadiusKm: number;
+    merchantMaxAudience: number;
+  };
 }
 
 export const DEFAULT_SETTINGS: PlatformSettings = {
@@ -29,6 +35,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   creditsPerUsd: 100,
   responder: { priceCustomer: 500, priceMerchant: 1000, periodDays: 30, trialDays: 7, monthlyAiReplyLimit: 500 },
   payment: { usdtTrc20Address: "", localWallets: [] },
+  broadcasts: { merchantDefaultMonthly: 10, maxRadiusKm: 50, merchantMaxAudience: 2000 },
 };
 
 export async function getSettings(): Promise<PlatformSettings> {
@@ -39,6 +46,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     creditsPerUsd: stored.creditsPerUsd ?? DEFAULT_SETTINGS.creditsPerUsd,
     responder: { ...DEFAULT_SETTINGS.responder, ...(stored.responder ?? {}) },
     payment: { ...DEFAULT_SETTINGS.payment, ...(stored.payment ?? {}) },
+    broadcasts: { ...DEFAULT_SETTINGS.broadcasts, ...(stored.broadcasts ?? {}) },
   };
 }
 
@@ -49,6 +57,7 @@ export async function saveSettings(patch: Partial<PlatformSettings>) {
     creditsPerUsd: patch.creditsPerUsd ?? current.creditsPerUsd,
     responder: { ...current.responder, ...(patch.responder ?? {}) },
     payment: { ...current.payment, ...(patch.payment ?? {}) },
+    broadcasts: { ...current.broadcasts, ...(patch.broadcasts ?? {}) },
   };
   for (const [key, value] of Object.entries(next)) {
     await prisma.platformSetting.upsert({ where: { key }, update: { value: value as object }, create: { key, value: value as object } });

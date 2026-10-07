@@ -152,7 +152,7 @@ describe("A merchant's announcement around their shop — reviewed before anyone
     const boss = await admin();
 
     const preview = await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ radiusKm: 5 });
-    expect(preview.body).toEqual({ count: 2, cap: 2000, remainingToday: 3 });
+    expect(preview.body).toEqual({ count: 2, cap: 2000, limit: 10, remainingThisMonth: 10 }); // the platform default, no plan assigned
 
     const submitted = await request(app).post("/broadcasts").set(shop.owner.auth).send({ radiusKm: 5, title: "وصل جديد", body: "تعال شوف", productId: shop.productId });
     expect(submitted.status).toBe(201);
@@ -227,7 +227,7 @@ describe("A merchant's announcement around their shop — reviewed before anyone
     }
   });
 
-  it("keeps merchants inside their limits: own items, 50 km, shop location, 3 a day, approved shops", async () => {
+  it("keeps merchants inside their limits: own items, 50 km, shop location, the monthly quota of their plan, approved shops", async () => {
     const shop = await approvedShop(lat, lng);
     const other = await approvedShop(lat, lng);
     const send = (body: object) => request(app).post("/broadcasts").set(shop.owner.auth).send({ title: "t", body: "b", ...body });
@@ -243,11 +243,18 @@ describe("A merchant's announcement around their shop — reviewed before anyone
     expect(noCentre.body.error.code).toBe("SHOP_HAS_NO_LOCATION");
     expect((await request(app).post("/broadcasts").set(unlocated.owner.auth).send({ radiusKm: 5, latitude: lat, longitude: lng, title: "t", body: "b" })).status).toBe(201); // a chosen point works
 
+    // the super admin gives this shop a plan that allows 3 announcements a month
+    const boss = await admin();
+    const plan = await prisma.servicePlan.create({ data: { name: `Quota plan ${Date.now()}`, service: "MERCHANT_ACCOUNT", durationDays: 30, priceCents: 0, monthlyBroadcastLimit: 3 } });
+    expect((await request(app).put(`/admin/merchants/${shop.merchantId}/plan`).set(shop.owner.auth).send({ planId: plan.id })).status).toBe(403); // not the shop's call
+    expect((await request(app).put(`/admin/merchants/${shop.merchantId}/plan`).set(boss.auth).send({ planId: plan.id })).status).toBe(200);
+    expect((await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ radiusKm: 5 })).body).toMatchObject({ limit: 3, remainingThisMonth: 3 });
+
     for (let i = 0; i < 3; i++) expect((await send({ radiusKm: 5 })).status).toBe(201);
     const fourth = await send({ radiusKm: 5 });
     expect(fourth.status).toBe(429);
     expect(fourth.body.error.code).toBe("BROADCAST_LIMIT");
-    expect((await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ radiusKm: 5 })).body.remainingToday).toBe(0);
+    expect((await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ radiusKm: 5 })).body).toMatchObject({ limit: 3, remainingThisMonth: 0 });
 
     const pending = await approvedShop(lat, lng);
     await prisma.merchantProfile.update({ where: { id: pending.merchantId }, data: { approvalStatus: "PENDING" } });
@@ -266,5 +273,74 @@ describe("A merchant's announcement around their shop — reviewed before anyone
     expect(await received(resident.id)).toHaveLength(0);
     await request(app).post(`/broadcasts/${submitted.body.id}/approve`).set(boss.auth);
     expect((await received(resident.id, "NEW_PRODUCT"))[0].title).toBe("افتتاح");
+  });
+});
+
+describe("What the super admin decides: quotas, distance and followers", () => {
+  const lat = -50 + Math.random() * 5;
+  const lng = -130 + Math.random() * 10;
+
+  it("the plan sets the shop's quota, the platform settings set the default, and a refused announcement costs nothing", async () => {
+    const boss = await admin();
+    const shop = await approvedShop(lat, lng);
+    const send = () => request(app).post("/broadcasts").set(shop.owner.auth).send({ radiusKm: 1, title: "t", body: "b" });
+
+    // no plan: the default from the settings (changed here from 10 to 2)
+    const before = (await request(app).get("/admin/settings").set(boss.auth)).body.broadcasts;
+    expect(before).toMatchObject({ merchantDefaultMonthly: 10, maxRadiusKm: 50, merchantMaxAudience: 2000 });
+    try {
+      expect((await request(app).put("/admin/settings").set(boss.auth).send({ broadcasts: { merchantDefaultMonthly: 2 } })).status).toBe(200);
+      expect((await send()).status).toBe(201);
+      expect((await send()).status).toBe(201);
+      expect((await send()).status).toBe(429);
+
+      // a plan with a bigger quota lifts it; a plan with none (0) stops the shop altogether
+      const big = await prisma.servicePlan.create({ data: { name: `Big ${Date.now()}`, service: "MERCHANT_ACCOUNT", durationDays: 30, priceCents: 0, monthlyBroadcastLimit: 5 } });
+      await request(app).put(`/admin/merchants/${shop.merchantId}/plan`).set(boss.auth).send({ planId: big.id });
+      expect((await send()).status).toBe(201);
+      const none = await prisma.servicePlan.create({ data: { name: `None ${Date.now()}`, service: "MERCHANT_ACCOUNT", durationDays: 30, priceCents: 0, monthlyBroadcastLimit: 0 } });
+      await request(app).put(`/admin/merchants/${shop.merchantId}/plan`).set(boss.auth).send({ planId: none.id });
+      expect((await send()).status).toBe(429);
+      await request(app).put(`/admin/merchants/${shop.merchantId}/plan`).set(boss.auth).send({ planId: null });
+      expect((await send()).status).toBe(429); // back on the default (2), already used
+
+      // the distance limit comes from the settings too
+      await request(app).put("/admin/settings").set(boss.auth).send({ broadcasts: { merchantDefaultMonthly: 50, maxRadiusKm: 5 } });
+      expect((await request(app).post("/broadcasts").set(shop.owner.auth).send({ radiusKm: 6, title: "t", body: "b" })).body.error.code).toBe("RADIUS_TOO_LARGE");
+    } finally {
+      await request(app).put("/admin/settings").set(boss.auth).send({ broadcasts: before });
+    }
+  });
+
+  it("only merchant plans can be assigned, and only to a shop that exists", async () => {
+    const boss = await admin();
+    const shop = await approvedShop(lat, lng);
+    const membership = await prisma.servicePlan.create({ data: { name: `Card ${Date.now()}`, service: "MEMBERSHIP", durationDays: 30, priceCents: 0 } });
+    expect((await request(app).put(`/admin/merchants/${shop.merchantId}/plan`).set(boss.auth).send({ planId: membership.id })).status).toBe(400);
+    expect((await request(app).put(`/admin/merchants/${crypto.randomUUID()}/plan`).set(boss.auth).send({ planId: null })).status).toBe(404);
+    const list = await request(app).get("/merchant/list").set(boss.auth);
+    expect(list.body.find((m: { id: string }) => m.id === shop.merchantId)).toHaveProperty("plan", null);
+  });
+
+  it("a shop can announce to its followers — the people who saved it — after the same review", async () => {
+    const boss = await admin();
+    const shop = await approvedShop(lat, lng);
+    const fan = await account("bcfan");
+    const other = await account("bcnotfan");
+    await prisma.favoriteMerchant.create({ data: { userId: fan.id, merchantId: shop.merchantId } });
+
+    const preview = await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ followers: true });
+    expect(preview.body.count).toBe(1);
+    const submitted = await request(app).post("/broadcasts").set(shop.owner.auth).send({ followers: true, title: "وصلنا الجديد", body: "تعالوا", productId: shop.productId });
+    expect(submitted.body).toMatchObject({ status: "PENDING_REVIEW", targeted: 1 });
+    expect(await received(fan.id)).toHaveLength(0);
+
+    await request(app).post(`/broadcasts/${submitted.body.id}/approve`).set(boss.auth);
+    expect((await received(fan.id, "NEW_PRODUCT"))[0].title).toBe("وصلنا الجديد");
+    expect(await received(other.id)).toHaveLength(0);
+
+    // followers are a shop's thing, and cannot be combined with another target
+    expect((await request(app).post("/broadcasts/preview").set(boss.auth).send({ followers: true })).body.error.code).toBe("BAD_TARGET");
+    expect((await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ followers: true, radiusKm: 5 })).body.error.code).toBe("BAD_TARGET");
   });
 });

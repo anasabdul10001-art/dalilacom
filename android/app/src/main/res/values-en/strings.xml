@@ -193,6 +193,8 @@
     <string name="social_back_to_login">Back to sign in</string>
     <string name="profile_share_location">Let nearby shops send me their offers</string>
     <string name="profile_share_location_sub">The app shares your approximate position (about 1 km accuracy) while you use the map. You can turn it off any time and it is deleted.</string>
+    <string name="promo_audience_radius">Around my shop</string>
+    <string name="promo_audience_followers">My followers</string>
     <string name="promo_tab">My announcements</string>
     <string name="promo_title">My announcements</string>
     <string name="promo_sub">Send a notification to people around your shop — the Dalilacom team reviews it before anyone receives it</string>
@@ -212,12 +214,12 @@
     <string name="promo_enter_radius">Enter the distance in kilometres</string>
     <string name="promo_enter_text">Enter a title and text</string>
     <string name="promo_err_no_location">Set your shop\u2019s location first, from \u201cShop details &amp; location\u201d</string>
-    <string name="promo_err_radius">The largest distance allowed is 50 km</string>
-    <string name="promo_err_limit">You reached the daily limit: 3 announcements a day</string>
+    <string name="promo_err_radius">The distance is larger than your shop is allowed</string>
+    <string name="promo_err_limit">You reached your plan\u2019s announcement limit for this month</string>
     <string name="promo_err_not_approved">Your shop must be approved first</string>
     <string name="promo_err_audience">The audience is too large — reduce the distance</string>
     <string name="promo_err_generic">Could not complete the request</string>
-    <string name="fmt_promo_count">It will reach about %1$d people — announcements left for you today: %2$d</string>
+    <string name="fmt_promo_count">It will reach about %1$d people — announcements left for you this month: %2$d of %3$d</string>
     <string name="fmt_promo_rejected_now">Announcement rejected: %1$s</string>
     <string name="fmt_promo_reached">Reached %1$d people</string>
     <string name="fmt_promo_reason">Reason: %1$s</string>

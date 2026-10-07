@@ -207,6 +207,7 @@ model ServicePlan {
   updatedAt             DateTime    @updatedAt
 
   memberships Membership[]
+  merchants   MerchantProfile[]
   features    PlanFeature[]
   prices      PlanPrice[]
 
@@ -322,6 +323,9 @@ model MerchantProfile {
   phone           String?
   whatsapp        String?
   approvalStatus  MerchantApprovalStatus @default(PENDING) // manual admin approval (section 63)
+  // The merchant plan the super admin assigned to this shop: its monthlyBroadcastLimit is how many announcements the shop
+  // may send per month. No plan = the platform default (settings.broadcasts.merchantDefaultMonthly).
+  planId          String?
   rejectionReason String?
   // {"sat":[{"open":"09:00","close":"22:00"}], ...} — validated in routes; evaluated in the platform timezone
   openingHours    Json?
@@ -330,6 +334,7 @@ model MerchantProfile {
 
   user                 User                  @relation(fields: [userId], references: [id])
   category             Category              @relation(fields: [categoryId], references: [id])
+  plan                 ServicePlan?          @relation(fields: [planId], references: [id])
   favoritedBy          FavoriteMerchant[]
   discounts            Discount[]
   discountTransactions DiscountTransaction[]

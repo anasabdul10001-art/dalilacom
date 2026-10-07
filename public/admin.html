@@ -117,7 +117,7 @@
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>اسم المحل</th><th>المالك</th><th>الإيميل</th><th>التصنيف</th><th>الحالة</th><th>الموقع على الخريطة</th><th>إجراءات</th></tr></thead>
+          <thead><tr><th>اسم المحل</th><th>المالك</th><th>الإيميل</th><th>التصنيف</th><th>الحالة</th><th>الموقع على الخريطة</th><th>الباقة</th><th>إجراءات</th></tr></thead>
           <tbody id="merchants-body"></tbody>
         </table>
       </div>
@@ -233,6 +233,19 @@
     <div class="section" id="section-broadcasts" style="display:none">
       <h2>الإعلانات</h2>
       <p class="subtitle">أرسل إشعارًا لكل من في بلد أو منطقة أو مدينة أو حي، وراجع إعلانات التجار قبل نشرها.</p>
+
+      <div class="card">
+        <h3>حدود إعلانات التجار</h3>
+        <p class="muted">عدد الإعلانات بالشهر يحدّده نوع اشتراك المتجر (حقل «حد الرسائل الجماعية بالشهر» بباقات التجار، وتعيّن الباقة لكل متجر من قسم التجار). المتجر بلا باقة يأخذ الرقم الافتراضي هون. الصفر يعني ممنوع.</p>
+        <label>الرقم الافتراضي لإعلانات المتجر بالشهر</label>
+        <input id="bc-limit-default" inputmode="numeric" />
+        <label>أبعد مسافة يقدر المتجر يوصلها (كم)</label>
+        <input id="bc-limit-radius" inputmode="decimal" />
+        <label>أكبر جمهور لإعلان واحد من متجر</label>
+        <input id="bc-limit-audience" inputmode="numeric" />
+        <button style="margin-top:12px" onclick="saveBroadcastLimits()">حفظ الحدود</button>
+        <span id="bc-limit-msg" class="muted" style="margin-right:10px"></span>
+      </div>
 
       <div class="card">
         <h3>إعلانات التجار بانتظار المراجعة</h3>
@@ -441,12 +454,18 @@ const BC_STATUS = { PENDING_REVIEW: ['PENDING', 'بانتظار المراجعة
 const AI_VERDICT = { OK: 'سليم', REVIEW: 'يحتاج انتباهك', BLOCK: 'مخالف' };
 
 async function loadBroadcasts() {
-  const [pending, all, countries] = await Promise.all([
+  const [pending, all, countries, settings] = await Promise.all([
     api('GET', '/broadcasts?status=PENDING_REVIEW'),
     api('GET', '/broadcasts'),
     api('GET', '/geo/countries'),
+    api('GET', '/admin/settings'),
   ]);
   if (!pending.ok) return;
+  if (settings.ok && settings.data.broadcasts) {
+    document.getElementById('bc-limit-default').value = settings.data.broadcasts.merchantDefaultMonthly;
+    document.getElementById('bc-limit-radius').value = settings.data.broadcasts.maxRadiusKm;
+    document.getElementById('bc-limit-audience').value = settings.data.broadcasts.merchantMaxAudience;
+  }
   const count = document.getElementById('bc-pending-count');
   count.textContent = pending.data.length;
   count.style.display = pending.data.length ? 'inline-block' : 'none';
@@ -477,6 +496,20 @@ async function loadBroadcasts() {
   if (countries.ok && select.options.length <= 1) {
     countries.data.forEach(c => select.add(new Option(c.nameArabic || c.name, c.id)));
   }
+}
+
+async function saveBroadcastLimits() {
+  const msg = document.getElementById('bc-limit-msg');
+  const num = (id) => Number(String(document.getElementById(id).value).replace(',', '.'));
+  const merchantDefaultMonthly = Math.trunc(num('bc-limit-default'));
+  const maxRadiusKm = num('bc-limit-radius');
+  const merchantMaxAudience = Math.trunc(num('bc-limit-audience'));
+  if (![merchantDefaultMonthly, maxRadiusKm, merchantMaxAudience].every(Number.isFinite) || merchantDefaultMonthly < 0 || maxRadiusKm <= 0 || merchantMaxAudience <= 0) {
+    msg.textContent = 'تأكد من الأرقام';
+    return;
+  }
+  const { ok, data } = await api('PUT', '/admin/settings', { broadcasts: { merchantDefaultMonthly, maxRadiusKm, merchantMaxAudience } });
+  msg.textContent = ok ? 'تم الحفظ ✅' : errText(data, 'تعذّر الحفظ');
 }
 
 async function bcFill(selectId, params, placeholder) {
@@ -625,6 +658,7 @@ async function loadAiStatus() {
 // ---- merchants ----
 async function loadMerchants(status) {
   document.querySelectorAll('.filters button').forEach(b => b.classList.toggle('active', b.dataset.status === status));
+  if (!state.plans) await loadPlans(); // the plan selector below needs the merchant plans
   const { ok, data } = await api('GET', '/merchant/list' + (status ? '?status=' + status : ''));
   if (!ok) { logout(); return; }
   document.getElementById('merchants-body').innerHTML = data.map(m => `
@@ -637,11 +671,19 @@ async function loadMerchants(status) {
       <td>${m.latitude != null && m.longitude != null
         ? `<a href="https://www.google.com/maps?q=${Number(m.latitude)},${Number(m.longitude)}" target="_blank" rel="noopener">📍 عرض</a>`
         : `<span class="muted" title="بدون موقع لا يظهر المحل على الخريطة">⚠️ غير محدد</span>`}</td>
+      <td><select onchange="assignMerchantPlan('${m.id}', this.value)">
+        <option value="">— الافتراضي —</option>
+        ${(state.plans || []).filter(p => p.service === 'MERCHANT_ACCOUNT').map(p => `<option value="${p.id}" ${m.planId === p.id ? 'selected' : ''}>${esc(p.name)}${p.monthlyBroadcastLimit != null ? ' (' + esc(p.monthlyBroadcastLimit) + ' إعلان/شهر)' : ''}</option>`).join('')}
+      </select></td>
       <td>${m.approvalStatus === 'PENDING' ? `
         <button class="small" onclick="approveMerchant('${m.id}')">✅ موافقة</button>
         <button class="small danger" onclick="rejectMerchant('${m.id}')">❌ رفض</button>
       ` : ''}</td>
-    </tr>`).join('') || `<tr><td colspan="7" class="muted">لا يوجد تجار بهذه الحالة</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="8" class="muted">لا يوجد تجار بهذه الحالة</td></tr>`;
+}
+async function assignMerchantPlan(id, planId) {
+  const { ok, data } = await api('PUT', '/admin/merchants/' + id + '/plan', { planId: planId || null });
+  if (!ok) alert(errText(data, 'تعذّر تعيين الباقة'));
 }
 function statusLabel(s) { return { PENDING: 'بانتظار الموافقة', APPROVED: 'معتمد', REJECTED: 'مرفوض' }[s] || s; }
 async function approveMerchant(id) {

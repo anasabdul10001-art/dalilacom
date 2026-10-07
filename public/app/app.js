@@ -2130,8 +2130,8 @@ function screenMerchantModeShell() {
 const PROMO_STATUS = { PENDING_REVIEW: "بانتظار مراجعة دليلكم", SENT: "تم النشر", REJECTED: "مرفوض" };
 const PROMO_ERRORS = {
   SHOP_HAS_NO_LOCATION: "حدّد موقع محلك أولًا من «بيانات المحل ومكانه»",
-  RADIUS_TOO_LARGE: "أكبر مسافة مسموحة 50 كم",
-  BROADCAST_LIMIT: "وصلت للحد اليومي: 3 إعلانات باليوم",
+  RADIUS_TOO_LARGE: "المسافة أكبر من المسموح لمتجرك",
+  BROADCAST_LIMIT: "وصلت لحد إعلانات باقتك هذا الشهر",
   MERCHANT_NOT_APPROVED: "لازم تتم الموافقة على محلك أولًا",
   AUDIENCE_TOO_LARGE: "الجمهور كبير جدًا — صغّر المسافة",
 };
@@ -2142,7 +2142,7 @@ function promoError(data, fallback) {
 }
 
 function tabPromo() {
-  if (!S._promo) { S._promo = { loading: true, radius: "5", title: "", body: "", productId: "", discountId: "" }; loadPromo(); }
+  if (!S._promo) { S._promo = { loading: true, audience: "radius", radius: "5", title: "", body: "", productId: "", discountId: "" }; loadPromo(); }
   const p = S._promo;
   if (p.loading) return `<h1 class="screen-title">إعلاناتي</h1>${spinner()}`;
   const option = (value, label, chosen) => `<option value="${esc(value)}" ${chosen === value ? "selected" : ""}>${esc(label)}</option>`;
@@ -2150,7 +2150,9 @@ function tabPromo() {
     <h1 class="screen-title">إعلاناتي</h1>
     <p class="screen-sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</p>
     <div class="card">
-      <div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" inputmode="decimal" value="${esc(p.radius)}" /></div>
+      <div class="field"><label>لمن تريد الإرسال؟</label>
+        <select id="pr-audience" onchange="promoRead(); render()">${option("radius", "حول محلي", p.audience)}${option("followers", "متابعيّ", p.audience)}</select></div>
+      ${p.audience === "followers" ? "" : `<div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" inputmode="decimal" value="${esc(p.radius)}" /></div>`}
       <div class="field"><label>العنوان</label><input id="pr-title" maxlength="100" value="${esc(p.title)}" /></div>
       <div class="field"><label>النص</label><textarea id="pr-body" maxlength="500" rows="3">${esc(p.body)}</textarea></div>
       <div class="field"><label>إرفاق منتج (اختياري)</label>
@@ -2189,37 +2191,39 @@ async function loadPromo() {
   render();
 }
 
-/** Reads the form into the state so a re-render never loses what was typed. */
+/** Reads the form into the state so a re-render never loses what was typed; returns who it is for, or null when something is missing. */
 function promoRead() {
   const p = S._promo;
-  p.radius = qs("pr-radius").value;
+  p.audience = qs("pr-audience").value;
+  if (qs("pr-radius")) p.radius = qs("pr-radius").value;
   p.title = qs("pr-title").value;
   p.body = qs("pr-body").value;
   p.productId = qs("pr-product").value;
   p.discountId = qs("pr-discount").value;
   p.error = null;
+  if (p.audience === "followers") return { followers: true };
   const radiusKm = parseFloat(latinDigits(p.radius));
   if (!radiusKm || radiusKm <= 0) { p.error = "اكتب المسافة بالكيلومتر"; return null; }
-  return radiusKm;
+  return { radiusKm };
 }
 
 async function promoPreview() {
-  const radiusKm = promoRead();
+  const target = promoRead();
   const p = S._promo;
-  if (radiusKm) {
-    const { ok, data } = await api("POST", "/broadcasts/preview", { radiusKm });
-    if (ok) p.info = `سيصل لنحو ${data.count} شخص — المتبقّي لك اليوم: ${data.remainingToday} إعلانات`;
+  if (target) {
+    const { ok, data } = await api("POST", "/broadcasts/preview", target);
+    if (ok) p.info = `سيصل لنحو ${data.count} شخص — المتبقّي لك هذا الشهر: ${data.remainingThisMonth} من ${data.limit}`;
     else { p.info = null; p.error = promoError(data, "تعذّر الحساب"); }
   }
   render();
 }
 
 async function promoSend() {
-  const radiusKm = promoRead();
+  const target = promoRead();
   const p = S._promo;
-  if (radiusKm && (!p.title.trim() || !p.body.trim())) p.error = "اكتب العنوان والنص";
-  if (!p.error) {
-    const body = { radiusKm, title: p.title.trim(), body: p.body.trim() };
+  if (target && (!p.title.trim() || !p.body.trim())) p.error = "اكتب العنوان والنص";
+  if (target && !p.error) {
+    const body = { ...target, title: p.title.trim(), body: p.body.trim() };
     if (p.productId) body.productId = p.productId;
     if (p.discountId) body.discountId = p.discountId;
     const { ok, data } = await api("POST", "/broadcasts", body);

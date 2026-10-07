@@ -197,6 +197,8 @@
     <string name="social_back_to_login">رجوع لتسجيل الدخول</string>
     <string name="profile_share_location">السماح للمتاجر القريبة بإرسال عروضها لي</string>
     <string name="profile_share_location_sub">يرسل التطبيق موقعك التقريبي (بدقة نحو كيلومتر) أثناء استخدام الخريطة. تقدر توقفه بأي وقت وبنمسح الموقع.</string>
+    <string name="promo_audience_radius">حول محلي</string>
+    <string name="promo_audience_followers">متابعيّ</string>
     <string name="promo_tab">إعلاناتي</string>
     <string name="promo_title">إعلاناتي</string>
     <string name="promo_sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</string>
@@ -216,12 +218,12 @@
     <string name="promo_enter_radius">اكتب المسافة بالكيلومتر</string>
     <string name="promo_enter_text">اكتب العنوان والنص</string>
     <string name="promo_err_no_location">حدّد موقع محلك أولًا من «بيانات المحل ومكانه»</string>
-    <string name="promo_err_radius">أكبر مسافة مسموحة 50 كم</string>
-    <string name="promo_err_limit">وصلت للحد اليومي: 3 إعلانات باليوم</string>
+    <string name="promo_err_radius">المسافة أكبر من المسموح لمتجرك</string>
+    <string name="promo_err_limit">وصلت لحد إعلانات باقتك هذا الشهر</string>
     <string name="promo_err_not_approved">لازم تتم الموافقة على محلك أولًا</string>
     <string name="promo_err_audience">الجمهور كبير جدًا — صغّر المسافة</string>
     <string name="promo_err_generic">تعذّر تنفيذ الطلب</string>
-    <string name="fmt_promo_count">سيصل لنحو %1$d شخص — المتبقّي لك اليوم: %2$d إعلانات</string>
+    <string name="fmt_promo_count">سيصل لنحو %1$d شخص — المتبقّي لك هذا الشهر: %2$d من %3$d</string>
     <string name="fmt_promo_rejected_now">رُفض الإعلان: %1$s</string>
     <string name="fmt_promo_reached">وصل إلى %1$d شخص</string>
     <string name="fmt_promo_reason">السبب: %1$s</string>

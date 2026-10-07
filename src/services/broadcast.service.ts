@@ -2,13 +2,16 @@ import { NotificationType, Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { notify } from "./notification.service";
 import { screenAnnouncement } from "./ai.service";
+import { getSettings } from "./settings.service";
 
-/** One announcement may not fan out to more people than this: narrow the area instead of paging a whole platform. */
+/**
+ * One announcement may not fan out to more people than this: narrow the area instead of paging a whole platform.
+ * A shop's own limits (audience, distance, announcements per month) are the super admin's to set: the shop's plan says how
+ * many announcements, the platform settings say what applies when there is no plan (see settings.broadcasts).
+ */
 export const MAX_ADMIN_RECIPIENTS = 5000;
-export const MAX_MERCHANT_RECIPIENTS = 2000;
-/** A shop's reach, and how often it may use it — people can switch these notifications off, so do not wear that out. */
-export const MAX_MERCHANT_RADIUS_KM = 50;
-export const MERCHANT_BROADCASTS_PER_DAY = 3;
+/** The rolling month a shop's quota is counted over. */
+const QUOTA_WINDOW_MS = 30 * 24 * 3600 * 1000;
 
 export interface BroadcastTarget {
   /** Everyone in a country (its ISO code on the account, or an address in it). */
@@ -19,6 +22,8 @@ export interface BroadcastTarget {
   latitude?: number;
   longitude?: number;
   radiusKm?: number;
+  /** The people who saved this shop (its followers). A merchant only. */
+  followers?: boolean;
   /** Only customers, or only merchants. */
   role?: Role;
 }
@@ -46,13 +51,13 @@ export class BroadcastError extends Error {
   }
 }
 
-type Scope = "COUNTRY" | "PLACE" | "RADIUS";
+type Scope = "COUNTRY" | "PLACE" | "RADIUS" | "FOLLOWERS";
 
 function scopeOf(target: BroadcastTarget): Scope {
   const radius = target.radiusKm !== undefined;
-  const chosen = [!!target.countryId, !!target.geoUnitId, radius].filter(Boolean).length;
-  if (chosen !== 1) throw new BroadcastError(400, "BAD_TARGET", "Choose exactly one of: a country, a place inside a country, or a distance");
-  return target.countryId ? "COUNTRY" : target.geoUnitId ? "PLACE" : "RADIUS";
+  const chosen = [!!target.countryId, !!target.geoUnitId, radius, !!target.followers].filter(Boolean).length;
+  if (chosen !== 1) throw new BroadcastError(400, "BAD_TARGET", "Choose exactly one of: a country, a place inside a country, a distance, or your followers");
+  return target.countryId ? "COUNTRY" : target.geoUnitId ? "PLACE" : target.followers ? "FOLLOWERS" : "RADIUS";
 }
 
 /** The unit itself plus every unit below it. Units of one country are loaded once and walked in memory. */
@@ -96,9 +101,15 @@ async function withinRadius(lat: number, lng: number, radiusKm: number, base: Pr
 }
 
 /** Ids of the enabled accounts in the chosen place (profile location, saved address or last known position). */
-export async function audienceUserIds(target: BroadcastTarget, exclude?: string): Promise<string[]> {
+export async function audienceUserIds(target: BroadcastTarget, opts: { exclude?: string; followersOf?: string } = {}): Promise<string[]> {
   const scope = scopeOf(target);
-  const base: Prisma.UserWhereInput = { isDisabled: false, ...(target.role ? { role: target.role } : {}), ...(exclude ? { id: { not: exclude } } : {}) };
+  const base: Prisma.UserWhereInput = { isDisabled: false, ...(target.role ? { role: target.role } : {}), ...(opts.exclude ? { id: { not: opts.exclude } } : {}) };
+
+  if (scope === "FOLLOWERS") {
+    if (!opts.followersOf) throw new BroadcastError(400, "BAD_TARGET", "Only a shop has followers");
+    const users = await prisma.user.findMany({ where: { ...base, favoriteMerchants: { some: { merchantId: opts.followersOf } } }, select: { id: true } });
+    return users.map((u) => u.id);
+  }
 
   if (scope === "RADIUS") {
     const { latitude, longitude, radiusKm } = target;
@@ -128,6 +139,8 @@ interface Resolved {
   target: BroadcastTarget;
   scope: Scope;
   cap: number;
+  /** Announcements this shop may send per month (null for the admin: no quota). */
+  quota: number | null;
   merchant: { id: string; businessName: string } | null;
   product: { id: string; name: string } | null;
   discount: { id: string; title: string } | null;
@@ -137,16 +150,17 @@ interface Resolved {
 async function resolve(sender: Sender, target: BroadcastTarget, message?: BroadcastMessage): Promise<Resolved> {
   if (sender.role === Role.ADMIN) {
     if (message?.productId || message?.discountId) throw new BroadcastError(400, "BAD_ATTACHMENT", "Only a merchant can attach a product or an offer");
-    return { target, scope: scopeOf(target), cap: MAX_ADMIN_RECIPIENTS, merchant: null, product: null, discount: null };
+    return { target, scope: scopeOf(target), cap: MAX_ADMIN_RECIPIENTS, quota: null, merchant: null, product: null, discount: null };
   }
   if (sender.role !== Role.MERCHANT) throw new BroadcastError(403, "FORBIDDEN", "Forbidden");
 
   const merchant = await prisma.merchantProfile.findUnique({
     where: { userId: sender.id },
-    select: { id: true, businessName: true, approvalStatus: true, latitude: true, longitude: true },
+    select: { id: true, businessName: true, approvalStatus: true, latitude: true, longitude: true, plan: { select: { monthlyBroadcastLimit: true } } },
   });
   if (!merchant || merchant.approvalStatus !== "APPROVED") throw new BroadcastError(403, "MERCHANT_NOT_APPROVED", "Your shop must be approved before you can send announcements");
 
+  const { broadcasts } = await getSettings();
   let resolved = target;
   // A distance with no centre means "around my shop".
   if (target.radiusKm !== undefined && target.latitude === undefined && target.longitude === undefined) {
@@ -155,8 +169,8 @@ async function resolve(sender: Sender, target: BroadcastTarget, message?: Broadc
     }
     resolved = { ...target, latitude: merchant.latitude, longitude: merchant.longitude };
   }
-  if (resolved.radiusKm !== undefined && resolved.radiusKm > MAX_MERCHANT_RADIUS_KM) {
-    throw new BroadcastError(400, "RADIUS_TOO_LARGE", `The largest distance a shop can reach is ${MAX_MERCHANT_RADIUS_KM} km`);
+  if (resolved.radiusKm !== undefined && resolved.radiusKm > broadcasts.maxRadiusKm) {
+    throw new BroadcastError(400, "RADIUS_TOO_LARGE", `The largest distance a shop can reach is ${broadcasts.maxRadiusKm} km`);
   }
 
   const product = message?.productId
@@ -168,26 +182,35 @@ async function resolve(sender: Sender, target: BroadcastTarget, message?: Broadc
     : null;
   if (message?.discountId && !discount) throw new BroadcastError(404, "NOT_FOUND", "Offer not found in your shop");
 
-  return { target: resolved, scope: scopeOf(resolved), cap: MAX_MERCHANT_RECIPIENTS, merchant, product, discount };
+  // the plan the super admin gave this shop decides the quota; with no plan, the platform default applies
+  const quota = merchant.plan?.monthlyBroadcastLimit ?? broadcasts.merchantDefaultMonthly;
+  return { target: resolved, scope: scopeOf(resolved), cap: broadcasts.merchantMaxAudience, quota, merchant, product, discount };
 }
 
-async function sentToday(senderId: string): Promise<number> {
-  return prisma.broadcast.count({ where: { senderId, createdAt: { gte: new Date(Date.now() - 24 * 3600 * 1000) } } });
+/** Announcements this account has used in the last 30 days (refused ones never reached anyone, so they are free). */
+async function usedThisMonth(senderId: string): Promise<number> {
+  return prisma.broadcast.count({
+    where: { senderId, status: { in: ["PENDING_REVIEW", "SENT"] }, createdAt: { gte: new Date(Date.now() - QUOTA_WINDOW_MS) } },
+  });
 }
+
+/** Who a merchant's audience query is about: their own followers are the people who saved the shop. */
+const audienceOptions = (r: Resolved, sender: Sender) => ({ exclude: r.merchant ? sender.id : undefined, followersOf: r.merchant?.id });
 
 export interface BroadcastPreview {
   count: number;
   cap: number;
-  /** Merchants only: how many announcements are left in the rolling day. */
-  remainingToday: number | null;
+  /** Merchants only: the monthly quota and what is left of it (null for the admin). */
+  limit: number | null;
+  remainingThisMonth: number | null;
 }
 
 /** How many people an announcement would reach, before anything is sent. */
 export async function previewBroadcast(sender: Sender, target: BroadcastTarget): Promise<BroadcastPreview> {
   const r = await resolve(sender, target);
-  const count = (await audienceUserIds(r.target, r.merchant ? sender.id : undefined)).length;
-  const remainingToday = sender.role === Role.MERCHANT ? Math.max(0, MERCHANT_BROADCASTS_PER_DAY - (await sentToday(sender.id))) : null;
-  return { count, cap: r.cap, remainingToday };
+  const count = (await audienceUserIds(r.target, audienceOptions(r, sender))).length;
+  const remainingThisMonth = r.quota === null ? null : Math.max(0, r.quota - (await usedThisMonth(sender.id)));
+  return { count, cap: r.cap, limit: r.quota, remainingThisMonth };
 }
 
 export interface BroadcastResult {
@@ -211,6 +234,7 @@ function targetOfRow(row: Row): BroadcastTarget {
     longitude: row.longitude ?? undefined,
     radiusKm: row.radiusKm ?? undefined,
     role: row.audienceRole ?? undefined,
+    followers: row.scope === "FOLLOWERS" ? true : undefined,
   };
 }
 
@@ -219,7 +243,7 @@ function targetOfRow(row: Row): BroadcastTarget {
  * translation exists). Never an email — an announcement to a whole city must not become a mass mailing.
  */
 async function deliver(r: Resolved, sender: Sender, message: BroadcastMessage): Promise<{ targeted: number; delivered: number }> {
-  const ids = await audienceUserIds(r.target, r.merchant ? sender.id : undefined);
+  const ids = await audienceUserIds(r.target, audienceOptions(r, sender));
   if (ids.length > r.cap) throw new BroadcastError(413, "AUDIENCE_TOO_LARGE", `This reaches ${ids.length} people; the limit is ${r.cap}. Narrow the area.`);
 
   const type: NotificationType = !r.merchant ? "SYSTEM" : r.product && !r.discount ? "NEW_PRODUCT" : "NEW_OFFER";
@@ -280,10 +304,10 @@ export async function submitBroadcast(sender: Sender, target: BroadcastTarget, m
     return { id: row.id, status: "SENT", ...sent };
   }
 
-  if ((await sentToday(sender.id)) >= MERCHANT_BROADCASTS_PER_DAY) {
-    throw new BroadcastError(429, "BROADCAST_LIMIT", `A shop can send ${MERCHANT_BROADCASTS_PER_DAY} announcements per day`);
+  if (r.quota !== null && (await usedThisMonth(sender.id)) >= r.quota) {
+    throw new BroadcastError(429, "BROADCAST_LIMIT", `Your plan allows ${r.quota} announcements per month`);
   }
-  const estimate = (await audienceUserIds(r.target, sender.id)).length;
+  const estimate = (await audienceUserIds(r.target, audienceOptions(r, sender))).length;
   if (estimate > r.cap) throw new BroadcastError(413, "AUDIENCE_TOO_LARGE", `This reaches ${estimate} people; the limit is ${r.cap}. Narrow the area.`);
 
   const screening = await screenAnnouncement(message.title, message.body);

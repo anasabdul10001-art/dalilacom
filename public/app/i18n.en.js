@@ -387,6 +387,11 @@ PHRASES.en = {
   "اكتب العنوان والنص": "Enter a title and text",
   "تعذّر الحساب": "Could not calculate",
   "وصل الإعلان لفريق دليلكم للمراجعة، وسيُنشر فور الموافقة": "Your announcement reached the Dalilacom team for review and will be published as soon as it is approved",
+  "لمن تريد الإرسال؟": "Who is it for?",
+  "حول محلي": "Around my shop",
+  "متابعيّ": "My followers",
+  "وصلت لحد إعلانات باقتك هذا الشهر": "You reached your plan's announcement limit for this month",
+  "المسافة أكبر من المسموح لمتجرك": "The distance is larger than your shop is allowed",
 };
 PATTERNS.en = [
   [/^بيتجدد خلال (\d+) ثانية$/, "Refreshes in $1 s"],
@@ -422,5 +427,6 @@ PATTERNS.en = [
   [/^وصل إلى (\d+) شخص$/, "Reached $1 people"],
   [/^رُفض الإعلان: (.*)$/, "Announcement rejected: $1"],
   [/^السبب: (.+)$/, "Reason: $1"],
+  [/^سيصل لنحو (\d+) شخص — المتبقّي لك هذا الشهر: (\d+) من (\d+)$/, "It will reach about $1 people \u2014 announcements left for you this month: $2 of $3"],
 ];
 WORDS.en = { "دليلكم كوين": "Dalilacom Credits" };

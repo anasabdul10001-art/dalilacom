@@ -165,7 +165,7 @@ merchantRouter.get("/list", requireAuth, requireRole(Role.ADMIN), async (req, re
   }
   const merchants = await prisma.merchantProfile.findMany({
     where: parsed.data.status ? { approvalStatus: parsed.data.status } : {},
-    include: { user: { select: { email: true, fullName: true } }, category: true },
+    include: { user: { select: { email: true, fullName: true } }, category: true, plan: { select: { id: true, name: true, monthlyBroadcastLimit: true } } },
     orderBy: { createdAt: "desc" },
   });
   res.json(merchants);
