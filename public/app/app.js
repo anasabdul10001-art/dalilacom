@@ -243,6 +243,7 @@ function renderScreen() {
     case "merchantHours": return screenMerchantHours();
     case "merchantProfile": return screenMerchantProfile();
     case "profileEdit": return screenProfileEdit();
+    case "pricing": return screenPricing();
     default: return screenLogin();
   }
 }
@@ -401,6 +402,7 @@ function tabCard() {
         <div class="card">
           <div class="title-line"><strong>${esc(p.name)}</strong><span class="price">${fmt(p.priceCents)}</span></div>
           <p class="muted">${p.durationDays} يوم</p>
+          <button class="link-btn" style="padding:0" onclick="S._pricing=null;go('pricing')">${esc(t("pricing.link"))}</button>
           <button class="btn small" onclick="subscribePlan('${p.id}')">اشترك</button>
         </div>`).join("") || `<div class="empty-state">لا يوجد خطط متاحة حاليًا</div>`}
       ${errorBanner()}
@@ -915,6 +917,7 @@ function guestPrompt(tab) {
       <button class="btn" onclick="go('login')">${esc(t("guest.login"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" onclick="go('register')">${esc(t("guest.register"))}</button>
+      ${tab === "card" || tab === "profile" ? `<div style="height:10px"></div><button class="link-btn" onclick="S._pricing=null;go('pricing')">${esc(t("pricing.link"))}</button>` : ""}
     </div>`;
 }
 
@@ -1037,6 +1040,8 @@ function tabProfile() {
       ${S.role === "MERCHANT"
         ? `<button class="btn" style="max-width:240px" onclick="go('merchantMode')">${esc(t("profile.merchantMode"))}</button>`
         : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`}
+      <div style="height:10px"></div>
+      <button class="btn outline" style="max-width:240px" onclick="S._pricing=null;go('pricing')">${esc(t("pricing.link"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('favorites')">${esc(t("profile.favorites"))}</button>
       <div style="height:10px"></div>
@@ -1929,6 +1934,57 @@ function setLang(code) {
     loadCategories().then(() => render()); // names come back in the new language
   }
   render();
+}
+
+/* ================= PRICING PAGE ================= */
+
+function screenPricing() {
+  if (!S._pricing) { S._pricing = { loading: true }; loadPricing(); }
+  const p = S._pricing;
+  const header = `${backRow()}<h1 class="screen-title">${esc(t("pricing.title"))}</h1><p class="screen-sub">${esc(t("pricing.sub"))}</p>`;
+  if (p.loading) return header + spinner();
+  const services = (p.catalog && p.catalog.services) || [];
+  if (!services.length) return header + `<div class="empty-state">${esc(t("pricing.empty"))}</div>`;
+  const credit = p.catalog.creditName;
+  return header + services.map((group) => `
+    <div class="section-title">${esc(t("service." + group.service))}</div>
+    ${group.plans.map((plan) => {
+      const price = plan.priceCredits === null ? t("pricing.notPriced") : plan.priceCredits === 0 ? t("pricing.free") : t("pricing.credits", { n: plan.priceCredits, credit });
+      const canBuy = group.service === "MEMBERSHIP" && plan.source === "catalog" && plan.priceCredits !== null;
+      return `<div class="card plan-card">
+        <div class="title-line"><strong>${esc(plan.name)}</strong><span class="price">${esc(price)}</span></div>
+        ${plan.description ? `<p class="muted" style="margin:2px 0 6px">${esc(plan.description)}</p>` : ""}
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">
+          <span class="badge neutral">${esc(t("pricing.days", { n: plan.durationDays }))}</span>
+          ${plan.trialDays > 0 ? `<span class="badge success">${esc(t("pricing.trial", { n: plan.trialDays }))}</span>` : ""}
+          ${plan.priceFrom === "country" ? `<span class="badge info">${esc(t("pricing.yourCountry"))}</span>` : ""}
+          ${plan.monthlyBroadcastLimit ? `<span class="badge neutral">${esc(t("pricing.broadcasts", { n: plan.monthlyBroadcastLimit }))}</span>` : ""}
+        </div>
+        ${plan.features.length ? `<ul class="plan-features">${plan.features.map((f) => `<li class="${f.included ? "" : "off"}">${f.included ? "✔" : "✘"} ${esc(f.text)}</li>`).join("")}</ul>` : ""}
+        ${canBuy ? `<button class="btn small" ${S.busy ? "disabled" : ""} onclick="subscribeFromPricing('${plan.id}')">${esc(t("pricing.subscribe"))}</button>` : ""}
+      </div>`;
+    }).join("")}`).join("") + errorBanner();
+}
+
+async function loadPricing() {
+  const { ok, data } = await api("GET", "/plans/catalog");
+  S._pricing = { loading: false, catalog: ok ? data : null };
+  render();
+}
+
+async function subscribeFromPricing(planId) {
+  if (!S.token) return go("login");
+  S.busy = true; S.error = null; render();
+  const { ok, data } = await api("POST", "/membership/subscribe", { planId });
+  S.busy = false;
+  if (ok) {
+    toast(t("pricing.subscribed"));
+    S._card = { loading: true }; S._cardLoaded = null; S._pricing = null;
+    reset("home"); setHomeTab("card");
+  } else {
+    S.error = errMsg(data, t("pricing.failed"));
+    render();
+  }
 }
 
 /* ================= MERCHANT MODE SHELL ================= */

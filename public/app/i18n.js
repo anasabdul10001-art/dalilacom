@@ -66,6 +66,15 @@ const DICT = {
     "browse.back": "‹ رجوع", "browse.close": "إغلاق",
     "picker.section": "القسم", "picker.profession": "المهنة / النوع", "picker.specialty": "التخصص", "picker.choose": "اختر...",
     "lang.title": "اللغة",
+
+    "pricing.title": "الباقات والأسعار", "pricing.sub": "كل خدمات دليلكم بأسعارها — والسعر اللي بتشوفه هو سعر بلدك.",
+    "pricing.link": "💳 الباقات والأسعار",
+    "service.MEMBERSHIP": "عضوية الزبون (بطاقة الحسم)", "service.MERCHANT_ACCOUNT": "باقات التاجر",
+    "service.RESPONDER_CUSTOMER": "المجيب الآلي — للزبائن", "service.RESPONDER_MERCHANT": "المجيب الآلي — للتجار",
+    "pricing.free": "مجاني", "pricing.notPriced": "السعر غير محدد بعد", "pricing.credits": "{n} {credit}",
+    "pricing.days": "{n} يوم", "pricing.trial": "تجربة مجانية {n} يوم", "pricing.yourCountry": "سعر بلدك",
+    "pricing.broadcasts": "{n} رسالة جماعية بالشهر", "pricing.subscribe": "اشترك", "pricing.empty": "ما في باقات متاحة حاليًا",
+    "pricing.subscribed": "تم الاشتراك ✅", "pricing.failed": "تعذّر الاشتراك",
   },
 
   en: {
@@ -124,6 +133,15 @@ const DICT = {
     "browse.back": "‹ Back", "browse.close": "Close",
     "picker.section": "Category", "picker.profession": "Profession / type", "picker.specialty": "Specialty", "picker.choose": "Choose...",
     "lang.title": "Language",
+
+    "pricing.title": "Plans & pricing", "pricing.sub": "Every Dalilacom service and its price — the price you see is the one for your country.",
+    "pricing.link": "💳 Plans & pricing",
+    "service.MEMBERSHIP": "Customer membership (discount card)", "service.MERCHANT_ACCOUNT": "Merchant plans",
+    "service.RESPONDER_CUSTOMER": "Auto-responder — customers", "service.RESPONDER_MERCHANT": "Auto-responder — merchants",
+    "pricing.free": "Free", "pricing.notPriced": "Price not set yet", "pricing.credits": "{n} {credit}",
+    "pricing.days": "{n} days", "pricing.trial": "{n}-day free trial", "pricing.yourCountry": "Your country's price",
+    "pricing.broadcasts": "{n} follower broadcasts per month", "pricing.subscribe": "Subscribe", "pricing.empty": "No plans available right now",
+    "pricing.subscribed": "Subscribed ✅", "pricing.failed": "Couldn't subscribe",
   },
 };
 
