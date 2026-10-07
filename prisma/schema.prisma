@@ -59,6 +59,11 @@ model User {
   tokenVersion    Int       @default(0) // bumped on logout / password reset to invalidate existing JWTs (section 56)
   isEmailVerified Boolean   @default(false)
   isDisabled      Boolean   @default(false) // admin-controlled kill switch, blocks login regardless of tokenVersion
+  // Last place the app reported (rounded to ~1 km), so a merchant can announce "within 5 km of my shop".
+  // Optional: only set while the person uses the map with location allowed; cleared by DELETE /profile/location.
+  lastLatitude      Float?
+  lastLongitude     Float?
+  locationUpdatedAt DateTime?
   bio             String? // short public description shown on the account's profile / shop page
   language        String? // preferred language (ar, en, ...): what push notifications and emails are written in
   // Country/city used for per-country pricing and tax (sections 64/58). Deliberately a plain ISO-2
@@ -97,6 +102,7 @@ model User {
 
   notifications           Notification[]
   deviceTokens            DeviceToken[]
+  broadcasts              Broadcast[]
   notificationPreferences NotificationPreference[]
   metaOAuthSessions       MetaOAuthSession[]
 }
@@ -1181,4 +1187,38 @@ model MetaOAuthSession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// An announcement sent to everyone in a place (admin: anywhere; merchant: with their own product/offer attached).
+// Kept as history, and it is what the merchant's daily limit is counted from.
+model Broadcast {
+  id           String   @id @default(uuid())
+  senderId     String
+  senderRole   Role
+  scope        String // COUNTRY | PLACE | RADIUS
+  countryId    String?
+  geoUnitId    String?
+  latitude     Float?
+  longitude    Float?
+  radiusKm     Float?
+  audienceRole Role?
+  title        String
+  body         String
+  productId    String?
+  discountId   String?
+  targeted     Int // sent: how many were reached; pending: the estimate at submission
+  delivered    Int
+  // A merchant's announcement is reviewed (by an AI screen, then always by an admin) before anyone receives it.
+  status       String   @default("SENT") // PENDING_REVIEW | SENT | REJECTED
+  aiVerdict    String? // OK | REVIEW | BLOCK; null when no AI provider was available
+  aiReasons    Json?
+  reviewNote   String? // why it was rejected
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  sender User @relation(fields: [senderId], references: [id])
+
+  @@index([senderId, createdAt])
+  @@index([status, createdAt])
 }

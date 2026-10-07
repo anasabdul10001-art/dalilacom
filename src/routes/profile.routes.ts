@@ -85,6 +85,26 @@ profileRouter.put(
   },
 );
 
+// The app reports where the person is while they use the map (location allowed). Stored rounded to ~1 km — enough for a
+// shop's "within 5 km" announcement, not enough to follow anyone. DELETE forgets it.
+const locationSchema = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) });
+const roundCoarse = (n: number) => Math.round(n * 100) / 100;
+
+profileRouter.put("/location", requireAuth, async (req, res) => {
+  const parsed = locationSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await prisma.user.update({
+    where: { id: req.user!.id },
+    data: { lastLatitude: roundCoarse(parsed.data.latitude), lastLongitude: roundCoarse(parsed.data.longitude), locationUpdatedAt: new Date() },
+  });
+  res.json({ ok: true });
+});
+
+profileRouter.delete("/location", requireAuth, async (req, res) => {
+  await prisma.user.update({ where: { id: req.user!.id }, data: { lastLatitude: null, lastLongitude: null, locationUpdatedAt: null } });
+  res.json({ ok: true });
+});
+
 profileRouter.delete("/avatar", requireAuth, async (req, res) => {
   await prisma.$transaction([
     prisma.userAvatar.deleteMany({ where: { userId: req.user!.id } }),

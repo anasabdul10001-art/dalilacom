@@ -18,6 +18,8 @@ export interface NotifyInput {
   title: string;
   body?: string | null;
   data?: Prisma.InputJsonValue;
+  /** Set false for bulk announcements: inbox + push only, never an email. */
+  email?: boolean;
 }
 
 export interface NotifyResult {
@@ -75,7 +77,7 @@ export async function notify(input: NotifyInput): Promise<NotifyResult> {
 
   let emailed = false;
   try {
-    if (recipient?.email) {
+    if (recipient?.email && input.email !== false) {
       await emailService.send({ to: recipient.email, subject: title, text: body ?? title });
       emailed = true;
     }

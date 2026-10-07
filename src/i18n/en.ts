@@ -76,6 +76,11 @@ export const en: LanguagePack = {
     "تم إلغاء طلبك": "Your order was cancelled",
     "الزبون ألغى طلبًا": "A customer cancelled an order",
     "طلب جديد وصلك 🛒": "You have a new order 🛒",
+    "إعلان جديد بانتظار المراجعة": "A new announcement is waiting for review",
+    "تمت الموافقة على إعلانك": "Your announcement was approved",
+    "تم نشر إعلانك للمستهدَفين.": "Your announcement was published to its audience.",
+    "تم رفض إعلانك": "Your announcement was rejected",
+    "مخالف لمعايير النشر": "Against the publishing standards",
     "عضويتك عم تنتهي قريبًا": "Your membership is about to expire",
 
     // ---- responder / channels / Facebook linking ----
@@ -185,6 +190,7 @@ export const en: LanguagePack = {
     [/^مرحبًا،\n\nطلب أحدهم إعادة تعيين كلمة سر حسابك على دليلكم\. إذا كنت أنت، اضغط الرابط التالي \(صالح لمدة (\d+(?:\.\d+)?) دقيقة\):\n(\S+)\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة — كلمة سرك لن تتغيّر\.$/, "Hello,\n\nSomeone asked to reset your Dalilacom account password. If it was you, open the link below (valid for $1 minutes):\n$2\n\nIf you didn't request this, ignore this message — your password won't change."],
     [/^طلبك (.+) وصل للتاجر\. رح يوصلك تحديث كل ما تتغير حالته\.$/, "Your order $1 reached the merchant. You'll get an update every time its status changes."],
     [/^تحديث على طلبك: (.+)$/, "Update on your order: $1"],
+    [/^السبب: (.+)$/, "Reason: $1"],
     [/^وصلك الطلب (.+)\. افتح الطلبات لتأكيده\.$/, "You received order $1. Open your orders to confirm it."],
     [/^تم إلغاء الطلب (.+) من قبل الزبون، والمخزون رجع\.$/, "Order $1 was cancelled by the customer and the stock was restored."],
     [/^(.+) \(مضمّنة بالسعر\)$/, "$1 (included in the price)"],
