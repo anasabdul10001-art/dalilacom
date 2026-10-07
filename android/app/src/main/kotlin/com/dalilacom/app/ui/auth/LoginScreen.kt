@@ -77,7 +77,7 @@ fun LoginScreen(
                     modifier = Modifier.size(92.dp).clip(CircleShape).background(Color.White),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = AppStrings.get(R.string.s_7feb59f4), modifier = Modifier.size(92.dp))
+                    Image(painterResource(R.drawable.brand_logo), contentDescription = AppStrings.get(R.string.s_7feb59f4), modifier = Modifier.size(76.dp))
                 }
                 Spacer(Modifier.height(14.dp))
                 Text(AppStrings.get(R.string.s_7feb59f4), style = MaterialTheme.typography.headlineLarge, color = Color.White)

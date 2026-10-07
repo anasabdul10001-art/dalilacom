@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8" />
+<link rel="icon" href="/brand/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/brand/favicon-64.png"><link rel="apple-touch-icon" href="/brand/logo-192.png">
 <title>DALILACOM — لوحة التحكم</title>
 <style>
   :root { color-scheme: light; }
@@ -13,13 +14,15 @@
   #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #5A0E12, #BA2A34); }
   .login-card { background: #fff; border-radius: 16px; padding: 32px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
   .login-card h1 { margin: 0 0 4px; font-size: 22px; color: #BA2A34; }
+  .login-card .logo { display: block; width: 84px; height: 84px; margin: 0 auto 10px; object-fit: contain; }
   .login-card p { margin: 0 0 20px; color: #777; font-size: 13px; }
 
   /* ---- shell ---- */
   #app { display: none; min-height: 100vh; }
   #app.active { display: flex; }
   .sidebar { width: 220px; background: linear-gradient(180deg, #5A0E12, #BA2A34); color: #fff; padding: 20px 0; flex-shrink: 0; }
-  .sidebar h2 { font-size: 16px; margin: 0 20px 24px; }
+  .sidebar h2 { font-size: 16px; margin: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+  .sidebar h2 .badge-logo { width: 38px; height: 38px; border-radius: 10px; background: #fff; padding: 3px; object-fit: contain; }
   .sidebar .nav-item { padding: 12px 20px; cursor: pointer; font-weight: 600; font-size: 14px; opacity: .85; border-right: 3px solid transparent; }
   .sidebar .nav-item:hover { opacity: 1; background: rgba(255,255,255,.08); }
   .sidebar .nav-item.active { opacity: 1; background: rgba(255,255,255,.15); border-color: #fff; }
@@ -72,7 +75,8 @@
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
-    <h1>🅳 لوحة تحكم دليلكم</h1>
+    <img class="logo" src="/brand/logo.png" alt="DALILACOM">
+    <h1>لوحة تحكم دليلكم</h1>
     <p>دخول مخصّص للأدمن فقط</p>
     <div id="login-error" class="error-banner" style="display:none"></div>
     <label>الإيميل</label>
@@ -87,7 +91,7 @@
 <!-- APP -->
 <div id="app">
   <div class="sidebar">
-    <h2>🅳 دليلكم</h2>
+    <h2><img class="badge-logo" src="/brand/logo.png" alt="DALILACOM"> دليلكم</h2>
     <div class="nav-item active" data-section="merchants" onclick="showSection('merchants')">🏪 التجار</div>
     <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
     <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 الباقات والأسعار</div>

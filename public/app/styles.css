@@ -97,17 +97,17 @@ body {
 }
 
 .page-head .brand .mark {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: linear-gradient(155deg, var(--primary-deep), var(--primary));
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Cairo", sans-serif;
-  font-weight: 800;
-  font-size: 16px;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.auth-logo {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin: 4px auto 6px;
+  object-fit: contain;
 }
 
 .page-head p {

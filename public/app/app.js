@@ -278,6 +278,7 @@ function screenLogin() {
   const draft = S.params.draft || {};
   return `
     <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
+    <img class="auth-logo" src="/brand/logo.png" alt="DALILACOM" />
     <h1 class="screen-title">تسجيل الدخول</h1>
     <p class="screen-sub">أهلًا فيك بدليلكم — دخّل بياناتك</p>
     <div class="field"><label>الإيميل</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>

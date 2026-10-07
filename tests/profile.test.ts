@@ -150,7 +150,8 @@ describe("Printable documents carry the issuing account's name and photo", () =>
     await request(app).delete("/profile/avatar").set(f.merchantAuth);
     const noPhoto = await request(app).get(`/invoices/order/${f.order.id}`).set(f.customer.auth);
     expect(noPhoto.text).toContain('class="doc-logo ph"');
-    expect(noPhoto.text).not.toContain("<img");
+    expect(noPhoto.text).not.toContain('class="doc-logo"'); // no account photo (the platform mark in the corner is separate)
+    expect(noPhoto.text).toContain("/brand/logo-192.png");
 
     const plan = await prisma.servicePlan.create({ data: { name: "Receipt Plan", durationDays: 30, priceCents: 1000 } });
     const member = await prisma.user.findUniqueOrThrow({ where: { id: f.order.userId } });
