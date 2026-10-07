@@ -1,3 +1,6 @@
+import { DEFAULT_LANGUAGE } from "../lib/languages";
+import { translateText } from "../i18n";
+import { pushStatus, sendPushToUser } from "../services/push.service";
 import { Router } from "express";
 import { z } from "zod";
 import { ChannelDriver, Prisma, Role, TopUpStatus } from "@prisma/client";
@@ -169,6 +172,26 @@ adminRouter.get("/responder/subscriptions", async (_req, res) => {
 });
 
 /* ---------------- AI provider check (booleans + counters only — no keys, no message text) ---------------- */
+
+/* ---------------- push notifications: is Firebase set up, and does a message reach this admin's phone? ---------------- */
+
+adminRouter.get("/push-status", async (_req, res) => {
+  res.json(await pushStatus());
+});
+
+adminRouter.post("/push-test", async (req, res) => {
+  const devices = await prisma.deviceToken.count({ where: { userId: req.user!.id } });
+  if (!devices) {
+    return sendError(res, 409, "NO_DEVICE", "ما في جهاز مسجّل لحسابك — سجّل دخولك بتطبيق أندرويد (النسخة الجديدة) بهالحساب أول.");
+  }
+  const errors: string[] = [];
+  const me = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { language: true } });
+  const lang = me?.language ?? DEFAULT_LANGUAGE;
+  const title = translateText("إشعار تجريبي من دليلكم 🔔", lang);
+  const body = translateText("إذا وصلك هذا الإشعار فالإشعارات شغّالة.", lang);
+  const delivered = await sendPushToUser(req.user!.id, { title, body, data: { type: "TEST" } }, errors);
+  res.json({ devices, delivered, errors });
+});
 
 adminRouter.get("/ai-status", async (_req, res) => {
   res.json({

@@ -92,6 +92,7 @@
     <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
     <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 الباقات والأسعار</div>
     <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
+    <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
     <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
     <div class="logout" onclick="changePassword()">🔑 تغيير كلمة السر</div>
@@ -223,6 +224,31 @@
       </div>
     </div>
 
+    <!-- PUSH NOTIFICATIONS STATUS -->
+    <div class="section" id="section-push" style="display:none">
+      <h2>الإشعارات</h2>
+      <p class="subtitle">هل مفتاح Firebase مضبوط على السيرفر وشغّال، وكم جهاز مسجّل — مع زر يبعت إشعار تجريبي لجهازك.</p>
+      <div class="card">
+        <button class="small" onclick="loadPushStatus()">🔄 تحديث</button>
+        <span id="push-msg" class="muted" style="margin-right:10px"></span>
+        <table style="margin-top:14px">
+          <tbody>
+            <tr><td>مفتاح Firebase مضبوط؟</td><td id="push-configured">—</td></tr>
+            <tr><td>مشروع Firebase</td><td id="push-project">—</td></tr>
+            <tr><td>تسجيل الدخول لـ Google بالمفتاح</td><td id="push-auth">—</td></tr>
+            <tr><td>أجهزة مسجّلة (مستخدمين)</td><td id="push-devices">—</td></tr>
+          </tbody>
+        </table>
+        <p id="push-error" class="muted" style="margin-top:10px;direction:ltr;text-align:left"></p>
+      </div>
+      <div class="card">
+        <h3>إشعار تجريبي</h3>
+        <p class="muted">يوصل لأجهزة حسابك أنت فقط: سجّل دخولك بتطبيق أندرويد (النسخة الجديدة) بنفس هذا الحساب وأعطِ إذن الإشعارات، وبعدها اضغط الزر.</p>
+        <button style="margin-top:12px" onclick="sendPushTest()">🔔 ابعت إشعار تجريبي</button>
+        <p id="push-test-result" class="muted" style="margin-top:10px"></p>
+      </div>
+    </div>
+
     <!-- AI PROVIDER STATUS -->
     <div class="section" id="section-ai" style="display:none">
       <h2>حالة الذكاء الاصطناعي</h2>
@@ -345,6 +371,7 @@ function enterApp() {
   loadCategories();
   loadPlans();
   loadResponderAdmin();
+  loadPushStatus();
   loadAiStatus();
   loadTopups('PENDING');
 }
@@ -353,6 +380,31 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- Push notifications status ----
+async function loadPushStatus() {
+  const { ok, data } = await api('GET', '/admin/push-status');
+  if (!ok) { logout(); return; }
+  const badge = (good, yes, no) => `<span class="badge ${good ? 'APPROVED' : 'REJECTED'}">${good ? yes : no}</span>`;
+  document.getElementById('push-configured').innerHTML = data.invalid
+    ? badge(false, '', 'المتغيّر موجود لكنه مو ملف JSON صالح')
+    : badge(data.configured, 'نعم', 'لا — ضيف FIREBASE_SERVICE_ACCOUNT_JSON على Render');
+  document.getElementById('push-project').textContent = data.projectId || '—';
+  document.getElementById('push-auth').innerHTML = data.authenticated === null ? '—' : badge(data.authenticated, 'شغّال', 'فشل');
+  document.getElementById('push-devices').textContent = `${data.devices} (${data.usersWithDevices})`;
+  document.getElementById('push-error').textContent = data.error || '';
+}
+
+async function sendPushTest() {
+  const out = document.getElementById('push-test-result');
+  out.textContent = 'عم يرسل...';
+  const { ok, data } = await api('POST', '/admin/push-test');
+  if (!ok) { out.textContent = (data && data.error && data.error.message) || 'تعذّر الإرسال'; return; }
+  out.textContent = data.delivered > 0
+    ? `انبعت لـ ${data.delivered} من ${data.devices} جهاز — تأكد أنه وصل على الموبايل.`
+    : `ما وصل لأي جهاز. ${data.errors.join(' | ')}`;
+  loadPushStatus();
 }
 
 // ---- AI provider status ----

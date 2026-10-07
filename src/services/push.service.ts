@@ -61,7 +61,11 @@ async function accessToken(account: ServiceAccount): Promise<string> {
     body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }),
     signal: AbortSignal.timeout(8000),
   });
-  if (!res.ok) throw new Error(`FCM auth failed (${res.status})`);
+  if (!res.ok) {
+    // Google's answer names the problem (invalid_grant, invalid JWT signature...) and never contains our key.
+    const detail = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200);
+    throw new Error(`FCM auth failed (${res.status}) ${detail}`.trim());
+  }
   const json = (await res.json()) as { access_token: string; expires_in?: number };
   cachedToken = { value: json.access_token, expiresAt: Date.now() + (json.expires_in ?? 3600) * 1000, account: account.client_email };
   return json.access_token;
@@ -90,7 +94,7 @@ function isDeadToken(status: number, body: string): boolean {
  * removed so it is not retried forever, and one failing device does not stop the others.
  * Returns how many devices accepted the message.
  */
-export async function sendPushToUser(userId: string, message: PushMessage): Promise<number> {
+export async function sendPushToUser(userId: string, message: PushMessage, report?: string[]): Promise<number> {
   const account = serviceAccount();
   if (!account) return 0;
 
@@ -117,16 +121,46 @@ export async function sendPushToUser(userId: string, message: PushMessage): Prom
         });
         if (res.ok) {
           delivered++;
-        } else if (isDeadToken(res.status, await res.text().catch(() => ""))) {
-          await prisma.deviceToken.deleteMany({ where: { id: device.id } });
+        } else {
+          const text = await res.text().catch(() => "");
+          report?.push(`FCM ${res.status}: ${text.replace(/\s+/g, " ").slice(0, 160)}`);
+          if (isDeadToken(res.status, text)) await prisma.deviceToken.deleteMany({ where: { id: device.id } });
         }
-      } catch {
-        /* this device failed (timeout/network); try the rest */
+      } catch (err) {
+        report?.push(`device unreachable: ${err instanceof Error ? err.message : "error"}`);
       }
     }
     return delivered;
-  } catch {
+  } catch (err) {
+    report?.push(`push failed: ${err instanceof Error ? err.message : "error"}`);
     return 0;
+  }
+}
+
+export interface PushStatus {
+  configured: boolean;
+  /** The variable is set but is not a usable service-account file. */
+  invalid: boolean;
+  projectId: string | null;
+  /** Could we sign in to Google with the key? null when there is no key to try. */
+  authenticated: boolean | null;
+  error: string | null;
+  devices: number;
+  usersWithDevices: number;
+}
+
+/** What the admin needs to see to know whether push can work: booleans and counts, never the key itself. */
+export async function pushStatus(): Promise<PushStatus> {
+  const account = serviceAccount();
+  const [devices, groups] = await Promise.all([prisma.deviceToken.count(), prisma.deviceToken.groupBy({ by: ["userId"] })]);
+  const base = { devices, usersWithDevices: groups.length };
+  if (!account) return { ...base, configured: false, invalid: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, projectId: null, authenticated: null, error: null };
+  try {
+    resetPushTokenCache();
+    await accessToken(account);
+    return { ...base, configured: true, invalid: false, projectId: account.project_id, authenticated: true, error: null };
+  } catch (err) {
+    return { ...base, configured: true, invalid: false, projectId: account.project_id, authenticated: false, error: err instanceof Error ? err.message : "error" };
   }
 }
 
