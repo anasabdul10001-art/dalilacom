@@ -241,6 +241,7 @@ const ICON = {
   user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.3"/><path d="M5 20c1.3-3.6 4-5.4 7-5.4s5.7 1.8 7 5.4"/></svg>',
   scan: '<svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M4 12h16" stroke-dasharray="2.5 2.5"/></svg>',
   box: '<svg viewBox="0 0 24 24"><path d="M3.5 7 12 3l8.5 4-8.5 4-8.5-4Z"/><path d="M3.5 7v10L12 21l8.5-4V7"/><path d="M12 11v10"/></svg>',
+  bell: '<svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15Z"/><path d="M10 21h4"/></svg>',
 };
 
 /* ---------------- screen router ---------------- */
@@ -2016,10 +2017,11 @@ const MERCHANT_TABS = [
   { id: "redeem", label: "تأكيد حسم", icon: "scan" },
   { id: "orders", label: "طلبات واردة", icon: "orders" },
   { id: "catalog", label: "الكتالوج", icon: "box" },
+  { id: "promo", label: "إعلاناتي", icon: "bell" },
 ];
 
 function screenMerchantModeShell() {
-  const body = { redeem: tabRedeem, orders: tabMerchantOrders, catalog: tabCatalog }[S.merchantTab]();
+  const body = { redeem: tabRedeem, orders: tabMerchantOrders, catalog: tabCatalog, promo: tabPromo }[S.merchantTab]();
   return `
     <button class="back-btn" onclick="back()">‹ رجوع لحساب الزبون</button>
     ${merchantChecklistHtml()}
@@ -2031,6 +2033,117 @@ function screenMerchantModeShell() {
         </button>`).join("")}
     </div>
   `;
+}
+
+/* ---- Announcements tab: a notice to people around the shop, reviewed by the platform before it goes out ---- */
+
+const PROMO_STATUS = { PENDING_REVIEW: "بانتظار مراجعة دليلكم", SENT: "تم النشر", REJECTED: "مرفوض" };
+const PROMO_ERRORS = {
+  SHOP_HAS_NO_LOCATION: "حدّد موقع محلك أولًا من «بيانات المحل ومكانه»",
+  RADIUS_TOO_LARGE: "أكبر مسافة مسموحة 50 كم",
+  BROADCAST_LIMIT: "وصلت للحد اليومي: 3 إعلانات باليوم",
+  MERCHANT_NOT_APPROVED: "لازم تتم الموافقة على محلك أولًا",
+  AUDIENCE_TOO_LARGE: "الجمهور كبير جدًا — صغّر المسافة",
+};
+
+function promoError(data, fallback) {
+  const code = data && data.error && data.error.code;
+  return PROMO_ERRORS[code] || errMsg(data, fallback);
+}
+
+function tabPromo() {
+  if (!S._promo) { S._promo = { loading: true, radius: "5", title: "", body: "", productId: "", discountId: "" }; loadPromo(); }
+  const p = S._promo;
+  if (p.loading) return `<h1 class="screen-title">إعلاناتي</h1>${spinner()}`;
+  const option = (value, label, chosen) => `<option value="${esc(value)}" ${chosen === value ? "selected" : ""}>${esc(label)}</option>`;
+  return `
+    <h1 class="screen-title">إعلاناتي</h1>
+    <p class="screen-sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</p>
+    <div class="card">
+      <div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" inputmode="decimal" value="${esc(p.radius)}" /></div>
+      <div class="field"><label>العنوان</label><input id="pr-title" maxlength="100" value="${esc(p.title)}" /></div>
+      <div class="field"><label>النص</label><textarea id="pr-body" maxlength="500" rows="3">${esc(p.body)}</textarea></div>
+      <div class="field"><label>إرفاق منتج (اختياري)</label>
+        <select id="pr-product">${option("", "— بدون —", p.productId)}${(p.products || []).map((x) => option(x.id, x.name, p.productId)).join("")}</select></div>
+      <div class="field"><label>إرفاق عرض (اختياري)</label>
+        <select id="pr-discount">${option("", "— بدون —", p.discountId)}${(p.discounts || []).map((x) => option(x.id, `${x.title} — ${x.percent}%`, p.discountId)).join("")}</select></div>
+      ${p.info ? `<p class="muted">${esc(p.info)}</p>` : ""}
+      ${p.error ? `<div class="error-banner">${esc(p.error)}</div>` : ""}
+      <div class="row">
+        <button class="btn outline" onclick="promoPreview()">كم شخص سيصل؟</button>
+        <button class="btn" onclick="promoSend()">أرسل للمراجعة</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0">إعلاناتك السابقة</div>
+      ${(p.history || []).length ? p.history.map((b) => `
+        <div style="padding:8px 0;border-top:1px solid var(--border)">
+          <div class="title-line"><strong>${esc(b.title)}</strong>
+            <span class="badge ${b.status === "SENT" ? "success" : "neutral"}">${esc(PROMO_STATUS[b.status] || b.status)}</span></div>
+          <p class="muted">${esc(b.body)}</p>
+          ${b.status === "SENT" ? `<p class="muted">وصل إلى ${b.delivered} شخص</p>` : ""}
+          ${b.status === "REJECTED" && b.reviewNote ? `<p class="muted">السبب: ${esc(b.reviewNote)}</p>` : ""}
+        </div>`).join("") : `<p class="muted">لا إعلانات بعد</p>`}
+    </div>
+  `;
+}
+
+async function loadPromo() {
+  const [history, me, products] = await Promise.all([api("GET", "/broadcasts"), api("GET", "/merchant/me"), api("GET", "/products/mine")]);
+  Object.assign(S._promo, {
+    loading: false,
+    history: history.ok ? history.data : [],
+    discounts: me.ok ? (me.data.discounts || []).filter((d) => d.isActive !== false) : [],
+    products: products.ok ? products.data.filter((x) => x.isActive !== false) : [],
+  });
+  render();
+}
+
+/** Reads the form into the state so a re-render never loses what was typed. */
+function promoRead() {
+  const p = S._promo;
+  p.radius = qs("pr-radius").value;
+  p.title = qs("pr-title").value;
+  p.body = qs("pr-body").value;
+  p.productId = qs("pr-product").value;
+  p.discountId = qs("pr-discount").value;
+  p.error = null;
+  const radiusKm = parseFloat(latinDigits(p.radius));
+  if (!radiusKm || radiusKm <= 0) { p.error = "اكتب المسافة بالكيلومتر"; return null; }
+  return radiusKm;
+}
+
+async function promoPreview() {
+  const radiusKm = promoRead();
+  const p = S._promo;
+  if (radiusKm) {
+    const { ok, data } = await api("POST", "/broadcasts/preview", { radiusKm });
+    if (ok) p.info = `سيصل لنحو ${data.count} شخص — المتبقّي لك اليوم: ${data.remainingToday} إعلانات`;
+    else { p.info = null; p.error = promoError(data, "تعذّر الحساب"); }
+  }
+  render();
+}
+
+async function promoSend() {
+  const radiusKm = promoRead();
+  const p = S._promo;
+  if (radiusKm && (!p.title.trim() || !p.body.trim())) p.error = "اكتب العنوان والنص";
+  if (!p.error) {
+    const body = { radiusKm, title: p.title.trim(), body: p.body.trim() };
+    if (p.productId) body.productId = p.productId;
+    if (p.discountId) body.discountId = p.discountId;
+    const { ok, data } = await api("POST", "/broadcasts", body);
+    if (ok) {
+      p.info = data.status === "REJECTED" ? `رُفض الإعلان: ${(data.reasons || []).join(" — ")}` : "وصل الإعلان لفريق دليلكم للمراجعة، وسيُنشر فور الموافقة";
+      if (data.status !== "REJECTED") { p.title = ""; p.body = ""; p.productId = ""; p.discountId = ""; }
+      const history = await api("GET", "/broadcasts");
+      if (history.ok) p.history = history.data;
+    } else {
+      p.info = null;
+      p.error = promoError(data, "تعذّر الإرسال");
+    }
+  }
+  render();
 }
 
 /* ---- Redeem tab ---- */
