@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from "vitest";
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
-import { uniqueEmail, uniqueIsoCode2 } from "./helpers";
+import { uniqueEmail, freeIsoCode2 } from "./helpers";
 
 afterAll(async () => {
   await prisma.$disconnect();
@@ -23,7 +23,7 @@ describe("Geography", () => {
     const country = await request(app)
       .post("/geo/countries")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: `Testland-${Date.now()}`, isoCode2: uniqueIsoCode2(), currencyCode: "TST" });
+      .send({ name: `Testland-${Date.now()}`, isoCode2: await freeIsoCode2(prisma), currencyCode: "TST" });
     expect(country.status).toBe(201);
 
     const region = await request(app)
@@ -51,7 +51,7 @@ describe("Geography", () => {
     const country = await request(app)
       .post("/geo/countries")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: `Flatland-${Date.now()}`, isoCode2: uniqueIsoCode2(), currencyCode: "TST" });
+      .send({ name: `Flatland-${Date.now()}`, isoCode2: await freeIsoCode2(prisma), currencyCode: "TST" });
     expect(country.status).toBe(201);
 
     const city = await request(app)
@@ -66,7 +66,7 @@ describe("Geography", () => {
     const country = await request(app)
       .post("/geo/countries")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: `Badland-${Date.now()}`, isoCode2: uniqueIsoCode2(), currencyCode: "TST" });
+      .send({ name: `Badland-${Date.now()}`, isoCode2: await freeIsoCode2(prisma), currencyCode: "TST" });
     expect(country.status).toBe(201);
 
     const res = await request(app)
@@ -82,12 +82,12 @@ describe("Geography", () => {
     const countryA = await request(app)
       .post("/geo/countries")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: `CountryA-${Date.now()}`, isoCode2: uniqueIsoCode2(), currencyCode: "TST" });
+      .send({ name: `CountryA-${Date.now()}`, isoCode2: await freeIsoCode2(prisma), currencyCode: "TST" });
     expect(countryA.status).toBe(201);
     const countryB = await request(app)
       .post("/geo/countries")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: `CountryB-${Date.now()}`, isoCode2: uniqueIsoCode2(), currencyCode: "TST" });
+      .send({ name: `CountryB-${Date.now()}`, isoCode2: await freeIsoCode2(prisma), currencyCode: "TST" });
     expect(countryB.status).toBe(201);
     const regionA = await request(app)
       .post("/geo/units")

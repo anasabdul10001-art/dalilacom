@@ -27,6 +27,16 @@ export function uniqueIsoCode2(): string {
   return a + b;
 }
 
+/** Like uniqueIsoCode2, but also skips codes a persistent dev database already holds from earlier runs
+ * (the counter alone cannot know about them, which made a long-lived local database fail at random). */
+export async function freeIsoCode2(prisma: PrismaClient): Promise<string> {
+  for (let attempt = 0; attempt < 700; attempt++) {
+    const code = uniqueIsoCode2();
+    if (!(await prisma.country.findUnique({ where: { isoCode2: code }, select: { id: true } }))) return code;
+  }
+  throw new Error("No free 2-letter ISO code left in the test database");
+}
+
 /** A single reusable Country fixture for Business/Branch/Catalog tests that just need *a*
  * valid country and don't care which one — idempotent, safe to call from every test file. */
 export async function ensureTestCountry(prisma: PrismaClient) {
