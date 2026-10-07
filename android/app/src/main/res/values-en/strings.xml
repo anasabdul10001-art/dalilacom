@@ -208,6 +208,12 @@
     <string name="responder_fallback_text">Fixed text</string>
     <string name="responder_fallback_reply">Fallback reply text ({name} = the customer\u2019s name)</string>
     <string name="fmt_responder_stats">Last 30 days: sent %1$d · waiting for you %2$d · failed %3$d</string>
+    <string name="profile_delete_account">Delete my account</string>
+    <string name="profile_delete_message">Your account and all your personal data will be deleted permanently (an anonymous record of orders and wallet stays for accounting). Type your password to confirm, or leave it empty if you signed in with Google or Facebook.</string>
+    <string name="profile_delete_password">Password</string>
+    <string name="profile_delete_confirm">Delete permanently</string>
+    <string name="profile_delete_cancel">Cancel</string>
+    <string name="profile_delete_failed">Could not delete the account</string>
     <string name="promo_tab">My announcements</string>
     <string name="promo_title">My announcements</string>
     <string name="promo_sub">Send a notification to people around your shop — the Dalilacom team reviews it before anyone receives it</string>

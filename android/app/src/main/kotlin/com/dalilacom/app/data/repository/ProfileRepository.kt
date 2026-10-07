@@ -3,6 +3,7 @@ package com.dalilacom.app.data.repository
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.ApiService
+import com.dalilacom.app.data.network.DeleteAccountRequest
 import com.dalilacom.app.data.network.LocationRequest
 import com.dalilacom.app.data.network.ProfileDto
 import com.dalilacom.app.data.network.UpdateProfileRequest
@@ -26,6 +27,13 @@ class ProfileRepository(private val api: ApiService) {
     /** Tells the server which language this account reads, so push notifications and emails match. Silent on failure. */
     suspend fun setLanguage(code: String) {
         safeApiCall { api.updateProfile(UpdateProfileRequest(language = code)) }
+    }
+
+    /** Deletes the account for good. A wrong password comes back as the server's own message. */
+    suspend fun deleteAccount(password: String): Result<Unit> {
+        val response = safeApiCall { api.deleteAccount(DeleteAccountRequest(confirm = true, password = password.ifBlank { null })) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.profile_delete_failed))))
     }
 
     /** The person opted in: tell the server roughly where they are (it rounds to ~1 km). Silent on failure. */

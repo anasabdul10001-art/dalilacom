@@ -19,6 +19,9 @@ interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
 
+    @retrofit2.http.HTTP(method = "DELETE", path = "profile/me", hasBody = true)
+    suspend fun deleteAccount(@Body body: DeleteAccountRequest): Response<kotlinx.serialization.json.JsonElement>
+
     @PUT("profile/location")
     suspend fun putLocation(@Body body: LocationRequest): Response<kotlinx.serialization.json.JsonElement>
 

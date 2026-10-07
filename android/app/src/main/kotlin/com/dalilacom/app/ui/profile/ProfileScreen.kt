@@ -139,5 +139,48 @@ fun ProfileScreen(
         }) {
             Text(stringResource(R.string.profile_logout))
         }
+
+        // Delete the account for good: personal data goes, an anonymous record of orders and wallet stays for the books.
+        var askDelete by remember { mutableStateOf(false) }
+        var deletePassword by remember { mutableStateOf("") }
+        var deleteError by remember { mutableStateOf<String?>(null) }
+        TextButton(onClick = { askDelete = true }) {
+            Text(stringResource(R.string.profile_delete_account), color = MaterialTheme.colorScheme.error)
+        }
+        if (askDelete) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { askDelete = false },
+                title = { Text(stringResource(R.string.profile_delete_account)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.profile_delete_message))
+                        androidx.compose.material3.OutlinedTextField(
+                            value = deletePassword,
+                            onValueChange = { deletePassword = it; deleteError = null },
+                            label = { Text(stringResource(R.string.profile_delete_password)) },
+                            singleLine = true,
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        deleteError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        scope.launch {
+                            container.profileRepository.deleteAccount(deletePassword)
+                                .onSuccess {
+                                    container.notificationRepository.unregisterCurrentDevice()
+                                    container.authRepository.logout()
+                                    askDelete = false
+                                    onLoggedOut()
+                                }
+                                .onFailure { deleteError = it.message }
+                        }
+                    }) { Text(stringResource(R.string.profile_delete_confirm), color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton(onClick = { askDelete = false }) { Text(stringResource(R.string.profile_delete_cancel)) } },
+            )
+        }
     }
 }

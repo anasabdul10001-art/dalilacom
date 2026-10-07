@@ -212,6 +212,12 @@
     <string name="responder_fallback_text">نص ثابت</string>
     <string name="responder_fallback_reply">نص الرد الاحتياطي ({name} = اسم الزبون)</string>
     <string name="fmt_responder_stats">آخر 30 يوم: أُرسل %1$d · بانتظار ردّك %2$d · فشل %3$d</string>
+    <string name="profile_delete_account">حذف حسابي</string>
+    <string name="profile_delete_message">سيُحذف حسابك وكل بياناتك الشخصية نهائيًا (يبقى سجل الطلبات والمحفظة المجهول للمحاسبة). اكتب كلمة السر للتأكيد، أو اتركها فاضية إذا دخلت بحساب جوجل أو فيسبوك.</string>
+    <string name="profile_delete_password">كلمة السر</string>
+    <string name="profile_delete_confirm">احذف نهائيًا</string>
+    <string name="profile_delete_cancel">تراجع</string>
+    <string name="profile_delete_failed">تعذّر حذف الحساب</string>
     <string name="promo_tab">إعلاناتي</string>
     <string name="promo_title">إعلاناتي</string>
     <string name="promo_sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</string>

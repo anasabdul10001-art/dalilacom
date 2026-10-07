@@ -24,6 +24,10 @@ data class ProfileDto(
 @Serializable
 data class UpdateProfileRequest(val fullName: String? = null, val bio: String? = null, val language: String? = null)
 
+// `confirm` has no default on purpose: defaults are not sent, and the server insists on an explicit true.
+@Serializable
+data class DeleteAccountRequest(val confirm: Boolean, val password: String? = null)
+
 @Serializable
 data class LocationRequest(val latitude: Double, val longitude: Double)
 

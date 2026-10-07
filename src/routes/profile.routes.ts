@@ -45,7 +45,8 @@ profileRouter.delete("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { passwordHash: true, socialIdentities: { select: { id: true } } } });
   if (user.socialIdentities.length === 0) {
     if (!parsed.data.password || !(await bcrypt.compare(parsed.data.password, user.passwordHash))) {
-      return sendError(res, 401, "AUTH_INVALID_CREDENTIALS", "كلمة السر غير صحيحة");
+      // 403, not 401: a wrong password here must not look like an expired session (the apps sign out on 401)
+      return sendError(res, 403, "WRONG_PASSWORD", "كلمة السر غير صحيحة");
     }
   }
   await anonymizeAccount(req.user!.id);

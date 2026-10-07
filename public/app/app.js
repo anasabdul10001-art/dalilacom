@@ -414,6 +414,18 @@ async function doRegister() {
   }
 }
 
+async function deleteMyAccount() {
+  if (!confirm(t("profile.deleteConfirm"))) return;
+  const password = prompt(t("profile.deletePassword"));
+  if (password === null) return;
+  const { ok, data } = await api("DELETE", "/profile/me", { confirm: true, password: password || undefined });
+  if (!ok) return toast(errMsg(data, t("profile.deleteFailed")));
+  clearToken();
+  S.homeTab = "discover";
+  reset("home");
+  toast(t("profile.deleted"));
+}
+
 function doLogout() {
   api("POST", "/auth/logout");
   clearToken();
@@ -1135,6 +1147,8 @@ function tabProfile() {
       <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
       <div style="height:14px"></div>
       <button class="btn secondary" style="max-width:240px" onclick="doLogout()">${esc(t("profile.logout"))}</button>
+      <div style="height:10px"></div>
+      <button class="link-btn" style="color:var(--danger, #b71c1c)" onclick="deleteMyAccount()">${esc(t("profile.deleteAccount"))}</button>
     </div>
   `;
 }
