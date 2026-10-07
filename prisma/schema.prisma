@@ -60,6 +60,12 @@ model User {
   isEmailVerified Boolean   @default(false)
   isDisabled      Boolean   @default(false) // admin-controlled kill switch, blocks login regardless of tokenVersion
   bio             String? // short public description shown on the account's profile / shop page
+  // Country/city used for per-country pricing and tax (sections 64/58). Deliberately a plain ISO-2
+  // code rather than a relation: it is set from the account's own claims/address and never needs a
+  // join to render a price. `cityId` points at a GeoUnit.
+  countryCode     String?
+  cityId          String?
+  vatNumber       String? // EU business customers: shown on invoices, enables reverse charge later
   avatarUpdatedAt DateTime? // set when a profile photo exists; also the cache-busting version in its URL
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -156,22 +162,94 @@ model SecurityEvent {
 }
 
 // One pricing plan a customer can subscribe to (Admin-managed, section 24/60/61)
-model MembershipPlan {
-  id           String   @id @default(uuid())
+// Which sellable service a plan belongs to. The pricing page lists every service from one catalogue
+// (sections 24/60), so membership plans, merchant plans and (later) add-ons live in the same table
+// instead of three unrelated places.
+enum ServiceKind {
+  MEMBERSHIP // the customer's digital membership card (section 19/24)
+  RESPONDER_CUSTOMER // auto-responder subscription, customer price
+  RESPONDER_MERCHANT // auto-responder subscription, merchant price
+  MERCHANT_ACCOUNT // a merchant plan (tiers carry their own broadcast quota)
+}
+
+// One service plan a customer or merchant can subscribe to. This is the single source of truth for
+// prices, duration, trial and what the plan includes (Admin-managed, section 24/60/61).
+model ServicePlan {
+  id           String      @id @default(uuid())
+  service      ServiceKind @default(MEMBERSHIP)
   name         String
+  description  String?
   durationDays Int
+  trialDays    Int         @default(0) // free trial days before the first charge (0 = none, section 61)
   priceCents   Int
-  currency     String   @default("EUR")
+  currency     String      @default("EUR")
   // What subscribing actually costs in wallet credits (the wallet's own unit, section 51). priceCents
   // is the price shown to the customer in `currency`; this is the amount debited. Null on a plan whose
   // priceCents > 0 means the admin has not priced it in credits yet, and subscribing is refused rather
   // than converting currencies with a rate nobody set (sections 24/60/64).
   priceCredits Int?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  // Merchant plans only: how many follower broadcasts this plan allows per period (section 37/76).
+  // Null means "not applicable" for that kind of service.
+  monthlyBroadcastLimit Int?
+  sortOrder    Int         @default(0) // display order on the pricing page (lower first)
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   memberships Membership[]
+  features    PlanFeature[]
+  prices      PlanPrice[]
+
+  @@index([service, isActive])
+}
+
+// One bullet of a plan's specification list, in the order the pricing page shows it, e.g.
+// "✔ 500 AI replies / month" or "✘ follower broadcasts" (included = false).
+model PlanFeature {
+  id        String  @id @default(uuid())
+  planId    String
+  text      String
+  included  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  plan ServicePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}
+
+// A price override for one country (section 64). A plan without a row for the customer's country
+// falls back to the plan's own priceCredits, so the admin only enters the exceptions.
+model PlanPrice {
+  id              String  @id @default(uuid())
+  planId          String
+  countryId       String
+  priceCredits    Int
+  cashAmountCents Int?
+  currencyCode    String? // defaults to the country's currency when empty
+  isActive        Boolean @default(true)
+
+  plan    ServicePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  country Country     @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, countryId])
+  @@index([countryId])
+}
+
+// The VAT/sales-tax rate applied to a country's invoices (section 58/64). Stored in basis points so
+// the arithmetic stays integer: 1900 = 19.00%. A row with no country is the platform default, used
+// for customers whose country has no rate of its own.
+model TaxRate {
+  id            String   @id @default(uuid())
+  countryId     String?
+  name          String // "VAT 19%" — printed on the invoice exactly as entered
+  percentBps    Int // basis points: 1900 = 19.00%
+  isDefault     Boolean  @default(false)
+  effectiveFrom DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  country Country? @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@unique([countryId])
 }
 
 // A customer's active/expired subscription instance — this IS the digital card (section 19)
@@ -192,8 +270,8 @@ model Membership {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
-  user User           @relation(fields: [userId], references: [id])
-  plan MembershipPlan @relation(fields: [planId], references: [id])
+  user User        @relation(fields: [userId], references: [id])
+  plan ServicePlan @relation(fields: [planId], references: [id])
 
   discountTransactions DiscountTransaction[]
 
@@ -655,6 +733,9 @@ model Country {
 
   businesses Business[]
   branches   Branch[]
+
+  planPrices PlanPrice[]
+  taxRates   TaxRate[]
 }
 
 enum GeoLevel {
@@ -761,6 +842,7 @@ model Business {
   phone       String?
   whatsapp    String?
   email       String?
+  vatNumber   String? // EU business: printed on invoices and used for reverse charge later (section 58)
   status      BusinessStatus @default(DRAFT)
 
   countryId String

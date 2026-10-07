@@ -4,6 +4,7 @@ import { sendError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { avatarUrl } from "../lib/profile";
 import { DocumentData, formatMoney, renderDocumentHtml } from "../lib/documents";
+import { taxRateFor } from "../services/plan.service";
 
 export const invoiceRouter = Router();
 invoiceRouter.use(requireAuth);
@@ -42,23 +43,33 @@ function sendHtml(res: Response, doc: DocumentData) {
 invoiceRouter.get("/order/:id", async (req, res) => {
   const order = await prisma.order.findUnique({
     where: { id: req.params.id },
-    include: { items: true, user: { select: { fullName: true } }, merchant: merchantInclude },
+    include: { items: true, user: { select: { fullName: true, countryCode: true, vatNumber: true } }, merchant: merchantInclude },
   });
   if (!order || (order.userId !== req.user!.id && order.merchant.userId !== req.user!.id)) {
     return sendError(res, 404, "NOT_FOUND", "Order not found");
   }
+  // Prices are tax-inclusive, so VAT is the part of the total that belongs to the tax — never added on top.
+  // Nothing is printed unless the admin has set a rate for the customer's country (or a platform default).
+  const taxRate = await taxRateFor(order.user.countryCode);
+  const vatCents = taxRate && taxRate.percentBps > 0 ? Math.round((order.totalCents * taxRate.percentBps) / (10000 + taxRate.percentBps)) : 0;
   sendHtml(res, {
     kind: "ORDER_INVOICE",
     number: order.orderNumber,
     issuedAt: order.createdAt,
     issuer: issuerOf(order.merchant),
-    recipient: { label: "العميل", name: order.user.fullName },
+    recipient: { label: "العميل", name: order.user.fullName, taxId: order.user.vatNumber },
     status: ORDER_STATUS_AR[order.status] ?? order.status,
     rows: order.items.map((i) => ({ label: i.productName, qty: i.quantity, amount: formatMoney(i.unitPriceCents * i.quantity) })),
     totals: [
       { label: "المجموع", value: formatMoney(order.subtotalCents) },
       ...(order.memberDiscountCents > 0 ? [{ label: "حسم أعضاء دليلكم", value: `− ${formatMoney(order.memberDiscountCents)}` }] : []),
       { label: "الإجمالي", value: formatMoney(order.totalCents), strong: true },
+      ...(taxRate && vatCents > 0
+        ? [
+            { label: "الصافي قبل الضريبة", value: formatMoney(order.totalCents - vatCents) },
+            { label: `${taxRate.name} (مضمّنة بالسعر)`, value: formatMoney(vatCents) },
+          ]
+        : []),
     ],
     footnote: "شكراً لتعاملكم معنا — صدرت هذه الفاتورة عبر منصة دليلكم",
   });

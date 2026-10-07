@@ -35,10 +35,10 @@ async function main() {
   }
 
   const planName = "Monthly";
-  const existingPlan = await prisma.membershipPlan.findFirst({ where: { name: planName } });
+  const existingPlan = await prisma.servicePlan.findFirst({ where: { name: planName, service: "MEMBERSHIP" } });
   if (!existingPlan) {
-    await prisma.membershipPlan.create({
-      data: { name: planName, durationDays: 30, priceCents: 999, currency: "EUR" },
+    await prisma.servicePlan.create({
+      data: { name: planName, service: "MEMBERSHIP", durationDays: 30, priceCents: 999, currency: "EUR" },
     });
     console.log("Created Monthly membership plan");
   }

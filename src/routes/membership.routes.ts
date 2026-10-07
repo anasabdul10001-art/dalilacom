@@ -8,13 +8,16 @@ import { Role } from "@prisma/client";
 import { notifyExpiringMembership } from "../services/notification.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
 import { getSettings } from "../services/settings.service";
+import { creditsChargeFor } from "../services/plan.service";
 
 export const membershipRouter = Router();
 
 // Public: list plans a customer can subscribe to
 membershipRouter.get("/plans", async (_req, res) => {
-  const plans = await prisma.membershipPlan.findMany({
-    where: { isActive: true },
+  const plans = await prisma.servicePlan.findMany({
+    // The catalogue also holds merchant plans and (later) add-ons; this endpoint stays membership-only
+    // so the Android app and the web preview keep getting exactly what they used to.
+    where: { isActive: true, service: "MEMBERSHIP" },
     orderBy: { priceCents: "asc" },
   });
   res.json(plans);
@@ -36,13 +39,13 @@ membershipRouter.post("/plans", requireAuth, requireRole(Role.ADMIN), async (req
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
   }
-  const plan = await prisma.membershipPlan.create({ data: parsed.data });
+  const plan = await prisma.servicePlan.create({ data: { ...parsed.data, service: "MEMBERSHIP" } });
   res.status(201).json(plan);
 });
 
 // Admin: every plan including inactive ones, for the admin dashboard (section 24/60)
 membershipRouter.get("/plans/all", requireAuth, requireRole(Role.ADMIN), async (_req, res) => {
-  const plans = await prisma.membershipPlan.findMany({ orderBy: { priceCents: "asc" } });
+  const plans = await prisma.servicePlan.findMany({ where: { service: "MEMBERSHIP" }, orderBy: { priceCents: "asc" } });
   res.json(plans);
 });
 
@@ -60,11 +63,11 @@ membershipRouter.patch("/plans/:id", requireAuth, requireRole(Role.ADMIN), async
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
   }
-  const existing = await prisma.membershipPlan.findUnique({ where: { id: req.params.id } });
+  const existing = await prisma.servicePlan.findUnique({ where: { id: req.params.id } });
   if (!existing) {
     return sendError(res, 404, "NOT_FOUND", "Plan not found");
   }
-  const plan = await prisma.membershipPlan.update({ where: { id: existing.id }, data: parsed.data });
+  const plan = await prisma.servicePlan.update({ where: { id: existing.id }, data: parsed.data });
   res.json(plan);
 });
 
@@ -80,8 +83,10 @@ membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
     return sendValidationError(res, parsed.error);
   }
 
-  const plan = await prisma.membershipPlan.findUnique({ where: { id: parsed.data.planId } });
-  if (!plan || !plan.isActive) {
+  const plan = await prisma.servicePlan.findUnique({ where: { id: parsed.data.planId } });
+  // The catalogue holds merchant plans and add-ons too, so a membership subscription must refuse
+  // anything that is not a membership plan rather than silently selling the wrong service.
+  if (!plan || !plan.isActive || plan.service !== "MEMBERSHIP") {
     return sendError(res, 404, "NOT_FOUND", "Plan not found");
   }
 
@@ -95,7 +100,9 @@ membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
   // A plan that costs money must also say what it costs in wallet credits (section 51/60). Refusing
   // is deliberate: converting `currency` to credits would invent an exchange rate nobody configured.
   // A plan priced 0 is free and activates directly, which is how sections 24/61 allow 0 pricing.
-  const charge = plan.priceCents > 0 ? plan.priceCredits : 0;
+  // The price is the one this customer's country is shown on the pricing page (section 64).
+  const buyer = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { countryCode: true } });
+  const charge = await creditsChargeFor(plan, buyer?.countryCode ?? null);
   if (charge === null || charge === undefined) {
     const { creditName } = await getSettings();
     return sendError(

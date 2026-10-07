@@ -191,7 +191,7 @@ describe("A redeemed discount notifies the member (section 34/13)", () => {
     const { owner, merchantId } = await shop();
     await request(app).post("/merchant/discounts").set("Authorization", owner.bearer).send({ title: "15% off", percent: 15 });
 
-    const plan = await prisma.membershipPlan.create({ data: { name: `Notif Plan ${Date.now()}`, durationDays: 30, priceCents: 0 } });
+    const plan = await prisma.servicePlan.create({ data: { name: `Notif Plan ${Date.now()}`, durationDays: 30, priceCents: 0 } });
     const member = await account("notifmember", "Notif Member");
     await request(app).post("/membership/subscribe").set("Authorization", member.bearer).send({ planId: plan.id });
 
@@ -217,7 +217,7 @@ describe("The membership expiry reminder is produced lazily (section 13)", () =>
   it("appears when the membership is close to ending, and only once", async () => {
     const member = await account("notifexpiry", "Expiring Member");
     const user = await prisma.user.findUniqueOrThrow({ where: { email: member.email } });
-    const plan = await prisma.membershipPlan.create({ data: { name: `Expiry Plan ${Date.now()}`, durationDays: 30, priceCents: 0 } });
+    const plan = await prisma.servicePlan.create({ data: { name: `Expiry Plan ${Date.now()}`, durationDays: 30, priceCents: 0 } });
 
     await prisma.membership.create({
       data: {
@@ -246,7 +246,7 @@ describe("The membership expiry reminder is produced lazily (section 13)", () =>
   it("stays silent while the membership has plenty of time left", async () => {
     const member = await account("notiffresh", "Fresh Member");
     const user = await prisma.user.findUniqueOrThrow({ where: { email: member.email } });
-    const plan = await prisma.membershipPlan.create({ data: { name: `Fresh Plan ${Date.now()}`, durationDays: 30, priceCents: 0 } });
+    const plan = await prisma.servicePlan.create({ data: { name: `Fresh Plan ${Date.now()}`, durationDays: 30, priceCents: 0 } });
     await prisma.membership.create({
       data: {
         userId: user.id,

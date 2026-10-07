@@ -152,7 +152,7 @@ describe("Printable documents carry the issuing account's name and photo", () =>
     expect(noPhoto.text).toContain('class="doc-logo ph"');
     expect(noPhoto.text).not.toContain("<img");
 
-    const plan = await prisma.membershipPlan.create({ data: { name: "Receipt Plan", durationDays: 30, priceCents: 1000 } });
+    const plan = await prisma.servicePlan.create({ data: { name: "Receipt Plan", durationDays: 30, priceCents: 1000 } });
     const member = await prisma.user.findUniqueOrThrow({ where: { id: f.order.userId } });
     const membership = await prisma.membership.create({
       data: { memberNumber: `DLK-${crypto.randomUUID().slice(0, 10).toUpperCase()}`, userId: member.id, planId: plan.id, endDate: new Date(Date.now() + 86400000), qrSecret: "s" },

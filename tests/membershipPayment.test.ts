@@ -27,7 +27,7 @@ async function giveCredits(userId: string, amount: number) {
 const balance = (userId: string) => prisma.wallet.findUnique({ where: { userId } }).then((w) => w?.balance ?? 0);
 
 const plan = (data: { name: string; priceCents: number; priceCredits?: number | null; durationDays?: number }) =>
-  prisma.membershipPlan.create({
+  prisma.servicePlan.create({
     data: { name: `${data.name} ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, durationDays: data.durationDays ?? 30, priceCents: data.priceCents, priceCredits: data.priceCredits ?? null },
   });
 
@@ -161,7 +161,7 @@ describe("Buying a membership now costs money (sections 24/51/54)", () => {
   it("refuses a plan that an admin has deactivated", async () => {
     const user = await account("inactiveplan");
     const p = await plan({ name: "Inactive", priceCents: 0 });
-    await prisma.membershipPlan.update({ where: { id: p.id }, data: { isActive: false } });
+    await prisma.servicePlan.update({ where: { id: p.id }, data: { isActive: false } });
 
     const res = await request(app).post("/membership/subscribe").set("Authorization", user.bearer).send({ planId: p.id });
     expect(res.status).toBe(404);

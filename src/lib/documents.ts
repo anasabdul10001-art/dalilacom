@@ -20,7 +20,7 @@ export interface DocumentData {
   number: string;
   issuedAt: Date;
   issuer: { name: string; avatarUrl: string | null; bio?: string | null; phone?: string | null; address?: string | null };
-  recipient: { label: string; name: string };
+  recipient: { label: string; name: string; taxId?: string | null };
   status?: string;
   rows: { label: string; qty?: number; amount: string }[];
   totals: { label: string; value: string; strong?: boolean }[];
@@ -94,7 +94,7 @@ export function renderDocumentHtml(doc: DocumentData): string {
 <div class="doc-meta">
   <div><small>${escapeHtml(kind.numberLabel)}</small>${escapeHtml(doc.number)}</div>
   <div><small>التاريخ</small>${escapeHtml(date)}</div>
-  <div><small>${escapeHtml(doc.recipient.label)}</small>${escapeHtml(doc.recipient.name)}</div>
+  <div><small>${escapeHtml(doc.recipient.label)}</small>${escapeHtml(doc.recipient.name)}${doc.recipient.taxId ? `<small>الرقم الضريبي: ${escapeHtml(doc.recipient.taxId)}</small>` : ""}</div>
   ${doc.status ? `<div><small>الحالة</small>${escapeHtml(doc.status)}</div>` : ""}
 </div>
 <table><thead><tr><th>البند</th>${hasQty ? `<th class="num">الكمية</th>` : ""}<th class="num">المبلغ</th></tr></thead><tbody>${rows}</tbody></table>

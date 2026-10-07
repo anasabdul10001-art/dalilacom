@@ -33,15 +33,25 @@ profileRouter.get("/me", requireAuth, async (req, res) => {
 const updateProfileSchema = z.object({
   fullName: z.string().trim().min(2).max(80).optional(),
   bio: z.string().trim().max(500).nullable().optional(),
+  // Drives per-country pricing and the VAT rate on invoices (sections 64/58). ISO-2, e.g. "DE".
+  countryCode: z.string().trim().length(2).toUpperCase().nullable().optional(),
+  cityId: z.string().uuid().nullable().optional(),
+  vatNumber: z.string().trim().max(30).nullable().optional(),
 });
 
 profileRouter.patch("/me", requireAuth, async (req, res) => {
   const parsed = updateProfileSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const { fullName, bio } = parsed.data;
+  const { fullName, bio, countryCode, cityId, vatNumber } = parsed.data;
   await prisma.user.update({
     where: { id: req.user!.id },
-    data: { ...(fullName !== undefined ? { fullName } : {}), ...(bio !== undefined ? { bio: bio || null } : {}) },
+    data: {
+      ...(fullName !== undefined ? { fullName } : {}),
+      ...(bio !== undefined ? { bio: bio || null } : {}),
+      ...(countryCode !== undefined ? { countryCode: countryCode || null } : {}),
+      ...(cityId !== undefined ? { cityId: cityId || null } : {}),
+      ...(vatNumber !== undefined ? { vatNumber: vatNumber || null } : {}),
+    },
   });
   res.json(await profileOf(req.user!.id));
 });
