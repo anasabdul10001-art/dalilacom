@@ -20,6 +20,7 @@ import com.dalilacom.app.ui.i18n.AppLanguages
 import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.ui.i18n.LocalizedContext
 import com.dalilacom.app.ui.nav.DalilacomNavGraph
+import com.dalilacom.app.ui.nav.NotificationRoutes
 import com.dalilacom.app.ui.theme.DalilacomTheme
 import kotlinx.coroutines.runBlocking
 
@@ -27,9 +28,13 @@ class MainActivity : ComponentActivity() {
     /** Set when the Facebook login browser sends the merchant back through dalilacom://responder/meta. */
     private val deepLink = mutableStateOf<Intent?>(null)
 
+    /** Set when a push was tapped: the screen it is about (see NotificationRoutes). */
+    private val notificationRoute = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         deepLink.value = metaReturnIntent(intent)
+        notificationRoute.value = NotificationRoutes.fromIntent(intent)
         val container = (application as DalilacomApp).container
         // Read the saved language before the first frame so the app never flashes in the wrong one.
         val initialLanguage = runBlocking { container.sessionStore.getLanguage() }
@@ -54,7 +59,15 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(LocalContext provides localized, LocalConfiguration provides localized.configuration) {
                     DalilacomTheme(darkTheme = dark, rtl = language.rtl) {
                         Surface(modifier = Modifier.fillMaxSize()) {
-                            DalilacomNavGraph(container, deepLink.value)
+                            DalilacomNavGraph(
+                                container,
+                                deepLink.value,
+                                notificationRoute.value,
+                                onNotificationRouteConsumed = {
+                                    notificationRoute.value = null
+                                    NotificationRoutes.consume(this@MainActivity.intent)
+                                },
+                            )
                         }
                     }
                 }
@@ -67,6 +80,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         deepLink.value = metaReturnIntent(intent)
+        notificationRoute.value = NotificationRoutes.fromIntent(intent)
     }
 
     private fun metaReturnIntent(intent: Intent?): Intent? =

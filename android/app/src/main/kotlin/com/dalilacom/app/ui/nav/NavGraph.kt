@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.flow.first
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,7 +33,12 @@ import com.dalilacom.app.ui.responder.ResponderScreen
 import com.dalilacom.app.ui.responder.WalletScreen
 
 @Composable
-fun DalilacomNavGraph(container: AppContainer, deepLinkIntent: Intent? = null) {
+fun DalilacomNavGraph(
+    container: AppContainer,
+    deepLinkIntent: Intent? = null,
+    notificationRoute: String? = null,
+    onNotificationRouteConsumed: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val factory = remember { ViewModelFactory(container) }
 
@@ -42,6 +48,16 @@ fun DalilacomNavGraph(container: AppContainer, deepLinkIntent: Intent? = null) {
     LaunchedEffect(deepLinkIntent) {
         val incoming = deepLinkIntent ?: return@LaunchedEffect
         if (container.tokenStore.getToken() != null) navController.handleDeepLink(incoming)
+    }
+
+    // A push tapped in the tray: wait until the app has reached its home screen, then open what the notification is
+    // about. Orders are private, so they need a signed-in account; products, shops and prices are open to everyone.
+    LaunchedEffect(notificationRoute) {
+        val route = notificationRoute ?: return@LaunchedEffect
+        navController.currentBackStackEntryFlow.first { it.destination.route == "home" }
+        val needsAccount = route.startsWith("order/") || route == "merchantMode" || route == NotificationRoutes.INBOX
+        if (route != "home" && (!needsAccount || container.tokenStore.getToken() != null)) navController.navigate(route)
+        onNotificationRouteConsumed()
     }
 
     NavHost(navController = navController, startDestination = "splash") {
@@ -127,7 +143,7 @@ fun DalilacomNavGraph(container: AppContainer, deepLinkIntent: Intent? = null) {
             "notifications",
             deepLinks = listOf(navDeepLink { uriPattern = "dalilacom://app/notifications" }),
         ) {
-            NotificationsScreen(factory = factory, onBack = { navController.popBackStack() })
+            NotificationsScreen(factory = factory, onBack = { navController.popBackStack() }, onOpen = { navController.navigate(it) })
         }
         composable("pricing") {
             PricingScreen(

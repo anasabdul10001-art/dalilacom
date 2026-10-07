@@ -50,14 +50,17 @@ object PushHelper {
     }
 
     /** Shows a notification while the app is open (Firebase only draws one itself when the app is in the background). */
-    fun show(context: Context, title: String?, body: String?) {
+    fun show(context: Context, title: String?, body: String?, data: Map<String, String> = emptyMap()) {
         if (title.isNullOrBlank() && body.isNullOrBlank()) return
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
         ensureChannel(context)
         val open = PendingIntent.getActivity(
             context,
             0,
-            Intent(Intent.ACTION_VIEW, Uri.parse("dalilacom://app/notifications"), context, MainActivity::class.java),
+            Intent(Intent.ACTION_VIEW, Uri.parse("dalilacom://app/notifications"), context, MainActivity::class.java).apply {
+                // the same keys a tray-tapped push carries, so MainActivity routes both alike
+                data.forEach { (key, value) -> putExtra(key, value) }
+            },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)

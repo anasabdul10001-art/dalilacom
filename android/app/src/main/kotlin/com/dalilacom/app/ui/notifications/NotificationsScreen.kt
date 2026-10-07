@@ -37,6 +37,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.R
 import com.dalilacom.app.data.network.NotificationDto
+import com.dalilacom.app.ui.nav.NotificationRoutes
 import com.dalilacom.app.data.network.NotificationPreferenceDto
 import com.dalilacom.app.data.repository.NotificationRepository
 import com.dalilacom.app.ui.ViewModelFactory
@@ -100,7 +101,7 @@ private val timeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZon
 private fun formatTime(iso: String): String = runCatching { timeFormat.format(Instant.parse(iso)) }.getOrDefault("")
 
 @Composable
-fun NotificationsScreen(factory: ViewModelFactory, onBack: () -> Unit) {
+fun NotificationsScreen(factory: ViewModelFactory, onBack: () -> Unit, onOpen: (String) -> Unit = {}) {
     val viewModel: NotificationsViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -118,7 +119,13 @@ fun NotificationsScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (state.items.isEmpty()) item { Text(stringResource(R.string.notifications_empty), color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                items(state.items, key = { it.id }) { item -> NotificationRow(item) { viewModel.open(item) } }
+                items(state.items, key = { it.id }) { item ->
+                    NotificationRow(item) {
+                        viewModel.open(item)
+                        val route = NotificationRoutes.routeFor(item.type, NotificationRoutes.dataOf(item.data))
+                        if (route != NotificationRoutes.INBOX) onOpen(route)
+                    }
+                }
                 item { PreferencesSection(state.preferences, viewModel::cycle) }
             }
         }

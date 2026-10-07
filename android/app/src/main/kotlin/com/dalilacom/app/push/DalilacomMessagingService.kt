@@ -16,6 +16,6 @@ class DalilacomMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        PushHelper.show(this, message.notification?.title ?: message.data["title"], message.notification?.body ?: message.data["body"])
+        PushHelper.show(this, message.notification?.title ?: message.data["title"], message.notification?.body ?: message.data["body"], message.data)
     }
 }

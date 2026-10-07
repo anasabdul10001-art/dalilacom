@@ -154,7 +154,7 @@ orderRouter.post("/:id/cancel", requireAuth, async (req, res) => {
       type: "ORDER_STATUS",
       title: "الزبون ألغى طلبًا",
       body: `تم إلغاء الطلب ${order.orderNumber} من قبل الزبون، والمخزون رجع.`,
-      data: { orderId: order.id, orderNumber: order.orderNumber, status: "CANCELLED" },
+      data: { orderId: order.id, orderNumber: order.orderNumber, status: "CANCELLED", audience: "MERCHANT" },
     });
   }
 
