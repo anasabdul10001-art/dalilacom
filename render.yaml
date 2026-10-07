@@ -25,6 +25,17 @@ services:
       # Tried before Anthropic (see src/services/ai.service.ts). Leave unset to keep using Anthropic only.
       - key: GROQ_API_KEY
         sync: false
+      # More free providers, tried in order when the one before fails (src/services/ai.service.ts). All optional.
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
       # Set once in the Render dashboard to bootstrap the first admin (never generated/committed —
       # section: Admin Credentials). Leave unset after the admin exists; use /auth/forgot-password
       # to change the password afterwards.

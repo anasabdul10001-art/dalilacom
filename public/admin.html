@@ -584,12 +584,15 @@ async function loadAiStatus() {
   const { ok, data } = await api('GET', '/admin/ai-status');
   if (!ok) { logout(); return; }
 
-  const providers = [
-    { key: 'groq', label: 'Groq — llama-3.3-70b-versatile', configured: data.groqConfigured },
-    { key: 'anthropic', label: 'Anthropic — Claude (احتياطي)', configured: data.anthropicConfigured },
-  ];
+  // Every provider the server knows, in the order they are tried; a failing one rests for a while (shown here).
+  const providers = (data.providers || []).map(p => ({
+    key: p.id,
+    label: `${esc(p.label)} — ${esc(p.model)}${p.id === 'anthropic' ? ' (احتياطي أخير)' : ''}`
+      + (p.cooldownSeconds > 0 ? `<br><small class="muted">⏸ يرتاح ${esc(p.cooldownSeconds)} ث — ${esc(p.lastError || '')}</small>` : (p.lastError ? `<br><small class="muted">آخر خطأ: ${esc(p.lastError)}</small>` : '')),
+    configured: p.configured,
+  }));
   const rows = (usage) => providers.map(p => {
-    const u = usage[p.key];
+    const u = usage[p.key] || { attempts: 0, successes: 0, failures: 0 };
     return `
       <tr>
         <td>${p.label}</td>

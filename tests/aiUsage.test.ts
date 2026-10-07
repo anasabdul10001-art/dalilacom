@@ -2,10 +2,11 @@ import { describe, it, expect, afterAll, afterEach, vi } from "vitest";
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
-import { classifyIntent } from "../src/services/ai.service";
+import { classifyIntent, resetAiProviderState } from "../src/services/ai.service";
 import { uniqueEmail } from "./helpers";
 
 afterEach(() => {
+  resetAiProviderState(); // a provider benched by one test must not be skipped in the next
   vi.unstubAllGlobals();
   delete process.env.GROQ_API_KEY;
   delete process.env.ANTHROPIC_API_KEY;

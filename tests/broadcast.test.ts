@@ -5,9 +5,11 @@ import { app } from "../src/server";
 import { prisma } from "../src/prisma";
 import { emailService } from "../src/services/email.service";
 import { freeIsoCode2, uniqueEmail } from "./helpers";
+import { resetAiProviderState } from "../src/services/ai.service";
 
 const sendSpy = vi.spyOn(emailService, "send").mockResolvedValue();
 beforeEach(() => {
+  resetAiProviderState();
   sendSpy.mockClear();
   // no AI provider unless a test provides one: the admin review is what is always there
   delete process.env.GROQ_API_KEY;
