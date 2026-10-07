@@ -139,6 +139,18 @@ export async function categoryTreeFor(lang: string): Promise<CategoryShape[]> {
   return roots.map(shape);
 }
 
+/**
+ * Places carry their category row, whose name is the base (Arabic) one. This returns a function that swaps
+ * in the name for [lang], so a customer browsing in English sees "Dentist" on the card, not the Arabic.
+ */
+export async function categoryNameLocalizer(lang: string) {
+  const { byId } = await loadCategoryTree();
+  return <T extends { category?: { id: string; name: string } | null }>(place: T): T => {
+    const node = place.category ? byId.get(place.category.id) : undefined;
+    return place.category && node ? { ...place, category: { ...place.category, name: localizedName(node, lang) } } : place;
+  };
+}
+
 /* ---------------- search ---------------- */
 
 export interface CategoryHit {

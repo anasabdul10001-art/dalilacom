@@ -179,6 +179,25 @@ describe("Places under a section", () => {
   });
 });
 
+describe("Places show their category in the customer's language", () => {
+  it("returns the translated category name on the directory, the place page and the suggestions", async () => {
+    const name = `Lang Clinic ${crypto.randomUUID().slice(0, 6)}`;
+    const id = await approvedShop(name, "health-doctors-dentist");
+
+    const search = async (lang?: string) => (await request(app).get("/merchant").query({ q: name, ...(lang ? { lang } : {}) })).body[0];
+    expect((await search()).category.name).toBe("أسنان"); // Arabic by default
+    expect((await search("en")).category.name).toBe("Dentist");
+    expect((await request(app).get("/merchant").query({ q: name }).set("Accept-Language", "en-US,en;q=0.9")).body[0].category.name).toBe("Dentist");
+
+    const detail = await request(app).get(`/merchant/${id}`).query({ lang: "en" });
+    expect(detail.body.category.name).toBe("Dentist");
+    expect((await request(app).get(`/merchant/${id}`)).body.category.name).toBe("أسنان");
+
+    const suggest = await request(app).get("/merchant/suggest").query({ q: name, lang: "en" });
+    expect(suggest.body.merchants[0].category.name).toBe("Dentist");
+  });
+});
+
 describe("Admin can add a translated category", () => {
   it("stores translations and synonyms and finds them straight away", async () => {
     const admin = await account("catadmin");

@@ -5,7 +5,7 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { ownerProfileSelect, withOwnerProfile } from "../lib/profile";
 import { resolveLanguage } from "../lib/languages";
-import { categoryAndDescendantIds, searchCategories } from "../services/category.service";
+import { categoryAndDescendantIds, categoryNameLocalizer, searchCategories } from "../services/category.service";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { createBusinessFromMerchantProfile } from "../services/business.service";
 import { getDefaultCountry } from "../services/geo.service";
@@ -237,7 +237,8 @@ merchantRouter.get("/", async (req, res) => {
 
   const tz = await platformTimeZone();
   const now = new Date();
-  let merchants = found.map((m) => ({ ...withOwnerProfile(m), openStatus: computeOpenStatus(m.openingHours, tz, now) }));
+  const localize = await categoryNameLocalizer(resolveLanguage(req));
+  let merchants = found.map((m) => localize({ ...withOwnerProfile(m), openStatus: computeOpenStatus(m.openingHours, tz, now) }));
   if (openNow === "true") merchants = merchants.filter((m) => m.openStatus.isOpen);
 
   // Nearest-first sorting when the customer's location is known (section 31 "Radius Selector").
@@ -262,14 +263,15 @@ merchantRouter.get("/suggest", async (req, res) => {
   const [merchants, categories] = await Promise.all([
     prisma.merchantProfile.findMany({
       where: { approvalStatus: "APPROVED", businessName: { contains: q, mode: "insensitive" } },
-      select: { id: true, businessName: true, category: { select: { name: true } } },
+      select: { id: true, businessName: true, category: { select: { id: true, name: true } } },
       orderBy: { businessName: "asc" },
       take: 5,
     }),
     // Sections / professions / specialties, spelling-tolerant and in any language, with their breadcrumb path.
     searchCategories(q, resolveLanguage(req), 6),
   ]);
-  res.json({ merchants, categories });
+  const localize = await categoryNameLocalizer(resolveLanguage(req));
+  res.json({ merchants: merchants.map(localize), categories });
 });
 
 const hoursBodySchema = z.object({ openingHours: openingHoursSchema.nullable() });
@@ -296,7 +298,8 @@ merchantRouter.get("/:id", async (req, res) => {
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
     return sendError(res, 404, "NOT_FOUND", "Merchant not found");
   }
-  res.json({ ...withOwnerProfile(merchant), openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) });
+  const localize = await categoryNameLocalizer(resolveLanguage(req));
+  res.json(localize({ ...withOwnerProfile(merchant), openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
 });
 
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {

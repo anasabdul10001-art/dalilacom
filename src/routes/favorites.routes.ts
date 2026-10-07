@@ -5,12 +5,15 @@ import { requireAuth } from "../middleware/auth";
 import { getDefaultCountry } from "../services/geo.service";
 import { computeOpenStatus } from "../services/hours.service";
 import { ownerProfileSelect, withOwnerProfile } from "../lib/profile";
+import { resolveLanguage } from "../lib/languages";
+import { categoryNameLocalizer } from "../services/category.service";
 
 export const favoritesRouter = Router();
 favoritesRouter.use(requireAuth);
 
 // The user's saved places, newest first, shaped like the map's merchant results.
 favoritesRouter.get("/", async (req, res) => {
+  const localize = await categoryNameLocalizer(resolveLanguage(req));
   const favorites = await prisma.favoriteMerchant.findMany({
     where: { userId: req.user!.id, merchant: { approvalStatus: "APPROVED" } },
     include: { merchant: { include: { category: true, discounts: { where: { isActive: true } }, user: ownerProfileSelect } } },
@@ -18,7 +21,7 @@ favoritesRouter.get("/", async (req, res) => {
   });
   const tz = (await getDefaultCountry()).timezone ?? "UTC";
   const now = new Date();
-  res.json(favorites.map((f) => ({ ...withOwnerProfile(f.merchant), openStatus: computeOpenStatus(f.merchant.openingHours, tz, now), savedAt: f.createdAt })));
+  res.json(favorites.map((f) => localize({ ...withOwnerProfile(f.merchant), openStatus: computeOpenStatus(f.merchant.openingHours, tz, now), savedAt: f.createdAt })));
 });
 
 // Just the ids, so any screen can show a filled heart without loading full places.
