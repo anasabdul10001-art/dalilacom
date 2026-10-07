@@ -393,6 +393,10 @@ PHRASES.en = {
   "وصلت لحد إعلانات باقتك هذا الشهر": "You reached your plan's announcement limit for this month",
   "المسافة أكبر من المسموح لمتجرك": "The distance is larger than your shop is allowed",
   "رصيد محفظتك لا يكفي لهذا الإعلان — اشحن المحفظة أولًا": "Your wallet balance is not enough for this announcement \u2014 top up first",
+  "مدينة": "City",
+  "المدينة": "City",
+  "— اختر مدينة —": "\u2014 Choose a city \u2014",
+  "اختر المدينة": "Choose the city",
 };
 PATTERNS.en = [
   [/^تكلفة هذا الإعلان (\d+) من رصيدك \(رصيدك (\d+)\)$/, "This one costs $1 from your balance (you have $2)"],

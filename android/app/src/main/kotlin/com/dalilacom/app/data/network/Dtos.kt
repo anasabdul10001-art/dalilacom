@@ -37,13 +37,16 @@ data class ResendVerificationRequest(val email: String)
 data class AuthResponse(val token: String, val user: UserDto)
 
 @Serializable
-data class BroadcastPreviewRequest(val radiusKm: Double? = null, val followers: Boolean? = null)
+data class GeoUnitDto(val id: String, val name: String, val nameArabic: String? = null, val nameEnglish: String? = null)
+
+@Serializable
+data class BroadcastPreviewRequest(val radiusKm: Double? = null, val followers: Boolean? = null, val geoUnitId: String? = null)
 
 @Serializable
 data class BroadcastPreviewDto(val count: Int = 0, val cap: Int = 0, val limit: Int? = null, val remainingThisMonth: Int? = null, val price: Int = 0, val balance: Int? = null)
 
 @Serializable
-data class BroadcastRequest(val title: String, val body: String, val radiusKm: Double? = null, val followers: Boolean? = null, val productId: String? = null, val discountId: String? = null)
+data class BroadcastRequest(val title: String, val body: String, val radiusKm: Double? = null, val followers: Boolean? = null, val geoUnitId: String? = null, val productId: String? = null, val discountId: String? = null)
 
 @Serializable
 data class BroadcastResultDto(val id: String = "", val status: String = "", val targeted: Int = 0, val delivered: Int = 0, val reasons: List<String> = emptyList())

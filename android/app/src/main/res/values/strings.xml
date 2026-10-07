@@ -204,6 +204,8 @@
     <string name="fmt_promo_confirm_pay">سيُخصم %1$d من رصيد محفظتك. اضغط «أرسل للمراجعة» مرة ثانية للتأكيد</string>
     <string name="fmt_promo_paid">دفعت %1$d</string>
     <string name="fmt_promo_refunded">أُعيد لمحفظتك %1$d</string>
+    <string name="promo_audience_city">مدينة</string>
+    <string name="promo_choose_city">اختر المدينة</string>
     <string name="promo_tab">إعلاناتي</string>
     <string name="promo_title">إعلاناتي</string>
     <string name="promo_sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</string>

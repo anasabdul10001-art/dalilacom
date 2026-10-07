@@ -200,6 +200,8 @@
     <string name="fmt_promo_confirm_pay">%1$d will be taken from your wallet. Press \u201cSend for review\u201d again to confirm</string>
     <string name="fmt_promo_paid">Paid %1$d</string>
     <string name="fmt_promo_refunded">Refunded to your wallet %1$d</string>
+    <string name="promo_audience_city">City</string>
+    <string name="promo_choose_city">Choose the city</string>
     <string name="promo_tab">My announcements</string>
     <string name="promo_title">My announcements</string>
     <string name="promo_sub">Send a notification to people around your shop — the Dalilacom team reviews it before anyone receives it</string>

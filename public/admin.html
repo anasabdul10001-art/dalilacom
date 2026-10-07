@@ -96,6 +96,7 @@
     <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
     <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 الباقات والأسعار</div>
     <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
+    <div class="nav-item" data-section="geo" onclick="showSection('geo')">🗺️ المدن والأحياء</div>
     <div class="nav-item" data-section="broadcasts" onclick="showSection('broadcasts')">📣 الإعلانات <span id="bc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
@@ -226,6 +227,33 @@
       <div class="card">
         <h3>الاشتراكات</h3>
         <table><thead><tr><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>ينتهي</th></tr></thead><tbody id="subs-body"></tbody></table>
+      </div>
+    </div>
+
+    <!-- GEOGRAPHY: governorates > cities > neighbourhoods -->
+    <div class="section" id="section-geo" style="display:none">
+      <h2>المدن والمناطق والأحياء</h2>
+      <p class="subtitle">المحافظة ثم المدينة ثم الحي. اختر مكانًا لتشوف اللي تحته وتضيف عليه. التجار بيكفيهم يختاروا المدينة، والأحياء اختيارية.</p>
+      <div class="card">
+        <label>البلد</label>
+        <select id="geo-country" onchange="geoPickCountry()"><option value="">— اختر بلدًا —</option></select>
+        <label>المحافظة / المنطقة</label>
+        <select id="geo-region" onchange="geoPickRegion()" disabled><option value="">— كل المحافظات —</option></select>
+        <label>المدينة</label>
+        <select id="geo-city" onchange="geoPickCity()" disabled><option value="">— كل المدن —</option></select>
+      </div>
+      <div class="card">
+        <h3 id="geo-list-title">—</h3>
+        <table>
+          <thead><tr><th>بالعربي</th><th>بالإنجليزي</th><th></th></tr></thead>
+          <tbody id="geo-body"></tbody>
+        </table>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <input id="geo-new-ar" placeholder="اسم بالعربي" style="flex:1;min-width:160px" />
+          <input id="geo-new-en" placeholder="اسم بالإنجليزي (اختياري)" style="flex:1;min-width:160px;direction:ltr" />
+          <button onclick="geoAdd()">➕ إضافة</button>
+        </div>
+        <p id="geo-msg" class="muted" style="margin-top:8px"></p>
       </div>
     </div>
 
@@ -441,6 +469,7 @@ function enterApp() {
   loadResponderAdmin();
   loadPushStatus();
   loadBroadcasts();
+  geoInit();
   loadAiStatus();
   loadTopups('PENDING');
 }
@@ -449,6 +478,118 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- Geography: governorates > cities > neighbourhoods ----
+const GEO_LEVELS = { REGION: 'المحافظات', CITY: 'المدن', AREA: 'الأحياء' };
+const geoState = { countryId: '', regionId: '', cityId: '' };
+
+async function geoInit() {
+  const { ok, data } = await api('GET', '/geo/countries');
+  const select = document.getElementById('geo-country');
+  if (ok && select.options.length <= 1) data.forEach(c => select.add(new Option(c.nameArabic || c.name, c.id)));
+}
+
+async function geoFill(selectId, params, placeholder) {
+  const select = document.getElementById(selectId);
+  select.length = 1;
+  select.options[0].text = placeholder;
+  select.disabled = true;
+  if (!params) return;
+  const { ok, data } = await api('GET', '/geo/units?' + new URLSearchParams(params));
+  if (ok && data.length) { data.forEach(u => select.add(new Option(u.nameArabic || u.name, u.id))); select.disabled = false; }
+}
+
+async function geoPickCountry() {
+  geoState.countryId = document.getElementById('geo-country').value;
+  geoState.regionId = geoState.cityId = '';
+  await geoFill('geo-region', geoState.countryId && { countryId: geoState.countryId, level: 'REGION' }, '— كل المحافظات —');
+  await geoFill('geo-city', null, '— كل المدن —');
+  geoList();
+}
+async function geoPickRegion() {
+  geoState.regionId = document.getElementById('geo-region').value;
+  geoState.cityId = '';
+  await geoFill('geo-city', geoState.regionId && { parentId: geoState.regionId }, '— كل المدن —');
+  geoList();
+}
+async function geoPickCity() {
+  geoState.cityId = document.getElementById('geo-city').value;
+  geoList();
+}
+
+/** What is being listed (and added to): areas of a city, cities of a region, or the governorates of the country. */
+function geoLevel() {
+  return geoState.cityId ? 'AREA' : geoState.regionId ? 'CITY' : 'REGION';
+}
+
+async function geoList() {
+  const body = document.getElementById('geo-body');
+  const title = document.getElementById('geo-list-title');
+  document.getElementById('geo-msg').textContent = '';
+  if (!geoState.countryId) { title.textContent = '—'; body.innerHTML = '<tr><td colspan="3" class="muted">اختر بلدًا أولًا</td></tr>'; return; }
+  const level = geoLevel();
+  title.textContent = GEO_LEVELS[level];
+  const params = level === 'REGION' ? { countryId: geoState.countryId, level: 'REGION' } : { parentId: geoState.cityId || geoState.regionId };
+  const { ok, data } = await api('GET', '/geo/units?' + new URLSearchParams(params));
+  if (!ok) { body.innerHTML = '<tr><td colspan="3" class="muted">تعذّر التحميل</td></tr>'; return; }
+  body.innerHTML = data.length ? data.map(u => `
+    <tr>
+      <td><input id="geo-ar-${u.id}" value="${esc(u.nameArabic || '')}" /></td>
+      <td><input id="geo-en-${u.id}" value="${esc(u.nameEnglish || u.name)}" style="direction:ltr" /></td>
+      <td style="white-space:nowrap">
+        <button class="small" onclick="geoSave('${u.id}')">حفظ</button>
+        <button class="small" style="background:#777" onclick="geoHide('${u.id}')">إخفاء</button>
+      </td>
+    </tr>`).join('') : '<tr><td colspan="3" class="muted">لا شيء هون بعد — أضف أول اسم</td></tr>';
+}
+
+async function geoAdd() {
+  const msg = document.getElementById('geo-msg');
+  const ar = document.getElementById('geo-new-ar').value.trim();
+  const en = document.getElementById('geo-new-en').value.trim();
+  if (!geoState.countryId) { msg.textContent = 'اختر بلدًا أولًا'; return; }
+  if (!ar) { msg.textContent = 'اكتب الاسم بالعربي'; return; }
+  const level = geoLevel();
+  const body = { countryId: geoState.countryId, level, name: en || ar, nameArabic: ar, nameEnglish: en || undefined };
+  if (level !== 'REGION') body.parentId = geoState.cityId || geoState.regionId;
+  const { ok, data } = await api('POST', '/geo/units', body);
+  if (!ok) { msg.textContent = errText(data, 'تعذّرت الإضافة'); return; }
+  document.getElementById('geo-new-ar').value = '';
+  document.getElementById('geo-new-en').value = '';
+  await geoRefreshPickers(level);
+  geoList();
+}
+
+/** The pickers above show the same places, so they must see what was just added or hidden. */
+async function geoRefreshPickers(level) {
+  if (level === 'REGION') {
+    const keep = geoState.regionId;
+    await geoFill('geo-region', { countryId: geoState.countryId, level: 'REGION' }, '— كل المحافظات —');
+    document.getElementById('geo-region').value = keep;
+  } else if (level === 'CITY') {
+    const keep = geoState.cityId;
+    await geoFill('geo-city', { parentId: geoState.regionId }, '— كل المدن —');
+    document.getElementById('geo-city').value = keep;
+  }
+}
+
+async function geoSave(id) {
+  const nameArabic = document.getElementById('geo-ar-' + id).value.trim();
+  const nameEnglish = document.getElementById('geo-en-' + id).value.trim();
+  const msg = document.getElementById('geo-msg');
+  if (!nameArabic) { msg.textContent = 'الاسم بالعربي مطلوب'; return; }
+  const { ok, data } = await api('PATCH', '/geo/units/' + id, { nameArabic, nameEnglish: nameEnglish || undefined, name: nameEnglish || nameArabic });
+  msg.textContent = ok ? 'تم الحفظ ✅' : errText(data, 'تعذّر الحفظ');
+  if (ok) await geoRefreshPickers(geoLevel());
+}
+
+async function geoHide(id) {
+  if (!confirm('إخفاء هذا المكان؟ ما رح يظهر بالقوائم (الحسابات والتجار المرتبطين فيه ما بيتأثروا).')) return;
+  const { ok, data } = await api('PATCH', '/geo/units/' + id, { isActive: false });
+  if (!ok) { document.getElementById('geo-msg').textContent = errText(data, 'تعذّر الإخفاء'); return; }
+  await geoRefreshPickers(geoLevel());
+  geoList();
 }
 
 // ---- Announcements ----

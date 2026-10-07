@@ -25,6 +25,9 @@ interface ApiService {
     @DELETE("profile/location")
     suspend fun deleteLocation(): Response<kotlinx.serialization.json.JsonElement>
 
+    @GET("geo/units")
+    suspend fun geoUnits(@Query("level") level: String): Response<List<GeoUnitDto>>
+
     @POST("broadcasts/preview")
     suspend fun previewBroadcast(@Body body: BroadcastPreviewRequest): Response<BroadcastPreviewDto>
 

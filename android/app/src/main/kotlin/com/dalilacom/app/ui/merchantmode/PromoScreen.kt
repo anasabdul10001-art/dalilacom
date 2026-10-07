@@ -46,10 +46,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.dalilacom.app.data.network.GeoUnitDto
+import com.dalilacom.app.data.network.BroadcastPreviewRequest
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.foundation.layout.Box
 
 data class PromoUiState(
     val isLoading: Boolean = true,
-    val followers: Boolean = false,
+    /** Who it is for: "radius" (around the shop), "city" or "followers". */
+    val audience: String = "radius",
+    val cityId: String? = null,
+    val cities: List<GeoUnitDto> = emptyList(),
     val radius: String = "5",
     val title: String = "",
     val body: String = "",
@@ -80,6 +91,7 @@ class PromoViewModel(
                 it.copy(
                     isLoading = false,
                     discounts = me?.discounts.orEmpty(),
+                    cities = broadcasts.cities(),
                     products = products.getMyProducts().filter { p -> p.isActive },
                     history = broadcasts.history(),
                 )
@@ -88,7 +100,8 @@ class PromoViewModel(
     }
 
     fun onRadius(value: String) = _uiState.update { it.copy(radius = value, error = null) }
-    fun onFollowers(on: Boolean) = _uiState.update { it.copy(followers = on, error = null, info = null) }
+    fun onAudience(value: String) = _uiState.update { it.copy(audience = value, error = null, info = null) }
+    fun pickCity(id: String) = _uiState.update { it.copy(cityId = id, error = null, info = null) }
     fun onTitle(value: String) = _uiState.update { it.copy(title = value, error = null) }
     fun onBody(value: String) = _uiState.update { it.copy(body = value, error = null) }
     fun pickProduct(id: String?) = _uiState.update { it.copy(productId = if (it.productId == id) null else id) }
@@ -96,14 +109,29 @@ class PromoViewModel(
 
     private fun radiusKm(): Double? = _uiState.value.radius.parseDecimal()?.takeIf { it > 0 }
 
-    /** Followers need no distance; around the shop does. */
-    private fun distanceMissing(): Boolean = !_uiState.value.followers && radiusKm() == null
+    /** Followers need nothing more; a city needs a choice; around the shop needs a distance. */
+    private fun targetMissing(): Boolean = when (_uiState.value.audience) {
+        "followers" -> false
+        "city" -> _uiState.value.cityId == null
+        else -> radiusKm() == null
+    }
+
+    private fun missingMessage(): String = AppStrings.get(if (_uiState.value.audience == "city") R.string.promo_choose_city else R.string.promo_enter_radius)
+
+    private fun previewRequest(): BroadcastPreviewRequest {
+        val s = _uiState.value
+        return BroadcastPreviewRequest(
+            radiusKm = if (s.audience == "radius") radiusKm() else null,
+            followers = if (s.audience == "followers") true else null,
+            geoUnitId = if (s.audience == "city") s.cityId else null,
+        )
+    }
 
     fun preview() {
-        if (distanceMissing()) return _uiState.update { it.copy(error = AppStrings.get(R.string.promo_enter_radius)) }
+        if (targetMissing()) return _uiState.update { it.copy(error = missingMessage()) }
         viewModelScope.launch {
             _uiState.update { it.copy(busy = true, error = null) }
-            broadcasts.preview(radiusKm(), _uiState.value.followers)
+            broadcasts.preview(previewRequest())
                 .onSuccess { r ->
                     val cost = if (r.price > 0) " — " + AppStrings.get(R.string.fmt_promo_cost, r.price, r.balance ?: 0) else ""
                     _uiState.update { it.copy(busy = false, info = AppStrings.get(R.string.fmt_promo_count, r.count, r.remainingThisMonth ?: 0, r.limit ?: 0) + cost) }
@@ -114,18 +142,19 @@ class PromoViewModel(
 
     fun send() {
         val state = _uiState.value
-        if (distanceMissing()) return _uiState.update { it.copy(error = AppStrings.get(R.string.promo_enter_radius)) }
+        if (targetMissing()) return _uiState.update { it.copy(error = missingMessage()) }
         if (state.title.isBlank() || state.body.isBlank()) return _uiState.update { it.copy(error = AppStrings.get(R.string.promo_enter_text)) }
         viewModelScope.launch {
             _uiState.update { it.copy(busy = true, error = null) }
             // Beyond the plan's included announcements each one is paid from the wallet: say so, and charge on the second press.
-            val price = broadcasts.preview(radiusKm(), state.followers).getOrNull()?.price ?: 0
+            val price = broadcasts.preview(previewRequest()).getOrNull()?.price ?: 0
             if (price > 0 && state.confirmPrice != price) {
                 _uiState.update { it.copy(busy = false, confirmPrice = price, info = AppStrings.get(R.string.fmt_promo_confirm_pay, price)) }
                 return@launch
             }
             _uiState.update { it.copy(confirmPrice = null) }
-            broadcasts.send(BroadcastRequest(state.title.trim(), state.body.trim(), radiusKm = if (state.followers) null else radiusKm(), followers = if (state.followers) true else null, productId = state.productId, discountId = state.discountId))
+            val target = previewRequest()
+            broadcasts.send(BroadcastRequest(state.title.trim(), state.body.trim(), radiusKm = target.radiusKm, followers = target.followers, geoUnitId = target.geoUnitId, productId = state.productId, discountId = state.discountId))
                 .onSuccess { r ->
                     val rejected = r.status == "REJECTED"
                     _uiState.update {
@@ -158,11 +187,26 @@ fun PromoScreen(factory: ViewModelFactory) {
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = !state.followers, onClick = { viewModel.onFollowers(false) }, label = { Text(AppStrings.get(R.string.promo_audience_radius)) })
-                FilterChip(selected = state.followers, onClick = { viewModel.onFollowers(true) }, label = { Text(AppStrings.get(R.string.promo_audience_followers)) })
+                FilterChip(selected = state.audience == "radius", onClick = { viewModel.onAudience("radius") }, label = { Text(AppStrings.get(R.string.promo_audience_radius)) })
+                FilterChip(selected = state.audience == "city", onClick = { viewModel.onAudience("city") }, label = { Text(AppStrings.get(R.string.promo_audience_city)) })
+                FilterChip(selected = state.audience == "followers", onClick = { viewModel.onAudience("followers") }, label = { Text(AppStrings.get(R.string.promo_audience_followers)) })
             }
         }
-        if (!state.followers) item {
+        if (state.audience == "city") item {
+            var open by remember { mutableStateOf(false) }
+            val chosen = state.cities.firstOrNull { it.id == state.cityId }
+            Box {
+                OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(chosen?.let { it.nameArabic ?: it.name } ?: AppStrings.get(R.string.promo_choose_city))
+                }
+                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    state.cities.forEach { city ->
+                        DropdownMenuItem(text = { Text(city.nameArabic ?: city.name) }, onClick = { viewModel.pickCity(city.id); open = false })
+                    }
+                }
+            }
+        }
+        if (state.audience == "radius") item {
             OutlinedTextField(
                 state.radius, viewModel::onRadius, label = { Text(AppStrings.get(R.string.promo_radius)) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),

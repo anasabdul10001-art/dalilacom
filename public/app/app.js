@@ -2143,7 +2143,7 @@ function promoError(data, fallback) {
 }
 
 function tabPromo() {
-  if (!S._promo) { S._promo = { loading: true, audience: "radius", radius: "5", title: "", body: "", productId: "", discountId: "" }; loadPromo(); }
+  if (!S._promo) { S._promo = { loading: true, audience: "radius", cityId: "", radius: "5", title: "", body: "", productId: "", discountId: "" }; loadPromo(); }
   const p = S._promo;
   if (p.loading) return `<h1 class="screen-title">إعلاناتي</h1>${spinner()}`;
   const option = (value, label, chosen) => `<option value="${esc(value)}" ${chosen === value ? "selected" : ""}>${esc(label)}</option>`;
@@ -2152,8 +2152,10 @@ function tabPromo() {
     <p class="screen-sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</p>
     <div class="card">
       <div class="field"><label>لمن تريد الإرسال؟</label>
-        <select id="pr-audience" onchange="promoRead(); render()">${option("radius", "حول محلي", p.audience)}${option("followers", "متابعيّ", p.audience)}</select></div>
-      ${p.audience === "followers" ? "" : `<div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" inputmode="decimal" value="${esc(p.radius)}" /></div>`}
+        <select id="pr-audience" onchange="promoRead(); render()">${option("radius", "حول محلي", p.audience)}${option("city", "مدينة", p.audience)}${option("followers", "متابعيّ", p.audience)}</select></div>
+      ${p.audience === "city"
+        ? `<div class="field"><label>المدينة</label><select id="pr-city">${option("", "— اختر مدينة —", p.cityId)}${(p.cities || []).map((c) => option(c.id, c.nameArabic || c.name, p.cityId)).join("")}</select></div>`
+        : p.audience === "followers" ? "" : `<div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" inputmode="decimal" value="${esc(p.radius)}" /></div>`}
       <div class="field"><label>العنوان</label><input id="pr-title" maxlength="100" value="${esc(p.title)}" /></div>
       <div class="field"><label>النص</label><textarea id="pr-body" maxlength="500" rows="3">${esc(p.body)}</textarea></div>
       <div class="field"><label>إرفاق منتج (اختياري)</label>
@@ -2183,9 +2185,10 @@ function tabPromo() {
 }
 
 async function loadPromo() {
-  const [history, me, products] = await Promise.all([api("GET", "/broadcasts"), api("GET", "/merchant/me"), api("GET", "/products/mine")]);
+  const [history, me, products, cities] = await Promise.all([api("GET", "/broadcasts"), api("GET", "/merchant/me"), api("GET", "/products/mine"), api("GET", "/geo/units?level=CITY")]);
   Object.assign(S._promo, {
     loading: false,
+    cities: cities.ok ? cities.data : [],
     history: history.ok ? history.data : [],
     discounts: me.ok ? (me.data.discounts || []).filter((d) => d.isActive !== false) : [],
     products: products.ok ? products.data.filter((x) => x.isActive !== false) : [],
@@ -2198,12 +2201,17 @@ function promoRead() {
   const p = S._promo;
   p.audience = qs("pr-audience").value;
   if (qs("pr-radius")) p.radius = qs("pr-radius").value;
+  if (qs("pr-city")) p.cityId = qs("pr-city").value;
   p.title = qs("pr-title").value;
   p.body = qs("pr-body").value;
   p.productId = qs("pr-product").value;
   p.discountId = qs("pr-discount").value;
   p.error = null;
   if (p.audience === "followers") return { followers: true };
+  if (p.audience === "city") {
+    if (!p.cityId) { p.error = "اختر المدينة"; return null; }
+    return { geoUnitId: p.cityId };
+  }
   const radiusKm = parseFloat(latinDigits(p.radius));
   if (!radiusKm || radiusKm <= 0) { p.error = "اكتب المسافة بالكيلومتر"; return null; }
   return { radiusKm };

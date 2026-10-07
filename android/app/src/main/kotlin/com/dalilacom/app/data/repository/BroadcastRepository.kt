@@ -18,8 +18,14 @@ import retrofit2.Response
 /** A merchant's announcements to the people around the shop: preview the reach, send for review, read the history. */
 class BroadcastRepository(private val api: ApiService) {
 
-    suspend fun preview(radiusKm: Double?, followers: Boolean): Result<BroadcastPreviewDto> {
-        val response = safeApiCall { api.previewBroadcast(BroadcastPreviewRequest(radiusKm = if (followers) null else radiusKm, followers = if (followers) true else null)) }
+    /** The cities a shop can address an announcement to (the people living there). */
+    suspend fun cities(): List<com.dalilacom.app.data.network.GeoUnitDto> {
+        val response = safeApiCall { api.geoUnits("CITY") } ?: return emptyList()
+        return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()
+    }
+
+    suspend fun preview(request: BroadcastPreviewRequest): Result<BroadcastPreviewDto> {
+        val response = safeApiCall { api.previewBroadcast(request) }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(reason(response)))
