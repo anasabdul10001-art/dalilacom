@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.dalilacom.app.ui.common.parseInt
 
 data class CatalogUiState(
     val isLoading: Boolean = true,
@@ -57,7 +58,7 @@ class CatalogViewModel(
 
     fun addDiscount() {
         val state = _uiState.value
-        val percent = state.discountPercent.toIntOrNull()
+        val percent = state.discountPercent.parseInt()
         if (state.discountTitle.isBlank() || percent == null || percent !in 1..100) {
             _uiState.value = state.copy(error = AppStrings.get(R.string.s_96a2838a))
             return

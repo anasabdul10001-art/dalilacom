@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.dalilacom.app.ui.common.parseCents
 
 enum class RedeemPhase { INPUT, VERIFIED, DONE }
 
@@ -74,7 +75,7 @@ class RedeemViewModel(private val repository: MerchantRepository) : ViewModel() 
 
     fun confirmRedeem() {
         val state = _uiState.value
-        val billCents = state.billAmountText.replace(",", ".").toDoubleOrNull()?.times(100)?.toInt()
+        val billCents = state.billAmountText.parseCents()
         if (billCents == null || billCents <= 0) {
             _uiState.value = state.copy(error = AppStrings.get(R.string.s_33093b21))
             return

@@ -3,6 +3,17 @@ const API_BASE = "";
 
 initLanguage(); // language files are loaded by now (index.html order)
 
+// A phone/keyboard set to Arabic or Persian types its own digit shapes, which parseInt/parseFloat reject.
+// Every number typed into a form goes through latinDigits() first. (Built from char codes so no Arabic text sits in the code.)
+function latinDigits(text) {
+  const ch = (n) => String.fromCharCode(n);
+  return String(text == null ? "" : text)
+    .replace(new RegExp("[" + ch(0x660) + "-" + ch(0x669) + "]", "g"), (d) => d.charCodeAt(0) - 0x660)
+    .replace(new RegExp("[" + ch(0x6f0) + "-" + ch(0x6f9) + "]", "g"), (d) => d.charCodeAt(0) - 0x6f0)
+    .replace(new RegExp("[" + ch(0x66b) + ch(0x60c) + ",]", "g"), ".")
+    .replace(new RegExp("[" + ch(0x66c) + "\\s]", "g"), "");
+}
+
 const S = {
   token: localStorage.getItem("dlk_token") || null,
   role: localStorage.getItem("dlk_role") || null,
@@ -2090,7 +2101,7 @@ async function verifyRedeem() {
 async function confirmRedeem() {
   const billText = qs("rd-bill").value;
   S._redeem.billText = billText;
-  const billAmountCents = Math.round(parseFloat(billText.replace(",", ".")) * 100);
+  const billAmountCents = Math.round(parseFloat(latinDigits(billText)) * 100);
   if (!billAmountCents || billAmountCents <= 0) { S.error = "دخّل قيمة فاتورة صحيحة"; return render(); }
   S.busy = true; S.error = null; render();
   const r = S._redeem;
@@ -2233,7 +2244,7 @@ async function loadCatalog() {
 async function addCatalogAffiliate() {
   const userEmail = qs("aff-email").value.trim();
   const commissionType = qs("aff-type").value;
-  const commissionValue = parseInt(qs("aff-value").value, 10);
+  const commissionValue = parseInt(latinDigits(qs("aff-value").value), 10);
   S._catalog.affEmail = userEmail;
   S._catalog.affType = commissionType;
   S._catalog.affValue = qs("aff-value").value;
@@ -2262,7 +2273,7 @@ async function addCatalogDiscount() {
   const percentText = qs("cat-disc-percent").value;
   S._catalog.discTitle = title;
   S._catalog.discPercent = percentText;
-  const percent = parseInt(percentText, 10);
+  const percent = parseInt(latinDigits(percentText), 10);
   if (!title || !percent || percent < 1 || percent > 100) { S.error = "دخّل عنوان الحسم ونسبة بين 1 و100"; return render(); }
   const { ok, data } = await api("POST", "/merchant/discounts", { title, percent });
   if (!ok) { S.error = errMsg(data, "تعذّرت إضافة الحسم"); return render(); }
@@ -2359,13 +2370,13 @@ async function saveProduct() {
   snapshotProdEditDraft();
   const name = p.name.trim();
   const description = p.description.trim();
-  const priceCents = Math.round(parseFloat(p.price.replace(",", ".")) * 100);
-  const stock = parseInt(p.stock, 10);
+  const priceCents = Math.round(parseFloat(latinDigits(p.price)) * 100);
+  const stock = parseInt(latinDigits(p.stock), 10);
   const sku = p.sku.trim();
   if (!name || !priceCents || priceCents <= 0 || isNaN(stock) || stock < 0) { S.error = "تأكد من اسم المنتج والسعر والمخزون"; return render(); }
   let memberPriceCents = null;
   if (p.memberDiscountEnabled) {
-    memberPriceCents = Math.round(parseFloat((p.memberPrice || "").replace(",", ".")) * 100);
+    memberPriceCents = Math.round(parseFloat(latinDigits(p.memberPrice)) * 100);
     if (!memberPriceCents || memberPriceCents <= 0 || memberPriceCents >= priceCents) { S.error = "سعر العضو لازم يكون أقل من السعر الأصلي"; return render(); }
   }
   const payload = {
@@ -2462,7 +2473,7 @@ async function submitTopup() {
   const reference = qs("tp-ref").value.trim();
   const amountText = qs("tp-amount").value;
   const draft = { method, reference, amount: amountText };
-  const amount = parseFloat(amountText);
+  const amount = parseFloat(latinDigits(amountText));
   if (!reference) { S.error = "دخّل رقم العملية"; return restoreTopupDraft(draft); }
   const body = { method, reference };
   if (method !== "USDT_TRC20") {

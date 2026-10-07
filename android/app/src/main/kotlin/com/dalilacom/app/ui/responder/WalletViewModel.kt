@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.dalilacom.app.ui.common.parseDecimal
 
 data class WalletUiState(
     val isLoading: Boolean = true,
@@ -47,7 +48,7 @@ class WalletViewModel(private val repository: ResponderRepository) : ViewModel()
     }
 
     fun submitTopUp(method: String, reference: String, amount: String) {
-        val parsedAmount = amount.trim().replace(",", ".").toDoubleOrNull()
+        val parsedAmount = amount.parseDecimal()
         if (method.isBlank() || reference.isBlank()) {
             _uiState.update { it.copy(error = AppStrings.get(R.string.s_51ed1058), info = null) }
             return

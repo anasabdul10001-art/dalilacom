@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.dalilacom.app.ui.common.parseInt
+import com.dalilacom.app.ui.common.parseCents
 
 data class ProductEditUiState(
     val isNew: Boolean = true,
@@ -84,15 +86,15 @@ class ProductEditViewModel(
 
     fun save() {
         val state = _uiState.value
-        val priceCents = state.priceText.replace(",", ".").toDoubleOrNull()?.times(100)?.toInt()
-        val stock = state.stockText.toIntOrNull()
+        val priceCents = state.priceText.parseCents()
+        val stock = state.stockText.parseInt()
         if (state.name.isBlank() || priceCents == null || priceCents <= 0 || stock == null || stock < 0) {
             _uiState.value = state.copy(error = AppStrings.get(R.string.s_8d0496d3))
             return
         }
         var memberPriceCents: Int? = null
         if (state.memberDiscountEnabled) {
-            memberPriceCents = state.memberPriceText.replace(",", ".").toDoubleOrNull()?.times(100)?.toInt()
+            memberPriceCents = state.memberPriceText.parseCents()
             if (memberPriceCents == null || memberPriceCents <= 0 || memberPriceCents >= priceCents) {
                 _uiState.value = state.copy(error = AppStrings.get(R.string.s_746ec1bd))
                 return
