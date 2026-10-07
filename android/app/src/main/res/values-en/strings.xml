@@ -202,6 +202,12 @@
     <string name="fmt_promo_refunded">Refunded to your wallet %1$d</string>
     <string name="promo_audience_city">City</string>
     <string name="promo_choose_city">Choose the city</string>
+    <string name="responder_fallback_title">If no rule matches</string>
+    <string name="responder_fallback_off">Do not reply</string>
+    <string name="responder_fallback_ai">AI</string>
+    <string name="responder_fallback_text">Fixed text</string>
+    <string name="responder_fallback_reply">Fallback reply text ({name} = the customer\u2019s name)</string>
+    <string name="fmt_responder_stats">Last 30 days: sent %1$d · waiting for you %2$d · failed %3$d</string>
     <string name="promo_tab">My announcements</string>
     <string name="promo_title">My announcements</string>
     <string name="promo_sub">Send a notification to people around your shop — the Dalilacom team reviews it before anyone receives it</string>

@@ -10,7 +10,7 @@ import { decryptJson, encryptJson } from "../services/crypto.service";
 import { drivers } from "../services/channels";
 import { getSettings } from "../services/settings.service";
 import { InsufficientBalanceError } from "../services/wallet.service";
-import { activate, AlreadyRunningError, getSubscription, isRunning, pay, sendThroughConnection } from "../services/responder.service";
+import { activate, AlreadyRunningError, getSubscription, isRunning, maybeNotifyEnding, pay, sendThroughConnection } from "../services/responder.service";
 import { metaOAuthRouter } from "./metaOAuth.routes";
 
 export const responderRouter = Router();
@@ -48,6 +48,8 @@ responderRouter.get("/status", requireAuth, async (req, res) => {
     getSettings(),
     prisma.wallet.findUnique({ where: { userId: req.user!.id } }),
   ]);
+  // Looking at the service is a natural moment to warn that it is about to end (once per ending).
+  await maybeNotifyEnding(sub).catch(() => null);
   const price = req.user!.role === "MERCHANT" ? settings.responder.priceMerchant : settings.responder.priceCustomer;
   res.json({
     status: sub.status,
@@ -64,6 +66,8 @@ responderRouter.get("/status", requireAuth, async (req, res) => {
     aiReplyLimit: settings.responder.monthlyAiReplyLimit,
     businessDescription: sub.businessDescription,
     tone: sub.tone,
+    fallbackMode: sub.fallbackMode,
+    fallbackReply: sub.fallbackReply,
   });
 });
 
@@ -90,14 +94,29 @@ responderRouter.post("/renew", requireAuth, async (req, res) => {
 const profileSchema = z.object({
   businessDescription: z.string().max(1000).optional(),
   tone: z.string().max(200).optional(),
+  fallbackMode: z.enum(["OFF", "AI", "TEMPLATE"]).optional(),
+  fallbackReply: z.string().max(1000).optional(),
 });
 
 responderRouter.patch("/profile", requireAuth, async (req, res) => {
   const parsed = profileSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   await getSubscription(req.user!.id);
-  const sub = await prisma.responderSubscription.update({ where: { userId: req.user!.id }, data: parsed.data });
-  res.json({ businessDescription: sub.businessDescription, tone: sub.tone });
+  const merged = { ...parsed.data };
+  const current = await prisma.responderSubscription.findUniqueOrThrow({ where: { userId: req.user!.id } });
+  const mode = merged.fallbackMode ?? current.fallbackMode;
+  const reply = merged.fallbackReply ?? current.fallbackReply;
+  if (mode === "TEMPLATE" && !reply?.trim()) return sendError(res, 400, "BAD_REQUEST", "اكتب نص الرد الاحتياطي");
+  const sub = await prisma.responderSubscription.update({ where: { userId: req.user!.id }, data: merged });
+  res.json({ businessDescription: sub.businessDescription, tone: sub.tone, fallbackMode: sub.fallbackMode, fallbackReply: sub.fallbackReply });
+});
+
+// The last 30 days at a glance: what was answered, what waits for a person, what failed.
+responderRouter.get("/stats", requireAuth, async (req, res) => {
+  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+  const groups = await prisma.responderInteraction.groupBy({ by: ["status"], where: { userId: req.user!.id, createdAt: { gte: since } }, _count: { _all: true } });
+  const count = (status: string) => groups.find((g) => g.status === status)?._count._all ?? 0;
+  res.json({ days: 30, sent: count("SENT"), needsReview: count("NEEDS_REVIEW"), failed: count("FAILED"), skipped: count("SKIPPED") });
 });
 
 /* ---------------- channels & connections ---------------- */

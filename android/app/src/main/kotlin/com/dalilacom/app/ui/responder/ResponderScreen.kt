@@ -130,7 +130,7 @@ fun ResponderScreen(
             if (state.error != null || state.info != null) Spacer(Modifier.height(10.dp))
 
             when (state.tab) {
-                0 -> OverviewTab(state.status, state.isBusy, onActivate = viewModel::activateOrRenew, onSaveProfile = viewModel::saveProfile)
+                0 -> OverviewTab(state.status, state.stats, state.isBusy, onActivate = viewModel::activateOrRenew, onSaveProfile = viewModel::saveProfile)
                 1 -> ChannelsTab(state, viewModel)
                 2 -> RulesTab(state, viewModel)
                 else -> InboxTab(state.inbox, state.isBusy, onSend = viewModel::sendReply)
@@ -142,9 +142,10 @@ fun ResponderScreen(
 @Composable
 private fun OverviewTab(
     status: ResponderStatusDto?,
+    stats: com.dalilacom.app.data.network.ResponderStatsDto?,
     busy: Boolean,
     onActivate: () -> Unit,
-    onSaveProfile: (String, String) -> Unit,
+    onSaveProfile: (String, String, String, String) -> Unit,
 ) {
     if (status == null) {
         Text(AppStrings.get(R.string.s_8c818f60))
@@ -170,6 +171,7 @@ private fun OverviewTab(
             Text(AppStrings.get(R.string.fmt_your_balance, status.balance, status.creditName))
             Text(AppStrings.get(R.string.fmt_price_every, status.price, status.creditName, status.periodDays))
             if (status.aiReplyLimit > 0) Text(AppStrings.get(R.string.fmt_ai_replies, status.aiRepliesUsed, status.aiReplyLimit))
+            if (stats != null && status.running) Text(AppStrings.get(R.string.fmt_responder_stats, stats.sent, stats.needsReview, stats.failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(12.dp))
             val label = when {
                 !status.running && status.status != "EXPIRED" && status.trialAvailable -> AppStrings.get(R.string.intro_continue)
@@ -186,8 +188,21 @@ private fun OverviewTab(
     Text(AppStrings.get(R.string.s_dc09c826), style = MaterialTheme.typography.titleSmall)
     OutlinedTextField(description, { description = it }, label = { Text(AppStrings.get(R.string.s_04230bfd)) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
     OutlinedTextField(tone, { tone = it }, label = { Text(AppStrings.get(R.string.s_6d05e053)) }, modifier = Modifier.fillMaxWidth())
+    // What to do with a message no rule matches.
+    var fallbackMode by remember(status.fallbackMode) { mutableStateOf(status.fallbackMode) }
+    var fallbackReply by remember(status.fallbackReply) { mutableStateOf(status.fallbackReply.orEmpty()) }
     Spacer(Modifier.height(8.dp))
-    OutlinedButton(onClick = { onSaveProfile(description, tone) }, enabled = !busy) { Text(AppStrings.get(R.string.s_56ee6e0d)) }
+    Text(AppStrings.get(R.string.responder_fallback_title), style = MaterialTheme.typography.labelLarge)
+    androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.material3.FilterChip(selected = fallbackMode == "OFF", onClick = { fallbackMode = "OFF" }, label = { Text(AppStrings.get(R.string.responder_fallback_off)) })
+        androidx.compose.material3.FilterChip(selected = fallbackMode == "AI", onClick = { fallbackMode = "AI" }, label = { Text(AppStrings.get(R.string.responder_fallback_ai)) })
+        androidx.compose.material3.FilterChip(selected = fallbackMode == "TEMPLATE", onClick = { fallbackMode = "TEMPLATE" }, label = { Text(AppStrings.get(R.string.responder_fallback_text)) })
+    }
+    if (fallbackMode == "TEMPLATE") {
+        OutlinedTextField(fallbackReply, { fallbackReply = it }, label = { Text(AppStrings.get(R.string.responder_fallback_reply)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+    }
+    Spacer(Modifier.height(8.dp))
+    OutlinedButton(onClick = { onSaveProfile(description, tone, fallbackMode, fallbackReply) }, enabled = !busy) { Text(AppStrings.get(R.string.s_56ee6e0d)) }
 }
 
 @Composable

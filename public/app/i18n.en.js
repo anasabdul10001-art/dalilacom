@@ -66,7 +66,9 @@ DICT.en = {
   "pricing.days": "{n} days", "pricing.trial": "{n}-day free trial", "pricing.yourCountry": "Your country's price",
   "pricing.broadcasts": "{n} follower broadcasts per month", "pricing.subscribe": "Subscribe", "pricing.empty": "No plans available right now",
   "pricing.subscribed": "Subscribed ✅", "pricing.failed": "Couldn't subscribe",
-  "intro.card.title": "Welcome to the Dalilacom card \ud83d\udc4b",
+    "intro.responder.title": "Welcome to the auto-responder \ud83d\udc4b",
+  "intro.responder.body": "Smart replies to messages from your customers on your channels, even when you are busy.",
+"intro.card.title": "Welcome to the Dalilacom card \ud83d\udc4b",
   "intro.card.body": "A digital card that gives you discounts at participating shops \u2014 just show your code to the merchant.",
   "intro.trial": "Try the service free for {n} days. After that {price} every {days} days.",
   "intro.noTrial": "Subscription: {price} every {days} days.",
@@ -397,6 +399,11 @@ PHRASES.en = {
   "المدينة": "City",
   "— اختر مدينة —": "\u2014 Choose a city \u2014",
   "اختر المدينة": "Choose the city",
+  "ما أرد (أتجاهل الرسالة)": "Do not reply (ignore the message)",
+  "الذكاء الاصطناعي يجاوب من معلومات نشاطي": "The AI answers from my business information",
+  "نص ثابت": "A fixed text",
+  "إذا ما انطبقت أي قاعدة": "If no rule matches",
+  "نص الرد الاحتياطي ({name} = اسم الزبون)": "Fallback reply text ({name} = the customer's name)",
 };
 PATTERNS.en = [
   [/^تكلفة هذا الإعلان (\d+) من رصيدك \(رصيدك (\d+)\)$/, "This one costs $1 from your balance (you have $2)"],
@@ -437,5 +444,6 @@ PATTERNS.en = [
   [/^سيصل لنحو (\d+) شخص — المتبقّي لك هذا الشهر: (\d+) من (\d+) — تكلفة هذا الإعلان (\d+) من رصيدك \(رصيدك (\d+)\)$/, "It will reach about $1 people \u2014 announcements left for you this month: $2 of $3 \u2014 this one costs $4 from your balance (you have $5)"],
   [/^سيُخصم (\d+) من رصيد محفظتك لهذا الإعلان\. متابعة؟$/, "$1 will be taken from your wallet for this announcement. Continue?"],
   [/^(دفعت|أُعيد لمحفظتك) (\d+)$/, (m) => `${m[1] === "دفعت" ? "Paid" : "Refunded to your wallet"} ${m[2]}`],
+  [/^آخر 30 يوم: أُرسل (\d+) · بانتظار ردّك (\d+) · فشل (\d+)$/, "Last 30 days: sent $1 \u00b7 waiting for you $2 \u00b7 failed $3"],
 ];
 WORDS.en = { "دليلكم كوين": "Dalilacom Credits" };

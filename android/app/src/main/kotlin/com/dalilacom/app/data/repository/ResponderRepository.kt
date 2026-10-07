@@ -28,8 +28,10 @@ class ResponderRepository(private val api: ApiService) {
     suspend fun status() = call(AppStrings.get(R.string.s_221bae78)) { api.getResponderStatus() }
     suspend fun activate() = call(AppStrings.get(R.string.s_da0717d9)) { api.activateResponder() }
     suspend fun renew() = call(AppStrings.get(R.string.s_daaa4ebe)) { api.renewResponder() }
-    suspend fun saveProfile(description: String, tone: String) =
-        call(AppStrings.get(R.string.s_98bd1e1e)) { api.saveResponderProfile(ProfileRequest(description, tone)) }
+    suspend fun saveProfile(description: String, tone: String, fallbackMode: String, fallbackReply: String) =
+        call(AppStrings.get(R.string.s_98bd1e1e)) { api.saveResponderProfile(ProfileRequest(description, tone, fallbackMode, fallbackReply.ifBlank { null })) }
+
+    suspend fun stats() = call(AppStrings.get(R.string.s_221bae78)) { api.getResponderStats() }
 
     suspend fun channels() = call(AppStrings.get(R.string.s_e51fe37e)) { api.getResponderChannels() }
     suspend fun connections() = call(AppStrings.get(R.string.s_bc12337c)) { api.getResponderConnections() }

@@ -658,6 +658,12 @@ model ResponderSubscription {
   aiPeriodStart       DateTime?
   businessDescription String?
   tone                String?
+  // What to do with a message no rule matches: nothing (OFF), let the AI answer from the business information, or send a
+  // fixed text (TEMPLATE, fallbackReply).
+  fallbackMode        String          @default("OFF")
+  fallbackReply       String?
+  // The end date (trial end or period end) the owner was last warned about, so each ending is announced once.
+  expiryNoticeFor     DateTime?
   createdAt           DateTime        @default(now())
 
   user User @relation(fields: [userId], references: [id])

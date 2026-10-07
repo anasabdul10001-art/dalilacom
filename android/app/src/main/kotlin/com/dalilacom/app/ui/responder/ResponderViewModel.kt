@@ -27,6 +27,7 @@ data class ResponderUiState(
     val info: String? = null,
     val needsTopUp: Boolean = false,
     val status: ResponderStatusDto? = null,
+    val stats: com.dalilacom.app.data.network.ResponderStatsDto? = null,
     val channels: List<ChannelDto> = emptyList(),
     val connections: List<ConnectionDto> = emptyList(),
     val rules: List<RuleDto> = emptyList(),
@@ -65,10 +66,12 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
             val rules = repository.rules().getOrNull().orEmpty()
             val inbox = repository.inbox().getOrNull().orEmpty()
             val metaStatus = repository.metaStatus().getOrNull()
+            val stats = repository.stats().getOrNull()
             _uiState.update {
                 it.copy(
                     isLoading = false,
                     status = status.getOrNull() ?: it.status,
+                    stats = stats ?: it.stats,
                     error = status.exceptionOrNull()?.message,
                     channels = channels,
                     connections = connections,
@@ -108,8 +111,8 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         }
     }
 
-    fun saveProfile(description: String, tone: String) =
-        act(AppStrings.get(R.string.s_a1ec84ae)) { repository.saveProfile(description.trim(), tone.trim()) }
+    fun saveProfile(description: String, tone: String, fallbackMode: String, fallbackReply: String) =
+        act(AppStrings.get(R.string.s_a1ec84ae)) { repository.saveProfile(description.trim(), tone.trim(), fallbackMode, fallbackReply.trim()) }
 
     fun connect(channelId: String, credentials: Map<String, String>) =
         act(AppStrings.get(R.string.s_0224de46)) { repository.connect(channelId, credentials) }

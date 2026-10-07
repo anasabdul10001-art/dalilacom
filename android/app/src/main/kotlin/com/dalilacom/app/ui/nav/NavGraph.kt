@@ -58,7 +58,7 @@ fun DalilacomNavGraph(
     LaunchedEffect(notificationRoute) {
         val route = notificationRoute ?: return@LaunchedEffect
         navController.currentBackStackEntryFlow.first { it.destination.route == "home" }
-        val needsAccount = route.startsWith("order/") || route == "merchantMode" || route == NotificationRoutes.INBOX
+        val needsAccount = route.startsWith("order/") || route == "merchantMode" || route == "responder" || route == NotificationRoutes.INBOX
         if (route != "home" && (!needsAccount || container.tokenStore.getToken() != null)) navController.navigate(route)
         onNotificationRouteConsumed()
     }

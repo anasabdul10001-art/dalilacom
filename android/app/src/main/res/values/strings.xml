@@ -206,6 +206,12 @@
     <string name="fmt_promo_refunded">أُعيد لمحفظتك %1$d</string>
     <string name="promo_audience_city">مدينة</string>
     <string name="promo_choose_city">اختر المدينة</string>
+    <string name="responder_fallback_title">إذا ما انطبقت أي قاعدة</string>
+    <string name="responder_fallback_off">ما أرد</string>
+    <string name="responder_fallback_ai">الذكاء الاصطناعي</string>
+    <string name="responder_fallback_text">نص ثابت</string>
+    <string name="responder_fallback_reply">نص الرد الاحتياطي ({name} = اسم الزبون)</string>
+    <string name="fmt_responder_stats">آخر 30 يوم: أُرسل %1$d · بانتظار ردّك %2$d · فشل %3$d</string>
     <string name="promo_tab">إعلاناتي</string>
     <string name="promo_title">إعلاناتي</string>
     <string name="promo_sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</string>

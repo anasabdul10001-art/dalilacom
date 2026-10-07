@@ -18,7 +18,12 @@ data class ResponderStatusDto(
     val aiReplyLimit: Int = 0,
     val businessDescription: String? = null,
     val tone: String? = null,
+    val fallbackMode: String = "OFF",
+    val fallbackReply: String? = null,
 )
+
+@Serializable
+data class ResponderStatsDto(val days: Int = 30, val sent: Int = 0, val needsReview: Int = 0, val failed: Int = 0, val skipped: Int = 0)
 
 @Serializable
 data class ChannelFieldDto(val key: String, val label: String, val secret: Boolean = false)
@@ -50,7 +55,7 @@ data class ConnectRequest(val channelId: String, val credentials: Map<String, St
 data class ToggleRequest(val isActive: Boolean)
 
 @Serializable
-data class ProfileRequest(val businessDescription: String, val tone: String)
+data class ProfileRequest(val businessDescription: String, val tone: String, val fallbackMode: String? = null, val fallbackReply: String? = null)
 
 @Serializable
 data class RuleDto(

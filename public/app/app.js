@@ -2732,13 +2732,13 @@ function screenResponder() {
 }
 
 async function loadResponder() {
-  const [st, ch, cn, ru, ib] = await Promise.all([
+  const [st, ch, cn, ru, ib, sx] = await Promise.all([
     api("GET", "/responder/status"), api("GET", "/responder/channels"), api("GET", "/responder/connections"),
-    api("GET", "/responder/rules"), api("GET", "/responder/inbox"),
+    api("GET", "/responder/rules"), api("GET", "/responder/inbox"), api("GET", "/responder/stats"),
   ]);
   const tab = (S._resp && S._resp.tab) || "overview";
   const keep = S._resp || {};
-  S._resp = { loading: false, tab, ruleDraft: keep.ruleDraft, posts: keep.posts, selectedPosts: keep.selectedPosts, postsError: keep.postsError, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [] };
+  S._resp = { loading: false, tab, ruleDraft: keep.ruleDraft, posts: keep.posts, selectedPosts: keep.selectedPosts, postsError: keep.postsError, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [], stats: sx.ok ? sx.data : null };
   render();
 }
 
@@ -2755,14 +2755,27 @@ function respOverview() {
   if (!st) return `<div class="error-banner">تعذّر تحميل الحالة</div>`;
   const daysLeft = (d) => Math.max(0, Math.ceil((new Date(d) - Date.now()) / 86400000));
   const endInfo = st.status === "TRIAL" ? `تنتهي التجربة بعد ${daysLeft(st.trialEndsAt)} يوم` : st.status === "ACTIVE" ? `الاشتراك ساري لحد ${String(st.periodEnd).slice(0, 10)}` : "";
+  const firstVisit = !st.running && st.status !== "EXPIRED";
+  const price = `${st.price} ${st.creditName}`;
+  const welcome = firstVisit ? `
+    <div class="card intro-card">
+      <h2>${esc(t("intro.responder.title"))}</h2>
+      <p>${esc(t("intro.responder.body"))}</p>
+      <p><strong>${esc(st.trialAvailable ? t("intro.trial", { n: st.trialDays, price, days: st.periodDays }) : t("intro.noTrial", { price, days: st.periodDays }))}</strong></p>
+      ${st.trialAvailable ? `<p class="muted">${esc(t("intro.afterContinue"))}</p>` : ""}
+    </div>` : "";
+  const sx = S._resp.stats;
+  const stats = sx && st.running ? `<p class="muted" style="margin:4px 0 0">آخر 30 يوم: أُرسل ${sx.sent} · بانتظار ردّك ${sx.needsReview} · فشل ${sx.failed}</p>` : "";
   return `
+    ${welcome}
     <div class="card">
       <div class="title-line"><strong>حالة الخدمة</strong>${respStatusBadge(st.status)}</div>
+      ${stats}
       <p class="muted" style="margin-top:6px">${esc(endInfo)}</p>
       ${st.status === "EXPIRED" ? `<div class="error-banner">خلصت المدة — الردود الآلية موقوفة. ادفع لتكمل الخدمة.</div>` : ""}
       <p class="muted">رصيدك: <b>${st.balance}</b> ${esc(st.creditName)} · ردود AI هالفترة: ${st.aiRepliesUsed}/${st.aiReplyLimit}</p>
       ${errorBanner()}
-      ${!st.running && st.trialAvailable ? `<button class="btn" onclick="respActivate()">ابدأ التجربة المجانية (${st.trialDays} يوم)</button>` : ""}
+      ${!st.running && st.trialAvailable ? `<button class="btn" onclick="respActivate()">${esc(t("intro.continue"))}</button>` : ""}
       ${!st.running && !st.trialAvailable ? `<button class="btn" onclick="respActivate()">فعّل مقابل ${st.price} ${esc(st.creditName)} / ${st.periodDays} يوم</button>` : ""}
       ${st.running && st.status === "ACTIVE" ? `<button class="btn outline" onclick="respRenew()">جدّد ${st.periodDays} يوم إضافي (${st.price} ${esc(st.creditName)})</button>` : ""}
       ${st.status === "TRIAL" ? `<button class="btn outline" onclick="respRenew()">اشترك من هلق (${st.price} ${esc(st.creditName)})</button>` : ""}
@@ -2773,6 +2786,13 @@ function respOverview() {
       <div class="section-title" style="margin-top:0">عن نشاطك (بيساعد الذكاء الاصطناعي يرد صح)</div>
       <div class="field"><label>وصف النشاط</label><input id="rp-desc" value="${esc(st.businessDescription || "")}" /></div>
       <div class="field"><label>نبرة الرد (رسمي، ودود...)</label><input id="rp-tone" value="${esc(st.tone || "")}" /></div>
+      <div class="field"><label>إذا ما انطبقت أي قاعدة</label>
+        <select id="rp-fb" onchange="S._resp.status.fallbackMode = this.value; render()">
+          <option value="OFF" ${st.fallbackMode === "OFF" ? "selected" : ""}>ما أرد (أتجاهل الرسالة)</option>
+          <option value="AI" ${st.fallbackMode === "AI" ? "selected" : ""}>الذكاء الاصطناعي يجاوب من معلومات نشاطي</option>
+          <option value="TEMPLATE" ${st.fallbackMode === "TEMPLATE" ? "selected" : ""}>نص ثابت</option>
+        </select></div>
+      ${st.fallbackMode === "TEMPLATE" ? `<div class="field"><label>نص الرد الاحتياطي ({name} = اسم الزبون)</label><textarea id="rp-fbtext" rows="3">${esc(st.fallbackReply || "")}</textarea></div>` : ""}
       <button class="btn small" onclick="respSaveProfile()">حفظ</button>
     </div>`;
 }
@@ -2790,7 +2810,11 @@ async function respRenew() {
   S._resp = { loading: true, tab: "overview" }; render(); loadResponder();
 }
 async function respSaveProfile() {
-  await api("PATCH", "/responder/profile", { businessDescription: qs("rp-desc").value.trim(), tone: qs("rp-tone").value.trim() });
+  const body = { businessDescription: qs("rp-desc").value.trim(), tone: qs("rp-tone").value.trim(), fallbackMode: qs("rp-fb").value };
+  if (qs("rp-fbtext")) body.fallbackReply = qs("rp-fbtext").value.trim();
+  const { ok, data } = await api("PATCH", "/responder/profile", body);
+  if (!ok) { S.error = errMsg(data, "تعذّر الحفظ"); return render(); }
+  S.error = null;
   loadResponder();
 }
 

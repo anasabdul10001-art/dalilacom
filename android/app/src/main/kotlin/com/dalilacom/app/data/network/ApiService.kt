@@ -212,6 +212,9 @@ interface ApiService {
     @POST("qr/redeem")
     suspend fun redeemDiscount(@Body body: RedeemRequest): Response<RedeemResponse>
 
+    @GET("responder/stats")
+    suspend fun getResponderStats(): Response<ResponderStatsDto>
+
     @GET("responder/status")
     suspend fun getResponderStatus(): Response<ResponderStatusDto>
 
