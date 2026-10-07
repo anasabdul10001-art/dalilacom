@@ -123,6 +123,13 @@ describe("A real order drives the notifications (section 13)", () => {
     expect(placed[0].title).toContain("استلام طلبك");
     expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({ to: customer.email })); // FULL also emails
 
+    // The merchant hears about the new order too, with a title that says it is theirs to act on.
+    const merchantPlaced = await prisma.notification.findMany({ where: { userId: ownerUser.id, type: "ORDER_PLACED" } });
+    expect(merchantPlaced).toHaveLength(1);
+    expect(merchantPlaced[0].title).toContain("طلب جديد");
+    expect(merchantPlaced[0].body).toContain(order.orderNumber);
+    expect(merchantPlaced[0].data).toMatchObject({ orderId: order.id, audience: "MERCHANT" });
+
     // The merchant moves the order on: the customer hears about it.
     sendSpy.mockClear();
     const moved = await request(app)
@@ -165,7 +172,8 @@ describe("A real order drives the notifications (section 13)", () => {
     expect(checkout.status).toBe(201); // the order still happens
 
     expect(await prisma.notification.count({ where: { userId: user.id, type: "ORDER_PLACED" } })).toBe(0);
-    expect(sendSpy).not.toHaveBeenCalled();
+    // the merchant's own new-order email is separate; nothing goes to this customer
+    expect(sendSpy).not.toHaveBeenCalledWith(expect.objectContaining({ to: customer.email }));
   });
 
   it("keeps the inbox row but skips the email on IN_APP_ONLY", async () => {
@@ -182,7 +190,7 @@ describe("A real order drives the notifications (section 13)", () => {
     await request(app).post("/cart/checkout").set("Authorization", customer.bearer);
 
     expect(await inbox(customer.bearer, "ORDER_PLACED")).toHaveLength(1);
-    expect(sendSpy).not.toHaveBeenCalled();
+    expect(sendSpy).not.toHaveBeenCalledWith(expect.objectContaining({ to: customer.email }));
   });
 });
 

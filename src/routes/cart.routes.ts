@@ -222,6 +222,23 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
       });
     }
 
+    // The merchant is the one who has to act on a new order, so they hear about it too.
+    const owners = await prisma.merchantProfile.findMany({
+      where: { id: { in: orders.map((o) => o.merchantId) } },
+      select: { id: true, userId: true },
+    });
+    for (const order of orders) {
+      const owner = owners.find((m) => m.id === order.merchantId);
+      if (!owner) continue;
+      await notify({
+        userId: owner.userId,
+        type: "ORDER_PLACED",
+        title: "طلب جديد وصلك 🛒",
+        body: `وصلك الطلب ${order.orderNumber}. افتح الطلبات لتأكيده.`,
+        data: { orderId: order.id, orderNumber: order.orderNumber, audience: "MERCHANT" },
+      });
+    }
+
     res.status(201).json(orders);
   } catch (err) {
     if (err instanceof Error && err.message.startsWith("OUT_OF_STOCK:")) {
