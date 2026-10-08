@@ -46,6 +46,8 @@ import com.dalilacom.app.data.network.GeoUnitDto
 import com.dalilacom.app.data.network.ProfileDto
 import com.dalilacom.app.data.repository.AccountRepository
 import com.dalilacom.app.ui.ViewModelFactory
+import com.dalilacom.app.ui.common.PlaceDropdown
+import com.dalilacom.app.ui.common.title
 import com.dalilacom.app.ui.i18n.AppStrings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -73,7 +75,11 @@ data class AccountUiState(
     val profile: ProfileDto? = null,
     val emailDelivery: Boolean = false,
     val countries: List<GeoUnitDto> = emptyList(),
+    val profileRegions: List<GeoUnitDto> = emptyList(),
+    val profileRegionId: String? = null,
     val profileCities: List<GeoUnitDto> = emptyList(),
+    /** Every city of the country, kept so the governorate of the saved city can be found and the list narrowed without another request. */
+    val allProfileCities: List<GeoUnitDto> = emptyList(),
     val addresses: List<AddressDto> = emptyList(),
     val form: AddressForm? = null,
     val info: String? = null,
@@ -95,13 +101,27 @@ class AccountSettingsViewModel(private val repository: AccountRepository) : View
 
     private fun done(message: String?, error: String? = null) = _uiState.update { it.copy(info = message, error = error) }
 
+    /** The governorates of the country first; the cities of the saved city's governorate (all of them for a country without governorates). */
     private suspend fun loadProfileCities(isoCode: String?) {
         val country = _uiState.value.countries.firstOrNull { it.isoCode2 == isoCode }
-        _uiState.update { it.copy(profileCities = if (country == null) emptyList() else emptyList()) }
-        if (country != null) {
-            val cities = repository.units(countryId = country.id, level = "CITY")
-            _uiState.update { it.copy(profileCities = cities) }
+        _uiState.update { it.copy(profileRegions = emptyList(), profileRegionId = null, profileCities = emptyList(), allProfileCities = emptyList()) }
+        if (country == null) return
+        val regions = repository.units(countryId = country.id, level = "REGION")
+        val cities = repository.units(countryId = country.id, level = "CITY")
+        val savedCity = cities.firstOrNull { it.id == _uiState.value.profile?.cityId }
+        val regionId = if (regions.isEmpty()) null else savedCity?.parentId
+        _uiState.update {
+            it.copy(
+                profileRegions = regions,
+                profileRegionId = regionId,
+                allProfileCities = cities,
+                profileCities = if (regions.isEmpty()) cities else cities.filter { c -> c.parentId == regionId },
+            )
         }
+    }
+
+    fun pickProfileRegion(id: String) = _uiState.update { st ->
+        st.copy(profileRegionId = id, profile = st.profile?.copy(cityId = null), profileCities = st.allProfileCities.filter { it.parentId == id })
     }
 
     fun changeEmail(newEmail: String, password: String) = viewModelScope.launch {
@@ -198,30 +218,12 @@ class AccountSettingsViewModel(private val repository: AccountRepository) : View
     }
 }
 
-private fun GeoUnitDto.title(): String = nameArabic?.takeIf { AppStrings.language == "ar" } ?: nameEnglish ?: name
-
 @Composable
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
     Surface(shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             content()
-        }
-    }
-}
-
-/** A drop-down of places (country, governorate, city, area), shown as a button with the current choice. */
-@Composable
-private fun PlaceDropdown(label: String, options: List<GeoUnitDto>, selectedId: String?, onSelect: (GeoUnitDto) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    val chosen = options.firstOrNull { it.id == selectedId }
-    Column {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Box {
-            OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) { Text(chosen?.title() ?: AppStrings.get(R.string.account_choose)) }
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                options.forEach { unit -> DropdownMenuItem(text = { Text(unit.title()) }, onClick = { onSelect(unit); open = false }) }
-            }
         }
     }
 }
@@ -291,6 +293,7 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                     Text(AppStrings.get(R.string.account_place_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     val countryId = state.countries.firstOrNull { it.isoCode2 == profile.countryCode }?.id
                     PlaceDropdown(AppStrings.get(R.string.account_country), state.countries, countryId) { viewModel.pickProfileCountry(it.isoCode2) }
+                    if (state.profileRegions.isNotEmpty()) PlaceDropdown(AppStrings.get(R.string.account_region), state.profileRegions, state.profileRegionId) { viewModel.pickProfileRegion(it.id) }
                     PlaceDropdown(AppStrings.get(R.string.account_city), state.profileCities, profile.cityId) { viewModel.pickProfileCity(it.id) }
                     OutlinedTextField(vat, { vat = it }, label = { Text(AppStrings.get(R.string.account_vat)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Button(onClick = { viewModel.saveLocation(vat) }) { Text(AppStrings.get(R.string.account_save)) }

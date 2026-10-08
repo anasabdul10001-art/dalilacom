@@ -433,6 +433,12 @@ async function doLogin() {
 function screenRegister() {
   const intent = S.params.intent || "CUSTOMER";
   const draft = S.params.draft || {};
+  if (!S._regGeo) { S._regGeo = { countries: [], regions: [], cities: [], loading: true }; loadRegGeo(); }
+  const g = S._regGeo;
+  const countryOpts = g.countries.map((c) => `<option value="${esc(c.isoCode2)}" ${draft.country === c.isoCode2 ? "selected" : ""}>${esc(c.nameArabic || c.name)}</option>`).join("");
+  const regionOpts = g.regions.map((c) => `<option value="${esc(c.id)}" ${draft.region === c.id ? "selected" : ""}>${esc(c.nameArabic || c.name)}</option>`).join("");
+  const cityOpts = g.cities.map((c) => `<option value="${esc(c.id)}" ${draft.city === c.id ? "selected" : ""}>${esc(c.nameArabic || c.name)}</option>`).join("");
+  const cityHint = g.regions.length && !draft.region ? "— اختر المحافظة أول —" : g.cities.length ? "— اختر المدينة —" : "— اختر الدولة أول —";
   return `
     <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
     <h1 class="screen-title">إنشاء حساب جديد</h1>
@@ -445,6 +451,9 @@ function screenRegister() {
     <div class="field"><label>الاسم الكامل</label><input id="f-name" placeholder="اسمك" value="${esc(draft.name || "")}" /></div>
     <div class="field"><label>الإيميل</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
     <div class="field"><label>كلمة السر (8 أحرف على الأقل)</label><input id="f-password" type="password" placeholder="••••••••" value="${esc(draft.password || "")}" /></div>
+    <div class="field"><label>الدولة</label><select id="f-country" onchange="regPickCountry()"><option value="">— اختر الدولة —</option>${countryOpts}</select></div>
+    ${g.regions.length ? `<div class="field"><label>المحافظة</label><select id="f-region" onchange="regPickRegion()"><option value="">— اختر المحافظة —</option>${regionOpts}</select></div>` : ""}
+    <div class="field"><label>المدينة</label><select id="f-city" ${g.cities.length ? "" : "disabled"}><option value="">${cityHint}</option>${cityOpts}</select></div>
     ${errorBanner()}
     <button class="btn" onclick="doRegister()">إنشاء الحساب</button>
     ${socialButtonsHtml()}
@@ -457,7 +466,58 @@ function snapshotRegisterDraft() {
     name: qs("f-name") ? qs("f-name").value : (S.params.draft || {}).name,
     email: qs("f-email") ? qs("f-email").value : (S.params.draft || {}).email,
     password: qs("f-password") ? qs("f-password").value : (S.params.draft || {}).password,
+    country: qs("f-country") ? qs("f-country").value : (S.params.draft || {}).country,
+    region: qs("f-region") ? qs("f-region").value : (S.params.draft || {}).region,
+    city: qs("f-city") ? qs("f-city").value : (S.params.draft || {}).city,
   };
+}
+
+/** The lists on the sign-up page: country, then its governorates, then the cities of the chosen governorate (Syria is chosen first when it is there). */
+async function loadRegGeo() {
+  const { ok, data } = await api("GET", "/geo/countries");
+  const g = S._regGeo;
+  g.loading = false;
+  g.countries = ok ? data : [];
+  const draft = S.params.draft || (S.params.draft = {});
+  if (!draft.country) { const sy = g.countries.find((c) => c.isoCode2 === "SY"); if (sy) draft.country = "SY"; }
+  await loadRegRegions(draft.country);
+  render();
+}
+
+async function loadRegRegions(isoCode) {
+  const g = S._regGeo;
+  g.regions = [];
+  g.cities = [];
+  const country = g.countries.find((c) => c.isoCode2 === isoCode);
+  if (!country) return;
+  const regions = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "REGION" }));
+  if (regions.ok && regions.data.length) { g.regions = regions.data; return; }
+  // a country with no governorates in our list: its cities come straight under it
+  const cities = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "CITY" }));
+  if (cities.ok) g.cities = cities.data;
+}
+
+async function loadRegCities(regionId) {
+  const g = S._regGeo;
+  g.cities = [];
+  if (!regionId) return;
+  const { ok, data } = await api("GET", "/geo/units?" + new URLSearchParams({ parentId: regionId, level: "CITY" }));
+  if (ok) g.cities = data;
+}
+
+async function regPickCountry() {
+  snapshotRegisterDraft();
+  S.params.draft.region = "";
+  S.params.draft.city = "";
+  await loadRegRegions(S.params.draft.country);
+  render();
+}
+
+async function regPickRegion() {
+  snapshotRegisterDraft();
+  S.params.draft.city = "";
+  await loadRegCities(S.params.draft.region);
+  render();
 }
 
 function setRegisterIntent(intent) {
@@ -473,7 +533,11 @@ async function doRegister() {
   const password = qs("f-password").value;
   if (!fullName || !email || password.length < 8) { S.error = "عبّي كل الحقول (كلمة السر 8 أحرف ع الأقل)"; return render(); }
   S.busy = true; S.error = null; render();
-  const { ok, data } = await api("POST", "/auth/register", { email, password, fullName });
+  const body = { email, password, fullName };
+  const d = S.params.draft || {};
+  if (d.country) body.countryCode = d.country;
+  if (d.city) body.cityId = d.city;
+  const { ok, data } = await api("POST", "/auth/register", body);
   S.busy = false;
   if (ok) {
     setToken(data.token, data.user.role);
@@ -2207,6 +2271,8 @@ function screenAccount() {
       <p class="muted">بتأثر على الأسعار والضريبة بالفواتير.</p>
       <div class="field"><label>البلد</label>
         <select id="ac-country" onchange="acctPickProfileCountry(this.value)">${opt("", "— اختر —", p.countryCode)}${a.countries.map((c) => opt(c.isoCode2, unitName(c), p.countryCode)).join("")}</select></div>
+      ${(a.regions || []).length ? `<div class="field"><label>المحافظة</label>
+        <select id="ac-region" onchange="acctPickProfileRegion(this.value)">${opt("", "— اختر —", a.regionId)}${a.regions.map((c) => opt(c.id, unitName(c), a.regionId)).join("")}</select></div>` : ""}
       <div class="field"><label>المدينة</label>
         <select id="ac-city">${opt("", "— اختر —", p.cityId)}${a.cities.map((c) => opt(c.id, unitName(c), p.cityId)).join("")}</select></div>
       <div class="field"><label>الرقم الضريبي (اختياري)</label><input id="ac-vat" dir="ltr" value="${esc(p.vatNumber || "")}" /></div>
@@ -2259,14 +2325,28 @@ async function loadAccount() {
   render();
 }
 
+/** The governorates of the country, and the cities of the chosen governorate (the saved city's governorate is found from its parent). */
 async function acctLoadCities(isoCode) {
   const a = S._acct;
   const country = a.countries.find((c) => c.isoCode2 === isoCode);
+  a.regions = [];
   a.cities = [];
-  if (country) {
-    const { ok, data } = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "CITY" }));
-    if (ok) a.cities = data;
+  if (!country) return;
+  const regions = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "REGION" }));
+  if (regions.ok && regions.data.length) {
+    a.regions = regions.data;
+    if (a.profile && a.profile.cityId && !a.regionId) {
+      const city = await api("GET", "/geo/units/" + a.profile.cityId);
+      if (city.ok && city.data.parentId) a.regionId = city.data.parentId;
+    }
+    if (a.regionId) {
+      const cities = await api("GET", "/geo/units?" + new URLSearchParams({ parentId: a.regionId, level: "CITY" }));
+      if (cities.ok) a.cities = cities.data;
+    }
+    return;
   }
+  const cities = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "CITY" }));
+  if (cities.ok) a.cities = cities.data;
 }
 
 function acctDone(message, error) {
@@ -2315,7 +2395,20 @@ async function acctSavePhone() {
 async function acctPickProfileCountry(isoCode) {
   S._acct.profile.countryCode = isoCode || null;
   S._acct.profile.cityId = null;
+  S._acct.regionId = null;
   await acctLoadCities(isoCode);
+  render();
+}
+
+async function acctPickProfileRegion(regionId) {
+  const a = S._acct;
+  a.regionId = regionId || null;
+  a.profile.cityId = null;
+  a.cities = [];
+  if (regionId) {
+    const { ok, data } = await api("GET", "/geo/units?" + new URLSearchParams({ parentId: regionId, level: "CITY" }));
+    if (ok) a.cities = data;
+  }
   render();
 }
 

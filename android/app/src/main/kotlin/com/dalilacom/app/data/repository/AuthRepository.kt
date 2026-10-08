@@ -5,6 +5,7 @@ import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.ForgotPasswordRequest
+import com.dalilacom.app.data.network.GeoUnitDto
 import com.dalilacom.app.data.network.LoginRequest
 import com.dalilacom.app.data.network.SocialCompleteRequest
 import com.dalilacom.app.data.network.MeResponse
@@ -22,8 +23,14 @@ class AuthRepository(
     private val tokenStore: TokenStore,
     private val sessionStore: SessionStore,
 ) {
-    suspend fun register(email: String, password: String, fullName: String): Result<UserDto> {
-        val response = safeApiCall { api.register(RegisterRequest(email, password, fullName)) }
+    /** The lists of the sign-up page: countries, then the governorates / cities under what was chosen. */
+    suspend fun countries(): List<GeoUnitDto> = safeApiCall { api.geoCountries() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
+    suspend fun units(countryId: String? = null, level: String? = null, parentId: String? = null): List<GeoUnitDto> =
+        safeApiCall { api.geoChildren(countryId, level, parentId) }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
+    suspend fun register(email: String, password: String, fullName: String, countryCode: String? = null, cityId: String? = null): Result<UserDto> {
+        val response = safeApiCall { api.register(RegisterRequest(email, password, fullName, countryCode, cityId)) }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {

@@ -3,7 +3,7 @@ package com.dalilacom.app.data.network
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class RegisterRequest(val email: String, val password: String, val fullName: String)
+data class RegisterRequest(val email: String, val password: String, val fullName: String, val countryCode: String? = null, val cityId: String? = null)
 
 @Serializable
 data class LoginRequest(val email: String, val password: String)
@@ -54,7 +54,7 @@ data class ResendVerificationRequest(val email: String)
 data class AuthResponse(val token: String, val user: UserDto)
 
 @Serializable
-data class GeoUnitDto(val id: String, val name: String, val nameArabic: String? = null, val nameEnglish: String? = null, val isoCode2: String? = null)
+data class GeoUnitDto(val id: String, val name: String, val nameArabic: String? = null, val nameEnglish: String? = null, val isoCode2: String? = null, val parentId: String? = null)
 
 @Serializable
 data class ChangeEmailRequest(val newEmail: String, val password: String? = null)

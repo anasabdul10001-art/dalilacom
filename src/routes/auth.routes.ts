@@ -73,21 +73,33 @@ const registerSchema = z.object({
   phone: z.string().min(6).optional(),
   password: z.string().min(8),
   fullName: z.string().min(2),
+  // Where the person lives, picked from the lists on the sign-up page. Optional; what does not match our lists is simply ignored.
+  countryCode: z.string().trim().length(2).toUpperCase().optional(),
+  cityId: z.string().uuid().optional(),
 });
 
 authRouter.post("/register", registerRateLimiter, async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const { email, phone, password, fullName } = parsed.data;
+  const { email, phone, password, fullName, countryCode, cityId } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return sendError(res, 409, "EMAIL_ALREADY_REGISTERED", "هذا البريد الإلكتروني مسجّل مسبقًا");
   }
 
+  // the chosen city must exist (and belong to the chosen country); its country fills the country when only the city came
+  const city = cityId ? await prisma.geoUnit.findFirst({ where: { id: cityId, level: "CITY" }, select: { id: true, country: { select: { isoCode2: true } } } }) : null;
+  const countryKnown = countryCode ? await prisma.country.findFirst({ where: { isoCode2: countryCode }, select: { isoCode2: true } }) : null;
+  const place = city && (!countryKnown || city.country.isoCode2 === countryKnown.isoCode2)
+    ? { countryCode: city.country.isoCode2, cityId: city.id }
+    : countryKnown
+      ? { countryCode: countryKnown.isoCode2 }
+      : {};
+
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({
-    data: { email, phone, passwordHash, fullName, language: resolveLanguage(req) },
+    data: { email, phone, passwordHash, fullName, language: resolveLanguage(req), ...place },
   });
 
   const rawToken = await issueVerificationToken(user.id);

@@ -3,7 +3,7 @@ import request from "supertest";
 import { describe, it, expect, afterAll } from "vitest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
-import { uniqueEmail } from "./helpers";
+import { freeIsoCode2, uniqueEmail } from "./helpers";
 
 afterAll(async () => {
   await prisma.$disconnect();
@@ -110,5 +110,29 @@ describe("The admin's list of accounts", () => {
     expect(refused.status).toBe(403);
     expect((await request(app).patch(`/admin/users/${victim.id}`).set(boss.auth).send({ isDisabled: false })).body.isDisabled).toBe(false);
     expect((await request(app).post("/auth/login").send({ email: victim.email, password })).status).toBe(200);
+  });
+});
+
+describe("Choosing the country and city while signing up", () => {
+  it("stores the country and city picked on the sign-up page, fills the country from the city, and ignores what does not match", async () => {
+    const iso = await freeIsoCode2(prisma);
+    const country = await prisma.country.create({ data: { name: `Reg-${iso}-${Date.now()}`, isoCode2: iso, currencyCode: "TST" } });
+    const region = await prisma.geoUnit.create({ data: { countryId: country.id, level: "REGION", name: "Region" } });
+    const city = await prisma.geoUnit.create({ data: { countryId: country.id, level: "CITY", name: "City", parentId: region.id } });
+    const other = await prisma.country.create({ data: { name: `Reg2-${Date.now()}`, isoCode2: await freeIsoCode2(prisma), currencyCode: "TST" } });
+    const password = "correct-horse-battery-staple";
+    const register = async (extra: Record<string, unknown>) => {
+      const email = uniqueEmail("regplace");
+      const res = await request(app).post("/auth/register").send({ email, password, fullName: "Place Person", ...extra });
+      expect(res.status).toBe(201);
+      return prisma.user.findUniqueOrThrow({ where: { email } });
+    };
+
+    expect(await register({ countryCode: iso.toLowerCase(), cityId: city.id })).toMatchObject({ countryCode: iso, cityId: city.id });
+    expect(await register({ cityId: city.id })).toMatchObject({ countryCode: iso, cityId: city.id }); // the city brings its country
+    expect(await register({ countryCode: iso })).toMatchObject({ countryCode: iso, cityId: null });
+    expect(await register({ countryCode: other.isoCode2, cityId: city.id })).toMatchObject({ countryCode: other.isoCode2, cityId: null }); // city of another country: ignored
+    expect(await register({ countryCode: "ZZ", cityId: crypto.randomUUID() })).toMatchObject({ countryCode: null, cityId: null }); // unknown: ignored, sign-up still works
+    expect(await register({})).toMatchObject({ countryCode: null, cityId: null });
   });
 });

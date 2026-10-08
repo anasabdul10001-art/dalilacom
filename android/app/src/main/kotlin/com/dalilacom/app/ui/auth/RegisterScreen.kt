@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.ui.ViewModelFactory
+import com.dalilacom.app.ui.common.PlaceDropdown
 
 private enum class SignupIntent { CUSTOMER, MERCHANT }
 
@@ -48,6 +49,8 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var signupIntent by remember { mutableStateOf(SignupIntent.CUSTOMER) }
+    val places by viewModel.places.collectAsState()
+    LaunchedEffect(Unit) { viewModel.loadPlaces() }
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) onRegisterSuccess(signupIntent == SignupIntent.MERCHANT)
@@ -110,6 +113,19 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth(),
         )
+        Spacer(Modifier.height(12.dp))
+        // country first, then its governorates, then the cities of the chosen governorate
+        if (places.countries.isNotEmpty()) {
+            PlaceDropdown(AppStrings.get(R.string.account_country), places.countries, places.countryId) { viewModel.pickCountry(it) }
+            if (places.regions.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                PlaceDropdown(AppStrings.get(R.string.account_region), places.regions, places.regionId) { viewModel.pickRegion(it) }
+            }
+            if (places.cities.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                PlaceDropdown(AppStrings.get(R.string.account_city), places.cities, places.cityId) { viewModel.pickCity(it) }
+            }
+        }
         Spacer(Modifier.height(20.dp))
 
         if (uiState is AuthUiState.Error) {

@@ -491,6 +491,13 @@ PHRASES.en = {
   "رجوع": "Back",
   "هذا الإيميل مسجّل عندنا. سجّل دخول بكلمة السر أول، أو استخدم إيميل غيره.": "This email is already registered. Sign in with your password first, or use a different email.",
   "انتهت صلاحية الدخول. ابدأ من جديد.": "The sign-in expired. Start again.",
+  "الدولة": "Country",
+  "— اختر الدولة —": "— Choose the country —",
+  "— اختر المدينة —": "— Choose the city —",
+  "— اختر الدولة أول —": "— Choose the country first —",
+  "المحافظة": "Governorate",
+  "— اختر المحافظة —": "— Choose the governorate —",
+  "— اختر المحافظة أول —": "— Choose the governorate first —",
 };
 PATTERNS.en = [
   [/^تكلفة هذا الإعلان (\d+) من رصيدك \(رصيدك (\d+)\)$/, "This one costs $1 from your balance (you have $2)"],
