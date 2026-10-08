@@ -361,6 +361,14 @@ model Product {
   stock                 Int      @default(0)
   sku                   String?
   isActive              Boolean  @default(true) // merchant-controlled visibility, independent of stock (section 59.1)
+  // The online store: a picture (a generated one is drawn from `icon` when there is no photo), the section it is
+  // listed under, and the figures a shopper looks at.
+  imageUrl              String?
+  icon                  String?
+  storeSection          String?
+  rating                Float    @default(0)
+  ratingCount           Int      @default(0)
+  soldCount             Int      @default(0)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -371,6 +379,7 @@ model Product {
   affiliateReferrals AffiliateReferral[]
 
   @@index([merchantId])
+  @@index([storeSection])
 }
 
 // One active cart per customer (section 6)

@@ -7,6 +7,7 @@ import { ChannelDriver, Prisma, Role, TopUpStatus } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { addDemoStore, removeDemoStore } from "../services/demoStore.service";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
 import { aiProviderStatus, aiTotals, aiUsage } from "../services/ai.service";
@@ -263,4 +264,13 @@ adminRouter.get("/ai-status", async (_req, res) => {
     usage: aiUsage(), // this process, exact
     usageTotals: await aiTotals(), // durable, survives deploys; null if the database is unreachable
   });
+});
+
+// Sample shops and 50 sample products for the online store, to judge its look before real merchants fill it.
+adminRouter.post("/demo-store", async (_req, res) => {
+  res.json(await addDemoStore());
+});
+
+adminRouter.delete("/demo-store", async (_req, res) => {
+  res.json(await removeDemoStore());
 });

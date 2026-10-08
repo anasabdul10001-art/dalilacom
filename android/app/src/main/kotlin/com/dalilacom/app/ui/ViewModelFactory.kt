@@ -15,6 +15,7 @@ import com.dalilacom.app.ui.merchantmode.RedeemViewModel
 import com.dalilacom.app.ui.notifications.NotificationsViewModel
 import com.dalilacom.app.ui.orders.OrdersViewModel
 import com.dalilacom.app.ui.pricing.PricingViewModel
+import com.dalilacom.app.ui.store.StoreViewModel
 import com.dalilacom.app.ui.places.FavoritesViewModel
 import com.dalilacom.app.ui.places.HoursViewModel
 import com.dalilacom.app.ui.merchantmode.PromoViewModel
@@ -31,6 +32,7 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
         AuthViewModel::class.java -> AuthViewModel(container.authRepository) as T
         CardViewModel::class.java -> CardViewModel(container.membershipRepository) as T
         DiscoverViewModel::class.java -> DiscoverViewModel(container.discoverRepository, container.placesRepository, container.sessionStore, container.profileRepository) as T
+        StoreViewModel::class.java -> StoreViewModel(container.storeRepository, container.cartRepository, container.authRepository) as T
         CartViewModel::class.java -> CartViewModel(container.cartRepository) as T
         OrdersViewModel::class.java -> OrdersViewModel(container.orderRepository) as T
         MerchantRegisterViewModel::class.java ->

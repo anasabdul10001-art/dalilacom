@@ -194,6 +194,32 @@ interface ApiService {
     @GET("products/{id}")
     suspend fun getProduct(@Path("id") id: String): Response<ProductDto>
 
+    @GET("store/home")
+    suspend fun storeHome(
+        @Query("scope") scope: String?,
+        @Query("cityId") cityId: String?,
+        @Query("radiusKm") radiusKm: Int?,
+        @Query("lat") lat: Double?,
+        @Query("lng") lng: Double?,
+    ): Response<StoreHomeDto>
+
+    @GET("store/products")
+    suspend fun storeProducts(
+        @Query("q") q: String?,
+        @Query("section") section: String?,
+        @Query("sort") sort: String,
+        @Query("limit") limit: Int,
+        @Query("offset") offset: Int,
+        @Query("scope") scope: String?,
+        @Query("cityId") cityId: String?,
+        @Query("radiusKm") radiusKm: Int?,
+        @Query("lat") lat: Double?,
+        @Query("lng") lng: Double?,
+    ): Response<StoreListDto>
+
+    @GET("store/products/{id}")
+    suspend fun storeProduct(@Path("id") id: String): Response<StoreProductDto>
+
     @POST("products")
     suspend fun createProduct(@Body body: CreateProductRequest): Response<ProductDto>
 

@@ -270,6 +270,7 @@ function renderScreen() {
     case "wallet": return screenWallet();
     case "responder": return screenResponder();
     case "favorites": return screenFavorites();
+    case "store": return screenStore();
     case "merchantHours": return screenMerchantHours();
     case "merchantProfile": return screenMerchantProfile();
     case "profileEdit": return screenProfileEdit();
@@ -1151,6 +1152,7 @@ function guestPrompt(tab) {
       <button class="btn" onclick="go('login')">${esc(t("guest.login"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" onclick="go('register')">${esc(t("guest.register"))}</button>
+      ${tab === "profile" ? `<div style="height:10px"></div><button class="btn secondary" onclick="openStore()">${esc(t("profile.store"))}</button>` : ""}
     </div>`;
 }
 
@@ -1278,7 +1280,7 @@ function tabProfile() {
       <p class="muted" style="margin:0 0 10px">${esc(t("profile.shareLocationSub"))}</p>
       <button class="btn outline" style="max-width:240px" onclick="S._acct=null;go('account')">${esc(t("profile.account"))}</button>
       <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('favorites')">${esc(t("profile.favorites"))}</button>
+      <button class="btn" style="max-width:240px" onclick="openStore()">${esc(t("profile.store"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>
       <div style="height:10px"></div>
@@ -1517,39 +1519,346 @@ async function loadMerchantDetail(id) {
 
 /* ================= PRODUCT DETAIL ================= */
 
+/* ================= STORE: like a marketplace, every shop's products in one place ================= */
+
+const storeSecName = (x) => (x ? (LANG === "ar" ? x.name : x.nameEn || x.name) : "");
+
+function openStore() {
+  S._store = null;
+  go("store");
+}
+
+function storeState() {
+  if (!S._store) {
+    S._store = { loading: true, q: "", section: "", sort: "popular", home: null, items: [], total: 0, cartCount: 0, more: false, scope: "country", cityId: "", regionId: "", radiusKm: 10, pos: null, geo: null, locError: null };
+    try { Object.assign(S._store, JSON.parse(localStorage.getItem("dlk_store_scope") || "{}")); } catch (e) {}
+    if (S._store.scope === "radius") storeLocate().then(() => storeReload());
+    if (S._store.scope === "city") storeLoadGeo();
+    loadStoreHome();
+    loadStoreCartCount();
+  }
+  return S._store;
+}
+
+/** The place filter as query parameters: the whole country (the default), one governorate/city, or some km around the shopper. */
+function storeScopeParams(st, params) {
+  if (st.scope === "city" && (st.cityId || st.regionId)) { params.set("scope", "city"); params.set("cityId", st.cityId || st.regionId); }
+  else if (st.scope === "radius" && st.pos) { params.set("scope", "radius"); params.set("radiusKm", String(st.radiusKm)); params.set("lat", String(st.pos.lat)); params.set("lng", String(st.pos.lng)); }
+  return params;
+}
+
+function storeSaveScope() {
+  const st = S._store;
+  try { localStorage.setItem("dlk_store_scope", JSON.stringify({ scope: st.scope, cityId: st.cityId, regionId: st.regionId, radiusKm: st.radiusKm })); } catch (e) {}
+}
+
+function storeReload() {
+  const st = S._store;
+  if (!st) return;
+  loadStoreHome();
+  if (st.q || st.section) loadStoreList(false);
+}
+
+async function storeLocate() {
+  const st = S._store;
+  st.locError = null;
+  try { st.pos = await locateUser(); }
+  catch (e) { st.pos = null; st.locError = t("store.needLocation"); }
+}
+
+async function storeSetScope(scope) {
+  const st = S._store;
+  st.scope = scope;
+  storeSaveScope();
+  if (scope === "city") storeLoadGeo();
+  if (scope === "radius" && !st.pos) { render(); await storeLocate(); }
+  storeReload();
+}
+
+async function storeSetRadius(km) {
+  const st = S._store;
+  st.radiusKm = km;
+  storeSaveScope();
+  if (!st.pos) await storeLocate();
+  storeReload();
+}
+
+/** The governorates of the shopper's country, and the cities of the chosen governorate. */
+async function storeLoadGeo() {
+  const st = S._store;
+  if (!st.geo) st.geo = { regions: [], cities: [], loaded: false };
+  const code = st.home ? st.home.country : "SY";
+  const countries = await api("GET", "/geo/countries");
+  const country = countries.ok ? countries.data.find((c) => c.isoCode2 === code) : null;
+  if (country) {
+    st.geo.countryName = LANG === "ar" ? country.nameArabic || country.name : country.nameEnglish || country.name;
+    const regions = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "REGION" }));
+    if (regions.ok && regions.data.length) st.geo.regions = regions.data;
+    else {
+      const cities = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "CITY" }));
+      if (cities.ok) st.geo.cities = cities.data;
+    }
+  }
+  if (st.regionId) await storeLoadCities(st.regionId);
+  st.geo.loaded = true;
+  render();
+}
+
+async function storeLoadCities(regionId) {
+  const st = S._store;
+  st.geo.cities = [];
+  if (!regionId) return;
+  const { ok, data } = await api("GET", "/geo/units?" + new URLSearchParams({ parentId: regionId, level: "CITY" }));
+  if (ok) st.geo.cities = data;
+}
+
+async function storePickRegion(id) {
+  const st = S._store;
+  st.regionId = id;
+  st.cityId = "";
+  storeSaveScope();
+  await storeLoadCities(id);
+  storeReload();
+}
+
+function storePickCity(id) {
+  const st = S._store;
+  st.cityId = id;
+  storeSaveScope();
+  storeReload();
+}
+
+/** "Where": the whole country, one city, or around me — shown as a bar under the search. */
+function storeScopeBar(st) {
+  const g = st.geo;
+  const unit = (x) => (LANG === "ar" ? x.nameArabic || x.name : x.nameEnglish || x.name);
+  const countryLabel = st.countryName || (g && g.countryName) || (st.home ? st.home.country : "");
+  const chip = (id, label) => `<button class="chip ${st.scope === id ? "active" : ""}" onclick="storeSetScope('${id}')">${label}</button>`;
+  let more = "";
+  if (st.scope === "city") {
+    more = !g || !g.loaded ? `<span class="muted">…</span>` : `
+      ${g.regions.length ? `<select class="store-sort" onchange="storePickRegion(this.value)"><option value="">${esc(t("store.allGovernorates"))}</option>${g.regions.map((r) => `<option value="${r.id}" ${st.regionId === r.id ? "selected" : ""}>${esc(unit(r))}</option>`).join("")}</select>` : ""}
+      ${g.cities.length ? `<select class="store-sort" onchange="storePickCity(this.value)"><option value="">${esc(t("store.allCities"))}</option>${g.cities.map((c) => `<option value="${c.id}" ${st.cityId === c.id ? "selected" : ""}>${esc(unit(c))}</option>`).join("")}</select>` : ""}`;
+  } else if (st.scope === "radius") {
+    more = [5, 10, 25, 50, 100].map((km) => `<button class="chip ${st.radiusKm === km ? "active" : ""}" onclick="storeSetRadius(${km})">${km} ${esc(t("unit.km"))}</button>`).join("")
+      + (st.locError ? `<span class="error-text">${esc(st.locError)}</span>` : "");
+  }
+  return `
+    <div class="store-scope">
+      <span class="store-scope-label">📍</span>
+      ${chip("country", "🌍 " + esc(countryLabel || t("store.country")))}
+      ${chip("city", "🏙️ " + esc(t("store.cityScope")))}
+      ${chip("radius", "📡 " + esc(t("store.aroundMe")))}
+      ${more ? `<div class="store-scope-more">${more}</div>` : ""}
+    </div>`;
+}
+
+async function loadStoreHome() {
+  const { ok, data } = await api("GET", "/store/home?" + storeScopeParams(S._store || {}, new URLSearchParams()));
+  const st = S._store;
+  if (!st) return;
+  st.loading = false;
+  st.home = ok ? data : { sections: [], bestSellers: [], deals: [], newest: [] };
+  render();
+  if (ok && !st.countryName) {
+    const countries = await api("GET", "/geo/countries");
+    const c = countries.ok ? countries.data.find((x) => x.isoCode2 === data.country) : null;
+    if (c && S._store === st) { st.countryName = LANG === "ar" ? c.nameArabic || c.name : c.nameEnglish || c.name; render(); }
+  }
+}
+
+async function loadStoreCartCount() {
+  if (!S.token || !S._store) return;
+  const { ok, data } = await api("GET", "/cart");
+  if (ok && S._store) { S._store.cartCount = data.items.reduce((n, i) => n + i.quantity, 0); render(); }
+}
+
+async function loadStoreList(append) {
+  const st = S._store;
+  st.busy = true;
+  if (!append) { st.items = []; st.total = 0; }
+  render();
+  const params = new URLSearchParams({ sort: st.sort, limit: "24", offset: String(append ? st.items.length : 0) });
+  if (st.q) params.set("q", st.q);
+  if (st.section) params.set("section", st.section);
+  storeScopeParams(st, params);
+  const { ok, data } = await api("GET", "/store/products?" + params);
+  st.busy = false;
+  if (ok) { st.items = append ? st.items.concat(data.items) : data.items; st.total = data.total; }
+  render();
+}
+
+function storeSearch(ev) {
+  if (ev) ev.preventDefault();
+  const st = S._store;
+  st.q = qs("store-q").value.trim();
+  if (!st.q && !st.section) { render(); return; }
+  loadStoreList(false);
+}
+
+function storePickSection(id) {
+  const st = S._store;
+  st.section = id;
+  if (!id && !st.q) { render(); return; }
+  loadStoreList(false);
+}
+
+function storeSetSort(v) { S._store.sort = v; loadStoreList(false); }
+
+function storeBack() {
+  const st = S._store;
+  if (st && (st.q || st.section)) { st.q = ""; st.section = ""; render(); return; }
+  S._store = null;
+  back();
+}
+
+function storeToCart() {
+  if (!S.token) return go("login");
+  S.homeTab = "cart";
+  reset("home");
+}
+
+async function storeAdd(id, ev) {
+  if (ev) ev.stopPropagation();
+  if (!S.token) return go("login");
+  const { ok, data } = await addToCart(id, 1);
+  if (!ok) { S.error = errMsg(data, "تعذّرت إضافة المنتج للسلة"); render(); return; }
+  S._cart = null;
+  S.error = null;
+  const st = S._store;
+  if (st) { st.cartCount += 1; st.justAdded = id; render(); setTimeout(() => { if (S._store === st && st.justAdded === id) { st.justAdded = null; render(); } }, 1600); }
+}
+
+/** The product's picture: its photo when it has one, otherwise a coloured tile with its icon. */
+function storePic(p) {
+  if (p.imageUrl) return `<div class="store-pic"><img src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy" /></div>`;
+  return `<div class="store-pic" style="--h:${Number(p.hue) || 0}"><span>${esc(p.icon || "🛍️")}</span></div>`;
+}
+
+function storeStars(p) {
+  if (!p.ratingCount) return "";
+  const full = Math.round(p.rating);
+  return `<div class="store-rate"><span class="stars">${"★".repeat(full)}${"☆".repeat(5 - full)}</span> <b>${p.rating.toFixed(1)}</b> <small>(${p.ratingCount})</small></div>`;
+}
+
+function storePrice(p) {
+  return p.memberDiscountEnabled
+    ? `<div class="store-price"><b>${fmt(p.memberPriceCents)}</b> <s>${fmt(p.priceCents)}</s></div><div class="store-member">⭐ سعر أعضاء دليلكم</div>`
+    : `<div class="store-price"><b>${fmt(p.priceCents)}</b></div>`;
+}
+
+function storeCard(p) {
+  const added = S._store && S._store.justAdded === p.id;
+  return `
+    <div class="store-card" onclick="go('productDetail',{productId:'${p.id}'})">
+      ${storePic(p)}
+      <div class="store-card-body">
+        <div class="store-name">${esc(p.name)}</div>
+        ${storeStars(p)}
+        ${storePrice(p)}
+        <div class="store-shop">${esc(p.merchant.name)}</div>
+        <button class="btn small ${added ? "secondary" : ""}" onclick="storeAdd('${p.id}', event)">${added ? "✓ " + esc(t("store.added")) : esc(t("store.add"))}</button>
+      </div>
+    </div>`;
+}
+
+function storeRow(title, items) {
+  if (!items || !items.length) return "";
+  return `<h2 class="store-h">${esc(title)}</h2><div class="store-row">${items.map(storeCard).join("")}</div>`;
+}
+
+function screenStore() {
+  const st = storeState();
+  const home = st.home;
+  const sections = home ? home.sections : [];
+  const filtering = !!(st.q || st.section);
+  const activeSection = sections.find((x) => x.id === st.section);
+  let body;
+  if (st.loading) body = spinner();
+  else if (filtering) {
+    const title = st.q ? `${t("store.resultsFor")} «${st.q}»` : storeSecName(activeSection);
+    body = `
+      <div class="store-bar"><h2 class="store-h" style="margin:0">${esc(title)} <small class="muted">${st.total ? "· " + st.total : ""}</small></h2>
+        <select class="store-sort" onchange="storeSetSort(this.value)">
+          ${[["popular", "الأكثر مبيعًا"], ["new", "الأحدث"], ["rating", "الأعلى تقييمًا"], ["price_asc", "السعر: من الأقل"], ["price_desc", "السعر: من الأعلى"]].map(([v, l]) => `<option value="${v}" ${st.sort === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
+        </select></div>
+      ${st.busy && !st.items.length ? spinner() : st.items.length
+        ? `<div class="store-grid">${st.items.map(storeCard).join("")}</div>
+           ${st.items.length < st.total ? `<div style="text-align:center;margin:18px 0"><button class="btn outline" style="width:auto" ${st.busy ? "disabled" : ""} onclick="loadStoreList(true)">${esc(t("store.more"))}</button></div>` : ""}`
+        : `<div class="empty">${esc(t("store.noResults"))}</div>`}`;
+  } else {
+    body = `
+      <div class="store-hero">
+        <div><h1>${esc(t("store.heroTitle"))}</h1><p>${esc(t("store.heroSub"))}</p></div>
+        <div class="store-hero-art">🛍️</div>
+      </div>
+      <div class="store-depts">${sections.map((x) => `
+        <button class="store-dept" onclick="storePickSection('${x.id}')"><span>${esc(x.icon)}</span><b>${esc(storeSecName(x))}</b><small>${x.count}</small></button>`).join("")}</div>
+      ${storeRow(t("store.deals"), home.deals)}
+      ${storeRow(t("store.best"), home.bestSellers)}
+      ${storeRow(t("store.newest"), home.newest)}`;
+  }
+  return `
+    <div class="store">
+      <div class="store-head">
+        <button class="store-icon-btn" onclick="storeBack()" aria-label="back">›</button>
+        <form class="store-search" onsubmit="storeSearch(event)">
+          <input id="store-q" type="search" value="${esc(st.q)}" placeholder="${esc(t("store.searchPlaceholder"))}" />
+          <button type="submit" aria-label="search">🔍</button>
+        </form>
+        <button class="store-icon-btn store-cart" onclick="storeToCart()" aria-label="cart">🛒${st.cartCount ? `<span class="store-badge">${st.cartCount}</span>` : ""}</button>
+      </div>
+      ${storeScopeBar(st)}
+      <div class="store-cats">
+        <button class="chip ${st.section ? "" : "active"}" onclick="storePickSection('')">${esc(t("store.all"))}</button>
+        ${sections.map((x) => `<button class="chip ${st.section === x.id ? "active" : ""}" onclick="storePickSection('${x.id}')">${esc(x.icon)} ${esc(storeSecName(x))}</button>`).join("")}
+      </div>
+      ${errorBanner()}
+      ${body}
+    </div>`;
+}
+
 function screenProductDetail() {
   if (!S._productDetail || S._productDetail.id !== S.params.productId) {
     S._productDetail = { id: S.params.productId, loading: true, qty: 1 };
     loadProductDetail(S.params.productId);
   }
   const p = S._productDetail;
-  if (p.loading) return backRow() + spinner();
-  if (!p.product) return backRow() + `<div class="error-banner">هذا المنتج غير متوفر</div>`;
+  if (p.loading) return `<div class="store">${backRow()}${spinner()}</div>`;
+  if (!p.product) return `<div class="store">${backRow()}<div class="error-banner">هذا المنتج غير متوفر</div></div>`;
   const prod = p.product;
-  const available = prod.isActive && prod.stock > 0;
+  const available = prod.stock > 0;
   return `
-    ${backRow()}
-    <h1 class="screen-title">${esc(prod.name)}</h1>
-    ${prod.description ? `<p class="screen-sub">${esc(prod.description)}</p>` : ""}
-    ${prod.memberDiscountEnabled && prod.memberPriceCents != null
-      ? `<p><span class="price strike">${fmt(prod.priceCents)}</span> <span class="price" style="font-size:18px;color:var(--primary)"> ${fmt(prod.memberPriceCents)} — سعر أعضاء دليلكم</span></p>`
-      : `<p class="price" style="font-size:18px">${fmt(prod.priceCents)}</p>`}
-    ${available ? `<p class="muted">المتوفر بالمخزون: ${prod.stock}</p>` : `<div class="error-banner">غير متوفر حاليًا</div>`}
-    ${available ? `
-      <div style="height:14px"></div>
-      <div class="stepper">
-        <button onclick="changeProductQty(-1)">−</button><span>${p.qty}</span><button onclick="changeProductQty(1)">+</button>
+    <div class="store">
+      ${backRow()}
+      <div class="pd">
+        <div class="pd-pic">${storePic(prod)}</div>
+        <div class="pd-info">
+          ${prod.section ? `<a class="pd-crumb" onclick="openStore();storePickSection('${prod.section.id}')">${esc(prod.section.icon)} ${esc(storeSecName(prod.section))}</a>` : ""}
+          <h1 class="pd-title">${esc(prod.name)}</h1>
+          ${storeStars(prod)}
+          ${prod.soldCount ? `<div class="muted">${esc(t("store.sold", { n: prod.soldCount }))}</div>` : ""}
+          <div class="pd-price">${storePrice(prod)}</div>
+          ${prod.description ? `<p class="pd-desc">${esc(prod.description)}</p>` : ""}
+          <div class="pd-meta">${esc(t("store.soldBy"))} <a onclick="go('merchantDetail',{merchantId:'${prod.merchant.id}'})">${esc(prod.merchant.name)}</a></div>
+          ${available
+            ? `<div class="${prod.stock <= 5 ? "pd-stock low" : "pd-stock"}">${prod.stock <= 5 ? esc(t("store.lastPieces", { n: prod.stock })) : "✓ " + esc(t("store.inStock"))}</div>
+               <div class="stepper"><button onclick="changeProductQty(-1)">−</button><span>${p.qty}</span><button onclick="changeProductQty(1)">+</button></div>
+               <div class="pd-actions">
+                 <button class="btn" ${p.adding ? "disabled" : ""} onclick="addProductToCart(false)">🛒 ${esc(t("store.add"))}</button>
+                 <button class="btn secondary" ${p.adding ? "disabled" : ""} onclick="addProductToCart(true)">${esc(t("store.buyNow"))}</button>
+               </div>
+               ${p.added ? `<div class="success-banner">${esc(t("store.addedToCart"))} ✓ <button class="link-btn" style="padding:0" onclick="storeToCart()">${esc(t("store.goToCart"))}</button></div>` : ""}`
+            : `<div class="error-banner">غير متوفر حاليًا</div>`}
+          ${errorBanner()}
+        </div>
       </div>
-      <div style="height:14px"></div>
-      <button class="btn" ${p.adding ? "disabled" : ""} onclick="addProductToCart()">أضف للسلة</button>
-      ${p.added ? `<div class="success-banner">تمت الإضافة للسلة ✓ <button class="link-btn" style="padding:0" onclick="reset('home'); setHomeTab('cart')">روح للسلة</button></div>` : ""}
-    ` : ""}
-    ${errorBanner()}
-  `;
+      ${prod.related && prod.related.length ? `<h2 class="store-h">${esc(t("store.related"))}</h2><div class="store-row">${prod.related.map(storeCard).join("")}</div>` : ""}
+    </div>`;
 }
 
 async function loadProductDetail(id) {
-  const { ok, data } = await api("GET", "/products/" + id);
+  const { ok, data } = await api("GET", "/store/products/" + id);
   S._productDetail = { id, loading: false, product: ok ? data : null, qty: 1 };
   render();
 }
@@ -1560,12 +1869,13 @@ function changeProductQty(delta) {
   if (next >= 1 && next <= p.product.stock) { p.qty = next; render(); }
 }
 
-async function addProductToCart() {
+async function addProductToCart(thenCart) {
+  if (!S.token) return go("login");
   const p = S._productDetail;
   p.adding = true; render();
   const { ok, data } = await addToCart(p.id, p.qty);
   p.adding = false;
-  if (ok) { p.added = true; S._cart = null; S.error = null; }
+  if (ok) { p.added = true; S._cart = null; S.error = null; if (S._store) S._store.cartCount += p.qty; if (thenCart) return storeToCart(); }
   else { S.error = errMsg(data, "تعذّرت إضافة المنتج للسلة"); }
   render();
 }

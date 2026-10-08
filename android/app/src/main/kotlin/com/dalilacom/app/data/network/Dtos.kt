@@ -521,3 +521,43 @@ data class CatalogServiceDto(val service: String, val plans: List<CatalogPlanDto
 
 @Serializable
 data class CatalogDto(val creditName: String = "", val countryCode: String? = null, val services: List<CatalogServiceDto> = emptyList())
+
+/* ---------------- the online store ---------------- */
+
+@Serializable
+data class StoreSectionDto(val id: String, val name: String, val nameEn: String = "", val icon: String = "", val count: Int = 0)
+
+@Serializable
+data class StoreShopDto(val id: String, val name: String)
+
+@Serializable
+data class StoreProductDto(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val priceCents: Int,
+    val memberDiscountEnabled: Boolean = false,
+    val memberPriceCents: Int? = null,
+    val stock: Int = 0,
+    val imageUrl: String? = null,
+    val icon: String = "🛍️",
+    val hue: Int = 0,
+    val rating: Double = 0.0,
+    val ratingCount: Int = 0,
+    val soldCount: Int = 0,
+    val section: StoreSectionDto? = null,
+    val merchant: StoreShopDto,
+    val related: List<StoreProductDto> = emptyList(),
+)
+
+@Serializable
+data class StoreHomeDto(
+    val country: String = "",
+    val sections: List<StoreSectionDto> = emptyList(),
+    val bestSellers: List<StoreProductDto> = emptyList(),
+    val deals: List<StoreProductDto> = emptyList(),
+    val newest: List<StoreProductDto> = emptyList(),
+)
+
+@Serializable
+data class StoreListDto(val total: Int = 0, val items: List<StoreProductDto> = emptyList())

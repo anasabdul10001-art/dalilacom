@@ -47,7 +47,7 @@ fun ProfileScreen(
     onOpenNotifications: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
-    onOpenFavorites: () -> Unit,
+    onOpenStore: () -> Unit,
     onOpenResponder: () -> Unit,
     onOpenWallet: () -> Unit,
 ) {
@@ -130,7 +130,7 @@ fun ProfileScreen(
             )
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
+        Button(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_store)) }
         Spacer(Modifier.height(8.dp))
         Button(onClick = onOpenResponder, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_responder)) }
         Spacer(Modifier.height(8.dp))

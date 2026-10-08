@@ -101,6 +101,7 @@
     <div class="nav-item" data-section="broadcasts" onclick="showSection('broadcasts')">📣 الإعلانات <span id="bc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
+    <div class="nav-item" data-section="store" onclick="showSection('store')">🛍️ المتجر</div>
     <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
     <div class="logout" onclick="changePassword()">🔑 تغيير كلمة السر</div>
     <div class="logout" onclick="logout()">⏻ تسجيل خروج</div>
@@ -400,6 +401,19 @@
     </div>
 
     <!-- TOP-UPS -->
+    <!-- STORE -->
+    <div class="section" id="section-store" style="display:none">
+      <h2>المتجر الإلكتروني</h2>
+      <p class="subtitle">منتجات كل المتاجر بمكان واحد. قبل ما يعبّيه التجار، ضيف منتجات تجريبية لتشوف شكله.</p>
+      <div class="card">
+        <h3>منتجات تجريبية</h3>
+        <p class="muted">يضيف 5 متاجر وهمية و50 منتج موزّعة على أقسام المتجر. الحذف يمسح هالتجريبي فقط ولا يمس بيانات حقيقية.</p>
+        <button style="margin-top:12px" onclick="demoStore('POST')">➕ أضف 50 منتج تجريبي</button>
+        <button class="danger" style="margin-top:12px;margin-right:8px" onclick="demoStore('DELETE')">🗑️ احذف المنتجات التجريبية</button>
+        <p id="store-msg" class="muted" style="margin-top:10px"></p>
+      </div>
+    </div>
+
     <div class="section" id="section-topups" style="display:none">
       <h2>طلبات الشحن</h2>
       <p class="subtitle">حوالات المحافظ المحلية بانتظار تأكيدك. USDT بينتحقق منه السيرفر تلقائيًا.</p>
@@ -813,6 +827,18 @@ async function sendPushTest() {
     ? `انبعت لـ ${data.delivered} من ${data.devices} جهاز — تأكد أنه وصل على الموبايل.`
     : `ما وصل لأي جهاز. ${data.errors.join(' | ')}`;
   loadPushStatus();
+}
+
+// ---- Store ----
+async function demoStore(method) {
+  const out = document.getElementById('store-msg');
+  if (method === 'DELETE' && !confirm('حذف المتاجر والمنتجات التجريبية؟')) return;
+  out.textContent = 'لحظة...';
+  const { ok, data } = await api(method, '/admin/demo-store');
+  if (!ok) { out.textContent = (data && data.error && data.error.message) || 'تعذّر التنفيذ'; return; }
+  out.textContent = method === 'POST'
+    ? (data.created ? `انضافت ${data.created} منتج لـ ${data.shops} متاجر.` : `المنتجات التجريبية موجودة من قبل (${data.products}).`)
+    : `انحذف ${data.products} منتج و${data.shops} متاجر تجريبية.`;
 }
 
 // ---- AI provider status ----

@@ -178,6 +178,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         perks = listOf(stringResource(R.string.guest_profile_p1), stringResource(R.string.guest_profile_p2), stringResource(R.string.guest_profile_p3)),
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
+                        extraLabel = stringResource(R.string.profile_store),
+                        onExtra = { rootNavController.navigate("store") },
                     ) else ProfileScreen(
                         container = container,
                         onLoggedOut = { rootNavController.navigate("home") { popUpTo(0) } },
@@ -187,7 +189,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onOpenAccount = { rootNavController.navigate("accountSettings") },
                         onOpenReview = { rootNavController.navigate("adminReview") },
                         onOpenNotifications = { rootNavController.navigate("notifications") },
-                        onOpenFavorites = { rootNavController.navigate("favorites") },
+                        onOpenStore = { rootNavController.navigate("store") },
                         onOpenResponder = { rootNavController.navigate("responder") },
                         onOpenWallet = { rootNavController.navigate("wallet") },
                     )
@@ -204,6 +206,8 @@ private fun AccountPrompt(
     perks: List<String>,
     onLogin: () -> Unit,
     onRegister: () -> Unit,
+    extraLabel: String? = null,
+    onExtra: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(28.dp),
@@ -230,5 +234,9 @@ private fun AccountPrompt(
         Button(onClick = onLogin, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(stringResource(R.string.guest_login)) }
         Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick = onRegister, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(stringResource(R.string.guest_register)) }
+        if (extraLabel != null) {
+            Spacer(Modifier.height(10.dp))
+            TextButton(onClick = onExtra, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(extraLabel, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+        }
     }
 }

@@ -30,7 +30,8 @@ import com.dalilacom.app.ui.orders.OrderDetailScreen
 import com.dalilacom.app.ui.places.FavoritesScreen
 import com.dalilacom.app.ui.places.HoursScreen
 import com.dalilacom.app.ui.pricing.PricingScreen
-import com.dalilacom.app.ui.product.ProductDetailScreen
+import com.dalilacom.app.ui.store.StoreProductScreen
+import com.dalilacom.app.ui.store.StoreScreen
 import com.dalilacom.app.ui.profile.ProfileEditScreen
 import com.dalilacom.app.ui.responder.ResponderScreen
 import com.dalilacom.app.ui.responder.WalletScreen
@@ -144,11 +145,23 @@ fun DalilacomNavGraph(
         }
         composable("product/{productId}") { backStackEntry ->
             val productId = backStackEntry.arguments?.getString("productId").orEmpty()
-            ProductDetailScreen(
+            StoreProductScreen(
                 container = container,
                 productId = productId,
                 onBack = { navController.popBackStack() },
                 onGoToCart = { navController.popBackStack("home", inclusive = false) },
+                onOpenProduct = { id -> navController.navigate("product/$id") },
+                onOpenMerchant = { id -> navController.navigate("merchant/$id") },
+                onLogin = { navController.navigate("login") },
+            )
+        }
+        composable("store") {
+            StoreScreen(
+                container = container,
+                onBack = { navController.popBackStack() },
+                onOpenProduct = { id -> navController.navigate("product/$id") },
+                onOpenCart = { navController.popBackStack("home", inclusive = false) },
+                onLogin = { navController.navigate("login") },
             )
         }
         composable("order/{orderId}") { backStackEntry ->

@@ -222,7 +222,7 @@ function walk(dir: string, extensions: string[], skip: (file: string) => boolean
 }
 
 /** Server files whose Arabic is data or an internal word list, not text a user reads. */
-const SERVER_IGNORE = ["src/i18n/", "src/lib/languages.ts", "src/services/category.service.ts", "src/services/geo.service.ts", "src/services/responder.service.ts"];
+const SERVER_IGNORE = ["src/i18n/", "src/lib/languages.ts", "src/services/category.service.ts", "src/services/geo.service.ts", "src/services/responder.service.ts", "src/lib/storeSections.ts", "src/services/demoStore.service.ts"];
 
 export async function checkLanguages(root: string): Promise<CheckReport> {
   const langs = registeredLanguages(root).filter((l) => l.code !== "ar");

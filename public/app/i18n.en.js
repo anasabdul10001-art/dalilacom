@@ -70,7 +70,14 @@ DICT.en = {
 
   "profile.edit": "✏️ Edit my profile", "profile.myAccount": "My account",
   "profile.merchantMode": "Merchant mode", "profile.registerMerchant": "Register as a merchant",
-  "profile.favorites": "♥ Saved places", "profile.affiliates": "My affiliations", "profile.responder": "🤖 Auto-responder",
+  "profile.store": "🛍️ Store", "profile.affiliates": "My affiliations", "profile.responder": "🤖 Auto-responder",
+  "store.add": "Add to cart", "store.added": "Added", "store.all": "All", "store.more": "Show more", "store.noResults": "No matching products",
+  "store.resultsFor": "Results for", "store.searchPlaceholder": "Search products or shops",
+  "store.heroTitle": "Shop every store in your city", "store.heroSub": "Thousands of products in one place, with special prices for Dalilacom members",
+  "store.deals": "Member deals", "store.best": "Best sellers", "store.newest": "New arrivals", "store.related": "Similar products",
+  "store.soldBy": "Sold by:", "store.inStock": "In stock", "store.buyNow": "Buy now", "store.addedToCart": "Added to your cart",
+  "store.goToCart": "Go to cart", "store.lastPieces": "Only {n} left", "store.sold": "{n} sold",
+  "store.country": "Whole country", "store.cityScope": "City", "store.aroundMe": "Around me", "store.allGovernorates": "All governorates", "store.allCities": "All cities", "store.needLocation": "Turn on location to see shops near you",
   "profile.wallet": "💰 My wallet", "profile.logout": "Sign out",
   "verify.title": "✉️ Email not verified", "verify.sub": "Verify your email to protect your account and recover your password.",
   "verify.resend": "Resend verification link", "verify.sent": "We sent the verification link to your email ✅", "verify.failed": "Couldn't send, try again shortly",
@@ -498,6 +505,11 @@ PHRASES.en = {
   "المحافظة": "Governorate",
   "— اختر المحافظة —": "— Choose the governorate —",
   "— اختر المحافظة أول —": "— Choose the governorate first —",
+  "الأحدث": "Newest",
+  "الأعلى تقييمًا": "Top rated",
+  "السعر: من الأقل": "Price: low to high",
+  "السعر: من الأعلى": "Price: high to low",
+  "الأكثر مبيعًا": "Best selling",
 };
 PATTERNS.en = [
   [/^تكلفة هذا الإعلان (\d+) من رصيدك \(رصيدك (\d+)\)$/, "This one costs $1 from your balance (you have $2)"],
