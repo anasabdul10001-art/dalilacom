@@ -13,6 +13,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.ViewModelFactory
+import com.dalilacom.app.ui.account.AccountSettingsScreen
 import com.dalilacom.app.ui.auth.LoginScreen
 import com.dalilacom.app.ui.auth.RegisterScreen
 import com.dalilacom.app.ui.auth.SocialReturnScreen
@@ -178,6 +179,9 @@ fun DalilacomNavGraph(
                 onLogin = { navController.navigate("login") },
                 onBack = { navController.popBackStack() },
             )
+        }
+        composable("accountSettings") {
+            AccountSettingsScreen(factory = factory, onBack = { navController.popBackStack() })
         }
         composable("profileEdit") {
             ProfileEditScreen(factory = factory, onBack = { navController.popBackStack() })

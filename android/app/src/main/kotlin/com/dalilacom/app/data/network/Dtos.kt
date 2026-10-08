@@ -15,14 +15,27 @@ data class UserDto(val id: String, val email: String, val fullName: String, val 
 data class ProfileDto(
     val id: String,
     val email: String,
+    val emailVerified: Boolean = false,
+    val phone: String? = null,
     val fullName: String,
     val role: String,
     val bio: String? = null,
+    val countryCode: String? = null,
+    val cityId: String? = null,
+    val vatNumber: String? = null,
     val avatarUrl: String? = null,
 )
 
 @Serializable
-data class UpdateProfileRequest(val fullName: String? = null, val bio: String? = null, val language: String? = null)
+data class UpdateProfileRequest(
+    val fullName: String? = null,
+    val bio: String? = null,
+    val language: String? = null,
+    val phone: String? = null,
+    val countryCode: String? = null,
+    val cityId: String? = null,
+    val vatNumber: String? = null,
+)
 
 // `confirm` has no default on purpose: defaults are not sent, and the server insists on an explicit true.
 @Serializable
@@ -41,7 +54,43 @@ data class ResendVerificationRequest(val email: String)
 data class AuthResponse(val token: String, val user: UserDto)
 
 @Serializable
-data class GeoUnitDto(val id: String, val name: String, val nameArabic: String? = null, val nameEnglish: String? = null)
+data class GeoUnitDto(val id: String, val name: String, val nameArabic: String? = null, val nameEnglish: String? = null, val isoCode2: String? = null)
+
+@Serializable
+data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
+
+@Serializable
+data class ChangePasswordResponse(val token: String)
+
+@Serializable
+data class AddressDto(
+    val id: String,
+    val label: String? = null,
+    val isDefault: Boolean = false,
+    val street: String? = null,
+    val buildingNumber: String? = null,
+    val country: GeoUnitDto,
+    val region: GeoUnitDto? = null,
+    val city: GeoUnitDto? = null,
+    val area: GeoUnitDto? = null,
+)
+
+@Serializable
+data class AddressRequest(
+    val countryId: String,
+    val regionId: String? = null,
+    val cityId: String? = null,
+    val areaId: String? = null,
+    val street: String? = null,
+    val buildingNumber: String? = null,
+    val postalCode: String? = null,
+    val label: String? = null,
+    val isDefault: Boolean,
+)
+
+// isDefault has no default on purpose: defaults are not sent.
+@Serializable
+data class DefaultAddressRequest(val isDefault: Boolean)
 
 @Serializable
 data class BroadcastPreviewRequest(val radiusKm: Double? = null, val followers: Boolean? = null, val geoUnitId: String? = null)

@@ -42,6 +42,7 @@ fun ProfileScreen(
     container: AppContainer,
     onLoggedOut: () -> Unit,
     onEditProfile: () -> Unit,
+    onOpenAccount: () -> Unit,
     onOpenNotifications: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
@@ -75,6 +76,7 @@ fun ProfileScreen(
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
         TextButton(onClick = onEditProfile) { Text(stringResource(R.string.profile_edit)) }
+        TextButton(onClick = onOpenAccount) { Text(stringResource(R.string.profile_account_settings)) }
         Spacer(Modifier.height(24.dp))
 
         // Only nag about verifying when the server can actually deliver the email.

@@ -265,6 +265,7 @@ function renderScreen() {
     case "merchantHours": return screenMerchantHours();
     case "merchantProfile": return screenMerchantProfile();
     case "profileEdit": return screenProfileEdit();
+    case "account": return screenAccount();
     case "pricing": return screenPricing();
     default: return screenLogin();
   }
@@ -1138,6 +1139,8 @@ function tabProfile() {
       <div style="height:10px"></div>
       <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
       <p class="muted" style="margin:0 0 10px">${esc(t("profile.shareLocationSub"))}</p>
+      <button class="btn outline" style="max-width:240px" onclick="S._acct=null;go('account')">${esc(t("profile.account"))}</button>
+      <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('favorites')">${esc(t("profile.favorites"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>
@@ -1803,6 +1806,230 @@ async function loadProfile() {
   const { ok, data } = await api("GET", "/profile/me");
   S._profile = ok ? data : { failed: true };
   render();
+}
+
+/* ================= ACCOUNT SETTINGS: email, password, phone, place, addresses ================= */
+
+function screenAccount() {
+  if (!S._acct) { S._acct = { loading: true, addr: null }; loadAccount(); }
+  const a = S._acct;
+  if (a.loading) return backRow() + `<h1 class="screen-title">إعدادات الحساب</h1>${spinner()}`;
+  const p = a.profile;
+  const unitName = (u) => u.nameArabic || u.name;
+  const opt = (value, label, chosen) => `<option value="${esc(value)}" ${String(chosen || "") === String(value) ? "selected" : ""}>${esc(label)}</option>`;
+  const note = a.msg ? `<div class="card" style="border-color:var(--primary)">${esc(a.msg)}</div>` : "";
+  const err = a.err ? `<div class="error-banner">${esc(a.err)}</div>` : "";
+  const f = a.addr;
+  const LABELS = { HOME: "البيت", WORK: "العمل", OTHER: "غير ذلك" };
+  return `
+    ${backRow()}
+    <h1 class="screen-title">إعدادات الحساب</h1>
+    ${note}${err}
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0">الإيميل</div>
+      <p dir="ltr" style="margin:4px 0;text-align:right"><strong>${esc(p.email)}</strong></p>
+      <p class="muted">${p.emailVerified ? "✅ مؤكَّد" : "⚠️ غير مؤكَّد"}</p>
+      <p class="muted">تغيير الإيميل رح يتوفر قريبًا.</p>
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0">كلمة السر</div>
+      <div class="field"><label>كلمة السر الحالية</label><input id="ac-pw-old" type="password" autocomplete="current-password" /></div>
+      <div class="field"><label>كلمة السر الجديدة (8 أحرف على الأقل)</label><input id="ac-pw-new" type="password" autocomplete="new-password" /></div>
+      <div class="field"><label>أعد كتابة الجديدة</label><input id="ac-pw-new2" type="password" autocomplete="new-password" /></div>
+      <button class="btn small" onclick="acctChangePassword()">تغيير كلمة السر</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0">رقم الهاتف</div>
+      <div class="field"><input id="ac-phone" inputmode="tel" dir="ltr" placeholder="+49..." value="${esc(p.phone || "")}" /></div>
+      <button class="btn small" onclick="acctSavePhone()">حفظ</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0">بلدي ومدينتي</div>
+      <p class="muted">بتأثر على الأسعار والضريبة بالفواتير.</p>
+      <div class="field"><label>البلد</label>
+        <select id="ac-country" onchange="acctPickProfileCountry(this.value)">${opt("", "— اختر —", p.countryCode)}${a.countries.map((c) => opt(c.isoCode2, unitName(c), p.countryCode)).join("")}</select></div>
+      <div class="field"><label>المدينة</label>
+        <select id="ac-city">${opt("", "— اختر —", p.cityId)}${a.cities.map((c) => opt(c.id, unitName(c), p.cityId)).join("")}</select></div>
+      <div class="field"><label>الرقم الضريبي (اختياري)</label><input id="ac-vat" dir="ltr" value="${esc(p.vatNumber || "")}" /></div>
+      <button class="btn small" onclick="acctSaveLocation()">حفظ</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0">عناويني</div>
+      ${a.addresses.length ? a.addresses.map((ad) => `
+        <div style="padding:8px 0;border-top:1px solid var(--border)">
+          <div class="title-line"><strong>${esc(LABELS[ad.label] || "عنوان")}</strong>${ad.isDefault ? `<span class="badge success">الأساسي</span>` : ""}</div>
+          <p class="muted">${esc([ad.street, ad.buildingNumber, ad.area && unitName(ad.area), ad.city && unitName(ad.city), ad.region && unitName(ad.region), unitName(ad.country)].filter(Boolean).join("، "))}</p>
+          <div class="row">
+            ${ad.isDefault ? "" : `<button class="btn small outline" onclick="acctDefaultAddress('${ad.id}')">اجعله الأساسي</button>`}
+            <button class="btn small outline" onclick="acctDeleteAddress('${ad.id}')">حذف</button>
+          </div>
+        </div>`).join("") : `<p class="muted">ما عندك عناوين محفوظة</p>`}
+      ${f ? `
+        <div class="divider"></div>
+        <div class="field"><label>النوع</label>
+          <select id="ad-label">${["HOME", "WORK", "OTHER"].map((k) => opt(k, LABELS[k], f.label)).join("")}</select></div>
+        <div class="field"><label>البلد</label>
+          <select id="ad-country" onchange="acctAddrPick('country', this.value)">${opt("", "— اختر —", f.countryId)}${a.allCountries.map((c) => opt(c.id, unitName(c), f.countryId)).join("")}</select></div>
+        ${f.regions.length ? `<div class="field"><label>المحافظة / المنطقة</label>
+          <select id="ad-region" onchange="acctAddrPick('region', this.value)">${opt("", "— اختر —", f.regionId)}${f.regions.map((u) => opt(u.id, unitName(u), f.regionId)).join("")}</select></div>` : ""}
+        ${f.cities.length ? `<div class="field"><label>المدينة</label>
+          <select id="ad-city" onchange="acctAddrPick('city', this.value)">${opt("", "— اختر —", f.cityId)}${f.cities.map((u) => opt(u.id, unitName(u), f.cityId)).join("")}</select></div>` : ""}
+        ${f.areas.length ? `<div class="field"><label>الحي</label>
+          <select id="ad-area" onchange="acctAddrPick('area', this.value)">${opt("", "— اختر —", f.areaId)}${f.areas.map((u) => opt(u.id, unitName(u), f.areaId)).join("")}</select></div>` : ""}
+        <div class="field"><label>الشارع</label><input id="ad-street" value="${esc(f.street)}" /></div>
+        <div class="row">
+          <div class="field"><label>رقم البناء</label><input id="ad-building" value="${esc(f.buildingNumber)}" /></div>
+          <div class="field"><label>الرمز البريدي</label><input id="ad-postal" dir="ltr" value="${esc(f.postalCode)}" /></div>
+        </div>
+        <label class="switch-row"><input id="ad-default" type="checkbox" ${f.isDefault ? "checked" : ""} /><span>اجعله عنواني الأساسي</span></label>
+        <div class="row">
+          <button class="btn small" onclick="acctSaveAddress()">حفظ العنوان</button>
+          <button class="btn small outline" onclick="S._acct.addr=null;render()">إلغاء</button>
+        </div>` : `<div style="height:8px"></div><button class="btn small" onclick="acctNewAddress()">➕ إضافة عنوان</button>`}
+    </div>
+  `;
+}
+
+async function loadAccount() {
+  const [me, addresses, countries] = await Promise.all([api("GET", "/profile/me"), api("GET", "/addresses"), api("GET", "/geo/countries")]);
+  if (!me.ok) { S._acct = null; return render(); }
+  const list = countries.ok ? countries.data : [];
+  S._acct = { loading: false, profile: me.data, addresses: addresses.ok ? addresses.data : [], countries: list, allCountries: list, cities: [], addr: null };
+  await acctLoadCities(me.data.countryCode);
+  render();
+}
+
+async function acctLoadCities(isoCode) {
+  const a = S._acct;
+  const country = a.countries.find((c) => c.isoCode2 === isoCode);
+  a.cities = [];
+  if (country) {
+    const { ok, data } = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "CITY" }));
+    if (ok) a.cities = data;
+  }
+}
+
+function acctDone(message, error) {
+  S._acct.msg = message || null;
+  S._acct.err = error || null;
+  render();
+  window.scrollTo(0, 0);
+}
+
+async function acctChangePassword() {
+  const current = qs("ac-pw-old").value, next = qs("ac-pw-new").value, again = qs("ac-pw-new2").value;
+  if (!current || !next) return acctDone(null, "اكتب كلمة السر الحالية والجديدة");
+  if (next.length < 8) return acctDone(null, "كلمة السر الجديدة لازم تكون 8 أحرف على الأقل");
+  if (next !== again) return acctDone(null, "كلمتا السر الجديدتان غير متطابقتين");
+  // a wrong current password answers 401 like an expired session, so call fetch directly and keep the visitor signed in
+  const res = await fetch(API_BASE + "/auth/change-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept-Language": LANG, Authorization: "Bearer " + S.token },
+    body: JSON.stringify({ currentPassword: current, newPassword: next }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return acctDone(null, res.status === 401 ? "كلمة السر الحالية غير صحيحة" : errMsg(data, "تعذّر تغيير كلمة السر"));
+  if (data.token) S.token = data.token, localStorage.setItem("dlk_token", data.token); // this device stays signed in
+  S._acct = null;
+  S._acct = { loading: true, addr: null, msg: "تم تغيير كلمة السر ✅" };
+  loadAccount().then(() => { S._acct.msg = "تم تغيير كلمة السر ✅"; render(); });
+  render();
+}
+
+async function acctSavePhone() {
+  const { ok, data } = await api("PATCH", "/profile/me", { phone: qs("ac-phone").value.trim() });
+  if (!ok) return acctDone(null, errMsg(data, "تعذّر حفظ الرقم"));
+  S._acct.profile = data;
+  acctDone("تم حفظ الرقم ✅");
+}
+
+async function acctPickProfileCountry(isoCode) {
+  S._acct.profile.countryCode = isoCode || null;
+  S._acct.profile.cityId = null;
+  await acctLoadCities(isoCode);
+  render();
+}
+
+async function acctSaveLocation() {
+  const countryCode = qs("ac-country").value || null;
+  const cityId = qs("ac-city").value || null;
+  const vatNumber = qs("ac-vat").value.trim() || null;
+  const { ok, data } = await api("PATCH", "/profile/me", { countryCode, cityId, vatNumber });
+  if (!ok) return acctDone(null, errMsg(data, "تعذّر الحفظ"));
+  S._acct.profile = data;
+  acctDone("تم الحفظ ✅");
+}
+
+/* ---- addresses ---- */
+
+function acctNewAddress() {
+  const a = S._acct;
+  a.addr = { label: "HOME", countryId: "", regionId: "", cityId: "", areaId: "", regions: [], cities: [], areas: [], street: "", buildingNumber: "", postalCode: "", isDefault: a.addresses.length === 0 };
+  render();
+}
+
+/** One step down the place pickers: choosing a country loads its governorates, a governorate its cities, a city its areas. */
+async function acctAddrPick(level, id) {
+  const f = S._acct.addr;
+  f.street = qs("ad-street") ? qs("ad-street").value : f.street;
+  f.buildingNumber = qs("ad-building") ? qs("ad-building").value : f.buildingNumber;
+  f.postalCode = qs("ad-postal") ? qs("ad-postal").value : f.postalCode;
+  f.isDefault = qs("ad-default") ? qs("ad-default").checked : f.isDefault;
+  f.label = qs("ad-label") ? qs("ad-label").value : f.label;
+  const units = async (params) => { const { ok, data } = await api("GET", "/geo/units?" + new URLSearchParams(params)); return ok ? data : []; };
+  if (level === "country") {
+    Object.assign(f, { countryId: id, regionId: "", cityId: "", areaId: "", regions: id ? await units({ countryId: id, level: "REGION" }) : [], cities: [], areas: [] });
+  } else if (level === "region") {
+    Object.assign(f, { regionId: id, cityId: "", areaId: "", cities: id ? await units({ parentId: id }) : [], areas: [] });
+  } else if (level === "city") {
+    Object.assign(f, { cityId: id, areaId: "", areas: id ? await units({ parentId: id }) : [] });
+  } else {
+    f.areaId = id;
+  }
+  render();
+}
+
+async function acctSaveAddress() {
+  const f = S._acct.addr;
+  const body = {
+    countryId: f.countryId,
+    label: qs("ad-label").value,
+    street: qs("ad-street").value.trim() || undefined,
+    buildingNumber: qs("ad-building").value.trim() || undefined,
+    postalCode: qs("ad-postal").value.trim() || undefined,
+    isDefault: qs("ad-default").checked,
+  };
+  if (!body.countryId) return acctDone(null, "اختر البلد");
+  if (f.regionId) body.regionId = f.regionId;
+  if (f.cityId) body.cityId = f.cityId;
+  if (f.areaId) body.areaId = f.areaId;
+  const { ok, data } = await api("POST", "/addresses", body);
+  if (!ok) return acctDone(null, errMsg(data, "تعذّر حفظ العنوان"));
+  const list = await api("GET", "/addresses");
+  S._acct.addresses = list.ok ? list.data : S._acct.addresses;
+  S._acct.addr = null;
+  acctDone("تم حفظ العنوان ✅");
+}
+
+async function acctDefaultAddress(id) {
+  const { ok, data } = await api("PATCH", "/addresses/" + id, { isDefault: true });
+  if (!ok) return acctDone(null, errMsg(data, "تعذّر التنفيذ"));
+  const list = await api("GET", "/addresses");
+  if (list.ok) S._acct.addresses = list.data;
+  acctDone("تم ✅");
+}
+
+async function acctDeleteAddress(id) {
+  if (!confirm("حذف هذا العنوان؟")) return;
+  const { ok, data } = await api("DELETE", "/addresses/" + id);
+  if (!ok) return acctDone(null, errMsg(data, "تعذّر الحذف"));
+  S._acct.addresses = S._acct.addresses.filter((a) => a.id !== id);
+  acctDone("تم الحذف ✅");
 }
 
 function screenProfileEdit() {

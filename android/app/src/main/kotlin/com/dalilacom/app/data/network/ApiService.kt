@@ -31,6 +31,27 @@ interface ApiService {
     @GET("geo/units")
     suspend fun geoUnits(@Query("level") level: String): Response<List<GeoUnitDto>>
 
+    @GET("geo/units")
+    suspend fun geoChildren(@Query("countryId") countryId: String?, @Query("level") level: String?, @Query("parentId") parentId: String?): Response<List<GeoUnitDto>>
+
+    @GET("geo/countries")
+    suspend fun geoCountries(): Response<List<GeoUnitDto>>
+
+    @GET("addresses")
+    suspend fun getAddresses(): Response<List<AddressDto>>
+
+    @POST("addresses")
+    suspend fun addAddress(@Body body: AddressRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @PATCH("addresses/{id}")
+    suspend fun updateAddress(@retrofit2.http.Path("id") id: String, @Body body: DefaultAddressRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @DELETE("addresses/{id}")
+    suspend fun deleteAddress(@retrofit2.http.Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @POST("auth/change-password")
+    suspend fun changePassword(@Body body: ChangePasswordRequest): Response<ChangePasswordResponse>
+
     @POST("broadcasts/preview")
     suspend fun previewBroadcast(@Body body: BroadcastPreviewRequest): Response<BroadcastPreviewDto>
 

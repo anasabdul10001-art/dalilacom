@@ -96,6 +96,7 @@
     <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
     <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 الباقات والأسعار</div>
     <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
+    <div class="nav-item" data-section="users" onclick="showSection('users'); loadUsers()">👥 المستخدمون</div>
     <div class="nav-item" data-section="geo" onclick="showSection('geo')">🗺️ المدن والأحياء</div>
     <div class="nav-item" data-section="broadcasts" onclick="showSection('broadcasts')">📣 الإعلانات <span id="bc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
@@ -227,6 +228,29 @@
       <div class="card">
         <h3>الاشتراكات</h3>
         <table><thead><tr><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>ينتهي</th></tr></thead><tbody id="subs-body"></tbody></table>
+      </div>
+    </div>
+
+    <!-- USERS: who is who -->
+    <div class="section" id="section-users" style="display:none">
+      <h2>المستخدمون</h2>
+      <p class="subtitle">ابحث عن أي حساب بالاسم أو الإيميل أو الهاتف، وشوف دوره وحالته. تعطيل الحساب بيوقفه فورًا وبينهي جلساته. الترقية لأدمن بتتم فقط من إعدادات السيرفر (SUPER_ADMIN_EMAIL).</p>
+      <div class="card">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="users-q" placeholder="اسم أو إيميل أو هاتف" style="flex:2;min-width:200px" onkeydown="if(event.key==='Enter') loadUsers()" />
+          <select id="users-role" style="flex:1;min-width:140px" onchange="loadUsers()">
+            <option value="">كل الأدوار</option>
+            <option value="ADMIN">أدمن</option>
+            <option value="MERCHANT">تاجر</option>
+            <option value="CUSTOMER">زبون</option>
+          </select>
+          <button onclick="loadUsers()">🔍 بحث</button>
+        </div>
+        <table style="margin-top:14px">
+          <thead><tr><th>الاسم</th><th>الإيميل</th><th>الهاتف</th><th>الدور</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="users-body"></tbody>
+        </table>
+        <p id="users-msg" class="muted" style="margin-top:8px"></p>
       </div>
     </div>
 
@@ -478,6 +502,38 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- Users ----
+const ROLE_LABEL = { ADMIN: 'أدمن', MERCHANT: 'تاجر', CUSTOMER: 'زبون' };
+
+async function loadUsers() {
+  const body = document.getElementById('users-body');
+  const msg = document.getElementById('users-msg');
+  const params = new URLSearchParams();
+  const q = document.getElementById('users-q').value.trim();
+  const role = document.getElementById('users-role').value;
+  if (q) params.set('q', q);
+  if (role) params.set('role', role);
+  const { ok, data } = await api('GET', '/admin/users?' + params.toString());
+  if (!ok) { body.innerHTML = ''; msg.textContent = errText(data, 'تعذّر التحميل'); return; }
+  msg.textContent = data.length >= 100 ? 'أول 100 نتيجة — ضيّق البحث لتشوف غيرها' : '';
+  body.innerHTML = data.length ? data.map(u => `
+    <tr>
+      <td>${esc(u.fullName)}</td>
+      <td class="muted" style="direction:ltr;text-align:right">${esc(u.email)}${u.isEmailVerified ? '' : ' <small title="الإيميل غير مؤكَّد">⚠️</small>'}</td>
+      <td class="muted" style="direction:ltr;text-align:right">${esc(u.phone || '—')}</td>
+      <td><span class="badge ${u.role === 'ADMIN' ? 'APPROVED' : 'inactive'}">${esc(ROLE_LABEL[u.role] || u.role)}</span></td>
+      <td><span class="badge ${u.isDisabled ? 'REJECTED' : 'active'}">${u.isDisabled ? 'معطّل' : 'فعّال'}</span></td>
+      <td><button class="small" style="${u.isDisabled ? '' : 'background:#777'}" onclick="toggleUser('${esc(u.id)}', ${!u.isDisabled})">${u.isDisabled ? 'تفعيل' : 'تعطيل'}</button></td>
+    </tr>`).join('') : '<tr><td colspan="6" class="muted">ما في نتائج</td></tr>';
+}
+
+async function toggleUser(id, disable) {
+  if (disable && !confirm('تعطيل هذا الحساب؟ بيطلع من كل أجهزته ولا يقدر يدخل.')) return;
+  const { ok, data } = await api('PATCH', '/admin/users/' + id, { isDisabled: disable });
+  if (!ok) { document.getElementById('users-msg').textContent = errText(data, 'تعذّر التنفيذ'); return; }
+  loadUsers();
 }
 
 // ---- Geography: governorates > cities > neighbourhoods ----
