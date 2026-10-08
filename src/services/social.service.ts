@@ -79,6 +79,12 @@ const PROVIDERS: Record<SocialProvider, ProviderConfig> = {
     profile: async (accessToken) => {
       const data = await getJson(`https://graph.facebook.com/me?fields=id,name,email&access_token=${encodeURIComponent(accessToken)}`);
       if (!data || typeof data.id !== "string") return null;
+      if (typeof data.email !== "string") {
+        // Say why in the server log (permission states only, nothing personal): declined, never asked, or an account with no email.
+        const perms = await getJson(`https://graph.facebook.com/me/permissions?access_token=${encodeURIComponent(accessToken)}`);
+        const list = Array.isArray(perms?.data) ? (perms!.data as Array<{ permission?: string; status?: string }>) : [];
+        console.warn("Facebook sign-in without an email — permissions:", list.map((p) => `${p.permission}=${p.status}`).join(", ") || "unreadable", "| profile keys:", Object.keys(data).join(","));
+      }
       return {
         id: data.id,
         email: typeof data.email === "string" ? data.email.toLowerCase() : null,
