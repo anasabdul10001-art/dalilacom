@@ -4,6 +4,7 @@ import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.ApiService
+import com.dalilacom.app.data.network.ForgotPasswordRequest
 import com.dalilacom.app.data.network.LoginRequest
 import com.dalilacom.app.data.network.MeResponse
 import com.dalilacom.app.data.network.ResendVerificationRequest
@@ -62,6 +63,14 @@ class AuthRepository(
         } else {
             Result.failure(Exception(AppStrings.get(R.string.social_failed)))
         }
+    }
+
+    /** "Forgot my password": the server sends the link when the email is registered and answers the same either way. */
+    suspend fun forgotPassword(email: String): Result<String> {
+        val response = safeApiCall { api.forgotPassword(ForgotPasswordRequest(email.trim())) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (response.isSuccessful) Result.success(response.body()?.message ?: AppStrings.get(R.string.forgot_sent))
+        else Result.failure(Exception(errorText(response, AppStrings.get(R.string.account_failed))))
     }
 
     /** The signed-in user (with email-verification state), or null when offline / signed out. */

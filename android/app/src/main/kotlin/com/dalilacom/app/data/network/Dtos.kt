@@ -57,6 +57,12 @@ data class AuthResponse(val token: String, val user: UserDto)
 data class GeoUnitDto(val id: String, val name: String, val nameArabic: String? = null, val nameEnglish: String? = null, val isoCode2: String? = null)
 
 @Serializable
+data class ChangeEmailRequest(val newEmail: String, val password: String? = null)
+
+@Serializable
+data class ForgotPasswordRequest(val email: String)
+
+@Serializable
 data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
 
 @Serializable

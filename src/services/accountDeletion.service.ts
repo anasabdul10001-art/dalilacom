@@ -30,6 +30,7 @@ export async function anonymizeAccount(userId: string): Promise<void> {
       tx.metaOAuthSession.deleteMany({ where: { userId } }),
       tx.emailVerificationToken.deleteMany({ where: { userId } }),
       tx.passwordResetToken.deleteMany({ where: { userId } }),
+      tx.emailChangeToken.deleteMany({ where: { userId } }),
     ]);
     await tx.merchantProfile.updateMany({
       where: { userId },

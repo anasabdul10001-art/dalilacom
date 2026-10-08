@@ -275,6 +275,95 @@ authRouter.post("/reset-password", resetPasswordRateLimiter, async (req, res) =>
   return res.json({ message: "تم تغيير كلمة السر بنجاح، سجّل الدخول من جديد" });
 });
 
+/* ---------------- change email (signed-in) ---------------- */
+
+const EMAIL_CHANGE_TTL_MS = 60 * 60 * 1000;
+const changeEmailSchema = z.object({ newEmail: z.string().trim().toLowerCase().email(), password: z.string().optional() });
+
+async function sendEmailChangeMails(oldEmail: string, newEmail: string, rawToken: string, lang: string) {
+  const base = process.env.PUBLIC_BASE_URL ?? "";
+  const link = `${base}/auth/confirm-email-change?token=${rawToken}`;
+  try {
+    await emailService.send({
+      to: newEmail,
+      subject: translateText("تأكيد بريدك الإلكتروني الجديد — دليلكم", lang),
+      text: translateText(`مرحبًا،\n\nطلبت تغيير بريد حسابك على دليلكم إلى هذا العنوان. لتأكيد التغيير اضغط الرابط التالي (صالح لمدة ساعة):\n${link}\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة.`, lang),
+    });
+    // The old address is told too: if it was not the owner who asked, they still have time to react.
+    await emailService.send({
+      to: oldEmail,
+      subject: translateText("تنبيه أمني — طلب تغيير بريد حسابك", lang),
+      text: translateText(`مرحبًا،\n\nوصلنا طلب لتغيير بريد حسابك على دليلكم إلى ${newEmail}. إذا كنت أنت فلا تحتاج لأي إجراء. إذا لم تكن أنت، غيّر كلمة سرك فورًا.`, lang),
+    });
+  } catch (err) {
+    console.error("Failed to send email-change mails:", err instanceof Error ? err.message : err);
+  }
+}
+
+// Needs real mail delivery: without it the confirmation link would never reach the new address, so it is refused honestly.
+authRouter.post("/change-email", loginRateLimiter, requireAuth, async (req, res) => {
+  const parsed = changeEmailSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  if (!process.env.SMTP_HOST) {
+    return sendError(res, 503, "EMAIL_NOT_CONFIGURED", "خدمة البريد غير مفعّلة بعد، ما فينا نأكد الإيميل الجديد");
+  }
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { id: true, email: true, passwordHash: true, socialIdentities: { select: { id: true } } } });
+  // 403, not 401: a wrong password here must not look like an expired session (the apps sign out on 401).
+  if (user.socialIdentities.length === 0 && (!parsed.data.password || !(await bcrypt.compare(parsed.data.password, user.passwordHash)))) {
+    return sendError(res, 403, "WRONG_PASSWORD", "كلمة السر غير صحيحة");
+  }
+  if (parsed.data.newEmail === user.email) return sendError(res, 400, "BAD_REQUEST", "البريد الجديد نفس بريدك الحالي");
+  if (await prisma.user.findUnique({ where: { email: parsed.data.newEmail }, select: { id: true } })) {
+    return sendError(res, 409, "EMAIL_IN_USE", "هذا البريد مسجّل بحساب ثاني");
+  }
+  await prisma.emailChangeToken.updateMany({ where: { userId: user.id, consumedAt: null }, data: { consumedAt: new Date() } });
+  const { raw, hash } = generateRawToken();
+  await prisma.emailChangeToken.create({ data: { userId: user.id, newEmail: parsed.data.newEmail, tokenHash: hash, expiresAt: new Date(Date.now() + EMAIL_CHANGE_TTL_MS) } });
+  await sendEmailChangeMails(user.email, parsed.data.newEmail, raw, resolveLanguage(req));
+  await logSecurityEvent({ userId: user.id, type: "EMAIL_CHANGE_REQUESTED", req });
+  return res.json({ message: "أرسلنا رابط التأكيد للبريد الجديد. اضغطه ليتم التغيير." });
+});
+
+// The link in the email: a small page, as for email verification. On success the account carries the new, already-confirmed
+// address and every session ends — the person signs in again with the new email.
+authRouter.get("/confirm-email-change", verifyEmailRateLimiter, async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  let outcome: "CHANGED" | "EXPIRED" | "INVALID" | "TAKEN" = "INVALID";
+  const record = token.length >= 10 ? await prisma.emailChangeToken.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } }) : null;
+  if (record && !record.consumedAt) {
+    if (record.expiresAt.getTime() < Date.now()) {
+      outcome = "EXPIRED";
+    } else if (await prisma.user.findUnique({ where: { email: record.newEmail }, select: { id: true } })) {
+      outcome = "TAKEN";
+    } else {
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: record.userId }, data: { email: record.newEmail, isEmailVerified: true, tokenVersion: { increment: 1 } } }),
+        prisma.emailChangeToken.updateMany({ where: { userId: record.userId, consumedAt: null }, data: { consumedAt: new Date() } }),
+      ]);
+      await logSecurityEvent({ userId: record.userId, type: "EMAIL_CHANGED" });
+      try {
+        await emailService.send({
+          to: record.user.email,
+          subject: translateText("تم تغيير بريد حسابك", resolveLanguage(req)),
+          text: translateText(`تم تغيير بريد حسابك على دليلكم إلى ${record.newEmail}. إذا لم تكن أنت، تواصل معنا فورًا على dalilacomsy@gmail.com.`, resolveLanguage(req)),
+        });
+      } catch {
+        /* best-effort */
+      }
+      outcome = "CHANGED";
+    }
+  }
+  const messages = {
+    CHANGED: "تم تغيير بريدك الإلكتروني وتوثيقه. سجّل الدخول من جديد بالبريد الجديد.",
+    EXPIRED: "انتهت صلاحية رابط التغيير. اطلب تغييرًا جديدًا من التطبيق.",
+    TAKEN: "هذا البريد صار مستعملًا بحساب آخر، جرّب بريدًا ثانيًا.",
+    INVALID: "رابط التغيير غير صالح.",
+  };
+  res.status(outcome === "CHANGED" ? 200 : 400).type("html").send(
+    `<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><body style="font-family:sans-serif;padding:40px;text-align:center;color:#1a1a1a"><h2>دليلكم</h2><p>${messages[outcome]}</p></body></html>`,
+  );
+});
+
 /* ---------------- change password (signed-in) ---------------- */
 
 const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) });

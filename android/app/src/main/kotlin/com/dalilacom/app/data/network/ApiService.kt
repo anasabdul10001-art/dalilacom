@@ -49,6 +49,12 @@ interface ApiService {
     @DELETE("addresses/{id}")
     suspend fun deleteAddress(@retrofit2.http.Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
 
+    @POST("auth/change-email")
+    suspend fun changeEmail(@Body body: ChangeEmailRequest): Response<MessageResponse>
+
+    @POST("auth/forgot-password")
+    suspend fun forgotPassword(@Body body: ForgotPasswordRequest): Response<MessageResponse>
+
     @POST("auth/change-password")
     suspend fun changePassword(@Body body: ChangePasswordRequest): Response<ChangePasswordResponse>
 

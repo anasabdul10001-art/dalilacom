@@ -86,6 +86,7 @@ DICT.ar = {
   "profile.deleteFailed": "تعذّر حذف الحساب",
   "profile.deleted": "تم حذف حسابك",
   "profile.account": "⚙️ إعدادات الحساب",
+  "tab.responder": "المجيب الآلي",
 "profile.shareLocation": "السماح للمتاجر القريبة بإرسال عروضها لي",
   "profile.shareLocationSub": "يرسل التطبيق موقعك التقريبي (بدقة نحو كيلومتر) أثناء استخدام الخريطة. تقدر توقفه بأي وقت وبنمسح الموقع.",
 "social.google": "المتابعة بحساب Google",

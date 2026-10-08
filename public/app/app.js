@@ -156,6 +156,12 @@ function reset(screen) {
 }
 
 function setHomeTab(tab) {
+  // The auto-responder is a whole screen of its own: the middle button opens it (guests are taken to sign in first).
+  if (tab === "responder") {
+    if (!S.token) return go("login");
+    S._resp = null;
+    return go("responder");
+  }
   if (tab !== "card") stopQrLoop();
   S.homeTab = tab;
   render();
@@ -235,6 +241,7 @@ function orderBadge(status) {
 const ICON = {
   home: '<svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg>',
   card: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>',
+  bot: '<svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 16.5h6"/><circle cx="12" cy="3.5" r="1"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>',
   cart: '<svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.2 11h10.4L20 8H6.2"/></svg>',
   orders: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M8 9h8M8 13h8"/></svg>',
@@ -266,6 +273,7 @@ function renderScreen() {
     case "merchantProfile": return screenMerchantProfile();
     case "profileEdit": return screenProfileEdit();
     case "account": return screenAccount();
+    case "forgot": return screenForgot();
     case "pricing": return screenPricing();
     default: return screenLogin();
   }
@@ -326,6 +334,32 @@ async function bootSocialReturn() {
   return true;
 }
 
+function screenForgot() {
+  const done = S.params.sent;
+  return `
+    ${backRow()}
+    <img class="auth-logo" src="/brand/logo.png" alt="DALILACOM" />
+    <h1 class="screen-title">نسيت كلمة السر</h1>
+    <p class="screen-sub">اكتب إيميل حسابك ورح نبعتلك رابط لتعيين كلمة سر جديدة.</p>
+    ${done ? `<div class="card">${esc(done)}</div>` : `
+      <div class="field"><label>الإيميل</label><input id="f-email" type="email" dir="ltr" autocomplete="email" value="${esc(S.params.email || "")}" /></div>
+      ${errorBanner()}
+      <button class="btn" onclick="doForgot()">أرسل الرابط</button>`}
+  `;
+}
+
+async function doForgot() {
+  const email = qs("f-email").value.trim();
+  S.params.email = email;
+  if (!email) { S.error = "اكتب إيميلك"; return render(); }
+  S.busy = true; S.error = null; render();
+  const { ok, data } = await api("POST", "/auth/forgot-password", { email });
+  S.busy = false;
+  if (ok) S.params.sent = data.message || "إذا الإيميل مسجّل رح يوصلك رابط خلال دقائق.";
+  else S.error = errMsg(data, "تعذّر الإرسال");
+  render();
+}
+
 function screenLogin() {
   const draft = S.params.draft || {};
   return `
@@ -338,6 +372,7 @@ function screenLogin() {
     ${errorBanner()}
     <button class="btn" onclick="doLogin()">دخول</button>
     ${socialButtonsHtml()}
+    <button class="link-btn" onclick="go('forgot')">نسيت كلمة السر؟</button>
     <button class="link-btn" onclick="reset('register')">ما عندك حساب؟ سجل واحد جديد</button>
   `;
 }
@@ -439,6 +474,7 @@ function doLogout() {
 const HOME_TABS = [
   { id: "discover", label: "tab.map", icon: "search" },
   { id: "card", label: "tab.card", icon: "card" },
+  { id: "responder", label: "tab.responder", icon: "bot", hero: true },
   { id: "cart", label: "tab.cart", icon: "cart" },
   { id: "orders", label: "tab.orders", icon: "orders" },
   { id: "profile", label: "tab.account", icon: "user" },
@@ -457,7 +493,7 @@ function screenHomeShell() {
     <div>${body}</div>
     <div class="tabbar" id="home-tabbar">
       ${HOME_TABS.map((tab) => `
-        <button class="${S.homeTab === tab.id ? "active" : ""}" onclick="setHomeTab('${tab.id}')">
+        <button class="${S.homeTab === tab.id ? "active" : ""} ${tab.hero ? "hero" : ""}" onclick="setHomeTab('${tab.id}')">
           ${ICON[tab.icon]}<span>${esc(t(tab.label))}</span>
         </button>`).join("")}
     </div>
@@ -1830,7 +1866,12 @@ function screenAccount() {
       <div class="section-title" style="margin-top:0">الإيميل</div>
       <p dir="ltr" style="margin:4px 0;text-align:right"><strong>${esc(p.email)}</strong></p>
       <p class="muted">${p.emailVerified ? "✅ مؤكَّد" : "⚠️ غير مؤكَّد"}</p>
-      <p class="muted">تغيير الإيميل رح يتوفر قريبًا.</p>
+      ${a.emailDelivery ? `
+        <div class="divider"></div>
+        <div class="field"><label>الإيميل الجديد</label><input id="ac-newemail" type="email" dir="ltr" autocomplete="email" /></div>
+        <div class="field"><label>كلمة السر للتأكيد</label><input id="ac-email-pw" type="password" autocomplete="current-password" /></div>
+        <p class="muted">رح نبعت رابط تأكيد للإيميل الجديد، وتنبيه للقديم. بعد التأكيد بتسجّل دخول من جديد بالإيميل الجديد.</p>
+        <button class="btn small" onclick="acctChangeEmail()">تغيير الإيميل</button>` : `<p class="muted">تغيير الإيميل مش متوفر حاليًا (خدمة البريد غير مفعّلة بعد).</p>`}
     </div>
 
     <div class="card">
@@ -1896,10 +1937,10 @@ function screenAccount() {
 }
 
 async function loadAccount() {
-  const [me, addresses, countries] = await Promise.all([api("GET", "/profile/me"), api("GET", "/addresses"), api("GET", "/geo/countries")]);
+  const [me, addresses, countries, auth] = await Promise.all([api("GET", "/profile/me"), api("GET", "/addresses"), api("GET", "/geo/countries"), api("GET", "/auth/me")]);
   if (!me.ok) { S._acct = null; return render(); }
   const list = countries.ok ? countries.data : [];
-  S._acct = { loading: false, profile: me.data, addresses: addresses.ok ? addresses.data : [], countries: list, allCountries: list, cities: [], addr: null };
+  S._acct = { loading: false, emailDelivery: auth.ok && !!auth.data.emailDeliveryEnabled, profile: me.data, addresses: addresses.ok ? addresses.data : [], countries: list, allCountries: list, cities: [], addr: null };
   await acctLoadCities(me.data.countryCode);
   render();
 }
@@ -1939,6 +1980,15 @@ async function acctChangePassword() {
   S._acct = { loading: true, addr: null, msg: "تم تغيير كلمة السر ✅" };
   loadAccount().then(() => { S._acct.msg = "تم تغيير كلمة السر ✅"; render(); });
   render();
+}
+
+async function acctChangeEmail() {
+  const newEmail = qs("ac-newemail").value.trim();
+  const password = qs("ac-email-pw").value;
+  if (!newEmail || !password) return acctDone(null, "اكتب الإيميل الجديد وكلمة السر");
+  const { ok, data } = await api("POST", "/auth/change-email", { newEmail, password });
+  if (!ok) return acctDone(null, errMsg(data, "تعذّر طلب تغيير الإيميل"));
+  acctDone(data.message || "أرسلنا رابط التأكيد للبريد الجديد");
 }
 
 async function acctSavePhone() {

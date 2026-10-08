@@ -129,6 +129,25 @@ fun LoginScreen(
         }
 
         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            var askForgot by remember { mutableStateOf(false) }
+            var forgotEmail by remember { mutableStateOf("") }
+            val forgotMessage by viewModel.forgotMessage.collectAsState()
+            TextButton(onClick = { askForgot = true }) { Text(AppStrings.get(R.string.login_forgot)) }
+            if (askForgot) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { askForgot = false; viewModel.clearForgotMessage() },
+                    title = { Text(AppStrings.get(R.string.forgot_title)) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(AppStrings.get(R.string.forgot_hint))
+                            OutlinedTextField(forgotEmail, { forgotEmail = it }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
+                            forgotMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall) }
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { viewModel.forgotPassword(forgotEmail) }) { Text(AppStrings.get(R.string.forgot_send)) } },
+                    dismissButton = { TextButton(onClick = { askForgot = false; viewModel.clearForgotMessage() }) { Text(AppStrings.get(R.string.account_cancel)) } },
+                )
+            }
             TextButton(onClick = onNavigateToRegister) { Text(AppStrings.get(R.string.s_60e251d0)) }
             TextButton(onClick = onBrowseAsGuest) { Text(AppStrings.get(R.string.s_d2cbe1d2), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }

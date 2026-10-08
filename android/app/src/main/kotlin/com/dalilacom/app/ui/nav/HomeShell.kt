@@ -61,10 +61,13 @@ import com.dalilacom.app.ui.orders.OrdersScreen
 import com.dalilacom.app.ui.profile.ProfileScreen
 import com.dalilacom.app.ui.theme.DeepRed
 import com.dalilacom.app.ui.theme.PrimaryRed
+import androidx.compose.material.icons.filled.SmartToy
 
 private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) {
     Discover(R.string.tab_map, Icons.Filled.Map),
     Card(R.string.tab_card, Icons.Filled.CreditCard),
+    /** Not a page of this shell: the middle button opens the auto-responder screen. */
+    Responder(R.string.tab_responder, Icons.Filled.SmartToy),
     Cart(R.string.tab_cart, Icons.Filled.ShoppingCart),
     Orders(R.string.tab_orders, Icons.AutoMirrored.Filled.ListAlt),
     Profile(R.string.tab_account, Icons.Filled.Person),
@@ -102,12 +105,27 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
                 HomeTab.values().forEach { tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
-                        icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
-                        label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall) },
-                    )
+                    if (tab == HomeTab.Responder) {
+                        // The one button that stands out: a red disc, opening the auto-responder (guests sign in first).
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = { if (isGuest) goLogin() else rootNavController.navigate("responder") },
+                            icon = {
+                                Box(
+                                    modifier = Modifier.size(44.dp).clip(CircleShape).background(Brush.linearGradient(listOf(DeepRed, PrimaryRed))),
+                                    contentAlignment = Alignment.Center,
+                                ) { Icon(tab.icon, contentDescription = stringResource(tab.labelRes), tint = Color.White) }
+                            },
+                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, color = PrimaryRed) },
+                        )
+                    } else {
+                        NavigationBarItem(
+                            selected = selectedTab == tab,
+                            onClick = { selectedTab = tab },
+                            icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
+                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall) },
+                        )
+                    }
                 }
             }
         },
@@ -124,6 +142,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     onLogin = { goLogin() },
                     onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
                 )
+                HomeTab.Responder -> Unit // never selected: its button opens its own screen
                 HomeTab.Card ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.CreditCard,

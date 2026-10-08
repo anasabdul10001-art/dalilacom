@@ -71,6 +71,7 @@ data class AddressForm(
 data class AccountUiState(
     val isLoading: Boolean = true,
     val profile: ProfileDto? = null,
+    val emailDelivery: Boolean = false,
     val countries: List<GeoUnitDto> = emptyList(),
     val profileCities: List<GeoUnitDto> = emptyList(),
     val addresses: List<AddressDto> = emptyList(),
@@ -87,7 +88,7 @@ class AccountSettingsViewModel(private val repository: AccountRepository) : View
         viewModelScope.launch {
             val profile = repository.profile()
             val countries = repository.countries()
-            _uiState.update { it.copy(isLoading = false, profile = profile, countries = countries, addresses = repository.addresses()) }
+            _uiState.update { it.copy(isLoading = false, profile = profile, countries = countries, addresses = repository.addresses(), emailDelivery = repository.emailDelivery()) }
             profile?.countryCode?.let { code -> loadProfileCities(code) }
         }
     }
@@ -101,6 +102,13 @@ class AccountSettingsViewModel(private val repository: AccountRepository) : View
             val cities = repository.units(countryId = country.id, level = "CITY")
             _uiState.update { it.copy(profileCities = cities) }
         }
+    }
+
+    fun changeEmail(newEmail: String, password: String) = viewModelScope.launch {
+        if (newEmail.isBlank()) return@launch done(null, AppStrings.get(R.string.account_email_enter))
+        repository.changeEmail(newEmail, password)
+            .onSuccess { message -> done(message) }
+            .onFailure { e -> done(null, e.message) }
     }
 
     fun savePhone(phone: String) = viewModelScope.launch {
@@ -235,6 +243,8 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit) {
         }
         var phone by remember(profile.phone) { mutableStateOf(profile.phone.orEmpty()) }
         var vat by remember(profile.vatNumber) { mutableStateOf(profile.vatNumber.orEmpty()) }
+        var newEmail by remember { mutableStateOf("") }
+        var emailPw by remember { mutableStateOf("") }
         var pwOld by remember { mutableStateOf("") }
         var pwNew by remember { mutableStateOf("") }
         var pwAgain by remember { mutableStateOf("") }
@@ -252,7 +262,14 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Text(AppStrings.get(R.string.account_email_soon), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (state.emailDelivery) {
+                        OutlinedTextField(newEmail, { newEmail = it }, label = { Text(AppStrings.get(R.string.account_new_email)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(emailPw, { emailPw = it }, label = { Text(AppStrings.get(R.string.account_email_pw)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                        Text(AppStrings.get(R.string.account_email_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick = { viewModel.changeEmail(newEmail, emailPw); emailPw = "" }) { Text(AppStrings.get(R.string.account_email_change)) }
+                    } else {
+                        Text(AppStrings.get(R.string.account_email_unavailable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
             item {

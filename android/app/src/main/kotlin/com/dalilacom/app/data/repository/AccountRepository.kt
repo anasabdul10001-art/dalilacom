@@ -4,6 +4,7 @@ import com.dalilacom.app.R
 import com.dalilacom.app.data.network.AddressDto
 import com.dalilacom.app.data.network.AddressRequest
 import com.dalilacom.app.data.network.ApiService
+import com.dalilacom.app.data.network.ChangeEmailRequest
 import com.dalilacom.app.data.network.ChangePasswordRequest
 import com.dalilacom.app.data.network.DefaultAddressRequest
 import com.dalilacom.app.data.network.GeoUnitDto
@@ -30,6 +31,17 @@ class AccountRepository(private val api: ApiService, private val tokenStore: Tok
     /** Only what is passed is sent; an empty phone clears it. */
     suspend fun update(phone: String? = null, countryCode: String? = null, cityId: String? = null, vatNumber: String? = null): Result<ProfileDto> =
         result(AppStrings.get(R.string.account_failed)) { api.updateProfile(UpdateProfileRequest(phone = phone, countryCode = countryCode, cityId = cityId, vatNumber = vatNumber)) }
+
+    /** Can the server send mail at all? Changing the email needs it, so the form is offered only then. */
+    suspend fun emailDelivery(): Boolean = safeApiCall { api.me() }?.takeIf { it.isSuccessful }?.body()?.emailDeliveryEnabled == true
+
+    /** Asks for the change: a confirmation link goes to the new address. A wrong password is a 403 (never an expired session). */
+    suspend fun changeEmail(newEmail: String, password: String): Result<String> {
+        val response = safeApiCall { api.changeEmail(ChangeEmailRequest(newEmail.trim(), password.ifBlank { null })) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (response.isSuccessful) Result.success(response.body()?.message ?: AppStrings.get(R.string.account_email_sent))
+        else Result.failure(Exception(errorText(response, AppStrings.get(R.string.account_failed))))
+    }
 
     /** Changes the password and keeps this phone signed in: the server hands back a fresh token (the old ones stop working). */
     suspend fun changePassword(current: String, new: String): Result<Unit> {

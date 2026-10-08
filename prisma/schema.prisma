@@ -94,6 +94,7 @@ model User {
 
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
+  emailChangeTokens       EmailChangeToken[]
   securityEvents          SecurityEvent[]
 
   addresses         Address[]
@@ -152,6 +153,8 @@ enum SecurityEventType {
   ACCOUNT_ENABLED
   TOKEN_REVOKED
   RATE_LIMIT_EXCEEDED
+  EMAIL_CHANGE_REQUESTED
+  EMAIL_CHANGED
 }
 
 // Append-only audit trail of security-relevant events (section: Security Events). Never
@@ -1266,4 +1269,19 @@ model LoginTicket {
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// "Change my email": the new address must be confirmed through a link sent to it before the account switches.
+model EmailChangeToken {
+  id         String    @id @default(uuid())
+  userId     String
+  newEmail   String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

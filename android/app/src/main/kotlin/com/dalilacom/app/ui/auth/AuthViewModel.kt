@@ -29,6 +29,20 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         viewModelScope.launch { _socialProviders.value = repository.socialProviders() }
     }
 
+    private val _forgotMessage = MutableStateFlow<String?>(null)
+    val forgotMessage: StateFlow<String?> = _forgotMessage.asStateFlow()
+
+    fun forgotPassword(email: String) {
+        if (email.isBlank()) { _forgotMessage.value = AppStrings.get(R.string.account_email_enter); return }
+        viewModelScope.launch {
+            repository.forgotPassword(email)
+                .onSuccess { _forgotMessage.value = it }
+                .onFailure { _forgotMessage.value = it.message }
+        }
+    }
+
+    fun clearForgotMessage() { _forgotMessage.value = null }
+
     fun exchangeTicket(ticket: String) {
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
