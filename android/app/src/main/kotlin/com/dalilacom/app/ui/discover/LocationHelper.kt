@@ -5,19 +5,46 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
 import androidx.core.os.CancellationSignal
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
+
+/** One reading of the position while a trip is going on. */
+data class LiveFix(val latitude: Double, val longitude: Double, val accuracy: Float?, val bearing: Float?)
 
 object LocationHelper {
     val PERMISSIONS = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
 
     fun hasPermission(context: Context): Boolean = PERMISSIONS.any {
         ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /** A stream of position readings (about every second while moving) from GPS, with the network position as a fallback. */
+    @SuppressLint("MissingPermission")
+    fun updates(context: Context): Flow<LiveFix> = callbackFlow {
+        val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        if (manager == null || !hasPermission(context)) {
+            close()
+            return@callbackFlow
+        }
+        val listener = LocationListener { location ->
+            trySend(LiveFix(location.latitude, location.longitude, if (location.hasAccuracy()) location.accuracy else null, if (location.hasBearing()) location.bearing else null))
+        }
+        for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+            if (runCatching { manager.isProviderEnabled(provider) }.getOrDefault(false)) {
+                runCatching { manager.requestLocationUpdates(provider, 1000L, 3f, listener, Looper.getMainLooper()) }
+            }
+        }
+        awaitClose { manager.removeUpdates(listener) }
     }
 
     /**

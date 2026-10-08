@@ -1,6 +1,13 @@
 package com.dalilacom.app.ui.discover
 
 import android.content.Intent
+import android.speech.tts.TextToSpeech
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalView
+import com.dalilacom.app.data.network.RouteDto
+import com.dalilacom.app.ui.i18n.AppStrings
+import com.dalilacom.app.ui.common.formatDistance
+import com.dalilacom.app.ui.common.formatDuration
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -109,6 +116,26 @@ fun DiscoverScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val navigating = state.route?.navigating == true
+
+    // The trip: the voice, the live position, and a screen that stays on.
+    val speaker = remember { TripVoice(context) }
+    DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
+    LaunchedEffect(Unit) { viewModel.speech.collect { speaker.say(it) } }
+    LaunchedEffect(navigating) {
+        if (!navigating) return@LaunchedEffect
+        if (!LocationHelper.hasPermission(context)) {
+            Toast.makeText(context, context.getString(R.string.nav_no_gps), Toast.LENGTH_LONG).show()
+            viewModel.endNavigation()
+            return@LaunchedEffect
+        }
+        LocationHelper.updates(context).collect { fix -> viewModel.onNavLocation(fix.latitude, fix.longitude, fix.accuracy, fix.bearing) }
+    }
+    val hostView = LocalView.current
+    DisposableEffect(navigating) {
+        hostView.keepScreenOn = navigating
+        onDispose { hostView.keepScreenOn = false }
+    }
     var recenterTick by remember { mutableIntStateOf(0) }
     var radiusFitTick by remember { mutableIntStateOf(0) }
     var languageMenuOpen by remember { mutableStateOf(false) }
@@ -176,7 +203,8 @@ fun DiscoverScreen(
     Box(Modifier.fillMaxSize()) {
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = 210.dp,
+        sheetPeekHeight = if (navigating) 0.dp else 210.dp,
+        sheetSwipeEnabled = !navigating,
         sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         sheetContainerColor = MaterialTheme.colorScheme.surface,
         sheetShadowElevation = 16.dp,
@@ -196,7 +224,7 @@ fun DiscoverScreen(
         Box(Modifier.fillMaxSize()) {
             MerchantsMap(
                 merchants = state.merchants,
-                userLocation = state.userLocation,
+                userLocation = state.route?.nav?.position ?: state.userLocation,
                 selectedId = state.selectedMerchantId,
                 onSelect = { id ->
                     viewModel.selectMerchant(id)
@@ -208,17 +236,33 @@ fun DiscoverScreen(
                 routeWalking = state.route?.mode == "walking",
                 radiusKm = state.radiusKm,
                 radiusFitTick = radiusFitTick,
+                navigating = navigating,
+                followUser = state.route?.nav?.follow == true,
+                userBearing = state.route?.nav?.heading,
+                onUserPanned = viewModel::onNavPanned,
                 modifier = Modifier.fillMaxSize(),
             )
 
             val route = state.route
-            if (route != null) {
+            if (route != null && !route.navigating) {
                 RouteBar(
                     route = route,
-                    onMode = { mode -> beginRoute(route.target, mode) },
+                    onMode = viewModel::setRouteMode,
+                    onStart = viewModel::startNavigation,
                     onClose = viewModel::cancelRoute,
                     onOpenGoogle = { openDirections(context, route.target.latitude, route.target.longitude) },
                     modifier = Modifier.padding(top = 10.dp, start = 12.dp, end = 12.dp),
+                )
+            }
+            val trip = route?.nav
+            if (route != null && route.navigating && trip != null) {
+                NavBanner(route = route, nav = trip, onFinish = viewModel::finishNavigation, modifier = Modifier.padding(top = 10.dp, start = 12.dp, end = 12.dp))
+                NavBottomBar(
+                    nav = trip,
+                    onRecenter = viewModel::recenterNav,
+                    onVoice = viewModel::toggleNavVoice,
+                    onEnd = viewModel::endNavigation,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
                 )
             }
             Column(Modifier.fillMaxWidth().padding(top = 10.dp)) {
@@ -295,7 +339,7 @@ fun DiscoverScreen(
                 LocationNotice(state.locationStatus, onRetry = { requestLocation() })
             }
 
-            if (state.areaDirty) {
+            if (state.areaDirty && !navigating) {
                 Surface(
                     onClick = { viewModel.searchThisArea() },
                     shape = RoundedCornerShape(22.dp),
@@ -308,7 +352,7 @@ fun DiscoverScreen(
                 }
             }
 
-            SmallFloatingActionButton(
+            if (!navigating) SmallFloatingActionButton(
                 onClick = {
                     requestLocation()
                     recenterTick++
@@ -318,14 +362,14 @@ fun DiscoverScreen(
                 modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 16.dp),
             ) { Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.fab_my_location)) }
 
-            SmallFloatingActionButton(
+            if (!navigating) SmallFloatingActionButton(
                 onClick = onToggleTheme,
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
                 contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 72.dp),
             ) { Text(if (isDark) "☀️" else "🌙") }
 
-            Box(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 128.dp)) {
+            if (!navigating) Box(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 128.dp)) {
                 SmallFloatingActionButton(
                     onClick = { languageMenuOpen = true },
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
@@ -605,10 +649,12 @@ private fun MerchantCard(
     }
 }
 
+/** Directions: the two ways side by side (time and distance), pick one, then "Start trip". */
 @Composable
 private fun RouteBar(
     route: RouteUi,
     onMode: (String) -> Unit,
+    onStart: () -> Unit,
     onClose: () -> Unit,
     onOpenGoogle: () -> Unit,
     modifier: Modifier = Modifier,
@@ -617,31 +663,133 @@ private fun RouteBar(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         shadowElevation = 6.dp,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
     ) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.route_to, route.target.name), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 IconButton(onClick = onClose) { Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.route_cancel)) }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                val data = route.data
-                when {
-                    route.isLoading -> Text(stringResource(R.string.route_calculating), style = MaterialTheme.typography.bodyMedium)
-                    data != null -> Text(
-                        "${if (route.mode == "walking") "🚶" else "🚗"} ${formatDuration(data.durationSeconds)} · ${formatDistance(data.distanceMeters)}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    else -> Text(route.error ?: stringResource(R.string.route_failed), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    MapChip("🚗", route.mode == "driving") { if (route.mode != "driving") onMode("driving") }
-                    MapChip("🚶", route.mode == "walking") { if (route.mode != "walking") onMode("walking") }
+            Column(Modifier.padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                RouteOption("🚗", stringResource(R.string.nav_drive), route.options["driving"], route.isLoading, route.mode == "driving") { onMode("driving") }
+                RouteOption("🚶", stringResource(R.string.nav_walk), route.options["walking"], route.isLoading, route.mode == "walking") { onMode("walking") }
+                if (route.isLoading) Text(stringResource(R.string.route_calculating), style = MaterialTheme.typography.bodyMedium)
+                else if (route.data == null) Text(route.error ?: stringResource(R.string.route_failed), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                Button(onClick = onStart, enabled = route.data != null, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                    Text("▶  " + stringResource(R.string.nav_start), fontWeight = FontWeight.Bold)
                 }
             }
             TextButton(onClick = onOpenGoogle) { Text(stringResource(R.string.route_google)) }
         }
+    }
+}
+
+@Composable
+private fun RouteOption(icon: String, label: String, data: RouteDto?, loading: Boolean, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(2.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+    ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(icon, style = MaterialTheme.typography.titleLarge)
+            Text(label, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            if (data != null) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(formatDuration(data.durationSeconds), fontWeight = FontWeight.Bold)
+                    Text(formatDistance(data.distanceMeters), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else Text(if (loading) "…" else "—")
+        }
+    }
+}
+
+/** The top of the screen during a trip: the next manoeuvre, how far, and where. */
+@Composable
+private fun NavBanner(route: RouteUi, nav: NavUi, onFinish: () -> Unit, modifier: Modifier = Modifier) {
+    val step = route.data?.steps?.getOrNull(nav.idx)
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        shadowElevation = 8.dp,
+        color = if (nav.arrived) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+        contentColor = Color.White,
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Surface(shape = RoundedCornerShape(14.dp), color = Color.White.copy(alpha = 0.16f), contentColor = Color.White) {
+                Box(Modifier.size(54.dp), contentAlignment = Alignment.Center) { Text(if (nav.arrived) "📍" else NavText.arrow(step), style = MaterialTheme.typography.headlineMedium) }
+            }
+            Column(Modifier.weight(1f)) {
+                if (nav.arrived) {
+                    Text(stringResource(R.string.nav_arrive), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(route.target.name, style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    Text(
+                        when {
+                            nav.rerouting -> stringResource(R.string.nav_rerouting)
+                            nav.distToNext == null -> stringResource(R.string.nav_wait_gps)
+                            else -> formatDistance(nav.distToNext.toInt())
+                        },
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(NavText.instruction(step), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+            if (nav.arrived) {
+                Surface(onClick = onFinish, shape = RoundedCornerShape(20.dp), color = Color.White, contentColor = Color(0xFF2E7D32)) {
+                    Text(stringResource(R.string.nav_done), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+                }
+            }
+        }
+    }
+}
+
+/** The bottom of the screen during a trip: arrival time and what is left, the voice and the end button. */
+@Composable
+private fun NavBottomBar(nav: NavUi, onRecenter: () -> Unit, onVoice: () -> Unit, onEnd: () -> Unit, modifier: Modifier = Modifier) {
+    if (nav.arrived) return
+    val eta = remember(nav.remainingSeconds) {
+        java.text.SimpleDateFormat("hh:mm a", java.util.Locale(AppStrings.language)).format(java.util.Date(System.currentTimeMillis() + nav.remainingSeconds * 1000L))
+    }
+    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), shadowElevation = 10.dp, color = MaterialTheme.colorScheme.surface) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.nav_eta, eta), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                Text("${formatDuration(nav.remainingSeconds)} · ${formatDistance(nav.remainingMeters)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (!nav.follow) MapChip("🎯", false, onRecenter)
+            Spacer(Modifier.width(8.dp))
+            MapChip(if (nav.voice) "🔊" else "🔇", false, onVoice)
+            Spacer(Modifier.width(8.dp))
+            Surface(onClick = onEnd, shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.error, contentColor = Color.White) {
+                Text(stringResource(R.string.nav_end), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+            }
+        }
+    }
+}
+
+/** Reads the guidance aloud in the language on screen (the phone's own text-to-speech; silent if it has no voice for it). */
+private class TripVoice(context: android.content.Context) {
+    private var ready = false
+    private val engine: TextToSpeech = TextToSpeech(context.applicationContext) { status ->
+        ready = status == TextToSpeech.SUCCESS
+        applyLanguage()
+    }
+
+    private fun applyLanguage() {
+        if (ready) engine.language = java.util.Locale(AppStrings.language)
+    }
+
+    fun say(text: String) {
+        if (!ready || text.isBlank()) return
+        applyLanguage()
+        engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "trip")
+    }
+
+    fun shutdown() {
+        runCatching { engine.stop(); engine.shutdown() }
     }
 }
 

@@ -449,6 +449,20 @@ data class RouteDto(
     val distanceMeters: Int,
     val durationSeconds: Int,
     val geometry: List<List<Double>> = emptyList(),
+    /** The manoeuvres of the route, for turn-by-turn guidance. */
+    val steps: List<RouteStepDto> = emptyList(),
+)
+
+/** One manoeuvre: what to do ([type] + [modifier]), on which road, where ([location] = lat, lng) and how long the step is. */
+@Serializable
+data class RouteStepDto(
+    val type: String = "",
+    val modifier: String = "",
+    val exit: Int? = null,
+    val name: String = "",
+    val location: List<Double> = emptyList(),
+    val distanceMeters: Int = 0,
+    val durationSeconds: Int = 0,
 )
 
 @Serializable

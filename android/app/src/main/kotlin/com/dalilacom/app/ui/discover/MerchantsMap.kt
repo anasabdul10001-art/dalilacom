@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
@@ -73,6 +74,32 @@ private fun clusterIcon(context: Context, count: Int): BitmapDrawable {
     return BitmapDrawable(context.resources, bitmap)
 }
 
+/** The person's position during a trip: a blue arrow pointing the way they are heading (rotated by the marker). */
+private fun arrowIcon(context: Context): BitmapDrawable {
+    val d = context.resources.displayMetrics.density
+    val size = (40 * d).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val c = size / 2f
+    val path = Path().apply {
+        moveTo(c, 4 * d)
+        lineTo(c + 13 * d, c + 14 * d)
+        lineTo(c, c + 7 * d)
+        lineTo(c - 13 * d, c + 14 * d)
+        close()
+    }
+    paint.color = Color.WHITE
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = 5 * d
+    paint.strokeJoin = Paint.Join.ROUND
+    canvas.drawPath(path, paint)
+    paint.color = Color.parseColor("#1E6FE0")
+    paint.style = Paint.Style.FILL
+    canvas.drawPath(path, paint)
+    return BitmapDrawable(context.resources, bitmap)
+}
+
 /**
  * OpenStreetMap view (no API key needed): the user's position, one pin per merchant, pins that
  * are close together folded into numbered clusters (tap to zoom in), and a callback when the
@@ -90,6 +117,11 @@ fun MerchantsMap(
     routeWalking: Boolean = false,
     radiusKm: Double? = null,
     radiusFitTick: Int = 0,
+    /** A trip is going on: the camera follows [userLocation] and the position is drawn as an arrow when the [userBearing] is known. */
+    navigating: Boolean = false,
+    followUser: Boolean = false,
+    userBearing: Float? = null,
+    onUserPanned: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -124,6 +156,9 @@ fun MerchantsMap(
     val latestRoute by rememberUpdatedState(route)
     val latestWalking by rememberUpdatedState(routeWalking)
     val latestRadius by rememberUpdatedState(radiusKm)
+    val latestNavigating by rememberUpdatedState(navigating)
+    val latestBearing by rememberUpdatedState(userBearing)
+    val latestOnPanned by rememberUpdatedState(onUserPanned)
 
     fun redraw(map: MapView) {
         map.overlays.clear()
@@ -216,7 +251,13 @@ fun MerchantsMap(
             Marker(map).apply {
                 position = GeoPoint(lat, lng)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                icon = dot(context, Color.parseColor("#1E6FE0"), 18)
+                val bearing = latestBearing
+                if (latestNavigating && bearing != null) {
+                    icon = arrowIcon(context)
+                    rotation = bearing
+                } else {
+                    icon = dot(context, Color.parseColor("#1E6FE0"), if (latestNavigating) 24 else 18)
+                }
                 title = AppStrings.get(R.string.s_a860cf2b)
                 setInfoWindow(null)
                 map.overlays.add(this)
@@ -243,6 +284,8 @@ fun MerchantsMap(
         val redrawLater = Runnable { redraw(mapView) }
         val listener = object : MapListener {
             override fun onScroll(event: ScrollEvent?): Boolean {
+                // the person dragged the map during a trip: stop following them
+                if (latestNavigating && SystemClock.uptimeMillis() > ignoreMovesUntil[0]) latestOnPanned()
                 handler.removeCallbacks(reportMove)
                 handler.postDelayed(reportMove, 500)
                 return false
@@ -285,8 +328,19 @@ fun MerchantsMap(
 
     // A new route: frame the whole way.
     LaunchedEffect(route) {
+        if (latestNavigating) return@LaunchedEffect // a trip: the camera follows the person, it does not frame the road
         val points = route?.takeIf { it.size >= 2 }?.map { GeoPoint(it[0], it[1]) } ?: return@LaunchedEffect
         programmatic { mapView.post { mapView.zoomToBoundingBox(BoundingBox.fromGeoPoints(points).increaseByScale(1.3f), true, 100) } }
+    }
+
+    // During a trip: stay on the person.
+    LaunchedEffect(userLocation, followUser, navigating) {
+        val here = userLocation ?: return@LaunchedEffect
+        if (!navigating || !followUser) return@LaunchedEffect
+        programmatic {
+            if (mapView.zoomLevelDouble < 16.5) mapView.controller.setZoom(17.0)
+            mapView.controller.animateTo(GeoPoint(here.first, here.second))
+        }
     }
 
     // First GPS fix (or the "my location" button): jump to the user.
