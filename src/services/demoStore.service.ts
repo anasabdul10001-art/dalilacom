@@ -117,14 +117,26 @@ export async function addDemoStore() {
     shopIds.push(profile.id);
   }
 
-  const existing = await prisma.product.count({ where: { merchantId: { in: shopIds } } });
-  if (existing > 0) return { shops: shopIds.length, products: existing, created: 0 };
+  // two real photos per product, shipped in public/product-photos (demo-01-a.jpg, demo-01-b.jpg, ...)
+  const photos = (i: number) => ["a", "b"].map((x) => `/product-photos/demo-${String(i + 1).padStart(2, "0")}-${x}.jpg`);
+
+  const have = await prisma.product.findMany({ where: { merchantId: { in: shopIds } }, select: { id: true, merchantId: true, name: true } });
+  const key = (merchantId: string, name: string) => `${merchantId}|${name}`;
+  const existingByKey = new Map(have.map((p) => [key(p.merchantId, p.name), p.id]));
+  // products added by an earlier run only get their photos
+  for (const [i, r] of PRODUCTS.entries()) {
+    const id = existingByKey.get(key(shopIds[r[10]], r[2]));
+    if (id) await prisma.product.update({ where: { id }, data: { images: photos(i), imageUrl: photos(i)[0] } });
+  }
 
   // spread the "added" times over the last weeks so "newest" sorts differently from "best selling"
   const now = Date.now();
+  const fresh = PRODUCTS.map((r, i) => ({ r, i })).filter(({ r }) => !existingByKey.has(key(shopIds[r[10]], r[2])));
   await prisma.product.createMany({
-    data: PRODUCTS.map((r, i) => ({
+    data: fresh.map(({ r, i }) => ({
       merchantId: shopIds[r[10]],
+      images: photos(i),
+      imageUrl: photos(i)[0],
       storeSection: r[0],
       icon: r[1],
       name: r[2],
@@ -139,7 +151,7 @@ export async function addDemoStore() {
       createdAt: new Date(now - i * 14 * 3600 * 1000),
     })),
   });
-  return { shops: shopIds.length, products: PRODUCTS.length, created: PRODUCTS.length };
+  return { shops: shopIds.length, products: PRODUCTS.length, created: fresh.length };
 }
 
 /** Deletes the sample shops, their products and anything that points at them. */

@@ -1782,6 +1782,23 @@ function storeOff(p) {
   return p.memberDiscountEnabled && p.priceCents > 0 ? Math.round((1 - p.memberPriceCents / p.priceCents) * 100) : 0;
 }
 
+/** The product page's pictures: the big one and a row of small ones to pick from. */
+function storeGallery(prod, idx) {
+  const imgs = prod.images && prod.images.length ? prod.images : [];
+  if (!imgs.length) return `<div class="pd-pic">${storePic(prod)}</div>`;
+  const cur = Math.min(idx, imgs.length - 1);
+  return `
+    <div class="pd-pic">
+      <div class="pd-main"><div class="store-pic"><img src="${esc(imgs[cur])}" alt="${esc(prod.name)}" /></div></div>
+      ${imgs.length > 1 ? `<div class="pd-thumbs">${imgs.map((u, i) => `<button class="${i === cur ? "on" : ""}" onclick="storePickImage(${i})"><img src="${esc(u)}" alt="" /></button>`).join("")}</div>` : ""}
+    </div>`;
+}
+
+function storePickImage(i) {
+  S._productDetail.imgIdx = i;
+  render();
+}
+
 function storeCount(n) { return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k+" : String(n); }
 
 function storePrice(p) {
@@ -1796,6 +1813,7 @@ function storeCard(p) {
     <div class="store-card" onclick="go('productDetail',{productId:'${p.id}'})">
       <div class="store-card-img">
         ${storePic(p)}
+        ${p.images && p.images[1] ? `<img class="store-alt" src="${esc(p.images[1])}" alt="" loading="lazy" />` : ""}
         ${p.soldCount >= 8000 ? `<span class="store-tag hot">${esc(t("store.best"))}</span>` : ""}
         <button class="store-bag ${added ? "done" : ""}" onclick="storeAdd('${p.id}', event)" aria-label="${esc(t("store.add"))}">${added ? "✓" : ICON.bag}</button>
       </div>
@@ -1891,7 +1909,7 @@ function screenProductDetail() {
     <div class="store">
       <div class="pd-crumbs"><button onclick="back()">‹ ${esc(t("tab.store"))}</button>${prod.section ? ` / <span>${esc(storeSecName(prod.section))}</span>` : ""}</div>
       <div class="pd">
-        <div class="pd-pic">${storePic(prod)}</div>
+        ${storeGallery(prod, p.imgIdx || 0)}
         <div class="pd-info">
           <h1 class="pd-title">${esc(prod.name)}</h1>
           <div class="pd-rate">

@@ -543,6 +543,7 @@ data class StoreProductDto(
     val memberPriceCents: Int? = null,
     val stock: Int = 0,
     val imageUrl: String? = null,
+    val images: List<String> = emptyList(),
     val icon: String = "🛍️",
     val hue: Int = 0,
     val rating: Double = 0.0,

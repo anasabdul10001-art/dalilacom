@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -100,6 +101,33 @@ class StoreProductViewModel(
     }
 }
 
+/** The product pictures: swipe through them, with dots under the picture. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun StoreGallery(product: StoreProductDto) {
+    val photos = product.images.ifEmpty { listOfNotNull(product.imageUrl) }
+    if (photos.size < 2) {
+        StorePic(product, Modifier.fillMaxWidth().aspectRatio(1.1f), emojiSize = 130.sp)
+        return
+    }
+    val pager = androidx.compose.foundation.pager.rememberPagerState { photos.size }
+    Box(Modifier.fillMaxWidth().aspectRatio(1.1f)) {
+        androidx.compose.foundation.pager.HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { page ->
+            coil.compose.AsyncImage(
+                model = photos[page].let { if (it.startsWith("/")) com.dalilacom.app.data.network.absoluteUrl(it) else it },
+                contentDescription = product.name,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(photos.size) { i ->
+                Box(Modifier.size(if (i == pager.currentPage) 9.dp else 7.dp).background(androidx.compose.ui.graphics.Color.White.copy(alpha = if (i == pager.currentPage) 1f else 0.6f), androidx.compose.foundation.shape.CircleShape))
+            }
+        }
+    }
+}
+
 @Composable
 fun StoreProductScreen(
     container: AppContainer,
@@ -125,7 +153,7 @@ fun StoreProductScreen(
             ui.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             product == null -> Text(stringResource(R.string.store_not_found), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
             else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                StorePic(product, Modifier.fillMaxWidth().aspectRatio(1.1f), emojiSize = 130.sp)
+                StoreGallery(product)
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     product.section?.let { Text("${it.icon} ${it.label()}", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp) }
                     Text(product.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)

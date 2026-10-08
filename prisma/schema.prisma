@@ -364,6 +364,7 @@ model Product {
   // The online store: a picture (a generated one is drawn from `icon` when there is no photo), the section it is
   // listed under, and the figures a shopper looks at.
   imageUrl              String?
+  images                String[] @default([]) // every picture, the first one is imageUrl
   icon                  String?
   storeSection          String?
   rating                Float    @default(0)

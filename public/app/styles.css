@@ -1111,3 +1111,12 @@ body.navigating .tabbar { display: none; }
   .store-where, .pd-crumbs { padding-inline: 28px; }
   .store-sec, .store-bar, .store-hero, .store-circles, .store > .store-grid, .pd, .store > .empty { margin-inline: 28px; }
 }
+
+.store-alt { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.25s; }
+.store-card:hover .store-alt { opacity: 1; }
+.store-card-img .store-tag, .store-card-img .store-bag { z-index: 3; }
+.pd-main .store-pic { border-radius: 6px; aspect-ratio: 1 / 1; }
+.pd-thumbs { display: flex; gap: 8px; margin-top: 10px; }
+.pd-thumbs button { width: 64px; height: 64px; padding: 0; border: 2px solid transparent; border-radius: 4px; overflow: hidden; background: none; cursor: pointer; opacity: 0.7; }
+.pd-thumbs button.on { border-color: var(--ink); opacity: 1; }
+.pd-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
