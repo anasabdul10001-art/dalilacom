@@ -134,10 +134,12 @@ export async function sendPushToUser(userId: string, message: PushMessage, repor
           body: JSON.stringify({
             message: {
               token: device.token,
-              // data only (no "notification" block): the app then draws every push itself, in the foreground or not,
-              // so it always carries the Dalilacom logo and name (a system-drawn one cannot have the large logo)
+              // Both blocks, on purpose. The "notification" block makes the phone's own system draw the push even when the app is
+              // closed, so it reaches EVERY installed version — old or new, even one that has no code for pushes — and never depends on
+              // an app update. The "data" block lets a current app, when it is open, draw it itself (with the large Dalilacom logo).
+              notification: { title: message.title, ...(message.body ? { body: message.body } : {}) },
               data: { ...stringifyData(message.data), title: message.title, ...(message.body ? { body: message.body } : {}) },
-              android: { priority: "HIGH" },
+              android: { priority: "HIGH", notification: { channel_id: ANDROID_CHANNEL_ID } },
             },
           }),
           signal: AbortSignal.timeout(8000),
