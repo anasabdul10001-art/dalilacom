@@ -454,6 +454,11 @@ PHRASES.en = {
   "تعذّر بدء الربط": "Could not start linking",
   "تم ربط الصفحة ✅": "Page linked ✅",
   "تعذّر ربط الصفحة. جرّب من جديد.": "Could not link the Page. Try again.",
+  "أكمل تسجيلك": "Finish signing up",
+  "فيسبوك ما شاركنا إيميلك. اكتب إيميلك ورح نبعتلك رابط لتأكيده.": "Facebook did not share your email. Type your email and we will send you a link to confirm it.",
+  "رجوع": "Back",
+  "هذا الإيميل مسجّل عندنا. سجّل دخول بكلمة السر أول، أو استخدم إيميل غيره.": "This email is already registered. Sign in with your password first, or use a different email.",
+  "انتهت صلاحية الدخول. ابدأ من جديد.": "The sign-in expired. Start again.",
 };
 PATTERNS.en = [
   [/^تكلفة هذا الإعلان (\d+) من رصيدك \(رصيدك (\d+)\)$/, "This one costs $1 from your balance (you have $2)"],

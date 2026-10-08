@@ -296,6 +296,9 @@
     <string name="forgot_send">أرسل الرابط</string>
     <string name="forgot_sent">إذا الإيميل مسجّل رح يوصلك رابط خلال دقائق.</string>
     <string name="tab_responder">المجيب الآلي</string>
+    <string name="social_pending_title">أكمل تسجيلك</string>
+    <string name="social_pending_hint">فيسبوك ما شاركنا إيميلك. اكتب إيميلك ورح نبعتلك رابط لتأكيده.</string>
+    <string name="social_pending_button">إنشاء الحساب</string>
     <string name="promo_tab">إعلاناتي</string>
     <string name="promo_title">إعلاناتي</string>
     <string name="promo_sub">أرسل إشعارًا لمن حول محلك — يراجعه فريق دليلكم قبل أن يصل لأحد</string>

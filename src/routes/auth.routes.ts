@@ -28,7 +28,7 @@ function publicUserShape(user: { id: string; email: string; fullName: string; ro
   return { id: user.id, email: user.email, fullName: user.fullName, role: user.role, emailVerified: user.isEmailVerified };
 }
 
-async function issueVerificationToken(userId: string) {
+export async function issueVerificationToken(userId: string) {
   const { raw, hash } = generateRawToken();
   await prisma.emailVerificationToken.create({
     data: { userId, tokenHash: hash, expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS) },
@@ -36,7 +36,7 @@ async function issueVerificationToken(userId: string) {
   return raw;
 }
 
-async function sendVerificationEmail(to: string, rawToken: string, lang: string = DEFAULT_LANGUAGE) {
+export async function sendVerificationEmail(to: string, rawToken: string, lang: string = DEFAULT_LANGUAGE) {
   const base = process.env.PUBLIC_BASE_URL ?? "";
   const link = `${base}/auth/verify-email?token=${rawToken}`;
   try {

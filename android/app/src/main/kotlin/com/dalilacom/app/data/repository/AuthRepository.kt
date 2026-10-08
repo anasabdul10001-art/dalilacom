@@ -6,6 +6,7 @@ import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.ForgotPasswordRequest
 import com.dalilacom.app.data.network.LoginRequest
+import com.dalilacom.app.data.network.SocialCompleteRequest
 import com.dalilacom.app.data.network.MeResponse
 import com.dalilacom.app.data.network.ResendVerificationRequest
 import com.dalilacom.app.data.network.RegisterRequest
@@ -50,6 +51,20 @@ class AuthRepository(
     /** Which "Continue with ..." buttons the server can serve right now. */
     suspend fun socialProviders(): SocialProvidersDto =
         safeApiCall { api.socialProviders() }?.takeIf { it.isSuccessful }?.body() ?: SocialProvidersDto()
+
+    /** Facebook shared no email: the person typed one, and the account is made (an address that already has one is refused). */
+    suspend fun socialComplete(pending: String, email: String): Result<UserDto> {
+        val response = safeApiCall { api.socialComplete(SocialCompleteRequest(pending, email.trim())) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) {
+            tokenStore.saveToken(body.token)
+            sessionStore.saveRole(body.user.role)
+            Result.success(body.user)
+        } else {
+            Result.failure(Exception(AppStrings.get(if (response.code() == 409) R.string.social_error_email_in_use else R.string.social_failed)))
+        }
+    }
 
     /** The one-time ticket the browser brought back, traded for a normal session. */
     suspend fun socialExchange(ticket: String): Result<UserDto> {

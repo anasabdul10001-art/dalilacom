@@ -15,6 +15,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,11 +68,29 @@ fun SocialButtons(viewModel: AuthViewModel) {
 
 /** What the provider's page sent the browser back with: a ticket to trade for a session, or the reason it failed. */
 @Composable
-fun SocialReturnScreen(factory: ViewModelFactory, ticket: String?, error: String?, onSignedIn: () -> Unit, onBack: () -> Unit) {
+fun SocialReturnScreen(factory: ViewModelFactory, ticket: String?, error: String?, pending: String? = null, onSignedIn: () -> Unit, onBack: () -> Unit) {
     val viewModel: AuthViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
     LaunchedEffect(ticket) { if (!ticket.isNullOrBlank()) viewModel.exchangeTicket(ticket) }
     LaunchedEffect(state) { if (state is AuthUiState.Success) onSignedIn() }
+
+    // Facebook shared no email: ask for one here instead of turning the person away
+    if (!pending.isNullOrBlank() && state !is AuthUiState.Success) {
+        var typedEmail by remember { mutableStateOf("") }
+        val failure = (state as? AuthUiState.Error)?.message
+        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(AppStrings.get(R.string.social_pending_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Text(AppStrings.get(R.string.social_pending_hint), textAlign = TextAlign.Center)
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(typedEmail, { typedEmail = it }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
+            failure?.let { Spacer(Modifier.height(8.dp)); Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
+            Spacer(Modifier.height(16.dp))
+            if (state is AuthUiState.Loading) CircularProgressIndicator() else Button(onClick = { viewModel.completeSocial(pending, typedEmail) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(AppStrings.get(R.string.social_pending_button)) }
+            TextButton(onClick = onBack) { Text(AppStrings.get(R.string.social_back_to_login)) }
+        }
+        return
+    }
 
     val message = when {
         state is AuthUiState.Error -> (state as AuthUiState.Error).message

@@ -69,7 +69,7 @@ fun DalilacomNavGraph(
     LaunchedEffect(socialReturn) {
         val back = socialReturn ?: return@LaunchedEffect
         navController.currentBackStackEntryFlow.first { it.destination.route == "home" }
-        navController.navigate("socialReturn?ticket=${android.net.Uri.encode(back.ticket.orEmpty())}&error=${android.net.Uri.encode(back.error.orEmpty())}")
+        navController.navigate("socialReturn?ticket=${android.net.Uri.encode(back.ticket.orEmpty())}&error=${android.net.Uri.encode(back.error.orEmpty())}&pending=${android.net.Uri.encode(back.pending.orEmpty())}")
         onSocialReturnConsumed()
     }
 
@@ -82,16 +82,18 @@ fun DalilacomNavGraph(
             )
         }
         composable(
-            "socialReturn?ticket={ticket}&error={error}",
+            "socialReturn?ticket={ticket}&error={error}&pending={pending}",
             arguments = listOf(
                 navArgument("ticket") { type = NavType.StringType; defaultValue = "" },
                 navArgument("error") { type = NavType.StringType; defaultValue = "" },
+                navArgument("pending") { type = NavType.StringType; defaultValue = "" },
             ),
         ) { entry ->
             SocialReturnScreen(
                 factory = factory,
                 ticket = entry.arguments?.getString("ticket")?.takeIf { it.isNotBlank() },
                 error = entry.arguments?.getString("error")?.takeIf { it.isNotBlank() },
+                pending = entry.arguments?.getString("pending")?.takeIf { it.isNotBlank() },
                 onSignedIn = { navController.navigate("home") { popUpTo(0) } },
                 onBack = { navController.navigate("login") { popUpTo(0) } },
             )

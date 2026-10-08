@@ -154,6 +154,9 @@ data class SocialProvidersDto(val google: Boolean = false, val facebook: Boolean
 data class SocialExchangeRequest(val ticket: String)
 
 @Serializable
+data class SocialCompleteRequest(val pending: String, val email: String)
+
+@Serializable
 data class MessageResponse(val message: String? = null, val error: String? = null)
 
 @Serializable

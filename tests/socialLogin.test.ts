@@ -156,9 +156,35 @@ describe("Signing in with Facebook", () => {
     expect(params(refused.location).get("ticket")).toBeNull();
   });
 
-  it("explains when Facebook shares no email", async () => {
+  it("lets the person type an email when Facebook shares none, and never takes over an address that already has an account", async () => {
     providerAnswers("facebook", facebookProfile(undefined));
-    expect(params((await browserFlow("facebook")).location).get("social_error")).toBe("NO_EMAIL");
+    const back = await browserFlow("facebook");
+    const pending = params(back.location).get("social_pending")!;
+    expect(params(back.location).get("social_error")).toBeNull();
+    expect(params(back.location).get("ticket")).toBeNull();
+    expect(pending).toBeTruthy();
+
+    // a made-up pending token is refused
+    expect((await request(app).post("/auth/social/complete").send({ pending: "x".repeat(40), email: uniqueEmail("nope") })).status).toBe(400);
+
+    // an address that already belongs to someone is refused
+    const taken = uniqueEmail("fbtaken");
+    await request(app).post("/auth/register").send({ email: taken, password: "correct-horse-battery-staple", fullName: "Owner" });
+    const refused = await request(app).post("/auth/social/complete").send({ pending, email: taken });
+    expect(refused.status).toBe(409);
+    expect(refused.body.error.code).toBe("EMAIL_IN_USE");
+
+    // a free address makes the account and signs in; the address is not verified yet
+    const fresh = uniqueEmail("fbtyped");
+    const done = await request(app).post("/auth/social/complete").send({ pending, email: fresh.toUpperCase() });
+    expect(done.status).toBe(200);
+    expect(done.body.user).toMatchObject({ email: fresh, emailVerified: false });
+    expect(done.body.token).toBeTruthy();
+
+    // the same Facebook account signs straight in next time
+    const again = await request(app).post("/auth/social/complete").send({ pending, email: uniqueEmail("other") });
+    expect(again.status).toBe(200);
+    expect(again.body.user.email).toBe(fresh);
   });
 });
 

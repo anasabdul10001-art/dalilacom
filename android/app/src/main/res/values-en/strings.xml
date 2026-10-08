@@ -292,6 +292,9 @@
     <string name="forgot_send">Send the link</string>
     <string name="forgot_sent">If the email is registered you will get a link within minutes.</string>
     <string name="tab_responder">Responder</string>
+    <string name="social_pending_title">Finish signing up</string>
+    <string name="social_pending_hint">Facebook did not share your email. Type your email and we will send you a link to confirm it.</string>
+    <string name="social_pending_button">Create account</string>
     <string name="promo_tab">My announcements</string>
     <string name="promo_title">My announcements</string>
     <string name="promo_sub">Send a notification to people around your shop — the Dalilacom team reviews it before anyone receives it</string>

@@ -43,6 +43,16 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 
     fun clearForgotMessage() { _forgotMessage.value = null }
 
+    fun completeSocial(pending: String, email: String) {
+        if (email.isBlank()) { _uiState.value = AuthUiState.Error(AppStrings.get(R.string.account_email_enter)); return }
+        _uiState.value = AuthUiState.Loading
+        viewModelScope.launch {
+            repository.socialComplete(pending, email)
+                .onSuccess { _uiState.value = AuthUiState.Success }
+                .onFailure { _uiState.value = AuthUiState.Error(it.message ?: AppStrings.get(R.string.social_failed)) }
+        }
+    }
+
     fun exchangeTicket(ticket: String) {
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {

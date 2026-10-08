@@ -229,6 +229,58 @@ async function unusablePassword(): Promise<string> {
   return bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
 }
 
+/**
+ * Some people have no email Facebook will hand over (phone-only accounts, an unconfirmed address, a declined permission).
+ * Instead of turning them away, the sign-in goes on with a short-lived signed "pending" token: the person types an email, and
+ * [completeWithEmail] makes the account. An address that already has an account is never taken over this way.
+ */
+interface PendingPayload {
+  k: "social-pending";
+  p: SocialProvider;
+  id: string;
+  name: string;
+  lang?: string;
+}
+
+export function signPending(provider: SocialProvider, profile: SocialProfile, lang?: string): string {
+  const payload: PendingPayload = { k: "social-pending", p: provider, id: profile.id, name: profile.name, lang };
+  return jwt.sign(payload, process.env.JWT_SECRET as string, { expiresIn: "15m" });
+}
+
+export function readPending(token: string): PendingPayload | null {
+  try {
+    const data = jwt.verify(token, process.env.JWT_SECRET as string) as PendingPayload;
+    return data.k === "social-pending" ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function completeWithEmail(pending: PendingPayload, email: string): Promise<{ user: User; created: boolean }> {
+  const known = await prisma.socialIdentity.findUnique({
+    where: { provider_providerUserId: { provider: pending.p, providerUserId: pending.id } },
+    include: { user: true },
+  });
+  if (known) {
+    if (known.user.isDisabled) throw new SocialError("ACCOUNT_DISABLED", "This account is disabled");
+    return { user: known.user, created: false };
+  }
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) throw new SocialError("EMAIL_IN_USE", "An account with this email already exists — sign in with your password first");
+  const user = await prisma.user.create({
+    data: {
+      email,
+      passwordHash: await unusablePassword(),
+      fullName: pending.name,
+      role: Role.CUSTOMER,
+      isEmailVerified: false,
+      ...(pending.lang && isSupportedLanguage(pending.lang) ? { language: pending.lang } : {}),
+    },
+  });
+  await prisma.socialIdentity.create({ data: { userId: user.id, provider: pending.p, providerUserId: pending.id, email } });
+  return { user, created: true };
+}
+
 const TICKET_TTL_MS = 60 * 1000;
 
 export async function createTicket(userId: string): Promise<string> {

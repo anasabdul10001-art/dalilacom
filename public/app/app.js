@@ -274,6 +274,7 @@ function renderScreen() {
     case "profileEdit": return screenProfileEdit();
     case "account": return screenAccount();
     case "forgot": return screenForgot();
+    case "socialEmail": return screenSocialEmail();
     case "pricing": return screenPricing();
     default: return screenLogin();
   }
@@ -316,8 +317,18 @@ async function bootSocialReturn() {
   const q = new URLSearchParams(location.search);
   const ticket = q.get("ticket");
   const failure = q.get("social_error");
-  if (!ticket && !failure) return false;
+  const pending = q.get("social_pending");
+  if (!ticket && !failure && !pending) return false;
   try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  if (pending) {
+    // Facebook shared no email: ask for one instead of turning the person away
+    S.stack = [];
+    S.screen = "socialEmail";
+    S.params = { pending, name: q.get("name") || "" };
+    S.error = null;
+    render();
+    return true;
+  }
   if (ticket) {
     const { ok, data } = await api("POST", "/auth/social/exchange", { ticket });
     if (ok) {
@@ -332,6 +343,30 @@ async function bootSocialReturn() {
   S.error = t("social.error." + failure) !== "social.error." + failure ? t("social.error." + failure) : t("social.failed");
   render();
   return true;
+}
+
+function screenSocialEmail() {
+  return `
+    <img class="auth-logo" src="/brand/logo.png" alt="DALILACOM" />
+    <h1 class="screen-title">أكمل تسجيلك</h1>
+    <p class="screen-sub">${S.params.name ? esc(S.params.name) + "، " : ""}فيسبوك ما شاركنا إيميلك. اكتب إيميلك ورح نبعتلك رابط لتأكيده.</p>
+    <div class="field"><label>الإيميل</label><input id="se-email" type="email" dir="ltr" autocomplete="email" /></div>
+    ${errorBanner()}
+    <button class="btn" onclick="doSocialEmail()">إنشاء الحساب</button>
+    <button class="link-btn" onclick="reset('login')">رجوع</button>
+  `;
+}
+
+async function doSocialEmail() {
+  const email = qs("se-email").value.trim();
+  if (!email) { S.error = "اكتب إيميلك"; return render(); }
+  S.busy = true; S.error = null; render();
+  const { ok, data } = await api("POST", "/auth/social/complete", { pending: S.params.pending, email });
+  S.busy = false;
+  if (ok) { setToken(data.token, data.user.role); reset("home"); return; }
+  const code = data && data.error && data.error.code;
+  S.error = code === "EMAIL_IN_USE" ? "هذا الإيميل مسجّل عندنا. سجّل دخول بكلمة السر أول، أو استخدم إيميل غيره." : code === "BAD_STATE" ? "انتهت صلاحية الدخول. ابدأ من جديد." : errMsg(data, "تعذّر إنشاء الحساب");
+  render();
 }
 
 function screenForgot() {

@@ -3,16 +3,20 @@ import { z } from "zod";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { signAuthToken } from "../utils/jwt";
 import { logSecurityEvent } from "../services/securityEvent.service";
+import { issueVerificationToken, sendVerificationEmail } from "./auth.routes";
 import { socialLoginRateLimiter } from "../middleware/rateLimit";
 import {
   configuredProviders,
   createTicket,
+  completeWithEmail,
   fetchProfile,
   isProviderConfigured,
   parseProvider,
+  readPending,
   readState,
   redeemTicket,
   resolveUser,
+  signPending,
   SocialError,
   SocialPlatform,
   startLogin,
@@ -67,13 +71,41 @@ socialRouter.get("/:provider/callback", socialLoginRateLimiter, async (req, res)
   const code = typeof req.query.code === "string" ? req.query.code : null;
   if (!code) return finish(res, state.pl, { social_error: "CANCELLED" }); // the person said no, or the provider refused
 
+  let profile: Awaited<ReturnType<typeof fetchProfile>> | undefined;
   try {
-    const profile = await fetchProfile(provider, code);
+    profile = await fetchProfile(provider, code);
     const user = await resolveUser(provider, profile, state.lang);
     await logSecurityEvent({ userId: user.id, type: "LOGIN_SUCCESS", req, metadata: { via: provider } });
     finish(res, state.pl, { ticket: await createTicket(user.id) });
   } catch (err) {
-    if (err instanceof SocialError) return finish(res, state.pl, { social_error: err.code });
+    if (err instanceof SocialError) {
+      // The provider gave no email: let the person type one instead of turning them away.
+      if (err.code === "NO_EMAIL" && profile) return finish(res, state.pl, { social_pending: signPending(provider, profile, state.lang), name: profile.name });
+      return finish(res, state.pl, { social_error: err.code });
+    }
+    throw err;
+  }
+});
+
+const completeSchema = z.object({ pending: z.string().min(20).max(2000), email: z.string().trim().toLowerCase().email().max(200) });
+
+/** The person typed the email the provider did not give us: make the account and sign in (the address is confirmed by mail). */
+socialRouter.post("/complete", socialLoginRateLimiter, async (req, res) => {
+  const parsed = completeSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const pending = readPending(parsed.data.pending);
+  if (!pending) return sendError(res, 400, "BAD_STATE", "The sign-in link is not valid or has expired");
+  try {
+    const { user, created } = await completeWithEmail(pending, parsed.data.email);
+    if (created) await sendVerificationEmail(user.email, await issueVerificationToken(user.id), user.language ?? undefined);
+    await logSecurityEvent({ userId: user.id, type: "LOGIN_SUCCESS", req, metadata: { via: pending.p, emailTyped: true } });
+    const token = signAuthToken({ sub: user.id, role: user.role, tokenVersion: user.tokenVersion });
+    res.json({ token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, emailVerified: user.isEmailVerified } });
+  } catch (err) {
+    if (err instanceof SocialError) {
+      const status = err.code === "EMAIL_IN_USE" ? 409 : 403;
+      return sendError(res, status, err.code, err.message);
+    }
     throw err;
   }
 });
