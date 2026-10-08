@@ -118,6 +118,9 @@ services:
         sync: false
       - key: PUBLIC_BASE_URL
         value: "https://dalilacom.com"
+      # The admin panel and the developer console are only for the owner: they are served on the testing address, not here.
+      - key: HIDE_ADMIN_UI
+        value: "true"
       - key: ANTHROPIC_API_KEY
         sync: false
       # Tried before Anthropic (see src/services/ai.service.ts). Leave unset to keep using Anthropic only.

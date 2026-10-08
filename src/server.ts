@@ -58,8 +58,15 @@ app.use(express.json({ verify: (req, _res, buf) => { (req as any).rawBody = buf;
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-// Developer test console (public/index.html) — a plain HTML/JS page to click through the
-// API by hand; not the final Android/product UI (section 18).
+// The pages that are for the owner, not the public (the admin panel and the developer test console, public/console.html):
+// the live service sets HIDE_ADMIN_UI=true so they exist only on the testing address. The /admin API itself stays (the apps use it, behind sign-in).
+app.use((req, res, next) => {
+  if (process.env.HIDE_ADMIN_UI === "true" && req.method === "GET" && /^\/(admin\.html|console\.html)$/.test(req.path)) return res.status(404).send("Not found");
+  next();
+});
+
+// The main website: the app is served at the root of the domain (dalilacom.com/), and also at /app/.
+app.get("/", (_req, res) => res.sendFile(path.join(__dirname, "..", "public", "app", "index.html")));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 app.use("/auth/social", socialRouter);
