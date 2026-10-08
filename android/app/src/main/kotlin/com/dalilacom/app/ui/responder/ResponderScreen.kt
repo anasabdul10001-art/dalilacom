@@ -4,7 +4,7 @@ import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import com.dalilacom.app.ui.common.ExternalBrowser
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,10 +66,8 @@ private fun interactionLabel(status: String) = when (status) {
     else -> AppStrings.get(R.string.s_d7359b3c)
 }
 
-/** Opens the Facebook dialog in the phone's browser — no WebView, no extra dependency. */
-private fun openInBrowser(context: Context, url: String) {
-    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-}
+/** Opens the Facebook dialog in the phone's browser (not the Facebook app, which fails on it) — no WebView, no extra dependency. */
+private fun openInBrowser(context: Context, url: String) = ExternalBrowser.open(context, url)
 
 @Composable
 fun ResponderScreen(
