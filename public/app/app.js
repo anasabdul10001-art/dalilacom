@@ -3343,7 +3343,7 @@ async function loadResponder() {
   ]);
   const tab = (S._resp && S._resp.tab) || "overview";
   const keep = S._resp || {};
-  S._resp = { loading: false, tab, ruleDraft: keep.ruleDraft, posts: keep.posts, selectedPosts: keep.selectedPosts, postsError: keep.postsError, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [], stats: sx.ok ? sx.data : null };
+  S._resp = { loading: false, tab, notice: keep.notice, ruleDraft: keep.ruleDraft, posts: keep.posts, selectedPosts: keep.selectedPosts, postsError: keep.postsError, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [], stats: sx.ok ? sx.data : null };
   render();
 }
 
@@ -3635,6 +3635,7 @@ function bootMetaReturn() {
   S._resp = { loading: true, tab: "channels", notice: q.get("ok") === "1" ? "تم ربط الصفحة ✅" : null };
   if (q.get("ok") !== "1") S.error = "تعذّر ربط الصفحة. جرّب من جديد.";
   go("responder");
+  loadResponder(); // go() only loads when there is no state yet, and this state is already marked as loading
   return true;
 }
 
