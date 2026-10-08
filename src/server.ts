@@ -35,6 +35,21 @@ import { ApiError, sendError, sendValidationError } from "./lib/apiError";
 
 const app = express();
 app.set("trust proxy", 1); // Render sits behind a proxy — needed for correct req.ip / X-Forwarded-For
+// One address for the website: a visit to the old Render address (the pages, and the "continue with Facebook/Google" starts, whose
+// cookie must live on the same address the provider sends the person back to) moves to PUBLIC_BASE_URL. The API itself keeps
+// answering on the old address, so apps that were built before the new domain keep working.
+app.use((req, res, next) => {
+  const base = process.env.PUBLIC_BASE_URL;
+  const host = (req.headers.host ?? "").toLowerCase();
+  if (!base || req.method !== "GET" || !host.endsWith(".onrender.com")) return next();
+  let wanted = "";
+  try { wanted = new URL(base).host.toLowerCase(); } catch { return next(); }
+  if (!wanted || wanted === host) return next();
+  const isPage = /^\/(app(\/.*)?|admin\.html|privacy\.html|terms\.html|data-deletion\.html|reset-password\.html|index\.html)?$/.test(req.path);
+  const isSocialStart = /^\/auth\/social\/[a-z]+\/start$/.test(req.path);
+  if (!isPage && !isSocialStart) return next();
+  return res.redirect(302, base.replace(/\/+$/, "") + req.originalUrl);
+});
 app.use(securityHeaders);
 app.use(corsMiddleware);
 app.use(localizeResponses);
