@@ -116,6 +116,23 @@ describe("Facebook Login: starting the flow", () => {
     expect(forged.status).toBe(400);
   });
 
+  it("asks through the saved Login-for-Business configuration only when explicitly switched on", async () => {
+    process.env.META_LOGIN_CONFIG_ID = "999";
+    try {
+      const plain = await startState(token);
+      expect(plain.url.searchParams.get("config_id")).toBeNull();
+      expect(plain.url.searchParams.get("scope")).toContain("pages_read_user_content");
+
+      process.env.META_LOGIN_USE_CONFIG = "true";
+      const configured = await startState(token);
+      expect(configured.url.searchParams.get("config_id")).toBe("999");
+      expect(configured.url.searchParams.get("scope")).toBeNull();
+    } finally {
+      delete process.env.META_LOGIN_CONFIG_ID;
+      delete process.env.META_LOGIN_USE_CONFIG;
+    }
+  });
+
   it("brings a flow started from the web preview back to /app/, and an app flow back to the phone app", async () => {
     const web = await request(app).get("/responder/meta/oauth/start?platform=web").set("Authorization", token);
     const webState = new URL(web.body.url).searchParams.get("state") as string;

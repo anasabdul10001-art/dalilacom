@@ -20,16 +20,19 @@ const GRAPH_VERSION = process.env.META_GRAPH_VERSION ?? "v21.0";
 const SESSION_TTL_MINUTES = 15;
 const STATE_TTL_MINUTES = 15;
 
-/** Matches what the drivers actually do: read the Page, subscribe webhooks, answer DMs and comments. */
+/**
+ * Matches what the drivers actually do: read the Page, subscribe webhooks, answer DMs and comments.
+ * Only permissions the Meta app really has: Facebook refuses the whole dialog ("Invalid Scopes") for the app's own
+ * developers when one is missing. The Instagram ones join (via META_OAUTH_SCOPES) once the app has them.
+ * pages_manage_engagement (replying to comments) needs pages_read_user_content next to it.
+ */
 const DEFAULT_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_manage_metadata",
   "pages_messaging",
   "pages_manage_engagement",
-  "instagram_basic",
-  "instagram_manage_messages",
-  "instagram_manage_comments",
+  "pages_read_user_content",
 ];
 
 export interface MetaPage {
@@ -137,9 +140,10 @@ export function metaDialogUrl(userId: string, state: string = signState(userId))
     state,
     response_type: "code",
   });
-  // An app that uses "Facebook Login for Business" asks for its permissions through a saved configuration instead of a
-  // scope list: META_LOGIN_CONFIG_ID (the Configuration ID from the app's Facebook Login for Business page) switches to it.
-  if (process.env.META_LOGIN_CONFIG_ID) params.set("config_id", process.env.META_LOGIN_CONFIG_ID);
+  // An app that uses "Facebook Login for Business" can ask for its permissions through a saved configuration instead of a
+  // scope list: META_LOGIN_CONFIG_ID plus META_LOGIN_USE_CONFIG=true switches to it. Off by default: the configuration
+  // dialog answered "App not active" for this app while the plain scope dialog worked.
+  if (process.env.META_LOGIN_CONFIG_ID && process.env.META_LOGIN_USE_CONFIG === "true") params.set("config_id", process.env.META_LOGIN_CONFIG_ID);
   else params.set("scope", metaScopes().join(","));
   return `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${params.toString()}`;
 }
