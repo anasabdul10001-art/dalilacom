@@ -1,8 +1,10 @@
 services:
+  # TESTING: every push to master lands here first (the old address). The people use the other service below.
   - type: web
     name: dalilacom-api
     runtime: node
     plan: free
+    branch: master
     buildCommand: npm install --include=dev && npm run build && npm run deploy:migrate && npm run prisma:seed && npm run backfill:1b
     startCommand: npm start
     envVars:
@@ -20,6 +22,102 @@ services:
         generateValue: true
       - key: PUBLIC_BASE_URL
         value: "https://dalilacom-api.onrender.com"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Tried before Anthropic (see src/services/ai.service.ts). Leave unset to keep using Anthropic only.
+      - key: GROQ_API_KEY
+        sync: false
+      # More free providers, tried in order when the one before fails (src/services/ai.service.ts). All optional.
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      # Set once in the Render dashboard to bootstrap the first admin (never generated/committed —
+      # section: Admin Credentials). Leave unset after the admin exists; use /auth/forgot-password
+      # to change the password afterwards.
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      # Optional SMTP provider for real email delivery. Without it, verification/reset emails are
+      # just logged server-side (visible in Render's logs) — the flows still work end to end.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: EMAIL_VERIFICATION_TOKEN_TTL_HOURS
+        value: "24"
+      - key: PASSWORD_RESET_TOKEN_TTL_MINUTES
+        value: "30"
+      # Comma-separated browser origins for cross-origin API calls (section: CORS). Leave unset
+      # until there's an actual separate frontend domain — same-origin pages (public/app,
+      # public/admin.html) work regardless.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      # Facebook/Instagram auto-responder: from the Meta app dashboard (App secret) and any string you choose
+      # as the webhook verify token. Without them the /hooks/meta webhook refuses requests.
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_VERIFY_TOKEN
+        sync: false
+      # Push notifications to phones (src/services/push.service.ts): the whole Firebase service-account
+      # key file as one value. Optional: unset means no push (inbox + email still work).
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      # Facebook Login, so a merchant connects their Page without pasting a token
+      # (src/services/metaOAuth.service.ts). Optional: unset means META_NOT_CONFIGURED.
+      - key: META_APP_ID
+        sync: false
+      # Only for an app using "Facebook Login for Business": the Configuration ID that lists the page permissions.
+      - key: META_LOGIN_CONFIG_ID
+        sync: false
+      # "Continue with Google / Facebook" (src/services/social.service.ts). Each is optional: a provider
+      # with no keys simply shows no button. Facebook Login reuses META_APP_ID / META_APP_SECRET unless
+      # FACEBOOK_LOGIN_APP_ID / _SECRET are set.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+  # LIVE (dalilacom.com): updated only when the owner says "publish", which moves the tested code to the production branch.
+  # Same database as the testing service, so database changes must stay additive (add columns/tables, never drop or rename).
+  - type: web
+    name: dalilacom-prod
+    runtime: node
+    plan: free
+    branch: production
+    buildCommand: npm install --include=dev && npm run build && npm run deploy:migrate && npm run prisma:seed && npm run backfill:1b
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dalilacom-db
+          property: connectionString
+      # Paste the SAME value as the testing service: both share one database, so sign-ins must be valid on both.
+      - key: JWT_SECRET
+        sync: false
+      - key: QR_TOKEN_TTL_SECONDS
+        value: "30"
+      - key: NODE_ENV
+        value: "production"
+      # Paste the SAME value as the testing service: connected Pages/bots are stored encrypted with it in the shared database.
+      - key: CREDENTIALS_ENCRYPTION_KEY
+        sync: false
+      - key: PUBLIC_BASE_URL
+        value: "https://dalilacom.com"
       - key: ANTHROPIC_API_KEY
         sync: false
       # Tried before Anthropic (see src/services/ai.service.ts). Leave unset to keep using Anthropic only.
