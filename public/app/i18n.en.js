@@ -77,6 +77,8 @@ DICT.en = {
   "store.deals": "Member deals", "store.best": "Best sellers", "store.newest": "New arrivals", "store.related": "Similar products",
   "store.soldBy": "Sold by:", "store.inStock": "In stock", "store.buyNow": "Buy now", "store.addedToCart": "Added to your cart",
   "store.goToCart": "Go to cart", "store.lastPieces": "Only {n} left", "store.sold": "{n} sold",
+  "store.offLabel": "{n}% off", "store.heroBig": "Great deals", "store.heroUpTo": "Save up to {n}% with member prices",
+  "store.promo": "Delivery to your door • Special prices for Dalilacom members", "store.seeAll": "See all", "store.soldShort": "{n} sold", "store.membersOnly": "Exclusive to Dalilacom members", "store.shopNow": "Shop now", "store.freshSub": "The latest from the shops", "store.ratings": "{n} ratings", "store.memberPrice": "Dalilacom member price", "store.availability": "Availability", "store.unavailable": "Currently unavailable",
   "store.country": "Whole country", "store.cityScope": "City", "store.aroundMe": "Around me", "store.allGovernorates": "All governorates", "store.allCities": "All cities", "store.needLocation": "Turn on location to see shops near you",
   "profile.wallet": "💰 My wallet", "profile.logout": "Sign out",
   "verify.title": "✉️ Email not verified", "verify.sub": "Verify your email to protect your account and recover your password.",

@@ -434,4 +434,10 @@
     <string name="store_back">رجوع</string>
     <string name="store_not_found">هذا المنتج غير متوفر</string>
     <string name="store_unavailable">غير متوفر حاليًا</string>
+    <string name="store_off_label">خصم %1$d%%</string>
+    <string name="store_hero_big">تخفيضات رائعة</string>
+    <string name="store_hero_up_to">وفّر حتى %1$d%% بسعر أعضاء دليلكم</string>
+    <string name="store_see_all">عرض الكل</string>
+    <string name="store_sold_short">تم بيع %1$s</string>
+    <string name="store_shop_now">تسوّق الآن</string>
 </resources>

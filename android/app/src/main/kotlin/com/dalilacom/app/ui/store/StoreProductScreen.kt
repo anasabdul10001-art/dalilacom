@@ -1,5 +1,6 @@
 package com.dalilacom.app.ui.store
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -123,13 +125,14 @@ fun StoreProductScreen(
             ui.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             product == null -> Text(stringResource(R.string.store_not_found), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
             else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                StorePic(product, Modifier.fillMaxWidth().padding(horizontal = 16.dp).aspectRatio(1.25f).clip(RoundedCornerShape(22.dp)), emojiSize = 120.sp)
+                StorePic(product, Modifier.fillMaxWidth().aspectRatio(1.1f), emojiSize = 130.sp)
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     product.section?.let { Text("${it.icon} ${it.label()}", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp) }
                     Text(product.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                     StoreStars(product)
                     if (product.soldCount > 0) Text(stringResource(R.string.store_sold, product.soldCount), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                    StorePrice(product, big = true)
+                    Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color(0x14FA6338), RoundedCornerShape(6.dp)).padding(12.dp)) { StorePrice(product, big = true) }
+                    if (product.memberDiscountEnabled) Text("⭐ " + stringResource(R.string.store_member_price), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     product.description?.let { Text(it, style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp) }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.store_sold_by), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -147,8 +150,8 @@ fun StoreProductScreen(
                             Text("${ui.quantity}", modifier = Modifier.padding(horizontal = 18.dp), fontWeight = FontWeight.Bold)
                             OutlinedButton(onClick = { vm.change(1) }) { Text("+") }
                         }
-                        Button(onClick = { vm.add(false) }, enabled = !ui.adding, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("🛒  " + stringResource(R.string.store_add)) }
-                        OutlinedButton(onClick = { vm.add(true) }, enabled = !ui.adding, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(stringResource(R.string.store_buy_now)) }
+                        Button(onClick = { vm.add(false) }, enabled = !ui.adding, shape = RoundedCornerShape(4.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onSurface, contentColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("🛒  " + stringResource(R.string.store_add)) }
+                        OutlinedButton(onClick = { vm.add(true) }, enabled = !ui.adding, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(stringResource(R.string.store_buy_now)) }
                         if (ui.added) Text(stringResource(R.string.store_added_to_cart) + " ✓", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     }
                     ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

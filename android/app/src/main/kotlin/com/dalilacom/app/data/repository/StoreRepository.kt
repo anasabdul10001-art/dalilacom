@@ -23,8 +23,8 @@ class StoreRepository(private val api: ApiService) {
     suspend fun home(s: StoreScope): StoreHomeDto? =
         safeApiCall { api.storeHome(s.scope, s.cityId, s.radiusKm, s.lat, s.lng) }?.takeIf { it.isSuccessful }?.body()?.also { if (it.currency.isNotBlank()) Market.currency = it.currency }
 
-    suspend fun products(q: String?, section: String?, sort: String, offset: Int, s: StoreScope): StoreListDto? =
-        safeApiCall { api.storeProducts(q?.ifBlank { null }, section?.ifBlank { null }, sort, 24, offset, s.scope, s.cityId, s.radiusKm, s.lat, s.lng) }
+    suspend fun products(q: String?, section: String?, deals: Boolean, sort: String, offset: Int, s: StoreScope): StoreListDto? =
+        safeApiCall { api.storeProducts(q?.ifBlank { null }, section?.ifBlank { null }, if (deals) "1" else null, sort, 24, offset, s.scope, s.cityId, s.radiusKm, s.lat, s.lng) }
             ?.takeIf { it.isSuccessful }?.body()?.also { if (it.currency.isNotBlank()) Market.currency = it.currency }
 
     suspend fun product(id: String): StoreProductDto? =

@@ -210,6 +210,7 @@ interface ApiService {
     suspend fun storeProducts(
         @Query("q") q: String?,
         @Query("section") section: String?,
+        @Query("deals") deals: String?,
         @Query("sort") sort: String,
         @Query("limit") limit: Int,
         @Query("offset") offset: Int,

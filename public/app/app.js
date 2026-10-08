@@ -261,6 +261,7 @@ const ICON = {
   card: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>',
   bot: '<svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 16.5h6"/><circle cx="12" cy="3.5" r="1"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>',
+  bag: '<svg viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>',
   store: '<svg viewBox="0 0 24 24"><path d="M4 9 5.5 4h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9"/><path d="M5.5 11.5V20h13v-8.5"/><path d="M10 20v-4.5h4V20"/></svg>',
   cart: '<svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.2 11h10.4L20 8H6.2"/></svg>',
   orders: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M8 9h8M8 13h8"/></svg>',
@@ -1549,7 +1550,7 @@ function openStore() {
 
 function storeState() {
   if (!S._store) {
-    S._store = { loading: true, q: "", section: "", sort: "popular", home: null, items: [], total: 0, cartCount: 0, more: false, scope: "country", cityId: "", regionId: "", radiusKm: 10, pos: null, geo: null, locError: null };
+    S._store = { loading: true, q: "", section: "", sort: "popular", home: null, items: [], total: 0, cartCount: 0, more: false, scope: "country", cityId: "", regionId: "", radiusKm: 10, pos: null, geo: null, locError: null, deals: false, scopeOpen: false };
     try { Object.assign(S._store, JSON.parse(localStorage.getItem("dlk_store_scope") || "{}")); } catch (e) {}
     if (S._store.scope === "radius") storeLocate().then(() => storeReload());
     if (S._store.scope === "city") storeLoadGeo();
@@ -1575,7 +1576,7 @@ function storeReload() {
   const st = S._store;
   if (!st) return;
   loadStoreHome();
-  if (st.q || st.section) loadStoreList(false);
+  if (st.q || st.section || st.deals) loadStoreList(false);
 }
 
 async function storeLocate() {
@@ -1647,28 +1648,32 @@ function storePickCity(id) {
   storeReload();
 }
 
-/** "Where": the whole country, one city, or around me — shown as a bar under the search. */
+/** "Where": one slim line (the place being shown) that opens into the whole country / a city / around me. */
 function storeScopeBar(st) {
   const g = st.geo;
   const unit = (x) => (LANG === "ar" ? x.nameArabic || x.name : x.nameEnglish || x.name);
   const countryLabel = st.countryName || (g && g.countryName) || (st.home ? st.home.country : "");
-  const chip = (id, label) => `<button class="chip ${st.scope === id ? "active" : ""}" onclick="storeSetScope('${id}')">${label}</button>`;
+  const chosen = (list, id) => { const u = (list || []).find((x) => x.id === id); return u ? unit(u) : ""; };
+  const where = st.scope === "city"
+    ? `${countryLabel} · ${chosen(g && g.cities, st.cityId) || chosen(g && g.regions, st.regionId) || t("store.cityScope")}`
+    : st.scope === "radius" ? `${t("store.aroundMe")} · ${st.radiusKm} ${t("unit.km")}` : countryLabel;
+  const opt = (id, label) => `<button class="${st.scope === id ? "on" : ""}" onclick="storeSetScope('${id}')">${label}</button>`;
   let more = "";
   if (st.scope === "city") {
     more = !g || !g.loaded ? `<span class="muted">…</span>` : `
-      ${g.regions.length ? `<select class="store-sort" onchange="storePickRegion(this.value)"><option value="">${esc(t("store.allGovernorates"))}</option>${g.regions.map((r) => `<option value="${r.id}" ${st.regionId === r.id ? "selected" : ""}>${esc(unit(r))}</option>`).join("")}</select>` : ""}
-      ${g.cities.length ? `<select class="store-sort" onchange="storePickCity(this.value)"><option value="">${esc(t("store.allCities"))}</option>${g.cities.map((c) => `<option value="${c.id}" ${st.cityId === c.id ? "selected" : ""}>${esc(unit(c))}</option>`).join("")}</select>` : ""}`;
+      ${g.regions.length ? `<select onchange="storePickRegion(this.value)"><option value="">${esc(t("store.allGovernorates"))}</option>${g.regions.map((r) => `<option value="${r.id}" ${st.regionId === r.id ? "selected" : ""}>${esc(unit(r))}</option>`).join("")}</select>` : ""}
+      ${g.cities.length ? `<select onchange="storePickCity(this.value)"><option value="">${esc(t("store.allCities"))}</option>${g.cities.map((c) => `<option value="${c.id}" ${st.cityId === c.id ? "selected" : ""}>${esc(unit(c))}</option>`).join("")}</select>` : ""}`;
   } else if (st.scope === "radius") {
-    more = [5, 10, 25, 50, 100].map((km) => `<button class="chip ${st.radiusKm === km ? "active" : ""}" onclick="storeSetRadius(${km})">${km} ${esc(t("unit.km"))}</button>`).join("")
+    more = [5, 10, 25, 50, 100].map((km) => `<button class="${st.radiusKm === km ? "on" : ""}" onclick="storeSetRadius(${km})">${km} ${esc(t("unit.km"))}</button>`).join("")
       + (st.locError ? `<span class="error-text">${esc(st.locError)}</span>` : "");
   }
   return `
-    <div class="store-scope">
-      <span class="store-scope-label">📍</span>
-      ${chip("country", "🌍 " + esc(countryLabel || t("store.country")))}
-      ${chip("city", "🏙️ " + esc(t("store.cityScope")))}
-      ${chip("radius", "📡 " + esc(t("store.aroundMe")))}
-      ${more ? `<div class="store-scope-more">${more}</div>` : ""}
+    <div class="store-where">
+      <button class="store-where-pill" onclick="storeToggleScope()">📍 ${esc(where)} <span>${st.scopeOpen ? "▴" : "▾"}</span></button>
+      ${st.scopeOpen ? `<div class="store-where-panel">
+        <div class="store-where-opts">${opt("country", "🌍 " + esc(countryLabel || t("store.country")))}${opt("city", "🏙️ " + esc(t("store.cityScope")))}${opt("radius", "📡 " + esc(t("store.aroundMe")))}</div>
+        ${more ? `<div class="store-where-more">${more}</div>` : ""}
+      </div>` : ""}
     </div>`;
 }
 
@@ -1701,6 +1706,7 @@ async function loadStoreList(append) {
   const params = new URLSearchParams({ sort: st.sort, limit: "24", offset: String(append ? st.items.length : 0) });
   if (st.q) params.set("q", st.q);
   if (st.section) params.set("section", st.section);
+  if (st.deals) params.set("deals", "1");
   storeScopeParams(st, params);
   const { ok, data } = await api("GET", "/store/products?" + params);
   st.busy = false;
@@ -1712,6 +1718,7 @@ function storeSearch(ev) {
   if (ev) ev.preventDefault();
   const st = S._store;
   st.q = qs("store-q").value.trim();
+  st.deals = false;
   if (!st.q && !st.section) { render(); return; }
   loadStoreList(false);
 }
@@ -1719,6 +1726,7 @@ function storeSearch(ev) {
 function storePickSection(id) {
   const st = S._store;
   st.section = id;
+  st.deals = false;
   if (!id && !st.q) { render(); return; }
   loadStoreList(false);
 }
@@ -1727,9 +1735,23 @@ function storeSetSort(v) { S._store.sort = v; loadStoreList(false); }
 
 function storeBack() {
   const st = S._store;
-  if (st && (st.q || st.section)) { st.q = ""; st.section = ""; render(); return; }
+  if (st && (st.q || st.section || st.deals)) { st.q = ""; st.section = ""; st.deals = false; window.scrollTo(0, 0); render(); return; }
   S._store = null;
   back();
+}
+
+/** "See all" of a home row: the member deals, the best sellers or the newest, as a full list. */
+function storeSeeAll(kind) {
+  const st = S._store;
+  st.q = ""; st.section = "";
+  st.deals = kind === "deals";
+  st.sort = kind === "new" ? "new" : "popular";
+  loadStoreList(false);
+}
+
+function storeToggleScope() {
+  S._store.scopeOpen = !S._store.scopeOpen;
+  render();
 }
 
 function storeToCart() {
@@ -1749,21 +1771,22 @@ async function storeAdd(id, ev) {
   if (st) { st.cartCount += 1; st.justAdded = id; render(); setTimeout(() => { if (S._store === st && st.justAdded === id) { st.justAdded = null; render(); } }, 1600); }
 }
 
-/** The product's picture: its photo when it has one, otherwise a coloured tile with its icon. */
+/** The product picture: its photo when it has one, otherwise a soft tile with its icon (the shops' own photos replace it). */
 function storePic(p) {
   if (p.imageUrl) return `<div class="store-pic"><img src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy" /></div>`;
-  return `<div class="store-pic" style="--h:${Number(p.hue) || 0}"><span>${esc(p.icon || "🛍️")}</span></div>`;
+  return `<div class="store-pic" style="--h:${Number(p.hue) || 0}"><span class="store-emoji">${esc(p.icon || "🛍️")}</span></div>`;
 }
 
-function storeStars(p) {
-  if (!p.ratingCount) return "";
-  const full = Math.round(p.rating);
-  return `<div class="store-rate"><span class="stars">${"★".repeat(full)}${"☆".repeat(5 - full)}</span> <b>${p.rating.toFixed(1)}</b> <small>(${p.ratingCount})</small></div>`;
+/** The member discount in percent (0 when there is none). */
+function storeOff(p) {
+  return p.memberDiscountEnabled && p.priceCents > 0 ? Math.round((1 - p.memberPriceCents / p.priceCents) * 100) : 0;
 }
+
+function storeCount(n) { return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k+" : String(n); }
 
 function storePrice(p) {
   return p.memberDiscountEnabled
-    ? `<div class="store-price"><b>${fmt(p.memberPriceCents)}</b> <s>${fmt(p.priceCents)}</s></div><div class="store-member">⭐ سعر أعضاء دليلكم</div>`
+    ? `<div class="store-price sale"><b>${fmt(p.memberPriceCents)}</b><s>${fmt(p.priceCents)}</s></div><div class="store-off">${esc(t("store.offLabel", { n: storeOff(p) }))}</div>`
     : `<div class="store-price"><b>${fmt(p.priceCents)}</b></div>`;
 }
 
@@ -1771,68 +1794,83 @@ function storeCard(p) {
   const added = S._store && S._store.justAdded === p.id;
   return `
     <div class="store-card" onclick="go('productDetail',{productId:'${p.id}'})">
-      ${storePic(p)}
+      <div class="store-card-img">
+        ${storePic(p)}
+        ${p.soldCount >= 8000 ? `<span class="store-tag hot">${esc(t("store.best"))}</span>` : ""}
+        <button class="store-bag ${added ? "done" : ""}" onclick="storeAdd('${p.id}', event)" aria-label="${esc(t("store.add"))}">${added ? "✓" : ICON.bag}</button>
+      </div>
       <div class="store-card-body">
         <div class="store-name">${esc(p.name)}</div>
-        ${storeStars(p)}
         ${storePrice(p)}
-        <div class="store-shop">${esc(p.merchant.name)}</div>
-        <button class="btn small ${added ? "secondary" : ""}" onclick="storeAdd('${p.id}', event)">${added ? "✓ " + esc(t("store.added")) : esc(t("store.add"))}</button>
+        ${p.section ? `<div class="store-hash">#${esc(storeSecName(p.section))}</div>` : ""}
+        <div class="store-meta">${p.ratingCount ? `<span class="star">★ ${p.rating.toFixed(1)}</span>` : ""}${p.soldCount ? `<span>${esc(t("store.soldShort", { n: storeCount(p.soldCount) }))}</span>` : ""}</div>
       </div>
     </div>`;
 }
 
-function storeRow(title, items) {
+function storeSection(title, items, kind) {
   if (!items || !items.length) return "";
-  return `<h2 class="store-h">${esc(title)}</h2><div class="store-row">${items.map(storeCard).join("")}</div>`;
+  return `
+    <section class="store-sec">
+      <div class="store-sec-head"><h2>${esc(title)}</h2><button onclick="storeSeeAll('${kind}')">${esc(t("store.seeAll"))} ›</button></div>
+      <div class="store-grid">${items.slice(0, 10).map(storeCard).join("")}</div>
+    </section>`;
 }
 
 function screenStore() {
   const st = storeState();
   const home = st.home;
   const sections = home ? home.sections : [];
-  const filtering = !!(st.q || st.section);
+  const filtering = !!(st.q || st.section || st.deals);
   const activeSection = sections.find((x) => x.id === st.section);
   let body;
   if (st.loading) body = spinner();
   else if (filtering) {
-    const title = st.q ? `${t("store.resultsFor")} «${st.q}»` : storeSecName(activeSection);
+    const title = st.q ? `${t("store.resultsFor")} «${st.q}»` : st.deals ? t("store.deals") : storeSecName(activeSection) || t("store.best");
     body = `
-      <div class="store-bar"><h2 class="store-h" style="margin:0">${esc(title)} <small class="muted">${st.total ? "· " + st.total : ""}</small></h2>
+      <div class="store-bar"><h2>${esc(title)} <small>${st.total ? st.total : ""}</small></h2>
         <select class="store-sort" onchange="storeSetSort(this.value)">
           ${[["popular", "الأكثر مبيعًا"], ["new", "الأحدث"], ["rating", "الأعلى تقييمًا"], ["price_asc", "السعر: من الأقل"], ["price_desc", "السعر: من الأعلى"]].map(([v, l]) => `<option value="${v}" ${st.sort === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
         </select></div>
       ${st.busy && !st.items.length ? spinner() : st.items.length
         ? `<div class="store-grid">${st.items.map(storeCard).join("")}</div>
-           ${st.items.length < st.total ? `<div style="text-align:center;margin:18px 0"><button class="btn outline" style="width:auto" ${st.busy ? "disabled" : ""} onclick="loadStoreList(true)">${esc(t("store.more"))}</button></div>` : ""}`
+           ${st.items.length < st.total ? `<div class="store-more"><button class="btn outline" ${st.busy ? "disabled" : ""} onclick="loadStoreList(true)">${esc(t("store.more"))}</button></div>` : ""}`
         : `<div class="empty">${esc(t("store.noResults"))}</div>`}`;
   } else {
     body = `
       <div class="store-hero">
-        <div><h1>${esc(t("store.heroTitle"))}</h1><p>${esc(t("store.heroSub"))}</p></div>
-        <div class="store-hero-art">🛍️</div>
+        <div class="store-picks">${home.bestSellers.slice(0, 3).map((p) => `<button onclick="go('productDetail',{productId:'${p.id}'})">${storePic(p)}</button>`).join("")}</div>
+        <button class="store-banner" onclick="storeSeeAll('deals')">
+          <h1>${esc(t("store.heroBig"))}</h1>
+          <p>${esc(t("store.heroUpTo", { n: Math.max(0, ...home.deals.map(storeOff)) }))}</p>
+          <span class="btn-pill">${esc(t("store.shopNow"))}</span>
+          <i>🛍️</i>
+        </button>
+        <div class="store-picks">${home.bestSellers.slice(3, 6).map((p) => `<button onclick="go('productDetail',{productId:'${p.id}'})">${storePic(p)}</button>`).join("")}</div>
       </div>
-      <div class="store-depts">${sections.map((x) => `
-        <button class="store-dept" onclick="storePickSection('${x.id}')"><span>${esc(x.icon)}</span><b>${esc(storeSecName(x))}</b><small>${x.count}</small></button>`).join("")}</div>
-      ${storeRow(t("store.deals"), home.deals)}
-      ${storeRow(t("store.best"), home.bestSellers)}
-      ${storeRow(t("store.newest"), home.newest)}`;
+      <div class="store-circles">${sections.map((x) => `
+        <button onclick="storePickSection('${x.id}')"><span>${esc(x.icon)}</span><em>${esc(storeSecName(x))}</em></button>`).join("")}</div>
+      ${storeSection(t("store.best"), home.bestSellers, "best")}
+      ${storeSection(t("store.deals"), home.deals, "deals")}
+      ${storeSection(t("store.newest"), home.newest, "new")}
+      ${!home.bestSellers.length && !home.newest.length ? `<div class="empty">${esc(t("store.noResults"))}</div>` : ""}`;
   }
   return `
     <div class="store">
       <div class="store-head">
         <button class="store-icon-btn" onclick="storeBack()" aria-label="back">›</button>
+        <b class="store-brand">${esc(t("tab.store"))}</b>
         <form class="store-search" onsubmit="storeSearch(event)">
           <input id="store-q" type="search" value="${esc(st.q)}" placeholder="${esc(t("store.searchPlaceholder"))}" />
-          <button type="submit" aria-label="search">🔍</button>
+          <button type="submit" aria-label="search">${ICON.search}</button>
         </form>
-        <button class="store-icon-btn store-cart" onclick="storeToCart()" aria-label="cart">🛒${st.cartCount ? `<span class="store-badge">${st.cartCount}</span>` : ""}</button>
+        <button class="store-icon-btn store-cart" onclick="storeToCart()" aria-label="cart">${ICON.bag}${st.cartCount ? `<span class="store-badge">${st.cartCount}</span>` : ""}</button>
+      </div>
+      <div class="store-tabs">
+        <button class="${!st.section && !st.deals ? "on" : ""}" onclick="storePickSection('')">${esc(t("store.all"))}</button>
+        ${sections.map((x) => `<button class="${st.section === x.id ? "on" : ""}" onclick="storePickSection('${x.id}')">${esc(storeSecName(x))}</button>`).join("")}
       </div>
       ${storeScopeBar(st)}
-      <div class="store-cats">
-        <button class="chip ${st.section ? "" : "active"}" onclick="storePickSection('')">${esc(t("store.all"))}</button>
-        ${sections.map((x) => `<button class="chip ${st.section === x.id ? "active" : ""}" onclick="storePickSection('${x.id}')">${esc(x.icon)} ${esc(storeSecName(x))}</button>`).join("")}
-      </div>
       ${errorBanner()}
       ${body}
     </div>`;
@@ -1848,32 +1886,40 @@ function screenProductDetail() {
   if (!p.product) return `<div class="store">${backRow()}<div class="error-banner">هذا المنتج غير متوفر</div></div>`;
   const prod = p.product;
   const available = prod.stock > 0;
+  const off = storeOff(prod);
   return `
     <div class="store">
-      ${backRow()}
+      <div class="pd-crumbs"><button onclick="back()">‹ ${esc(t("tab.store"))}</button>${prod.section ? ` / <span>${esc(storeSecName(prod.section))}</span>` : ""}</div>
       <div class="pd">
         <div class="pd-pic">${storePic(prod)}</div>
         <div class="pd-info">
-          ${prod.section ? `<a class="pd-crumb" onclick="openStore();storePickSection('${prod.section.id}')">${esc(prod.section.icon)} ${esc(storeSecName(prod.section))}</a>` : ""}
           <h1 class="pd-title">${esc(prod.name)}</h1>
-          ${storeStars(prod)}
-          ${prod.soldCount ? `<div class="muted">${esc(t("store.sold", { n: prod.soldCount }))}</div>` : ""}
-          <div class="pd-price">${storePrice(prod)}</div>
+          <div class="pd-rate">
+            ${prod.ratingCount ? `<span class="star">${"★".repeat(Math.round(prod.rating))}${"☆".repeat(5 - Math.round(prod.rating))}</span> <b>${prod.rating.toFixed(1)}</b> <span>${esc(t("store.ratings", { n: prod.ratingCount }))}</span>` : ""}
+            ${prod.soldCount ? `<span class="dot">·</span><span>${esc(t("store.soldShort", { n: storeCount(prod.soldCount) }))}</span>` : ""}
+          </div>
+          <div class="pd-price-box">
+            ${prod.memberDiscountEnabled
+              ? `<b class="sale">${fmt(prod.memberPriceCents)}</b><s>${fmt(prod.priceCents)}</s><span class="store-tag off inline">-${off}%</span>
+                 <div class="pd-member">⭐ ${esc(t("store.memberPrice"))}</div>`
+              : `<b>${fmt(prod.priceCents)}</b>`}
+          </div>
           ${prod.description ? `<p class="pd-desc">${esc(prod.description)}</p>` : ""}
-          <div class="pd-meta">${esc(t("store.soldBy"))} <a onclick="go('merchantDetail',{merchantId:'${prod.merchant.id}'})">${esc(prod.merchant.name)}</a></div>
-          ${available
-            ? `<div class="${prod.stock <= 5 ? "pd-stock low" : "pd-stock"}">${prod.stock <= 5 ? esc(t("store.lastPieces", { n: prod.stock })) : "✓ " + esc(t("store.inStock"))}</div>
-               <div class="stepper"><button onclick="changeProductQty(-1)">−</button><span>${p.qty}</span><button onclick="changeProductQty(1)">+</button></div>
-               <div class="pd-actions">
-                 <button class="btn" ${p.adding ? "disabled" : ""} onclick="addProductToCart(false)">🛒 ${esc(t("store.add"))}</button>
-                 <button class="btn secondary" ${p.adding ? "disabled" : ""} onclick="addProductToCart(true)">${esc(t("store.buyNow"))}</button>
-               </div>
-               ${p.added ? `<div class="success-banner">${esc(t("store.addedToCart"))} ✓ <button class="link-btn" style="padding:0" onclick="storeToCart()">${esc(t("store.goToCart"))}</button></div>` : ""}`
-            : `<div class="error-banner">غير متوفر حاليًا</div>`}
+          <div class="pd-rows">
+            <div><span>${esc(t("store.soldBy"))}</span><a onclick="go('merchantDetail',{merchantId:'${prod.merchant.id}'})">${esc(prod.merchant.name)}</a></div>
+            <div><span>${esc(t("store.availability"))}</span>${available ? `<b class="${prod.stock <= 5 ? "low" : "ok"}">${prod.stock <= 5 ? esc(t("store.lastPieces", { n: prod.stock })) : "✓ " + esc(t("store.inStock"))}</b>` : `<b class="low">${esc(t("store.unavailable"))}</b>`}</div>
+          </div>
+          ${available ? `
+            <div class="stepper"><button onclick="changeProductQty(-1)">−</button><span>${p.qty}</span><button onclick="changeProductQty(1)">+</button></div>
+            <div class="pd-actions">
+              <button class="btn" ${p.adding ? "disabled" : ""} onclick="addProductToCart(false)">${ICON.bag} ${esc(t("store.add"))}</button>
+              <button class="btn outline" ${p.adding ? "disabled" : ""} onclick="addProductToCart(true)">${esc(t("store.buyNow"))}</button>
+            </div>
+            ${p.added ? `<div class="success-banner">${esc(t("store.addedToCart"))} ✓ <button class="link-btn" style="padding:0" onclick="storeToCart()">${esc(t("store.goToCart"))}</button></div>` : ""}` : ""}
           ${errorBanner()}
         </div>
       </div>
-      ${prod.related && prod.related.length ? `<h2 class="store-h">${esc(t("store.related"))}</h2><div class="store-row">${prod.related.map(storeCard).join("")}</div>` : ""}
+      ${prod.related && prod.related.length ? `<section class="store-sec"><div class="store-sec-head"><h2>${esc(t("store.related"))}</h2></div><div class="store-grid">${prod.related.map(storeCard).join("")}</div></section>` : ""}
     </div>`;
 }
 

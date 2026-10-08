@@ -430,4 +430,10 @@
     <string name="store_back">Back</string>
     <string name="store_not_found">This product is not available</string>
     <string name="store_unavailable">Currently unavailable</string>
+    <string name="store_off_label">%1$d%% off</string>
+    <string name="store_hero_big">Great deals</string>
+    <string name="store_hero_up_to">Save up to %1$d%% with member prices</string>
+    <string name="store_see_all">See all</string>
+    <string name="store_sold_short">%1$s sold</string>
+    <string name="store_shop_now">Shop now</string>
 </resources>

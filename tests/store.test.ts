@@ -103,4 +103,10 @@ describe("the store only shows a shopper their own country's shops", () => {
     // a country nobody configured falls back to euros
     expect((await request(app).get("/geo/market").set("CF-IPCountry", "ZY")).body.currencyCode).toBe("EUR");
   });
+
+  it("can list only the products that have a member price", async () => {
+    const res = await request(app).get("/store/products").query({ deals: "1", limit: 60 }).set("CF-IPCountry", "SY");
+    expect(res.status).toBe(200);
+    expect(res.body.items.every((p: { memberDiscountEnabled: boolean }) => p.memberDiscountEnabled)).toBe(true);
+  });
 });

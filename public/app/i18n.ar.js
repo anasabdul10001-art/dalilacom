@@ -76,6 +76,8 @@ DICT.ar = {
   "store.deals": "عروض الأعضاء", "store.best": "الأكثر مبيعًا", "store.newest": "وصل حديثًا", "store.related": "منتجات مشابهة",
   "store.soldBy": "البائع:", "store.inStock": "متوفر", "store.buyNow": "اشترِ الآن", "store.addedToCart": "تمت الإضافة للسلة",
   "store.goToCart": "روح للسلة", "store.lastPieces": "بقي {n} قطع فقط", "store.sold": "بيع {n} قطعة",
+  "store.offLabel": "خصم {n}%", "store.heroBig": "تخفيضات رائعة", "store.heroUpTo": "وفّر حتى {n}% بسعر أعضاء دليلكم",
+  "store.promo": "توصيل لباب بيتك • أسعار خاصة لأعضاء دليلكم", "store.seeAll": "عرض الكل", "store.soldShort": "تم بيع {n}", "store.membersOnly": "حصريًا لأعضاء دليلكم", "store.shopNow": "تسوّق الآن", "store.freshSub": "آخر ما وصل من المتاجر", "store.ratings": "{n} تقييم", "store.memberPrice": "سعر أعضاء دليلكم", "store.availability": "التوفر", "store.unavailable": "غير متوفر حاليًا",
   "store.country": "البلد كله", "store.cityScope": "مدينة", "store.aroundMe": "حولي", "store.allGovernorates": "كل المحافظات", "store.allCities": "كل المدن", "store.needLocation": "فعّل الموقع لنعرض المتاجر القريبة منك",
   "profile.wallet": "💰 محفظتي", "profile.logout": "تسجيل الخروج",
   "verify.title": "✉️ بريدك غير موثّق", "verify.sub": "وثّق بريدك لتحمي حسابك وتقدر تسترجع كلمة السرّ.",

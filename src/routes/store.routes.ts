@@ -118,6 +118,7 @@ const listSchema = z.object({
   q: z.string().trim().max(80).optional(),
   section: z.string().optional(),
   merchantId: z.string().uuid().optional(),
+  deals: z.enum(["1"]).optional(), // only products with a member price
   sort: z.enum(["popular", "new", "rating", "price_asc", "price_desc"]).default("popular"),
   limit: z.coerce.number().int().min(1).max(60).default(24),
   offset: z.coerce.number().int().min(0).default(0),
@@ -126,7 +127,7 @@ const listSchema = z.object({
 storeRouter.get("/products", async (req, res) => {
   const parsed = listSchema.safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const { q, section, merchantId, sort, limit, offset } = parsed.data;
+  const { q, section, merchantId, deals, sort, limit, offset } = parsed.data;
   if (section && !isStoreSection(section)) return sendError(res, 400, "BAD_REQUEST", "Unknown store section");
 
   const country = await viewerCountry(req);
@@ -134,6 +135,7 @@ storeRouter.get("/products", async (req, res) => {
     ...(await visibleFor(req.query, country)),
     ...(section ? { storeSection: section } : {}),
     ...(merchantId ? { merchantId } : {}),
+    ...(deals ? { memberDiscountEnabled: true, memberPriceCents: { not: null } } : {}),
     ...(q
       ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { description: { contains: q, mode: "insensitive" } }, { merchant: { businessName: { contains: q, mode: "insensitive" } } }] }
       : {}),
