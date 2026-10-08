@@ -325,7 +325,7 @@
     <string name="nav_fork_right">Keep right</string>
     <string name="nav_endofroad_left">At the end of the road turn left</string>
     <string name="nav_endofroad_right">At the end of the road turn right</string>
-    <string name="nav_roundabout">Enter the roundabout and take exit %1$d</string>
+    <string name="nav_roundabout">Enter the roundabout and take the %1$s exit</string>
     <string name="nav_roundabout_enter">Enter the roundabout</string>
     <string name="nav_roundabout_exit">Exit the roundabout</string>
     <string name="nav_recenter">Back to my location</string>
@@ -436,4 +436,23 @@
     <string name="store_see_all">See all</string>
     <string name="store_sold_short">%1$s sold</string>
     <string name="store_shop_now">Shop now</string>
+    <string name="nav_stay">on %1$s</string>
+    <string name="nav_arrive_left">You have arrived, the destination is on your left</string>
+    <string name="nav_arrive_right">You have arrived, the destination is on your right</string>
+    <string name="nav_say_in">In %1$s,</string>
+    <string name="nav_say_m">%1$s meters</string>
+    <string name="nav_say_km">%1$s kilometers</string>
+    <string name="nav_say_km_half">%1$s.5 kilometers</string>
+    <string name="nav_say_km_1">1 kilometer</string>
+    <string name="nav_say_km_1_5">1.5 kilometers</string>
+    <string name="nav_say_km_2">2 kilometers</string>
+    <string name="nav_say_km_2_5">2.5 kilometers</string>
+    <string name="nav_ord_1">first</string>
+    <string name="nav_ord_2">second</string>
+    <string name="nav_ord_3">third</string>
+    <string name="nav_ord_4">fourth</string>
+    <string name="nav_ord_5">fifth</string>
+    <string name="nav_ord_6">sixth</string>
+    <string name="nav_ord_7">seventh</string>
+    <string name="nav_ord_8">eighth</string>
 </resources>

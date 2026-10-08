@@ -2338,20 +2338,32 @@ function navArrow(step) {
 
 function navInstruction(step) {
   if (!step) return "";
-  const on = step.name ? " " + t("nav.on", { name: step.name }) : "";
+  const onto = step.name ? " " + t("nav.on", { name: step.name }) : "";
+  const stay = step.name ? " " + t("nav.stay", { name: step.name }) : "";
   const side = /left/.test(step.modifier) ? "left" : /right/.test(step.modifier) ? "right" : "";
+  const ord = (n) => { const w = t("nav.ord." + n); return w === "nav.ord." + n ? String(n) : w; };
   switch (step.type) {
-    case "arrive": return t("nav.arrive");
-    case "depart": return t("nav.depart") + on;
-    case "roundabout": case "rotary": return step.exit ? t("nav.roundabout", { n: step.exit }) : t("nav.roundaboutEnter");
-    case "exit roundabout": case "exit rotary": return t("nav.roundaboutExit") + on;
-    case "merge": return t("nav.merge") + on;
-    case "on ramp": case "off ramp": return t("nav.ramp") + on;
-    case "fork": return (side ? t("nav.fork." + side) : t("nav.continue")) + on;
-    case "end of road": return (side ? t("nav.endofroad." + side) : t("nav.continue")) + on;
-    case "new name": case "continue": return (step.modifier && step.modifier !== "straight" ? t("nav.turn." + step.modifier) : t("nav.continue")) + on;
-    default: return (t("nav.turn." + (step.modifier || "straight"))) + on; // turn, and anything unknown
+    case "arrive": return side ? t("nav.arrive." + side) : t("nav.arrive");
+    case "depart": return t("nav.depart") + stay;
+    case "roundabout": case "rotary": return step.exit ? t("nav.roundabout", { n: ord(step.exit) }) + onto : t("nav.roundaboutEnter");
+    case "exit roundabout": case "exit rotary": return t("nav.roundaboutExit") + onto;
+    case "merge": return t("nav.merge") + stay;
+    case "on ramp": case "off ramp": return t("nav.ramp") + onto;
+    case "fork": return (side ? t("nav.fork." + side) : t("nav.continue")) + onto;
+    case "end of road": return (side ? t("nav.endofroad." + side) : t("nav.continue")) + onto;
+    case "new name": case "continue": return (step.modifier && step.modifier !== "straight" ? t("nav.turn." + step.modifier) + onto : t("nav.continue") + stay);
+    default: return t("nav.turn." + (step.modifier || "straight")) + (step.modifier === "straight" || !step.modifier ? stay : onto); // turn, and anything unknown
   }
+}
+
+/** A distance the way a person says it ("200 metres", "a kilometre and a half"), so the voice does not read "م". */
+function spokenDistance(m) {
+  if (m < 1000) return t("nav.say.m", { n: Math.max(50, Math.round(m / 50) * 50) });
+  const km = Math.round(m / 500) / 2;
+  const key = "nav.say.km." + km;
+  const special = t(key);
+  if (special !== key) return special;
+  return Number.isInteger(km) ? t("nav.say.km", { n: km }) : t("nav.say.kmHalf", { n: Math.floor(km) });
 }
 
 function metersBetween(a, b) { return haversineKm(a.lat, a.lng, b.lat, b.lng) * 1000; }
@@ -2470,7 +2482,7 @@ async function onNavPosition(p) {
   if (next) {
     const key = n.idx;
     const near = walking ? 40 : 180;
-    if (n.dist < near && !n.spoke[key + "n"]) { n.spoke[key + "n"] = true; navSpeak(t("nav.in", { d: fmtDistance(Math.round(n.dist / 10) * 10) }) + " " + navInstruction(next)); }
+    if (n.dist < near && !n.spoke[key + "n"]) { n.spoke[key + "n"] = true; navSpeak(t("nav.say.in", { d: spokenDistance(n.dist) }) + " " + navInstruction(next)); }
     else if (moved && !n.spoke[key]) { n.spoke[key] = true; navSpeak(navInstruction(next)); }
   }
 

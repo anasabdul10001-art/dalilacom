@@ -365,7 +365,7 @@ class DiscoverViewModel(
         if (next != null) {
             val near = if (walking) 40.0 else 180.0
             if (distToNext < near && navSpoke.add("$idx-near")) {
-                speak(AppStrings.get(R.string.nav_in, com.dalilacom.app.ui.common.formatDistance(((distToNext / 10).toInt() * 10))) + " " + NavText.instruction(next))
+                speak(NavText.sayIn(distToNext) + " " + NavText.instruction(next))
             } else if (moved && navSpoke.add("$idx")) {
                 speak(NavText.instruction(next))
             }
