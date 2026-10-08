@@ -69,6 +69,46 @@ adminRouter.put("/settings", async (req, res) => {
   res.json(await saveSettings(parsed.data as any));
 });
 
+/* ---------------- accounts: who is who, and switching one off ---------------- */
+
+const usersQuerySchema = z.object({ q: z.string().trim().max(80).optional(), role: z.nativeEnum(Role).optional() });
+
+adminRouter.get("/users", async (req, res) => {
+  const parsed = usersQuerySchema.safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const { q, role } = parsed.data;
+  const users = await prisma.user.findMany({
+    where: {
+      ...(role ? { role } : {}),
+      ...(q
+        ? { OR: [{ email: { contains: q, mode: "insensitive" } }, { fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q } }] }
+        : {}),
+    },
+    select: { id: true, email: true, fullName: true, phone: true, role: true, isDisabled: true, isEmailVerified: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  res.json(users);
+});
+
+// Switching an account off (or back on) ends its sessions. An admin can't switch off their own account, so at least one
+// enabled admin always remains (whoever is making the request).
+adminRouter.patch("/users/:id", async (req, res) => {
+  const parsed = z.object({ isDisabled: z.boolean() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, role: true, isDisabled: true } });
+  if (!target) return sendError(res, 404, "NOT_FOUND", "User not found");
+  if (parsed.data.isDisabled) {
+    if (target.id === req.user!.id) return sendError(res, 409, "CONFLICT", "You cannot disable your own account");
+  }
+  const updated = await prisma.user.update({
+    where: { id: target.id },
+    data: { isDisabled: parsed.data.isDisabled, ...(parsed.data.isDisabled ? { tokenVersion: { increment: 1 } } : {}) },
+    select: { id: true, isDisabled: true },
+  });
+  res.json(updated);
+});
+
 /* ---------------- a shop's plan decides how many announcements it may send ---------------- */
 
 adminRouter.put("/merchants/:id/plan", async (req, res) => {

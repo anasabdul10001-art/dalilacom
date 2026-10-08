@@ -24,9 +24,22 @@ function sniffImageMime(buf: Buffer): "image/jpeg" | "image/png" | "image/webp" 
 async function profileOf(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { id: true, email: true, fullName: true, role: true, bio: true, language: true, avatarUpdatedAt: true },
+    select: { id: true, email: true, isEmailVerified: true, phone: true, fullName: true, role: true, bio: true, language: true, countryCode: true, cityId: true, vatNumber: true, avatarUpdatedAt: true },
   });
-  return { id: user.id, email: user.email, fullName: user.fullName, role: user.role, bio: user.bio, language: user.language, avatarUrl: avatarUrl(user.id, user.avatarUpdatedAt) };
+  return {
+    id: user.id,
+    email: user.email,
+    emailVerified: user.isEmailVerified,
+    phone: user.phone,
+    fullName: user.fullName,
+    role: user.role,
+    bio: user.bio,
+    language: user.language,
+    countryCode: user.countryCode,
+    cityId: user.cityId,
+    vatNumber: user.vatNumber,
+    avatarUrl: avatarUrl(user.id, user.avatarUpdatedAt),
+  };
 }
 
 profileRouter.get("/me", requireAuth, async (req, res) => {
@@ -62,15 +75,28 @@ const updateProfileSchema = z.object({
   countryCode: z.string().trim().length(2).toUpperCase().nullable().optional(),
   cityId: z.string().uuid().nullable().optional(),
   vatNumber: z.string().trim().max(30).nullable().optional(),
+  // Digits with an optional leading + (spaces and dashes are ignored); another account may not use the same number.
+  phone: z
+    .string()
+    .trim()
+    .transform((value) => value.replace(/[\s-]/g, ""))
+    .refine((value) => value === "" || /^\+?\d{6,15}$/.test(value), "رقم الهاتف غير صالح")
+    .nullable()
+    .optional(),
 });
 
 profileRouter.patch("/me", requireAuth, async (req, res) => {
   const parsed = updateProfileSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const { fullName, bio, language, countryCode, cityId, vatNumber } = parsed.data;
+  const { fullName, bio, language, countryCode, cityId, vatNumber, phone } = parsed.data;
+  if (phone) {
+    const taken = await prisma.user.findFirst({ where: { phone, id: { not: req.user!.id } }, select: { id: true } });
+    if (taken) return sendError(res, 409, "PHONE_IN_USE", "رقم الهاتف مستعمل بحساب ثاني");
+  }
   await prisma.user.update({
     where: { id: req.user!.id },
     data: {
+      ...(phone !== undefined ? { phone: phone || null } : {}),
       ...(fullName !== undefined ? { fullName } : {}),
       ...(bio !== undefined ? { bio: bio || null } : {}),
       ...(language !== undefined ? { language } : {}),

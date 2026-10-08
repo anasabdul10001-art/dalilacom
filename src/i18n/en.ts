@@ -88,6 +88,8 @@ export const en: LanguagePack = {
     "اكتب نص الرد الاحتياطي": "Write the fallback reply text",
     "كلمة السر غير صحيحة": "Incorrect password",
     "حساب محذوف": "Deleted account",
+    "رقم الهاتف غير صالح": "Invalid phone number",
+    "رقم الهاتف مستعمل بحساب ثاني": "This phone number is used by another account",
     "إعلان جديد بانتظار المراجعة": "A new announcement is waiting for review",
     "تمت الموافقة على إعلانك": "Your announcement was approved",
     "تم نشر إعلانك للمستهدَفين.": "Your announcement was published to its audience.",
