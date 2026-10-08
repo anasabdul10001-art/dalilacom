@@ -180,6 +180,7 @@ async function render() {
   const el = root();
   if (!el) return;
   el.classList.toggle("map-mode", S.screen === "home" && S.homeTab === "discover");
+  document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
   el.innerHTML = renderScreen();
@@ -704,7 +705,7 @@ function tabDiscover() {
   S._visible = list;
   const sheetPx = sheetHeights()[S._sheet || "peek"];
   return `
-    <div class="mapfull ${S._route ? "routing" : ""}" id="mapfull" style="--sheet-h:${sheetPx}px">
+    <div class="mapfull ${S._route ? "routing" : ""} ${S._route && S._route.phase === "navigating" ? "navigating" : ""}" id="mapfull" style="--sheet-h:${sheetPx}px">
       <div id="discover-map-slot"></div>
 
       <div class="map-top">
@@ -734,6 +735,7 @@ function tabDiscover() {
       <button class="map-fab lang-fab" title="${esc(t("fab.language"))}" onclick="toggleLangMenu()">🌐</button>
       ${langMenuHtml()}
 
+      ${navBottomHtml()}
       <div class="sheet" id="sheet">
         <div class="sheet-handle" onpointerdown="sheetDragStart(event)" onclick="sheetToggle()"><span></span></div>
         <div class="sheet-head">
@@ -1216,7 +1218,6 @@ function tabProfile() {
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>
       <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('responder')">${esc(t("profile.responder"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
       <div style="height:14px"></div>
@@ -1785,6 +1786,14 @@ function locateUser() {
   });
 }
 
+/* ---- directions: choose car or walking, then "start trip" gives live turn-by-turn guidance ---- */
+
+async function fetchRouteOption(from, dest, mode) {
+  const q = new URLSearchParams({ fromLat: from.lat, fromLng: from.lng, toLat: dest.lat, toLng: dest.lng, mode });
+  const { ok, data } = await api("GET", "/route?" + q.toString());
+  return ok ? data : { error: errMsg(data, t("route.failed")) };
+}
+
 async function startRoute(merchantId, mode) {
   const d = discoverState();
   const m = d.merchants.find((x) => x.id === merchantId) || (S._merchantDetail && S._merchantDetail.merchant);
@@ -1793,38 +1802,54 @@ async function startRoute(merchantId, mode) {
     try { d.userLoc = await locateUser(); S._centeredUser = true; }
     catch (e) { return toast(t("route.needLocation")); }
   }
-  S._route = { merchantId, mode: mode || "driving", name: m.businessName, dest: { lat: m.latitude, lng: m.longitude }, loading: true };
+  endNavigationQuietly();
+  S._route = { merchantId, mode: mode || "driving", phase: "preview", name: m.businessName, dest: { lat: m.latitude, lng: m.longitude }, loading: true };
   d.selectedId = merchantId;
   S.stack = []; S.screen = "home"; S.params = {}; S.homeTab = "discover"; S._sheet = "peek";
   render();
-  const q = new URLSearchParams({ fromLat: d.userLoc.lat, fromLng: d.userLoc.lng, toLat: m.latitude, toLng: m.longitude, mode: S._route.mode });
-  const { ok, data } = await api("GET", "/route?" + q.toString());
+  // both ways are asked at once so the person can compare the times before choosing
+  const [driving, walking] = await Promise.all([fetchRouteOption(d.userLoc, S._route.dest, "driving"), fetchRouteOption(d.userLoc, S._route.dest, "walking")]);
   if (!S._route) return; // cancelled meanwhile
   S._route.loading = false;
-  if (ok) S._route.data = data; else S._route.error = errMsg(data, t("route.failed"));
+  S._route.options = { driving, walking };
+  const chosen = S._route.options[S._route.mode];
+  if (chosen && !chosen.error) S._route.data = chosen; else S._route.error = (chosen && chosen.error) || t("route.failed");
   render();
 }
 
-function setRouteMode(mode) { if (S._route && S._route.mode !== mode) startRoute(S._route.merchantId, mode); }
-function cancelRoute() { S._route = null; render(); }
+function setRouteMode(mode) {
+  const r = S._route;
+  if (!r || r.mode === mode || r.phase === "navigating" || !r.options) return;
+  r.mode = mode;
+  const chosen = r.options[mode];
+  r.data = chosen && !chosen.error ? chosen : null;
+  r.error = chosen && chosen.error ? chosen.error : null;
+  render();
+}
+
+function cancelRoute() { endNavigationQuietly(); S._route = null; render(); }
+
+function routeOptionHtml(r, mode, icon, label) {
+  const o = r.options && r.options[mode];
+  const detail = !o ? "…" : o.error ? "—" : `<b>${fmtDuration(o.durationSeconds)}</b><small>${fmtDistance(o.distanceMeters)}</small>`;
+  return `<button class="route-opt ${r.mode === mode ? "active" : ""}" onclick="setRouteMode('${mode}')"><span class="route-opt-ico">${icon}</span><span class="route-opt-text">${esc(label)}</span><span class="route-opt-val">${detail}</span></button>`;
+}
 
 function routeBarHtml() {
   const r = S._route;
   if (!r) return "";
-  const body = r.loading ? `<span class="muted">${esc(t("route.calculating"))}</span>`
-    : r.error ? `<span style="color:var(--danger)">${esc(r.error)}</span>`
-    : `<strong>${r.mode === "walking" ? "🚶" : "🚗"} ${fmtDuration(r.data.durationSeconds)}</strong> <span class="muted">· ${fmtDistance(r.data.distanceMeters)}</span>`;
+  if (r.phase === "navigating") return navBannerHtml();
+  const status = r.loading ? `<div class="muted" style="padding:6px 2px">${esc(t("route.calculating"))}</div>` : r.error ? `<div style="color:var(--danger);padding:6px 2px">${esc(r.error)}</div>` : "";
   return `
     <div class="route-bar">
       <div class="route-title"><span>${esc(t("route.to", { name: r.name }))}</span><button class="route-x" onclick="cancelRoute()">✕</button></div>
-      <div class="route-row">
-        <div>${body}</div>
-        <div class="route-actions">
-          <button class="chip ${r.mode === "driving" ? "active" : ""}" onclick="setRouteMode('driving')">🚗</button>
-          <button class="chip ${r.mode === "walking" ? "active" : ""}" onclick="setRouteMode('walking')">🚶</button>
-          <a class="chip" href="${directionsUrl(r.dest.lat, r.dest.lng)}" target="_blank" rel="noopener">${esc(t("route.google"))}</a>
-        </div>
+      <div class="route-opts">
+        ${routeOptionHtml(r, "driving", "🚗", t("nav.drive"))}
+        ${routeOptionHtml(r, "walking", "🚶", t("nav.walk"))}
       </div>
+      ${status}
+      <button class="btn route-start" ${r.data ? "" : "disabled"} onclick="startNavigation()">▶ ${esc(t("nav.start"))}</button>
+      <a class="route-google" href="${directionsUrl(r.dest.lat, r.dest.lng)}" target="_blank" rel="noopener">${esc(t("route.google"))}</a>
     </div>`;
 }
 
@@ -1832,14 +1857,268 @@ function syncRouteLayer() {
   const map = S._map;
   if (!map) return;
   const r = S._route;
-  const key = r && r.data ? `${r.merchantId}|${r.mode}|${r.data.distanceMeters}` : "";
+  const key = r && r.data ? `${r.merchantId}|${r.mode}|${r.data.distanceMeters}|${r.data.geometry.length}` : "";
   if (key === S._routeDrawn) return;
   S._routeDrawn = key;
   if (S._routeLayer) { map.removeLayer(S._routeLayer); S._routeLayer = null; }
   if (!r || !r.data || !r.data.geometry.length) return;
   S._routeLayer = L.polyline(r.data.geometry, { color: r.mode === "walking" ? "#1e6fe0" : "#ba2a34", weight: 6, opacity: 0.9, dashArray: r.mode === "walking" ? "1 10" : null, lineCap: "round" }).addTo(map);
-  moveMap(() => map.fitBounds(S._routeLayer.getBounds(), { padding: [50, 50], animate: false }));
+  if (!(S._nav && S._nav.follow)) moveMap(() => map.fitBounds(S._routeLayer.getBounds(), { padding: [50, 50], animate: false }));
 }
+
+/* -- the live trip -- */
+
+const NAV_ARROWS = { left: "↰", right: "↱", "slight left": "↖", "slight right": "↗", "sharp left": "⬉", "sharp right": "⬈", straight: "↑", uturn: "↶" };
+
+function navArrow(step) {
+  if (!step) return "↑";
+  if (step.type === "arrive") return "📍";
+  if (step.type === "depart") return "🚩";
+  if (step.type === "roundabout" || step.type === "rotary") return "⟳";
+  return NAV_ARROWS[step.modifier] || "↑";
+}
+
+function navInstruction(step) {
+  if (!step) return "";
+  const on = step.name ? " " + t("nav.on", { name: step.name }) : "";
+  const side = /left/.test(step.modifier) ? "left" : /right/.test(step.modifier) ? "right" : "";
+  switch (step.type) {
+    case "arrive": return t("nav.arrive");
+    case "depart": return t("nav.depart") + on;
+    case "roundabout": case "rotary": return step.exit ? t("nav.roundabout", { n: step.exit }) : t("nav.roundaboutEnter");
+    case "exit roundabout": case "exit rotary": return t("nav.roundaboutExit") + on;
+    case "merge": return t("nav.merge") + on;
+    case "on ramp": case "off ramp": return t("nav.ramp") + on;
+    case "fork": return (side ? t("nav.fork." + side) : t("nav.continue")) + on;
+    case "end of road": return (side ? t("nav.endofroad." + side) : t("nav.continue")) + on;
+    case "new name": case "continue": return (step.modifier && step.modifier !== "straight" ? t("nav.turn." + step.modifier) : t("nav.continue")) + on;
+    default: return (t("nav.turn." + (step.modifier || "straight"))) + on; // turn, and anything unknown
+  }
+}
+
+function metersBetween(a, b) { return haversineKm(a.lat, a.lng, b.lat, b.lng) * 1000; }
+
+/** Distance from a point to the drawn route (the nearest segment), in metres. */
+function distanceToRoute(pos, geometry) {
+  if (!geometry.length) return Infinity;
+  const k = Math.cos((pos.lat * Math.PI) / 180);
+  const px = pos.lng * k * 111320, py = pos.lat * 110540;
+  let best = Infinity;
+  for (let i = 0; i < geometry.length - 1; i++) {
+    const ax = geometry[i][1] * k * 111320, ay = geometry[i][0] * 110540;
+    const bx = geometry[i + 1][1] * k * 111320, by = geometry[i + 1][0] * 110540;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const u = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+    const d = Math.hypot(px - (ax + u * dx), py - (ay + u * dy));
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+function navVoiceOn() { try { return localStorage.getItem("dlk_nav_voice") !== "0"; } catch (e) { return true; } }
+
+function navSpeak(text) {
+  const n = S._nav;
+  if (!n || !n.voice || !text || !("speechSynthesis" in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = LANG === "ar" ? "ar-SA" : "en-US";
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+async function requestNavWakeLock() {
+  try { if (navigator.wakeLock) S._navLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+}
+
+function startNavigation() {
+  const r = S._route;
+  if (!r || !r.data || r.phase === "navigating") return;
+  if (!navigator.geolocation) return toast(t("route.needLocation"));
+  const steps = r.data.steps || [];
+  r.phase = "navigating";
+  S._nav = { idx: Math.min(1, Math.max(0, steps.length - 1)), pos: null, heading: null, acc: null, off: 0, lastReroute: 0, spoke: {}, voice: navVoiceOn(), follow: true, arrived: false, dist: null, remM: r.data.distanceMeters, remS: r.data.durationSeconds, rerouting: false };
+  S._nav.watch = navigator.geolocation.watchPosition(onNavPosition, onNavError, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+  requestNavWakeLock();
+  if (S._map) S._map.on("dragstart", navUserDragged);
+  if (S._userLayer && S._map) S._map.removeLayer(S._userLayer); // the live marker replaces the "you are here" dot
+  navSpeak(navInstruction(steps[0]));
+  render();
+}
+
+function navUserDragged() {
+  if (!S._nav) return;
+  S._nav.follow = false;
+  const b = document.getElementById("nav-recenter");
+  if (b) b.style.display = "inline-flex";
+}
+
+function navRecenter() {
+  const n = S._nav;
+  if (!n) return;
+  n.follow = true;
+  const b = document.getElementById("nav-recenter");
+  if (b) b.style.display = "none";
+  if (n.pos && S._map) moveMap(() => S._map.setView([n.pos.lat, n.pos.lng], 17, { animate: true }));
+}
+
+function onNavError() {
+  toast(t("nav.noGps"));
+}
+
+async function onNavPosition(p) {
+  const n = S._nav, r = S._route;
+  if (!n || !r || r.phase !== "navigating" || !r.data || n.arrived) return;
+  const pos = { lat: p.coords.latitude, lng: p.coords.longitude };
+  n.pos = pos;
+  n.acc = p.coords.accuracy;
+  if (p.coords.heading != null && !isNaN(p.coords.heading)) n.heading = p.coords.heading;
+  const walking = r.mode === "walking";
+  const steps = r.data.steps || [];
+
+  // off the road for a few readings in a row: ask for a new route from here
+  const off = distanceToRoute(pos, r.data.geometry);
+  const limit = Math.max(walking ? 45 : 70, (n.acc || 0) * 1.5);
+  n.off = off > limit ? n.off + 1 : 0;
+  if (n.off >= 3 && Date.now() - n.lastReroute > 15000) return navReroute(pos);
+
+  // arrived? the shop itself can sit well off the road, so the end of the route counts too
+  const endStep = steps[steps.length - 1];
+  const toEnd = endStep ? metersBetween(pos, { lat: endStep.location[0], lng: endStep.location[1] }) : Infinity;
+  if (Math.min(metersBetween(pos, r.dest), toEnd) < Math.max(walking ? 20 : 35, n.acc || 0)) {
+    n.arrived = true;
+    navSpeak(t("nav.arrive"));
+    drawNavMarker();
+    render();
+    return;
+  }
+
+  // passed the manoeuvre we were heading to?
+  let moved = false;
+  while (n.idx < steps.length - 1 && metersBetween(pos, { lat: steps[n.idx].location[0], lng: steps[n.idx].location[1] }) < (walking ? 15 : 25)) { n.idx++; moved = true; }
+  const next = steps[n.idx];
+  n.dist = next ? metersBetween(pos, { lat: next.location[0], lng: next.location[1] }) : 0;
+
+  // what is left
+  let remM = n.dist, remS = 0;
+  const speed = r.data.distanceMeters / Math.max(1, r.data.durationSeconds);
+  for (let k = n.idx; k < steps.length; k++) { remM += steps[k].distanceMeters; remS += steps[k].durationSeconds; }
+  n.remM = remM;
+  n.remS = remS + n.dist / Math.max(0.5, speed);
+
+  // voice: once when it is near, and once at the manoeuvre
+  if (next) {
+    const key = n.idx;
+    const near = walking ? 40 : 180;
+    if (n.dist < near && !n.spoke[key + "n"]) { n.spoke[key + "n"] = true; navSpeak(t("nav.in", { d: fmtDistance(Math.round(n.dist / 10) * 10) }) + " " + navInstruction(next)); }
+    else if (moved && !n.spoke[key]) { n.spoke[key] = true; navSpeak(navInstruction(next)); }
+  }
+
+  drawNavMarker();
+  if (moved) render(); else updateNavUi();
+}
+
+async function navReroute(pos) {
+  const n = S._nav, r = S._route;
+  if (!n || !r) return;
+  n.lastReroute = Date.now();
+  n.off = 0;
+  n.rerouting = true;
+  updateNavUi();
+  const data = await fetchRouteOption(pos, r.dest, r.mode);
+  if (!S._nav || !S._route) return;
+  n.rerouting = false;
+  if (data.error) return updateNavUi();
+  r.data = data;
+  r.options = { ...(r.options || {}), [r.mode]: data };
+  n.idx = Math.min(1, Math.max(0, (data.steps || []).length - 1));
+  n.spoke = {};
+  navSpeak(t("nav.rerouted"));
+  render();
+}
+
+function drawNavMarker() {
+  const n = S._nav, map = S._map;
+  if (!n || !map || !n.pos) return;
+  const html = `<div class="nav-me"><div class="nav-me-dot"></div>${n.heading != null ? `<div class="nav-me-arrow" style="transform:rotate(${Math.round(n.heading)}deg)"></div>` : ""}</div>`;
+  const icon = L.divIcon({ className: "nav-me-wrap", html, iconSize: [34, 34], iconAnchor: [17, 17] });
+  if (!S._navMarker) S._navMarker = L.marker([n.pos.lat, n.pos.lng], { icon, interactive: false, zIndexOffset: 1000 }).addTo(map);
+  else { S._navMarker.setLatLng([n.pos.lat, n.pos.lng]); S._navMarker.setIcon(icon); }
+  if (n.follow) moveMap(() => map.setView([n.pos.lat, n.pos.lng], Math.max(map.getZoom(), 17), { animate: true }));
+}
+
+function navEtaText(n) {
+  const eta = new Date(Date.now() + (n.remS || 0) * 1000).toLocaleTimeString(LANG === "ar" ? "ar" : "en-GB", { hour: "2-digit", minute: "2-digit" });
+  return t("nav.eta", { time: eta });
+}
+
+/** Updates the numbers on screen without redrawing the whole map screen on every GPS reading. */
+function updateNavUi() {
+  const n = S._nav, r = S._route;
+  if (!n || !r || !r.data) return;
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  const step = (r.data.steps || [])[n.idx];
+  set("nav-dist", n.rerouting ? t("nav.rerouting") : n.dist == null ? t("nav.waitGps") : fmtDistance(Math.round(n.dist)));
+  set("nav-instr", navInstruction(step));
+  set("nav-arrow", navArrow(step));
+  set("nav-eta", navEtaText(n));
+  set("nav-rem", `${fmtDuration(n.remS)} · ${fmtDistance(Math.round(n.remM))}`);
+}
+
+function navBannerHtml() {
+  const r = S._route, n = S._nav;
+  if (!r || !n || !r.data) return "";
+  if (n.arrived) {
+    return `<div class="nav-banner arrived"><div class="nav-arrow">📍</div><div class="nav-text"><strong>${esc(t("nav.arrive"))}</strong><span>${esc(r.name)}</span></div><button class="chip active" onclick="finishNavigation()">${esc(t("nav.done"))}</button></div>`;
+  }
+  const step = (r.data.steps || [])[n.idx];
+  return `<div class="nav-banner">
+    <div class="nav-arrow" id="nav-arrow">${navArrow(step)}</div>
+    <div class="nav-text"><strong id="nav-dist">${esc(n.rerouting ? t("nav.rerouting") : n.dist == null ? t("nav.waitGps") : fmtDistance(Math.round(n.dist)))}</strong><span id="nav-instr">${esc(navInstruction(step))}</span></div>
+  </div>`;
+}
+
+function navBottomHtml() {
+  const r = S._route, n = S._nav;
+  if (!r || r.phase !== "navigating" || !n || n.arrived) return "";
+  return `<div class="nav-bottom">
+    <div class="nav-stats"><strong id="nav-eta">${esc(navEtaText(n))}</strong><span id="nav-rem">${esc(fmtDuration(n.remS))} · ${esc(fmtDistance(Math.round(n.remM)))}</span></div>
+    <div class="nav-actions">
+      <button class="chip" id="nav-recenter" style="display:${n.follow ? "none" : "inline-flex"}" onclick="navRecenter()">🎯</button>
+      <button class="chip" onclick="toggleNavVoice()">${n.voice ? "🔊" : "🔇"}</button>
+      <button class="chip nav-end" onclick="endNavigation()">${esc(t("nav.end"))}</button>
+    </div>
+  </div>`;
+}
+
+function toggleNavVoice() {
+  const n = S._nav;
+  if (!n) return;
+  n.voice = !n.voice;
+  try { localStorage.setItem("dlk_nav_voice", n.voice ? "1" : "0"); } catch (e) {}
+  if (!n.voice && "speechSynthesis" in window) window.speechSynthesis.cancel();
+  render();
+}
+
+/** Stops listening to the GPS and clears the live marker; the route itself stays unless the caller drops it. */
+function endNavigationQuietly() {
+  const n = S._nav;
+  if (n && n.watch != null) navigator.geolocation.clearWatch(n.watch);
+  if (S._map) S._map.off("dragstart", navUserDragged);
+  if (S._navMarker && S._map) { S._map.removeLayer(S._navMarker); }
+  S._navMarker = null;
+  if (S._userLayer && S._map && !S._map.hasLayer(S._userLayer)) S._map.addLayer(S._userLayer);
+  try { if (S._navLock) S._navLock.release(); } catch (e) {}
+  S._navLock = null;
+  if ("speechSynthesis" in window) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+  S._nav = null;
+  if (S._route && S._route.phase === "navigating") S._route.phase = "preview";
+}
+
+function endNavigation() { endNavigationQuietly(); render(); }
+function finishNavigation() { endNavigationQuietly(); S._route = null; render(); }
 
 /* ---- account: email verification nudge (only when mail can actually be delivered) ---- */
 

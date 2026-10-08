@@ -31,6 +31,27 @@ describe("GET /route", () => {
     expect(url).toContain("36.2711,33.5111;36.3011,33.5311"); // OSRM wants lng,lat
   });
 
+  it("returns the turn-by-turn steps (manoeuvre, road, place, length) for navigation", async () => {
+    fetchStub.mockResolvedValueOnce(
+      osrm({
+        routes: [{
+          distance: 900, duration: 120, geometry: { coordinates: [[36.27, 33.51], [36.28, 33.52]] },
+          legs: [{ steps: [
+            { name: "شارع بغداد", distance: 500.4, duration: 60.2, maneuver: { type: "depart", modifier: "", location: [36.27, 33.51] } },
+            { name: "", distance: 400, duration: 60, maneuver: { type: "roundabout", modifier: "right", exit: 2, location: [36.275, 33.515] } },
+            { name: "", distance: 0, duration: 0, maneuver: { type: "arrive", location: [36.28, 33.52] } },
+          ] }],
+        }],
+      }),
+    );
+    const res = await request(app).get("/route").query({ fromLat: 33.5444, fromLng: 36.2444, toLat: 33.5544, toLng: 36.2544, mode: "driving" });
+    expect(fetchStub.mock.calls[0][0]).toContain("steps=true");
+    expect(res.body.steps).toHaveLength(3);
+    expect(res.body.steps[0]).toMatchObject({ type: "depart", name: "شارع بغداد", distanceMeters: 500, location: [33.51, 36.27] });
+    expect(res.body.steps[1]).toMatchObject({ type: "roundabout", modifier: "right", exit: 2 });
+    expect(res.body.steps[2]).toMatchObject({ type: "arrive", distanceMeters: 0 });
+  });
+
   it("uses the walking engine for mode=walking and caches repeated requests", async () => {
     fetchStub.mockResolvedValueOnce(osrm());
     const q = { fromLat: 33.5222, fromLng: 36.2822, toLat: 33.5322, toLng: 36.2922, mode: "walking" };
