@@ -55,7 +55,7 @@ function readTemplate(): string {
 /** The website's page with the right preview card in it. */
 export async function renderSharePage(merchantId?: unknown): Promise<string> {
   const base = baseUrl();
-  let card: Card = { title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION, url: `${base}/`, image: `${base}/brand/og-share.png` };
+  let card: Card = { title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION, url: `${base}/`, image: `${base}/brand/og-share-v2.png` };
 
   if (typeof merchantId === "string" && /^[0-9a-f-]{36}$/i.test(merchantId)) {
     const shop = await prisma.merchantProfile.findFirst({

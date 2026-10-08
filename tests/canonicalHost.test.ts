@@ -78,9 +78,9 @@ describe("Share preview cards", () => {
     const home = await request(app).get("/");
     expect(home.text).toContain('property="og:title"');
     expect(home.text).toContain('property="og:description"');
-    expect(home.text).toContain('/brand/og-share.png');
+    expect(home.text).toContain('/brand/og-share-v2.png');
     expect(home.text).toContain('name="twitter:card" content="summary_large_image"');
-    expect((await request(app).get("/brand/og-share.png")).status).toBe(200);
+    expect((await request(app).get("/brand/og-share-v2.png")).status).toBe(200);
 
     const category = await prisma.category.create({ data: { name: "مطاعم الاختبار", slug: `share-${Date.now()}` } });
     const owner = await prisma.user.create({ data: { email: `share${Date.now()}@example.com`, passwordHash: "x", fullName: "Owner", role: "MERCHANT" } });
