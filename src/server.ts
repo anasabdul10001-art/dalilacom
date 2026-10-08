@@ -58,12 +58,19 @@ app.use(express.json({ verify: (req, _res, buf) => { (req as any).rawBody = buf;
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-// The pages that are for the owner, not the public (the admin panel and the developer test console, public/console.html):
-// the live service sets HIDE_ADMIN_UI=true so they exist only on the testing address. The /admin API itself stays (the apps use it, behind sign-in).
+// The developer test console (public/console.html) is for the owner only: the live service sets HIDE_DEV_CONSOLE=true so it exists
+// only on the testing address.
 app.use((req, res, next) => {
-  if (process.env.HIDE_ADMIN_UI === "true" && req.method === "GET" && /^\/(admin\.html|console\.html)$/.test(req.path)) return res.status(404).send("Not found");
+  if (process.env.HIDE_DEV_CONSOLE === "true" && req.method === "GET" && req.path === "/console.html") return res.status(404).send("Not found");
   next();
 });
+
+// The admin panel is at /admin (its sign-in protects it; the /admin/... API paths below are unchanged). The old /admin.html moves there.
+app.get(/^\/admin\/?$/, (req, res) => {
+  if (req.path.endsWith("/")) return res.redirect(301, "/admin");
+  res.sendFile(path.join(__dirname, "..", "public", "admin.html"));
+});
+app.get("/admin.html", (_req, res) => res.redirect(301, "/admin"));
 
 // The main website: the app is served at the root of the domain (dalilacom.com/), and also at /app/.
 app.get("/", (_req, res) => res.sendFile(path.join(__dirname, "..", "public", "app", "index.html")));

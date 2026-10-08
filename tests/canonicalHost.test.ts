@@ -46,17 +46,29 @@ describe("The main website is at the root, the owner's pages are not public", ()
     expect((await request(app).get("/app/app.js")).status).toBe(200);
   });
 
-  it("keeps the admin panel and the developer console on the testing address only (HIDE_ADMIN_UI)", async () => {
-    expect((await request(app).get("/admin.html")).status).toBe(200);
+  it("serves the admin panel at /admin (the old /admin.html moves there) and keeps the /admin API behind sign-in", async () => {
+    const panel = await request(app).get("/admin");
+    expect(panel.status).toBe(200);
+    expect(panel.text).toContain("لوحة التحكم");
+    const slash = await request(app).get("/admin/");
+    expect(slash.status).toBe(301);
+    expect(slash.headers.location).toBe("/admin");
+    const old = await request(app).get("/admin.html");
+    expect(old.status).toBe(301);
+    expect(old.headers.location).toBe("/admin");
+    expect((await request(app).get("/admin/users")).status).toBe(401);
+  });
+
+  it("keeps the developer console on the testing address only (HIDE_DEV_CONSOLE)", async () => {
     expect((await request(app).get("/console.html")).status).toBe(200);
-    process.env.HIDE_ADMIN_UI = "true";
+    process.env.HIDE_DEV_CONSOLE = "true";
     try {
-      expect((await request(app).get("/admin.html")).status).toBe(404);
       expect((await request(app).get("/console.html")).status).toBe(404);
+      expect((await request(app).get("/admin")).status).toBe(200);
       expect((await request(app).get("/")).status).toBe(200);
       expect((await request(app).get("/health")).status).toBe(200);
     } finally {
-      delete process.env.HIDE_ADMIN_UI;
+      delete process.env.HIDE_DEV_CONSOLE;
     }
   });
 });
