@@ -72,3 +72,29 @@ describe("The main website is at the root, the owner's pages are not public", ()
     }
   });
 });
+
+describe("Share preview cards", () => {
+  it("gives the website a title, description and picture for WhatsApp/Facebook, and a shop link that shop's name", async () => {
+    const home = await request(app).get("/");
+    expect(home.text).toContain('property="og:title"');
+    expect(home.text).toContain('property="og:description"');
+    expect(home.text).toContain('/brand/og-share.png');
+    expect(home.text).toContain('name="twitter:card" content="summary_large_image"');
+    expect((await request(app).get("/brand/og-share.png")).status).toBe(200);
+
+    const category = await prisma.category.create({ data: { name: "مطاعم الاختبار", slug: `share-${Date.now()}` } });
+    const owner = await prisma.user.create({ data: { email: `share${Date.now()}@example.com`, passwordHash: "x", fullName: "Owner", role: "MERCHANT" } });
+    const shop = await prisma.merchantProfile.create({ data: { userId: owner.id, businessName: 'مطعم "الياسمين" <b>', categoryId: category.id, address: "دمشق - المزة", approvalStatus: "APPROVED" } });
+    await prisma.discount.create({ data: { merchantId: shop.id, title: "خصم", percent: 15, isActive: true } });
+    const page = await request(app).get(`/?merchant=${shop.id}`);
+    expect(page.text).toContain("مطعم &quot;الياسمين&quot; &lt;b&gt; — دليلكم"); // escaped, never raw HTML
+    expect(page.text).toContain("خصم 15%");
+    expect(page.text).toContain("دمشق - المزة");
+    expect(page.text).toContain(`?merchant=${shop.id}`);
+
+    // an unknown or not-approved shop falls back to the website's own card
+    const pending = await prisma.merchantProfile.update({ where: { id: shop.id }, data: { approvalStatus: "PENDING" } });
+    expect((await request(app).get(`/?merchant=${pending.id}`)).text).not.toContain("الياسمين");
+    expect((await request(app).get("/?merchant=not-an-id")).status).toBe(200);
+  });
+});

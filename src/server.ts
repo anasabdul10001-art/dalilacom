@@ -20,6 +20,7 @@ import { addressRouter } from "./routes/address.routes";
 import { businessRouter, branchRouter } from "./routes/business.routes";
 import { catalogRouter } from "./routes/catalog.routes";
 import { favoritesRouter } from "./routes/favorites.routes";
+import { renderSharePage } from "./lib/shareMeta";
 import { routeRouter } from "./routes/route.routes";
 import { profileRouter } from "./routes/profile.routes";
 import { invoiceRouter } from "./routes/invoice.routes";
@@ -73,7 +74,14 @@ app.get(/^\/admin\/?$/, (req, res) => {
 app.get("/admin.html", (_req, res) => res.redirect(301, "/admin"));
 
 // The main website: the app is served at the root of the domain (dalilacom.com/), and also at /app/.
-app.get("/", (_req, res) => res.sendFile(path.join(__dirname, "..", "public", "app", "index.html")));
+// It goes through renderSharePage so a shared link shows a proper preview card (a shop link: that shop's name and details).
+app.get(["/", "/app/"], async (req, res, next) => {
+  try {
+    res.type("html").send(await renderSharePage(req.query.merchant));
+  } catch (err) {
+    next(err);
+  }
+});
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 app.use("/auth/social", socialRouter);

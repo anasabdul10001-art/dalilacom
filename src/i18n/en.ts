@@ -178,6 +178,8 @@ export const en: LanguagePack = {
     "ارجع للتطبيق وابدأ الربط من جديد.": "Go back to the app and start the linking again.",
     "فعّل المجيب الآلي من التطبيق ثم أعد المحاولة.": "Activate the auto-responder from the app, then try again.",
     "صار المجيب الآلي مربوطًا. ارجع للتطبيق لتشوف القناة.": "The auto-responder is connected. Go back to the app to see the channel.",
+    "دليلكم — كل محلات مدينتك وعروضها بمكان واحد": "Dalilacom — every shop in your city and its offers in one place",
+    "اكتشف المحلات والمطاعم والخدمات القريبة منك، واستفد من خصومات حصرية ببطاقة عضوية واحدة. ابحث على الخريطة واطلب بسهولة ووفّر مع دليلكم.": "Discover the shops, restaurants and services near you and enjoy exclusive discounts with one membership card. Search on the map, order easily and save with Dalilacom.",
     "رابط البدء غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.": "The starting link isn't valid or has expired. Go back to the app and start again.",
     "رابط الرجوع غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.": "The return link isn't valid or has expired. Go back to the app and start again.",
     "رابط الرجوع غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد": "The return link isn't valid or has expired. Go back to the app and start again.",
