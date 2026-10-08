@@ -17,6 +17,7 @@ import {
   MetaPage,
   readSession,
   signPickerToken,
+  signState,
   verifyPickerToken,
   verifyState,
 } from "../services/metaOAuth.service";
@@ -73,12 +74,31 @@ metaOAuthRouter.get("/oauth/start", requireAuth, async (req, res) => {
   if (!(await responderRunning(req.user!.id))) {
     return sendError(res, 403, "FORBIDDEN", "فعّل المجيب الآلي أول (تجربة أو اشتراك)");
   }
+  const state = signState(req.user!.id);
   res.json({
-    url: metaDialogUrl(req.user!.id),
+    url: metaDialogUrl(req.user!.id, state),
+    // Phones with the Facebook app installed hand a facebook.com link opened from another app to the Facebook app, whose
+    // in-app page cannot show this dialog. This link stays on our own domain and then moves on by script (no tap), which
+    // keeps the dialog in the browser.
+    launchUrl: `${new URL(metaRedirectUri()).origin}/responder/meta/oauth/go?state=${encodeURIComponent(state)}`,
     redirectUri: metaRedirectUri(),
     scopes: metaScopes(),
     expiresInMinutes: 15,
   });
+});
+
+/** The app opens this in the phone's browser; it carries on to Facebook by script. The state proves who started it. */
+metaOAuthRouter.get("/oauth/go", (req, res) => {
+  const state = typeof req.query.state === "string" ? req.query.state : undefined;
+  const userId = verifyState(state);
+  if (!userId || !metaOAuthConfigured()) {
+    return res.status(400).send(page("تعذّر إكمال الربط", "<p>رابط البدء غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.</p>"));
+  }
+  const target = metaDialogUrl(userId, state);
+  res.send(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>دليلكم</title></head>
+<body style="font-family:system-ui,sans-serif;text-align:center;padding:48px 16px;color:#444"><p>جاري فتح فيسبوك…</p>
+<noscript><p><a href="${target.replace(/&/g, "&amp;")}">تابع إلى فيسبوك</a></p></noscript>
+<script>setTimeout(function(){location.replace(${JSON.stringify(target)})},150)</script></body></html>`);
 });
 
 /* ---------------- step 2: Facebook sends the merchant's browser back here ---------------- */

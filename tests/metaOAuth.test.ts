@@ -104,6 +104,18 @@ describe("Facebook Login: starting the flow", () => {
     expect(state.split(".")).toHaveLength(2);
   });
 
+  it("also hands out a link on our own domain that carries on to Facebook by script (so the Facebook app cannot take it over)", async () => {
+    const start = await request(app).get("/responder/meta/oauth/start").set("Authorization", token);
+    const launch = new URL(start.body.launchUrl);
+    expect(launch.origin + launch.pathname).toBe("http://localhost:4000/responder/meta/oauth/go");
+    const page = await request(app).get(launch.pathname + launch.search);
+    expect(page.status).toBe(200);
+    expect(page.text).toContain("https://www.facebook.com/v21.0/dialog/oauth");
+    expect(page.text).toContain("location.replace");
+    const forged = await request(app).get("/responder/meta/oauth/go?state=x.y");
+    expect(forged.status).toBe(400);
+  });
+
   it("requires a signed-in merchant", async () => {
     const res = await request(app).get("/responder/meta/oauth/start");
     expect(res.status).toBe(401);

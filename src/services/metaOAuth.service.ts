@@ -118,11 +118,11 @@ export function verifyPickerToken(sessionId: string, pageId: string, driver: Cha
 
 /* ---------------- Facebook itself ---------------- */
 
-export function metaDialogUrl(userId: string): string {
+export function metaDialogUrl(userId: string, state: string = signState(userId)): string {
   const params = new URLSearchParams({
     client_id: metaAppId() ?? "",
     redirect_uri: metaRedirectUri(),
-    state: signState(userId),
+    state,
     response_type: "code",
   });
   // An app that uses "Facebook Login for Business" asks for its permissions through a saved configuration instead of a

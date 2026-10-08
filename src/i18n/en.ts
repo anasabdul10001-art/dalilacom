@@ -178,6 +178,7 @@ export const en: LanguagePack = {
     "ارجع للتطبيق وابدأ الربط من جديد.": "Go back to the app and start the linking again.",
     "فعّل المجيب الآلي من التطبيق ثم أعد المحاولة.": "Activate the auto-responder from the app, then try again.",
     "صار المجيب الآلي مربوطًا. ارجع للتطبيق لتشوف القناة.": "The auto-responder is connected. Go back to the app to see the channel.",
+    "رابط البدء غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.": "The starting link isn't valid or has expired. Go back to the app and start again.",
     "رابط الرجوع غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.": "The return link isn't valid or has expired. Go back to the app and start again.",
     "رابط الرجوع غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد": "The return link isn't valid or has expired. Go back to the app and start again.",
     "الربط صالح 15 دقيقة. إذا ما لقيت صفحتك، تأكد إنك منحت صلاحية الوصول لصفحاتك.": "The link is valid for 15 minutes. If you can't find your page, make sure you granted access to your pages.",

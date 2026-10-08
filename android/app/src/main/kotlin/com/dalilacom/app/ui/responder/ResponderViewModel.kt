@@ -159,7 +159,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
             _uiState.update {
                 it.copy(
                     metaLoading = false,
-                    metaAuthUrl = result.getOrNull()?.url,
+                    metaAuthUrl = result.getOrNull()?.let { it.launchUrl ?: it.url },
                     error = result.exceptionOrNull()?.message,
                 )
             }

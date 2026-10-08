@@ -149,6 +149,8 @@ data class MetaOAuthStatusDto(
 @Serializable
 data class MetaOAuthStartDto(
     val url: String,
+    /** A link on our own domain that moves on to [url] by script, so the Facebook app cannot take it over. */
+    val launchUrl: String? = null,
     val redirectUri: String = "",
     val scopes: List<String> = emptyList(),
     val expiresInMinutes: Int = 15,
