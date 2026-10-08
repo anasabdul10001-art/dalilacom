@@ -82,6 +82,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     val factory = remember { ViewModelFactory(container) }
     var isGuest by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isGuest = !container.authRepository.hasStoredSession() }
+    // every price is shown in the money of the shopper's country
+    LaunchedEffect(isGuest, selectedTab) { container.storeRepository.market()?.let { com.dalilacom.app.ui.common.Market.currency = it } }
 
     // Push notifications: ask Android 13+ for permission once signed in, then tell the server this phone's token.
     val context = androidx.compose.ui.platform.LocalContext.current

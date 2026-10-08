@@ -93,4 +93,14 @@ describe("the store only shows a shopper their own country's shops", () => {
     expect(near).not.toContain(inB);
     expect(names(await get({ scope: "radius", lat: 33.52, lng: 36.28, radiusKm: 500 }))).toEqual(expect.arrayContaining([inA, inB]));
   });
+
+  it("prices are in the money of the shopper's country", async () => {
+    await prisma.country.upsert({ where: { isoCode2: "QQ" }, update: { currencyCode: "QQD" }, create: { name: `Q ${tag}`, isoCode2: "QQ", currencyCode: "QQD" } });
+    const market = await request(app).get("/geo/market").set("CF-IPCountry", "QQ");
+    expect(market.body).toEqual({ country: "QQ", currencyCode: "QQD" });
+    expect((await request(app).get("/store/home").set("CF-IPCountry", "QQ")).body.currency).toBe("QQD");
+    expect((await request(app).get("/store/products").set("CF-IPCountry", "QQ")).body.currency).toBe("QQD");
+    // a country nobody configured falls back to euros
+    expect((await request(app).get("/geo/market").set("CF-IPCountry", "ZY")).body.currencyCode).toBe("EUR");
+  });
 });

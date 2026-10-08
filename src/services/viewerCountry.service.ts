@@ -2,6 +2,12 @@ import type { Request } from "express";
 import { prisma } from "../prisma";
 import { verifyAuthToken } from "../utils/jwt";
 
+/** The money of a country's shoppers (its ISO 4217 code, set per country in the admin panel); euros when the country is not configured. */
+export async function currencyOf(countryCode: string): Promise<string> {
+  const country = await prisma.country.findUnique({ where: { isoCode2: countryCode }, select: { currencyCode: true } });
+  return country?.currencyCode ?? "EUR";
+}
+
 /** The country the platform serves first; also where an account or a visitor whose country cannot be told is placed. */
 export const DEFAULT_COUNTRY = "SY";
 

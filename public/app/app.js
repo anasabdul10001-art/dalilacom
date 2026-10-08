@@ -15,6 +15,7 @@ function latinDigits(text) {
 }
 
 const S = {
+  currency: "EUR",
   token: localStorage.getItem("dlk_token") || null,
   role: localStorage.getItem("dlk_role") || null,
   screen: S_initialScreen(),
@@ -56,8 +57,20 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+/** Money in the currency of the shopper's country (S.currency, from /geo/market): dollars in Syria for now, euros elsewhere unless set. */
+const CURRENCY_SYMBOL = { USD: "$", EUR: "€", GBP: "£", TRY: "₺" };
+
 function fmt(cents) {
-  return (Number(cents || 0) / 100).toFixed(2) + " €";
+  const code = S.currency || "EUR";
+  const amount = (Number(cents || 0) / 100).toFixed(2);
+  const sym = CURRENCY_SYMBOL[code];
+  if (!sym) return `${amount} ${code}`;
+  return LANG === "en" ? `${sym}${amount}` : `${amount} ${sym}`;
+}
+
+async function loadMarket() {
+  const { ok, data } = await api("GET", "/geo/market");
+  if (ok && data.currencyCode && data.currencyCode !== S.currency) { S.currency = data.currencyCode; render(); }
 }
 
 function errMsg(data, fallback) {
@@ -98,6 +111,7 @@ function setToken(token, role) {
   localStorage.setItem("dlk_token", token);
   localStorage.setItem("dlk_role", role);
   if (S._discover) loadFavIds();
+  loadMarket(); // the account's own country decides the currency
   saveAccountLanguage(); // push notifications and emails are written in this language
 }
 
@@ -117,6 +131,7 @@ function clearToken() {
   S._onboarding = null;
   S._mprof = null;
   S._profile = null;
+  loadMarket();
 }
 
 function stopQrLoop() {
@@ -1663,6 +1678,7 @@ async function loadStoreHome() {
   if (!st) return;
   st.loading = false;
   st.home = ok ? data : { sections: [], bestSellers: [], deals: [], newest: [] };
+  if (ok && data.currency) S.currency = data.currency;
   render();
   if (ok && !st.countryName) {
     const countries = await api("GET", "/geo/countries");
@@ -2733,6 +2749,8 @@ async function acctSaveLocation() {
   const { ok, data } = await api("PATCH", "/profile/me", { countryCode, cityId, vatNumber });
   if (!ok) return acctDone(null, errMsg(data, "تعذّر الحفظ"));
   S._acct.profile = data;
+  S._store = null; // another country: another shops list and another money
+  loadMarket();
   acctDone("تم الحفظ ✅");
 }
 
@@ -4045,6 +4063,8 @@ function bootMetaReturn() {
   loadResponder(); // go() only loads when there is no state yet, and this state is already marked as loading
   return true;
 }
+
+loadMarket();
 
 bootSocialReturn().then((social) => {
   if (social) return;

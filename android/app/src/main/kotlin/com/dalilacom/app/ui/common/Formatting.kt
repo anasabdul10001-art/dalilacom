@@ -2,9 +2,23 @@ package com.dalilacom.app.ui.common
 
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
-fun formatCents(cents: Int): String = "%.2f €".format(cents / 100.0)
+/** The money of the shopper's country (from the server: dollars in Syria for now); a state, so every price on screen follows a change. */
+object Market {
+    var currency by androidx.compose.runtime.mutableStateOf("EUR")
+}
+
+private val SYMBOLS = mapOf("USD" to "$", "EUR" to "€", "GBP" to "£", "TRY" to "₺")
+
+fun formatCents(cents: Int): String {
+    val amount = "%.2f".format(java.util.Locale.US, cents / 100.0)
+    val code = Market.currency
+    val symbol = SYMBOLS[code] ?: return "$amount $code"
+    return if (AppStrings.language == "en") "$symbol$amount" else "$amount $symbol"
+}
 
 fun orderStatusLabel(status: String): String = when (status) {
     "PENDING" -> AppStrings.get(R.string.s_8aed060f)

@@ -194,6 +194,9 @@ interface ApiService {
     @GET("products/{id}")
     suspend fun getProduct(@Path("id") id: String): Response<ProductDto>
 
+    @GET("geo/market")
+    suspend fun market(): Response<MarketDto>
+
     @GET("store/home")
     suspend fun storeHome(
         @Query("scope") scope: String?,

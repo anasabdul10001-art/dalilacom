@@ -4,10 +4,17 @@ import { GeoLevel, Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { currencyOf, viewerCountry } from "../services/viewerCountry.service";
 
 export const geoRouter = Router();
 
 /* ---------------- countries ---------------- */
+
+// The shopper's market: their country (account, else where they connect from) and its currency, so every price is shown in it.
+geoRouter.get("/market", async (req, res) => {
+  const country = await viewerCountry(req);
+  res.json({ country, currencyCode: await currencyOf(country) });
+});
 
 geoRouter.get("/countries", async (_req, res) => {
   res.json(await prisma.country.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }));

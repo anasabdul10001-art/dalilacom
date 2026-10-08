@@ -525,6 +525,9 @@ data class CatalogDto(val creditName: String = "", val countryCode: String? = nu
 /* ---------------- the online store ---------------- */
 
 @Serializable
+data class MarketDto(val country: String = "", val currencyCode: String = "")
+
+@Serializable
 data class StoreSectionDto(val id: String, val name: String, val nameEn: String = "", val icon: String = "", val count: Int = 0)
 
 @Serializable
@@ -548,11 +551,13 @@ data class StoreProductDto(
     val section: StoreSectionDto? = null,
     val merchant: StoreShopDto,
     val related: List<StoreProductDto> = emptyList(),
+    val currency: String = "",
 )
 
 @Serializable
 data class StoreHomeDto(
     val country: String = "",
+    val currency: String = "",
     val sections: List<StoreSectionDto> = emptyList(),
     val bestSellers: List<StoreProductDto> = emptyList(),
     val deals: List<StoreProductDto> = emptyList(),
@@ -560,4 +565,4 @@ data class StoreHomeDto(
 )
 
 @Serializable
-data class StoreListDto(val total: Int = 0, val items: List<StoreProductDto> = emptyList())
+data class StoreListDto(val total: Int = 0, val currency: String = "", val items: List<StoreProductDto> = emptyList())

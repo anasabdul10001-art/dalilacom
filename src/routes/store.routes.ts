@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
-import { DEFAULT_COUNTRY, viewerCountry } from "../services/viewerCountry.service";
+import { DEFAULT_COUNTRY, currencyOf, viewerCountry } from "../services/viewerCountry.service";
 
 /**
  * The online store: every shop's products in one place, like a marketplace. Read-only and public; buying goes
@@ -111,7 +111,7 @@ storeRouter.get("/home", async (req, res) => {
     prisma.product.findMany({ where: { ...visible, memberDiscountEnabled: true, memberPriceCents: { not: null } }, include, orderBy: sorts.popular, take: 12 }),
     prisma.product.findMany({ where: visible, include, orderBy: sorts.new, take: 12 }),
   ]);
-  res.json({ country, sections, bestSellers: best.map(view), deals: deals.map(view), newest: newest.map(view) });
+  res.json({ country, currency: await currencyOf(country), sections, bestSellers: best.map(view), deals: deals.map(view), newest: newest.map(view) });
 });
 
 const listSchema = z.object({
@@ -142,7 +142,7 @@ storeRouter.get("/products", async (req, res) => {
     prisma.product.count({ where }),
     prisma.product.findMany({ where, include, orderBy: sorts[sort], take: limit, skip: offset }),
   ]);
-  res.json({ total, items: items.map(view) });
+  res.json({ total, currency: await currencyOf(country), items: items.map(view) });
 });
 
 storeRouter.get("/sections", async (req, res) => {
@@ -161,5 +161,5 @@ storeRouter.get("/products/:id", async (req, res) => {
     orderBy: sorts.popular,
     take: 8,
   });
-  res.json({ ...view(product), related: related.map(view) });
+  res.json({ ...view(product), currency: await currencyOf(country), related: related.map(view) });
 });

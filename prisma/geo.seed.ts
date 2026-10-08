@@ -7,7 +7,7 @@ const SYRIA = {
   nameEnglish: "Syria",
   isoCode2: "SY",
   isoCode3: "SYR",
-  currencyCode: "SYP",
+  currencyCode: "USD", // Syria is priced in dollars for now
   phoneCode: "+963",
   defaultLanguage: "ar",
   timezone: "Asia/Damascus",
