@@ -21,6 +21,7 @@ const targetShape = {
   longitude: z.number().min(-180).max(180).optional(),
   radiusKm: z.number().positive().max(20000).optional(),
   followers: z.literal(true).optional(),
+  everyone: z.literal(true).optional(),
   role: z.enum([Role.CUSTOMER, Role.MERCHANT]).optional(),
 };
 
@@ -39,8 +40,8 @@ function fail(res: Parameters<typeof sendError>[0], err: unknown) {
 }
 
 function targetOf(data: z.infer<typeof previewSchema>): BroadcastTarget {
-  const { countryId, geoUnitId, latitude, longitude, radiusKm, followers, role } = data;
-  return { countryId, geoUnitId, latitude, longitude, radiusKm, followers, role };
+  const { countryId, geoUnitId, latitude, longitude, radiusKm, followers, everyone, role } = data;
+  return { countryId, geoUnitId, latitude, longitude, radiusKm, followers, everyone, role };
 }
 
 broadcastRouter.post("/preview", async (req, res) => {

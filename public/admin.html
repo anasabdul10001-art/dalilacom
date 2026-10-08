@@ -313,7 +313,7 @@
       <div class="card">
         <h3>إرسال إعلان جديد</h3>
         <label>البلد</label>
-        <select id="bc-country" onchange="bcPickCountry()"><option value="">— اختر بلدًا —</option></select>
+        <select id="bc-country" onchange="bcPickCountry()"><option value="">— اختر بلدًا —</option><option value="__all">كل المستخدمين (بدون تحديد بلد)</option></select>
         <label>المنطقة (اختياري)</label>
         <select id="bc-region" onchange="bcPickRegion()" disabled><option value="">— كل البلد —</option></select>
         <label>المدينة (اختياري)</label>
@@ -724,7 +724,8 @@ async function bcFill(selectId, params, placeholder) {
 }
 
 async function bcPickCountry() {
-  const id = document.getElementById('bc-country').value;
+  const picked = document.getElementById('bc-country').value;
+  const id = picked === '__all' ? '' : picked; // "everyone" has no regions to pick from
   await bcFill('bc-region', id && { countryId: id, level: 'REGION' }, '— كل البلد —');
   await bcFill('bc-city', null, '— كل المنطقة —');
   await bcFill('bc-area', null, '— كل المدينة —');
@@ -747,6 +748,7 @@ function bcTarget() {
   const v = (id) => document.getElementById(id).value;
   const country = v('bc-country');
   if (!country) return null;
+  if (country === '__all') return v('bc-role') ? { everyone: true, role: v('bc-role') } : { everyone: true };
   const unit = v('bc-area') || v('bc-city') || v('bc-region');
   const target = unit ? { geoUnitId: unit } : { countryId: country };
   if (v('bc-role')) target.role = v('bc-role');

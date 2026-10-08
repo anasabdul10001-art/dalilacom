@@ -25,6 +25,8 @@ export interface BroadcastTarget {
   radiusKm?: number;
   /** The people who saved this shop (its followers). A merchant only. */
   followers?: boolean;
+  /** Every enabled account, wherever it is (an account only counts for a place once its owner set a country or saved an address). Admin only. */
+  everyone?: boolean;
   /** Only customers, or only merchants. */
   role?: Role;
 }
@@ -52,12 +54,13 @@ export class BroadcastError extends Error {
   }
 }
 
-type Scope = "COUNTRY" | "PLACE" | "RADIUS" | "FOLLOWERS";
+type Scope = "ALL" | "COUNTRY" | "PLACE" | "RADIUS" | "FOLLOWERS";
 
 function scopeOf(target: BroadcastTarget): Scope {
   const radius = target.radiusKm !== undefined;
-  const chosen = [!!target.countryId, !!target.geoUnitId, radius, !!target.followers].filter(Boolean).length;
+  const chosen = [!!target.countryId, !!target.geoUnitId, radius, !!target.followers, !!target.everyone].filter(Boolean).length;
   if (chosen !== 1) throw new BroadcastError(400, "BAD_TARGET", "Choose exactly one of: a country, a place inside a country, a distance, or your followers");
+  if (target.everyone) return "ALL";
   return target.countryId ? "COUNTRY" : target.geoUnitId ? "PLACE" : target.followers ? "FOLLOWERS" : "RADIUS";
 }
 
@@ -105,6 +108,11 @@ async function withinRadius(lat: number, lng: number, radiusKm: number, base: Pr
 export async function audienceUserIds(target: BroadcastTarget, opts: { exclude?: string; followersOf?: string } = {}): Promise<string[]> {
   const scope = scopeOf(target);
   const base: Prisma.UserWhereInput = { isDisabled: false, ...(target.role ? { role: target.role } : {}), ...(opts.exclude ? { id: { not: opts.exclude } } : {}) };
+
+  if (scope === "ALL") {
+    const users = await prisma.user.findMany({ where: base, select: { id: true } });
+    return users.map((u) => u.id);
+  }
 
   if (scope === "FOLLOWERS") {
     if (!opts.followersOf) throw new BroadcastError(400, "BAD_TARGET", "Only a shop has followers");
@@ -156,6 +164,7 @@ async function resolve(sender: Sender, target: BroadcastTarget, message?: Broadc
     return { target, scope: scopeOf(target), cap: MAX_ADMIN_RECIPIENTS, quota: null, price: 0, merchant: null, product: null, discount: null };
   }
   if (sender.role !== Role.MERCHANT) throw new BroadcastError(403, "FORBIDDEN", "Forbidden");
+  if (target.everyone) throw new BroadcastError(403, "FORBIDDEN", "Only the platform can message everyone");
 
   const merchant = await prisma.merchantProfile.findUnique({
     where: { userId: sender.id },
@@ -245,6 +254,7 @@ function targetOfRow(row: Row): BroadcastTarget {
     radiusKm: row.radiusKm ?? undefined,
     role: row.audienceRole ?? undefined,
     followers: row.scope === "FOLLOWERS" ? true : undefined,
+    everyone: row.scope === "ALL" ? true : undefined,
   };
 }
 

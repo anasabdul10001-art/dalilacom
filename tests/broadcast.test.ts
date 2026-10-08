@@ -126,6 +126,33 @@ describe("Admin announcements by country, region, city and area", () => {
   });
 });
 
+describe("The admin's announcement to everyone", () => {
+  it("reaches every enabled account wherever it is (no country needed), can be limited to customers or merchants, and is refused for a merchant", async () => {
+    const a = await admin();
+    const noPlace = await account("bcnoplace"); // never set a country or an address
+    const disabled = await account("bcoff", { isDisabled: true });
+    const shop = await approvedShop(null, null);
+
+    const preview = await request(app).post("/broadcasts/preview").set(a.auth).send({ everyone: true });
+    expect(preview.status).toBe(200);
+    expect(preview.body.count).toBeGreaterThanOrEqual(3); // at least the three enabled accounts made here
+    const customersOnly = await request(app).post("/broadcasts/preview").set(a.auth).send({ everyone: true, role: "CUSTOMER" });
+    expect(customersOnly.body.count).toBeLessThan(preview.body.count);
+
+    // sent to the merchants only here (the test database holds hundreds of other accounts); no country or address anywhere
+    const sent = await request(app).post("/broadcasts").set(a.auth).send({ everyone: true, role: "MERCHANT", title: "للجميع", body: "إشعار تجريبي للجميع" });
+    expect(sent.status).toBe(201);
+    expect(sent.body.delivered).toBeGreaterThanOrEqual(1);
+    expect((await received(shop.owner.id, "SYSTEM")).some((n) => n.title === "للجميع")).toBe(true);
+    expect((await received(noPlace.id)).length).toBe(0); // a customer: not in this one
+    expect((await received(disabled.id)).length).toBe(0);
+
+    // a merchant can never message everyone, and "everyone" cannot be mixed with another target
+    expect((await request(app).post("/broadcasts/preview").set(shop.owner.auth).send({ everyone: true })).status).toBe(403);
+    expect((await request(app).post("/broadcasts/preview").set(a.auth).send({ everyone: true, countryId: crypto.randomUUID() })).status).toBe(400);
+  });
+});
+
 describe("A person's own position", () => {
   it("is stored rounded to ~1 km and can be forgotten", async () => {
     const user = await account("bcposition");
