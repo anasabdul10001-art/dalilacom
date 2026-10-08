@@ -68,7 +68,15 @@ describe("Which social buttons exist", () => {
     expect(url.searchParams.get("client_id")).toBe("google-client");
     expect(url.searchParams.get("redirect_uri")).toContain("/auth/social/google/callback");
     expect(url.searchParams.get("scope")).toContain("email");
+    expect(url.searchParams.get("auth_type")).toBeNull();
     expect(String(start.headers["set-cookie"])).toMatch(/dlk_social_nonce=.*HttpOnly/);
+  });
+
+  it("asks Facebook again for an email that was declined once (rerequest)", async () => {
+    const start = await request(app).get("/auth/social/facebook/start").query({ platform: "app", lang: "en" });
+    const url = new URL(start.headers.location);
+    expect(url.searchParams.get("scope")).toContain("email");
+    expect(url.searchParams.get("auth_type")).toBe("rerequest");
   });
 });
 

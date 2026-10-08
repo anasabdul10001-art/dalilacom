@@ -136,6 +136,9 @@ export function startLogin(provider: SocialProvider, platform: SocialPlatform, l
     state,
   });
   if (provider === "GOOGLE") query.set("prompt", "select_account");
+  // Facebook remembers a declined permission and never asks again, which leaves the sign-in without an email (we need one).
+  // "rerequest" asks again for exactly what was declined, and shows nothing when everything was already granted.
+  if (provider === "FACEBOOK") query.set("auth_type", "rerequest");
   return { url: `${config.authorizeUrl}?${query.toString()}`, nonce };
 }
 
