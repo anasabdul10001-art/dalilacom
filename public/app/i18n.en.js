@@ -2,7 +2,7 @@
 // PHRASES / PATTERNS / WORDS (the gettext-style table for everything else). See docs/I18N.md.
 LANGS.en = { name: "English", dir: "ltr" };
 DICT.en = {
-  "tab.map": "Map", "tab.card": "My card", "tab.cart": "Cart", "tab.orders": "Orders", "tab.account": "Account",
+  "tab.map": "Map", "tab.store": "Store", "tab.card": "My card", "tab.cart": "Cart", "tab.orders": "Orders", "tab.account": "Account",
 
   "search.placeholder": "Search for a place or service...",
   "search.recent": "Recent searches",

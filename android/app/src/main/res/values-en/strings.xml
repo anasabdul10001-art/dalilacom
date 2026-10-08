@@ -4,6 +4,7 @@
 
     <string name="tab_map">Map</string>
     <string name="tab_card">My card</string>
+    <string name="tab_store">Store</string>
     <string name="tab_cart">Cart</string>
     <string name="tab_orders">Orders</string>
     <string name="tab_account">Account</string>

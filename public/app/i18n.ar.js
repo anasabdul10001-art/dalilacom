@@ -1,7 +1,7 @@
 // Arabic — the source language of the app. Every key here must exist in every other language's DICT.
 LANGS.ar = { name: "العربية", dir: "rtl" };
 DICT.ar = {
-  "tab.map": "الخريطة", "tab.card": "بطاقتي", "tab.cart": "السلة", "tab.orders": "طلباتي", "tab.account": "حسابي",
+  "tab.map": "الخريطة", "tab.store": "المتجر", "tab.card": "بطاقتي", "tab.cart": "السلة", "tab.orders": "طلباتي", "tab.account": "حسابي",
 
   "search.placeholder": "دوّر على محل أو خدمة...",
   "search.recent": "عمليات بحث سابقة",

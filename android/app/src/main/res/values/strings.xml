@@ -8,6 +8,7 @@
 
     <string name="tab_map">الخريطة</string>
     <string name="tab_card">بطاقتي</string>
+    <string name="tab_store">المتجر</string>
     <string name="tab_cart">السلة</string>
     <string name="tab_orders">طلباتي</string>
     <string name="tab_account">حسابي</string>

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
@@ -65,6 +66,8 @@ import androidx.compose.material.icons.filled.SmartToy
 
 private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) {
     Discover(R.string.tab_map, Icons.Filled.Map),
+    /** Not a page of this shell: the button opens the online store screen (open to guests too). */
+    Store(R.string.tab_store, Icons.Filled.Storefront),
     Card(R.string.tab_card, Icons.Filled.CreditCard),
     /** Not a page of this shell: the middle button opens the auto-responder screen. */
     Responder(R.string.tab_responder, Icons.Filled.SmartToy),
@@ -120,8 +123,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         )
                     } else {
                         NavigationBarItem(
-                            selected = selectedTab == tab,
-                            onClick = { selectedTab = tab },
+                            selected = selectedTab == tab && tab != HomeTab.Store,
+                            onClick = { if (tab == HomeTab.Store) rootNavController.navigate("store") else selectedTab = tab },
                             icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
                             label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall) },
                         )
@@ -142,7 +145,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     onLogin = { goLogin() },
                     onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
                 )
-                HomeTab.Responder -> Unit // never selected: its button opens its own screen
+                HomeTab.Responder, HomeTab.Store -> Unit // never selected: their buttons open their own screens
                 HomeTab.Card ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.CreditCard,

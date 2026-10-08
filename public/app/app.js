@@ -162,6 +162,8 @@ function setHomeTab(tab) {
     S._resp = null;
     return go("responder");
   }
+  // the store is a whole screen of its own: guests may browse it too
+  if (tab === "store") return openStore();
   if (tab !== "card") stopQrLoop();
   S.homeTab = tab;
   render();
@@ -244,6 +246,7 @@ const ICON = {
   card: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>',
   bot: '<svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 16.5h6"/><circle cx="12" cy="3.5" r="1"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>',
+  store: '<svg viewBox="0 0 24 24"><path d="M4 9 5.5 4h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9"/><path d="M5.5 11.5V20h13v-8.5"/><path d="M10 20v-4.5h4V20"/></svg>',
   cart: '<svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.2 11h10.4L20 8H6.2"/></svg>',
   orders: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M8 9h8M8 13h8"/></svg>',
   user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.3"/><path d="M5 20c1.3-3.6 4-5.4 7-5.4s5.7 1.8 7 5.4"/></svg>',
@@ -574,6 +577,7 @@ function doLogout() {
 
 const HOME_TABS = [
   { id: "discover", label: "tab.map", icon: "search" },
+  { id: "store", label: "tab.store", icon: "store" },
   { id: "card", label: "tab.card", icon: "card" },
   { id: "responder", label: "tab.responder", icon: "bot", hero: true },
   { id: "cart", label: "tab.cart", icon: "cart" },
