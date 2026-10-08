@@ -2,9 +2,6 @@ package com.dalilacom.app.ui.responder
 
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
-import android.content.Context
-import android.content.Intent
-import com.dalilacom.app.ui.common.ExternalBrowser
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,9 +63,6 @@ private fun interactionLabel(status: String) = when (status) {
     else -> AppStrings.get(R.string.s_d7359b3c)
 }
 
-/** Opens the Facebook dialog in the phone's browser (not the Facebook app, which fails on it) — no WebView, no extra dependency. */
-private fun openInBrowser(context: Context, url: String) = ExternalBrowser.open(context, url)
-
 @Composable
 fun ResponderScreen(
     factory: ViewModelFactory,
@@ -91,13 +85,15 @@ fun ResponderScreen(
     LaunchedEffect(metaSessionId) {
         metaSessionId?.let { viewModel.loadMetaSession(it) }
     }
-    // A start request produced a dialog URL: open it, then forget it so a redraw doesn't reopen it.
+    // A start request produced a dialog URL: show it inside the app, then forget it so a redraw doesn't reopen it.
+    var loginUrl by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state.metaAuthUrl) {
         state.metaAuthUrl?.let {
-            openInBrowser(context, it)
+            loginUrl = it
             viewModel.consumeMetaAuthUrl()
         }
     }
+    loginUrl?.let { MetaLoginWebView(url = it, onClose = { loginUrl = null }) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
