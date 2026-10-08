@@ -89,10 +89,11 @@ describe("Sending push through Firebase", () => {
     const message = JSON.parse(send[1].body).message;
     expect(message).toMatchObject({
       token,
-      notification: { title: "طلبك وصل", body: "رقم الطلب ORD-1" },
-      data: { type: "ORDER_PLACED", orderId: "abc", count: "2" }, // every value is a string
-      android: { priority: "HIGH", notification: { channel_id: "dalilacom_default" } },
+      // data only: the app draws the notification itself, so it always carries the logo (every value is a string)
+      data: { type: "ORDER_PLACED", orderId: "abc", count: "2", title: "طلبك وصل", body: "رقم الطلب ORD-1" },
+      android: { priority: "HIGH" },
     });
+    expect(message.notification).toBeUndefined();
 
     // the access token is reused for the next notification
     await notify({ userId: user.id, type: "ORDER_STATUS", title: "تم التأكيد" });

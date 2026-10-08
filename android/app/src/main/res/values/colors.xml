@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- the brand red, used as the accent of push notifications -->
+    <color name="brand_red">#BA2A34</color>
+</resources>

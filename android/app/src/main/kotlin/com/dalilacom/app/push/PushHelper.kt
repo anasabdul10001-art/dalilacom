@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -64,7 +65,11 @@ object PushHelper {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            // the status bar only draws the shape of a small icon, so it is the logo as a white silhouette (a coloured one turns into a blob)
+            .setSmallIcon(R.drawable.ic_stat_dalilacom)
+            .setColor(ContextCompat.getColor(context, R.color.brand_red))
+            .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.ic_notification_large))
+            .setSubText(context.getString(R.string.app_name))
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))

@@ -134,9 +134,10 @@ export async function sendPushToUser(userId: string, message: PushMessage, repor
           body: JSON.stringify({
             message: {
               token: device.token,
-              notification: { title: message.title, ...(message.body ? { body: message.body } : {}) },
-              data: stringifyData(message.data),
-              android: { priority: "HIGH", notification: { channel_id: ANDROID_CHANNEL_ID } },
+              // data only (no "notification" block): the app then draws every push itself, in the foreground or not,
+              // so it always carries the Dalilacom logo and name (a system-drawn one cannot have the large logo)
+              data: { ...stringifyData(message.data), title: message.title, ...(message.body ? { body: message.body } : {}) },
+              android: { priority: "HIGH" },
             },
           }),
           signal: AbortSignal.timeout(8000),

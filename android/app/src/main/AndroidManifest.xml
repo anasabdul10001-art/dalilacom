@@ -63,5 +63,10 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- What a push shows when it is drawn by the system (app closed): the logo as the small icon, brand red accent, same channel as the server sends to. -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_dalilacom" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/brand_red" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="dalilacom_default" />
     </application>
 </manifest>
