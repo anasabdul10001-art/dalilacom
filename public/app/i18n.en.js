@@ -448,6 +448,12 @@ PHRASES.en = {
   "أرسل الرابط": "Send the link",
   "اكتب إيميلك": "Enter your email",
   "إذا الإيميل مسجّل رح يوصلك رابط خلال دقائق.": "If the email is registered you will get a link within minutes.",
+  "ربط بحساب فيسبوك (الأسهل)": "Connect with a Facebook account (easiest)",
+  "بتسجّل دخول بفيسبوك وبتختار صفحتك، ما في داعي لأي أرقام أو رموز.": "You sign in with Facebook and pick your Page — no numbers or tokens needed.",
+  "أو يدويًا:": "Or manually:",
+  "تعذّر بدء الربط": "Could not start linking",
+  "تم ربط الصفحة ✅": "Page linked ✅",
+  "تعذّر ربط الصفحة. جرّب من جديد.": "Could not link the Page. Try again.",
 };
 PATTERNS.en = [
   [/^تكلفة هذا الإعلان (\d+) من رصيدك \(رصيدك (\d+)\)$/, "This one costs $1 from your balance (you have $2)"],

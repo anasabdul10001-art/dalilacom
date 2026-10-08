@@ -3113,10 +3113,15 @@ function respChannels() {
   const r = S._resp;
   return `
     ${errorBanner()}
+    ${r.notice ? `<div class="card">${esc(r.notice)}</div>` : ""}
     <div class="section-title" style="margin-top:0">القنوات المتاحة</div>
     ${r.channels.map((c) => `
       <div class="card">
         <div class="title-line"><strong>${esc(c.name)}</strong>${c.connectable ? "" : `<span class="badge neutral">قريبًا</span>`}</div>
+        ${c.driver === "FACEBOOK" || c.driver === "INSTAGRAM" ? `
+          <button class="btn" onclick="respMetaLink()">ربط بحساب فيسبوك (الأسهل)</button>
+          <p class="muted">بتسجّل دخول بفيسبوك وبتختار صفحتك، ما في داعي لأي أرقام أو رموز.</p>
+          <div class="muted" style="margin:8px 0">أو يدويًا:</div>` : ""}
         ${c.connectable ? `
           ${c.fields.map((f) => `<div class="field"><label>${esc(f.label)}</label><input id="cf-${c.id}-${f.key}" ${f.secret ? 'type="password"' : ""} autocomplete="off" /></div>`).join("")}
           <button class="btn small" onclick="respConnect('${c.id}', ${JSON.stringify(c.fields.map((f) => f.key)).replace(/"/g, "&quot;")})">ربط</button>`
@@ -3130,6 +3135,14 @@ function respChannels() {
         ${c.hookUrl ? `<div class="field"><label>رابط استقبال الرسائل (الصقه بالمنصة)</label><input readonly value="${esc(c.hookUrl)}" onclick="this.select()" /></div>` : ""}
         <button class="btn small outline" onclick="respToggleConn('${c.id}', ${!c.isActive})">${c.isActive ? "إيقاف" : "تشغيل"}</button>
       </div>`).join("")}`;
+}
+
+/** Starts "Continue with Facebook" from the browser: no phone app can take the link over here, and the dialog comes back to /app/. */
+async function respMetaLink() {
+  S.error = null;
+  const { ok, data } = await api("GET", "/responder/meta/oauth/start?platform=web");
+  if (!ok) { S.error = errMsg(data, "تعذّر بدء الربط"); return render(); }
+  location.href = data.url;
 }
 
 async function respConnect(channelId, keys) {
@@ -3297,8 +3310,23 @@ function bootMerchantLink() {
   return true;
 }
 
+/** Back from the Facebook dialog (started by respMetaLink): show the result on the channels tab. */
+function bootMetaReturn() {
+  const q = new URLSearchParams(location.search);
+  if (q.get("meta") !== "1") return false;
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  if (!S.token) return false;
+  S.stack = [];
+  S.params = {};
+  S._resp = { loading: true, tab: "channels", notice: q.get("ok") === "1" ? "تم ربط الصفحة ✅" : null };
+  if (q.get("ok") !== "1") S.error = "تعذّر ربط الصفحة. جرّب من جديد.";
+  go("responder");
+  return true;
+}
+
 bootSocialReturn().then((social) => {
   if (social) return;
+  if (bootMetaReturn()) return;
   bootReferralCapture().then((handled) => {
     if (!handled && !bootMerchantLink()) render();
   });

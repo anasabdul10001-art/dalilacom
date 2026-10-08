@@ -130,6 +130,7 @@ responderRouter.get("/channels", requireAuth, async (req, res) => {
       key: c.key,
       name: translateText(c.name, lang),
       connectable: c.driver !== "META_PENDING",
+      driver: c.driver,
       fields: CREDENTIAL_FIELDS[c.driver].map((f) => ({ ...f, label: translateText(f.label, lang) })),
     })),
   );

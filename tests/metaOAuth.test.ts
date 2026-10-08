@@ -116,6 +116,18 @@ describe("Facebook Login: starting the flow", () => {
     expect(forged.status).toBe(400);
   });
 
+  it("brings a flow started from the web preview back to /app/, and an app flow back to the phone app", async () => {
+    const web = await request(app).get("/responder/meta/oauth/start?platform=web").set("Authorization", token);
+    const webState = new URL(web.body.url).searchParams.get("state") as string;
+    const webBack = await request(app).get("/responder/meta/oauth/callback").query({ state: webState, error: "access_denied" });
+    expect(webBack.text).toContain("/app/?meta=1&amp;ok=0".replace("&amp;", "&"));
+    expect(webBack.text).not.toContain("dalilacom://");
+
+    const { state: appState } = await startState(token);
+    const appBack = await request(app).get("/responder/meta/oauth/callback").query({ state: appState, error: "access_denied" });
+    expect(appBack.text).toContain("dalilacom://responder/meta");
+  });
+
   it("requires a signed-in merchant", async () => {
     const res = await request(app).get("/responder/meta/oauth/start");
     expect(res.status).toBe(401);

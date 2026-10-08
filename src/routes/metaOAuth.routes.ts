@@ -18,6 +18,7 @@ import {
   readSession,
   signPickerToken,
   signState,
+  stateIsWeb,
   verifyPickerToken,
   verifyState,
 } from "../services/metaOAuth.service";
@@ -74,7 +75,7 @@ metaOAuthRouter.get("/oauth/start", requireAuth, async (req, res) => {
   if (!(await responderRunning(req.user!.id))) {
     return sendError(res, 403, "FORBIDDEN", "فعّل المجيب الآلي أول (تجربة أو اشتراك)");
   }
-  const state = signState(req.user!.id);
+  const state = signState(req.user!.id, req.query.platform === "web");
   res.json({
     url: metaDialogUrl(req.user!.id, state),
     // Phones with the Facebook app installed hand a facebook.com link opened from another app to the Facebook app, whose
@@ -104,16 +105,19 @@ metaOAuthRouter.get("/oauth/go", (req, res) => {
 /* ---------------- step 2: Facebook sends the merchant's browser back here ---------------- */
 
 metaOAuthRouter.get("/oauth/callback", async (req, res) => {
-  const userId = verifyState(typeof req.query.state === "string" ? req.query.state : undefined);
+  const rawState = typeof req.query.state === "string" ? req.query.state : undefined;
+  const userId = verifyState(rawState);
   if (!userId) {
     return res
       .status(400)
       .send(page("تعذّر إكمال الربط", "<p>رابط الرجوع غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.</p>"));
   }
+  const web = stateIsWeb(rawState);
+  const back = (params: Record<string, string> = {}) => appDeepLink(params, web);
 
   if (typeof req.query.error === "string") {
     const reason = typeof req.query.error_description === "string" ? req.query.error_description : req.query.error;
-    return res.status(400).send(page("تم إلغاء الربط", `<p>ما تم منح الصلاحية: ${reason}</p>`, appDeepLink({ ok: "0" })));
+    return res.status(400).send(page("تم إلغاء الربط", `<p>ما تم منح الصلاحية: ${reason}</p>`, back({ ok: "0" })));
   }
 
   const code = typeof req.query.code === "string" ? req.query.code : undefined;
@@ -124,13 +128,13 @@ metaOAuthRouter.get("/oauth/callback", async (req, res) => {
     pages = await exchangeCodeForPages(code);
   } catch (err) {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الاتصال بفيسبوك";
-    return res.status(502).send(page("تعذّر إكمال الربط", `<p>${message}</p>`, appDeepLink({ ok: "0" })));
+    return res.status(502).send(page("تعذّر إكمال الربط", `<p>${message}</p>`, back({ ok: "0" })));
   }
 
   if (pages.length === 0) {
     return res
       .status(400)
-      .send(page("ما لقينا صفحات", "<p>حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك.</p>", appDeepLink({ ok: "0" })));
+      .send(page("ما لقينا صفحات", "<p>حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك.</p>", back({ ok: "0" })));
   }
 
   const sessionId = await createSession(userId, pages);
@@ -140,20 +144,20 @@ metaOAuthRouter.get("/oauth/callback", async (req, res) => {
     try {
       const connection = await connectFromSession({ userId, sessionId, pageId: pages[0].id, driver: "FACEBOOK" });
       return res.send(
-        page(`تم ربط «${pages[0].name}» ✅`, "<p>صار المجيب الآلي يرد على تعليقات ورسائل صفحتك.</p>", appDeepLink({ ok: "1", connectionId: connection.id })),
+        page(`تم ربط «${pages[0].name}» ✅`, "<p>صار المجيب الآلي يرد على تعليقات ورسائل صفحتك.</p>", back({ ok: "1", connectionId: connection.id })),
       );
     } catch (err) {
       const message = err instanceof MetaOAuthError ? err.message : "تعذّر ربط الصفحة";
-      return res.status(400).send(page("تعذّر ربط الصفحة", `<p>${message}</p>`, appDeepLink({ ok: "0" })));
+      return res.status(400).send(page("تعذّر ربط الصفحة", `<p>${message}</p>`, back({ ok: "0" })));
     }
   }
 
   // Several Pages: let the merchant pick, in the browser, with signed links.
   const rows = pages
     .map((p) => {
-      const fb = `<a class="btn" href="/responder/meta/oauth/pick?session=${sessionId}&page=${p.id}&driver=FACEBOOK&sig=${signPickerToken(sessionId, p.id, "FACEBOOK")}">ربط الصفحة</a>`;
+      const fb = `<a class="btn" href="/responder/meta/oauth/pick?session=${sessionId}&page=${p.id}&driver=FACEBOOK&sig=${signPickerToken(sessionId, p.id, "FACEBOOK")}${web ? "&web=1" : ""}">ربط الصفحة</a>`;
       const ig = p.instagramAccountId
-        ? `<a class="btn" href="/responder/meta/oauth/pick?session=${sessionId}&page=${p.id}&driver=INSTAGRAM&sig=${signPickerToken(sessionId, p.id, "INSTAGRAM")}">ربط إنستغرام${p.instagramUsername ? ` (@${p.instagramUsername})` : ""}</a>`
+        ? `<a class="btn" href="/responder/meta/oauth/pick?session=${sessionId}&page=${p.id}&driver=INSTAGRAM&sig=${signPickerToken(sessionId, p.id, "INSTAGRAM")}${web ? "&web=1" : ""}">ربط إنستغرام${p.instagramUsername ? ` (@${p.instagramUsername})` : ""}</a>`
         : "";
       return `<div class="pg"><b>${p.name}</b>${fb}${ig}</div>`;
     })
@@ -165,7 +169,7 @@ metaOAuthRouter.get("/oauth/callback", async (req, res) => {
       `${rows}<p class="muted">الربط صالح 15 دقيقة. إذا ما لقيت صفحتك، تأكد إنك منحت صلاحية الوصول لصفحاتك.</p>`,
       // No auto-redirect here: the merchant may prefer to pick right here in the browser. The button
       // hands the session to the app so it can show its own picker instead.
-      appDeepLink({ session: sessionId }),
+      web ? undefined : back({ session: sessionId }),
       false,
     ),
   );
@@ -178,6 +182,7 @@ metaOAuthRouter.get("/oauth/pick", async (req, res) => {
   const pageId = typeof req.query.page === "string" ? req.query.page : "";
   const driver = (typeof req.query.driver === "string" ? req.query.driver : "FACEBOOK") as ChannelDriver;
   const sig = typeof req.query.sig === "string" ? req.query.sig : undefined;
+  const web = req.query.web === "1";
 
   if (!sessionId || !pageId || !verifyPickerToken(sessionId, pageId, driver, sig)) {
     return res.status(400).send(page("رابط غير صالح", "<p>هالرابط مو موقّع أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.</p>"));
@@ -193,10 +198,10 @@ metaOAuthRouter.get("/oauth/pick", async (req, res) => {
 
   try {
     const connection = await connectFromSession({ userId: owner, sessionId, pageId, driver });
-    return res.send(page("تم الربط ✅", "<p>صار المجيب الآلي مربوطًا. ارجع للتطبيق لتشوف القناة.</p>", appDeepLink({ ok: "1", connectionId: connection.id })));
+    return res.send(page("تم الربط ✅", "<p>صار المجيب الآلي مربوطًا. ارجع للتطبيق لتشوف القناة.</p>", appDeepLink({ ok: "1", connectionId: connection.id }, web)));
   } catch (err) {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الربط";
-    return res.status(400).send(page("تعذّر الربط", `<p>${message}</p>`, appDeepLink({ ok: "0" })));
+    return res.status(400).send(page("تعذّر الربط", `<p>${message}</p>`, appDeepLink({ ok: "0" }, web)));
   }
 });
 

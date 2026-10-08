@@ -71,9 +71,11 @@ export function metaScopes(): string[] {
 }
 
 /** Where the browser sends the merchant back to at the end. The Android app registers this scheme. */
-export function appDeepLink(params: Record<string, string> = {}): string {
-  const scheme = process.env.APP_DEEP_LINK_SCHEME || "dalilacom";
+export function appDeepLink(params: Record<string, string> = {}, web = false): string {
   const query = new URLSearchParams(params).toString();
+  // The web preview (/app/) is the other place a merchant can start from: send the browser back there, not to the phone app.
+  if (web) return `/app/?${new URLSearchParams({ meta: "1", ...params }).toString()}`;
+  const scheme = process.env.APP_DEEP_LINK_SCHEME || "dalilacom";
   return `${scheme}://responder/meta${query ? `?${query}` : ""}`;
 }
 
@@ -83,9 +85,19 @@ function sign(value: string): string {
   return crypto.createHmac("sha256", metaAppSecret() ?? "").update(value).digest("base64url");
 }
 
-export function signState(userId: string): string {
-  const payload = Buffer.from(JSON.stringify({ u: userId, n: crypto.randomBytes(8).toString("hex"), t: Date.now() })).toString("base64url");
+export function signState(userId: string, web = false): string {
+  const payload = Buffer.from(JSON.stringify({ u: userId, n: crypto.randomBytes(8).toString("hex"), t: Date.now(), ...(web ? { w: 1 } : {}) })).toString("base64url");
   return `${payload}.${sign(payload)}`;
+}
+
+/** Did the flow start from the web preview (so it must come back there)? Only meaningful for a state that verified. */
+export function stateIsWeb(state: string | undefined): boolean {
+  try {
+    const data = JSON.parse(Buffer.from(String(state).split(".")[0], "base64url").toString("utf8")) as { w?: unknown };
+    return data.w === 1;
+  } catch {
+    return false;
+  }
 }
 
 /** Returns the userId the flow was started for, or null when the state is forged, altered or stale. */
