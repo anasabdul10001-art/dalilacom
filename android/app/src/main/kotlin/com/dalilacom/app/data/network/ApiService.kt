@@ -61,6 +61,15 @@ interface ApiService {
     @GET("broadcasts")
     suspend fun getBroadcasts(): Response<List<BroadcastDto>>
 
+    @GET("broadcasts")
+    suspend fun getPendingBroadcasts(@Query("status") status: String = "PENDING_REVIEW"): Response<List<ReviewItemDto>>
+
+    @POST("broadcasts/{id}/approve")
+    suspend fun approveBroadcast(@retrofit2.http.Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @POST("broadcasts/{id}/reject")
+    suspend fun rejectBroadcast(@retrofit2.http.Path("id") id: String, @Body body: RejectRequest): Response<kotlinx.serialization.json.JsonElement>
+
     @GET("auth/social/providers")
     suspend fun socialProviders(): Response<SocialProvidersDto>
 

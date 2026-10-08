@@ -166,6 +166,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onOpenMerchantMode = { rootNavController.navigate("merchantMode") },
                         onEditProfile = { rootNavController.navigate("profileEdit") },
                         onOpenAccount = { rootNavController.navigate("accountSettings") },
+                        onOpenReview = { rootNavController.navigate("adminReview") },
                         onOpenNotifications = { rootNavController.navigate("notifications") },
                         onOpenFavorites = { rootNavController.navigate("favorites") },
                         onOpenResponder = { rootNavController.navigate("responder") },

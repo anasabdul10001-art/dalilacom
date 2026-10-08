@@ -43,6 +43,21 @@ class BroadcastRepository(private val api: ApiService) {
         return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()
     }
 
+    /** The queue an admin reviews: announcements from merchants that have not been published yet. */
+    suspend fun pending(): List<com.dalilacom.app.data.network.ReviewItemDto> {
+        val response = safeApiCall { api.getPendingBroadcasts() } ?: return emptyList()
+        return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()
+    }
+
+    suspend fun approve(id: String): Result<Unit> = decision { api.approveBroadcast(id) }
+
+    suspend fun reject(id: String, reason: String): Result<Unit> = decision { api.rejectBroadcast(id, com.dalilacom.app.data.network.RejectRequest(reason)) }
+
+    private suspend fun <T> decision(call: suspend () -> Response<T>): Result<Unit> {
+        val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(reason(response)))
+    }
+
     /** The server's reason, in the app's language where the code is one we know. */
     private fun reason(response: Response<*>): String {
         val code = runCatching {

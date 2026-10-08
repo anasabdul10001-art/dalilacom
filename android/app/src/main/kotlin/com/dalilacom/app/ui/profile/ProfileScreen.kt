@@ -43,6 +43,7 @@ fun ProfileScreen(
     onLoggedOut: () -> Unit,
     onEditProfile: () -> Unit,
     onOpenAccount: () -> Unit,
+    onOpenReview: () -> Unit,
     onOpenNotifications: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
@@ -96,6 +97,10 @@ fun ProfileScreen(
             Spacer(Modifier.height(16.dp))
         }
 
+        if (role == "ADMIN") {
+            Button(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.review_title)) }
+            Spacer(Modifier.height(8.dp))
+        }
         if (role == "MERCHANT") {
             Button(onClick = onOpenMerchantMode, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_merchant_mode)) }
         } else {

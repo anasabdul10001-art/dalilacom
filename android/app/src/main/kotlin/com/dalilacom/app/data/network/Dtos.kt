@@ -88,6 +88,30 @@ data class AddressRequest(
     val isDefault: Boolean,
 )
 
+@Serializable
+data class ReviewShopDto(val businessName: String? = null)
+
+@Serializable
+data class ReviewSenderDto(val fullName: String? = null, val email: String? = null, val merchantProfile: ReviewShopDto? = null)
+
+@Serializable
+data class ReviewItemDto(
+    val id: String,
+    val title: String,
+    val body: String,
+    val scope: String = "",
+    val radiusKm: Double? = null,
+    val targeted: Int = 0,
+    val productId: String? = null,
+    val discountId: String? = null,
+    val aiVerdict: String? = null,
+    val aiReasons: List<String>? = null,
+    val sender: ReviewSenderDto? = null,
+)
+
+@Serializable
+data class RejectRequest(val reason: String)
+
 // isDefault has no default on purpose: defaults are not sent.
 @Serializable
 data class DefaultAddressRequest(val isDefault: Boolean)

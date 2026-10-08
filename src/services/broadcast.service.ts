@@ -296,9 +296,9 @@ function rowData(sender: Sender, r: Resolved, message: BroadcastMessage) {
   };
 }
 
-async function tellAdmins(title: string, body: string) {
+async function tellAdmins(title: string, body: string, broadcastId: string) {
   const admins = await prisma.user.findMany({ where: { role: Role.ADMIN, isDisabled: false }, select: { id: true } });
-  await Promise.all(admins.map((a) => notify({ userId: a.id, type: "SYSTEM", title, body, data: { kind: "BROADCAST_REVIEW" }, email: false })));
+  await Promise.all(admins.map((a) => notify({ userId: a.id, type: "SYSTEM", title, body, data: { kind: "BROADCAST_REVIEW", audience: "ADMIN", broadcastId }, email: false })));
 }
 
 /**
@@ -356,7 +356,7 @@ export async function submitBroadcast(sender: Sender, target: BroadcastTarget, m
     }
     throw err;
   }
-  await tellAdmins("إعلان جديد بانتظار المراجعة", `${r.merchant.businessName}: ${message.title}`);
+  await tellAdmins("إعلان جديد بانتظار المراجعة", `${r.merchant.businessName}: ${message.title}`, row.id);
   return { id: row.id, status: "PENDING_REVIEW", targeted: estimate, delivered: 0 };
 }
 

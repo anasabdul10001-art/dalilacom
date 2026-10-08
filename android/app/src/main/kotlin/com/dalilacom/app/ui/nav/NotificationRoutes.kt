@@ -30,7 +30,12 @@ object NotificationRoutes {
             "DISCOUNT_RECEIVED" -> shop ?: INBOX
             "NEW_PRODUCT", "NEW_OFFER" -> product ?: shop ?: INBOX
             // the auto-responder tells its owner about messages that wait, and about its own ending
-            "SYSTEM" -> if (data["kind"] == "RESPONDER") "responder" else INBOX
+            "SYSTEM" -> when {
+                data["kind"] == "RESPONDER" -> "responder"
+                // an announcement waiting for review goes to the admin's queue; the verdict on a shop's own announcement, to the shop
+                data["kind"] == "BROADCAST_REVIEW" -> if (data["audience"] == "ADMIN") "adminReview" else "merchantMode"
+                else -> INBOX
+            }
             else -> INBOX
         }
     }

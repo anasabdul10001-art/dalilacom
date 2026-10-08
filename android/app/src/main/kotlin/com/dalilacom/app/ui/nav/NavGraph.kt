@@ -14,6 +14,7 @@ import androidx.navigation.navDeepLink
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.account.AccountSettingsScreen
+import com.dalilacom.app.ui.admin.ReviewScreen
 import com.dalilacom.app.ui.auth.LoginScreen
 import com.dalilacom.app.ui.auth.RegisterScreen
 import com.dalilacom.app.ui.auth.SocialReturnScreen
@@ -59,7 +60,7 @@ fun DalilacomNavGraph(
     LaunchedEffect(notificationRoute) {
         val route = notificationRoute ?: return@LaunchedEffect
         navController.currentBackStackEntryFlow.first { it.destination.route == "home" }
-        val needsAccount = route.startsWith("order/") || route == "merchantMode" || route == "responder" || route == NotificationRoutes.INBOX
+        val needsAccount = route.startsWith("order/") || route == "merchantMode" || route == "responder" || route == "adminReview" || route == NotificationRoutes.INBOX
         if (route != "home" && (!needsAccount || container.tokenStore.getToken() != null)) navController.navigate(route)
         onNotificationRouteConsumed()
     }
@@ -179,6 +180,9 @@ fun DalilacomNavGraph(
                 onLogin = { navController.navigate("login") },
                 onBack = { navController.popBackStack() },
             )
+        }
+        composable("adminReview") {
+            ReviewScreen(factory = factory, onBack = { navController.popBackStack() })
         }
         composable("accountSettings") {
             AccountSettingsScreen(factory = factory, onBack = { navController.popBackStack() })

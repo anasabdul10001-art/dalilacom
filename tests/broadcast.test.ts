@@ -161,6 +161,9 @@ describe("A merchant's announcement around their shop — reviewed before anyone
     // nobody has received it yet — and the admin was told there is something to review
     for (const who of [near, nearAddress, far, noLocation]) expect(await received(who.id)).toHaveLength(0);
     expect(await prisma.notification.count({ where: { userId: boss.id, type: "SYSTEM" } })).toBeGreaterThan(0);
+    // the alert says it is for admins and which announcement, so the app can open the review queue
+    const alert = (await prisma.notification.findMany({ where: { userId: boss.id, type: "SYSTEM" }, orderBy: { createdAt: "desc" } }))[0];
+    expect(alert.data).toMatchObject({ kind: "BROADCAST_REVIEW", audience: "ADMIN", broadcastId: submitted.body.id });
 
     // only an admin decides
     expect((await request(app).post(`/broadcasts/${submitted.body.id}/approve`).set(shop.owner.auth)).status).toBe(403);
