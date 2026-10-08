@@ -864,3 +864,56 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
 
 .switch-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; cursor: pointer; }
 .switch-row input { width: 18px; height: 18px; }
+
+/* ================= website layout: like a maps site (the Android app keeps its own design) =================
+   Wide screens drop the phone frame: a slim rail with the logo and tabs, a results panel, and the map filling the rest.
+   Phones get the same screen without the frame. */
+
+@media (min-width: 900px) {
+  body { display: block; padding: 0; gap: 0; height: 100vh; overflow: hidden; }
+  .page-head { display: none; }
+  .device { position: fixed; inset: 0; width: auto; max-width: none; height: auto; max-height: none; border-radius: 0; padding: 0; background: var(--bg); box-shadow: none; }
+  .screen { border-radius: 0; border: none; background: var(--bg); }
+  .statusbar, .notch { display: none; }
+
+  /* the rail (logo + tabs) on the starting edge */
+  .tabbar { position: fixed; left: auto; right: auto; bottom: 0; top: 0; inset-inline-start: 0; width: 84px; flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 6px; padding: 14px 6px; border: 0; border-inline-end: 1px solid var(--border); border-radius: 0; background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 0 28px -10px rgba(0, 0, 0, 0.3); z-index: 700; }
+  .tabbar::before { content: ""; flex: none; width: 46px; height: 46px; margin: 2px auto 14px; background: url("/brand/logo.png") center / contain no-repeat; }
+  .tabbar button { flex: none; padding: 10px 2px; border-radius: 14px; font-size: 11px; }
+  .tabbar button:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+  .tabbar button.hero svg { margin-top: 0; }
+
+  /* ordinary screens: a centred column next to the rail */
+  .screen-body:not(.map-mode) { padding: 28px 24px 48px; }
+  .screen-body:not(.map-mode):has(> .tabbar) { padding-inline-start: 108px; }
+  .screen-body:not(.map-mode) > *:not(.tabbar) { max-width: 700px; margin-inline: auto; }
+
+  /* the discover screen: results panel on the starting edge, map on the rest */
+  .mapfull { inset-inline-start: 84px; }
+  #discover-map-slot { inset-inline-start: 420px; }
+  .sheet { inset-inline-start: 0; inset-inline-end: auto; width: 420px; top: 0; bottom: 0; height: auto !important; padding-top: 132px; border-radius: 0; background: var(--phone-bg); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 0 28px -10px rgba(0, 0, 0, 0.35); transition: none; }
+  .sheet-handle { display: none; }
+  .sheet-list { padding-bottom: 28px; }
+  .map-top { top: 12px; inset-inline-start: 12px; inset-inline-end: auto; width: 396px; z-index: 60; }
+  .map-top .searchbox { border-color: var(--border); box-shadow: 0 2px 10px -4px rgba(0, 0, 0, 0.35); }
+  .float-chips .chip { box-shadow: 0 1px 6px -2px rgba(0, 0, 0, 0.35); }
+  .browse { inset-inline-start: 0; inset-inline-end: auto; width: 420px; }
+
+  .mapfull .map-fab { bottom: 24px; inset-inline-start: 440px; }
+  .mapfull .theme-fab { bottom: 78px; }
+  .mapfull .lang-fab { bottom: 132px; }
+  .lang-menu { inset-inline-start: 500px; bottom: 132px; }
+  .mapfull .area-btn, .mapfull.routing .area-btn { top: 14px; }
+  html[dir="rtl"] .mapfull .area-btn { left: calc((100% - 420px) / 2); }
+  html[dir="ltr"] .mapfull .area-btn { left: calc(420px + (100% - 420px) / 2); }
+  .mapfull .leaflet-top.leaflet-right { top: auto; bottom: 24px; }
+  html[dir="rtl"] .mapfull .leaflet-top.leaflet-right { right: auto; left: 0; }
+}
+
+@media (max-width: 599px) {
+  body { display: block; padding: 0; gap: 0; }
+  .page-head { display: none; }
+  .device { width: 100vw; max-width: none; height: 100vh; height: 100dvh; max-height: none; border-radius: 0; padding: 0; box-shadow: none; }
+  .screen { border-radius: 0; border: none; }
+  .statusbar, .notch { display: none; }
+}
