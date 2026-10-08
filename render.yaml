@@ -80,6 +80,9 @@ services:
       # (src/services/metaOAuth.service.ts). Optional: unset means META_NOT_CONFIGURED.
       - key: META_APP_ID
         sync: false
+      # Only for an app using "Facebook Login for Business": the Configuration ID that lists the page permissions.
+      - key: META_LOGIN_CONFIG_ID
+        sync: false
       # "Continue with Google / Facebook" (src/services/social.service.ts). Each is optional: a provider
       # with no keys simply shows no button. Facebook Login reuses META_APP_ID / META_APP_SECRET unless
       # FACEBOOK_LOGIN_APP_ID / _SECRET are set.

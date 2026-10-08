@@ -124,8 +124,11 @@ export function metaDialogUrl(userId: string): string {
     redirect_uri: metaRedirectUri(),
     state: signState(userId),
     response_type: "code",
-    scope: metaScopes().join(","),
   });
+  // An app that uses "Facebook Login for Business" asks for its permissions through a saved configuration instead of a
+  // scope list: META_LOGIN_CONFIG_ID (the Configuration ID from the app's Facebook Login for Business page) switches to it.
+  if (process.env.META_LOGIN_CONFIG_ID) params.set("config_id", process.env.META_LOGIN_CONFIG_ID);
+  else params.set("scope", metaScopes().join(","));
   return `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${params.toString()}`;
 }
 

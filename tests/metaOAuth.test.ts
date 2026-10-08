@@ -100,6 +100,7 @@ describe("Facebook Login: starting the flow", () => {
     expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:4000/responder/meta/oauth/callback");
     expect(url.searchParams.get("response_type")).toBe("code");
     expect(url.searchParams.get("scope")).toContain("pages_messaging");
+    expect(url.searchParams.get("config_id")).toBeNull();
     expect(state.split(".")).toHaveLength(2);
   });
 
