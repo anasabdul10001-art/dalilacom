@@ -46,3 +46,18 @@ export async function ensureTestCountry(prisma: PrismaClient) {
     create: { name: "Test Country", isoCode2: "XT", currencyCode: "TST", defaultLanguage: "en" },
   });
 }
+
+/** An ISO code nobody else uses, *reserved* by creating its Country row, so tests running side by side in other files
+ * (which skip codes that already exist) can never pick the same one and see this test's users. */
+export async function reservedIsoCode2(prisma: PrismaClient): Promise<string> {
+  for (let attempt = 0; attempt < 700; attempt++) {
+    const code = await freeIsoCode2(prisma);
+    try {
+      await prisma.country.create({ data: { name: `Reserved ${code} ${Date.now()}`, isoCode2: code, currencyCode: "TST" } });
+      return code;
+    } catch {
+      /* someone took it a moment ago: try the next one */
+    }
+  }
+  throw new Error("No free 2-letter ISO code left in the test database");
+}

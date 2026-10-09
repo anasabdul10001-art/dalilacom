@@ -3,7 +3,7 @@ import crypto from "crypto";
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
-import { freeIsoCode2, uniqueEmail } from "./helpers";
+import { reservedIsoCode2, uniqueEmail } from "./helpers";
 import { resetAiProviderState } from "../src/services/ai.service";
 
 const fetchStub = vi.fn();
@@ -49,8 +49,8 @@ const aiSays = (json: object) => fetchStub.mockResolvedValue(new Response(JSON.s
 
 describe("a shop's product photos", () => {
   it("are uploaded, served to everyone, and only usable by the shop that took them", async () => {
-    const a = await shop(await freeIsoCode2(prisma));
-    const b = await shop(await freeIsoCode2(prisma));
+    const a = await shop(await reservedIsoCode2(prisma));
+    const b = await shop(await reservedIsoCode2(prisma));
     const up = await upload(a.owner.auth);
     expect(up.status).toBe(201);
     expect(up.body.url).toBe(`/store/photos/${up.body.id}`);
@@ -70,7 +70,7 @@ describe("a shop's product photos", () => {
   });
 
   it("make a product with its pictures, details and section, shown in the store", async () => {
-    const iso = await freeIsoCode2(prisma);
+    const iso = await reservedIsoCode2(prisma);
     const s = await shop(iso);
     const one = (await upload(s.owner.auth)).body;
     const two = (await upload(s.owner.auth)).body;
@@ -94,7 +94,7 @@ describe("a shop's product photos", () => {
 
 describe("a product from a photo", () => {
   it("gets a name, a description, a section and details from the AI, and a price range from similar products", async () => {
-    const iso = await freeIsoCode2(prisma);
+    const iso = await reservedIsoCode2(prisma);
     const s = await shop(iso);
     for (const price of [1000, 2000, 3000]) {
       await request(app).post("/products").set(s.owner.auth).send({ name: `similar ${price}`, priceCents: price, stock: 2, categoryId: s.categoryId, storeSection: "electronics" });
@@ -115,7 +115,7 @@ describe("a product from a photo", () => {
   });
 
   it("never trusts a section the AI made up, and says so when no AI can see", async () => {
-    const s = await shop(await freeIsoCode2(prisma));
+    const s = await shop(await reservedIsoCode2(prisma));
     const photo = (await upload(s.owner.auth)).body;
     aiSays({ name: "شيء", section: "not-a-section", description: "وصف" });
     expect((await request(app).post("/products/ai-draft").set(s.owner.auth).send({ photoId: photo.id })).body.draft.section).toBeNull();
@@ -128,8 +128,8 @@ describe("a product from a photo", () => {
 
 describe("searching the store with a photo", () => {
   it("finds the shopper's own country's products that match what the picture shows", async () => {
-    const iso = await freeIsoCode2(prisma);
-    const other = await freeIsoCode2(prisma);
+    const iso = await reservedIsoCode2(prisma);
+    const other = await reservedIsoCode2(prisma);
     const mine = await shop(iso);
     const abroad = await shop(other);
     const tag = crypto.randomUUID().slice(0, 6);

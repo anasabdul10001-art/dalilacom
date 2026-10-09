@@ -3,7 +3,7 @@ import crypto from "crypto";
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
-import { freeIsoCode2, uniqueEmail } from "./helpers";
+import { reservedIsoCode2, uniqueEmail } from "./helpers";
 import { adjustBalance } from "../src/services/wallet.service";
 import { AD_SLOTS } from "../src/services/ads.service";
 
@@ -15,7 +15,7 @@ afterAll(async () => {
 // A country code nobody has booked space in before (the test database keeps what earlier runs left behind).
 async function freshCountry(): Promise<string> {
   for (let i = 0; i < 700; i++) {
-    const iso = await freeIsoCode2(prisma);
+    const iso = await reservedIsoCode2(prisma);
     if ((await prisma.adBooking.count({ where: { countryCode: iso } })) === 0) return iso;
   }
   throw new Error("no free country code");
