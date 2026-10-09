@@ -36,6 +36,7 @@ class AppContainer(context: Context) {
     val productRepository = ProductRepository(api)
     val cartRepository = CartRepository(api)
     val storeRepository = StoreRepository(api)
+    val reviewsRepository = com.dalilacom.app.data.repository.ReviewsRepository(api)
     val orderRepository = OrderRepository(api)
     val merchantRepository = MerchantRepository(api, sessionStore)
     val responderRepository = ResponderRepository(api)

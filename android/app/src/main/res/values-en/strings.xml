@@ -541,4 +541,23 @@
     <string name="photo_seen">We saw</string>
     <string name="photo_failed">Could not analyse the photo</string>
     <string name="photo_offline">No connection, check the internet</string>
+    <string name="rv_title">Reviews</string>
+    <string name="rv_none">No reviews yet</string>
+    <string name="rv_count">%1$d ratings</string>
+    <string name="rv_verified">Verified buyer</string>
+    <string name="rv_need_buy">Only someone who bought and received the order can rate and comment.</string>
+    <string name="rv_write">Write your review</string>
+    <string name="rv_edit">Edit your review</string>
+    <string name="rv_placeholder">What do you think? Tell us about your experience (optional)</string>
+    <string name="rv_cancel">Cancel</string>
+    <string name="rv_send">Send</string>
+    <string name="rv_failed">Could not send the review</string>
+    <string name="rv_thanks">Thanks for your rating ⭐</string>
+    <string name="rv_need_account_follow">Sign in first to follow the shop</string>
+    <string name="rv_rate_title">Rate your experience</string>
+    <string name="rv_rate_shop">Rate the shop</string>
+    <string name="rv_customer_title">Customer</string>
+    <string name="rv_customer_none">No ratings yet</string>
+    <string name="rv_rate_customer">Rate the customer</string>
+    <string name="shop_followers">followers</string>
 </resources>

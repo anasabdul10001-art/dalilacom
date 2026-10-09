@@ -221,6 +221,9 @@ data class MerchantDto(
     val openStatus: OpenStatusDto? = null,
     val bio: String? = null,
     val avatarUrl: String? = null,
+    val rating: Double = 0.0,
+    val ratingCount: Int = 0,
+    val followersCount: Int = 0,
 )
 
 @Serializable
@@ -280,7 +283,7 @@ data class ProductDto(
 data class MerchantSummaryDto(val id: String, val businessName: String)
 
 @Serializable
-data class UserNameDto(val fullName: String)
+data class UserNameDto(val fullName: String, val id: String = "")
 
 @Serializable
 data class CartProductDto(
@@ -332,6 +335,10 @@ data class OrderDto(
     val merchant: MerchantSummaryDto? = null,
     val user: UserNameDto? = null,
     val items: List<OrderItemDto> = emptyList(),
+    val rated: RatedDto? = null,
+    val customer: CustomerRefDto? = null,
+    val customerRating: RatingDto? = null,
+    val ratedCustomer: Boolean = false,
 )
 
 @Serializable
@@ -659,3 +666,44 @@ data class PriceHintDto(val min: Int = 0, val median: Int = 0, val max: Int = 0,
 
 @Serializable
 data class AiDraftResponseDto(val available: Boolean = false, val draft: AiDraftDto? = null, val priceHint: PriceHintDto? = null)
+
+/* ---------------- ratings and comments ---------------- */
+
+@Serializable
+data class ReviewSummaryDto(val average: Double = 0.0, val count: Int = 0, val distribution: Map<String, Int> = emptyMap())
+
+@Serializable
+data class ReviewEntryDto(
+    val id: String,
+    val stars: Int,
+    val comment: String? = null,
+    val name: String = "",
+    val shop: String = "",
+    val verified: Boolean = false,
+    val createdAt: String = "",
+    val mine: Boolean = false,
+)
+
+@Serializable
+data class MyReviewDto(val stars: Int = 0, val comment: String? = null)
+
+@Serializable
+data class ReviewsDto(
+    val summary: ReviewSummaryDto = ReviewSummaryDto(),
+    val items: List<ReviewEntryDto> = emptyList(),
+    val canReview: Boolean = false,
+    val mine: MyReviewDto? = null,
+    val followersCount: Int = 0,
+)
+
+@Serializable
+data class ReviewRequest(val stars: Int, val comment: String? = null)
+
+@Serializable
+data class RatedDto(val shop: Boolean = false, val products: List<String> = emptyList())
+
+@Serializable
+data class RatingDto(val rating: Double = 0.0, val ratingCount: Int = 0)
+
+@Serializable
+data class CustomerRefDto(val id: String, val fullName: String = "")

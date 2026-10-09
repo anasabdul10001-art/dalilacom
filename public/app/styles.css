@@ -1254,3 +1254,34 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .wiz-done { text-align: center; padding: 40px 10px; }
 .wiz-done-ico { font-size: 70px; }
 @media (min-width: 600px) { .wiz-photos { grid-template-columns: repeat(3, 1fr); } .wiz-tiles { grid-template-columns: repeat(3, 1fr); } }
+
+/* ---- ratings and comments ---- */
+.rv-sec { padding-bottom: 18px; }
+.rv-sum { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; margin: 4px 0 10px; }
+.rv-avg { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 110px; }
+.rv-avg b { font-family: "Cairo", "Tajawal", sans-serif; font-size: 44px; line-height: 1; }
+.rv-avg small { color: var(--text-muted); }
+.rv-bars { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 5px; }
+.rv-bars > div { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.rv-bars span { width: 26px; color: var(--text-muted); }
+.rv-bars i { flex: 1; height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.rv-bars u { display: block; height: 100%; background: #f0a30a; border-radius: 4px; }
+.rv-bars em { width: 26px; font-style: normal; color: var(--text-muted); text-align: end; }
+.rv-note { margin: 6px 0 4px; font-size: 13px; }
+.rv-write { width: auto; margin: 4px 0 8px; }
+.rv-item { padding: 12px 0; border-top: 1px solid var(--border); }
+.rv-item p { margin: 6px 0 0; line-height: 1.7; }
+.rv-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+.rv-ok { color: #1e8a3a; font-weight: 700; }
+.star { color: #f0a30a; letter-spacing: 1px; }
+.rv-rate-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+#rv-modal { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.rv-back { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }
+.rv-card { position: relative; width: 100%; max-width: 420px; background: var(--surface); color: var(--text); border-radius: 18px; padding: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); }
+.rv-card h3 { margin: 0 0 10px; font-size: 17px; }
+.rv-card textarea { width: 100%; padding: 10px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; resize: vertical; }
+.rv-pick { display: flex; justify-content: center; gap: 6px; margin: 6px 0 12px; }
+.rv-pick button { border: 0; background: none; font-size: 40px; line-height: 1; color: var(--border); cursor: pointer; padding: 0 2px; }
+.rv-pick button.on { color: #f0a30a; }
+.rv-actions { display: flex; gap: 10px; margin-top: 12px; }
+.rv-actions .btn { flex: 1; }

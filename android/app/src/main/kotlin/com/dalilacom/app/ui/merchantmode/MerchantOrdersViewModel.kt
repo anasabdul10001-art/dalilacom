@@ -13,9 +13,12 @@ data class MerchantOrdersUiState(
     val isLoading: Boolean = true,
     val orders: List<OrderDto> = emptyList(),
     val error: String? = null,
+    val reviewTarget: com.dalilacom.app.ui.common.ReviewTarget? = null,
+    val reviewBusy: Boolean = false,
+    val reviewError: String? = null,
 )
 
-class MerchantOrdersViewModel(private val repository: OrderRepository) : ViewModel() {
+class MerchantOrdersViewModel(private val repository: OrderRepository, private val reviews: com.dalilacom.app.data.repository.ReviewsRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(MerchantOrdersUiState())
     val uiState: StateFlow<MerchantOrdersUiState> = _uiState.asStateFlow()
 
@@ -26,7 +29,23 @@ class MerchantOrdersViewModel(private val repository: OrderRepository) : ViewMod
     fun refresh() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            _uiState.value = MerchantOrdersUiState(isLoading = false, orders = repository.getMerchantOrders())
+            _uiState.value = _uiState.value.copy(isLoading = false, orders = repository.getMerchantOrders())
+        }
+    }
+
+    fun openReview(customerId: String, name: String) {
+        _uiState.value = _uiState.value.copy(reviewTarget = com.dalilacom.app.ui.common.ReviewTarget("customer", customerId, name), reviewError = null)
+    }
+
+    fun closeReview() { _uiState.value = _uiState.value.copy(reviewTarget = null) }
+
+    fun sendReview(stars: Int, comment: String) {
+        val target = _uiState.value.reviewTarget ?: return
+        _uiState.value = _uiState.value.copy(reviewBusy = true, reviewError = null)
+        viewModelScope.launch {
+            reviews.send("customer", target.id, stars, comment)
+                .onSuccess { _uiState.value = _uiState.value.copy(reviewBusy = false, reviewTarget = null); refresh() }
+                .onFailure { e -> _uiState.value = _uiState.value.copy(reviewBusy = false, reviewError = e.message) }
         }
     }
 

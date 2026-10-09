@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -40,13 +41,14 @@ import com.dalilacom.app.ui.common.orderStatusLabel
 fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Unit) {
     val viewModel: OrderDetailViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { OrderDetailViewModel(container.orderRepository, orderId) }
+            initializer { OrderDetailViewModel(container.orderRepository, container.reviewsRepository, orderId) }
         },
     )
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    state.reviewTarget?.let { target -> com.dalilacom.app.ui.common.ReviewDialog(target, state.reviewBusy, state.reviewError, viewModel::sendReview, viewModel::closeReview) }
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
 
@@ -80,6 +82,30 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
                 }
                 if (order.memberDiscountCents > 0) {
                     Text(AppStrings.get(R.string.fmt_saved, formatCents(order.memberDiscountCents)), style = MaterialTheme.typography.bodySmall)
+                }
+
+                val rated = order.rated
+                if (order.status == "DELIVERED" && rated != null && order.merchant != null) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(stringResource(R.string.rv_rate_title), style = MaterialTheme.typography.titleMedium)
+                    OutlinedButton(onClick = { viewModel.openReview("shop", order.merchant.id, order.merchant.businessName) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("🏪  " + stringResource(R.string.rv_rate_shop) + if (rated.shop) " ✓" else "")
+                    }
+                    order.items.forEach { item ->
+                        OutlinedButton(onClick = { viewModel.openReview("product", item.productId, item.productName) }, modifier = Modifier.fillMaxWidth()) {
+                            Text("📦  ${item.productName}" + if (item.productId in rated.products) " ✓" else "", maxLines = 1)
+                        }
+                    }
+                }
+                val customer = order.customer
+                if (order.status == "DELIVERED" && customer != null) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(stringResource(R.string.rv_customer_title) + ": " + customer.fullName, style = MaterialTheme.typography.titleMedium)
+                    val cr = order.customerRating
+                    Text(if (cr != null && cr.ratingCount > 0) "${com.dalilacom.app.ui.common.starsText(cr.rating)}  ${"%.1f".format(java.util.Locale.US, cr.rating)} (${cr.ratingCount})" else stringResource(R.string.rv_customer_none), style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(onClick = { viewModel.openReview("customer", customer.id, customer.fullName) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("⭐  " + stringResource(if (order.ratedCustomer) R.string.rv_edit else R.string.rv_rate_customer))
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))

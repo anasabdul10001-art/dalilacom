@@ -1369,3 +1369,45 @@ model ProductPhoto {
 
   @@index([merchantId])
 }
+
+// What buyers say about a product: only someone who received an order containing it can write one (one per person; editable).
+model ProductReview {
+  id        String   @id @default(uuid())
+  productId String
+  userId    String
+  stars     Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, userId])
+  @@index([productId, createdAt])
+}
+
+// What buyers say about a shop (after an order from it was delivered).
+model MerchantReview {
+  id         String   @id @default(uuid())
+  merchantId String
+  userId     String
+  stars      Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([merchantId, userId])
+  @@index([merchantId, createdAt])
+}
+
+// What a shop says about a customer who bought from it (shown to shops only, so they know who they deal with).
+model CustomerReview {
+  id         String   @id @default(uuid())
+  merchantId String
+  customerId String
+  stars      Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([merchantId, customerId])
+  @@index([customerId])
+}

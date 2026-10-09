@@ -22,10 +22,17 @@ export const orderRouter = Router();
 orderRouter.get("/mine", requireAuth, async (req, res) => {
   const orders = await prisma.order.findMany({
     where: { userId: req.user!.id },
-    include: { items: true, merchant: { select: { businessName: true } } },
+    include: { items: true, merchant: { select: { id: true, businessName: true } } },
     orderBy: { createdAt: "desc" },
   });
-  res.json(orders);
+  // what the customer has already rated, so a delivered order can offer only what is left to rate
+  const [products, shops] = await Promise.all([
+    prisma.productReview.findMany({ where: { userId: req.user!.id, productId: { in: orders.flatMap((o) => o.items.map((i) => i.productId)) } }, select: { productId: true } }),
+    prisma.merchantReview.findMany({ where: { userId: req.user!.id, merchantId: { in: orders.map((o) => o.merchantId) } }, select: { merchantId: true } }),
+  ]);
+  const ratedProducts = new Set(products.map((p) => p.productId));
+  const ratedShops = new Set(shops.map((s) => s.merchantId));
+  res.json(orders.map((o) => ({ ...o, rated: { shop: ratedShops.has(o.merchantId), products: o.items.map((i) => i.productId).filter((id) => ratedProducts.has(id)) } })));
 });
 
 // Merchant: orders placed with their store (section 45/6)
@@ -36,10 +43,18 @@ orderRouter.get("/merchant", requireAuth, requireRole(Role.MERCHANT), async (req
   }
   const orders = await prisma.order.findMany({
     where: { merchantId: merchant.id },
-    include: { items: true, user: { select: { fullName: true } } },
+    include: { items: true, user: { select: { id: true, fullName: true } } },
     orderBy: { createdAt: "desc" },
   });
-  res.json(orders);
+  // how each customer's shops rate them, and whether this shop already rated them
+  const customerIds = [...new Set(orders.map((o) => o.userId))];
+  const [mine, others] = await Promise.all([
+    prisma.customerReview.findMany({ where: { merchantId: merchant.id, customerId: { in: customerIds } }, select: { customerId: true } }),
+    prisma.customerReview.groupBy({ by: ["customerId"], where: { customerId: { in: customerIds } }, _avg: { stars: true }, _count: { _all: true } }),
+  ]);
+  const rated = new Set(mine.map((m) => m.customerId));
+  const standing = new Map(others.map((g) => [g.customerId, { rating: g._avg.stars ? Math.round(g._avg.stars * 10) / 10 : 0, ratingCount: g._count._all }]));
+  res.json(orders.map((o) => ({ ...o, customerRating: standing.get(o.userId) ?? { rating: 0, ratingCount: 0 }, ratedCustomer: rated.has(o.userId) })));
 });
 
 async function loadOrderForRequester(orderId: string, userId: string) {
@@ -59,7 +74,20 @@ orderRouter.get("/:id", requireAuth, async (req, res) => {
   if (!order) {
     return sendError(res, 404, "NOT_FOUND", "Order not found");
   }
-  res.json(order);
+  // what is left to rate: the customer sees their own ratings, the shop sees how the customer is rated
+  if (order.userId === req.user!.id) {
+    const [products, shop] = await Promise.all([
+      prisma.productReview.findMany({ where: { userId: order.userId, productId: { in: order.items.map((i) => i.productId) } }, select: { productId: true } }),
+      prisma.merchantReview.findUnique({ where: { merchantId_userId: { merchantId: order.merchantId, userId: order.userId } }, select: { id: true } }),
+    ]);
+    return res.json({ ...order, rated: { shop: !!shop, products: products.map((p) => p.productId) } });
+  }
+  const [standing, mine] = await Promise.all([
+    prisma.customerReview.aggregate({ where: { customerId: order.userId }, _avg: { stars: true }, _count: { _all: true } }),
+    prisma.customerReview.findUnique({ where: { merchantId_customerId: { merchantId: order.merchantId, customerId: order.userId } }, select: { id: true } }),
+  ]);
+  const customer = await prisma.user.findUnique({ where: { id: order.userId }, select: { id: true, fullName: true } });
+  res.json({ ...order, customer, customerRating: { rating: standing._avg.stars ? Math.round(standing._avg.stars * 10) / 10 : 0, ratingCount: standing._count._all }, ratedCustomer: !!mine });
 });
 
 // Forward-only lifecycle (section 6); CANCELLED is reachable up until SHIPPED (section 59.6)

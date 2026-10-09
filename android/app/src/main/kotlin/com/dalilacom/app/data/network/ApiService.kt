@@ -227,6 +227,21 @@ interface ApiService {
     @POST("ads/{id}/click")
     suspend fun adClick(@Path("id") id: String): Response<Unit>
 
+    @GET("reviews/products/{id}")
+    suspend fun productReviews(@Path("id") id: String, @Query("limit") limit: Int, @Query("offset") offset: Int): Response<ReviewsDto>
+
+    @GET("reviews/shops/{id}")
+    suspend fun shopReviews(@Path("id") id: String, @Query("limit") limit: Int, @Query("offset") offset: Int): Response<ReviewsDto>
+
+    @PUT("reviews/products/{id}")
+    suspend fun reviewProduct(@Path("id") id: String, @Body body: ReviewRequest): Response<Unit>
+
+    @PUT("reviews/shops/{id}")
+    suspend fun reviewShop(@Path("id") id: String, @Body body: ReviewRequest): Response<Unit>
+
+    @PUT("reviews/customers/{id}")
+    suspend fun reviewCustomer(@Path("id") id: String, @Body body: ReviewRequest): Response<Unit>
+
     @GET("geo/market")
     suspend fun market(): Response<MarketDto>
 

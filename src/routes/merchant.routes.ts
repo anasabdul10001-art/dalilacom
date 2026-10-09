@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { shopStanding } from "./reviews.routes";
 import { z } from "zod";
 import { MerchantApprovalStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
@@ -299,7 +300,8 @@ merchantRouter.get("/:id", async (req, res) => {
     return sendError(res, 404, "NOT_FOUND", "Merchant not found");
   }
   const localize = await categoryNameLocalizer(resolveLanguage(req));
-  res.json(localize({ ...withOwnerProfile(merchant), openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
+  const standing = await shopStanding(merchant.id); // the stars and the followers are public
+  res.json(localize({ ...withOwnerProfile(merchant), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
 });
 
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {

@@ -93,7 +93,7 @@ fun MerchantDetailScreen(
     val viewModel: MerchantDetailViewModel = viewModel(
         factory = viewModelFactory {
             initializer {
-                MerchantDetailViewModel(container.discoverRepository, container.storeRepository, container.cartRepository, container.authRepository, container.placesRepository, merchantId)
+                MerchantDetailViewModel(container.discoverRepository, container.storeRepository, container.cartRepository, container.authRepository, container.reviewsRepository, container.placesRepository, merchantId)
             }
         },
     )
@@ -106,9 +106,10 @@ fun MerchantDetailScreen(
             viewModel.clearMessage()
         }
     }
+    state.reviewTarget?.let { target -> com.dalilacom.app.ui.common.ReviewDialog(target, state.reviewBusy, state.reviewError, viewModel::sendReview, viewModel::closeReview) }
     LaunchedEffect(state.needLogin) {
         if (state.needLogin) {
-            Toast.makeText(context, context.getString(R.string.store_login_needed), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.rv_need_account_follow), Toast.LENGTH_SHORT).show()
             viewModel.consumeNeedLogin()
             onLogin()
         }
@@ -128,9 +129,8 @@ fun MerchantDetailScreen(
             else -> {
                 val merchant = state.merchant!!
                 val products = state.products
-                val rated = products.filter { it.ratingCount > 0 }
-                val votes = rated.sumOf { it.ratingCount }
-                val avg = if (votes > 0) rated.sumOf { it.rating * it.ratingCount } / votes else 0.0
+                val votes = merchant.ratingCount // the shop's own rating, from the people it delivered to
+                val avg = merchant.rating
                 val sold = products.sumOf { it.soldCount }
                 val hue = merchant.id.fold(0) { h, c -> (h * 31 + c.code) % 360 }.toFloat()
                 val sorted = when (state.sort) {
@@ -163,6 +163,7 @@ fun MerchantDetailScreen(
                                 Spacer(Modifier.height(10.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                     if (avg > 0) Text("★ %.1f (%d)".format(java.util.Locale.US, avg, votes), color = Color(0xFFFFD04A), fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                                    Text("${state.followers} " + stringResource(R.string.shop_followers), color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
                                     Text("${products.size} " + stringResource(R.string.shop_products), color = Color.White, fontSize = 12.5.sp)
                                     if (sold > 0) Text(stringResource(R.string.store_sold_short, if (sold >= 1000) "%.1fk+".format(java.util.Locale.US, sold / 1000.0) else sold.toString()), color = Color.White, fontSize = 12.5.sp)
                                     Spacer(Modifier.weight(1f))
@@ -185,7 +186,7 @@ fun MerchantDetailScreen(
                     // tabs
                     item {
                         Row(Modifier.fillMaxWidth().background(Color.Black).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                            listOf("home" to R.string.shop_tab_home, "all" to R.string.shop_tab_all, "about" to R.string.shop_tab_about).forEach { (id, label) ->
+                            listOf("home" to R.string.shop_tab_home, "all" to R.string.shop_tab_all, "reviews" to R.string.rv_title, "about" to R.string.shop_tab_about).forEach { (id, label) ->
                                 Column(Modifier.clickable { viewModel.setTab(id) }.padding(top = 12.dp)) {
                                     Text(stringResource(label), color = if (state.tab == id) Color.White else Color.White.copy(alpha = 0.75f), fontWeight = if (state.tab == id) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 14.sp)
                                     Spacer(Modifier.height(9.dp))
@@ -195,6 +196,15 @@ fun MerchantDetailScreen(
                         }
                     }
                     when (state.tab) {
+                        "reviews" -> item {
+                            ShopCard {
+                                state.reviews?.let { rv ->
+                                    com.dalilacom.app.ui.common.ReviewSummaryView(rv.summary)
+                                    com.dalilacom.app.ui.common.ReviewActionView(rv.canReview, rv.mine != null) { viewModel.openReview(merchant.businessName) }
+                                    com.dalilacom.app.ui.common.ReviewListView(rv.items)
+                                }
+                            }
+                        }
                         "about" -> item {
                             ShopCard {
                                 merchant.bio?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(10.dp)) }

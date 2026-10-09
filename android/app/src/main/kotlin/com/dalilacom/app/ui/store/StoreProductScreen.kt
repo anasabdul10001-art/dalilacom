@@ -59,19 +59,51 @@ data class StoreProductUi(
     val goToCart: Boolean = false,
     val needLogin: Boolean = false,
     val error: String? = null,
+    val reviews: com.dalilacom.app.data.network.ReviewsDto? = null,
+    val reviewTarget: com.dalilacom.app.ui.common.ReviewTarget? = null,
+    val reviewBusy: Boolean = false,
+    val reviewError: String? = null,
 )
 
 class StoreProductViewModel(
     private val store: StoreRepository,
     private val cart: CartRepository,
     private val auth: AuthRepository,
+    private val reviews: com.dalilacom.app.data.repository.ReviewsRepository,
     private val productId: String,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(StoreProductUi())
     val ui: StateFlow<StoreProductUi> = _ui.asStateFlow()
 
     init {
-        viewModelScope.launch { _ui.value = StoreProductUi(loading = false, product = store.product(productId)) }
+        viewModelScope.launch { _ui.value = StoreProductUi(loading = false, product = store.product(productId), reviews = reviews.of("product", productId)) }
+    }
+
+    fun openReview(title: String) {
+        val mine = _ui.value.reviews?.mine
+        _ui.value = _ui.value.copy(reviewTarget = com.dalilacom.app.ui.common.ReviewTarget("product", productId, title, mine?.stars ?: 0, mine?.comment.orEmpty()), reviewError = null)
+    }
+
+    fun closeReview() { _ui.value = _ui.value.copy(reviewTarget = null) }
+
+    fun sendReview(stars: Int, comment: String) {
+        _ui.value = _ui.value.copy(reviewBusy = true, reviewError = null)
+        viewModelScope.launch {
+            reviews.send("product", productId, stars, comment)
+                .onSuccess {
+                    val product = store.product(productId)
+                    _ui.value = _ui.value.copy(reviewBusy = false, reviewTarget = null, product = product ?: _ui.value.product, reviews = reviews.of("product", productId))
+                }
+                .onFailure { e -> _ui.value = _ui.value.copy(reviewBusy = false, reviewError = e.message) }
+        }
+    }
+
+    fun moreReviews() {
+        val current = _ui.value.reviews ?: return
+        viewModelScope.launch {
+            val next = reviews.of("product", productId, offset = current.items.size) ?: return@launch
+            _ui.value = _ui.value.copy(reviews = current.copy(items = current.items + next.items))
+        }
     }
 
     fun change(delta: Int) {
@@ -141,10 +173,11 @@ fun StoreProductScreen(
 ) {
     val vm: StoreProductViewModel = viewModel(
         key = "store-product-$productId",
-        factory = viewModelFactory { initializer { StoreProductViewModel(container.storeRepository, container.cartRepository, container.authRepository, productId) } },
+        factory = viewModelFactory { initializer { StoreProductViewModel(container.storeRepository, container.cartRepository, container.authRepository, container.reviewsRepository, productId) } },
     )
     val ui by vm.ui.collectAsState()
     LaunchedEffect(ui.needLogin) { if (ui.needLogin) { vm.consumeNeedLogin(); onLogin() } }
+    ui.reviewTarget?.let { target -> com.dalilacom.app.ui.common.ReviewDialog(target, ui.reviewBusy, ui.reviewError, vm::sendReview, vm::closeReview) }
     LaunchedEffect(ui.goToCart) { if (ui.goToCart) { vm.consumeGoToCart(); onGoToCart() } }
 
     Column(Modifier.fillMaxSize()) {
@@ -192,6 +225,16 @@ fun StoreProductScreen(
                         if (ui.added) Text(stringResource(R.string.store_added_to_cart) + " ✓", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     }
                     ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+                // ratings and comments: readable by anyone, writable by whoever received the product
+                Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(stringResource(R.string.rv_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                    ui.reviews?.let { rv ->
+                        com.dalilacom.app.ui.common.ReviewSummaryView(rv.summary)
+                        com.dalilacom.app.ui.common.ReviewActionView(rv.canReview, rv.mine != null) { vm.openReview(product.name) }
+                        com.dalilacom.app.ui.common.ReviewListView(rv.items)
+                        if (rv.items.size < rv.summary.count) OutlinedButton(onClick = vm::moreReviews, shape = RoundedCornerShape(6.dp)) { Text(stringResource(R.string.store_more)) }
+                    }
                 }
                 StoreProductRow(stringResource(R.string.store_related), product.related, null, onOpenProduct) { onOpenProduct(it) }
             }

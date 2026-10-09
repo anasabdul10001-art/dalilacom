@@ -1412,9 +1412,9 @@ function screenMerchantDetail() {
   const wa = (x.whatsapp || "").replace(/\D/g, "");
   const saved = S._discover && S._discover.favIds.includes(x.id);
   const products = m.products || [];
-  const rated = products.filter((p) => p.ratingCount > 0);
-  const votes = rated.reduce((n, p) => n + p.ratingCount, 0);
-  const avg = votes ? rated.reduce((n, p) => n + p.rating * p.ratingCount, 0) / votes : 0;
+  const avg = x.rating || 0; // the shop's own rating (from the people it delivered to)
+  const votes = x.ratingCount || 0;
+  const followers = x.followersCount || 0;
   const sold = products.reduce((n, p) => n + (p.soldCount || 0), 0);
   let hue = 0;
   for (const c of String(x.id)) hue = (hue * 31 + c.charCodeAt(0)) % 360;
@@ -1428,7 +1428,13 @@ function screenMerchantDetail() {
   }[m.sort] || (() => 0));
   const deals = products.filter((p) => p.memberDiscountEnabled);
   let body;
-  if (m.tab === "about") {
+  if (m.tab === "reviews") {
+    body = `<section class="store-sec rv-sec">
+      ${m.reviews ? `${reviewSummary(m.reviews.summary)}
+        ${reviewAction("shop", x.id, m.reviews, x.businessName)}
+        <div class="rv-list">${reviewList(m.reviews.items)}</div>` : ""}
+    </section>`;
+  } else if (m.tab === "about") {
     body = `
       <section class="store-sec">
         ${x.bio ? `<p class="place-bio" style="margin-top:0">${esc(x.bio)}</p>` : ""}
@@ -1470,13 +1476,14 @@ function screenMerchantDetail() {
             <h1>${esc(x.businessName)} <span class="shop-verified" title="${esc(t("shop.verified"))}">✓</span></h1>
             <p>${esc(catName(x.category))}${x.distanceKm != null ? " · " + x.distanceKm.toFixed(1) + " " + esc(t("unit.km")) : ""}</p>
             <div class="shop-stats">
-              ${avg ? `<span><b class="star">★ ${avg.toFixed(1)}</b> (${votes})</span>` : ""}
+              ${votes ? `<span><b class="star">★ ${avg.toFixed(1)}</b> (${votes})</span>` : ""}
+              <span><b>${storeCount(followers)}</b> ${esc(t("shop.followers"))}</span>
               <span><b>${products.length}</b> ${esc(t("shop.products"))}</span>
               ${sold ? `<span><b>${storeCount(sold)}</b> ${esc(t("shop.sold"))}</span>` : ""}
               ${openBadge(x.openStatus)}
             </div>
           </div>
-          <button class="shop-follow ${saved ? "on" : ""}" onclick="toggleFav('${x.id}')">${saved ? "✓ " + esc(t("place.saved")) : "+ " + esc(t("shop.follow"))}</button>
+          <button class="shop-follow ${saved ? "on" : ""}" onclick="followShop('${x.id}')">${saved ? "✓ " + esc(t("place.saved")) : "+ " + esc(t("shop.follow"))}</button>
         </div>
       </div>
       <div class="shop-actions">
@@ -1486,10 +1493,21 @@ function screenMerchantDetail() {
         <button onclick="shareMerchant()"><span>📤</span>${esc(t("place.share"))}</button>
       </div>
       <div class="store-tabs">
-        ${[["home", t("shop.tabHome")], ["all", t("shop.tabAll")], ["about", t("shop.tabAbout")]].map(([id, label]) => `<button class="${m.tab === id ? "on" : ""}" onclick="S._merchantDetail.tab='${id}';render()">${esc(label)}</button>`).join("")}
+        ${[["home", t("shop.tabHome")], ["all", t("shop.tabAll")], ["reviews", t("rv.title") + (votes ? ` (${votes})` : "")], ["about", t("shop.tabAbout")]].map(([id, label]) => `<button class="${m.tab === id ? "on" : ""}" onclick="S._merchantDetail.tab='${id}';render()">${esc(label)}</button>`).join("")}
       </div>
       ${body}
     </div>`;
+}
+
+/** Following a shop needs an account (a customer's or a shop's); a visitor is taken to sign in. */
+async function followShop(id) {
+  if (!S.token) { toast(t("rv.needAccountFollow")); return go("login"); }
+  await toggleFav(id);
+  if (S._merchantDetail && S._merchantDetail.merchant) {
+    const saved = S._discover && S._discover.favIds.includes(id);
+    S._merchantDetail.merchant.followersCount = Math.max(0, (S._merchantDetail.merchant.followersCount || 0) + (saved ? 1 : -1));
+  }
+  render();
 }
 
 /* ---- merchant: opening hours editor ---- */
@@ -1576,14 +1594,14 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 }
 
 async function loadMerchantDetail(id) {
-  const [mRes, pRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/store/products?limit=60&merchantId=" + id)]);
+  const [mRes, pRes, rvRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/store/products?limit=60&merchantId=" + id), api("GET", "/reviews/shops/" + id + "?limit=10")]);
   const merchant = mRes.ok ? mRes.data : null;
   const loc = S._discover && S._discover.userLoc;
   // /merchant/:id doesn't compute distance; derive it from the location the map view already asked for.
   if (merchant && loc && merchant.latitude != null && merchant.longitude != null) {
     merchant.distanceKm = haversineKm(loc.lat, loc.lng, merchant.latitude, merchant.longitude);
   }
-  S._merchantDetail = { id, loading: false, merchant, products: pRes.ok ? pRes.data.items : [], tab: "home", q: "", sort: "popular" };
+  S._merchantDetail = { id, loading: false, merchant, products: pRes.ok ? pRes.data.items : [], reviews: rvRes.ok ? rvRes.data : null, tab: "home", q: "", sort: "popular" };
   render();
 }
 
@@ -2278,6 +2296,74 @@ async function wizPublish() {
   render();
 }
 
+/* ---------------- ratings and comments (everyone reads; only people who received the order write) ---------------- */
+
+const starsText = (n) => "★".repeat(Math.round(n)) + "☆".repeat(5 - Math.round(n));
+
+/** The big average, the bars (how many gave 5, 4, ...) and the number of ratings. */
+function reviewSummary(sum) {
+  if (!sum || !sum.count) return `<p class="muted" style="margin:6px 0">${esc(t("rv.none"))}</p>`;
+  return `
+    <div class="rv-sum">
+      <div class="rv-avg"><b>${sum.average.toFixed(1)}</b><span class="star">${starsText(sum.average)}</span><small>${esc(t("rv.count", { n: sum.count }))}</small></div>
+      <div class="rv-bars">${[5, 4, 3, 2, 1].map((k) => `<div><span>${k}★</span><i><u style="width:${Math.round((sum.distribution[k] / sum.count) * 100)}%"></u></i><em>${sum.distribution[k]}</em></div>`).join("")}</div>
+    </div>`;
+}
+
+function reviewList(items, shopField) {
+  return (items || []).map((r) => `
+    <div class="rv-item">
+      <div class="rv-head"><span class="star">${starsText(r.stars)}</span><b>${esc(shopField ? r[shopField] : r.name)}</b>${r.verified ? `<small class="rv-ok">✓ ${esc(t("rv.verified"))}</small>` : ""}<small class="muted">${new Date(r.createdAt).toLocaleDateString(LANG, { day: "numeric", month: "short", year: "numeric" })}</small></div>
+      ${r.comment ? `<p>${esc(r.comment)}</p>` : ""}
+    </div>`).join("");
+}
+
+/** The note and the button under a summary: write when allowed, otherwise say who may. */
+function reviewAction(kind, id, data, title) {
+  if (!S.token) return `<p class="muted rv-note">${esc(t("rv.needBuy"))}</p>`;
+  if (!data.canReview) return `<p class="muted rv-note">${esc(t("rv.needBuy"))}</p>`;
+  return `<button class="btn outline rv-write" onclick="openReview('${kind}','${id}','${esc(title).replace(/'/g, "&#39;")}',${data.mine ? data.mine.stars : 0},'${esc((data.mine && data.mine.comment) || "").replace(/'/g, "&#39;").replace(/\n/g, " ")}')">✍️ ${esc(data.mine ? t("rv.edit") : t("rv.write"))}</button>`;
+}
+
+/** The little window: choose the stars, write a few words, send. */
+function openReview(kind, id, title, stars, comment) {
+  S._rv = { kind, id, title, stars: stars || 0, comment: comment || "", busy: false, error: null };
+  renderReviewModal();
+}
+
+function closeReview() { S._rv = null; renderReviewModal(); }
+
+function renderReviewModal() {
+  let box = document.getElementById("rv-modal");
+  if (!S._rv) { if (box) box.remove(); return; }
+  if (!box) { box = document.createElement("div"); box.id = "rv-modal"; document.body.appendChild(box); }
+  const r = S._rv;
+  box.innerHTML = `
+    <div class="rv-back" onclick="closeReview()"></div>
+    <div class="rv-card">
+      <h3>${esc(r.title)}</h3>
+      <div class="rv-pick">${[1, 2, 3, 4, 5].map((n) => `<button class="${n <= r.stars ? "on" : ""}" onclick="S._rv.stars=${n};renderReviewModal()" aria-label="${n}">★</button>`).join("")}</div>
+      <textarea rows="4" maxlength="1000" placeholder="${esc(t("rv.placeholder"))}" oninput="S._rv.comment=this.value">${esc(r.comment)}</textarea>
+      ${r.error ? `<div class="error-banner">${esc(r.error)}</div>` : ""}
+      <div class="rv-actions"><button class="btn outline" onclick="closeReview()">${esc(t("rv.cancel"))}</button><button class="btn" ${r.busy || !r.stars ? "disabled" : ""} onclick="submitReview()">${esc(t("rv.send"))}</button></div>
+    </div>`;
+  trDom(box);
+}
+
+async function submitReview() {
+  const r = S._rv;
+  r.busy = true; r.error = null; renderReviewModal();
+  const path = { product: "/reviews/products/", shop: "/reviews/shops/", customer: "/reviews/customers/" }[r.kind] + r.id;
+  const { ok, data } = await api("PUT", path, { stars: r.stars, comment: r.comment.trim() || undefined });
+  if (!ok) { r.busy = false; r.error = errMsg(data, t("rv.failed")); return renderReviewModal(); }
+  S._rv = null;
+  renderReviewModal();
+  toast(t("rv.thanks"));
+  // the pages that show reviews or "rate me" buttons load again
+  S._productDetail = null; S._merchantDetail = null; S._orderDetail = null; S._orders = null; S._mOrders = null;
+  render();
+}
+
 /** The product page's pictures: the big one and a row of small ones to pick from. */
 function storeGallery(prod, idx) {
   const imgs = prod.images && prod.images.length ? prod.images : [];
@@ -2437,14 +2523,27 @@ function screenProductDetail() {
           ${errorBanner()}
         </div>
       </div>
+      <section class="store-sec rv-sec">
+        <div class="store-sec-head"><h2>${esc(t("rv.title"))}</h2></div>
+        ${p.reviews ? `${reviewSummary(p.reviews.summary)}
+          ${reviewAction("product", prod.id, p.reviews, prod.name)}
+          <div class="rv-list">${reviewList(p.reviews.items)}</div>
+          ${p.reviews.items.length < p.reviews.summary.count ? `<button class="btn outline" style="width:auto;margin:10px auto 0;display:block" onclick="moreProductReviews()">${esc(t("store.more"))}</button>` : ""}` : ""}
+      </section>
       ${prod.related && prod.related.length ? `<section class="store-sec"><div class="store-sec-head"><h2>${esc(t("store.related"))}</h2></div><div class="store-grid">${prod.related.map(storeCard).join("")}</div></section>` : ""}
     </div>`;
 }
 
 async function loadProductDetail(id) {
-  const { ok, data } = await api("GET", "/store/products/" + id);
-  S._productDetail = { id, loading: false, product: ok ? data : null, qty: 1 };
+  const [{ ok, data }, rv] = await Promise.all([api("GET", "/store/products/" + id), api("GET", "/reviews/products/" + id + "?limit=10")]);
+  S._productDetail = { id, loading: false, product: ok ? data : null, qty: 1, reviews: rv.ok ? rv.data : null };
   render();
+}
+
+async function moreProductReviews() {
+  const p = S._productDetail;
+  const { ok, data } = await api("GET", `/reviews/products/${p.id}?limit=10&offset=${p.reviews.items.length}`);
+  if (ok) { p.reviews.items = p.reviews.items.concat(data.items); render(); }
 }
 
 function changeProductQty(delta) {
@@ -2490,6 +2589,16 @@ function screenOrderDetail() {
     <div class="divider"></div>
     <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(ord.totalCents)}</span></div>
     ${ord.memberDiscountCents > 0 ? `<p class="muted">وفّرت ${fmt(ord.memberDiscountCents)} بسعر أعضاء دليلكم</p>` : ""}
+    ${ord.status === "DELIVERED" && ord.rated ? `
+      <div class="section-title">${esc(t("rv.rateTitle"))}</div>
+      <div class="rv-rate-list">
+        <button class="btn outline" onclick="openReview('shop','${ord.merchant.id}','${esc(ord.merchant.businessName).replace(/'/g, "&#39;")}',0,'')">🏪 ${esc(t("rv.rateShop"))} ${ord.rated.shop ? "✓" : ""}</button>
+        ${(ord.items || []).map((it) => `<button class="btn outline" onclick="openReview('product','${it.productId}','${esc(it.productName).replace(/'/g, "&#39;")}',0,'')">📦 ${esc(it.productName)} ${ord.rated.products.includes(it.productId) ? "✓" : ""}</button>`).join("")}
+      </div>` : ""}
+    ${ord.status === "DELIVERED" && ord.customer ? `
+      <div class="section-title">${esc(t("rv.customerTitle"))}</div>
+      <p class="muted">${ord.customerRating.ratingCount ? `<span class="star">${starsText(ord.customerRating.rating)}</span> ${ord.customerRating.rating.toFixed(1)} (${ord.customerRating.ratingCount})` : esc(t("rv.customerNone"))}</p>
+      <button class="btn outline" onclick="openReview('customer','${ord.customer.id}','${esc(ord.customer.fullName).replace(/'/g, "&#39;")}',0,'')">⭐ ${esc(ord.ratedCustomer ? t("rv.edit") : t("rv.rateCustomer"))}</button>` : ""}
     <button class="btn outline" style="margin-top:10px" onclick="exportDocument('/invoices/order/${ord.id}')">📄 تصدير الفاتورة PDF</button>
     ${canCancel ? `<div style="height:16px"></div><button class="btn danger" ${S.busy ? "disabled" : ""} onclick="cancelOrder()">إلغاء الطلب</button>` : ""}
     ${errorBanner()}
@@ -3956,8 +4065,9 @@ function tabMerchantOrders() {
       return `
       <div class="card">
         <div class="title-line"><strong>${esc(ord.orderNumber)}</strong>${orderBadge(ord.status)}</div>
-        <p class="muted">${esc(ord.user ? ord.user.fullName : "")}</p>
+        <p class="muted">${esc(ord.user ? ord.user.fullName : "")}${ord.customerRating && ord.customerRating.ratingCount ? ` · <span class="star">★ ${ord.customerRating.rating.toFixed(1)}</span> (${ord.customerRating.ratingCount})` : ""}</p>
         <p class="price">${fmt(ord.totalCents)}</p>
+        ${ord.status === "DELIVERED" && ord.user ? `<button class="btn small outline" style="width:auto;margin-top:6px" onclick="openReview('customer','${ord.user.id}','${esc(ord.user.fullName).replace(/'/g, "&#39;")}',0,'')">⭐ ${esc(ord.ratedCustomer ? t("rv.edit") : t("rv.rateCustomer"))}</button>` : ""}
         ${(next.length || canCancel) ? `<div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">
           ${next.map((s) => `<button class="btn small" style="width:auto" onclick="advanceMerchantOrder('${ord.id}','${s}')">${esc(ORDER_ACTION_LABEL[s] || s)}</button>`).join("")}
           ${canCancel ? `<button class="btn small outline" style="width:auto" onclick="cancelMerchantOrder('${ord.id}')">إلغاء</button>` : ""}

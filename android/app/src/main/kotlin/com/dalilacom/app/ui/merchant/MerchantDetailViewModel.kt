@@ -28,6 +28,11 @@ data class MerchantDetailUiState(
     val sort: String = "popular",
     val justAdded: String? = null,
     val needLogin: Boolean = false,
+    val reviews: com.dalilacom.app.data.network.ReviewsDto? = null,
+    val reviewTarget: com.dalilacom.app.ui.common.ReviewTarget? = null,
+    val reviewBusy: Boolean = false,
+    val reviewError: String? = null,
+    val followers: Int = 0,
     val saved: Boolean = false,
     val message: String? = null,
     val error: String? = null,
@@ -38,6 +43,7 @@ class MerchantDetailViewModel(
     private val storeRepository: StoreRepository,
     private val cartRepository: CartRepository,
     private val authRepository: AuthRepository,
+    private val reviewsRepository: com.dalilacom.app.data.repository.ReviewsRepository,
     private val placesRepository: PlacesRepository,
     private val merchantId: String,
 ) : ViewModel() {
@@ -53,17 +59,44 @@ class MerchantDetailViewModel(
             }
             val products = storeRepository.products(null, null, false, "popular", 0, StoreScope(), merchantId = merchantId, limit = 60)?.items.orEmpty()
             val saved = merchantId in placesRepository.favoriteIds()
-            _uiState.value = MerchantDetailUiState(isLoading = false, merchant = merchant, products = products, saved = saved)
+            _uiState.value = MerchantDetailUiState(isLoading = false, merchant = merchant, products = products, saved = saved, followers = merchant.followersCount, reviews = reviewsRepository.of("shop", merchantId))
         }
     }
 
+    /** Following needs an account (a customer's or a shop's): a visitor is taken to sign in. */
     fun toggleSaved() {
-        val saved = _uiState.value.saved
-        _uiState.update { it.copy(saved = !saved) }
         viewModelScope.launch {
-            placesRepository.setSaved(merchantId, !saved).onFailure { error ->
-                _uiState.update { it.copy(saved = saved, message = error.message) }
+            if (!authRepository.hasStoredSession()) {
+                _uiState.update { it.copy(needLogin = true) }
+                return@launch
             }
+            val saved = _uiState.value.saved
+            _uiState.update { it.copy(saved = !saved, followers = maxOf(0, it.followers + if (saved) -1 else 1)) }
+            placesRepository.setSaved(merchantId, !saved).onFailure { error ->
+                _uiState.update { it.copy(saved = saved, followers = maxOf(0, it.followers + if (saved) 1 else -1), message = error.message) }
+            }
+        }
+    }
+
+    fun openReview(title: String) {
+        val mine = _uiState.value.reviews?.mine
+        _uiState.update { it.copy(reviewTarget = com.dalilacom.app.ui.common.ReviewTarget("shop", merchantId, title, mine?.stars ?: 0, mine?.comment.orEmpty()), reviewError = null) }
+    }
+
+    fun closeReview() = _uiState.update { it.copy(reviewTarget = null) }
+
+    fun sendReview(stars: Int, comment: String) {
+        _uiState.update { it.copy(reviewBusy = true, reviewError = null) }
+        viewModelScope.launch {
+            reviewsRepository.send("shop", merchantId, stars, comment)
+                .onSuccess {
+                    val merchant = discoverRepository.getMerchant(merchantId)
+                    _uiState.update { it.copy(reviewBusy = false, reviewTarget = null, merchant = merchant ?: it.merchant, reviews = null) }
+                    _uiState.update { it.copy(reviews = null) }
+                    val fresh = reviewsRepository.of("shop", merchantId)
+                    _uiState.update { it.copy(reviews = fresh) }
+                }
+                .onFailure { e -> _uiState.update { it.copy(reviewBusy = false, reviewError = e.message) } }
         }
     }
 

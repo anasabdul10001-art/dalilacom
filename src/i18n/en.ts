@@ -49,6 +49,13 @@ export const en: LanguagePack = {
     "عدد محاولات البحث بالصورة كبير، جرّب بعد قليل": "Too many photo searches, try again in a while",
     "ما قدرنا نتعرف على الصورة، جرّب صورة أوضح": "We couldn't recognise the picture, try a clearer one",
 
+    "التقييم متاح فقط لمن استلم هذا المنتج": "Only someone who received this product can rate it",
+    "التقييم متاح فقط لمن استلم طلبًا من هذا المتجر": "Only someone who received an order from this shop can rate it",
+    "التقييم متاح فقط لزبون استلم طلبًا من متجرك": "You can only rate a customer who received an order from your shop",
+    "تقييم جديد لمنتجك": "New rating for your product",
+    "تقييم جديد لمتجرك": "New rating for your shop",
+    "تقييم جديد من أحد المتاجر": "New rating from a shop",
+
     // ---- auth ----
     "البريد الإلكتروني أو كلمة السر غير صحيحة": "Incorrect email or password",
     "هذا الحساب معطّل، تواصل مع الدعم": "This account is disabled — contact support",
@@ -240,6 +247,7 @@ export const en: LanguagePack = {
     "صدر هذا الإيصال عبر منصة دليلكم": "This receipt was issued through the Dalilacom platform",
   },
   patterns: [
+    [/^(.+): (★+)$/, "$1: $2"],
     [/^السبب: (.+)\. تم إرجاع المبلغ لمحفظتك\.$/, "Reason: $1. The money was returned to your wallet."],
     [/^مرحبًا،\n\nلتفعيل حسابك على دليلكم اضغط الرابط التالي \(صالح لمدة (\d+(?:\.\d+)?) ساعة\):\n(\S+)\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة\.$/, "Hello,\n\nTo activate your Dalilacom account, open the link below (valid for $1 hours):\n$2\n\nIf you didn't request this, ignore this message."],
     [/^مرحبًا،\n\nطلب أحدهم إعادة تعيين كلمة سر حسابك على دليلكم\. إذا كنت أنت، اضغط الرابط التالي \(صالح لمدة (\d+(?:\.\d+)?) دقيقة\):\n(\S+)\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة — كلمة سرك لن تتغيّر\.$/, "Hello,\n\nSomeone asked to reset your Dalilacom account password. If it was you, open the link below (valid for $1 minutes):\n$2\n\nIf you didn't request this, ignore this message — your password won't change."],

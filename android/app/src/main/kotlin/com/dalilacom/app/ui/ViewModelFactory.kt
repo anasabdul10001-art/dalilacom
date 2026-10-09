@@ -39,7 +39,7 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
             MerchantRegisterViewModel(container.merchantRepository, container.discoverRepository) as T
         MerchantProfileViewModel::class.java ->
             MerchantProfileViewModel(container.merchantRepository, container.discoverRepository) as T
-        MerchantOrdersViewModel::class.java -> MerchantOrdersViewModel(container.orderRepository) as T
+        MerchantOrdersViewModel::class.java -> MerchantOrdersViewModel(container.orderRepository, container.reviewsRepository) as T
         RedeemViewModel::class.java -> RedeemViewModel(container.merchantRepository) as T
         CatalogViewModel::class.java -> CatalogViewModel(container.merchantRepository, container.productRepository) as T
         ResponderViewModel::class.java -> ResponderViewModel(container.responderRepository) as T

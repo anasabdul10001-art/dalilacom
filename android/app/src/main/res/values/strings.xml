@@ -545,4 +545,23 @@
     <string name="photo_seen">شفنا</string>
     <string name="photo_failed">تعذّر تحليل الصورة</string>
     <string name="photo_offline">تعذّر الاتصال، تحقق من الإنترنت</string>
+    <string name="rv_title">التقييمات</string>
+    <string name="rv_none">ما في تقييمات بعد</string>
+    <string name="rv_count">%1$d تقييم</string>
+    <string name="rv_verified">مشتري موثّق</string>
+    <string name="rv_need_buy">التقييم والتعليق متاحين لمن اشترى واستلم الطلب فقط.</string>
+    <string name="rv_write">اكتب تقييمك</string>
+    <string name="rv_edit">عدّل تقييمك</string>
+    <string name="rv_placeholder">شو رأيك؟ احكي عن تجربتك (اختياري)</string>
+    <string name="rv_cancel">إلغاء</string>
+    <string name="rv_send">أرسل</string>
+    <string name="rv_failed">تعذّر إرسال التقييم</string>
+    <string name="rv_thanks">شكرًا لتقييمك ⭐</string>
+    <string name="rv_need_account_follow">سجّل دخولك أول لتتابع المتجر</string>
+    <string name="rv_rate_title">قيّم تجربتك</string>
+    <string name="rv_rate_shop">قيّم المتجر</string>
+    <string name="rv_customer_title">الزبون</string>
+    <string name="rv_customer_none">ما إله تقييمات بعد</string>
+    <string name="rv_rate_customer">قيّم الزبون</string>
+    <string name="shop_followers">متابع</string>
 </resources>
