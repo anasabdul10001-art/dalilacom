@@ -221,8 +221,6 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         perks = listOf(stringResource(R.string.guest_profile_p1), stringResource(R.string.guest_profile_p2), stringResource(R.string.guest_profile_p3)),
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
-                        extraLabel = stringResource(R.string.profile_store),
-                        onExtra = { rootNavController.navigate("store") },
                     ) else ProfileScreen(
                         container = container,
                         onLoggedOut = { rootNavController.navigate("home") { popUpTo(0) } },
@@ -232,9 +230,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onOpenAccount = { rootNavController.navigate("accountSettings") },
                         onOpenReview = { rootNavController.navigate("adminReview") },
                         onOpenNotifications = { rootNavController.navigate("notifications") },
-                        onOpenStore = { rootNavController.navigate("store") },
                         onOpenMyAds = { rootNavController.navigate("myAds") },
-                        onOpenResponder = { rootNavController.navigate("responder") },
                         onOpenWallet = { rootNavController.navigate("wallet") },
                     )
             }

@@ -47,9 +47,7 @@ fun ProfileScreen(
     onOpenNotifications: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
-    onOpenStore: () -> Unit,
     onOpenMyAds: () -> Unit = {},
-    onOpenResponder: () -> Unit,
     onOpenWallet: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -131,13 +129,9 @@ fun ProfileScreen(
             )
         }
         Spacer(Modifier.height(8.dp))
-        Button(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_store)) }
         if (role == "MERCHANT") {
-            Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = onOpenMyAds, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_my_ads)) }
         }
-        Spacer(Modifier.height(8.dp))
-        Button(onClick = onOpenResponder, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_responder)) }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onOpenWallet, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_wallet)) }
         Spacer(Modifier.height(16.dp))

@@ -1228,7 +1228,6 @@ function guestPrompt(tab) {
       <button class="btn" onclick="go('login')">${esc(t("guest.login"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" onclick="go('register')">${esc(t("guest.register"))}</button>
-      ${tab === "profile" ? `<div style="height:10px"></div><button class="btn secondary" onclick="openStore()">${esc(t("profile.store"))}</button>` : ""}
     </div>`;
 }
 
@@ -1356,8 +1355,7 @@ function tabProfile() {
       <p class="muted" style="margin:0 0 10px">${esc(t("profile.shareLocationSub"))}</p>
       <button class="btn outline" style="max-width:240px" onclick="S._acct=null;go('account')">${esc(t("profile.account"))}</button>
       <div style="height:10px"></div>
-      <button class="btn" style="max-width:240px" onclick="openStore()">${esc(t("profile.store"))}</button>
-      ${S.role === "MERCHANT" ? `<div style="height:10px"></div><button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
+      ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>
       <div style="height:10px"></div>
