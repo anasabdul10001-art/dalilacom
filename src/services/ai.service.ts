@@ -339,20 +339,20 @@ function classifyStatus(status: number, retryAfter: string | null): { reason: st
   return { reason: `request refused (${status})`, cooldownMs: 5 * MINUTE }; // e.g. 404: the model name is wrong
 }
 
-/** The text models this key may really use, best first, read from the provider's own model list. */
-async function discoverModel(def: ProviderDef, apiKey: string): Promise<string | null> {
+/** The text models this key may really use, best first (a few), read from the provider's own model list. */
+async function discoverModels(def: ProviderDef, apiKey: string): Promise<string[]> {
   try {
     const res = await fetch(def.url.replace(/\/chat\/completions$/, "/models"), { headers: { authorization: `Bearer ${apiKey}`, ...(def.headers?.() ?? {}) }, signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const body = (await res.json()) as { data?: { id?: unknown }[] };
-    const ids = (body.data ?? []).map((m) => (typeof m.id === "string" ? m.id.replace(/^models\//, "") : "")).filter((id) => id && !/(embed|whisper|tts|guard|moderation|image|audio|safeguard|ocr|rerank)/i.test(id));
-    for (const wanted of [/llama-3\.3-70b/i, /gpt-oss-120b/i, /70b/i, /gpt-oss-20b/i, /flash/i, /small|large/i, /instruct|chat|versatile/i, /8b|7b/i]) {
-      const hit = ids.find((id) => wanted.test(id));
-      if (hit) return hit;
+    const ids = (body.data ?? []).map((m) => (typeof m.id === "string" ? m.id.replace(/^models\//, "") : "")).filter((id) => id && !/(embed|whisper|tts|guard|moderation|image|audio|safeguard|ocr|rerank|vision|-vl|reward|nemoretriever|parse|clip)/i.test(id));
+    const ranked: string[] = [];
+    for (const wanted of [/llama-3\.3-70b/i, /gpt-oss-120b/i, /llama-4/i, /qwen.*(72b|235b|32b)/i, /deepseek.*(v3|chat)/i, /70b/i, /gpt-oss-20b/i, /flash/i, /small|large/i, /instruct|chat|versatile/i, /8b|7b/i]) {
+      for (const id of ids) if (wanted.test(id) && !ranked.includes(id)) ranked.push(id);
     }
-    return ids[0] ?? null;
+    return [...ranked, ...ids.filter((id) => !ranked.includes(id))].slice(0, 4);
   } catch {
-    return null;
+    return [];
   }
 }
 
@@ -396,7 +396,8 @@ async function callProvider(def: ProviderDef, system: string, user: string, maxT
             }
           : {
               model,
-              max_tokens: maxTokens,
+              max_tokens: /gpt-oss|deepseek-r1|qwq|thinking/i.test(model) ? Math.max(maxTokens, 400) : maxTokens,
+              ...(/gpt-oss/i.test(model) && (def.id === "groq" || def.id === "openrouter") ? { reasoning_effort: "low" } : {}),
               messages: [
                 { role: "system", content: system },
                 { role: "user", content: image ? [{ type: "text", text: user }, { type: "image_url", image_url: { url: `data:${image.mime};base64,${image.data.toString("base64")}` } }] : user },
@@ -406,12 +407,14 @@ async function callProvider(def: ProviderDef, system: string, user: string, maxT
       signal: AbortSignal.timeout(timeoutMs ?? (image ? Math.max(AI_TIMEOUT_MS(), 25000) : AI_TIMEOUT_MS())),
     });
     let res = await send(discovered.get(def.id) ?? def.model());
-    if (res.status === 404 && !anthropic) {
-      // the model we asked for is gone: use one the provider says this key can use, and remember it
-      const found = await discoverModel(def, apiKey);
-      if (found && found !== (discovered.get(def.id) ?? def.model())) {
-        discovered.set(def.id, found);
-        res = await send(found);
+    if ((res.status === 404 || res.status === 410) && !anthropic) {
+      // the model we asked for is gone: try the ones the provider says this key can use, and remember the first that answers
+      const current = discovered.get(def.id) ?? def.model();
+      for (const found of (await discoverModels(def, apiKey)).filter((m) => m !== current)) {
+        const retry = await send(found);
+        if (retry.ok) discovered.set(def.id, found);
+        res = retry;
+        if (retry.ok || (retry.status !== 404 && retry.status !== 410 && retry.status !== 400)) break;
       }
     }
     if (!res.ok) {

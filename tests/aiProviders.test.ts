@@ -189,6 +189,27 @@ describe("When the model we asked for is gone", () => {
   });
 });
 
+describe("Models that are retired or that think before answering", () => {
+  it("steps past retired models (410) to one that answers, and gives a thinking model room to answer", async () => {
+    withKeys("NVIDIA", "GROQ");
+    const sent: Record<string, any>[] = [];
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      if (String(url).endsWith("/models")) {
+        return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ data: [{ id: "meta/llama-3.1-70b-instruct" }, { id: "openai/gpt-oss-120b" }] }) };
+      }
+      const body = JSON.parse(String(init.body));
+      sent.push(body);
+      if (body.model === "meta/llama-3.3-70b-instruct" || body.model === "meta/llama-3.1-70b-instruct") return { ok: false, status: 410, headers: { get: () => null }, text: async () => "end of life" };
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ choices: [{ message: { content: "ok" } }] }) };
+    });
+    expect(await testProvider("nvidia")).toMatchObject({ ok: true });
+    expect(sent.map((b) => b.model)).toEqual(["meta/llama-3.3-70b-instruct", "openai/gpt-oss-120b"]);
+    const thinking = sent[1];
+    expect(thinking.max_tokens).toBeGreaterThanOrEqual(400); // a reasoning model spends tokens thinking first
+    expect(thinking.reasoning_effort).toBeUndefined(); // only asked of Groq and OpenRouter
+  });
+});
+
 describe("Trying one provider on its own", () => {
   it("asks only that provider and says whether it really answered", async () => {
     expect(await testProvider("nope")).toBeNull();
