@@ -366,6 +366,8 @@ model Product {
   // listed under, and the figures a shopper looks at.
   imageUrl              String?
   images                String[] @default([]) // every picture, the first one is imageUrl
+  specs                 Json? // [{ label, value }] shown as the product's details
+  condition             String? // NEW | USED
   icon                  String?
   storeSection          String?
   rating                Float    @default(0)
@@ -1355,4 +1357,15 @@ model StoreBanner {
   clicks         Int       @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+// A picture a shop took of its product, kept in the database like profile photos (the host's disk does not last).
+model ProductPhoto {
+  id         String   @id @default(uuid())
+  merchantId String
+  mime       String
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId])
 }

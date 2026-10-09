@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,7 +33,7 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.formatCents
 
 @Composable
-fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit) {
+fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}) {
     val viewModel: CatalogViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -45,6 +46,12 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
             androidx.compose.material3.OutlinedButton(onClick = onOpenProfile, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.s_8008e7e0)) }
             androidx.compose.material3.OutlinedButton(onClick = onOpenHours, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.s_4a3ccec5)) }
         }
+        Spacer(Modifier.height(12.dp))
+
+        Button(onClick = onAddByPhoto, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(56.dp)) {
+            Text("📷  " + stringResource(R.string.wiz_start), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+        }
+        Text(stringResource(R.string.wiz_start_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.height(12.dp))
 
         Card(modifier = Modifier.fillMaxWidth()) {

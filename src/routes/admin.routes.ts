@@ -9,6 +9,7 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { addDemoStore, removeDemoStore } from "../services/demoStore.service";
 import { adState, approveAd, rejectAd } from "../services/ads.service";
+import { visionAvailable } from "../services/ai.service";
 import { sniffImageMime } from "../lib/image";
 import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
@@ -272,6 +273,7 @@ adminRouter.post("/push-test", async (req, res) => {
 adminRouter.get("/ai-status", async (_req, res) => {
   res.json({
     ...aiProviderStatus(),
+    vision: visionAvailable(), // can any configured provider look at a photo (search by photo, a product from a photo)?
     usage: aiUsage(), // this process, exact
     usageTotals: await aiTotals(), // durable, survives deploys; null if the database is unreachable
   });

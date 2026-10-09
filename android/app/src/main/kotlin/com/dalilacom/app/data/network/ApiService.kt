@@ -194,6 +194,18 @@ interface ApiService {
     @GET("products/{id}")
     suspend fun getProduct(@Path("id") id: String): Response<ProductDto>
 
+    @POST("store/search-by-image")
+    suspend fun searchByImage(@Body body: RequestBody): Response<PhotoSearchDto>
+
+    @GET("store/sections")
+    suspend fun storeSections(@Query("all") all: String?): Response<List<StoreSectionDto>>
+
+    @POST("products/photos")
+    suspend fun uploadProductPhoto(@Body body: RequestBody): Response<ProductPhotoDto>
+
+    @POST("products/ai-draft")
+    suspend fun aiDraft(@Body body: AiDraftRequest): Response<AiDraftResponseDto>
+
     @GET("store/banners")
     suspend fun storeBanners(): Response<StoreBannersDto>
 

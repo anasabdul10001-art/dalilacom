@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class PhotoSearchUi(val title: String, val bytes: ByteArray)
+
 data class StoreUi(
     val loading: Boolean = true,
     val busy: Boolean = false,
@@ -34,6 +36,8 @@ data class StoreUi(
     val query: String = "",
     val section: String = "",
     val dealsOnly: Boolean = false,
+    /** Searching with a photo: what it showed (blank while still looking) and the picture itself. */
+    val byPhoto: PhotoSearchUi? = null,
     val sort: String = "popular",
     val items: List<StoreProductDto> = emptyList(),
     val total: Int = 0,
@@ -52,7 +56,7 @@ data class StoreUi(
     val needLogin: Boolean = false,
     val error: String? = null,
 ) {
-    val filtering get() = query.isNotBlank() || section.isNotBlank() || dealsOnly
+    val filtering get() = query.isNotBlank() || section.isNotBlank() || dealsOnly || byPhoto != null
 }
 
 /** The online store: every shop's products of the shopper's own country, narrowed by city or by kilometres around them. */
@@ -126,12 +130,12 @@ class StoreViewModel(
     }
 
     fun search(q: String) {
-        _ui.value = _ui.value.copy(query = q.trim(), dealsOnly = false)
+        _ui.value = _ui.value.copy(query = q.trim(), dealsOnly = false, byPhoto = null)
         if (_ui.value.filtering) loadList(false)
     }
 
     fun pickSection(id: String) {
-        _ui.value = _ui.value.copy(section = id, dealsOnly = false)
+        _ui.value = _ui.value.copy(section = id, dealsOnly = false, byPhoto = null)
         if (_ui.value.filtering) loadList(false)
     }
 
@@ -139,6 +143,17 @@ class StoreViewModel(
     fun seeAll(kind: String) {
         _ui.value = _ui.value.copy(query = "", section = "", dealsOnly = kind == "deals", sort = if (kind == "new") "new" else "popular")
         loadList(false)
+    }
+
+    /** Search the store with a photo (already shrunk): the server says what it shows and finds the matching products. */
+    fun searchByPhoto(jpeg: ByteArray?) {
+        if (jpeg == null) { _ui.value = _ui.value.copy(error = com.dalilacom.app.ui.i18n.AppStrings.get(com.dalilacom.app.R.string.photo_failed)); return }
+        _ui.value = _ui.value.copy(byPhoto = PhotoSearchUi(title = "", bytes = jpeg), items = emptyList(), total = 0, busy = true, error = null, query = "", section = "", dealsOnly = false)
+        viewModelScope.launch {
+            store.searchByImage(jpeg)
+                .onSuccess { r -> _ui.value = _ui.value.copy(busy = false, byPhoto = PhotoSearchUi(r.title, jpeg), items = r.items, total = r.items.size) }
+                .onFailure { e -> _ui.value = _ui.value.copy(busy = false, byPhoto = null, error = e.message) }
+        }
     }
 
     fun setSort(sort: String) {
@@ -149,7 +164,7 @@ class StoreViewModel(
     /** Back inside the store first clears the search/section; true when it did so. */
     fun clearFilters(): Boolean {
         if (!_ui.value.filtering) return false
-        _ui.value = _ui.value.copy(query = "", section = "", dealsOnly = false)
+        _ui.value = _ui.value.copy(query = "", section = "", dealsOnly = false, byPhoto = null)
         return true
     }
 

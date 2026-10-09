@@ -60,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -251,8 +252,11 @@ fun StoreScreen(
     fun goBack() {
         if (vm.clearFilters()) query = "" else onBack()
     }
+    val photoPicker = com.dalilacom.app.ui.common.rememberPhotoPicker { uri -> scope.launch { vm.searchByPhoto(kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.dalilacom.app.ui.common.ImageUtil.maxJpeg(context, uri, 900) }) } }
+    var photoMenu by remember { mutableStateOf(false) }
 
     BackHandler { goBack() }
+    LaunchedEffect(ui.error) { ui.error?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() } }
     LaunchedEffect(ui.needLogin) {
         if (ui.needLogin) {
             Toast.makeText(context, context.getString(R.string.store_login_needed), Toast.LENGTH_SHORT).show()
@@ -282,6 +286,13 @@ fun StoreScreen(
                         keyboardActions = KeyboardActions(onSearch = { vm.search(query) }),
                         modifier = Modifier.fillMaxWidth(),
                     )
+                }
+                Box {
+                    IconButton(onClick = { photoMenu = true }, modifier = Modifier.size(36.dp)) { Text("📷", fontSize = 18.sp) }
+                    DropdownMenu(expanded = photoMenu, onDismissRequest = { photoMenu = false }) {
+                        DropdownMenuItem(text = { Text("📷  " + stringResource(R.string.wiz_take_photo)) }, onClick = { photoMenu = false; photoPicker.openCamera() })
+                        DropdownMenuItem(text = { Text("🖼️  " + stringResource(R.string.wiz_pick_photo)) }, onClick = { photoMenu = false; photoPicker.openGallery() })
+                    }
                 }
                 IconButton(onClick = { vm.search(query) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Search, contentDescription = null, tint = Color(0xFF111111), modifier = Modifier.size(20.dp)) }
             }
@@ -339,12 +350,13 @@ fun StoreScreen(
                     StoreCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             val title = when {
+                                ui.byPhoto != null -> stringResource(R.string.photo_results_for, ui.byPhoto!!.title)
                                 ui.query.isNotBlank() -> stringResource(R.string.store_results_for, ui.query)
                                 ui.dealsOnly -> stringResource(R.string.store_deals)
                                 else -> ui.sections.firstOrNull { it.id == ui.section }?.label().orEmpty()
                             }
                             Text(title + if (ui.total > 0) "  ${ui.total}" else "", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                            Box {
+                            if (ui.byPhoto == null) Box {
                                 OutlinedButton(onClick = { sortOpen = true }, shape = RoundedCornerShape(6.dp)) { Text(stringResource(SORTS.first { it.first == ui.sort }.second), fontSize = 12.sp) }
                                 DropdownMenu(expanded = sortOpen, onDismissRequest = { sortOpen = false }) {
                                     SORTS.forEach { (key, res) -> DropdownMenuItem(text = { Text(stringResource(res)) }, onClick = { vm.setSort(key); sortOpen = false }) }
@@ -352,6 +364,15 @@ fun StoreScreen(
                             }
                         }
                         Spacer(Modifier.height(12.dp))
+                        ui.byPhoto?.let { seen ->
+                            val bmp = remember(seen.bytes.size) { android.graphics.BitmapFactory.decodeByteArray(seen.bytes, 0, seen.bytes.size)?.asImageBitmap() }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (bmp != null) androidx.compose.foundation.Image(bitmap = bmp, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)))
+                                Spacer(Modifier.width(10.dp))
+                                Text(stringResource(R.string.photo_seen) + ": " + seen.title, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(Modifier.height(12.dp))
+                        }
                         if (ui.busy && ui.items.isEmpty()) Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         else if (ui.items.isEmpty()) Text(stringResource(R.string.store_no_results), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth().padding(40.dp))
                         else StoreProductGrid(ui.items, ui.justAdded, onOpenProduct, vm::addToCart)

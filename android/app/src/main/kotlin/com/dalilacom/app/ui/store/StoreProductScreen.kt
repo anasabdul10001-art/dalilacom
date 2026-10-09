@@ -20,6 +20,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -162,6 +163,14 @@ fun StoreProductScreen(
                     Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color(0x14FA6338), RoundedCornerShape(6.dp)).padding(12.dp)) { StorePrice(product, big = true) }
                     if (product.memberDiscountEnabled) Text("⭐ " + stringResource(R.string.store_member_price), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     product.description?.let { Text(it, style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp) }
+                    if (product.specs.isNotEmpty() || product.condition != null) {
+                        Surface(shape = RoundedCornerShape(8.dp), border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+                                product.condition?.let { c -> Row(Modifier.fillMaxWidth().padding(vertical = 7.dp)) { Text(stringResource(R.string.wiz_condition), Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant); Text(stringResource(if (c == "USED") R.string.wiz_cond_used else R.string.wiz_cond_new), fontWeight = FontWeight.Bold) } }
+                                product.specs.forEach { x -> Row(Modifier.fillMaxWidth().padding(vertical = 7.dp)) { Text(x.label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant); Text(x.value, fontWeight = FontWeight.Bold) } }
+                            }
+                        }
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.store_sold_by), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         TextButton(onClick = { onOpenMerchant(product.merchant.id) }) { Text(product.merchant.name, fontWeight = FontWeight.Bold) }

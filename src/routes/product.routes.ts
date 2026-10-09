@@ -1,9 +1,13 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { z } from "zod";
 import { Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { sniffImageMime } from "../lib/image";
+import { route } from "../lib/asyncRoute";
+import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
+import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
 
 export const productRouter = Router();
 
@@ -23,7 +27,19 @@ const productFieldsSchema = z.object({
   sku: z.string().optional(),
   memberDiscountEnabled: z.boolean().default(false),
   memberPriceCents: z.number().int().positive().optional(),
+  // the online store: where it is listed, how it looks and what it is
+  storeSection: z.string().refine(isStoreSection, "Unknown store section").optional(),
+  images: z.array(z.string().regex(/^\/store\/photos\/[0-9a-f-]{36}$/)).max(6).optional(),
+  specs: z.array(z.object({ label: z.string().trim().min(1).max(30), value: z.string().trim().min(1).max(60) })).max(10).optional(),
+  condition: z.enum(["NEW", "USED"]).optional(),
 });
+
+/** Photos are the shop's own: each one has to be among the pictures this shop uploaded. */
+async function ownPhotos(merchantId: string, urls: string[] | undefined): Promise<boolean> {
+  if (!urls?.length) return true;
+  const ids = urls.map((u) => u.slice("/store/photos/".length));
+  return (await prisma.productPhoto.count({ where: { id: { in: ids }, merchantId } })) === ids.length;
+}
 
 // section 5 rule: a member price only makes sense once the discount is switched on, and it
 // must actually be a discount (not equal to or above the regular price).
@@ -54,11 +70,64 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res
     }
   }
 
+  if (!(await ownPhotos(result.merchant.id, parsed.data.images))) return sendError(res, 400, "BAD_REQUEST", "الصورة غير صالحة");
+  const { images, ...rest } = parsed.data;
   const product = await prisma.product.create({
-    data: { merchantId: result.merchant.id, ...parsed.data },
+    data: { merchantId: result.merchant.id, ...rest, ...(images?.length ? { images, imageUrl: images[0] } : {}) },
   });
   res.status(201).json(product);
 });
+
+/* ---------------- a product from a photo: upload, then let the AI suggest the words ---------------- */
+
+const MAX_PHOTO_BYTES = 1_500_000; // the apps shrink to ~1280px before sending, so this is generous
+
+productRouter.post("/photos", requireAuth, requireRole(Role.MERCHANT), express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: MAX_PHOTO_BYTES }), route(async (req, res) => {
+  const found = await getOwnApprovedMerchant(req.user!.id);
+  if ("error" in found) return sendError(res, 403, "FORBIDDEN", found.error ?? "Forbidden");
+  const body = req.body;
+  if (!Buffer.isBuffer(body) || body.length === 0) return sendError(res, 415, "UNSUPPORTED_MEDIA", "أرسل الصورة بصيغة JPEG أو PNG أو WebP");
+  const mime = sniffImageMime(body);
+  if (!mime) return sendError(res, 415, "UNSUPPORTED_MEDIA", "الملف ليس صورة صالحة (JPEG أو PNG أو WebP)");
+  const photo = await prisma.productPhoto.create({ data: { merchantId: found.merchant.id, mime, data: body }, select: { id: true } });
+  res.status(201).json({ id: photo.id, url: `/store/photos/${photo.id}` });
+}));
+
+const drafts = new Map<string, { day: string; n: number }>();
+const DAILY_DRAFTS = 60;
+
+/** Looks at an uploaded photo and suggests the name, description, section and details (and what similar products cost). */
+productRouter.post("/ai-draft", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const parsed = z.object({ photoId: z.string().uuid() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const found = await getOwnApprovedMerchant(req.user!.id);
+  if ("error" in found) return sendError(res, 403, "FORBIDDEN", found.error ?? "Forbidden");
+  const photo = await prisma.productPhoto.findFirst({ where: { id: parsed.data.photoId, merchantId: found.merchant.id } });
+  if (!photo) return sendError(res, 404, "NOT_FOUND", "الصورة غير موجودة");
+  if (!visionAvailable()) return res.json({ available: false, draft: null, priceHint: null });
+
+  const day = new Date().toISOString().slice(0, 10);
+  const used = drafts.get(req.user!.id);
+  const count = used && used.day === day ? used.n : 0;
+  if (count >= DAILY_DRAFTS) return sendError(res, 429, "RATE_LIMITED", "وصلت للحد اليومي لاقتراحات الصور، كمّل كتابة المنتج بنفسك");
+  drafts.set(req.user!.id, { day, n: count + 1 });
+
+  const draft = await draftProductFromPhoto({ mime: photo.mime as "image/jpeg" | "image/png" | "image/webp", data: Buffer.from(photo.data) }, STORE_SECTIONS.map((s) => s.id));
+
+  // what others in the same section ask, to help the shop price it
+  let priceHint: { min: number; median: number; max: number; count: number } | null = null;
+  if (draft?.section) {
+    const owner = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { countryCode: true } });
+    const similar = await prisma.product.findMany({
+      where: { isActive: true, storeSection: draft.section, merchant: { approvalStatus: "APPROVED", user: { countryCode: owner?.countryCode ?? undefined } } },
+      select: { priceCents: true },
+      take: 200,
+    });
+    const prices = similar.map((p) => p.priceCents).sort((a, b) => a - b);
+    if (prices.length >= 3) priceHint = { min: prices[0], median: prices[Math.floor(prices.length / 2)], max: prices[prices.length - 1], count: prices.length };
+  }
+  res.json({ available: true, draft, priceHint });
+}));
 
 // Merchant: manage their own catalog, including inactive/out-of-stock items (section 59.1)
 productRouter.get("/mine", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {

@@ -387,6 +387,10 @@ data class CreateProductRequest(
     val sku: String? = null,
     val memberDiscountEnabled: Boolean = false,
     val memberPriceCents: Int? = null,
+    val storeSection: String? = null,
+    val images: List<String>? = null,
+    val specs: List<SpecDto>? = null,
+    val condition: String? = null,
 )
 
 @Serializable
@@ -544,6 +548,8 @@ data class StoreProductDto(
     val stock: Int = 0,
     val imageUrl: String? = null,
     val images: List<String> = emptyList(),
+    val specs: List<SpecDto> = emptyList(),
+    val condition: String? = null,
     val icon: String = "🛍️",
     val hue: Int = 0,
     val rating: Double = 0.0,
@@ -623,3 +629,33 @@ data class MyAdDto(
     val clicks: Int = 0,
     val rejectionReason: String? = null,
 )
+
+/* ---------------- photos: searching the store with one, and a product from one ---------------- */
+
+@Serializable
+data class SpecDto(val label: String, val value: String)
+
+@Serializable
+data class PhotoSearchDto(val title: String = "", val currency: String = "", val items: List<StoreProductDto> = emptyList())
+
+@Serializable
+data class ProductPhotoDto(val id: String, val url: String)
+
+@Serializable
+data class AiDraftRequest(val photoId: String)
+
+@Serializable
+data class AiDraftDto(
+    val name: String = "",
+    val alternatives: List<String> = emptyList(),
+    val section: String? = null,
+    val description: String = "",
+    val specs: List<SpecDto> = emptyList(),
+    val condition: String? = null,
+)
+
+@Serializable
+data class PriceHintDto(val min: Int = 0, val median: Int = 0, val max: Int = 0, val count: Int = 0)
+
+@Serializable
+data class AiDraftResponseDto(val available: Boolean = false, val draft: AiDraftDto? = null, val priceHint: PriceHintDto? = null)

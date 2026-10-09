@@ -379,6 +379,7 @@
         <button class="small" onclick="loadAiStatus()">🔄 تحديث</button>
         <span id="ai-msg" class="muted" style="margin-right:10px"></span>
         <p class="muted" style="margin-top:14px">المزوّد المُجرَّب أولًا: <b id="ai-active">—</b></p>
+        <p class="muted">البحث بالصورة و"منتج من صورة": <b id="ai-vision">—</b> <small>(بيحتاج مفتاح Gemini أو Mistral أو Claude)</small></p>
       </div>
       <div class="card">
         <h3>الجلسة الحالية</h3>
@@ -1060,6 +1061,7 @@ async function demoStore(method) {
 async function loadAiStatus() {
   const { ok, data } = await api('GET', '/admin/ai-status');
   if (!ok) { logout(); return; }
+  document.getElementById('ai-vision').textContent = data.vision ? 'شغّال ✓' : 'مطفأ — ضيف مفتاح Gemini على Render';
 
   // Every provider the server knows, in the order they are tried; a failing one rests for a while (shown here).
   const providers = (data.providers || []).map(p => ({

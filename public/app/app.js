@@ -290,6 +290,7 @@ function renderScreen() {
     case "responder": return screenResponder();
     case "favorites": return screenFavorites();
     case "store": return screenStore();
+    case "productWizard": return screenProductWizard();
     case "adBook": return screenAdBook();
     case "myAds": return screenMyAds();
     case "merchantHours": return screenMerchantHours();
@@ -1767,9 +1768,64 @@ async function loadStoreList(append) {
   render();
 }
 
+/** A photo as a small JPEG (long side at most `max` px), so it travels fast on a weak connection. */
+function downscaleImage(file, max = 1280, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k);
+      c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error("image"))), "image/jpeg", quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image")); };
+    img.src = url;
+  });
+}
+
+/** Sends raw image bytes (not JSON) with the signed-in person's token. */
+async function postImage(path, blob) {
+  const headers = { "Content-Type": "image/jpeg" };
+  if (S.token) headers.Authorization = "Bearer " + S.token;
+  try {
+    const res = await fetch(path, { method: "POST", headers, body: blob });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    return { ok: false, status: 0, data: { error: t("photo.offline") } };
+  }
+}
+
+/** Search the store with a photo: the shopper takes or picks one, the server says what it shows and finds the matching products. */
+async function storePhotoSearch(input) {
+  const file = input.files && input.files[0];
+  input.value = "";
+  if (!file) return;
+  const st = S._store;
+  st.byPhoto = { title: "", preview: null };
+  st.items = []; st.total = 0; st.busy = true;
+  render();
+  try {
+    const blob = await downscaleImage(file, 900);
+    st.byPhoto.preview = URL.createObjectURL(blob);
+    const { ok, data } = await postImage("/store/search-by-image", blob);
+    st.busy = false;
+    if (ok) { st.byPhoto.title = data.title; st.items = data.items; st.total = data.items.length; if (data.currency) S.currency = data.currency; }
+    else { st.byPhoto = null; S.error = errMsg(data, t("photo.failed")); }
+  } catch (e) {
+    st.busy = false; st.byPhoto = null; S.error = t("photo.failed");
+  }
+  render();
+}
+
 function storeSearch(ev) {
   if (ev) ev.preventDefault();
   const st = S._store;
+  st.byPhoto = null;
   st.q = qs("store-q").value.trim();
   st.deals = false;
   if (!st.q && !st.section) { render(); return; }
@@ -1788,7 +1844,7 @@ function storeSetSort(v) { S._store.sort = v; loadStoreList(false); }
 
 function storeBack() {
   const st = S._store;
-  if (st && (st.q || st.section || st.deals)) { st.q = ""; st.section = ""; st.deals = false; window.scrollTo(0, 0); render(); return; }
+  if (st && (st.q || st.section || st.deals || st.byPhoto)) { st.q = ""; st.section = ""; st.deals = false; st.byPhoto = null; window.scrollTo(0, 0); render(); return; }
   S._store = null;
   back();
 }
@@ -2054,6 +2110,174 @@ async function cancelMyAd(id) {
   loadMyAds();
 }
 
+/* ---------------- a product from a photo (for shops that are not used to typing) ---------------- */
+
+function openProductWizard() {
+  S._wiz = { step: "photos", photos: [], specs: [], stock: 1, condition: "NEW", section: "", name: "", description: "", price: "", alternatives: [], busy: false, error: null };
+  go("productWizard");
+  if (!S._wizSections) api("GET", "/store/sections?all=1").then((r) => { if (r.ok) { S._wizSections = r.data; render(); } });
+}
+
+const voiceOk = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+/** Fills a field by voice: tap the microphone, say it, and the words are added. */
+function wizVoice(field) {
+  const w = S._wiz;
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Rec) return;
+  if (S._rec) { try { S._rec.stop(); } catch (e) {} S._rec = null; w.listening = null; render(); return; }
+  const rec = new Rec();
+  rec.lang = LANG === "ar" ? "ar-SY" : "en-US";
+  rec.interimResults = false;
+  rec.onresult = (e) => {
+    const said = Array.from(e.results).map((r) => r[0].transcript).join(" ").trim();
+    if (said) w[field] = ((w[field] || "") + " " + said).trim();
+  };
+  rec.onend = () => { S._rec = null; w.listening = null; render(); };
+  rec.onerror = () => { S._rec = null; w.listening = null; render(); };
+  S._rec = rec;
+  w.listening = field;
+  rec.start();
+  render();
+}
+
+function screenProductWizard() {
+  if (!S._wiz) openProductWizard();
+  const w = S._wiz;
+  if (S.role !== "MERCHANT") return `${backRow()}<div class="error-banner">${esc(t("ads.needShop"))}</div>`;
+  const stepNo = { photos: 1, analyzing: 2, form: 3, done: 3 }[w.step];
+  const head = `${backRow()}<div class="wiz-steps">${[1, 2, 3].map((n) => `<i class="${n <= stepNo ? "on" : ""}"></i>`).join("")}</div>`;
+
+  if (w.step === "photos") {
+    return `${head}
+      <h1 class="screen-title">${esc(t("wiz.photoTitle"))}</h1>
+      <p class="screen-sub">${esc(t("wiz.photoSub"))}</p>
+      <div class="wiz-photos">
+        ${w.photos.map((p, i) => `<div class="wiz-photo"><img src="${esc(p.preview)}" alt=""><button onclick="wizRemovePhoto(${i})" aria-label="x">✕</button>${i === 0 ? `<span>${esc(t("wiz.mainPhoto"))}</span>` : ""}</div>`).join("")}
+        ${w.photos.length < 4 ? `<label class="wiz-add"><input type="file" accept="image/*" capture="environment" onchange="wizPickFiles(this)" hidden><b>📷</b><span>${esc(t("wiz.takePhoto"))}</span></label>
+          <label class="wiz-add alt"><input type="file" accept="image/*" multiple onchange="wizPickFiles(this)" hidden><b>🖼️</b><span>${esc(t("wiz.pickPhoto"))}</span></label>` : ""}
+      </div>
+      ${w.uploading ? `<p class="muted" style="text-align:center">${esc(t("wiz.uploading"))}</p>` : ""}
+      ${w.error ? `<div class="error-banner">${esc(w.error)}</div>` : ""}
+      <button class="btn wiz-go" ${w.photos.length === 0 || w.uploading ? "disabled" : ""} onclick="wizAnalyze()">${esc(t("wiz.next"))} ›</button>
+      <button class="link-btn" style="display:block;margin:10px auto 0" onclick="go('productEdit', {productId:null})">${esc(t("wiz.manual"))}</button>`;
+  }
+  if (w.step === "analyzing") {
+    return `${head}<div class="wiz-wait"><div class="spinner"></div><h2>${esc(t("wiz.analyzing"))}</h2><p class="muted">${esc(t("wiz.analyzingSub"))}</p></div>`;
+  }
+  if (w.step === "done") {
+    return `${head}
+      <div class="wiz-done"><div class="wiz-done-ico">🎉</div><h1>${esc(t("wiz.doneTitle"))}</h1><p class="muted">${esc(t("wiz.doneSub"))}</p>
+        <button class="btn" onclick="openProductWizard()">📷 ${esc(t("wiz.another"))}</button>
+        <div style="height:10px"></div>
+        <button class="btn outline" onclick="go('productDetail',{productId:'${w.createdId}'})">${esc(t("wiz.viewIt"))}</button>
+      </div>`;
+  }
+  const cur = S.currency || "EUR";
+  const mic = (field) => (voiceOk() ? `<button type="button" class="wiz-mic ${w.listening === field ? "on" : ""}" onclick="wizVoice('${field}')" aria-label="mic">${w.listening === field ? "⏺" : "🎤"}</button>` : "");
+  return `${head}
+    <h1 class="screen-title">${esc(t("wiz.reviewTitle"))}</h1>
+    ${w.aiAvailable === false ? `<div class="info-banner">${esc(t("wiz.noAi"))}</div>` : `<p class="screen-sub">${esc(t("wiz.reviewSub"))}</p>`}
+    <div class="wiz-top">${w.photos.slice(0, 4).map((p) => `<img src="${esc(p.preview)}" alt="">`).join("")}</div>
+
+    <div class="field"><label>${esc(t("wiz.name"))}</label>
+      <div class="wiz-row"><input value="${esc(w.name)}" oninput="S._wiz.name=this.value" placeholder="${esc(t("wiz.namePh"))}">${mic("name")}</div>
+      ${w.alternatives.length ? `<div class="wiz-chips">${w.alternatives.map((n) => `<button onclick="S._wiz.name='${esc(n).replace(/'/g, "&#39;")}';render()">${esc(n)}</button>`).join("")}</div>` : ""}</div>
+
+    <div class="field"><label>${esc(t("wiz.section"))}</label>
+      <div class="wiz-tiles">${(S._wizSections || []).map((x) => `<button class="${w.section === x.id ? "on" : ""}" onclick="S._wiz.section='${x.id}';render()"><span>${esc(x.icon)}</span>${esc(storeSecName(x))}</button>`).join("")}</div></div>
+
+    <div class="field"><label>${esc(t("wiz.condition"))}</label>
+      <div class="wiz-seg"><button class="${w.condition === "NEW" ? "on" : ""}" onclick="S._wiz.condition='NEW';render()">${esc(t("wiz.cond.NEW"))}</button><button class="${w.condition === "USED" ? "on" : ""}" onclick="S._wiz.condition='USED';render()">${esc(t("wiz.cond.USED"))}</button></div></div>
+
+    <div class="field"><label>${esc(t("wiz.description"))}</label>
+      <div class="wiz-row"><textarea rows="4" oninput="S._wiz.description=this.value" placeholder="${esc(t("wiz.descPh"))}">${esc(w.description)}</textarea>${mic("description")}</div>
+      <button class="link-btn" onclick="wizAutoDescription()">✨ ${esc(t("wiz.autoDesc"))}</button></div>
+
+    <div class="field"><label>${esc(t("wiz.specs"))}</label>
+      ${w.specs.map((x, i) => `<div class="wiz-spec"><input value="${esc(x.label)}" onchange="S._wiz.specs[${i}].label=this.value" placeholder="${esc(t("wiz.specLabel"))}"><input value="${esc(x.value)}" onchange="S._wiz.specs[${i}].value=this.value" placeholder="${esc(t("wiz.specValue"))}"><button onclick="S._wiz.specs.splice(${i},1);render()" aria-label="x">✕</button></div>`).join("")}
+      <button class="link-btn" onclick="S._wiz.specs.push({label:'',value:''});render()">+ ${esc(t("wiz.addSpec"))}</button></div>
+
+    <div class="field"><label>${esc(t("wiz.price"))} (${esc(cur === "USD" ? "$" : cur === "EUR" ? "€" : cur)})</label>
+      <input class="wiz-price" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(w.price)}" oninput="S._wiz.price=this.value" placeholder="0.00">
+      ${w.priceHint ? `<p class="muted" style="margin:6px 0 0">💡 ${esc(t("wiz.priceHint", { min: fmt(w.priceHint.min), max: fmt(w.priceHint.max) }))}</p>` : ""}</div>
+
+    <div class="field"><label>${esc(t("wiz.stock"))}</label>
+      <div class="stepper"><button onclick="S._wiz.stock=Math.max(1,S._wiz.stock-1);render()">−</button><span>${w.stock}</span><button onclick="S._wiz.stock+=1;render()">+</button></div></div>
+
+    ${w.error ? `<div class="error-banner">${esc(w.error)}</div>` : ""}
+    <button class="btn wiz-go" ${w.busy ? "disabled" : ""} onclick="wizPublish()">✅ ${esc(w.busy ? t("wiz.publishing") : t("wiz.publish"))}</button>`;
+}
+
+async function wizPickFiles(input) {
+  const w = S._wiz;
+  const files = Array.from(input.files || []).slice(0, 4 - w.photos.length);
+  input.value = "";
+  if (!files.length) return;
+  w.uploading = true; w.error = null; render();
+  for (const file of files) {
+    try {
+      const blob = await downscaleImage(file, 1280, 0.82);
+      const { ok, data } = await postImage("/products/photos", blob);
+      if (ok) w.photos.push({ id: data.id, url: data.url, preview: URL.createObjectURL(blob) });
+      else w.error = errMsg(data, t("photo.failed"));
+    } catch (e) { w.error = t("photo.failed"); }
+  }
+  w.uploading = false;
+  render();
+}
+
+function wizRemovePhoto(i) { S._wiz.photos.splice(i, 1); render(); }
+
+/** The AI looks at the first photo and suggests the words; whatever it cannot do, the shop simply types or says. */
+async function wizAnalyze() {
+  const w = S._wiz;
+  w.step = "analyzing"; w.error = null; render();
+  const { ok, data } = await api("POST", "/products/ai-draft", { photoId: w.photos[0].id });
+  w.step = "form";
+  if (ok) {
+    w.aiAvailable = data.available;
+    w.priceHint = data.priceHint;
+    const d = data.draft;
+    if (d) {
+      w.name = d.name; w.alternatives = d.alternatives || []; w.description = d.description || ""; w.specs = d.specs || [];
+      if (d.section) w.section = d.section;
+      if (d.condition) w.condition = d.condition;
+    } else if (data.available) w.error = t("wiz.aiMiss");
+  } else w.aiAvailable = false;
+  render();
+}
+
+/** No AI needed: a plain sentence from what was chosen, for a shop that would rather not write. */
+function wizAutoDescription() {
+  const w = S._wiz;
+  if (!w.name) { w.error = t("wiz.needName"); render(); return; }
+  const parts = [t("wiz.autoLine", { name: w.name, cond: t("wiz.cond." + w.condition) })];
+  w.specs.filter((x) => x.label && x.value).forEach((x) => parts.push(`${x.label}: ${x.value}.`));
+  w.description = parts.join(" ");
+  w.error = null;
+  render();
+}
+
+async function wizPublish() {
+  const w = S._wiz;
+  const price = Number(String(w.price).replace(",", "."));
+  if (!w.name.trim()) { w.error = t("wiz.needName"); return render(); }
+  if (!w.section) { w.error = t("wiz.needSection"); return render(); }
+  if (!(price > 0)) { w.error = t("wiz.needPrice"); return render(); }
+  w.busy = true; w.error = null; render();
+  const body = {
+    name: w.name.trim(), description: w.description.trim() || undefined, priceCents: Math.round(price * 100), stock: w.stock,
+    storeSection: w.section, condition: w.condition, images: w.photos.map((p) => p.url),
+    specs: w.specs.filter((x) => x.label.trim() && x.value.trim()).map((x) => ({ label: x.label.trim(), value: x.value.trim() })),
+  };
+  const { ok, data } = await api("POST", "/products", body);
+  w.busy = false;
+  if (ok) { w.step = "done"; w.createdId = data.id; S._catalog = null; }
+  else w.error = errMsg(data, t("wiz.failed"));
+  render();
+}
+
 /** The product page's pictures: the big one and a row of small ones to pick from. */
 function storeGallery(prod, idx) {
   const imgs = prod.images && prod.images.length ? prod.images : [];
@@ -2111,17 +2335,18 @@ function screenStore() {
   const st = storeState();
   const home = st.home;
   const sections = home ? home.sections : [];
-  const filtering = !!(st.q || st.section || st.deals);
+  const filtering = !!(st.q || st.section || st.deals || st.byPhoto);
   const activeSection = sections.find((x) => x.id === st.section);
   let body;
   if (st.loading) body = spinner();
   else if (filtering) {
-    const title = st.q ? `${t("store.resultsFor")} «${st.q}»` : st.deals ? t("store.deals") : storeSecName(activeSection) || t("store.best");
+    const title = st.byPhoto ? t("photo.resultsFor", { name: st.byPhoto.title || "" }) : st.q ? `${t("store.resultsFor")} «${st.q}»` : st.deals ? t("store.deals") : storeSecName(activeSection) || t("store.best");
     body = `
+      ${st.byPhoto ? `<div class="photo-seen">${st.byPhoto.preview ? `<img src="${esc(st.byPhoto.preview)}" alt="">` : ""}<span>${esc(t("photo.seen"))}: <b>${esc(st.byPhoto.title || "")}</b></span></div>` : ""}
       <div class="store-bar"><h2>${esc(title)} <small>${st.total ? st.total : ""}</small></h2>
-        <select class="store-sort" onchange="storeSetSort(this.value)">
+        ${st.byPhoto ? "" : `<select class="store-sort" onchange="storeSetSort(this.value)">
           ${[["popular", "الأكثر مبيعًا"], ["new", "الأحدث"], ["rating", "الأعلى تقييمًا"], ["price_asc", "السعر: من الأقل"], ["price_desc", "السعر: من الأعلى"]].map(([v, l]) => `<option value="${v}" ${st.sort === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
-        </select></div>
+        </select>`}</div>
       ${st.busy && !st.items.length ? spinner() : st.items.length
         ? `<div class="store-grid">${st.items.map(storeCard).join("")}</div>
            ${st.items.length < st.total ? `<div class="store-more"><button class="btn outline" ${st.busy ? "disabled" : ""} onclick="loadStoreList(true)">${esc(t("store.more"))}</button></div>` : ""}`
@@ -2149,8 +2374,10 @@ function screenStore() {
         <b class="store-brand">${esc(t("tab.store"))}</b>
         <form class="store-search" onsubmit="storeSearch(event)">
           <input id="store-q" type="search" value="${esc(st.q)}" placeholder="${esc(t("store.searchPlaceholder"))}" />
+          <button type="button" class="photo-btn" title="${esc(t("photo.search"))}" aria-label="${esc(t("photo.search"))}" onclick="qs('store-photo').click()">📷</button>
           <button type="submit" aria-label="search">${ICON.search}</button>
         </form>
+        <input id="store-photo" type="file" accept="image/*" hidden onchange="storePhotoSearch(this)" />
         <button class="store-icon-btn store-cart" onclick="storeToCart()" aria-label="cart">${ICON.bag}${st.cartCount ? `<span class="store-badge">${st.cartCount}</span>` : ""}</button>
       </div>
       <div class="store-tabs">
@@ -2192,6 +2419,10 @@ function screenProductDetail() {
               : `<b>${fmt(prod.priceCents)}</b>`}
           </div>
           ${prod.description ? `<p class="pd-desc">${esc(prod.description)}</p>` : ""}
+          ${(prod.specs && prod.specs.length) || prod.condition ? `<div class="pd-specs">
+            ${prod.condition ? `<div><span>${esc(t("wiz.condition"))}</span><b>${esc(t("wiz.cond." + prod.condition))}</b></div>` : ""}
+            ${(prod.specs || []).map((x) => `<div><span>${esc(x.label)}</span><b>${esc(x.value)}</b></div>`).join("")}
+          </div>` : ""}
           <div class="pd-rows">
             <div><span>${esc(t("store.soldBy"))}</span><a onclick="go('merchantDetail',{merchantId:'${prod.merchant.id}'})">${esc(prod.merchant.name)}</a></div>
             <div><span>${esc(t("store.availability"))}</span>${available ? `<b class="${prod.stock <= 5 ? "low" : "ok"}">${prod.stock <= 5 ? esc(t("store.lastPieces", { n: prod.stock })) : "✓ " + esc(t("store.inStock"))}</b>` : `<b class="low">${esc(t("store.unavailable"))}</b>`}</div>
@@ -3811,6 +4042,8 @@ function tabCatalog() {
       <button class="btn small" onclick="addCatalogAffiliate()">إضافة مسوّق</button>
     </div>
 
+    <button class="btn wiz-start" onclick="openProductWizard()">📷 ${esc(t("wiz.start"))}</button>
+    <p class="muted" style="margin:6px 0 0;text-align:center">${esc(t("wiz.startSub"))}</p>
     <div class="title-line" style="margin:16px 0 8px">
       <strong>المنتجات</strong>
       <button class="btn small" style="width:auto" onclick="go('productEdit', {productId:null})">+ منتج جديد</button>

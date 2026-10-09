@@ -42,6 +42,13 @@ export const en: LanguagePack = {
     "لم تتم الموافقة على إعلانك في المتجر": "Your store ad was not approved",
     "تم إرجاع المبلغ لمحفظتك.": "The money was returned to your wallet.",
 
+    "الصورة غير صالحة": "The picture isn't valid",
+    "الصورة غير موجودة": "Picture not found",
+    "وصلت للحد اليومي لاقتراحات الصور، كمّل كتابة المنتج بنفسك": "You reached today's limit of photo suggestions, finish writing the product yourself",
+    "البحث بالصورة غير متاح حاليًا": "Search by photo isn't available right now",
+    "عدد محاولات البحث بالصورة كبير، جرّب بعد قليل": "Too many photo searches, try again in a while",
+    "ما قدرنا نتعرف على الصورة، جرّب صورة أوضح": "We couldn't recognise the picture, try a clearer one",
+
     // ---- auth ----
     "البريد الإلكتروني أو كلمة السر غير صحيحة": "Incorrect email or password",
     "هذا الحساب معطّل، تواصل مع الدعم": "This account is disabled — contact support",

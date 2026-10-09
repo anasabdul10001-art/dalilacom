@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
@@ -7,6 +7,10 @@ import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
 import { DEFAULT_COUNTRY, currencyOf, viewerCountry } from "../services/viewerCountry.service";
 import { AD_SLOTS, liveAds } from "../services/ads.service";
 import { getSettings } from "../services/settings.service";
+import { describePhotoForSearch, visionAvailable } from "../services/ai.service";
+import { sniffImageMime } from "../lib/image";
+import { normalizeText } from "../services/category.service";
+import { route } from "../lib/asyncRoute";
 
 /**
  * The online store: every shop's products in one place, like a marketplace. Read-only and public; buying goes
@@ -34,6 +38,8 @@ function view(p: ProductWithShop) {
     memberPriceCents: p.memberPriceCents,
     stock: p.stock,
     imageUrl: p.imageUrl ?? p.images[0] ?? null,
+    specs: Array.isArray(p.specs) ? p.specs : [],
+    condition: p.condition,
     images: p.images.length ? p.images : p.imageUrl ? [p.imageUrl] : [],
     icon: p.icon ?? section?.icon ?? "🛍️",
     hue: hueOf(p.id),
@@ -168,6 +174,8 @@ storeRouter.get("/products", async (req, res) => {
 });
 
 storeRouter.get("/sections", async (req, res) => {
+  // ?all=1: every section, sold in yet or not (a shop choosing where to list a product)
+  if (req.query.all === "1") return res.json(STORE_SECTIONS.map((s) => ({ ...s, count: 0 })));
   res.json(await sectionsWithCounts(await visibleFor(req.query, await viewerCountry(req))));
 });
 
@@ -234,3 +242,70 @@ storeRouter.post("/banners/:id/click", async (req, res) => {
   if (parsed.success) await prisma.storeBanner.updateMany({ where: { id: parsed.data.id }, data: { clicks: { increment: 1 } } });
   res.json({ ok: true });
 });
+
+/* ---------------- photos and searching by photo ---------------- */
+
+// A shop's product photos are public (the ids are random), like profile photos.
+storeRouter.get("/photos/:id", async (req, res) => {
+  const parsed = bannerIdSchema.safeParse(req.params);
+  if (!parsed.success) return sendError(res, 404, "NOT_FOUND", "No picture");
+  const photo = await prisma.productPhoto.findUnique({ where: { id: parsed.data.id }, select: { mime: true, data: true } });
+  if (!photo) return sendError(res, 404, "NOT_FOUND", "No picture");
+  res.set({ "Content-Type": photo.mime, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=604800, immutable", "Content-Disposition": "inline" });
+  res.send(Buffer.from(photo.data));
+});
+
+const searches = new Map<string, number[]>();
+const SEARCHES_PER_HOUR = 30;
+
+/**
+ * Search with a photo: the AI says what the picture shows, and the store's own products (of the shopper's country) are
+ * ranked by how many of those words they contain. Without an AI that can see, it says so instead of guessing.
+ */
+storeRouter.post("/search-by-image", express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: 1_500_000 }), route(async (req, res) => {
+  const body = req.body;
+  if (!Buffer.isBuffer(body) || body.length === 0) return sendError(res, 415, "UNSUPPORTED_MEDIA", "أرسل الصورة بصيغة JPEG أو PNG أو WebP");
+  const mime = sniffImageMime(body);
+  if (!mime) return sendError(res, 415, "UNSUPPORTED_MEDIA", "الملف ليس صورة صالحة (JPEG أو PNG أو WebP)");
+  if (!visionAvailable()) return sendError(res, 503, "UNAVAILABLE", "البحث بالصورة غير متاح حاليًا");
+
+  const now = Date.now();
+  const recent = (searches.get(req.ip ?? "") ?? []).filter((t) => now - t < 3_600_000);
+  if (recent.length >= SEARCHES_PER_HOUR) return sendError(res, 429, "RATE_LIMITED", "عدد محاولات البحث بالصورة كبير، جرّب بعد قليل");
+  searches.set(req.ip ?? "", [...recent, now]);
+
+  const seen = await describePhotoForSearch({ mime, data: body }, STORE_SECTIONS.map((s) => s.id));
+  if (!seen) return sendError(res, 502, "UNAVAILABLE", "ما قدرنا نتعرف على الصورة، جرّب صورة أوضح");
+
+  const country = await viewerCountry(req);
+  const visible = await visibleFor({}, country);
+  const words = [...new Set(seen.keywords.map((k) => normalizeText(k)).filter((k) => k.length >= 2))].slice(0, 10);
+  const candidates = await prisma.product.findMany({
+    where: {
+      ...visible,
+      OR: [
+        ...words.flatMap((w) => [{ name: { contains: w, mode: "insensitive" as const } }, { description: { contains: w, mode: "insensitive" as const } }]),
+        ...(seen.section ? [{ storeSection: seen.section }] : []),
+      ],
+    },
+    include,
+    take: 120,
+  });
+  const scored = candidates
+    .map((p) => {
+      const name = normalizeText(p.name);
+      const description = normalizeText(p.description ?? "");
+      let score = seen.section && p.storeSection === seen.section ? 2 : 0;
+      for (const w of words) score += name.includes(w) ? 3 : description.includes(w) ? 1 : 0;
+      return { p, score };
+    })
+    .sort((a, b) => b.score - a.score || b.p.soldCount - a.p.soldCount);
+  res.json({
+    title: seen.title,
+    keywords: words,
+    section: seen.section,
+    currency: await currencyOf(country),
+    total: scored.length,
+    items: scored.slice(0, 24).map((x) => view(x.p)),
+  });
+}));

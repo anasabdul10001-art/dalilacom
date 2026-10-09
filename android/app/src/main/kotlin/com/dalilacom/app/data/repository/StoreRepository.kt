@@ -5,6 +5,13 @@ import com.dalilacom.app.data.network.StoreHomeDto
 import com.dalilacom.app.data.network.StoreListDto
 import com.dalilacom.app.data.network.StoreProductDto
 import com.dalilacom.app.R
+import com.dalilacom.app.data.network.AiDraftRequest
+import com.dalilacom.app.data.network.AiDraftResponseDto
+import com.dalilacom.app.data.network.PhotoSearchDto
+import com.dalilacom.app.data.network.ProductPhotoDto
+import com.dalilacom.app.data.network.StoreSectionDto
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.dalilacom.app.data.network.AdBookingDto
 import com.dalilacom.app.data.network.BookAdRequest
 import com.dalilacom.app.data.network.AdPackagesDto
@@ -34,6 +41,28 @@ class StoreRepository(private val api: ApiService) {
     suspend fun products(q: String?, section: String?, deals: Boolean, sort: String, offset: Int, s: StoreScope, merchantId: String? = null, limit: Int = 24): StoreListDto? =
         safeApiCall { api.storeProducts(q?.ifBlank { null }, section?.ifBlank { null }, if (deals) "1" else null, merchantId, sort, limit, offset, s.scope, s.cityId, s.radiusKm, s.lat, s.lng) }
             ?.takeIf { it.isSuccessful }?.body()?.also { if (it.currency.isNotBlank()) Market.currency = it.currency }
+
+    private fun jpeg(bytes: ByteArray) = bytes.toRequestBody("image/jpeg".toMediaType())
+
+    /** The store searched with a photo: what it shows, and the matching products. */
+    suspend fun searchByImage(bytes: ByteArray): Result<PhotoSearchDto> {
+        val response = safeApiCall { api.searchByImage(jpeg(bytes)) } ?: return Result.failure(Exception(AppStrings.get(R.string.photo_offline)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) {
+            if (body.currency.isNotBlank()) Market.currency = body.currency
+            Result.success(body)
+        } else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
+    }
+
+    suspend fun allSections(): List<StoreSectionDto> = safeApiCall { api.storeSections("1") }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
+    suspend fun uploadProductPhoto(bytes: ByteArray): Result<ProductPhotoDto> {
+        val response = safeApiCall { api.uploadProductPhoto(jpeg(bytes)) } ?: return Result.failure(Exception(AppStrings.get(R.string.photo_offline)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
+    }
+
+    suspend fun aiDraft(photoId: String): AiDraftResponseDto? = safeApiCall { api.aiDraft(AiDraftRequest(photoId)) }?.takeIf { it.isSuccessful }?.body()
 
     suspend fun banners(): StoreBannersDto? = safeApiCall { api.storeBanners() }?.takeIf { it.isSuccessful }?.body()
 

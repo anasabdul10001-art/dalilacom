@@ -32,6 +32,7 @@ import com.dalilacom.app.ui.places.HoursScreen
 import com.dalilacom.app.ui.pricing.PricingScreen
 import com.dalilacom.app.ui.store.StoreProductScreen
 import com.dalilacom.app.ui.store.AdBookScreen
+import com.dalilacom.app.ui.store.ProductWizardScreen
 import com.dalilacom.app.ui.store.MyAdsScreen
 import com.dalilacom.app.ui.store.StoreScreen
 import com.dalilacom.app.ui.profile.ProfileEditScreen
@@ -168,6 +169,9 @@ fun DalilacomNavGraph(
                 onOpenMerchant = { id -> navController.navigate("merchant/$id") },
                 onBookAd = { navController.navigate("adBook") },
             )
+        }
+        composable("productWizard") {
+            ProductWizardScreen(container = container, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") })
         }
         composable("adBook") {
             AdBookScreen(container = container, onBack = { navController.popBackStack() }, onWallet = { navController.navigate("wallet") }, onMyAds = { navController.navigate("myAds") })

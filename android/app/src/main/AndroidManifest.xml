@@ -12,6 +12,9 @@
     <!-- lets the app find the phone's default browser (ExternalBrowser) -->
     <queries>
         <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+        <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="https" />
@@ -77,5 +80,12 @@
         <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_dalilacom" />
         <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/brand_red" />
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="dalilacom_default" />
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

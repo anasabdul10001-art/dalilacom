@@ -95,6 +95,7 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                     factory = factory,
                     onProductClick = { id -> rootNavController.navigate("merchantProduct?productId=$id") },
                     onAddProduct = { rootNavController.navigate("merchantProduct") },
+                    onAddByPhoto = { rootNavController.navigate("productWizard") },
                     onOpenHours = { rootNavController.navigate("merchantHours") },
                     onOpenProfile = { rootNavController.navigate("merchantProfile") },
                 )
