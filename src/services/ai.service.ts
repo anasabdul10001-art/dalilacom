@@ -1,10 +1,10 @@
 // Replies written by an AI provider. The keys live only in the server environment — never in any client.
 // Providers are tried in order and the next one takes over when one fails: Groq first (fast and free), then the other
-// free tiers (Cerebras, SambaNova, Gemini, OpenRouter, Mistral, NVIDIA NIM, Together, Hugging Face, GitHub Models), then the cheap
+// free tiers (Cerebras, SambaNova, Gemini, OpenRouter, Mistral, NVIDIA NIM, Together, Hugging Face), then the cheap
 // paid ones (DeepSeek, OpenAI), and Anthropic last as the paid safety net.
 import { prisma } from "../prisma";
 
-const PROVIDER_IDS = ["groq", "cerebras", "sambanova", "gemini", "openrouter", "mistral", "nvidia", "together", "huggingface", "github", "deepseek", "openai", "anthropic"] as const;
+const PROVIDER_IDS = ["groq", "cerebras", "sambanova", "gemini", "openrouter", "mistral", "nvidia", "together", "huggingface", "deepseek", "openai", "anthropic"] as const;
 type Provider = (typeof PROVIDER_IDS)[number];
 type ProviderUsage = { attempts: number; successes: number; failures: number };
 
@@ -30,7 +30,7 @@ const DEFAULT_ORDER: ProviderDef[] = [
     keyEnv: "GEMINI_API_KEY",
     kind: "openai",
     url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    model: () => process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    model: () => process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
   },
   {
     id: "openrouter",
@@ -52,8 +52,6 @@ const DEFAULT_ORDER: ProviderDef[] = [
   },
   { id: "together", label: "Together AI", keyEnv: "TOGETHER_API_KEY", kind: "openai", url: "https://api.together.xyz/v1/chat/completions", model: () => process.env.TOGETHER_MODEL || "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
   { id: "huggingface", label: "Hugging Face", keyEnv: "HUGGINGFACE_API_KEY", kind: "openai", url: "https://router.huggingface.co/v1/chat/completions", model: () => process.env.HUGGINGFACE_MODEL || "meta-llama/Llama-3.3-70B-Instruct" },
-  // GitHub Models: a free tier for a GitHub account's personal access token; it reads pictures too.
-  { id: "github", label: "GitHub Models", keyEnv: "GITHUB_MODELS_API_KEY", kind: "openai", url: "https://models.inference.ai.azure.com/chat/completions", model: () => process.env.GITHUB_MODELS_MODEL || "gpt-4o-mini" },
   { id: "deepseek", label: "DeepSeek", keyEnv: "DEEPSEEK_API_KEY", kind: "openai", url: "https://api.deepseek.com/chat/completions", model: () => process.env.DEEPSEEK_MODEL || "deepseek-chat" },
   { id: "openai", label: "OpenAI", keyEnv: "OPENAI_API_KEY", kind: "openai", url: "https://api.openai.com/v1/chat/completions", model: () => process.env.OPENAI_MODEL || "gpt-4o-mini" },
   { id: "anthropic", label: "Anthropic Claude", keyEnv: "ANTHROPIC_API_KEY", kind: "anthropic", url: "https://api.anthropic.com/v1/messages", model: () => process.env.RESPONDER_AI_MODEL ?? "claude-haiku-4-5-20251001" },
@@ -338,8 +336,26 @@ function classifyStatus(status: number, retryAfter: string | null): { reason: st
   return { reason: `request refused (${status})`, cooldownMs: 5 * MINUTE }; // e.g. 404: the model name is wrong
 }
 
+/** A short, key-free piece of the provider's own error message (a wrong model name, a payment wall...), for the admin. */
+async function errorDetail(res: { text?: () => Promise<string> }): Promise<string> {
+  try {
+    const raw = (await res.text?.()) ?? "";
+    let message = raw;
+    try {
+      const body = JSON.parse(raw);
+      const found = body?.error?.message ?? body?.error ?? body?.message ?? body?.detail;
+      if (typeof found === "string") message = found;
+    } catch {
+      /* not JSON: use the text as it is */
+    }
+    return message.replace(/[A-Za-z0-9_\-]{24,}/g, "…").replace(/\s+/g, " ").trim().slice(0, 160);
+  } catch {
+    return "";
+  }
+}
+
 /** One provider, one attempt. Never throws: a failure is recorded and the next provider gets its turn. */
-async function callProvider(def: ProviderDef, system: string, user: string, maxTokens: number, image?: PhotoInput): Promise<string | null> {
+async function callProvider(def: ProviderDef, system: string, user: string, maxTokens: number, image?: PhotoInput, timeoutMs?: number): Promise<string | null> {
   const apiKey = process.env[def.keyEnv];
   if (!apiKey) return null;
   recordAttempt(def.id);
@@ -367,11 +383,12 @@ async function callProvider(def: ProviderDef, system: string, user: string, maxT
               ],
             },
       ),
-      signal: AbortSignal.timeout(image ? Math.max(AI_TIMEOUT_MS(), 25000) : AI_TIMEOUT_MS()),
+      signal: AbortSignal.timeout(timeoutMs ?? (image ? Math.max(AI_TIMEOUT_MS(), 25000) : AI_TIMEOUT_MS())),
     });
     if (!res.ok) {
       const failure = classifyStatus(res.status, res.headers?.get?.("retry-after") ?? null);
-      return recordFailure(def.id, failure.reason, failure.cooldownMs);
+      const detail = await errorDetail(res);
+      return recordFailure(def.id, detail ? `${failure.reason}: ${detail}` : failure.reason, failure.cooldownMs);
     }
     const body = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
@@ -394,7 +411,7 @@ export async function testProvider(id: string): Promise<{ ok: boolean; reason: s
   if (!def) return null;
   if (!isConfigured(def)) return { ok: false, reason: "no key set", ms: 0 };
   const started = Date.now();
-  const answer = await callProvider(def, "Reply with the single word: ok", "ping", 10);
+  const answer = await callProvider(def, "Reply with the single word: ok", "ping", 10, undefined, 30000);
   return { ok: answer !== null, reason: answer !== null ? null : lastError.get(def.id) ?? "no answer", ms: Date.now() - started };
 }
 
@@ -419,8 +436,8 @@ export interface PhotoInput {
   data: Buffer;
 }
 
-/** The providers that can see: Gemini, Mistral, GitHub Models, OpenAI and Claude (the others only read text). */
-const VISION_IDS: Provider[] = ["gemini", "mistral", "github", "openai", "anthropic"];
+/** The providers that can see: Gemini, Mistral, OpenAI and Claude (the others only read text). */
+const VISION_IDS: Provider[] = ["gemini", "mistral", "openai", "anthropic"];
 
 export const visionAvailable = (): boolean => orderedProviders().some((def) => VISION_IDS.includes(def.id) && isConfigured(def));
 
