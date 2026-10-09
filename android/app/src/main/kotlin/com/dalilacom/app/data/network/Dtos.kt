@@ -539,7 +539,7 @@ data class CatalogDto(val creditName: String = "", val countryCode: String? = nu
 data class MarketDto(val country: String = "", val currencyCode: String = "")
 
 @Serializable
-data class StoreSectionDto(val id: String, val name: String, val nameEn: String = "", val icon: String = "", val count: Int = 0)
+data class StoreSectionDto(val id: String, val name: String, val nameEn: String = "", val icon: String = "", val image: String = "", val count: Int = 0)
 
 @Serializable
 data class StoreShopDto(val id: String, val name: String)

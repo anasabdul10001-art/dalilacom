@@ -2203,7 +2203,7 @@ function screenProductWizard() {
       ${w.alternatives.length ? `<div class="wiz-chips">${w.alternatives.map((n) => `<button onclick="S._wiz.name='${esc(n).replace(/'/g, "&#39;")}';render()">${esc(n)}</button>`).join("")}</div>` : ""}</div>
 
     <div class="field"><label>${esc(t("wiz.section"))}</label>
-      <div class="wiz-tiles">${(S._wizSections || []).map((x) => `<button class="${w.section === x.id ? "on" : ""}" onclick="S._wiz.section='${x.id}';render()"><span>${esc(x.icon)}</span>${esc(storeSecName(x))}</button>`).join("")}</div></div>
+      <div class="wiz-tiles">${(S._wizSections || []).map((x) => `<button class="${w.section === x.id ? "on" : ""}" onclick="S._wiz.section='${x.id}';render()"><img src="${esc(x.image)}" alt="" loading="lazy">${esc(storeSecName(x))}</button>`).join("")}</div></div>
 
     <div class="field"><label>${esc(t("wiz.condition"))}</label>
       <div class="wiz-seg"><button class="${w.condition === "NEW" ? "on" : ""}" onclick="S._wiz.condition='NEW';render()">${esc(t("wiz.cond.NEW"))}</button><button class="${w.condition === "USED" ? "on" : ""}" onclick="S._wiz.condition='USED';render()">${esc(t("wiz.cond.USED"))}</button></div></div>
@@ -2447,7 +2447,7 @@ function screenStore() {
       ${home.slots && home.slots.length ? `<div class="store-slotstrip">${home.slots.map(storeSlot).join("")}</div>` : ""}
       ${home.adOffer ? `<div class="store-adstrip"><span>📢 ${esc(t("ads.pitch", { price: home.adOffer.fromCredits, name: home.adOffer.creditName, days: home.adOffer.days }))}</span><button onclick="openAdBooking()">${esc(t("ads.bookCta"))}</button></div>` : ""}
       <div class="store-circles">${sections.map((x) => `
-        <button onclick="storePickSection('${x.id}')"><span>${esc(x.icon)}</span><em>${esc(storeSecName(x))}</em></button>`).join("")}</div>
+        <button onclick="storePickSection('${x.id}')"><span><img src="${esc(x.image)}" alt="" loading="lazy"></span><em>${esc(storeSecName(x))}</em></button>`).join("")}</div>
       ${storeSection(t("store.best"), home.bestSellers, "best")}
       ${storeSection(t("store.deals"), home.deals, "deals")}
       ${storeSection(t("store.newest"), home.newest, "new")}

@@ -441,7 +441,10 @@ fun StoreScreen(
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             items(ui.sections, key = { it.id }) { s ->
                                 Column(Modifier.width(72.dp).clickable { vm.pickSection(s.id) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Box(Modifier.size(66.dp).clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)), contentAlignment = Alignment.Center) { Text(s.icon, fontSize = 30.sp) }
+                                    Box(Modifier.size(68.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)), contentAlignment = Alignment.Center) {
+                                        if (s.image.isNotBlank()) AsyncImage(model = absoluteUrl(s.image), contentDescription = s.label(), contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                        else Text(s.icon, fontSize = 30.sp)
+                                    }
                                     Spacer(Modifier.height(6.dp))
                                     Text(s.label(), fontSize = 12.sp, maxLines = 2, lineHeight = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                 }

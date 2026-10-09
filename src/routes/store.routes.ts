@@ -46,7 +46,7 @@ function view(p: ProductWithShop) {
     rating: p.rating,
     ratingCount: p.ratingCount,
     soldCount: p.soldCount,
-    section: section ? { id: section.id, name: section.name, nameEn: section.nameEn, icon: section.icon } : null,
+    section: section ? { id: section.id, name: section.name, nameEn: section.nameEn, icon: section.icon, image: section.image } : null,
     merchant: { id: p.merchant.id, name: p.merchant.businessName },
   };
 }

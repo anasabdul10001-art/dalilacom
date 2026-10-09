@@ -328,7 +328,10 @@ private fun FormStep(ui: WizardUi, vm: ProductWizardViewModel, listen: (String) 
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(2.dp, if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
                         color = if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.09f) else MaterialTheme.colorScheme.surface,
-                    ) { Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(s.icon, fontSize = 22.sp); Text(s.label(), fontWeight = FontWeight.Bold, fontSize = 14.sp) } }
+                    ) { Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (s.image.isNotBlank()) coil.compose.AsyncImage(model = com.dalilacom.app.data.network.absoluteUrl(s.image), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(40.dp).clip(CircleShape)) else Text(s.icon, fontSize = 22.sp)
+                        Text(s.label(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    } }
                 }
                 if (pair.size == 1) Spacer(Modifier.weight(1f))
             }
