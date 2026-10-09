@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
-import { DEFAULT_COUNTRY, currencyOf, viewerCountry } from "../services/viewerCountry.service";
+import { DEFAULT_COUNTRY, currencyOf, onlyCountry, viewerCountry } from "../services/viewerCountry.service";
 import { AD_SLOTS, liveAds } from "../services/ads.service";
 import { getSettings } from "../services/settings.service";
 import { describePhotoForSearch, visionAvailable } from "../services/ai.service";
@@ -77,11 +77,14 @@ function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number): num
 async function visibleFor(query: unknown, country: string): Promise<Prisma.ProductWhereInput> {
   const parsed = scopeSchema.safeParse(query);
   const { scope, cityId, radiusKm, lat, lng } = parsed.success ? parsed.data : scopeSchema.parse({});
-  const merchant: Prisma.MerchantProfileWhereInput = { approvalStatus: "APPROVED", user: countryOwner(country) };
+  // one country on the platform: every shop is in it, whatever its owner's account says
+  const everyone = (await onlyCountry()) !== null;
+  const merchant: Prisma.MerchantProfileWhereInput = { approvalStatus: "APPROVED", ...(everyone ? {} : { user: countryOwner(country) }) };
 
   if (scope === "city" && cityId) {
     const children = await prisma.geoUnit.findMany({ where: { parentId: cityId }, select: { id: true } });
-    merchant.user = { AND: [countryOwner(country), { cityId: { in: [cityId, ...children.map((c) => c.id)] } }] };
+    const inCity = { cityId: { in: [cityId, ...children.map((c) => c.id)] } };
+    merchant.user = everyone ? inCity : { AND: [countryOwner(country), inCity] };
   } else if (scope === "radius" && radiusKm && lat !== undefined && lng !== undefined) {
     const dLat = radiusKm / 111;
     const dLng = radiusKm / (111 * Math.max(0.1, Math.cos((lat * Math.PI) / 180)));

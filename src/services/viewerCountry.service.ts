@@ -8,6 +8,21 @@ export async function currencyOf(countryCode: string): Promise<string> {
   return country?.currencyCode ?? "EUR";
 }
 
+let marketCache: { at: number; only: string | null } | null = null;
+
+/** The one country the platform serves, or null when more than one is set up (cached for half a minute). */
+export async function onlyCountry(): Promise<string | null> {
+  if (marketCache && Date.now() - marketCache.at < 30_000) return marketCache.only;
+  const countries = await prisma.country.findMany({ where: { isActive: true }, select: { isoCode2: true }, take: 2 });
+  marketCache = { at: Date.now(), only: countries.length === 1 ? countries[0].isoCode2.toUpperCase() : null };
+  return marketCache.only;
+}
+
+/** For tests: forget what was learned about how many countries there are. */
+export function resetMarketCache() {
+  marketCache = null;
+}
+
 /** The signed-in person's id when the request carries a valid token, otherwise null (for pages that also work for visitors). */
 export async function optionalUserId(req: Request): Promise<string | null> {
   const header = req.headers.authorization;
@@ -57,6 +72,10 @@ async function countryOfIp(ip: string): Promise<string | null> {
  * platform's first country. Shoppers only ever see their own country's shops.
  */
 export async function viewerCountry(req: Request): Promise<string> {
+  // While the platform serves a single country, everyone belongs to it: there is no other market to keep apart. The moment
+  // a second country is added in the admin panel, shoppers are told apart by country again.
+  const only = await onlyCountry();
+  if (only) return only;
   const header = req.headers.authorization;
   if (header?.startsWith("Bearer ")) {
     try {

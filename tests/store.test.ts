@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import request from "supertest";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { Role } from "@prisma/client";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
@@ -108,5 +108,27 @@ describe("the store only shows a shopper their own country's shops", () => {
     const res = await request(app).get("/store/products").query({ deals: "1", limit: 60 }).set("CF-IPCountry", "SY");
     expect(res.status).toBe(200);
     expect(res.body.items.every((p: { memberDiscountEnabled: boolean }) => p.memberDiscountEnabled)).toBe(true);
+  });
+
+  it("while the platform serves a single country, everybody sees that country's shops and prices; with two, they are told apart again", async () => {
+    const { resetMarketCache } = await import("../src/services/viewerCountry.service");
+    const spy = vi.spyOn(prisma.country, "findMany");
+    try {
+      spy.mockResolvedValue([{ isoCode2: "SY" }] as never);
+      resetMarketCache();
+      const alone = await request(app).get("/store/products").query({ limit: 60 }).set("CF-IPCountry", "DE");
+      expect(names(alone)).toContain(syProduct); // a visitor from Germany still sees Syria's shops
+      expect(names(alone)).toContain(deProduct); // and, with one country only, every shop whatever its owner's account says
+      expect((await request(app).get("/store/home").set("CF-IPCountry", "DE")).body.country).toBe("SY");
+
+      spy.mockResolvedValue([{ isoCode2: "SY" }, { isoCode2: "DE" }] as never);
+      resetMarketCache();
+      const two = await request(app).get("/store/products").query({ limit: 60 }).set("CF-IPCountry", "DE");
+      expect(names(two)).toContain(deProduct);
+      expect(names(two)).not.toContain(syProduct);
+    } finally {
+      spy.mockRestore();
+      resetMarketCache();
+    }
   });
 });

@@ -12,6 +12,15 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+// A country code nobody has booked space in before (the test database keeps what earlier runs left behind).
+async function freshCountry(): Promise<string> {
+  for (let i = 0; i < 700; i++) {
+    const iso = await freeIsoCode2(prisma);
+    if ((await prisma.adBooking.count({ where: { countryCode: iso } })) === 0) return iso;
+  }
+  throw new Error("no free country code");
+}
+
 const password = "correct-horse-battery-staple";
 async function account(prefix: string, data: Record<string, unknown> = {}) {
   const email = uniqueEmail(prefix);
@@ -44,7 +53,7 @@ describe("advertising space: what it costs", () => {
     const a = await admin();
     const set = await request(app).put("/admin/settings").set(a.auth).send({ ads: { packages: [{ days: 1, credits: 100 }, { days: 3, credits: 250 }, { days: 5, credits: 400 }], autoApprove: false, bannerSeconds: 7 } });
     expect(set.status).toBe(200);
-    const iso = await freeIsoCode2(prisma);
+    const iso = await freshCountry();
     const s = await shop(iso, 123);
     const res = await request(app).get("/ads/packages").set(s.owner.auth);
     expect(res.body.packages).toEqual([{ days: 1, credits: 100 }, { days: 3, credits: 250 }, { days: 5, credits: 400 }]);
@@ -58,7 +67,7 @@ describe("booking and approving", () => {
   it("pays from the wallet, waits for approval, then runs in the first free space of the shop's country", async () => {
     const a = await admin();
     await request(app).put("/admin/settings").set(a.auth).send({ ads: { packages: [{ days: 1, credits: 100 }, { days: 3, credits: 250 }], autoApprove: false } });
-    const iso = await freeIsoCode2(prisma);
+    const iso = await freshCountry();
     const s = await shop(iso, 1000);
 
     const booked = await request(app).post("/ads").set(s.owner.auth).send({ productId: s.productId, days: 3 });
@@ -79,7 +88,7 @@ describe("booking and approving", () => {
     expect(ad.product.id).toBe(s.productId);
 
     // another country does not see it
-    const other = await freeIsoCode2(prisma);
+    const other = await freshCountry();
     expect((await home(other)).body.slots.some((x: { ad: boolean }) => x.ad)).toBe(false);
 
     // it was counted, and so is a tap on it
@@ -95,7 +104,7 @@ describe("booking and approving", () => {
   it("refuses a day count that is not for sale, a product that is not the shop's, and an empty wallet", async () => {
     const a = await admin();
     await request(app).put("/admin/settings").set(a.auth).send({ ads: { packages: [{ days: 1, credits: 100 }] } });
-    const iso = await freeIsoCode2(prisma);
+    const iso = await freshCountry();
     const s = await shop(iso, 50);
     expect((await request(app).post("/ads").set(s.owner.auth).send({ productId: s.productId, days: 2 })).status).toBe(400);
     const stranger = await shop(iso, 0);
@@ -109,7 +118,7 @@ describe("booking and approving", () => {
   it("gives the money back when the admin refuses, or when the shop cancels before approval", async () => {
     const a = await admin();
     await request(app).put("/admin/settings").set(a.auth).send({ ads: { packages: [{ days: 1, credits: 100 }], autoApprove: false } });
-    const iso = await freeIsoCode2(prisma);
+    const iso = await freshCountry();
     const s = await shop(iso, 300);
     const one = await request(app).post("/ads").set(s.owner.auth).send({ productId: s.productId, days: 1 });
     const two = await request(app).post("/ads").set(s.owner.auth).send({ productId: s.productId, days: 1, start: new Date(Date.now() + 3 * 86400000).toISOString() });
@@ -126,7 +135,7 @@ describe("booking and approving", () => {
   it("runs at once when the admin turned automatic approval on", async () => {
     const a = await admin();
     await request(app).put("/admin/settings").set(a.auth).send({ ads: { packages: [{ days: 1, credits: 10 }], autoApprove: true } });
-    const iso = await freeIsoCode2(prisma);
+    const iso = await freshCountry();
     const s = await shop(iso, 10);
     const booked = await request(app).post("/ads").set(s.owner.auth).send({ productId: s.productId, days: 1 });
     expect(booked.body.status).toBe("ACTIVE");
@@ -136,7 +145,7 @@ describe("booking and approving", () => {
   it("has a fixed number of spaces: once all are taken the next booking is refused with the next free time", async () => {
     const a = await admin();
     await request(app).put("/admin/settings").set(a.auth).send({ ads: { packages: [{ days: 1, credits: 1 }], autoApprove: true } });
-    const iso = await freeIsoCode2(prisma);
+    const iso = await freshCountry();
     const s = await shop(iso, 100);
     for (let i = 0; i < AD_SLOTS; i++) {
       const ok = await request(app).post("/ads").set(s.owner.auth).send({ productId: s.productId, days: 1 });
@@ -163,8 +172,8 @@ describe("the big banners of the front page", () => {
   it("shows only the active, current, own-country ones, in the admin's order, with their picture", async () => {
     const a = await admin();
     await request(app).put("/admin/settings").set(a.auth).send({ ads: { bannerSeconds: 9 } });
-    const iso = await freeIsoCode2(prisma);
-    const other = await freeIsoCode2(prisma);
+    const iso = await freshCountry();
+    const other = await freshCountry();
     const tag = crypto.randomUUID().slice(0, 6);
     const make = async (body: object) => (await request(app).post("/admin/banners").set(a.auth).send({ title: `B ${tag}`, ...body })).body;
     const first = await make({ title: `first ${tag}`, countryCode: iso, bg: "black" });

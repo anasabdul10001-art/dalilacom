@@ -4,6 +4,7 @@ import { ApiError } from "../lib/apiError";
 import { getSettings } from "./settings.service";
 import { adjustBalance, InsufficientBalanceError } from "./wallet.service";
 import { notify } from "./notification.service";
+import { onlyCountry } from "./viewerCountry.service";
 
 /** How many advertising spaces the store's front page has in each country (the picks beside the big banner). */
 export const AD_SLOTS = 6;
@@ -75,7 +76,8 @@ export async function bookAd(input: BookInput): Promise<AdBooking> {
   if (requested.getTime() > now.getTime() + MAX_ADVANCE_DAYS * DAY_MS) throw new AdError(400, "BAD_REQUEST", "الحجز المسبق أقصاه 60 يومًا");
   const startsAt = requested;
   const endsAt = new Date(startsAt.getTime() + pack.days * DAY_MS);
-  const country = merchant.user.countryCode ?? "SY";
+  // with a single country on the platform every shop advertises in it
+  const country = (await onlyCountry()) ?? merchant.user.countryCode ?? "SY";
 
   try {
     return await prisma.$transaction(async (tx) => {
