@@ -218,6 +218,15 @@ interface ApiService {
     @POST("ads")
     suspend fun bookAd(@Body body: BookAdRequest): Response<AdBookingDto>
 
+    @POST("ads/banners")
+    suspend fun bookBanner(@Body body: BannerBookRequest): Response<BannerBookingDto>
+
+    @GET("ads/banners/mine")
+    suspend fun myBannerBookings(): Response<List<BannerBookingDto>>
+
+    @POST("ads/banners/{id}/cancel")
+    suspend fun cancelBannerBooking(@Path("id") id: String): Response<Unit>
+
     @GET("ads/mine")
     suspend fun myAds(): Response<List<MyAdDto>>
 

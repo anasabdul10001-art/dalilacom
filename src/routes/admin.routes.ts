@@ -8,7 +8,7 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { addDemoStore, removeDemoStore } from "../services/demoStore.service";
-import { adState, approveAd, rejectAd } from "../services/ads.service";
+import { adState, approveAd, linkBannerToBooking, markBannerContacted, rejectAd, rejectBannerBooking } from "../services/ads.service";
 import { visionAvailable } from "../services/ai.service";
 import { sniffImageMime } from "../lib/image";
 import { route } from "../lib/asyncRoute";
@@ -46,6 +46,7 @@ const settingsSchema = z.object({
   ads: z
     .object({
       packages: z.array(z.object({ days: z.number().int().min(1).max(365), credits: z.number().int().nonnegative().max(100000000) })).max(12),
+      bannerPackages: z.array(z.object({ days: z.number().int().min(1).max(365), credits: z.number().int().nonnegative().max(100000000) })).max(12),
       autoApprove: z.boolean(),
       bannerSeconds: z.number().int().min(2).max(60),
     })
@@ -328,6 +329,30 @@ adminRouter.post("/ads/:id/reject", route(async (req, res) => {
   res.json({ ok: true });
 }));
 
+/* ---------------- big-banner bookings: the shops that asked for one, with the number to call ---------------- */
+
+adminRouter.get("/banner-bookings", async (req, res) => {
+  const status = typeof req.query.status === "string" ? req.query.status : undefined;
+  const rows = await prisma.bannerBooking.findMany({
+    where: status && ["PENDING", "CONTACTED", "SCHEDULED", "REJECTED", "CANCELLED"].includes(status) ? { status: status as "PENDING" } : {},
+    include: { merchant: { select: { id: true, businessName: true, phone: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+  });
+  res.json(rows);
+});
+
+adminRouter.post("/banner-bookings/:id/contacted", route(async (req, res) => {
+  await markBannerContacted(req.params.id);
+  res.json({ ok: true });
+}));
+
+adminRouter.post("/banner-bookings/:id/reject", route(async (req, res) => {
+  const reason = z.object({ reason: z.string().trim().max(300).optional() }).safeParse(req.body);
+  await rejectBannerBooking(req.params.id, reason.success ? reason.data.reason : undefined);
+  res.json({ ok: true });
+}));
+
 /* ---------------- the store's front-page banners ---------------- */
 
 const bannerFields = z.object({
@@ -341,6 +366,7 @@ const bannerFields = z.object({
   startsAt: z.string().nullable().optional(),
   endsAt: z.string().nullable().optional(),
   isActive: z.boolean().default(true),
+  bookingId: z.string().uuid().nullable().optional(),
 });
 
 function bannerData(input: Partial<z.infer<typeof bannerFields>>) {
@@ -356,12 +382,13 @@ function bannerData(input: Partial<z.infer<typeof bannerFields>>) {
     ...(input.startsAt !== undefined ? { startsAt: date(input.startsAt) } : {}),
     ...(input.endsAt !== undefined ? { endsAt: date(input.endsAt) } : {}),
     ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+    ...(input.bookingId !== undefined ? { bookingId: input.bookingId } : {}),
   };
 }
 
 const bannerSelect = {
   id: true, sortOrder: true, isActive: true, title: true, subtitle: true, buttonText: true, bg: true, targetType: true, targetValue: true,
-  countryCode: true, startsAt: true, endsAt: true, imageMime: true, imageUpdatedAt: true, views: true, clicks: true, createdAt: true,
+  countryCode: true, startsAt: true, endsAt: true, imageMime: true, imageUpdatedAt: true, views: true, clicks: true, bookingId: true, createdAt: true,
 } as const;
 
 adminRouter.get("/banners", async (_req, res) => {
@@ -377,6 +404,7 @@ adminRouter.post("/banners", async (req, res) => {
     data: { ...(bannerData(parsed.data) as { title: string }), sortOrder: (last._max.sortOrder ?? 0) + 1 },
     select: bannerSelect,
   });
+  if (banner.bookingId) await linkBannerToBooking(banner.bookingId, banner.id);
   res.status(201).json(banner);
 });
 
@@ -385,7 +413,9 @@ adminRouter.patch("/banners/:id", async (req, res) => {
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const exists = await prisma.storeBanner.findUnique({ where: { id: req.params.id }, select: { id: true } });
   if (!exists) return sendError(res, 404, "NOT_FOUND", "البانر غير موجود");
-  res.json(await prisma.storeBanner.update({ where: { id: req.params.id }, data: bannerData(parsed.data), select: bannerSelect }));
+  const updated = await prisma.storeBanner.update({ where: { id: req.params.id }, data: bannerData(parsed.data), select: bannerSelect });
+  if (updated.bookingId) await linkBannerToBooking(updated.bookingId, updated.id);
+  res.json(updated);
 });
 
 adminRouter.delete("/banners/:id", async (req, res) => {

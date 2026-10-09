@@ -228,7 +228,7 @@ fun StoreScreen(
     onOpenCart: () -> Unit,
     onLogin: () -> Unit,
     onOpenMerchant: (String) -> Unit = {},
-    onBookAd: () -> Unit = {},
+    onBookAd: (String) -> Unit = {},
 ) {
     val vm: StoreViewModel = viewModel(factory = ViewModelFactory(container))
     val ui by vm.ui.collectAsState()
@@ -419,7 +419,7 @@ fun StoreScreen(
                 if (ui.slots.isNotEmpty()) item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(ui.slots, key = { it.slot }) { sl ->
-                            AdSlot(sl, onOpen = { if (sl.adId != null) vm.adClick(sl.adId); onOpenProduct(sl.product.id) }, onAdvertise = onBookAd, onAdd = { vm.addToCart(sl.product.id) })
+                            AdSlot(sl, onOpen = { if (sl.adId != null) vm.adClick(sl.adId); onOpenProduct(sl.product.id) }, onAdvertise = { onBookAd("space") }, onAdd = { vm.addToCart(sl.product.id) })
                         }
                     }
                 }
@@ -431,7 +431,10 @@ fun StoreScreen(
                         ) {
                             Text("📢 " + stringResource(R.string.ads_pitch, offer.fromCredits, offer.creditName, offer.days), color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
                             Spacer(Modifier.width(10.dp))
-                            Text(stringResource(R.string.ads_book_cta), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable(onClick = onBookAd).padding(horizontal = 14.dp, vertical = 8.dp))
+                            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(stringResource(R.string.ads_book_cta), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable { onBookAd("space") }.padding(horizontal = 12.dp, vertical = 7.dp))
+                                Text(stringResource(R.string.ads_book_banner), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable { onBookAd("banner") }.padding(horizontal = 12.dp, vertical = 7.dp))
+                            }
                         }
                     }
                 }

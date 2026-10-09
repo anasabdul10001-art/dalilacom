@@ -564,4 +564,20 @@
     <string name="rv_customer_none">ما إله تقييمات بعد</string>
     <string name="rv_rate_customer">قيّم الزبون</string>
     <string name="shop_followers">متابع</string>
+    <string name="ads_kind_space">مساحة صغيرة</string>
+    <string name="ads_kind_banner">بانر كبير</string>
+    <string name="ads_book_banner">احجز بانر كبير</string>
+    <string name="ads_banner_sub">البانر الكبير بيظهر بأول الصفحة وبيتبدّل مع غيره. بعد ما تحجز بنتواصل معك لنعرف شو بدك نكتب فيه ونجهّزه لك.</string>
+    <string name="ads_phone">رقم هاتفك للتواصل</string>
+    <string name="ads_whatsapp">واتساب (اختياري)</string>
+    <string name="ads_note">شو بدك تعلن؟ (اختياري)</string>
+    <string name="ads_note_ph">مثلًا: عرض على الأحذية، أو افتتاح فرع جديد...</string>
+    <string name="ads_banner_note">بنتواصل معك على رقمك خلال يوم عمل لنتفق على شكل البانر. إذا ما اتفقنا بيرجع المبلغ لمحفظتك.</string>
+    <string name="ads_banner_done">وصل طلبك ✓ رح نتواصل معك على رقمك قريبًا لنجهّز البانر معك.</string>
+    <string name="ads_no_banner_packs">حجز البانر الكبير غير متاح حاليًا</string>
+    <string name="ads_my_banners">طلبات البانر الكبير</string>
+    <string name="ads_my_spaces">المساحات الصغيرة</string>
+    <string name="ads_bb_pending">بانتظار تواصلنا</string>
+    <string name="ads_bb_contacted">تم التواصل معك</string>
+    <string name="ads_bb_scheduled">تم تجهيزه وجدولته</string>
 </resources>

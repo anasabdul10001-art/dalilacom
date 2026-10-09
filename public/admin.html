@@ -426,6 +426,10 @@
         <p class="muted">كل سطر: عدد أيام وسعره بوحدة المحفظة. التاجر بيشوف هالخيارات بس. احذف السطر لتوقف بيع هالمدة.</p>
         <table><thead><tr><th style="width:30%">عدد الأيام</th><th style="width:40%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ads-packages"></tbody></table>
         <button class="secondary" style="margin-top:10px" onclick="addAdPackage()">➕ أضف مدة</button>
+        <h3 style="margin-top:18px">أسعار البانر الكبير</h3>
+        <p class="muted">التاجر بيشوف هالمدد والأسعار ويحجز، وبيترك رقمه، وإنت بتتواصل معه وبتجهّز البانر.</p>
+        <table><thead><tr><th style="width:30%">عدد الأيام</th><th style="width:40%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ads-banner-packages"></tbody></table>
+        <button class="secondary" style="margin-top:10px" onclick="addAdPackage(null, null, 'ads-banner-packages')">➕ أضف مدة</button>
         <div class="row" style="margin-top:14px">
           <div><label>مدة ظهور كل بانر كبير (بالثواني)</label><input id="ads-banner-seconds" type="number" min="2" max="60" /></div>
           <div><label>اعتماد الحجوزات</label>
@@ -444,6 +448,19 @@
           <button data-adstatus="CANCELLED" onclick="loadAdBookings('CANCELLED')">ملغاة</button>
         </div>
         <table><thead><tr><th>المتجر</th><th>المنتج</th><th>الدولة</th><th>المساحة</th><th>المدة</th><th>السعر</th><th>الحالة</th><th>الفترة</th><th>مشاهدات / نقرات</th><th></th></tr></thead><tbody id="ads-body"></tbody></table>
+      </div>
+
+      <div class="card">
+        <h3>حجوزات البانر الكبير <span id="bb-count" class="badge PENDING" style="display:none"></span></h3>
+        <p class="muted">التاجر دفع وترك رقمه. اتصل فيه، واتفقوا شو بده يكتب بالبانر، وبعدين اضغط "جهّز البانر" لتعبّي النموذج تحت.</p>
+        <div class="filters">
+          <button class="active" data-bbstatus="PENDING" onclick="loadBannerBookings('PENDING')">جديدة</button>
+          <button data-bbstatus="CONTACTED" onclick="loadBannerBookings('CONTACTED')">تم التواصل</button>
+          <button data-bbstatus="SCHEDULED" onclick="loadBannerBookings('SCHEDULED')">مجدولة</button>
+          <button data-bbstatus="REJECTED" onclick="loadBannerBookings('REJECTED')">مرفوضة</button>
+          <button data-bbstatus="CANCELLED" onclick="loadBannerBookings('CANCELLED')">ملغاة</button>
+        </div>
+        <table><thead><tr><th>المتجر</th><th>للتواصل</th><th>المدة</th><th>السعر</th><th>يبدأ</th><th>ملاحظته</th><th></th></tr></thead><tbody id="bb-body"></tbody></table>
       </div>
 
       <div class="card">
@@ -906,6 +923,8 @@ async function loadAds() {
     const body = document.getElementById('ads-packages');
     body.innerHTML = '';
     (ads.packages || []).sort((a, b) => a.days - b.days).forEach(p => addAdPackage(p.days, p.credits));
+    document.getElementById('ads-banner-packages').innerHTML = '';
+    (ads.bannerPackages || []).sort((a, b) => a.days - b.days).forEach(p => addAdPackage(p.days, p.credits, 'ads-banner-packages'));
     document.getElementById('ads-banner-seconds').value = ads.bannerSeconds;
     document.getElementById('ads-auto').value = String(!!ads.autoApprove);
   }
@@ -914,21 +933,85 @@ async function loadAds() {
     countries.data.forEach(c => sel.add(new Option((c.nameArabic || c.name) + ' (' + c.isoCode2 + ')', c.isoCode2)));
   }
   loadAdBookings(adStatus);
+  loadBannerBookings(bbStatus);
   loadBanners();
 }
 
-function addAdPackage(days, credits) {
+function addAdPackage(days, credits, into) {
   const tr = document.createElement('tr');
   tr.innerHTML = '<td><input type="number" min="1" max="365" class="pk-days" value="' + (days ?? '') + '"></td><td><input type="number" min="0" class="pk-credits" value="' + (credits ?? '') + '"></td><td><button class="small danger" onclick="this.closest(\'tr\').remove()">حذف</button></td>';
-  document.getElementById('ads-packages').appendChild(tr);
+  document.getElementById(into || 'ads-packages').appendChild(tr);
 }
 
 async function saveAdSettings() {
   const msg = document.getElementById('ads-settings-msg');
-  const packages = [...document.querySelectorAll('#ads-packages tr')].map(tr => ({ days: Number(tr.querySelector('.pk-days').value), credits: Number(tr.querySelector('.pk-credits').value) })).filter(p => p.days > 0);
-  if (new Set(packages.map(p => p.days)).size !== packages.length) { msg.textContent = 'في مدة مكررة'; return; }
-  const { ok, data } = await api('PUT', '/admin/settings', { ads: { packages, bannerSeconds: Number(document.getElementById('ads-banner-seconds').value) || 5, autoApprove: document.getElementById('ads-auto').value === 'true' } });
+  const read = (id) => [...document.querySelectorAll('#' + id + ' tr')].map(tr => ({ days: Number(tr.querySelector('.pk-days').value), credits: Number(tr.querySelector('.pk-credits').value) })).filter(p => p.days > 0);
+  const packages = read('ads-packages');
+  const bannerPackages = read('ads-banner-packages');
+  if ([packages, bannerPackages].some(list => new Set(list.map(p => p.days)).size !== list.length)) { msg.textContent = 'في مدة مكررة'; return; }
+  const { ok, data } = await api('PUT', '/admin/settings', { ads: { packages, bannerPackages, bannerSeconds: Number(document.getElementById('ads-banner-seconds').value) || 5, autoApprove: document.getElementById('ads-auto').value === 'true' } });
   msg.textContent = ok ? 'تم الحفظ ✓' : errText(data, 'تعذّر الحفظ');
+}
+
+let bbStatus = 'PENDING';
+let bbCache = [];
+let bannerForBooking = null;
+
+const BB_STATE = { PENDING: 'جديد', CONTACTED: 'تم التواصل', SCHEDULED: 'مجدول', REJECTED: 'مرفوض', CANCELLED: 'ملغى' };
+
+async function loadBannerBookings(status) {
+  bbStatus = status || bbStatus;
+  document.querySelectorAll('[data-bbstatus]').forEach(b => b.classList.toggle('active', b.dataset.bbstatus === bbStatus));
+  const { ok, data } = await api('GET', '/admin/banner-bookings?status=' + bbStatus);
+  const body = document.getElementById('bb-body');
+  if (!ok) { body.innerHTML = '<tr><td colspan="7">تعذّر التحميل</td></tr>'; return; }
+  bbCache = data;
+  const day = d => new Date(d).toLocaleDateString('ar', { day: 'numeric', month: 'short' });
+  const wa = n => (n || '').replace(/\D/g, '');
+  body.innerHTML = data.length ? data.map(b => `<tr>
+    <td>${esc(b.merchant.businessName)}</td>
+    <td style="white-space:nowrap"><a href="tel:${esc(b.phone)}">📞 ${esc(b.phone)}</a>${b.whatsapp ? `<br><a href="https://wa.me/${wa(b.whatsapp)}" target="_blank" rel="noopener">💬 ${esc(b.whatsapp)}</a>` : ''}</td>
+    <td>${b.days} يوم</td><td>${b.credits}</td><td>${day(b.requestedStart)}</td><td style="max-width:220px">${esc(b.note || '')}</td>
+    <td style="white-space:nowrap">
+      ${b.status === 'PENDING' ? `<button class="small" onclick="bannerBookingContacted('${b.id}')">تم التواصل</button>` : ''}
+      ${b.status === 'PENDING' || b.status === 'CONTACTED' ? `<button class="small" onclick="makeBannerFor('${b.id}')">جهّز البانر</button><button class="small danger" onclick="bannerBookingReject('${b.id}')">رفض</button>` : `<span class="badge ${b.status === 'SCHEDULED' ? 'APPROVED' : 'REJECTED'}">${esc(BB_STATE[b.status])}</span>`}
+    </td></tr>`).join('') : '<tr><td colspan="7" class="muted">ما في حجوزات</td></tr>';
+  const pending = await api('GET', '/admin/banner-bookings?status=PENDING');
+  const badge = document.getElementById('bb-count');
+  if (pending.ok && pending.data.length) { badge.textContent = pending.data.length; badge.style.display = ''; } else badge.style.display = 'none';
+  refreshAdsBadge();
+}
+
+async function bannerBookingContacted(id) {
+  const { ok, data } = await api('POST', '/admin/banner-bookings/' + id + '/contacted');
+  if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
+  loadBannerBookings(bbStatus);
+}
+
+async function bannerBookingReject(id) {
+  const reason = prompt('سبب الرفض (بيوصل للتاجر، واختياري، وبيرجع له المبلغ):');
+  if (reason === null) return;
+  const { ok, data } = await api('POST', '/admin/banner-bookings/' + id + '/reject', { reason });
+  if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
+  loadBannerBookings(bbStatus);
+}
+
+/** Fills the banner form for a booking: the shop's name, its dates, and a button that opens its shop page. */
+function makeBannerFor(id) {
+  const b = bbCache.find(x => x.id === id);
+  if (!b) return;
+  resetBannerForm();
+  bannerForBooking = id;
+  document.getElementById('banner-form-title').textContent = 'بانر لحجز: ' + b.merchant.businessName;
+  document.getElementById('bn-title').value = b.merchant.businessName;
+  document.getElementById('bn-target').value = 'shop';
+  document.getElementById('bn-value').value = b.merchant.id;
+  const start = new Date(b.requestedStart);
+  const end = new Date(start.getTime() + b.days * 86400000);
+  document.getElementById('bn-start').value = localInput(start.toISOString());
+  document.getElementById('bn-end').value = localInput(end.toISOString());
+  bannerTargetHint();
+  document.getElementById('banner-form-title').scrollIntoView({ behavior: 'smooth' });
 }
 
 const AD_STATE = { PENDING: 'بانتظار الموافقة', SCHEDULED: 'مجدول', LIVE: 'ظاهر الآن', ENDED: 'انتهى', REJECTED: 'مرفوض', CANCELLED: 'ملغى' };
@@ -946,9 +1029,15 @@ async function loadAdBookings(status) {
     <td>${day(a.startsAt)} → ${day(a.endsAt)}</td><td>${a.impressions} / ${a.clicks}</td>
     <td>${a.status === 'PENDING' ? `<button class="small" onclick="reviewAd('${a.id}','approve')">موافقة</button><button class="small danger" onclick="reviewAd('${a.id}','reject')">رفض</button>` : ''}</td></tr>`).join('')
     : '<tr><td colspan="10" class="muted">ما في حجوزات</td></tr>';
-  const pending = await api('GET', '/admin/ads?status=PENDING');
-  const badge = document.getElementById('ads-pending-count');
-  if (pending.ok && pending.data.length) { badge.textContent = pending.data.length; badge.style.display = ''; } else badge.style.display = 'none';
+  refreshAdsBadge();
+}
+
+/** The number on the menu: small-space bookings and big-banner bookings both waiting for the admin. */
+async function refreshAdsBadge() {
+  const [small, big] = await Promise.all([api('GET', '/admin/ads?status=PENDING'), api('GET', '/admin/banner-bookings?status=PENDING')]);
+  const total = (small.ok ? small.data.length : 0) + (big.ok ? big.data.length : 0);
+  const nav = document.getElementById('ads-pending-count');
+  if (total) { nav.textContent = total; nav.style.display = ''; } else nav.style.display = 'none';
 }
 
 async function reviewAd(id, action) {
@@ -1006,6 +1095,7 @@ function editBanner(id) {
 
 function resetBannerForm() {
   editingBanner = null;
+  bannerForBooking = null;
   document.getElementById('banner-form-title').textContent = 'بانر جديد';
   ['bn-title', 'bn-subtitle', 'bn-button', 'bn-value', 'bn-start', 'bn-end', 'bn-image'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('bn-bg').value = 'coral';
@@ -1023,6 +1113,7 @@ async function saveBanner() {
     title: val('bn-title').trim(), subtitle: val('bn-subtitle').trim() || null, buttonText: val('bn-button').trim() || null, bg: val('bn-bg'),
     targetType: val('bn-target'), targetValue: val('bn-value').trim() || null, countryCode: val('bn-country') || null,
     startsAt: iso('bn-start'), endsAt: iso('bn-end'), isActive: val('bn-active') === 'true',
+    ...(bannerForBooking ? { bookingId: bannerForBooking } : {}),
   };
   if (!body.title) { msg.textContent = 'اكتب العنوان'; return; }
   msg.textContent = 'عم يحفظ...';
@@ -1034,8 +1125,10 @@ async function saveBanner() {
     if (!up.ok) { msg.textContent = 'انحفظ البانر لكن الصورة ما انرفعت (JPG/PNG/WebP حتى 2 ميغا)'; loadBanners(); return; }
   }
   msg.textContent = 'تم الحفظ ✓';
+  const hadBooking = !!bannerForBooking;
   resetBannerForm();
   loadBanners();
+  if (hadBooking) loadBannerBookings(bbStatus);
 }
 
 async function deleteBanner(id) {

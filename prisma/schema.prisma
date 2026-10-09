@@ -343,6 +343,7 @@ model MerchantProfile {
   discountTransactions DiscountTransaction[]
   products             Product[]
   adBookings           AdBooking[]
+  bannerBookings       BannerBooking[]
   orders               Order[]
   affiliates           MerchantAffiliate[]
 
@@ -1355,6 +1356,7 @@ model StoreBanner {
   imageUpdatedAt DateTime?
   views          Int       @default(0)
   clicks         Int       @default(0)
+  bookingId      String? // the shop's booking this banner was made for
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
@@ -1410,4 +1412,35 @@ model CustomerReview {
 
   @@unique([merchantId, customerId])
   @@index([customerId])
+}
+
+enum BannerBookingStatus {
+  PENDING // paid; waiting for the admin to call the shop
+  CONTACTED // the admin spoke to the shop about what the banner should say
+  SCHEDULED // the banner was made and is (or will be) on the front page
+  REJECTED
+  CANCELLED
+}
+
+// A shop asking for one of the big rotating banners for some days. It pays from the wallet and leaves its phone/WhatsApp:
+// the admin then contacts it to agree what the banner shows, and makes the banner in the panel.
+model BannerBooking {
+  id              String              @id @default(uuid())
+  merchantId      String
+  days            Int
+  credits         Int
+  requestedStart  DateTime
+  phone           String
+  whatsapp        String?
+  note            String?
+  status          BannerBookingStatus @default(PENDING)
+  bannerId        String?
+  rejectionReason String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  merchant MerchantProfile @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId])
+  @@index([status])
 }

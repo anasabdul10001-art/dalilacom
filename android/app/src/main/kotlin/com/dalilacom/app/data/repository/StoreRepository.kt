@@ -13,6 +13,8 @@ import com.dalilacom.app.data.network.StoreSectionDto
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import com.dalilacom.app.data.network.AdBookingDto
+import com.dalilacom.app.data.network.BannerBookRequest
+import com.dalilacom.app.data.network.BannerBookingDto
 import com.dalilacom.app.data.network.BookAdRequest
 import com.dalilacom.app.data.network.AdPackagesDto
 import com.dalilacom.app.data.network.MyAdDto
@@ -69,6 +71,19 @@ class StoreRepository(private val api: ApiService) {
     suspend fun bannerClick(id: String) { safeApiCall { api.bannerClick(id) } }
 
     suspend fun adClick(id: String) { safeApiCall { api.adClick(id) } }
+
+    suspend fun bookBanner(days: Int, phone: String, start: String?, whatsapp: String?, note: String?): Result<BannerBookingDto> {
+        val response = safeApiCall { api.bookBanner(BannerBookRequest(days, phone, start, whatsapp?.ifBlank { null }, note?.ifBlank { null })) } ?: return Result.failure(Exception(AppStrings.get(R.string.ads_failed)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.ads_failed))))
+    }
+
+    suspend fun myBannerBookings(): List<BannerBookingDto> = safeApiCall { api.myBannerBookings() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
+    suspend fun cancelBannerBooking(id: String): Result<Unit> {
+        val response = safeApiCall { api.cancelBannerBooking(id) } ?: return Result.failure(Exception(AppStrings.get(R.string.ads_failed)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.ads_failed))))
+    }
 
     suspend fun adPackages(): AdPackagesDto? = safeApiCall { api.adPackages() }?.takeIf { it.isSuccessful }?.body()
 

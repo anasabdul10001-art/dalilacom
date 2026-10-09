@@ -214,3 +214,63 @@ describe("the big banners of the front page", () => {
     expect((await request(app).post("/admin/banners").set(customer.auth).send({ title: "x" })).status).toBe(403);
   });
 });
+
+describe("booking a big banner", () => {
+  it("is paid from the wallet with a phone number left, the admin calls, then makes the banner for it", async () => {
+    const a = await admin();
+    const set = await request(app).put("/admin/settings").set(a.auth).send({ ads: { bannerPackages: [{ days: 1, credits: 200 }, { days: 3, credits: 500 }] } });
+    expect(set.status).toBe(200);
+    const iso = await freshCountry();
+    const s = await shop(iso, 1000);
+
+    // the prices and lengths are what the admin set
+    const packs = await request(app).get("/ads/packages").set(s.owner.auth);
+    expect(packs.body.bannerPackages).toEqual([{ days: 1, credits: 200 }, { days: 3, credits: 500 }]);
+
+    // a way to reach the shop is required, and the length must be one for sale
+    expect((await request(app).post("/ads/banners").set(s.owner.auth).send({ days: 1 })).status).toBe(400);
+    expect((await request(app).post("/ads/banners").set(s.owner.auth).send({ days: 1, phone: "12" })).status).toBe(400);
+    expect((await request(app).post("/ads/banners").set(s.owner.auth).send({ days: 2, phone: "+963 944 000 111" })).status).toBe(400);
+    const customer = await account("bncust");
+    expect((await request(app).post("/ads/banners").set(customer.auth).send({ days: 1, phone: "+963 944 000 111" })).status).toBe(403);
+
+    const booked = await request(app).post("/ads/banners").set(s.owner.auth).send({ days: 3, phone: "+963 944 000 111", whatsapp: "+963 944 000 111", note: "بدي بانر لعروض العيد" });
+    expect(booked.status).toBe(201);
+    expect(booked.body).toMatchObject({ status: "PENDING", days: 3, credits: 500 });
+    expect(await balance(s.owner.id)).toBe(500);
+
+    // the admins get a notification, and the booking with the number to call
+    expect(await prisma.notification.count({ where: { userId: a.id, title: "حجز بانر كبير جديد" } })).toBeGreaterThan(0);
+    const list = await request(app).get("/admin/banner-bookings").query({ status: "PENDING" }).set(a.auth);
+    const row = list.body.find((x: { id: string }) => x.id === booked.body.id);
+    expect(row).toMatchObject({ phone: "+963944000111", whatsapp: "+963944000111", note: "بدي بانر لعروض العيد" });
+    expect(row.merchant.businessName).toBeTruthy();
+
+    // the admin called: the shop can no longer cancel; then the admin makes the banner for it
+    expect((await request(app).post(`/admin/banner-bookings/${booked.body.id}/contacted`).set(a.auth)).status).toBe(200);
+    expect((await request(app).post(`/ads/banners/${booked.body.id}/cancel`).set(s.owner.auth)).status).toBe(409);
+    const banner = await request(app).post("/admin/banners").set(a.auth).send({ title: "عروض العيد", countryCode: iso, bookingId: booked.body.id });
+    expect(banner.status).toBe(201);
+    const mine = await request(app).get("/ads/banners/mine").set(s.owner.auth);
+    expect(mine.body[0]).toMatchObject({ id: booked.body.id, status: "SCHEDULED" });
+    expect((await prisma.bannerBooking.findUniqueOrThrow({ where: { id: booked.body.id } })).bannerId).toBe(banner.body.id);
+  });
+
+  it("gives the money back when the shop cancels before the call, or when the admin refuses; and needs enough balance", async () => {
+    const a = await admin();
+    await request(app).put("/admin/settings").set(a.auth).send({ ads: { bannerPackages: [{ days: 1, credits: 200 }] } });
+    const s = await shop(await freshCountry(), 300);
+    const one = await request(app).post("/ads/banners").set(s.owner.auth).send({ days: 1, phone: "0944000222" });
+    expect(await balance(s.owner.id)).toBe(100);
+    const poor = await request(app).post("/ads/banners").set(s.owner.auth).send({ days: 1, phone: "0944000222" });
+    expect(poor.status).toBe(402);
+    expect((await request(app).post(`/ads/banners/${one.body.id}/cancel`).set(s.owner.auth)).status).toBe(200);
+    expect(await balance(s.owner.id)).toBe(300);
+
+    const two = await request(app).post("/ads/banners").set(s.owner.auth).send({ days: 1, phone: "0944000222" });
+    expect((await request(app).post(`/admin/banner-bookings/${two.body.id}/reject`).set(a.auth).send({ reason: "غير مناسب" })).status).toBe(200);
+    expect(await balance(s.owner.id)).toBe(300);
+    expect((await request(app).post(`/admin/banner-bookings/${two.body.id}/reject`).set(a.auth).send({})).status).toBe(409);
+    expect(await balance(s.owner.id)).toBe(300);
+  });
+});

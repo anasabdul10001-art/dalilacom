@@ -5,7 +5,7 @@ import { prisma } from "../prisma";
 import { sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { getSettings } from "../services/settings.service";
-import { AD_SLOTS, adState, bookAd, cancelAd, ownMerchant } from "../services/ads.service";
+import { AD_SLOTS, adState, bookAd, bookBanner, cancelAd, cancelBannerBooking, ownMerchant } from "../services/ads.service";
 import { optionalUserId } from "../services/viewerCountry.service";
 import { route } from "../lib/asyncRoute";
 
@@ -21,6 +21,7 @@ adsRouter.get("/packages", route(async (req, res) => {
   const wallet = userId ? await prisma.wallet.findUnique({ where: { userId } }) : null;
   res.json({
     packages: [...settings.ads.packages].sort((a, b) => a.days - b.days),
+    bannerPackages: [...settings.ads.bannerPackages].sort((a, b) => a.days - b.days),
     creditName: settings.creditName,
     creditsPerUsd: settings.creditsPerUsd,
     slots: AD_SLOTS,
@@ -42,6 +43,35 @@ adsRouter.post("/", requireAuth, requireRole(Role.MERCHANT), route(async (req, r
   if (start && Number.isNaN(start.getTime())) return sendValidationError(res, new z.ZodError([{ code: "custom", path: ["start"], message: "bad date" }]));
   const ad = await bookAd({ userId: req.user!.id, productId: parsed.data.productId, days: parsed.data.days, start });
   res.status(201).json(ad);
+}));
+
+const bannerBookSchema = z.object({
+  days: z.number().int().positive(),
+  start: z.string().optional(),
+  phone: z.string().trim().min(6).max(30),
+  whatsapp: z.string().trim().max(30).optional(),
+  note: z.string().trim().max(600).optional(),
+});
+
+// A big banner: the shop picks the length, pays, and leaves a number the admin will call to agree what the banner says.
+adsRouter.post("/banners", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const parsed = bannerBookSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const start = parsed.data.start ? new Date(parsed.data.start) : undefined;
+  if (start && Number.isNaN(start.getTime())) return sendValidationError(res, new z.ZodError([{ code: "custom", path: ["start"], message: "bad date" }]));
+  const b = await bookBanner({ userId: req.user!.id, days: parsed.data.days, start, phone: parsed.data.phone, whatsapp: parsed.data.whatsapp, note: parsed.data.note });
+  res.status(201).json(b);
+}));
+
+adsRouter.get("/banners/mine", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const merchant = await ownMerchant(req.user!.id);
+  const rows = await prisma.bannerBooking.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: "desc" }, take: 50 });
+  res.json(rows.map((b) => ({ id: b.id, days: b.days, credits: b.credits, requestedStart: b.requestedStart, status: b.status, phone: b.phone, rejectionReason: b.rejectionReason })));
+}));
+
+adsRouter.post("/banners/:id/cancel", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  await cancelBannerBooking(req.user!.id, req.params.id);
+  res.json({ ok: true });
 }));
 
 adsRouter.get("/mine", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {

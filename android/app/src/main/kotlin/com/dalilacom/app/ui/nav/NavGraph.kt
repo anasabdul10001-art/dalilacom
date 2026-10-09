@@ -167,14 +167,14 @@ fun DalilacomNavGraph(
                 onOpenCart = { navController.popBackStack("home", inclusive = false) },
                 onLogin = { navController.navigate("login") },
                 onOpenMerchant = { id -> navController.navigate("merchant/$id") },
-                onBookAd = { navController.navigate("adBook") },
+                onBookAd = { kind -> navController.navigate("adBook?kind=$kind") },
             )
         }
         composable("productWizard") {
             ProductWizardScreen(container = container, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") })
         }
-        composable("adBook") {
-            AdBookScreen(container = container, onBack = { navController.popBackStack() }, onWallet = { navController.navigate("wallet") }, onMyAds = { navController.navigate("myAds") })
+        composable("adBook?kind={kind}", arguments = listOf(androidx.navigation.navArgument("kind") { defaultValue = "space" })) { entry ->
+            AdBookScreen(container = container, kind = entry.arguments?.getString("kind") ?: "space", onBack = { navController.popBackStack() }, onWallet = { navController.navigate("wallet") }, onMyAds = { navController.navigate("myAds") })
         }
         composable("myAds") {
             MyAdsScreen(container = container, onBack = { navController.popBackStack() }, onBook = { navController.navigate("adBook") })

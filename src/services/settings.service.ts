@@ -11,6 +11,8 @@ export interface LocalWallet {
 /** Advertising space in the store: how long a shop may rent it and for how many credits (the admin sets both). */
 export interface AdSettings {
   packages: { days: number; credits: number }[];
+  /** The same for the big banners: how long and for how many credits (the admin then contacts the shop to make it). */
+  bannerPackages: { days: number; credits: number }[];
   /** True = a paid booking is shown at once; false = the admin approves each one first. */
   autoApprove: boolean;
   /** How long each big banner of the store's front page stays before the next one. */
@@ -54,6 +56,11 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
       { days: 2, credits: 500 },
       { days: 3, credits: 700 },
       { days: 5, credits: 1000 },
+    ],
+    bannerPackages: [
+      { days: 1, credits: 1500 },
+      { days: 3, credits: 3500 },
+      { days: 7, credits: 7000 },
     ],
     autoApprove: false,
     bannerSeconds: 5,

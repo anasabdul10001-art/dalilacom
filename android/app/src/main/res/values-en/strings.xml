@@ -560,4 +560,20 @@
     <string name="rv_customer_none">No ratings yet</string>
     <string name="rv_rate_customer">Rate the customer</string>
     <string name="shop_followers">followers</string>
+    <string name="ads_kind_space">Small space</string>
+    <string name="ads_kind_banner">Big banner</string>
+    <string name="ads_book_banner">Book a big banner</string>
+    <string name="ads_banner_sub">The big banner shows at the top of the page and rotates with the others. After you book we call you to agree what it says and we make it for you.</string>
+    <string name="ads_phone">Your phone number</string>
+    <string name="ads_whatsapp">WhatsApp (optional)</string>
+    <string name="ads_note">What do you want to advertise? (optional)</string>
+    <string name="ads_note_ph">For example: a sale on shoes, or a new branch opening...</string>
+    <string name="ads_banner_note">We call you within a working day to agree how the banner looks. If we do not agree the money returns to your wallet.</string>
+    <string name="ads_banner_done">We got your request ✓ We will call you soon to prepare the banner with you.</string>
+    <string name="ads_no_banner_packs">Big-banner booking is not available right now</string>
+    <string name="ads_my_banners">Big-banner requests</string>
+    <string name="ads_my_spaces">Small spaces</string>
+    <string name="ads_bb_pending">Waiting for our call</string>
+    <string name="ads_bb_contacted">We contacted you</string>
+    <string name="ads_bb_scheduled">Made and scheduled</string>
 </resources>

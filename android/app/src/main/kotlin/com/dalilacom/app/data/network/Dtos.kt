@@ -612,7 +612,7 @@ data class StoreBannersDto(val intervalSeconds: Int = 5, val banners: List<Store
 data class AdPackageDto(val days: Int, val credits: Int)
 
 @Serializable
-data class AdPackagesDto(val packages: List<AdPackageDto> = emptyList(), val creditName: String = "", val balance: Int? = null, val autoApprove: Boolean = false)
+data class AdPackagesDto(val packages: List<AdPackageDto> = emptyList(), val bannerPackages: List<AdPackageDto> = emptyList(), val creditName: String = "", val balance: Int? = null, val autoApprove: Boolean = false)
 
 @Serializable
 data class BookAdRequest(val productId: String, val days: Int, val start: String? = null)
@@ -707,3 +707,17 @@ data class RatingDto(val rating: Double = 0.0, val ratingCount: Int = 0)
 
 @Serializable
 data class CustomerRefDto(val id: String, val fullName: String = "")
+
+@Serializable
+data class BannerBookRequest(val days: Int, val phone: String, val start: String? = null, val whatsapp: String? = null, val note: String? = null)
+
+@Serializable
+data class BannerBookingDto(
+    val id: String,
+    val days: Int = 0,
+    val credits: Int = 0,
+    val requestedStart: String = "",
+    val status: String = "PENDING",
+    val phone: String = "",
+    val rejectionReason: String? = null,
+)

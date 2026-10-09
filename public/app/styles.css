@@ -1293,3 +1293,5 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .store-circles em { font-weight: 600; }
 .wiz-tiles button img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
 @media (min-width: 900px) { .store-circles span { width: 88px; height: 88px; border-radius: 50%; } }
+
+.store-adstrip-btns { display: inline-flex; gap: 8px; flex-wrap: wrap; }

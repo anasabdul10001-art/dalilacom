@@ -2005,9 +2005,10 @@ function storeSlotOpen(adId, productId) {
 
 /* ---------------- renting a space (shops) ---------------- */
 
-function openAdBooking() {
+function openAdBooking(kind) {
   if (!S.token) return go("login");
   S._adBook = null;
+  S._adKind = kind === "banner" ? "banner" : "space";
   go("adBook");
 }
 
@@ -2015,6 +2016,14 @@ function screenAdBook() {
   if (!S._adBook) { S._adBook = { loading: true, productId: "", days: 0, start: "" }; loadAdBook(); }
   const a = S._adBook;
   if (a.loading) return `${backRow()}${spinner()}`;
+  a.kind = a.kind || S._adKind || "space";
+  if (S.role === "MERCHANT" && !a.done) {
+    const seg = `<div class="wiz-seg" style="margin:6px 0 14px">
+      <button class="${a.kind === "space" ? "on" : ""}" onclick="S._adBook.kind='space';S._adBook.error=null;render()">${esc(t("ads.kindSpace"))}</button>
+      <button class="${a.kind === "banner" ? "on" : ""}" onclick="S._adBook.kind='banner';S._adBook.error=null;render()">${esc(t("ads.kindBanner"))}</button></div>`;
+    if (a.kind === "banner") return `${backRow()}<h1 class="screen-title">${esc(t("ads.bookTitle"))}</h1>${seg}${screenBannerBooking(a)}`;
+    a.seg = seg;
+  }
   if (S.role !== "MERCHANT") {
     return `${backRow()}
       <h1 class="screen-title">${esc(t("ads.bookTitle"))}</h1>
@@ -2039,6 +2048,7 @@ function screenAdBook() {
   return `
     ${backRow()}
     <h1 class="screen-title">${esc(t("ads.bookTitle"))}</h1>
+    ${a.seg || ""}
     <p class="screen-sub">${esc(t("ads.bookSub"))}</p>
     ${!a.products.length ? `<div class="error-banner">${esc(t("ads.noProducts"))}</div>` : `
     <div class="field"><label>${esc(t("ads.pickProduct"))}</label>
@@ -2065,8 +2075,63 @@ function screenAdBook() {
     <button class="btn" ${!a.productId || !a.days || a.busy || !enough ? "disabled" : ""} onclick="submitAdBooking()">${esc(a.busy ? t("ads.booking") : t("ads.book"))}</button>`}`;
 }
 
+/** A big banner: choose the length, leave a number, pay; the team calls to agree what the banner says. */
+function screenBannerBooking(a) {
+  const pk = a.bannerPackages || [];
+  const chosen = pk.find((p) => p.days === a.bannerDays);
+  const enough = chosen ? a.balance >= chosen.credits : true;
+  const starts = [["", t("ads.startNow")]];
+  for (let d = 1; d <= 14; d++) {
+    const dt = new Date(); dt.setDate(dt.getDate() + d); dt.setHours(0, 0, 0, 0);
+    starts.push([dt.toISOString(), d === 1 ? t("ads.tomorrow") : dt.toLocaleDateString(LANG, { weekday: "long", day: "numeric", month: "short" })]);
+  }
+  if (a.bannerDone) {
+    return `<div class="success-banner">${esc(t("ads.bannerDone"))}</div><div style="height:14px"></div>
+      <button class="btn" style="max-width:260px" onclick="S._myAds=null;back();go('myAds')">${esc(t("profile.myAds"))}</button>`;
+  }
+  if (!pk.length) return `<div class="error-banner">${esc(t("ads.noBannerPacks"))}</div>`;
+  return `
+    <p class="screen-sub">${esc(t("ads.bannerSub"))}</p>
+    <div class="field"><label>${esc(t("ads.pickDays"))}</label>
+      <div class="ad-packs">${pk.map((p) => `
+        <button class="ad-pack ${a.bannerDays === p.days ? "on" : ""}" onclick="S._adBook.bannerDays=${p.days};render()">
+          <b>${esc(t("ads.daysN", { n: p.days }))}</b><span>${p.credits} ${esc(a.creditName)}</span>
+        </button>`).join("")}</div></div>
+    <div class="field"><label>${esc(t("ads.pickStart"))}</label>
+      <select onchange="S._adBook.bannerStart=this.value">${starts.map(([v, l]) => `<option value="${esc(v)}" ${a.bannerStart === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
+    <div class="field"><label>${esc(t("ads.phone"))} *</label>
+      <input type="tel" inputmode="tel" value="${esc(a.phone || "")}" oninput="S._adBook.phone=this.value" placeholder="+963 9xx xxx xxx"></div>
+    <div class="field"><label>${esc(t("ads.whatsapp"))}</label>
+      <input type="tel" inputmode="tel" value="${esc(a.whatsapp || "")}" oninput="S._adBook.whatsapp=this.value" placeholder="+963 9xx xxx xxx"></div>
+    <div class="field"><label>${esc(t("ads.note"))}</label>
+      <textarea rows="3" maxlength="600" oninput="S._adBook.note=this.value" placeholder="${esc(t("ads.notePh"))}">${esc(a.note || "")}</textarea></div>
+    <div class="card" style="margin-top:6px">
+      <div class="list-row"><span>${esc(t("ads.yourBalance"))}</span><span class="price">${a.balance} ${esc(a.creditName)}</span></div>
+      ${chosen ? `<div class="list-row"><span>${esc(t("ads.price"))}</span><span class="price" style="color:var(--primary)">${chosen.credits} ${esc(a.creditName)}</span></div>` : ""}
+      <p class="muted" style="margin:8px 0 0">${esc(t("ads.bannerNote"))}</p>
+    </div>
+    ${a.error ? `<div class="error-banner">${esc(a.error)}</div>` : ""}
+    ${!enough ? `<button class="btn outline" style="margin-top:8px" onclick="go('wallet')">${esc(t("ads.topUp"))}</button>` : ""}
+    <div style="height:12px"></div>
+    <button class="btn" ${!a.bannerDays || !(a.phone || "").trim() || a.busy || !enough ? "disabled" : ""} onclick="submitBannerBooking()">${esc(a.busy ? t("ads.booking") : t("ads.bookBannerSend"))}</button>`;
+}
+
+async function submitBannerBooking() {
+  const a = S._adBook;
+  a.busy = true; a.error = null; render();
+  const body = { days: a.bannerDays, phone: a.phone.trim() };
+  if (a.bannerStart) body.start = a.bannerStart;
+  if ((a.whatsapp || "").trim()) body.whatsapp = a.whatsapp.trim();
+  if ((a.note || "").trim()) body.note = a.note.trim();
+  const { ok, data } = await api("POST", "/ads/banners", body);
+  a.busy = false;
+  if (ok) a.bannerDone = true;
+  else a.error = errMsg(data, t("ads.failed"));
+  render();
+}
+
 async function loadAdBook() {
-  const [pk, mine] = await Promise.all([api("GET", "/ads/packages"), S.role === "MERCHANT" ? api("GET", "/products/mine") : Promise.resolve({ ok: true, data: [] })]);
+  const [pk, mine, me] = await Promise.all([api("GET", "/ads/packages"), S.role === "MERCHANT" ? api("GET", "/products/mine") : Promise.resolve({ ok: true, data: [] }), S.role === "MERCHANT" ? api("GET", "/merchant/me") : Promise.resolve({ ok: false })]);
   const a = S._adBook;
   if (!a) return;
   a.loading = false;
@@ -2074,6 +2139,9 @@ async function loadAdBook() {
   a.creditName = pk.ok ? pk.data.creditName : "";
   a.balance = pk.ok ? pk.data.balance || 0 : 0;
   a.autoApprove = pk.ok ? pk.data.autoApprove : false;
+  a.bannerPackages = pk.ok ? pk.data.bannerPackages || [] : [];
+  if (a.bannerPackages.length) a.bannerDays = a.bannerPackages[0].days;
+  if (me.ok) { a.phone = me.data.phone || ""; a.whatsapp = me.data.whatsapp || ""; }
   a.products = mine.ok ? mine.data.filter((p) => p.isActive && p.stock > 0) : [];
   if (a.packages.length) a.days = a.packages[0].days;
   render();
@@ -2105,6 +2173,13 @@ function screenMyAds() {
     <h1 class="screen-title">${esc(t("profile.myAds"))}</h1>
     <button class="btn" style="max-width:260px;margin-bottom:12px" onclick="openAdBooking()">📢 ${esc(t("ads.bookCta"))}</button>
     ${errorBanner()}
+    ${(m.banners || []).length ? `<div class="section-title">${esc(t("ads.myBanners"))}</div>${m.banners.map((b) => `
+      <div class="card">
+        <div class="title-line"><strong>${esc(t("ads.daysN", { n: b.days }))}</strong><span class="badge ${b.status === "SCHEDULED" ? "success" : b.status === "PENDING" || b.status === "CONTACTED" ? "warning" : "neutral"}">${esc(t("ads.bb." + b.status))}</span></div>
+        <p class="muted">${new Date(b.requestedStart).toLocaleDateString(LANG, { day: "numeric", month: "short" })} · ${b.credits} · ${esc(b.phone)}</p>
+        ${b.rejectionReason ? `<p class="muted">${esc(b.rejectionReason)}</p>` : ""}
+        ${b.status === "PENDING" ? `<button class="btn outline small" style="width:auto" onclick="cancelMyBanner('${b.id}')">${esc(t("ads.cancel"))}</button>` : ""}
+      </div>`).join("")}<div class="section-title">${esc(t("ads.mySpaces"))}</div>` : ""}
     ${m.list.length === 0 ? `<div class="empty-state">${esc(t("ads.none"))}</div>` : m.list.map((a) => `
       <div class="card">
         <div class="title-line"><strong>${esc(a.product.name)}</strong><span class="badge ${a.state === "LIVE" ? "success" : a.state === "PENDING" || a.state === "SCHEDULED" ? "warning" : "neutral"}">${esc(t("ads.state." + a.state))}</span></div>
@@ -2116,9 +2191,16 @@ function screenMyAds() {
 }
 
 async function loadMyAds() {
-  const { ok, data } = await api("GET", "/ads/mine");
-  S._myAds = { loading: false, list: ok ? data : [] };
+  const [{ ok, data }, banners] = await Promise.all([api("GET", "/ads/mine"), api("GET", "/ads/banners/mine")]);
+  S._myAds = { loading: false, list: ok ? data : [], banners: banners.ok ? banners.data : [] };
   render();
+}
+
+async function cancelMyBanner(id) {
+  if (!confirm(t("ads.cancelConfirm"))) return;
+  const { ok, data } = await api("POST", "/ads/banners/" + id + "/cancel");
+  if (!ok) S.error = errMsg(data, t("ads.failed"));
+  loadMyAds();
 }
 
 async function cancelMyAd(id) {
@@ -2445,7 +2527,7 @@ function screenStore() {
         <div class="store-picks">${(home.slots || []).slice(3, 6).map(storeSlot).join("")}</div>
       </div>
       ${home.slots && home.slots.length ? `<div class="store-slotstrip">${home.slots.map(storeSlot).join("")}</div>` : ""}
-      ${home.adOffer ? `<div class="store-adstrip"><span>📢 ${esc(t("ads.pitch", { price: home.adOffer.fromCredits, name: home.adOffer.creditName, days: home.adOffer.days }))}</span><button onclick="openAdBooking()">${esc(t("ads.bookCta"))}</button></div>` : ""}
+      ${home.adOffer ? `<div class="store-adstrip"><span>📢 ${esc(t("ads.pitch", { price: home.adOffer.fromCredits, name: home.adOffer.creditName, days: home.adOffer.days }))}</span><span class="store-adstrip-btns"><button onclick="openAdBooking('space')">${esc(t("ads.bookCta"))}</button><button onclick="openAdBooking('banner')">${esc(t("ads.bookBanner"))}</button></span></div>` : ""}
       <div class="store-circles">${sections.map((x) => `
         <button onclick="storePickSection('${x.id}')"><span><img src="${esc(x.image)}" alt="" loading="lazy"></span><em>${esc(storeSecName(x))}</em></button>`).join("")}</div>
       ${storeSection(t("store.best"), home.bestSellers, "best")}

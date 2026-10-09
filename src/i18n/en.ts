@@ -56,6 +56,13 @@ export const en: LanguagePack = {
     "تقييم جديد لمتجرك": "New rating for your shop",
     "تقييم جديد من أحد المتاجر": "New rating from a shop",
 
+    "اكتب رقم هاتف صحيح للتواصل": "Write a valid phone number so we can reach you",
+    "حجز بانر كبير جديد": "New big-banner booking",
+    "تقدر تلغي الحجز فقط قبل ما نتواصل معك": "You can only cancel the booking before we contact you",
+    "لم يتم حجز البانر الكبير": "The big banner was not booked",
+    "بانرك الكبير صار جاهزًا": "Your big banner is ready",
+    "تم تجهيز بانرك وجدولته على الصفحة الأولى للمتجر.": "Your banner was made and scheduled on the store's front page.",
+
     // ---- auth ----
     "البريد الإلكتروني أو كلمة السر غير صحيحة": "Incorrect email or password",
     "هذا الحساب معطّل، تواصل مع الدعم": "This account is disabled — contact support",

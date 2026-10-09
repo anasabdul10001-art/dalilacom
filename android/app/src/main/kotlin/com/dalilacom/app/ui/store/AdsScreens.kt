@@ -64,6 +64,13 @@ import java.time.ZoneId
 
 data class AdBookUi(
     val loading: Boolean = true,
+    val kind: String = "space",
+    val bannerPackages: List<AdPackageDto> = emptyList(),
+    val bannerDays: Int = 0,
+    val phone: String = "",
+    val whatsapp: String = "",
+    val note: String = "",
+    val bannerDone: Boolean = false,
     val packages: List<AdPackageDto> = emptyList(),
     val creditName: String = "",
     val balance: Int = 0,
@@ -77,16 +84,22 @@ data class AdBookUi(
     val done: Boolean = false,
 )
 
-class AdBookViewModel(private val store: StoreRepository, private val products: ProductRepository) : ViewModel() {
-    private val _ui = MutableStateFlow(AdBookUi())
+class AdBookViewModel(private val store: StoreRepository, private val products: ProductRepository, private val merchants: com.dalilacom.app.data.repository.MerchantRepository, initialKind: String) : ViewModel() {
+    private val _ui = MutableStateFlow(AdBookUi(kind = initialKind))
     val ui: StateFlow<AdBookUi> = _ui.asStateFlow()
 
     init {
         viewModelScope.launch {
             val pk = store.adPackages()
             val mine = products.getMyProducts().filter { it.isActive && it.stock > 0 }
+            val me = merchants.getMerchantMe()
             _ui.value = AdBookUi(
                 loading = false,
+                kind = initialKind,
+                bannerPackages = pk?.bannerPackages?.sortedBy { it.days }.orEmpty(),
+                bannerDays = pk?.bannerPackages?.minByOrNull { it.days }?.days ?: 0,
+                phone = me?.phone.orEmpty(),
+                whatsapp = me?.whatsapp.orEmpty(),
                 packages = pk?.packages?.sortedBy { it.days }.orEmpty(),
                 creditName = pk?.creditName.orEmpty(),
                 balance = pk?.balance ?: 0,
@@ -94,6 +107,24 @@ class AdBookViewModel(private val store: StoreRepository, private val products: 
                 products = mine,
                 days = pk?.packages?.minByOrNull { it.days }?.days ?: 0,
             )
+        }
+    }
+
+    fun setKind(k: String) = _ui.update { it.copy(kind = k, error = null) }
+    fun pickBannerDays(d: Int) = _ui.update { it.copy(bannerDays = d) }
+    fun setPhone(v: String) = _ui.update { it.copy(phone = v) }
+    fun setWhatsapp(v: String) = _ui.update { it.copy(whatsapp = v) }
+    fun setNote(v: String) = _ui.update { it.copy(note = v) }
+
+    fun bookBanner() {
+        val s = _ui.value
+        if (s.bannerDays == 0 || s.phone.isBlank() || s.busy) return
+        _ui.update { it.copy(busy = true, error = null) }
+        val start = if (s.startDay == 0) null else LocalDate.now().plusDays(s.startDay.toLong()).atStartOfDay(ZoneId.systemDefault()).toInstant().toString()
+        viewModelScope.launch {
+            store.bookBanner(s.bannerDays, s.phone.trim(), start, s.whatsapp.trim(), s.note.trim())
+                .onSuccess { _ui.update { it.copy(busy = false, bannerDone = true) } }
+                .onFailure { e -> _ui.update { it.copy(busy = false, error = e.message) } }
         }
     }
 
@@ -115,14 +146,23 @@ class AdBookViewModel(private val store: StoreRepository, private val products: 
 }
 
 @Composable
-fun AdBookScreen(container: AppContainer, onBack: () -> Unit, onWallet: () -> Unit, onMyAds: () -> Unit) {
-    val vm: AdBookViewModel = viewModel(factory = viewModelFactory { initializer { AdBookViewModel(container.storeRepository, container.productRepository) } })
+fun AdBookScreen(container: AppContainer, kind: String = "space", onBack: () -> Unit, onWallet: () -> Unit, onMyAds: () -> Unit) {
+    val vm: AdBookViewModel = viewModel(factory = viewModelFactory { initializer { AdBookViewModel(container.storeRepository, container.productRepository, container.merchantRepository, kind) } })
     val ui by vm.ui.collectAsState()
     Column(Modifier.fillMaxSize()) {
         TextButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) { Text("‹  " + stringResource(R.string.store_back)) }
         if (ui.loading) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }; return@Column }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.ads_book_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+            if (!ui.done && !ui.bannerDone) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("space" to R.string.ads_kind_space, "banner" to R.string.ads_kind_banner).forEach { (k, label) ->
+                    val on = ui.kind == k
+                    Surface(onClick = { vm.setKind(k) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), border = BorderStroke(2.dp, if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant), color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface, contentColor = if (on) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurface) {
+                        Box(Modifier.padding(vertical = 12.dp), contentAlignment = Alignment.Center) { Text(stringResource(label), fontWeight = FontWeight.ExtraBold) }
+                    }
+                }
+            }
+            if (ui.kind == "banner") { BannerBookingForm(ui, vm, onWallet, onMyAds); return@Column }
             if (ui.done) {
                 Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                     Text(stringResource(if (ui.autoApprove) R.string.ads_done_live else R.string.ads_done_waiting), modifier = Modifier.padding(14.dp), color = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -192,6 +232,66 @@ fun AdBookScreen(container: AppContainer, onBack: () -> Unit, onWallet: () -> Un
     }
 }
 
+/** A big banner: choose the length, leave a number, pay; the team calls to agree what the banner says. */
+@Composable
+private fun BannerBookingForm(ui: AdBookUi, vm: AdBookViewModel, onWallet: () -> Unit, onMyAds: () -> Unit) {
+    if (ui.bannerDone) {
+        Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+            Text(stringResource(R.string.ads_banner_done), modifier = Modifier.padding(14.dp), color = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+        Button(onClick = onMyAds, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(stringResource(R.string.profile_my_ads)) }
+        return
+    }
+    if (ui.bannerPackages.isEmpty()) { Text(stringResource(R.string.ads_no_banner_packs), color = MaterialTheme.colorScheme.error); return }
+    Text(stringResource(R.string.ads_banner_sub), color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(stringResource(R.string.ads_pick_days), fontWeight = FontWeight.Bold)
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(ui.bannerPackages, key = { it.days }) { p ->
+            val on = ui.bannerDays == p.days
+            Surface(
+                onClick = { vm.pickBannerDays(p.days) },
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(2.dp, if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                color = if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+            ) {
+                Column(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.ads_days_n, p.days), fontWeight = FontWeight.ExtraBold)
+                    Text("${p.credits} ${ui.creditName}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+    Text(stringResource(R.string.ads_pick_start), fontWeight = FontWeight.Bold)
+    var startOpen by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { startOpen = true }, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) { Text(startLabel(ui.startDay)) }
+        DropdownMenu(expanded = startOpen, onDismissRequest = { startOpen = false }) {
+            (0..14).forEach { d -> DropdownMenuItem(text = { Text(startLabel(d)) }, onClick = { vm.pickStart(d); startOpen = false }) }
+        }
+    }
+    Text(stringResource(R.string.ads_phone) + " *", fontWeight = FontWeight.Bold)
+    androidx.compose.material3.OutlinedTextField(value = ui.phone, onValueChange = vm::setPhone, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth())
+    Text(stringResource(R.string.ads_whatsapp), fontWeight = FontWeight.Bold)
+    androidx.compose.material3.OutlinedTextField(value = ui.whatsapp, onValueChange = vm::setWhatsapp, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth())
+    Text(stringResource(R.string.ads_note), fontWeight = FontWeight.Bold)
+    androidx.compose.material3.OutlinedTextField(value = ui.note, onValueChange = { vm.setNote(it.take(600)) }, placeholder = { Text(stringResource(R.string.ads_note_ph)) }, minLines = 3, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth())
+
+    val chosen = ui.bannerPackages.firstOrNull { it.days == ui.bannerDays }
+    val enough = chosen == null || ui.balance >= chosen.credits
+    Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row { Text(stringResource(R.string.ads_your_balance), Modifier.weight(1f)); Text("${ui.balance} ${ui.creditName}", fontWeight = FontWeight.Bold) }
+            if (chosen != null) Row { Text(stringResource(R.string.ads_price), Modifier.weight(1f)); Text("${chosen.credits} ${ui.creditName}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary) }
+            Text(stringResource(R.string.ads_banner_note), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    if (!enough) OutlinedButton(onClick = onWallet, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.ads_top_up)) }
+    Button(onClick = vm::bookBanner, enabled = ui.bannerDays != 0 && ui.phone.isNotBlank() && !ui.busy && enough, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) {
+        Text(stringResource(if (ui.busy) R.string.ads_booking else R.string.ads_book))
+    }
+}
+
 @Composable
 private fun startLabel(day: Int): String = when (day) {
     0 -> stringResource(R.string.ads_start_now)
@@ -201,7 +301,7 @@ private fun startLabel(day: Int): String = when (day) {
 
 /* ---------------- my ads ---------------- */
 
-data class MyAdsUi(val loading: Boolean = true, val ads: List<MyAdDto> = emptyList(), val message: String? = null)
+data class MyAdsUi(val loading: Boolean = true, val ads: List<MyAdDto> = emptyList(), val banners: List<com.dalilacom.app.data.network.BannerBookingDto> = emptyList(), val message: String? = null)
 
 class MyAdsViewModel(private val store: StoreRepository) : ViewModel() {
     private val _ui = MutableStateFlow(MyAdsUi())
@@ -210,7 +310,14 @@ class MyAdsViewModel(private val store: StoreRepository) : ViewModel() {
     init { load() }
 
     fun load() {
-        viewModelScope.launch { _ui.value = MyAdsUi(loading = false, ads = store.myAds()) }
+        viewModelScope.launch { _ui.value = MyAdsUi(loading = false, ads = store.myAds(), banners = store.myBannerBookings()) }
+    }
+
+    fun cancelBanner(id: String) {
+        viewModelScope.launch {
+            store.cancelBannerBooking(id).onFailure { e -> _ui.update { it.copy(message = e.message) } }
+            load()
+        }
     }
 
     fun cancel(id: String) {
@@ -231,6 +338,23 @@ fun MyAdsScreen(container: AppContainer, onBack: () -> Unit, onBook: () -> Unit)
         Button(onClick = onBook, shape = RoundedCornerShape(4.dp), modifier = Modifier.padding(16.dp).fillMaxWidth().height(46.dp)) { Text("📢  " + stringResource(R.string.ads_book_cta)) }
         if (ui.loading) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }; return@Column }
         ui.message?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp)) }
+        if (ui.banners.isNotEmpty()) {
+            Text(stringResource(R.string.ads_my_banners), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+            ui.banners.forEach { b ->
+                Surface(shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.ads_days_n, b.days), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Text(stringResource(when (b.status) { "CONTACTED" -> R.string.ads_bb_contacted; "SCHEDULED" -> R.string.ads_bb_scheduled; "REJECTED" -> R.string.ads_state_rejected; "CANCELLED" -> R.string.ads_state_cancelled; else -> R.string.ads_bb_pending }), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (b.status == "SCHEDULED") androidx.compose.ui.graphics.Color(0xFF1E8A3A) else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(b.requestedStart.take(10) + " · ${b.credits} · ${b.phone}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        b.rejectionReason?.let { Text(it, fontSize = 12.sp) }
+                        if (b.status == "PENDING") OutlinedButton(onClick = { vm.cancelBanner(b.id) }, shape = RoundedCornerShape(4.dp)) { Text(stringResource(R.string.ads_cancel)) }
+                    }
+                }
+            }
+            Text(stringResource(R.string.ads_my_spaces), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+        }
         if (ui.ads.isEmpty()) Text(stringResource(R.string.ads_none), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
         LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(ui.ads, key = { it.id }) { ad ->

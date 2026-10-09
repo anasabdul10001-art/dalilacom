@@ -1,4 +1,4 @@
-import { AdBooking, Prisma } from "@prisma/client";
+import { AdBooking, BannerBooking, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { ApiError } from "../lib/apiError";
 import { getSettings } from "./settings.service";
@@ -172,4 +172,92 @@ export function adState(ad: Pick<AdBooking, "status" | "startsAt" | "endsAt">, n
   if (ad.status === "PENDING" || ad.status === "REJECTED" || ad.status === "CANCELLED") return ad.status;
   if (ad.endsAt.getTime() <= now.getTime()) return "ENDED";
   return ad.startsAt.getTime() > now.getTime() ? "SCHEDULED" : "LIVE";
+}
+
+/* ---------------- the big banners: the shop asks, pays and leaves its phone; the admin calls and makes the banner ---------------- */
+
+export interface BannerBookInput {
+  userId: string;
+  days: number;
+  start?: Date;
+  phone: string;
+  whatsapp?: string;
+  note?: string;
+}
+
+const digitsOnly = (v: string) => v.replace(/[^\d+]/g, "");
+
+export async function bookBanner(input: BannerBookInput): Promise<BannerBooking> {
+  const settings = await getSettings();
+  const merchant = await ownMerchant(input.userId);
+  const pack = settings.ads.bannerPackages.find((p) => p.days === input.days);
+  if (!pack) throw new AdError(400, "BAD_REQUEST", "هذه المدة غير متاحة");
+  const phone = digitsOnly(input.phone);
+  if (phone.replace(/\D/g, "").length < 6) throw new AdError(400, "BAD_REQUEST", "اكتب رقم هاتف صحيح للتواصل");
+  const now = new Date();
+  const start = input.start && input.start.getTime() > now.getTime() ? input.start : now;
+  if (start.getTime() > now.getTime() + MAX_ADVANCE_DAYS * DAY_MS) throw new AdError(400, "BAD_REQUEST", "الحجز المسبق أقصاه 60 يومًا");
+  let booking: BannerBooking;
+  try {
+    booking = await prisma.$transaction(async (tx) => {
+      if (pack.credits > 0) await adjustBalance(tx, input.userId, -pack.credits, "AD", "banner");
+      return tx.bannerBooking.create({
+        data: { merchantId: merchant.id, days: pack.days, credits: pack.credits, requestedStart: start, phone, whatsapp: input.whatsapp ? digitsOnly(input.whatsapp) : null, note: input.note?.trim() || null },
+      });
+    });
+  } catch (err) {
+    if (err instanceof InsufficientBalanceError) throw new AdError(402, "INSUFFICIENT_BALANCE", "رصيد محفظتك غير كافٍ، اشحنها أولًا", { balance: err.balance, needed: err.needed });
+    throw err;
+  }
+  // the admins are told at once, with the number to call
+  const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+  await Promise.all(admins.map((a) => notify({ userId: a.id, type: "SYSTEM", title: "حجز بانر كبير جديد", body: `${merchant.businessName}: ${phone}`, data: { kind: "BANNER_BOOKING", bookingId: booking.id }, email: false })));
+  return booking;
+}
+
+async function refundBanner(tx: Prisma.TransactionClient, b: BannerBooking, why: string) {
+  if (b.credits <= 0) return;
+  const owner = await tx.merchantProfile.findUniqueOrThrow({ where: { id: b.merchantId }, select: { userId: true } });
+  await adjustBalance(tx, owner.userId, b.credits, "AD", `${why}:banner:${b.id}`);
+}
+
+export async function cancelBannerBooking(userId: string, id: string): Promise<BannerBooking> {
+  const merchant = await ownMerchant(userId);
+  return prisma.$transaction(async (tx) => {
+    const marked = await tx.bannerBooking.updateMany({ where: { id, merchantId: merchant.id, status: "PENDING" }, data: { status: "CANCELLED" } });
+    if (marked.count === 0) throw new AdError(409, "CONFLICT", "تقدر تلغي الحجز فقط قبل ما نتواصل معك");
+    const b = await tx.bannerBooking.findUniqueOrThrow({ where: { id } });
+    await refundBanner(tx, b, "cancel");
+    return b;
+  });
+}
+
+export async function markBannerContacted(id: string): Promise<BannerBooking> {
+  const marked = await prisma.bannerBooking.updateMany({ where: { id, status: "PENDING" }, data: { status: "CONTACTED" } });
+  if (marked.count === 0) throw new AdError(409, "CONFLICT", "هذا الحجز تمت معالجته من قبل");
+  return prisma.bannerBooking.findUniqueOrThrow({ where: { id } });
+}
+
+export async function rejectBannerBooking(id: string, reason?: string): Promise<BannerBooking> {
+  const b = await prisma.$transaction(async (tx) => {
+    const marked = await tx.bannerBooking.updateMany({ where: { id, status: { in: ["PENDING", "CONTACTED"] } }, data: { status: "REJECTED", rejectionReason: reason ?? null } });
+    if (marked.count === 0) throw new AdError(409, "CONFLICT", "هذا الحجز تمت معالجته من قبل");
+    const row = await tx.bannerBooking.findUniqueOrThrow({ where: { id } });
+    await refundBanner(tx, row, "refund");
+    return row;
+  });
+  const owner = await prisma.merchantProfile.findUniqueOrThrow({ where: { id: b.merchantId }, select: { userId: true } });
+  await notify({ userId: owner.userId, type: "SYSTEM", title: "لم يتم حجز البانر الكبير", body: reason ? `السبب: ${reason}. تم إرجاع المبلغ لمحفظتك.` : "تم إرجاع المبلغ لمحفظتك.", data: { kind: "BANNER_BOOKING_REJECTED", bookingId: id }, email: false });
+  return b;
+}
+
+/** The admin made the banner for this booking: it is now scheduled, and the shop is told. */
+export async function linkBannerToBooking(bookingId: string, bannerId: string): Promise<void> {
+  const b = await prisma.bannerBooking.findUnique({ where: { id: bookingId } });
+  if (!b || b.status === "REJECTED" || b.status === "CANCELLED") return;
+  await prisma.bannerBooking.update({ where: { id: bookingId }, data: { status: "SCHEDULED", bannerId } });
+  if (b.status !== "SCHEDULED") {
+    const owner = await prisma.merchantProfile.findUniqueOrThrow({ where: { id: b.merchantId }, select: { userId: true } });
+    await notify({ userId: owner.userId, type: "SYSTEM", title: "بانرك الكبير صار جاهزًا", body: "تم تجهيز بانرك وجدولته على الصفحة الأولى للمتجر.", data: { kind: "BANNER_SCHEDULED", bookingId }, email: false });
+  }
 }
