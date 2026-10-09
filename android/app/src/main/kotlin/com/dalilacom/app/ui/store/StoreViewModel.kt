@@ -3,7 +3,10 @@ package com.dalilacom.app.ui.store
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dalilacom.app.data.network.GeoUnitDto
+import com.dalilacom.app.data.network.AdOfferDto
+import com.dalilacom.app.data.network.StoreBannerDto
 import com.dalilacom.app.data.network.StoreProductDto
+import com.dalilacom.app.data.network.StoreSlotDto
 import com.dalilacom.app.data.network.StoreSectionDto
 import com.dalilacom.app.data.repository.AuthRepository
 import com.dalilacom.app.data.repository.CartRepository
@@ -22,6 +25,10 @@ data class StoreUi(
     val countryName: String = "",
     val sections: List<StoreSectionDto> = emptyList(),
     val bestSellers: List<StoreProductDto> = emptyList(),
+    val slots: List<StoreSlotDto> = emptyList(),
+    val adOffer: AdOfferDto? = null,
+    val banners: List<StoreBannerDto> = emptyList(),
+    val bannerSeconds: Int = 5,
     val deals: List<StoreProductDto> = emptyList(),
     val newest: List<StoreProductDto> = emptyList(),
     val query: String = "",
@@ -60,7 +67,14 @@ class StoreViewModel(
     init {
         reload()
         refreshCart()
+        viewModelScope.launch {
+            store.banners()?.let { b -> _ui.value = _ui.value.copy(banners = b.banners, bannerSeconds = b.intervalSeconds) }
+        }
     }
+
+    fun bannerClick(id: String) { viewModelScope.launch { store.bannerClick(id) } }
+
+    fun adClick(id: String) { viewModelScope.launch { store.adClick(id) } }
 
     private fun scope(): StoreScope {
         val s = _ui.value
@@ -88,6 +102,8 @@ class StoreViewModel(
                 country = home?.country ?: _ui.value.country,
                 sections = home?.sections ?: emptyList(),
                 bestSellers = home?.bestSellers ?: emptyList(),
+                slots = home?.slots ?: emptyList(),
+                adOffer = home?.adOffer,
                 deals = home?.deals ?: emptyList(),
                 newest = home?.newest ?: emptyList(),
             )

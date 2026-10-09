@@ -560,6 +560,8 @@ data class StoreHomeDto(
     val country: String = "",
     val currency: String = "",
     val sections: List<StoreSectionDto> = emptyList(),
+    val slots: List<StoreSlotDto> = emptyList(),
+    val adOffer: AdOfferDto? = null,
     val bestSellers: List<StoreProductDto> = emptyList(),
     val deals: List<StoreProductDto> = emptyList(),
     val newest: List<StoreProductDto> = emptyList(),
@@ -567,3 +569,57 @@ data class StoreHomeDto(
 
 @Serializable
 data class StoreListDto(val total: Int = 0, val currency: String = "", val items: List<StoreProductDto> = emptyList())
+
+/* ---------------- advertising space and the store's banners ---------------- */
+
+@Serializable
+data class StoreSlotDto(val slot: Int, val ad: Boolean = false, val adId: String? = null, val product: StoreProductDto)
+
+@Serializable
+data class AdOfferDto(val fromCredits: Int = 0, val days: Int = 1, val creditName: String = "")
+
+@Serializable
+data class BannerTargetDto(val type: String = "none", val value: String? = null)
+
+@Serializable
+data class StoreBannerDto(
+    val id: String,
+    val title: String,
+    val subtitle: String? = null,
+    val buttonText: String? = null,
+    val bg: String = "coral",
+    val imageUrl: String? = null,
+    val target: BannerTargetDto = BannerTargetDto(),
+)
+
+@Serializable
+data class StoreBannersDto(val intervalSeconds: Int = 5, val banners: List<StoreBannerDto> = emptyList())
+
+@Serializable
+data class AdPackageDto(val days: Int, val credits: Int)
+
+@Serializable
+data class AdPackagesDto(val packages: List<AdPackageDto> = emptyList(), val creditName: String = "", val balance: Int? = null, val autoApprove: Boolean = false)
+
+@Serializable
+data class BookAdRequest(val productId: String, val days: Int, val start: String? = null)
+
+@Serializable
+data class AdBookingDto(val id: String, val status: String)
+
+@Serializable
+data class MyAdProductDto(val id: String, val name: String, val icon: String? = null)
+
+@Serializable
+data class MyAdDto(
+    val id: String,
+    val product: MyAdProductDto,
+    val days: Int,
+    val credits: Int,
+    val state: String,
+    val startsAt: String,
+    val endsAt: String,
+    val impressions: Int = 0,
+    val clicks: Int = 0,
+    val rejectionReason: String? = null,
+)

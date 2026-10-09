@@ -5,6 +5,8 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
 import { DEFAULT_COUNTRY, currencyOf, viewerCountry } from "../services/viewerCountry.service";
+import { AD_SLOTS, liveAds } from "../services/ads.service";
+import { getSettings } from "../services/settings.service";
 
 /**
  * The online store: every shop's products in one place, like a marketplace. Read-only and public; buying goes
@@ -112,7 +114,24 @@ storeRouter.get("/home", async (req, res) => {
     prisma.product.findMany({ where: { ...visible, memberDiscountEnabled: true, memberPriceCents: { not: null } }, include, orderBy: sorts.popular, take: 12 }),
     prisma.product.findMany({ where: visible, include, orderBy: sorts.new, take: 12 }),
   ]);
-  res.json({ country, currency: await currencyOf(country), sections, bestSellers: best.map(view), deals: deals.map(view), newest: newest.map(view) });
+
+  // the advertising spaces: a shop's paid product where one is running, otherwise the country's best sellers
+  const settings = await getSettings();
+  const live = (await liveAds(country)).filter((a) => a.product.isActive && a.product.stock > 0);
+  const bySlot = new Map(live.map((a) => [a.slot, a]));
+  const advertised = new Set(live.map((a) => a.productId));
+  const fillers = (await prisma.product.findMany({ where: await visibleFor({}, country), include, orderBy: sorts.popular, take: AD_SLOTS * 2 })).filter((p) => !advertised.has(p.id));
+  const slots = Array.from({ length: AD_SLOTS }, (_, i) => {
+    const ad = bySlot.get(i + 1);
+    if (ad) return { slot: i + 1, ad: true, adId: ad.id, product: view(ad.product) };
+    const filler = fillers.shift();
+    return filler ? { slot: i + 1, ad: false, adId: null, product: view(filler) } : null;
+  }).filter((s) => s !== null);
+  if (live.length) void prisma.adBooking.updateMany({ where: { id: { in: live.map((a) => a.id) } }, data: { impressions: { increment: 1 } } }).catch(() => {});
+  const cheapest = [...settings.ads.packages].sort((a, b) => a.credits - b.credits)[0];
+  const adOffer = cheapest ? { fromCredits: cheapest.credits, days: cheapest.days, creditName: settings.creditName } : null;
+
+  res.json({ country, currency: await currencyOf(country), sections, slots, adOffer, bestSellers: best.map(view), deals: deals.map(view), newest: newest.map(view) });
 });
 
 const listSchema = z.object({
@@ -165,4 +184,53 @@ storeRouter.get("/products/:id", async (req, res) => {
     take: 8,
   });
   res.json({ ...view(product), currency: await currencyOf(country), related: related.map(view) });
+});
+
+/* ---------------- the big rotating banners of the front page ---------------- */
+
+const bannerIdSchema = z.object({ id: z.string().uuid() });
+
+storeRouter.get("/banners", async (req, res) => {
+  const country = await viewerCountry(req);
+  const now = new Date();
+  const [settings, rows] = await Promise.all([
+    getSettings(),
+    prisma.storeBanner.findMany({
+      where: {
+        isActive: true,
+        OR: [{ countryCode: null }, { countryCode: country }],
+        AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: now } }] }, { OR: [{ endsAt: null }, { endsAt: { gt: now } }] }],
+      },
+      select: { id: true, title: true, subtitle: true, buttonText: true, bg: true, targetType: true, targetValue: true, imageUpdatedAt: true, imageMime: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
+  ]);
+  if (rows.length) void prisma.storeBanner.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data: { views: { increment: 1 } } }).catch(() => {});
+  res.json({
+    intervalSeconds: settings.ads.bannerSeconds,
+    banners: rows.map((b) => ({
+      id: b.id,
+      title: b.title,
+      subtitle: b.subtitle,
+      buttonText: b.buttonText,
+      bg: b.bg,
+      imageUrl: b.imageMime ? `/store/banners/${b.id}/image?v=${b.imageUpdatedAt?.getTime() ?? 0}` : null,
+      target: { type: b.targetType, value: b.targetValue },
+    })),
+  });
+});
+
+storeRouter.get("/banners/:id/image", async (req, res) => {
+  const parsed = bannerIdSchema.safeParse(req.params);
+  if (!parsed.success) return sendError(res, 404, "NOT_FOUND", "No picture");
+  const banner = await prisma.storeBanner.findUnique({ where: { id: parsed.data.id }, select: { imageMime: true, imageData: true } });
+  if (!banner?.imageData || !banner.imageMime) return sendError(res, 404, "NOT_FOUND", "No picture");
+  res.set({ "Content-Type": banner.imageMime, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=86400", "Content-Disposition": "inline" });
+  res.send(Buffer.from(banner.imageData));
+});
+
+storeRouter.post("/banners/:id/click", async (req, res) => {
+  const parsed = bannerIdSchema.safeParse(req.params);
+  if (parsed.success) await prisma.storeBanner.updateMany({ where: { id: parsed.data.id }, data: { clicks: { increment: 1 } } });
+  res.json({ ok: true });
 });

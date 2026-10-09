@@ -194,6 +194,27 @@ interface ApiService {
     @GET("products/{id}")
     suspend fun getProduct(@Path("id") id: String): Response<ProductDto>
 
+    @GET("store/banners")
+    suspend fun storeBanners(): Response<StoreBannersDto>
+
+    @POST("store/banners/{id}/click")
+    suspend fun bannerClick(@Path("id") id: String): Response<Unit>
+
+    @GET("ads/packages")
+    suspend fun adPackages(): Response<AdPackagesDto>
+
+    @POST("ads")
+    suspend fun bookAd(@Body body: BookAdRequest): Response<AdBookingDto>
+
+    @GET("ads/mine")
+    suspend fun myAds(): Response<List<MyAdDto>>
+
+    @POST("ads/{id}/cancel")
+    suspend fun cancelAd(@Path("id") id: String): Response<Unit>
+
+    @POST("ads/{id}/click")
+    suspend fun adClick(@Path("id") id: String): Response<Unit>
+
     @GET("geo/market")
     suspend fun market(): Response<MarketDto>
 
@@ -211,6 +232,7 @@ interface ApiService {
         @Query("q") q: String?,
         @Query("section") section: String?,
         @Query("deals") deals: String?,
+        @Query("merchantId") merchantId: String?,
         @Query("sort") sort: String,
         @Query("limit") limit: Int,
         @Query("offset") offset: Int,

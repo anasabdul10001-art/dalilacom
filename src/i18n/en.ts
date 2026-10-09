@@ -23,6 +23,25 @@ export const en: LanguagePack = {
     "خدمة المسارات غير متاحة حاليًا": "The routing service isn't available right now",
     "الوقت لازم يكون بصيغة HH:mm": "Time must be in HH:mm format",
 
+    // ---- the store: advertising space and banners ----
+    "البانر غير موجود": "Banner not found",
+    "ما عندك متجر": "You don't have a shop",
+    "متجرك لم يُعتمد بعد": "Your shop hasn't been approved yet",
+    "هذه المدة غير متاحة": "That duration isn't available",
+    "المنتج غير موجود في متجرك": "That product isn't in your shop",
+    "المنتج لازم يكون ظاهر ومتوفر بالمخزون ليتم الإعلان عنه": "The product must be visible and in stock to be advertised",
+    "الحجز المسبق أقصاه 60 يومًا": "You can book at most 60 days ahead",
+    "كل المساحات الإعلانية محجوزة بهذا الوقت": "All the advertising spaces are booked at that time",
+    "رصيد محفظتك غير كافٍ، اشحنها أولًا": "Your wallet balance isn't enough, top it up first",
+    "الحجز غير موجود": "Booking not found",
+    "هذا الحجز تمت معالجته من قبل": "This booking was already handled",
+    "ما عاد في مساحة فاضية بهذا الوقت، ارفضه ليرجع الرصيد لصاحبه": "No space is free at that time any more, reject it to give the money back",
+    "تقدر تلغي الحجز فقط قبل الموافقة عليه": "You can only cancel a booking before it is approved",
+    "تمت الموافقة على إعلانك في المتجر": "Your store ad was approved",
+    "إعلانك ظاهر الآن في المتجر.": "Your ad is showing in the store now.",
+    "لم تتم الموافقة على إعلانك في المتجر": "Your store ad was not approved",
+    "تم إرجاع المبلغ لمحفظتك.": "The money was returned to your wallet.",
+
     // ---- auth ----
     "البريد الإلكتروني أو كلمة السر غير صحيحة": "Incorrect email or password",
     "هذا الحساب معطّل، تواصل مع الدعم": "This account is disabled — contact support",
@@ -214,6 +233,7 @@ export const en: LanguagePack = {
     "صدر هذا الإيصال عبر منصة دليلكم": "This receipt was issued through the Dalilacom platform",
   },
   patterns: [
+    [/^السبب: (.+)\. تم إرجاع المبلغ لمحفظتك\.$/, "Reason: $1. The money was returned to your wallet."],
     [/^مرحبًا،\n\nلتفعيل حسابك على دليلكم اضغط الرابط التالي \(صالح لمدة (\d+(?:\.\d+)?) ساعة\):\n(\S+)\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة\.$/, "Hello,\n\nTo activate your Dalilacom account, open the link below (valid for $1 hours):\n$2\n\nIf you didn't request this, ignore this message."],
     [/^مرحبًا،\n\nطلب أحدهم إعادة تعيين كلمة سر حسابك على دليلكم\. إذا كنت أنت، اضغط الرابط التالي \(صالح لمدة (\d+(?:\.\d+)?) دقيقة\):\n(\S+)\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة — كلمة سرك لن تتغيّر\.$/, "Hello,\n\nSomeone asked to reset your Dalilacom account password. If it was you, open the link below (valid for $1 minutes):\n$2\n\nIf you didn't request this, ignore this message — your password won't change."],
     [/^طلبك (.+) وصل للتاجر\. رح يوصلك تحديث كل ما تتغير حالته\.$/, "Your order $1 reached the merchant. You'll get an update every time its status changes."],

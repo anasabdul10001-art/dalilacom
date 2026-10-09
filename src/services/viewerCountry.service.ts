@@ -8,6 +8,19 @@ export async function currencyOf(countryCode: string): Promise<string> {
   return country?.currencyCode ?? "EUR";
 }
 
+/** The signed-in person's id when the request carries a valid token, otherwise null (for pages that also work for visitors). */
+export async function optionalUserId(req: Request): Promise<string | null> {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) return null;
+  try {
+    const payload = verifyAuthToken(header.slice(7));
+    const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { id: true, tokenVersion: true, isDisabled: true } });
+    return user && user.tokenVersion === payload.tokenVersion && !user.isDisabled ? user.id : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The country the platform serves first; also where an account or a visitor whose country cannot be told is placed. */
 export const DEFAULT_COUNTRY = "SY";
 

@@ -1,13 +1,16 @@
 import { DEFAULT_LANGUAGE } from "../lib/languages";
 import { translateText } from "../i18n";
 import { pushStatus, sendPushToUser } from "../services/push.service";
-import { Router } from "express";
+import express, { Router } from "express";
 import { z } from "zod";
 import { ChannelDriver, Prisma, Role, TopUpStatus } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { addDemoStore, removeDemoStore } from "../services/demoStore.service";
+import { adState, approveAd, rejectAd } from "../services/ads.service";
+import { sniffImageMime } from "../lib/image";
+import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
 import { aiProviderStatus, aiTotals, aiUsage } from "../services/ai.service";
@@ -36,6 +39,14 @@ const settingsSchema = z.object({
       maxRadiusKm: z.number().positive().max(20000),
       merchantMaxAudience: z.number().int().positive().max(1000000),
       pricePerAnnouncement: z.number().int().nonnegative().max(10000000),
+    })
+    .partial()
+    .optional(),
+  ads: z
+    .object({
+      packages: z.array(z.object({ days: z.number().int().min(1).max(365), credits: z.number().int().nonnegative().max(100000000) })).max(12),
+      autoApprove: z.boolean(),
+      bannerSeconds: z.number().int().min(2).max(60),
     })
     .partial()
     .optional(),
@@ -273,4 +284,138 @@ adminRouter.post("/demo-store", async (_req, res) => {
 
 adminRouter.delete("/demo-store", async (_req, res) => {
   res.json(await removeDemoStore());
+});
+
+/* ---------------- advertising space bookings ---------------- */
+
+adminRouter.get("/ads", async (req, res) => {
+  const status = typeof req.query.status === "string" ? req.query.status : undefined;
+  const rows = await prisma.adBooking.findMany({
+    where: status && ["PENDING", "ACTIVE", "REJECTED", "CANCELLED"].includes(status) ? { status: status as "PENDING" | "ACTIVE" | "REJECTED" | "CANCELLED" } : {},
+    include: { merchant: { select: { id: true, businessName: true } }, product: { select: { id: true, name: true, icon: true } } },
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    take: 200,
+  });
+  res.json(rows.map((a) => ({
+    id: a.id,
+    merchant: a.merchant,
+    product: a.product,
+    country: a.countryCode,
+    slot: a.slot,
+    days: a.days,
+    credits: a.credits,
+    status: a.status,
+    state: adState(a),
+    startsAt: a.startsAt,
+    endsAt: a.endsAt,
+    impressions: a.impressions,
+    clicks: a.clicks,
+    rejectionReason: a.rejectionReason,
+    createdAt: a.createdAt,
+  })));
+});
+
+adminRouter.post("/ads/:id/approve", route(async (req, res) => {
+  await approveAd(req.params.id);
+  res.json({ ok: true });
+}));
+
+adminRouter.post("/ads/:id/reject", route(async (req, res) => {
+  const reason = z.object({ reason: z.string().trim().max(300).optional() }).safeParse(req.body);
+  await rejectAd(req.params.id, reason.success ? reason.data.reason : undefined);
+  res.json({ ok: true });
+}));
+
+/* ---------------- the store's front-page banners ---------------- */
+
+const bannerFields = z.object({
+  title: z.string().trim().min(1).max(80),
+  subtitle: z.string().trim().max(160).nullable().optional(),
+  buttonText: z.string().trim().max(30).nullable().optional(),
+  bg: z.enum(["coral", "black", "blue", "green", "purple", "gold"]).default("coral"),
+  targetType: z.enum(["none", "product", "section", "shop", "deals", "url"]).default("none"),
+  targetValue: z.string().trim().max(500).nullable().optional(),
+  countryCode: z.string().length(2).nullable().optional(),
+  startsAt: z.string().nullable().optional(),
+  endsAt: z.string().nullable().optional(),
+  isActive: z.boolean().default(true),
+});
+
+function bannerData(input: Partial<z.infer<typeof bannerFields>>) {
+  const date = (v: string | null | undefined) => (v === undefined ? undefined : v ? new Date(v) : null);
+  return {
+    ...(input.title !== undefined ? { title: input.title } : {}),
+    ...(input.subtitle !== undefined ? { subtitle: input.subtitle || null } : {}),
+    ...(input.buttonText !== undefined ? { buttonText: input.buttonText || null } : {}),
+    ...(input.bg !== undefined ? { bg: input.bg } : {}),
+    ...(input.targetType !== undefined ? { targetType: input.targetType } : {}),
+    ...(input.targetValue !== undefined ? { targetValue: input.targetValue || null } : {}),
+    ...(input.countryCode !== undefined ? { countryCode: input.countryCode ? input.countryCode.toUpperCase() : null } : {}),
+    ...(input.startsAt !== undefined ? { startsAt: date(input.startsAt) } : {}),
+    ...(input.endsAt !== undefined ? { endsAt: date(input.endsAt) } : {}),
+    ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+  };
+}
+
+const bannerSelect = {
+  id: true, sortOrder: true, isActive: true, title: true, subtitle: true, buttonText: true, bg: true, targetType: true, targetValue: true,
+  countryCode: true, startsAt: true, endsAt: true, imageMime: true, imageUpdatedAt: true, views: true, clicks: true, createdAt: true,
+} as const;
+
+adminRouter.get("/banners", async (_req, res) => {
+  const rows = await prisma.storeBanner.findMany({ select: bannerSelect, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
+  res.json(rows.map((b) => ({ ...b, imageUrl: b.imageMime ? `/store/banners/${b.id}/image?v=${b.imageUpdatedAt?.getTime() ?? 0}` : null })));
+});
+
+adminRouter.post("/banners", async (req, res) => {
+  const parsed = bannerFields.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const last = await prisma.storeBanner.aggregate({ _max: { sortOrder: true } });
+  const banner = await prisma.storeBanner.create({
+    data: { ...(bannerData(parsed.data) as { title: string }), sortOrder: (last._max.sortOrder ?? 0) + 1 },
+    select: bannerSelect,
+  });
+  res.status(201).json(banner);
+});
+
+adminRouter.patch("/banners/:id", async (req, res) => {
+  const parsed = bannerFields.partial().safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const exists = await prisma.storeBanner.findUnique({ where: { id: req.params.id }, select: { id: true } });
+  if (!exists) return sendError(res, 404, "NOT_FOUND", "البانر غير موجود");
+  res.json(await prisma.storeBanner.update({ where: { id: req.params.id }, data: bannerData(parsed.data), select: bannerSelect }));
+});
+
+adminRouter.delete("/banners/:id", async (req, res) => {
+  await prisma.storeBanner.deleteMany({ where: { id: req.params.id } });
+  res.json({ ok: true });
+});
+
+// The picture comes as raw image bytes (like profile photos); a banner without one is drawn from its colour.
+adminRouter.put(
+  "/banners/:id/image",
+  express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: 2 * 1024 * 1024 }),
+  async (req, res) => {
+    const body = req.body;
+    if (!Buffer.isBuffer(body) || body.length === 0) return sendError(res, 415, "UNSUPPORTED_MEDIA", "أرسل الصورة بصيغة JPEG أو PNG أو WebP");
+    const mime = sniffImageMime(body);
+    if (!mime) return sendError(res, 415, "UNSUPPORTED_MEDIA", "الملف ليس صورة صالحة (JPEG أو PNG أو WebP)");
+    const exists = await prisma.storeBanner.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!exists) return sendError(res, 404, "NOT_FOUND", "البانر غير موجود");
+    await prisma.storeBanner.update({ where: { id: req.params.id }, data: { imageMime: mime, imageData: body, imageUpdatedAt: new Date() } });
+    res.json({ ok: true });
+  },
+);
+
+adminRouter.delete("/banners/:id/image", async (req, res) => {
+  await prisma.storeBanner.updateMany({ where: { id: req.params.id }, data: { imageMime: null, imageData: null, imageUpdatedAt: null } });
+  res.json({ ok: true });
+});
+
+// The new order of all the banners (the ids, first to last).
+adminRouter.put("/banners-order", async (req, res) => {
+  const parsed = z.object({ ids: z.array(z.string().uuid()).max(500) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await prisma.$transaction(parsed.data.ids.map((id, i) => prisma.storeBanner.updateMany({ where: { id }, data: { sortOrder: i + 1 } })));
+  res.json({ ok: true });
 });

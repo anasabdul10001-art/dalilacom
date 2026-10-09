@@ -290,6 +290,8 @@ function renderScreen() {
     case "responder": return screenResponder();
     case "favorites": return screenFavorites();
     case "store": return screenStore();
+    case "adBook": return screenAdBook();
+    case "myAds": return screenMyAds();
     case "merchantHours": return screenMerchantHours();
     case "merchantProfile": return screenMerchantProfile();
     case "profileEdit": return screenProfileEdit();
@@ -1301,6 +1303,7 @@ function tabProfile() {
       <button class="btn outline" style="max-width:240px" onclick="S._acct=null;go('account')">${esc(t("profile.account"))}</button>
       <div style="height:10px"></div>
       <button class="btn" style="max-width:240px" onclick="openStore()">${esc(t("profile.store"))}</button>
+      ${S.role === "MERCHANT" ? `<div style="height:10px"></div><button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>
       <div style="height:10px"></div>
@@ -1396,50 +1399,96 @@ function hoursTable(m) {
 
 function screenMerchantDetail() {
   if (!S._merchantDetail || S._merchantDetail.id !== S.params.merchantId) {
-    S._merchantDetail = { id: S.params.merchantId, loading: true };
+    S._merchantDetail = { id: S.params.merchantId, loading: true, tab: "home", q: "", sort: "popular" };
     loadMerchantDetail(S.params.merchantId);
   }
   const m = S._merchantDetail;
-  if (m.loading) return backRow() + spinner();
-  if (!m.merchant) return backRow() + `<div class="error-banner">${esc(t("place.notFound"))}</div>`;
+  if (m.loading) return `<div class="store">${backRow()}${spinner()}</div>`;
+  if (!m.merchant) return `<div class="store">${backRow()}<div class="error-banner">${esc(t("place.notFound"))}</div></div>`;
   const x = m.merchant;
   const hasCoords = x.latitude != null && x.longitude != null;
   const phone = (x.phone || "").trim();
   const wa = (x.whatsapp || "").replace(/\D/g, "");
   const saved = S._discover && S._discover.favIds.includes(x.id);
+  const products = m.products || [];
+  const rated = products.filter((p) => p.ratingCount > 0);
+  const votes = rated.reduce((n, p) => n + p.ratingCount, 0);
+  const avg = votes ? rated.reduce((n, p) => n + p.rating * p.ratingCount, 0) / votes : 0;
+  const sold = products.reduce((n, p) => n + (p.soldCount || 0), 0);
+  let hue = 0;
+  for (const c of String(x.id)) hue = (hue * 31 + c.charCodeAt(0)) % 360;
+  const q = (m.q || "").trim().toLowerCase();
+  const sorted = [...products].filter((p) => !q || p.name.toLowerCase().includes(q)).sort({
+    popular: (p1, p2) => p2.soldCount - p1.soldCount,
+    new: () => 0,
+    rating: (p1, p2) => p2.rating - p1.rating,
+    price_asc: (p1, p2) => p1.priceCents - p2.priceCents,
+    price_desc: (p1, p2) => p2.priceCents - p1.priceCents,
+  }[m.sort] || (() => 0));
+  const deals = products.filter((p) => p.memberDiscountEnabled);
+  let body;
+  if (m.tab === "about") {
+    body = `
+      <section class="store-sec">
+        ${x.bio ? `<p class="place-bio" style="margin-top:0">${esc(x.bio)}</p>` : ""}
+        ${x.address ? `<div class="place-row">📍 ${esc(x.address)}</div>` : ""}
+        ${phone ? `<div class="place-row">📞 <a href="tel:${esc(phone)}">${esc(phone)}</a></div>` : ""}
+        ${(x.discounts || []).length ? `<div class="section-title">${esc(t("place.discounts"))}</div>${x.discounts.map((d) => `<div class="badge info" style="margin-bottom:6px">🏷️ ${esc(d.title)} — ${d.percent}%</div>`).join("")}` : ""}
+        ${hoursTable(x)}
+      </section>`;
+  } else if (m.tab === "all") {
+    body = `
+      <div class="store-bar"><h2>${esc(t("shop.allProducts"))} <small>${sorted.length}</small></h2>
+        <select class="store-sort" onchange="S._merchantDetail.sort=this.value;render()">
+          ${[["popular", "الأكثر مبيعًا"], ["rating", "الأعلى تقييمًا"], ["price_asc", "السعر: من الأقل"], ["price_desc", "السعر: من الأعلى"]].map(([v, l]) => `<option value="${v}" ${m.sort === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
+        </select></div>
+      ${sorted.length ? `<div class="store-grid">${sorted.map(storeCard).join("")}</div>` : `<div class="empty">${esc(t("place.noProducts"))}</div>`}`;
+  } else {
+    body = products.length ? `
+      ${deals.length ? storeSection(t("store.deals"), deals, "deals-shop") : ""}
+      <section class="store-sec">
+        <div class="store-sec-head"><h2>${esc(t("shop.bestInShop"))}</h2><button onclick="S._merchantDetail.tab='all';render()">${esc(t("store.seeAll"))} ›</button></div>
+        <div class="store-grid">${[...products].sort((p1, p2) => p2.soldCount - p1.soldCount).slice(0, 10).map(storeCard).join("")}</div>
+      </section>` : `<div class="empty">${esc(t("place.noProducts"))}</div>`;
+  }
   return `
-    ${backRow()}
-    <div class="place-head">
-      ${avatarHtml(x.avatarUrl, x.businessName, "big")}
-      <div style="min-width:0">
-        <h1 class="screen-title" style="margin:0">${esc(x.businessName)}</h1>
-        <p class="screen-sub" style="margin:2px 0 6px">${esc(catName(x.category))}${x.distanceKm != null ? " · " + x.distanceKm.toFixed(1) + " " + esc(t("unit.km")) : ""}</p>
-        ${openBadge(x.openStatus)}
+    <div class="store shop-page">
+      <div class="store-head">
+        <button class="store-icon-btn" onclick="back()" aria-label="back">›</button>
+        <b class="store-brand" style="font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.businessName)}</b>
+        <form class="store-search" onsubmit="event.preventDefault();S._merchantDetail.tab='all';S._merchantDetail.q=qs('shop-q').value;render()">
+          <input id="shop-q" type="search" value="${esc(m.q || "")}" placeholder="${esc(t("shop.searchIn"))}" />
+          <button type="submit" aria-label="search">${ICON.search}</button>
+        </form>
+        <button class="store-icon-btn store-cart" onclick="storeToCart()" aria-label="cart">${ICON.bag}</button>
       </div>
-    </div>
-    ${x.bio ? `<p class="place-bio">${esc(x.bio)}</p>` : ""}
-    <div class="place-actions">
-      ${phone ? `<a href="tel:${esc(phone)}"><span>📞</span>${esc(t("place.call"))}</a>` : ""}
-      ${wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span>💬</span>${esc(t("place.whatsapp"))}</a>` : ""}
-      ${hasCoords ? `<button onclick="startRoute('${x.id}')"><span>🧭</span>${esc(t("place.directions"))}</button>` : ""}
-      <button onclick="shareMerchant()"><span>📤</span>${esc(t("place.share"))}</button>
-      <button class="${saved ? "on" : ""}" onclick="toggleFav('${x.id}')"><span>${saved ? "♥" : "♡"}</span>${esc(saved ? t("place.saved") : t("place.save"))}</button>
-    </div>
-    ${x.address ? `<div class="place-row">📍 ${esc(x.address)}</div>` : ""}
-    ${(x.discounts || []).length ? `<div class="section-title">${esc(t("place.discounts"))}</div>${x.discounts.map((d) => `<div class="badge info" style="margin-bottom:6px">🏷️ ${esc(d.title)} — ${d.percent}%</div>`).join("")}` : ""}
-    ${hoursTable(x)}
-    <div class="section-title">${esc(t("place.products"))}</div>
-    ${(m.products || []).length === 0 ? `<div class="empty-state">${esc(t("place.noProducts"))}</div>` : m.products.map((p) => `
-      <div class="card clickable" onclick="go('productDetail', {productId:'${p.id}'})">
-        <div class="title-line">
-          <strong>${esc(p.name)}</strong>
-          ${(!p.isActive || p.stock <= 0) ? `<span class="badge danger">${esc(t("place.unavailable"))}</span>` : ""}
+      <div class="shop-cover" style="--h:${hue}">
+        <div class="shop-id">
+          ${avatarHtml(x.avatarUrl, x.businessName, "big")}
+          <div class="shop-id-text">
+            <h1>${esc(x.businessName)} <span class="shop-verified" title="${esc(t("shop.verified"))}">✓</span></h1>
+            <p>${esc(catName(x.category))}${x.distanceKm != null ? " · " + x.distanceKm.toFixed(1) + " " + esc(t("unit.km")) : ""}</p>
+            <div class="shop-stats">
+              ${avg ? `<span><b class="star">★ ${avg.toFixed(1)}</b> (${votes})</span>` : ""}
+              <span><b>${products.length}</b> ${esc(t("shop.products"))}</span>
+              ${sold ? `<span><b>${storeCount(sold)}</b> ${esc(t("shop.sold"))}</span>` : ""}
+              ${openBadge(x.openStatus)}
+            </div>
+          </div>
+          <button class="shop-follow ${saved ? "on" : ""}" onclick="toggleFav('${x.id}')">${saved ? "✓ " + esc(t("place.saved")) : "+ " + esc(t("shop.follow"))}</button>
         </div>
-        ${p.memberDiscountEnabled && p.memberPriceCents != null
-          ? `<p><span class="price strike">${fmt(p.priceCents)}</span> <span class="price" style="color:var(--primary)">${fmt(p.memberPriceCents)} ${esc(t("place.forMembers"))}</span></p>`
-          : `<p class="price">${fmt(p.priceCents)}</p>`}
-      </div>`).join("")}
-  `;
+      </div>
+      <div class="shop-actions">
+        ${phone ? `<a href="tel:${esc(phone)}"><span>📞</span>${esc(t("place.call"))}</a>` : ""}
+        ${wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span>💬</span>${esc(t("place.whatsapp"))}</a>` : ""}
+        ${hasCoords ? `<button onclick="startRoute('${x.id}')"><span>🧭</span>${esc(t("place.directions"))}</button>` : ""}
+        <button onclick="shareMerchant()"><span>📤</span>${esc(t("place.share"))}</button>
+      </div>
+      <div class="store-tabs">
+        ${[["home", t("shop.tabHome")], ["all", t("shop.tabAll")], ["about", t("shop.tabAbout")]].map(([id, label]) => `<button class="${m.tab === id ? "on" : ""}" onclick="S._merchantDetail.tab='${id}';render()">${esc(label)}</button>`).join("")}
+      </div>
+      ${body}
+    </div>`;
 }
 
 /* ---- merchant: opening hours editor ---- */
@@ -1526,14 +1575,14 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 }
 
 async function loadMerchantDetail(id) {
-  const [mRes, pRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/products?merchantId=" + id)]);
+  const [mRes, pRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/store/products?limit=60&merchantId=" + id)]);
   const merchant = mRes.ok ? mRes.data : null;
   const loc = S._discover && S._discover.userLoc;
   // /merchant/:id doesn't compute distance; derive it from the location the map view already asked for.
   if (merchant && loc && merchant.latitude != null && merchant.longitude != null) {
     merchant.distanceKm = haversineKm(loc.lat, loc.lng, merchant.latitude, merchant.longitude);
   }
-  S._merchantDetail = { id, loading: false, merchant, products: pRes.ok ? pRes.data : [] };
+  S._merchantDetail = { id, loading: false, merchant, products: pRes.ok ? pRes.data.items : [], tab: "home", q: "", sort: "popular" };
   render();
 }
 
@@ -1678,9 +1727,13 @@ function storeScopeBar(st) {
 }
 
 async function loadStoreHome() {
-  const { ok, data } = await api("GET", "/store/home?" + storeScopeParams(S._store || {}, new URLSearchParams()));
+  const [{ ok, data }, banners] = await Promise.all([
+    api("GET", "/store/home?" + storeScopeParams(S._store || {}, new URLSearchParams())),
+    api("GET", "/store/banners"),
+  ]);
   const st = S._store;
   if (!st) return;
+  if (banners.ok) st.banners = { list: banners.data.banners, seconds: banners.data.intervalSeconds, idx: 0 };
   st.loading = false;
   st.home = ok ? data : { sections: [], bestSellers: [], deals: [], newest: [] };
   if (ok && data.currency) S.currency = data.currency;
@@ -1769,6 +1822,7 @@ async function storeAdd(id, ev) {
   S.error = null;
   const st = S._store;
   if (st) { st.cartCount += 1; st.justAdded = id; render(); setTimeout(() => { if (S._store === st && st.justAdded === id) { st.justAdded = null; render(); } }, 1600); }
+  else toast(t("store.addedToCart"));
 }
 
 /** The product picture: its photo when it has one, otherwise a soft tile with its icon (the shops' own photos replace it). */
@@ -1780,6 +1834,224 @@ function storePic(p) {
 /** The member discount in percent (0 when there is none). */
 function storeOff(p) {
   return p.memberDiscountEnabled && p.priceCents > 0 ? Math.round((1 - p.memberPriceCents / p.priceCents) * 100) : 0;
+}
+
+/* ---------------- the big rotating banners ---------------- */
+
+function storeSlider(st, home) {
+  const list = st.banners && st.banners.list ? st.banners.list : [];
+  if (!list.length) {
+    return `<button class="store-banner" onclick="storeSeeAll('deals')">
+      <h1>${esc(t("store.heroBig"))}</h1>
+      <p>${esc(t("store.heroUpTo", { n: Math.max(0, ...home.deals.map(storeOff)) }))}</p>
+      <span class="btn-pill">${esc(t("store.shopNow"))}</span>
+      <i>🛍️</i>
+    </button>`;
+  }
+  const idx = Math.min(st.banners.idx || 0, list.length - 1);
+  return `
+    <div class="store-slider" id="store-slider">
+      ${list.map((b, i) => `
+        <button class="store-slide bg-${esc(b.bg)} ${b.imageUrl ? "has-img" : ""} ${i === idx ? "on" : ""}" ${b.imageUrl ? `style="background-image:url('${esc(b.imageUrl)}')"` : ""} onclick="storeBannerGo(${i})">
+          <span class="store-slide-text">
+            <h1>${esc(b.title)}</h1>
+            ${b.subtitle ? `<p>${esc(b.subtitle)}</p>` : ""}
+            ${b.buttonText ? `<span class="btn-pill">${esc(b.buttonText)}</span>` : ""}
+          </span>
+        </button>`).join("")}
+      ${list.length > 1 ? `
+        <button class="store-slide-arrow prev" onclick="storeBannerStep(-1)" aria-label="prev">›</button>
+        <button class="store-slide-arrow next" onclick="storeBannerStep(1)" aria-label="next">‹</button>
+        <div class="store-dots">${list.map((_, i) => `<i class="${i === idx ? "on" : ""}" onclick="storeBannerShow(${i})"></i>`).join("")}</div>` : ""}
+    </div>`;
+}
+
+/** Moves to another banner without redrawing the page (so a tap in progress, or a scroll, is not disturbed). */
+function storeBannerShow(i) {
+  const st = S._store;
+  if (!st || !st.banners) return;
+  const n = st.banners.list.length;
+  st.banners.idx = ((i % n) + n) % n;
+  document.querySelectorAll("#store-slider .store-slide").forEach((el, k) => el.classList.toggle("on", k === st.banners.idx));
+  document.querySelectorAll("#store-slider .store-dots i").forEach((el, k) => el.classList.toggle("on", k === st.banners.idx));
+  storeSliderRestart();
+}
+
+function storeBannerStep(d) { storeBannerShow((S._store.banners.idx || 0) + d); }
+
+/** The banners change by themselves, as often as the admin set; the timer lives only while the store is on screen. */
+function storeSliderRestart() {
+  if (S._sliderTimer) { clearInterval(S._sliderTimer); S._sliderTimer = null; }
+  const st = S._store;
+  if (S.screen !== "store" || !st || !st.banners || st.banners.list.length < 2) return;
+  S._sliderTimer = setInterval(() => {
+    if (S.screen !== "store" || !S._store || !document.getElementById("store-slider")) { clearInterval(S._sliderTimer); S._sliderTimer = null; return; }
+    const b = S._store.banners;
+    b.idx = ((b.idx || 0) + 1) % b.list.length;
+    document.querySelectorAll("#store-slider .store-slide").forEach((el, k) => el.classList.toggle("on", k === b.idx));
+    document.querySelectorAll("#store-slider .store-dots i").forEach((el, k) => el.classList.toggle("on", k === b.idx));
+  }, Math.max(2, Number(st.banners.seconds) || 5) * 1000);
+}
+
+function storeBannerGo(i) {
+  const b = S._store.banners.list[i];
+  if (!b) return;
+  api("POST", "/store/banners/" + b.id + "/click");
+  const { type, value } = b.target || {};
+  if (type === "product" && value) go("productDetail", { productId: value });
+  else if (type === "section" && value) storePickSection(value);
+  else if (type === "shop" && value) go("merchantDetail", { merchantId: value });
+  else if (type === "deals") storeSeeAll("deals");
+  else if (type === "url" && /^https:\/\//.test(value || "")) window.open(value, "_blank", "noopener");
+}
+
+/* ---------------- the advertising spaces beside the banner ---------------- */
+
+/** One space: a shop's paid product (marked as an ad) or, while nobody rented it, a best seller with an invitation to advertise. */
+function storeSlot(sl) {
+  const p = sl.product;
+  const off = storeOff(p);
+  return `
+    <div class="store-slot ${sl.ad ? "is-ad" : ""}" role="button" tabindex="0" onclick="storeSlotOpen('${sl.adId || ""}','${p.id}')">
+      ${storePic(p)}
+      ${sl.ad ? `<span class="store-slot-tag">${esc(t("ads.tag"))}</span>` : `<span class="store-slot-here" onclick="event.stopPropagation();openAdBooking()">📢 ${esc(t("ads.here"))}</span>`}
+      <span class="store-slot-info">
+        <b>${fmt(p.memberDiscountEnabled ? p.memberPriceCents : p.priceCents)}</b>
+        ${off ? `<em>-${off}%</em>` : ""}
+        <small>${esc(p.name)}</small>
+      </span>
+      <button class="store-bag" onclick="storeAdd('${p.id}', event)" aria-label="${esc(t("store.add"))}">${ICON.bag}</button>
+    </div>`;
+}
+
+function storeSlotOpen(adId, productId) {
+  if (adId) api("POST", "/ads/" + adId + "/click");
+  go("productDetail", { productId });
+}
+
+/* ---------------- renting a space (shops) ---------------- */
+
+function openAdBooking() {
+  if (!S.token) return go("login");
+  S._adBook = null;
+  go("adBook");
+}
+
+function screenAdBook() {
+  if (!S._adBook) { S._adBook = { loading: true, productId: "", days: 0, start: "" }; loadAdBook(); }
+  const a = S._adBook;
+  if (a.loading) return `${backRow()}${spinner()}`;
+  if (S.role !== "MERCHANT") {
+    return `${backRow()}
+      <h1 class="screen-title">${esc(t("ads.bookTitle"))}</h1>
+      <p class="screen-sub">${esc(t("ads.needShop"))}</p>
+      <button class="btn" style="max-width:260px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`;
+  }
+  if (a.done) {
+    return `${backRow()}
+      <div class="success-banner" style="margin-top:12px">${esc(a.done.autoApprove ? t("ads.doneLive") : t("ads.doneWaiting"))}</div>
+      <div style="height:14px"></div>
+      <button class="btn" style="max-width:260px" onclick="S._myAds=null;back();go('myAds')">${esc(t("profile.myAds"))}</button>`;
+  }
+  const pk = a.packages || [];
+  const chosen = pk.find((p) => p.days === a.days);
+  const enough = chosen ? a.balance >= chosen.credits : true;
+  const starts = [["", t("ads.startNow")]];
+  for (let d = 1; d <= 7; d++) {
+    const dt = new Date(); dt.setDate(dt.getDate() + d); dt.setHours(0, 0, 0, 0);
+    starts.push([dt.toISOString(), d === 1 ? t("ads.tomorrow") : dt.toLocaleDateString(LANG, { weekday: "long", day: "numeric", month: "short" })]);
+  }
+  if (a.start && !starts.some(([v]) => v === a.start)) starts.push([a.start, new Date(a.start).toLocaleString(LANG, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })]);
+  return `
+    ${backRow()}
+    <h1 class="screen-title">${esc(t("ads.bookTitle"))}</h1>
+    <p class="screen-sub">${esc(t("ads.bookSub"))}</p>
+    ${!a.products.length ? `<div class="error-banner">${esc(t("ads.noProducts"))}</div>` : `
+    <div class="field"><label>${esc(t("ads.pickProduct"))}</label>
+      <select onchange="S._adBook.productId=this.value;render()">
+        <option value="">—</option>
+        ${a.products.map((p) => `<option value="${p.id}" ${a.productId === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}
+      </select></div>
+    <div class="field"><label>${esc(t("ads.pickDays"))}</label>
+      <div class="ad-packs">${pk.map((p) => `
+        <button class="ad-pack ${a.days === p.days ? "on" : ""}" onclick="S._adBook.days=${p.days};render()">
+          <b>${esc(t("ads.daysN", { n: p.days }))}</b><span>${p.credits} ${esc(a.creditName)}</span>
+        </button>`).join("")}</div></div>
+    <div class="field"><label>${esc(t("ads.pickStart"))}</label>
+      <select onchange="S._adBook.start=this.value;render()">${starts.map(([v, l]) => `<option value="${esc(v)}" ${a.start === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
+    <div class="card" style="margin-top:6px">
+      <div class="list-row"><span>${esc(t("ads.yourBalance"))}</span><span class="price">${a.balance} ${esc(a.creditName)}</span></div>
+      ${chosen ? `<div class="list-row"><span>${esc(t("ads.price"))}</span><span class="price" style="color:var(--primary)">${chosen.credits} ${esc(a.creditName)}</span></div>` : ""}
+      ${!a.autoApprove ? `<p class="muted" style="margin:8px 0 0">${esc(t("ads.reviewNote"))}</p>` : ""}
+    </div>
+    ${a.error ? `<div class="error-banner">${esc(a.error)}</div>` : ""}
+    ${a.nextAvailable ? `<button class="btn outline" style="margin-top:8px" onclick="S._adBook.start='${esc(a.nextAvailable)}';S._adBook.nextAvailable=null;S._adBook.error=null;render()">${esc(t("ads.useNext", { when: new Date(a.nextAvailable).toLocaleString(LANG, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) }))}</button>` : ""}
+    ${!enough ? `<button class="btn outline" style="margin-top:8px" onclick="go('wallet')">${esc(t("ads.topUp"))}</button>` : ""}
+    <div style="height:12px"></div>
+    <button class="btn" ${!a.productId || !a.days || a.busy || !enough ? "disabled" : ""} onclick="submitAdBooking()">${esc(a.busy ? t("ads.booking") : t("ads.book"))}</button>`}`;
+}
+
+async function loadAdBook() {
+  const [pk, mine] = await Promise.all([api("GET", "/ads/packages"), S.role === "MERCHANT" ? api("GET", "/products/mine") : Promise.resolve({ ok: true, data: [] })]);
+  const a = S._adBook;
+  if (!a) return;
+  a.loading = false;
+  a.packages = pk.ok ? pk.data.packages : [];
+  a.creditName = pk.ok ? pk.data.creditName : "";
+  a.balance = pk.ok ? pk.data.balance || 0 : 0;
+  a.autoApprove = pk.ok ? pk.data.autoApprove : false;
+  a.products = mine.ok ? mine.data.filter((p) => p.isActive && p.stock > 0) : [];
+  if (a.packages.length) a.days = a.packages[0].days;
+  render();
+}
+
+async function submitAdBooking() {
+  const a = S._adBook;
+  a.busy = true; a.error = null; a.nextAvailable = null;
+  render();
+  const body = { productId: a.productId, days: a.days };
+  if (a.start) body.start = a.start;
+  const { ok, data } = await api("POST", "/ads", body);
+  a.busy = false;
+  if (ok) { a.done = { autoApprove: data.status === "ACTIVE" }; }
+  else {
+    a.error = errMsg(data, t("ads.failed"));
+    if (data && data.error && data.error.details && data.error.details.nextAvailable) a.nextAvailable = data.error.details.nextAvailable;
+  }
+  render();
+}
+
+function screenMyAds() {
+  if (!S._myAds) { S._myAds = { loading: true }; loadMyAds(); }
+  const m = S._myAds;
+  if (m.loading) return `${backRow()}<h1 class="screen-title">${esc(t("profile.myAds"))}</h1>${spinner()}`;
+  const day = (d) => new Date(d).toLocaleDateString(LANG, { day: "numeric", month: "short" });
+  return `
+    ${backRow()}
+    <h1 class="screen-title">${esc(t("profile.myAds"))}</h1>
+    <button class="btn" style="max-width:260px;margin-bottom:12px" onclick="openAdBooking()">📢 ${esc(t("ads.bookCta"))}</button>
+    ${errorBanner()}
+    ${m.list.length === 0 ? `<div class="empty-state">${esc(t("ads.none"))}</div>` : m.list.map((a) => `
+      <div class="card">
+        <div class="title-line"><strong>${esc(a.product.name)}</strong><span class="badge ${a.state === "LIVE" ? "success" : a.state === "PENDING" || a.state === "SCHEDULED" ? "warning" : "neutral"}">${esc(t("ads.state." + a.state))}</span></div>
+        <p class="muted">${esc(t("ads.daysN", { n: a.days }))} · ${day(a.startsAt)} → ${day(a.endsAt)} · ${a.credits}</p>
+        <p class="muted">👁 ${a.impressions} · 👆 ${a.clicks}</p>
+        ${a.rejectionReason ? `<p class="muted">${esc(a.rejectionReason)}</p>` : ""}
+        ${a.state === "PENDING" ? `<button class="btn outline small" style="width:auto" onclick="cancelMyAd('${a.id}')">${esc(t("ads.cancel"))}</button>` : ""}
+      </div>`).join("")}`;
+}
+
+async function loadMyAds() {
+  const { ok, data } = await api("GET", "/ads/mine");
+  S._myAds = { loading: false, list: ok ? data : [] };
+  render();
+}
+
+async function cancelMyAd(id) {
+  if (!confirm(t("ads.cancelConfirm"))) return;
+  const { ok, data } = await api("POST", "/ads/" + id + "/cancel");
+  if (!ok) S.error = errMsg(data, t("ads.failed"));
+  loadMyAds();
 }
 
 /** The product page's pictures: the big one and a row of small ones to pick from. */
@@ -1857,15 +2129,12 @@ function screenStore() {
   } else {
     body = `
       <div class="store-hero">
-        <div class="store-picks">${home.bestSellers.slice(0, 3).map((p) => `<button onclick="go('productDetail',{productId:'${p.id}'})">${storePic(p)}</button>`).join("")}</div>
-        <button class="store-banner" onclick="storeSeeAll('deals')">
-          <h1>${esc(t("store.heroBig"))}</h1>
-          <p>${esc(t("store.heroUpTo", { n: Math.max(0, ...home.deals.map(storeOff)) }))}</p>
-          <span class="btn-pill">${esc(t("store.shopNow"))}</span>
-          <i>🛍️</i>
-        </button>
-        <div class="store-picks">${home.bestSellers.slice(3, 6).map((p) => `<button onclick="go('productDetail',{productId:'${p.id}'})">${storePic(p)}</button>`).join("")}</div>
+        <div class="store-picks">${(home.slots || []).slice(0, 3).map(storeSlot).join("")}</div>
+        ${storeSlider(st, home)}
+        <div class="store-picks">${(home.slots || []).slice(3, 6).map(storeSlot).join("")}</div>
       </div>
+      ${home.slots && home.slots.length ? `<div class="store-slotstrip">${home.slots.map(storeSlot).join("")}</div>` : ""}
+      ${home.adOffer ? `<div class="store-adstrip"><span>📢 ${esc(t("ads.pitch", { price: home.adOffer.fromCredits, name: home.adOffer.creditName, days: home.adOffer.days }))}</span><button onclick="openAdBooking()">${esc(t("ads.bookCta"))}</button></div>` : ""}
       <div class="store-circles">${sections.map((x) => `
         <button onclick="storePickSection('${x.id}')"><span>${esc(x.icon)}</span><em>${esc(storeSecName(x))}</em></button>`).join("")}</div>
       ${storeSection(t("store.best"), home.bestSellers, "best")}
@@ -4094,6 +4363,8 @@ function wireUpAfterRender() {
     renderDiscoverMap();
   }
   if (S.screen === "merchantRegister" || S.screen === "merchantProfile") renderPicker();
+  if (S.screen === "store" && S._store && S._store.banners && S._store.banners.list.length > 1) { if (!S._sliderTimer) storeSliderRestart(); }
+  else if (S._sliderTimer) { clearInterval(S._sliderTimer); S._sliderTimer = null; }
 }
 
 // A merchant's affiliate shares a link like "...?product=ID&ref=CODE" — opening it tracks the

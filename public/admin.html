@@ -102,6 +102,7 @@
     <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
     <div class="nav-item" data-section="store" onclick="showSection('store')">🛍️ المتجر</div>
+    <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()">📢 إعلانات المتجر <span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
     <div class="logout" onclick="changePassword()">🔑 تغيير كلمة السر</div>
     <div class="logout" onclick="logout()">⏻ تسجيل خروج</div>
@@ -411,6 +412,68 @@
         <button style="margin-top:12px" onclick="demoStore('POST')">➕ أضف 50 منتج تجريبي</button>
         <button class="danger" style="margin-top:12px;margin-right:8px" onclick="demoStore('DELETE')">🗑️ احذف المنتجات التجريبية</button>
         <p id="store-msg" class="muted" style="margin-top:10px"></p>
+      </div>
+    </div>
+
+    <!-- STORE ADS AND BANNERS -->
+    <div class="section" id="section-ads" style="display:none">
+      <h2>إعلانات المتجر</h2>
+      <p class="subtitle">المساحات الإعلانية (6 مساحات لكل دولة بجانب البانر الكبير) يستأجرها التجار من محفظتهم، والبانرات الكبيرة إنت اللي بتتحكم فيها.</p>
+
+      <div class="card">
+        <h3>الأسعار والمدد</h3>
+        <p class="muted">كل سطر: عدد أيام وسعره بوحدة المحفظة. التاجر بيشوف هالخيارات بس. احذف السطر لتوقف بيع هالمدة.</p>
+        <table><thead><tr><th style="width:30%">عدد الأيام</th><th style="width:40%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ads-packages"></tbody></table>
+        <button class="secondary" style="margin-top:10px" onclick="addAdPackage()">➕ أضف مدة</button>
+        <div class="row" style="margin-top:14px">
+          <div><label>مدة ظهور كل بانر كبير (بالثواني)</label><input id="ads-banner-seconds" type="number" min="2" max="60" /></div>
+          <div><label>اعتماد الحجوزات</label>
+            <select id="ads-auto"><option value="false">يدوي — أنا بوافق على كل حجز</option><option value="true">تلقائي — تظهر فور الدفع</option></select></div>
+        </div>
+        <button style="margin-top:12px" onclick="saveAdSettings()">حفظ</button>
+        <span id="ads-settings-msg" class="muted" style="margin-right:10px"></span>
+      </div>
+
+      <div class="card">
+        <h3>الحجوزات</h3>
+        <div class="filters">
+          <button class="active" data-adstatus="PENDING" onclick="loadAdBookings('PENDING')">بانتظار الموافقة</button>
+          <button data-adstatus="ACTIVE" onclick="loadAdBookings('ACTIVE')">مقبولة</button>
+          <button data-adstatus="REJECTED" onclick="loadAdBookings('REJECTED')">مرفوضة</button>
+          <button data-adstatus="CANCELLED" onclick="loadAdBookings('CANCELLED')">ملغاة</button>
+        </div>
+        <table><thead><tr><th>المتجر</th><th>المنتج</th><th>الدولة</th><th>المساحة</th><th>المدة</th><th>السعر</th><th>الحالة</th><th>الفترة</th><th>مشاهدات / نقرات</th><th></th></tr></thead><tbody id="ads-body"></tbody></table>
+      </div>
+
+      <div class="card">
+        <h3>البانرات الكبيرة</h3>
+        <p class="muted">بتتبدّل لحالها بالترتيب اللي هون. عدد غير محدود. بانر بدون صورة بيترسم من اللون.</p>
+        <div id="banners-list"></div>
+        <h3 style="margin-top:18px" id="banner-form-title">بانر جديد</h3>
+        <div class="row">
+          <div><label>العنوان</label><input id="bn-title" maxlength="80" /></div>
+          <div><label>جملة صغيرة</label><input id="bn-subtitle" maxlength="160" /></div>
+          <div><label>نص الزر</label><input id="bn-button" maxlength="30" /></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div><label>اللون (لما ما في صورة)</label>
+            <select id="bn-bg"><option value="coral">مرجاني</option><option value="black">أسود</option><option value="blue">أزرق</option><option value="green">أخضر</option><option value="purple">بنفسجي</option><option value="gold">ذهبي</option></select></div>
+          <div><label>الزر بياخد لـ</label>
+            <select id="bn-target" onchange="bannerTargetHint()"><option value="none">لا شيء</option><option value="deals">قائمة عروض الأعضاء</option><option value="section">قسم</option><option value="product">منتج</option><option value="shop">متجر</option><option value="url">رابط خارجي</option></select></div>
+          <div><label id="bn-target-label">القيمة</label><input id="bn-value" /></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div><label>الدولة (كل الدول لو تركتها فاضية)</label><select id="bn-country"><option value="">كل الدول</option></select></div>
+          <div><label>يبدأ (اختياري)</label><input id="bn-start" type="datetime-local" /></div>
+          <div><label>ينتهي (اختياري)</label><input id="bn-end" type="datetime-local" /></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div><label>صورة البانر (اختياري، JPG/PNG/WebP، حتى 2 ميغا، الأفضل 1600×600)</label><input id="bn-image" type="file" accept="image/jpeg,image/png,image/webp" /></div>
+          <div><label>الحالة</label><select id="bn-active"><option value="true">ظاهر</option><option value="false">مخفي</option></select></div>
+        </div>
+        <button style="margin-top:12px" onclick="saveBanner()">حفظ البانر</button>
+        <button class="secondary" style="margin-top:12px;margin-right:8px" onclick="resetBannerForm()">جديد</button>
+        <span id="banner-msg" class="muted" style="margin-right:10px"></span>
       </div>
     </div>
 
@@ -827,6 +890,158 @@ async function sendPushTest() {
     ? `انبعت لـ ${data.delivered} من ${data.devices} جهاز — تأكد أنه وصل على الموبايل.`
     : `ما وصل لأي جهاز. ${data.errors.join(' | ')}`;
   loadPushStatus();
+}
+
+// ---- Store ads and banners ----
+let adStatus = 'PENDING';
+let bannersCache = [];
+let editingBanner = null;
+
+async function loadAds() {
+  const [settings, countries] = await Promise.all([api('GET', '/admin/settings'), api('GET', '/geo/countries')]);
+  if (settings.ok) {
+    const ads = settings.data.ads || { packages: [], autoApprove: false, bannerSeconds: 5 };
+    document.querySelectorAll('.credit-name').forEach(e => e.textContent = settings.data.creditName || 'الرصيد');
+    const body = document.getElementById('ads-packages');
+    body.innerHTML = '';
+    (ads.packages || []).sort((a, b) => a.days - b.days).forEach(p => addAdPackage(p.days, p.credits));
+    document.getElementById('ads-banner-seconds').value = ads.bannerSeconds;
+    document.getElementById('ads-auto').value = String(!!ads.autoApprove);
+  }
+  const sel = document.getElementById('bn-country');
+  if (countries.ok && sel.options.length === 1) {
+    countries.data.forEach(c => sel.add(new Option((c.nameArabic || c.name) + ' (' + c.isoCode2 + ')', c.isoCode2)));
+  }
+  loadAdBookings(adStatus);
+  loadBanners();
+}
+
+function addAdPackage(days, credits) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td><input type="number" min="1" max="365" class="pk-days" value="' + (days ?? '') + '"></td><td><input type="number" min="0" class="pk-credits" value="' + (credits ?? '') + '"></td><td><button class="small danger" onclick="this.closest(\'tr\').remove()">حذف</button></td>';
+  document.getElementById('ads-packages').appendChild(tr);
+}
+
+async function saveAdSettings() {
+  const msg = document.getElementById('ads-settings-msg');
+  const packages = [...document.querySelectorAll('#ads-packages tr')].map(tr => ({ days: Number(tr.querySelector('.pk-days').value), credits: Number(tr.querySelector('.pk-credits').value) })).filter(p => p.days > 0);
+  if (new Set(packages.map(p => p.days)).size !== packages.length) { msg.textContent = 'في مدة مكررة'; return; }
+  const { ok, data } = await api('PUT', '/admin/settings', { ads: { packages, bannerSeconds: Number(document.getElementById('ads-banner-seconds').value) || 5, autoApprove: document.getElementById('ads-auto').value === 'true' } });
+  msg.textContent = ok ? 'تم الحفظ ✓' : errText(data, 'تعذّر الحفظ');
+}
+
+const AD_STATE = { PENDING: 'بانتظار الموافقة', SCHEDULED: 'مجدول', LIVE: 'ظاهر الآن', ENDED: 'انتهى', REJECTED: 'مرفوض', CANCELLED: 'ملغى' };
+
+async function loadAdBookings(status) {
+  adStatus = status || adStatus;
+  document.querySelectorAll('[data-adstatus]').forEach(b => b.classList.toggle('active', b.dataset.adstatus === adStatus));
+  const { ok, data } = await api('GET', '/admin/ads?status=' + adStatus);
+  const body = document.getElementById('ads-body');
+  if (!ok) { body.innerHTML = '<tr><td colspan="10">تعذّر التحميل</td></tr>'; return; }
+  const day = d => new Date(d).toLocaleDateString('ar', { day: 'numeric', month: 'short' });
+  body.innerHTML = data.length ? data.map(a => `<tr>
+    <td>${esc(a.merchant.businessName)}</td><td>${esc(a.product.icon || '')} ${esc(a.product.name)}</td><td>${esc(a.country)}</td><td>${a.slot}</td><td>${a.days} يوم</td><td>${a.credits}</td>
+    <td><span class="badge ${a.status === 'ACTIVE' ? 'APPROVED' : a.status === 'PENDING' ? 'PENDING' : 'REJECTED'}">${esc(AD_STATE[a.state] || a.state)}</span></td>
+    <td>${day(a.startsAt)} → ${day(a.endsAt)}</td><td>${a.impressions} / ${a.clicks}</td>
+    <td>${a.status === 'PENDING' ? `<button class="small" onclick="reviewAd('${a.id}','approve')">موافقة</button><button class="small danger" onclick="reviewAd('${a.id}','reject')">رفض</button>` : ''}</td></tr>`).join('')
+    : '<tr><td colspan="10" class="muted">ما في حجوزات</td></tr>';
+  const pending = await api('GET', '/admin/ads?status=PENDING');
+  const badge = document.getElementById('ads-pending-count');
+  if (pending.ok && pending.data.length) { badge.textContent = pending.data.length; badge.style.display = ''; } else badge.style.display = 'none';
+}
+
+async function reviewAd(id, action) {
+  let body = {};
+  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل للتاجر، واختياري):'); if (reason === null) return; body = { reason }; }
+  const { ok, data } = await api('POST', '/admin/ads/' + id + '/' + action, body);
+  if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
+  loadAdBookings(adStatus);
+}
+
+const BANNER_HINT = { none: 'القيمة', deals: 'القيمة', section: 'اسم القسم (electronics, fashion, home, beauty, grocery, sports, kids, books, auto, health)', product: 'رقم المنتج (id)', shop: 'رقم المتجر (id)', url: 'الرابط (https://...)' };
+function bannerTargetHint() { document.getElementById('bn-target-label').textContent = BANNER_HINT[document.getElementById('bn-target').value]; }
+
+async function loadBanners() {
+  const { ok, data } = await api('GET', '/admin/banners');
+  const box = document.getElementById('banners-list');
+  if (!ok) { box.innerHTML = 'تعذّر التحميل'; return; }
+  bannersCache = data;
+  box.innerHTML = data.length ? '<table><thead><tr><th></th><th>العنوان</th><th>الدولة</th><th>الفترة</th><th>الحالة</th><th>مشاهدات / نقرات</th><th></th></tr></thead><tbody>' + data.map((b, i) => `<tr>
+    <td style="white-space:nowrap"><button class="small secondary" ${i === 0 ? 'disabled' : ''} onclick="moveBanner(${i},-1)">▲</button><button class="small secondary" ${i === data.length - 1 ? 'disabled' : ''} onclick="moveBanner(${i},1)">▼</button></td>
+    <td>${b.imageUrl ? '<img src="' + esc(b.imageUrl) + '" style="width:64px;height:24px;object-fit:cover;border-radius:4px;vertical-align:middle"> ' : ''}${esc(b.title)}</td>
+    <td>${esc(b.countryCode || 'الكل')}</td><td>${b.startsAt ? new Date(b.startsAt).toLocaleDateString('ar') : '—'} → ${b.endsAt ? new Date(b.endsAt).toLocaleDateString('ar') : '—'}</td>
+    <td><span class="badge ${b.isActive ? 'active' : 'inactive'}">${b.isActive ? 'ظاهر' : 'مخفي'}</span></td><td>${b.views} / ${b.clicks}</td>
+    <td style="white-space:nowrap"><button class="small" onclick="editBanner('${b.id}')">تعديل</button><button class="small danger" onclick="deleteBanner('${b.id}')">حذف</button></td></tr>`).join('') + '</tbody></table>' : '<p class="muted">ما في بانرات — بيظهر البانر الافتراضي.</p>';
+}
+
+async function moveBanner(i, d) {
+  const ids = bannersCache.map(b => b.id);
+  [ids[i], ids[i + d]] = [ids[i + d], ids[i]];
+  await api('PUT', '/admin/banners-order', { ids });
+  loadBanners();
+}
+
+function localInput(iso) { if (!iso) return ''; const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); }
+
+function editBanner(id) {
+  const b = bannersCache.find(x => x.id === id);
+  if (!b) return;
+  editingBanner = id;
+  document.getElementById('banner-form-title').textContent = 'تعديل البانر';
+  document.getElementById('bn-title').value = b.title;
+  document.getElementById('bn-subtitle').value = b.subtitle || '';
+  document.getElementById('bn-button').value = b.buttonText || '';
+  document.getElementById('bn-bg').value = b.bg;
+  document.getElementById('bn-target').value = b.targetType;
+  document.getElementById('bn-value').value = b.targetValue || '';
+  document.getElementById('bn-country').value = b.countryCode || '';
+  document.getElementById('bn-start').value = localInput(b.startsAt);
+  document.getElementById('bn-end').value = localInput(b.endsAt);
+  document.getElementById('bn-active').value = String(b.isActive);
+  document.getElementById('bn-image').value = '';
+  bannerTargetHint();
+  document.getElementById('banner-form-title').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetBannerForm() {
+  editingBanner = null;
+  document.getElementById('banner-form-title').textContent = 'بانر جديد';
+  ['bn-title', 'bn-subtitle', 'bn-button', 'bn-value', 'bn-start', 'bn-end', 'bn-image'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('bn-bg').value = 'coral';
+  document.getElementById('bn-target').value = 'none';
+  document.getElementById('bn-country').value = '';
+  document.getElementById('bn-active').value = 'true';
+  bannerTargetHint();
+}
+
+async function saveBanner() {
+  const msg = document.getElementById('banner-msg');
+  const val = id => document.getElementById(id).value;
+  const iso = id => (val(id) ? new Date(val(id)).toISOString() : null);
+  const body = {
+    title: val('bn-title').trim(), subtitle: val('bn-subtitle').trim() || null, buttonText: val('bn-button').trim() || null, bg: val('bn-bg'),
+    targetType: val('bn-target'), targetValue: val('bn-value').trim() || null, countryCode: val('bn-country') || null,
+    startsAt: iso('bn-start'), endsAt: iso('bn-end'), isActive: val('bn-active') === 'true',
+  };
+  if (!body.title) { msg.textContent = 'اكتب العنوان'; return; }
+  msg.textContent = 'عم يحفظ...';
+  const res = editingBanner ? await api('PATCH', '/admin/banners/' + editingBanner, body) : await api('POST', '/admin/banners', body);
+  if (!res.ok) { msg.textContent = errText(res.data, 'تعذّر الحفظ'); return; }
+  const file = document.getElementById('bn-image').files[0];
+  if (file) {
+    const up = await fetch('/admin/banners/' + res.data.id + '/image', { method: 'PUT', headers: { 'Content-Type': file.type, Authorization: 'Bearer ' + state.token }, body: file });
+    if (!up.ok) { msg.textContent = 'انحفظ البانر لكن الصورة ما انرفعت (JPG/PNG/WebP حتى 2 ميغا)'; loadBanners(); return; }
+  }
+  msg.textContent = 'تم الحفظ ✓';
+  resetBannerForm();
+  loadBanners();
+}
+
+async function deleteBanner(id) {
+  if (!confirm('حذف هذا البانر؟')) return;
+  await api('DELETE', '/admin/banners/' + id);
+  if (editingBanner === id) resetBannerForm();
+  loadBanners();
 }
 
 // ---- Store ----

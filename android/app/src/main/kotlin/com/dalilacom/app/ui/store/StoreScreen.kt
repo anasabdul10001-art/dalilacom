@@ -183,7 +183,7 @@ fun StoreProductCard(product: StoreProductDto, added: Boolean, onOpen: () -> Uni
 
 /** Products two to a row. */
 @Composable
-private fun ProductGrid(items: List<StoreProductDto>, justAdded: String?, onOpen: (String) -> Unit, onAdd: (String) -> Unit) {
+fun StoreProductGrid(items: List<StoreProductDto>, justAdded: String?, onOpen: (String) -> Unit, onAdd: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         items.chunked(2).forEach { pair ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -200,7 +200,7 @@ fun StoreProductRow(title: String, items: List<StoreProductDto>, justAdded: Stri
     StoreCard {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(12.dp))
-        ProductGrid(items.take(6), justAdded, onOpen, onAdd)
+        StoreProductGrid(items.take(6), justAdded, onOpen, onAdd)
     }
 }
 
@@ -226,6 +226,8 @@ fun StoreScreen(
     onOpenProduct: (String) -> Unit,
     onOpenCart: () -> Unit,
     onLogin: () -> Unit,
+    onOpenMerchant: (String) -> Unit = {},
+    onBookAd: () -> Unit = {},
 ) {
     val vm: StoreViewModel = viewModel(factory = ViewModelFactory(container))
     val ui by vm.ui.collectAsState()
@@ -352,7 +354,7 @@ fun StoreScreen(
                         Spacer(Modifier.height(12.dp))
                         if (ui.busy && ui.items.isEmpty()) Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         else if (ui.items.isEmpty()) Text(stringResource(R.string.store_no_results), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth().padding(40.dp))
-                        else ProductGrid(ui.items, ui.justAdded, onOpenProduct, vm::addToCart)
+                        else StoreProductGrid(ui.items, ui.justAdded, onOpenProduct, vm::addToCart)
                         if (ui.items.isNotEmpty() && ui.items.size < ui.total) {
                             Spacer(Modifier.height(16.dp))
                             OutlinedButton(onClick = vm::loadMore, enabled = !ui.busy, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.store_more)) }
@@ -360,8 +362,19 @@ fun StoreScreen(
                     }
                 }
             } else {
-                // the coral banner
+                // the big banners (the admin's, any number, changing by themselves) or the default one
                 item {
+                  if (ui.banners.isNotEmpty()) BannerPager(ui.banners, ui.bannerSeconds) { b ->
+                    vm.bannerClick(b.id)
+                    val value = b.target.value.orEmpty()
+                    when (b.target.type) {
+                        "product" -> if (value.isNotBlank()) onOpenProduct(value)
+                        "section" -> if (value.isNotBlank()) vm.pickSection(value)
+                        "shop" -> if (value.isNotBlank()) onOpenMerchant(value)
+                        "deals" -> vm.seeAll("deals")
+                        "url" -> if (value.startsWith("https://")) runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(value))) }
+                    }
+                  } else {
                     val up = ui.deals.maxOfOrNull { it.offPercent() } ?: 0
                     Box(
                         Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(8.dp))
@@ -377,6 +390,27 @@ fun StoreScreen(
                                 Text(stringResource(R.string.store_shop_now), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.background(Color.Black, RoundedCornerShape(3.dp)).padding(horizontal = 20.dp, vertical = 8.dp))
                             }
                             Text("🛍️", fontSize = 76.sp)
+                        }
+                    }
+                  }
+                }
+                // the advertising spaces: a shop's paid product, or a best seller with an invitation to advertise
+                if (ui.slots.isNotEmpty()) item {
+                    LazyRow(contentPadding = PaddingValues(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(ui.slots, key = { it.slot }) { sl ->
+                            AdSlot(sl, onOpen = { if (sl.adId != null) vm.adClick(sl.adId); onOpenProduct(sl.product.id) }, onAdvertise = onBookAd, onAdd = { vm.addToCart(sl.product.id) })
+                        }
+                    }
+                }
+                ui.adOffer?.let { offer ->
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(8.dp)).background(Color.Black).padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("📢 " + stringResource(R.string.ads_pitch, offer.fromCredits, offer.creditName, offer.days), color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                            Spacer(Modifier.width(10.dp))
+                            Text(stringResource(R.string.ads_book_cta), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable(onClick = onBookAd).padding(horizontal = 14.dp, vertical = 8.dp))
                         }
                     }
                 }
@@ -412,7 +446,7 @@ private fun HomeSection(title: String, kind: String, items: List<StoreProductDto
             Text(stringResource(R.string.store_see_all) + " ›", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.clickable { onSeeAll(kind) })
         }
         Spacer(Modifier.height(12.dp))
-        ProductGrid(items.take(6), justAdded, onOpen, onAdd)
+        StoreProductGrid(items.take(6), justAdded, onOpen, onAdd)
     }
 }
 
@@ -436,6 +470,71 @@ private fun UnitPicker(allLabel: String, options: List<Pair<String, String>>, se
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text(allLabel) }, onClick = { onSelect(null); open = false })
             options.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { onSelect(id); open = false }) }
+        }
+    }
+}
+
+/** The big banners: the picture (or the colour), the words, changing by themselves every few seconds; swipe to change by hand. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun BannerPager(banners: List<com.dalilacom.app.data.network.StoreBannerDto>, seconds: Int, onClick: (com.dalilacom.app.data.network.StoreBannerDto) -> Unit) {
+    val pager = androidx.compose.foundation.pager.rememberPagerState { banners.size }
+    LaunchedEffect(banners.size, seconds) {
+        if (banners.size < 2) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(maxOf(2, seconds) * 1000L)
+            pager.animateScrollToPage((pager.currentPage + 1) % banners.size)
+        }
+    }
+    Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(8.dp))) {
+        androidx.compose.foundation.pager.HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth()) { page ->
+            val b = banners[page]
+            val colors = when (b.bg) {
+                "black" -> listOf(Color(0xFF111111), Color(0xFF3A3A3A))
+                "blue" -> listOf(Color(0xFF1E6FE0), Color(0xFF12B3D6))
+                "green" -> listOf(Color(0xFF1E8A3A), Color(0xFF7BCF5A))
+                "purple" -> listOf(Color(0xFF5B2BD6), Color(0xFFC04BD6))
+                "gold" -> listOf(Color(0xFFD98A00), Color(0xFFF5C542))
+                else -> listOf(Color(0xFFFF7A59), Color(0xFFFF4D6D), Color(0xFFE8336D))
+            }
+            val ink = if (b.bg == "gold") Color(0xFF1B1200) else Color.White
+            Box(Modifier.fillMaxWidth().height(170.dp).clickable { onClick(b) }.background(Brush.linearGradient(colors))) {
+                b.imageUrl?.let { url ->
+                    AsyncImage(model = if (url.startsWith("/")) absoluteUrl(url) else url, contentDescription = b.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0x00000000), Color(0x8C000000)))))
+                }
+                Column(Modifier.align(Alignment.CenterStart).padding(horizontal = 20.dp).fillMaxWidth(0.72f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(b.title, color = if (b.imageUrl != null) Color.White else ink, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 28.sp)
+                    b.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, color = if (b.imageUrl != null) Color.White else ink, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                    b.buttonText?.takeIf { it.isNotBlank() }?.let { Text(it, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp).background(Color.Black, RoundedCornerShape(3.dp)).padding(horizontal = 18.dp, vertical = 8.dp)) }
+                }
+            }
+        }
+        if (banners.size > 1) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(banners.size) { i ->
+                Box(Modifier.height(7.dp).width(if (i == pager.currentPage) 20.dp else 7.dp).background(Color.White.copy(alpha = if (i == pager.currentPage) 1f else 0.55f), RoundedCornerShape(4.dp)))
+            }
+        }
+    }
+}
+
+/** One advertising space. */
+@Composable
+private fun AdSlot(sl: com.dalilacom.app.data.network.StoreSlotDto, onOpen: () -> Unit, onAdvertise: () -> Unit, onAdd: () -> Unit) {
+    val p = sl.product
+    Box(Modifier.width(168.dp).aspectRatio(1.4f).clip(RoundedCornerShape(6.dp)).clickable(onClick = onOpen)) {
+        StorePic(p, Modifier.fillMaxSize(), emojiSize = 44.sp)
+        if (sl.ad) Text(stringResource(R.string.ads_tag), color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(Color(0xC7000000), RoundedCornerShape(3.dp)).padding(horizontal = 7.dp, vertical = 2.dp))
+        else Text("📢 " + stringResource(R.string.ads_here), color = Color(0xFF111111), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(Color(0xEBFFFFFF), RoundedCornerShape(3.dp)).clickable(onClick = onAdvertise).padding(horizontal = 7.dp, vertical = 2.dp))
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0x00000000), Color(0xB8000000)))).padding(start = 8.dp, end = 40.dp, top = 16.dp, bottom = 6.dp)) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(formatCents(if (p.memberDiscountEnabled && p.memberPriceCents != null) p.memberPriceCents else p.priceCents), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                if (p.offPercent() > 0) Text("  -${p.offPercent()}%", color = StoreSale, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
+            }
+            Text(p.name, color = Color.White.copy(alpha = 0.92f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Surface(onClick = onAdd, shape = CircleShape, color = Color.White, contentColor = Color(0xFF111111), shadowElevation = 3.dp, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).size(28.dp)) {
+            Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ShoppingBag, contentDescription = null, modifier = Modifier.size(16.dp)) }
         }
     }
 }

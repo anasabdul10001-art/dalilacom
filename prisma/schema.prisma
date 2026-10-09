@@ -342,6 +342,7 @@ model MerchantProfile {
   discounts            Discount[]
   discountTransactions DiscountTransaction[]
   products             Product[]
+  adBookings           AdBooking[]
   orders               Order[]
   affiliates           MerchantAffiliate[]
 
@@ -378,6 +379,7 @@ model Product {
   cartItems          CartItem[]
   orderItems         OrderItem[]
   affiliateReferrals AffiliateReferral[]
+  adBookings         AdBooking[]
 
   @@index([merchantId])
   @@index([storeSection])
@@ -560,6 +562,7 @@ enum WalletTxType {
   SUBSCRIPTION
   MEMBERSHIP // a customer membership was bought out of the wallet balance
   BROADCAST // a shop paid for an announcement (or got the money back when it was refused)
+  AD // a shop paid for advertising space in the store (or got the money back)
   ADJUSTMENT
 }
 
@@ -1294,4 +1297,62 @@ model EmailChangeToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+enum AdStatus {
+  PENDING // paid, waiting for the admin to approve
+  ACTIVE // approved: shown while startsAt <= now < endsAt
+  REJECTED
+  CANCELLED
+}
+
+// A shop renting one of the store's advertising spaces (the picks beside the front-page banner) for some days.
+// The space (slot 1..6, per country) is reserved from the moment of booking; the price is paid from the wallet and
+// given back if the booking is refused or cancelled.
+model AdBooking {
+  id              String   @id @default(uuid())
+  merchantId      String
+  productId       String
+  countryCode     String
+  days            Int
+  credits         Int
+  status          AdStatus @default(PENDING)
+  requestedStart  DateTime
+  startsAt        DateTime
+  endsAt          DateTime
+  slot            Int
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  merchant MerchantProfile @relation(fields: [merchantId], references: [id])
+  product  Product         @relation(fields: [productId], references: [id])
+
+  @@index([countryCode, status])
+  @@index([merchantId])
+}
+
+// The big rotating banners of the store's front page, managed by the admin (any number, shown in order).
+model StoreBanner {
+  id             String    @id @default(uuid())
+  sortOrder      Int       @default(0)
+  isActive       Boolean   @default(true)
+  title          String
+  subtitle       String?
+  buttonText     String?
+  bg             String    @default("coral") // a colour preset used when there is no picture
+  targetType     String    @default("none") // none | product | section | shop | deals | url
+  targetValue    String?
+  countryCode    String? // null = every country
+  startsAt       DateTime?
+  endsAt         DateTime?
+  imageMime      String?
+  imageData      Bytes?
+  imageUpdatedAt DateTime?
+  views          Int       @default(0)
+  clicks         Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
