@@ -165,6 +165,30 @@ describe("Saying why a provider refused", () => {
   });
 });
 
+describe("When the model we asked for is gone", () => {
+  it("asks the provider which model this key may use, switches to it, and keeps using it", async () => {
+    withKeys("GROQ");
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      const u = String(url);
+      if (u.endsWith("/models")) {
+        return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ data: [{ id: "whisper-large-v3" }, { id: "llama-3.1-8b-instant" }, { id: "openai/gpt-oss-120b" }] }) };
+      }
+      const model = JSON.parse(String(init.body)).model;
+      asked.push(model);
+      if (model === "llama-3.3-70b-versatile") return { ok: false, status: 404, headers: { get: () => null }, text: async () => "model does not exist" };
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ choices: [{ message: { content: "ok" } }] }) };
+    });
+    expect(await testProvider("groq")).toMatchObject({ ok: true });
+    expect(asked).toEqual(["llama-3.3-70b-versatile", "openai/gpt-oss-120b"]);
+    expect(aiProviderStatus().providers.find((p) => p.id === "groq")!.model).toBe("openai/gpt-oss-120b");
+
+    asked.length = 0;
+    expect(await testProvider("groq")).toMatchObject({ ok: true });
+    expect(asked).toEqual(["openai/gpt-oss-120b"]); // no second discovery
+  });
+});
+
 describe("Trying one provider on its own", () => {
   it("asks only that provider and says whether it really answered", async () => {
     expect(await testProvider("nope")).toBeNull();

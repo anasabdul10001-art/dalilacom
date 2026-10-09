@@ -21,7 +21,7 @@ interface ProviderDef {
 
 /** Models change often on free tiers, so each one can be swapped from the environment without a deploy of code. */
 const DEFAULT_ORDER: ProviderDef[] = [
-  { id: "groq", label: "Groq", keyEnv: "GROQ_API_KEY", kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", model: () => "llama-3.3-70b-versatile" },
+  { id: "groq", label: "Groq", keyEnv: "GROQ_API_KEY", kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", model: () => process.env.GROQ_MODEL || "llama-3.3-70b-versatile" },
   { id: "cerebras", label: "Cerebras", keyEnv: "CEREBRAS_API_KEY", kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", model: () => process.env.CEREBRAS_MODEL || "llama-3.3-70b" },
   { id: "sambanova", label: "SambaNova", keyEnv: "SAMBANOVA_API_KEY", kind: "openai", url: "https://api.sambanova.ai/v1/chat/completions", model: () => process.env.SAMBANOVA_MODEL || "Meta-Llama-3.3-70B-Instruct" },
   {
@@ -76,12 +76,15 @@ export function aiAvailable(): boolean {
 // A provider that just failed is skipped for a while (a dead key, a rate limit) instead of making every customer wait
 // for the same failure. When every configured provider is cooling down they are all tried anyway — better than silence.
 const cooldownUntil = new Map<Provider, number>();
+// A model the provider itself told us we may use, found when the one we asked for was gone (providers rename models often).
+const discovered = new Map<Provider, string>();
 const lastError = new Map<Provider, string>();
 
 /** For tests (and a manual "try again now"): forget every cool-down and remembered error. */
 export function resetAiProviderState(): void {
   cooldownUntil.clear();
   lastError.clear();
+  discovered.clear();
 }
 
 /**
@@ -98,7 +101,7 @@ export function aiProviderStatus(): {
   const providers = orderedProviders().map((def) => ({
     id: def.id,
     label: def.label,
-    model: def.model(),
+    model: discovered.get(def.id) ?? def.model(),
     configured: isConfigured(def),
     cooldownSeconds: Math.max(0, Math.ceil(((cooldownUntil.get(def.id) ?? 0) - now) / 1000)),
     lastError: lastError.get(def.id) ?? null,
@@ -336,6 +339,23 @@ function classifyStatus(status: number, retryAfter: string | null): { reason: st
   return { reason: `request refused (${status})`, cooldownMs: 5 * MINUTE }; // e.g. 404: the model name is wrong
 }
 
+/** The text models this key may really use, best first, read from the provider's own model list. */
+async function discoverModel(def: ProviderDef, apiKey: string): Promise<string | null> {
+  try {
+    const res = await fetch(def.url.replace(/\/chat\/completions$/, "/models"), { headers: { authorization: `Bearer ${apiKey}`, ...(def.headers?.() ?? {}) }, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { data?: { id?: unknown }[] };
+    const ids = (body.data ?? []).map((m) => (typeof m.id === "string" ? m.id.replace(/^models\//, "") : "")).filter((id) => id && !/(embed|whisper|tts|guard|moderation|image|audio|safeguard|ocr|rerank)/i.test(id));
+    for (const wanted of [/llama-3\.3-70b/i, /gpt-oss-120b/i, /70b/i, /gpt-oss-20b/i, /flash/i, /small|large/i, /instruct|chat|versatile/i, /8b|7b/i]) {
+      const hit = ids.find((id) => wanted.test(id));
+      if (hit) return hit;
+    }
+    return ids[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** A short, key-free piece of the provider's own error message (a wrong model name, a payment wall...), for the admin. */
 async function errorDetail(res: { text?: () => Promise<string> }): Promise<string> {
   try {
@@ -361,7 +381,7 @@ async function callProvider(def: ProviderDef, system: string, user: string, maxT
   recordAttempt(def.id);
   try {
     const anthropic = def.kind === "anthropic";
-    const res = await fetch(def.url, {
+    const send = (model: string) => fetch(def.url, {
       method: "POST",
       headers: anthropic
         ? { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" }
@@ -369,13 +389,13 @@ async function callProvider(def: ProviderDef, system: string, user: string, maxT
       body: JSON.stringify(
         anthropic
           ? {
-              model: def.model(),
+              model,
               max_tokens: maxTokens,
               system,
               messages: [{ role: "user", content: image ? [{ type: "image", source: { type: "base64", media_type: image.mime, data: image.data.toString("base64") } }, { type: "text", text: user }] : user }],
             }
           : {
-              model: def.model(),
+              model,
               max_tokens: maxTokens,
               messages: [
                 { role: "system", content: system },
@@ -385,6 +405,15 @@ async function callProvider(def: ProviderDef, system: string, user: string, maxT
       ),
       signal: AbortSignal.timeout(timeoutMs ?? (image ? Math.max(AI_TIMEOUT_MS(), 25000) : AI_TIMEOUT_MS())),
     });
+    let res = await send(discovered.get(def.id) ?? def.model());
+    if (res.status === 404 && !anthropic) {
+      // the model we asked for is gone: use one the provider says this key can use, and remember it
+      const found = await discoverModel(def, apiKey);
+      if (found && found !== (discovered.get(def.id) ?? def.model())) {
+        discovered.set(def.id, found);
+        res = await send(found);
+      }
+    }
     if (!res.ok) {
       const failure = classifyStatus(res.status, res.headers?.get?.("retry-after") ?? null);
       const detail = await errorDetail(res);
