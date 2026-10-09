@@ -1165,7 +1165,7 @@ function merchantRowHtml(m) {
       </div>
       <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
         ${openBadge(m.openStatus)}
-        ${(m.discounts || []).map((dc) => `<span class="badge info">🏷️ ${esc(dc.title)} — ${dc.percent}%</span>`).join("")}
+        ${(m.discounts || []).map((dc) => `<span class="badge info">🏷️ ${esc(dc.title)} — ${dc.percent}%${dc.peopleLeft != null ? " · " + esc(t("disc.placesLeftShort", { n: dc.peopleLeft })) : ""}</span>`).join("")}
       </div>
       <div class="place-card-actions">
         <button class="btn small" style="width:auto" onclick="event.stopPropagation();go('merchantDetail',{merchantId:'${m.id}'})">${esc(t("card.details"))}</button>
@@ -4121,6 +4121,8 @@ function customerDiscountCard(d) {
   const bits = [discScopeText(d)];
   if (d.endDate) bits.push(t("disc.until", { date: new Date(d.endDate).toLocaleDateString(LANG, { day: "numeric", month: "short" }) }));
   if (d.perCustomerLimit) bits.push(t("disc.perCustomer", { n: d.perCustomerLimit }));
+  if (d.myTimesLeft != null) bits.push(t("disc.timesLeft", { n: d.myTimesLeft }));
+  if (d.maxCustomers && d.peopleLeft != null) bits.push(t("disc.placesLeft", { n: d.peopleLeft, max: d.maxCustomers }));
   return `<div class="disc-card"><b>${d.percent}%</b><div><strong>${esc(d.title)}</strong>${d.description ? `<p>${esc(d.description)}</p>` : ""}<small>${esc(bits.join(" · "))}</small></div></div>`;
 }
 
@@ -4214,7 +4216,7 @@ function screenDiscountForm() {
         ${chip(t("disc.scopeSection"), f.scope === "SECTION", "S._df.scope='SECTION';render()")}
         ${chip(t("disc.scopeProducts"), f.scope === "PRODUCTS", "S._df.scope='PRODUCTS';render()")}
       </div>
-      ${f.scope === "SECTION" ? `<select onchange="S._df.section=this.value" style="margin-top:8px"><option value="">—</option>${sections.map((x) => `<option value="${x.id}" ${f.section === x.id ? "selected" : ""}>${esc(storeSecName(x))}</option>`).join("")}</select>` : ""}
+      ${f.scope === "SECTION" ? `<input value="${esc(f.section)}" maxlength="60" oninput="S._df.section=this.value" placeholder="${esc(t("disc.sectionPh"))}" style="margin-top:8px">` : ""}
       ${f.scope === "PRODUCTS" ? `<div class="disc-products">${products.length ? products.map((p) => `<label><input type="checkbox" ${f.productIds.includes(p.id) ? "checked" : ""} onchange="discToggleProduct('${p.id}',this.checked)"> ${esc(p.name)}</label>`).join("") : `<p class="muted">${esc(t("disc.noProducts"))}</p>`}</div>` : ""}
     </div>
 
@@ -4226,14 +4228,17 @@ function screenDiscountForm() {
       <div class="chips-row">
         ${[["none", t("disc.noEnd")], ["7", t("disc.week")], ["14", t("disc.twoWeeks")], ["30", t("disc.month")], ["90", t("disc.threeMonths")], ["custom", t("disc.customDate")]].map(([k, l]) => chip(l, f.endPreset === k, `discEndPreset('${k}')`)).join("")}
       </div>
-      ${f.endPreset === "custom" ? `<input type="date" value="${esc(f.end)}" onchange="S._df.end=this.value" style="margin-top:8px">` : f.end ? `<p class="muted" style="margin:6px 0 0">${esc(t("disc.endsAt", { date: f.end }))}</p>` : ""}
+      <input type="date" value="${esc(f.end)}" onchange="S._df.end=this.value;S._df.endPreset='custom';render()" style="margin-top:8px">
+      ${f.end ? `<p class="muted" style="margin:6px 0 0">${esc(t("disc.endsAt", { date: f.end }))}</p>` : ""}
     </div>
 
     <div class="field"><label>${esc(t("disc.limits"))}</label>
       <label class="muted">${esc(t("disc.perCustomerLabel"))}</label>
       <div class="chips-row">${[["", t("disc.noLimit")], [1, "1"], [2, "2"], [3, "3"], [5, "5"], [10, "10"]].map(([v, l]) => chip(l, String(f.perCustomer) === String(v), `S._df.perCustomer='${v}';render()`)).join("")}</div>
+      <input type="number" inputmode="numeric" min="1" max="1000" value="${esc(f.perCustomer)}" placeholder="${esc(t("disc.orType"))}" oninput="S._df.perCustomer=this.value" style="margin-top:6px">
       <label class="muted" style="margin-top:8px;display:block">${esc(t("disc.maxPeopleLabel"))}</label>
       <div class="chips-row">${[["", t("disc.noLimit")], [10, "10"], [25, "25"], [50, "50"], [100, "100"], [500, "500"]].map(([v, l]) => chip(l, String(f.maxCustomers) === String(v), `S._df.maxCustomers='${v}';render()`)).join("")}</div>
+      <input type="number" inputmode="numeric" min="1" max="1000000" value="${esc(f.maxCustomers)}" placeholder="${esc(t("disc.orType"))}" oninput="S._df.maxCustomers=this.value" style="margin-top:6px">
     </div>
 
     <div class="field"><label>${esc(t("disc.notes"))}</label>
@@ -4266,13 +4271,14 @@ async function saveDiscount() {
   const num = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
   const body = {
     title: f.title.trim(), percent: Number(f.percent), description: f.description.trim() || null, scope: f.scope,
-    scopeSection: f.scope === "SECTION" ? f.section || null : null, productIds: f.scope === "PRODUCTS" ? f.productIds : [],
+    scopeSection: f.scope === "SECTION" ? (f.section || "").trim() || null : null, productIds: f.scope === "PRODUCTS" ? f.productIds : [],
     startDate: f.start ? new Date(f.start + "T00:00:00").toISOString() : null,
     endDate: f.end ? new Date(f.end + "T23:59:59").toISOString() : null,
     maxCustomers: num(f.maxCustomers), perCustomerLimit: num(f.perCustomer),
   };
   if (body.title.length < 2) { f.error = t("disc.needName"); return render(); }
   if (!(body.percent >= 1 && body.percent <= 100)) { f.error = t("disc.needPercent"); return render(); }
+  if (f.scope === "SECTION" && !body.scopeSection) { f.error = t("disc.needSection"); return render(); }
   f.busy = true; f.error = null; render();
   const res = f.id ? await api("PATCH", "/merchant/discounts/" + f.id, body) : await api("POST", "/merchant/discounts", body);
   f.busy = false;

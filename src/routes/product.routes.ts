@@ -5,6 +5,7 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { sniffImageMime } from "../lib/image";
+import { enhanceProductPhoto } from "../lib/photoEnhance";
 import { route } from "../lib/asyncRoute";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
@@ -91,6 +92,22 @@ productRouter.post("/photos", requireAuth, requireRole(Role.MERCHANT), express.r
   if (!mime) return sendError(res, 415, "UNSUPPORTED_MEDIA", "الملف ليس صورة صالحة (JPEG أو PNG أو WebP)");
   const photo = await prisma.productPhoto.create({ data: { merchantId: found.merchant.id, mime, data: body }, select: { id: true } });
   res.status(201).json({ id: photo.id, url: `/store/photos/${photo.id}` });
+}));
+
+// "Improve the photo": a new, cleaned-up copy (white square, centred, even light) that suits Google and the image-reading algorithms.
+productRouter.post("/photos/:id/enhance", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const found = await getOwnApprovedMerchant(req.user!.id);
+  if ("error" in found) return sendError(res, 403, "FORBIDDEN", found.error ?? "Forbidden");
+  const photo = await prisma.productPhoto.findFirst({ where: { id: req.params.id, merchantId: found.merchant.id } });
+  if (!photo) return sendError(res, 404, "NOT_FOUND", "الصورة غير موجودة");
+  let improved: Buffer;
+  try {
+    improved = await enhanceProductPhoto(Buffer.from(photo.data));
+  } catch {
+    return sendError(res, 422, "UNPROCESSABLE", "تعذّر تحسين هالصورة، جرّب صورة ثانية");
+  }
+  const created = await prisma.productPhoto.create({ data: { merchantId: found.merchant.id, mime: "image/jpeg", data: improved }, select: { id: true } });
+  res.status(201).json({ id: created.id, url: `/store/photos/${created.id}`, from: photo.id });
 }));
 
 const drafts = new Map<string, { day: string; n: number }>();

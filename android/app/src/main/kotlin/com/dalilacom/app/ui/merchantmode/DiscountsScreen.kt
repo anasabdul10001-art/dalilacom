@@ -183,12 +183,12 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
     var title by remember { mutableStateOf(existing?.title.orEmpty()) }
     var percent by remember { mutableStateOf(existing?.percent?.toString().orEmpty()) }
     var scope by remember { mutableStateOf(existing?.scope ?: "ALL") }
-    var section by remember { mutableStateOf(existing?.scopeSection) }
+    var section by remember { mutableStateOf(existing?.scopeSection.orEmpty()) }
     var picked by remember { mutableStateOf(existing?.productIds.orEmpty().toSet()) }
     var start by remember { mutableStateOf<String?>(existing?.startDate) }
     var end by remember { mutableStateOf<String?>(existing?.endDate) }
-    var perCustomer by remember { mutableStateOf(existing?.perCustomerLimit) }
-    var maxPeople by remember { mutableStateOf(existing?.maxCustomers) }
+    var perText by remember { mutableStateOf(existing?.perCustomerLimit?.toString().orEmpty()) }
+    var maxText by remember { mutableStateOf(existing?.maxCustomers?.toString().orEmpty()) }
     var notes by remember { mutableStateOf(existing?.description.orEmpty()) }
     var problem by remember { mutableStateOf<String?>(null) }
 
@@ -202,7 +202,7 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
         problem = when {
             title.trim().length < 2 -> needName
             p == null || p !in 1..100 -> needPercent
-            scope == "SECTION" && section == null -> needSection
+            scope == "SECTION" && section.trim().length < 2 -> needSection
             scope == "PRODUCTS" && picked.isEmpty() -> needProducts
             else -> null
         }
@@ -210,9 +210,9 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
         onSend(
             DiscountInput(
                 title = title.trim(), percent = p, description = notes.trim().ifBlank { null }, scope = scope,
-                scopeSection = if (scope == "SECTION") section else null,
+                scopeSection = if (scope == "SECTION") section.trim() else null,
                 productIds = if (scope == "PRODUCTS") picked.toList() else emptyList(),
-                startDate = start, endDate = end, maxCustomers = maxPeople, perCustomerLimit = perCustomer,
+                startDate = start, endDate = end, maxCustomers = maxText.toIntOrNull()?.takeIf { it > 0 }, perCustomerLimit = perText.toIntOrNull()?.takeIf { it > 0 },
             ),
         )
     }
@@ -251,11 +251,10 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
             FilterChip(selected = scope == "PRODUCTS", onClick = { scope = "PRODUCTS" }, label = { Text(stringResource(R.string.disc_scope_products)) })
         }
         if (scope == "SECTION") {
-            ChipRow {
-                state.sections.forEach { s ->
-                    FilterChip(selected = section == s.id, onClick = { section = s.id }, label = { Text(if (AppStrings.language == "en" && s.nameEn.isNotBlank()) s.nameEn else s.name) })
-                }
-            }
+            OutlinedTextField(
+                value = section, onValueChange = { section = it.take(60) }, singleLine = true,
+                placeholder = { Text(stringResource(R.string.disc_section_ph)) }, modifier = Modifier.fillMaxWidth(),
+            )
         }
         if (scope == "PRODUCTS") {
             if (state.products.isEmpty()) Text(stringResource(R.string.disc_no_products), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -275,6 +274,7 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
             FilterChip(selected = false, onClick = { start = Instant.now().plus(1, ChronoUnit.DAYS).toString() }, label = { Text(stringResource(R.string.disc_start_tomorrow)) })
             FilterChip(selected = false, onClick = { start = Instant.now().plus(7, ChronoUnit.DAYS).toString() }, label = { Text(stringResource(R.string.disc_start_week)) })
         }
+        DateButton(label = stringResource(R.string.disc_pick_date), onPicked = { start = it })
         Text(if (end != null) stringResource(R.string.disc_ends_at, day(end)) else stringResource(R.string.disc_no_end), style = MaterialTheme.typography.bodySmall)
         ChipRow {
             FilterChip(selected = end == null, onClick = { endIn(null) }, label = { Text(stringResource(R.string.disc_no_end)) })
@@ -283,21 +283,30 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
             FilterChip(selected = false, onClick = { endIn(30) }, label = { Text(stringResource(R.string.disc_month)) })
             FilterChip(selected = false, onClick = { endIn(90) }, label = { Text(stringResource(R.string.disc_three_months)) })
         }
+        DateButton(label = stringResource(R.string.disc_pick_date), endOfDay = true, onPicked = { end = it })
 
         Spacer(Modifier.height(12.dp))
         Label(R.string.disc_limits)
         Text(stringResource(R.string.disc_per_customer_label), style = MaterialTheme.typography.bodySmall)
         ChipRow {
             listOf<Int?>(null, 1, 2, 3, 5, 10).forEach { v ->
-                FilterChip(selected = perCustomer == v, onClick = { perCustomer = v }, label = { Text(v?.toString() ?: stringResource(R.string.disc_no_limit)) })
+                FilterChip(selected = perText == (v?.toString() ?: ""), onClick = { perText = v?.toString().orEmpty() }, label = { Text(v?.toString() ?: stringResource(R.string.disc_no_limit)) })
             }
         }
+        OutlinedTextField(
+            value = perText, onValueChange = { perText = it.filter(Char::isDigit).take(4) }, singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Text(stringResource(R.string.disc_or_type)) }, modifier = Modifier.fillMaxWidth(),
+        )
         Text(stringResource(R.string.disc_max_people_label), style = MaterialTheme.typography.bodySmall)
         ChipRow {
             listOf<Int?>(null, 10, 25, 50, 100, 500).forEach { v ->
-                FilterChip(selected = maxPeople == v, onClick = { maxPeople = v }, label = { Text(v?.toString() ?: stringResource(R.string.disc_no_limit)) })
+                FilterChip(selected = maxText == (v?.toString() ?: ""), onClick = { maxText = v?.toString().orEmpty() }, label = { Text(v?.toString() ?: stringResource(R.string.disc_no_limit)) })
             }
         }
+        OutlinedTextField(
+            value = maxText, onValueChange = { maxText = it.filter(Char::isDigit).take(7) }, singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Text(stringResource(R.string.disc_or_type)) }, modifier = Modifier.fillMaxWidth(),
+        )
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
@@ -323,4 +332,25 @@ private fun Label(res: Int) {
 @Composable
 private fun ChipRow(content: @Composable () -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) { content() }
+}
+
+/** A button that opens a calendar; the picked day comes back as an ISO time ([endOfDay]: the last minute of that day). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateButton(label: String, endOfDay: Boolean = false, onPicked: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    OutlinedButton(onClick = { open = true }, modifier = Modifier.padding(top = 2.dp)) { Text(label) }
+    if (open) {
+        val pickerState = androidx.compose.material3.rememberDatePickerState()
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { open = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickerState.selectedDateMillis?.let { ms -> onPicked(Instant.ofEpochMilli(ms + if (endOfDay) 86_340_000L else 0L).toString()) }
+                    open = false
+                }) { Text(stringResource(R.string.disc_confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.disc_cancel)) } },
+        ) { androidx.compose.material3.DatePicker(state = pickerState) }
+    }
 }

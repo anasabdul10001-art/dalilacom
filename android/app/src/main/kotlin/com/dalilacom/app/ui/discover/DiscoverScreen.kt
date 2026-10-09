@@ -636,7 +636,7 @@ private fun MerchantCard(
                     items(merchant.discounts) { discount ->
                         Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                             Text(
-                                "🏷️ ${discount.title} −${discount.percent}%",
+                                "🏷️ ${discount.title} −${discount.percent}%" + (discount.peopleLeft?.let { " · " + stringResource(R.string.disc_places_left_short, it) } ?: ""),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),

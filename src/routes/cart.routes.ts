@@ -46,7 +46,14 @@ async function buildCartView(userId: string) {
     };
   });
 
-  return { items: view, totalCents: view.reduce((sum, i) => sum + i.lineTotalCents, 0) };
+  // how each shop in the cart sends its order and what that costs (the customer picks one per shop at checkout)
+  const merchantIds = [...new Set(view.map((i) => i.product.merchant.id))];
+  const methods = merchantIds.length ? await prisma.shippingMethod.findMany({ where: { merchantId: { in: merchantIds }, isActive: true }, orderBy: { createdAt: "asc" } }) : [];
+  const shipping = merchantIds.map((merchantId) => ({
+    merchantId,
+    methods: methods.filter((m) => m.merchantId === merchantId).map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })),
+  }));
+  return { items: view, shipping, totalCents: view.reduce((sum, i) => sum + i.lineTotalCents, 0) };
 }
 
 cartRouter.get("/", requireAuth, async (req, res) => {
@@ -125,8 +132,13 @@ function generateOrderNumber(): string {
 
 // Checkout: a cart holding products from several merchants splits into one Order per
 // merchant (section 59.5 "Sub-Orders"), each tracked and updated independently from then on.
+const checkoutSchema = z.object({ shipping: z.record(z.string().uuid()).optional() }); // shop id -> the chosen shipping method id
+
 cartRouter.post("/checkout", requireAuth, async (req, res) => {
   const userId = req.user!.id;
+  const checkoutBody = checkoutSchema.safeParse(req.body ?? {});
+  if (!checkoutBody.success) return sendValidationError(res, checkoutBody.error);
+  const chosenShipping = checkoutBody.data.shipping ?? {};
   const cart = await getOrCreateCart(userId);
   const items = await prisma.cartItem.findMany({
     where: { cartId: cart.id },
@@ -164,8 +176,15 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
         byMerchant.set(item.product.merchantId, list);
       }
 
+      // a shop that lists shipping methods needs one chosen; its cost joins the order's total
+      const shopMethods = await tx.shippingMethod.findMany({ where: { merchantId: { in: [...byMerchant.keys()] }, isActive: true } });
+
       const createdOrders = [];
       for (const [merchantId, merchantItems] of byMerchant) {
+        const offered = shopMethods.filter((m) => m.merchantId === merchantId);
+        const picked = offered.find((m) => m.id === chosenShipping[merchantId]);
+        if (offered.length > 0 && !picked) throw new Error(`SHIPPING_REQUIRED:${merchantId}`);
+        const shippingCents = picked?.costCents ?? 0;
         let subtotalCents = 0;
         let totalCents = 0;
         const orderItemsData = [];
@@ -197,7 +216,9 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
             merchantId,
             subtotalCents,
             memberDiscountCents: subtotalCents - totalCents,
-            totalCents,
+            shippingName: picked?.name ?? null,
+            shippingCents,
+            totalCents: totalCents + shippingCents,
             items: { create: orderItemsData },
           },
           include: { items: true },
@@ -243,6 +264,9 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
   } catch (err) {
     if (err instanceof Error && err.message.startsWith("OUT_OF_STOCK:")) {
       return sendError(res, 409, "CONFLICT", `Not enough stock for "${err.message.split(":")[1]}"`);
+    }
+    if (err instanceof Error && err.message.startsWith("SHIPPING_REQUIRED:")) {
+      return sendError(res, 400, "BAD_REQUEST", "اختر طريقة الشحن لكل متجر بالسلة");
     }
     if (err instanceof Error && err.message.startsWith("PRODUCT_UNAVAILABLE:")) {
       return sendError(res, 409, "CONFLICT", "One of the products in your cart is no longer available");

@@ -65,6 +65,7 @@ invoiceRouter.get("/order/:id", async (req, res) => {
     totals: [
       { label: "المجموع", value: formatMoney(order.subtotalCents) },
       ...(order.memberDiscountCents > 0 ? [{ label: "حسم أعضاء دليلكم", value: `− ${formatMoney(order.memberDiscountCents)}` }] : []),
+      ...(order.shippingCents > 0 ? [{ label: "الشحن", value: formatMoney(order.shippingCents) }] : []),
       { label: "الإجمالي", value: formatMoney(order.totalCents), strong: true },
       ...(taxRate && vatCents > 0
         ? [

@@ -614,7 +614,7 @@
     <string name="disc_sending">Sending...</string>
     <string name="disc_need_name">Write the discount name</string>
     <string name="disc_need_percent">The percent must be between 1 and 100</string>
-    <string name="disc_need_section">Pick the section</string>
+    <string name="disc_need_section">Write the section name</string>
     <string name="disc_need_products">Pick at least one product</string>
     <string name="disc_failed">The request could not be completed</string>
     <string name="disc_st_pending">Waiting for approval</string>
@@ -658,4 +658,10 @@
     <string name="deals_empty">No shops with discounts here right now</string>
     <string name="deals_back">Deals</string>
     <string name="deals_locate">Find my location</string>
+    <string name="disc_section_ph">Type the section name, for example: Sports shoes</string>
+    <string name="disc_or_type">Or type the number here</string>
+    <string name="disc_pick_date">📅 Pick from the calendar</string>
+    <string name="disc_times_left">%1$d left for you</string>
+    <string name="disc_places_left">%1$d of %2$d places left</string>
+    <string name="disc_places_left_short">%1$d places left</string>
 </resources>

@@ -214,6 +214,8 @@ data class DiscountDto(
     val scope: String = "ALL",
     val section: DiscountSectionDto? = null,
     val productNames: List<String> = emptyList(),
+    val peopleLeft: Int? = null,
+    val myTimesLeft: Int? = null,
 )
 
 /** A discount in the shop's own list, with its state, review result and how it has been used. */

@@ -64,6 +64,18 @@ describe("The server answers in the language the client asks for", () => {
     expect(byHeader.body.error.code).toBeTruthy(); // the machine-readable code never changes
   });
 
+  it("shows an error the server wrote in English as Arabic to an Arabic reader, and leaves English readers alone", async () => {
+    const id = "00000000-0000-4000-8000-000000000000";
+    const ar = await request(app).get(`/merchant/${id}`);
+    expect(ar.status).toBe(404);
+    expect(ar.body.error.message).toBe("المحل غير موجود");
+    expect(ar.body.error.code).toBe("NOT_FOUND");
+    const en = await request(app).get(`/merchant/${id}`).query({ lang: "en" });
+    expect(en.body.error.message).toBe("Merchant not found");
+    const unknown = await request(app).get("/no-such-route");
+    expect(unknown.body.error.message).toBe("غير موجود");
+  });
+
   it("translates success messages and server-made pages", async () => {
     const forgot = await request(app).post("/auth/forgot-password").set("Accept-Language", "en").send({ email: uniqueEmail("ghost") });
     expect(forgot.body.message).toBe("If this email is registered, we sent a password reset link");

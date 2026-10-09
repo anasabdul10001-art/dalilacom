@@ -88,10 +88,13 @@ describe("a new discount waits for the admin", () => {
     expect((await make(s, { percent: 101 })).status).toBe(400);
     expect((await make(s, { endDate: new Date(Date.now() - day).toISOString() })).status).toBe(400);
     expect((await make(s, { startDate: new Date(Date.now() + 3 * day).toISOString(), endDate: new Date(Date.now() + day).toISOString() })).status).toBe(400);
-    expect((await make(s, { scope: "SECTION", scopeSection: "nope" })).status).toBe(400);
+    expect((await make(s, { scope: "SECTION", scopeSection: "" })).status).toBe(400); // a section must be named
+    expect((await make(s, { scope: "SECTION" })).status).toBe(400);
     expect((await make(s, { scope: "PRODUCTS", productIds: [] })).status).toBe(400);
     expect((await make(s, { scope: "PRODUCTS", productIds: [other.productId] })).status).toBe(400); // someone else's product
-    expect((await make(s, { scope: "SECTION", scopeSection: "electronics" })).status).toBe(201);
+    const typed = await make(s, { scope: "SECTION", scopeSection: "  ملابس رجالية " }); // the shop types the section in its own words
+    expect(typed.status).toBe(201);
+    expect(typed.body.scopeSection).toBe("ملابس رجالية");
     expect((await make(s, { scope: "PRODUCTS", productIds: [s.productId] })).status).toBe(201);
   });
 
@@ -125,6 +128,9 @@ describe("the shop's limits", () => {
     expect(third.body.error.code).toBe("LIMIT_REACHED");
     const seen = (await verify(s, c)).body.discounts[0];
     expect(seen).toMatchObject({ eligible: false, usedByMember: 2, remainingForMember: 0 });
+    // the member sees on the shop page how many times are left; a visitor does not
+    expect((await request(app).get(`/merchant/${s.id}`).set(c.auth)).body.discounts[0]).toMatchObject({ perCustomerLimit: 2, myTimesLeft: 0 });
+    expect((await request(app).get(`/merchant/${s.id}`)).body.discounts[0].myTimesLeft).toBeNull();
   });
 
   it("lets only so many different people have it", async () => {
@@ -139,6 +145,10 @@ describe("the shop's limits", () => {
     expect(blocked.status).toBe(409);
     expect(blocked.body.error.code).toBe("LIMIT_REACHED");
     expect((await verify(s, second)).body.discounts[0].eligible).toBe(false);
+    // everyone can see how many places are left, on the shop page and in the list
+    expect((await request(app).get(`/merchant/${s.id}`)).body.discounts[0]).toMatchObject({ maxCustomers: 1, peopleLeft: 0 });
+    const listed = (await request(app).get("/merchant?q=" + encodeURIComponent("Disc Shop"))).body.find((m: { id: string }) => m.id === s.id);
+    expect(listed.discounts[0].peopleLeft).toBe(0);
   });
 
   it("applies the discount the shop picks, or the best one the member may still take", async () => {
@@ -206,6 +216,10 @@ describe("the shop looks after its discounts", () => {
     await approve(sec.body.id);
     const fashion = (await request(app).get(`/merchant/${s.id}`)).body.discounts.find((x: { title: string }) => x.title === "قسم");
     expect(fashion.section).toMatchObject({ id: "fashion", nameEn: "Fashion" });
+    const own = await make(s, { title: "قسم حر", percent: 7, scope: "SECTION", scopeSection: "أحذية رياضية" });
+    await approve(own.body.id);
+    const mine = (await request(app).get(`/merchant/${s.id}`)).body.discounts.find((x: { title: string }) => x.title === "قسم حر");
+    expect(mine.section).toMatchObject({ name: "أحذية رياضية" });
   });
 
   it("is for shops only; only the admin approves", async () => {

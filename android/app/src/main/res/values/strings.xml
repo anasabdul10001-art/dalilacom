@@ -618,7 +618,7 @@
     <string name="disc_sending">عم نرسل...</string>
     <string name="disc_need_name">اكتب اسم الحسم</string>
     <string name="disc_need_percent">النسبة لازم تكون بين 1 و100</string>
-    <string name="disc_need_section">اختر القسم</string>
+    <string name="disc_need_section">اكتب اسم القسم</string>
     <string name="disc_need_products">اختر منتجًا واحدًا على الأقل</string>
     <string name="disc_failed">تعذّر تنفيذ الطلب</string>
     <string name="disc_st_pending">بانتظار الموافقة</string>
@@ -662,4 +662,10 @@
     <string name="deals_empty">ما في محلات عليها تخفيضات هون حاليًا</string>
     <string name="deals_back">التخفيضات</string>
     <string name="deals_locate">حدّد موقعي</string>
+    <string name="disc_section_ph">اكتب اسم القسم، مثلًا: أحذية رياضية</string>
+    <string name="disc_or_type">أو اكتب الرقم هون</string>
+    <string name="disc_pick_date">📅 اختر من الرزنامة</string>
+    <string name="disc_times_left">باقي لك %1$d مرة</string>
+    <string name="disc_places_left">باقي %1$d من %2$d مكان</string>
+    <string name="disc_places_left_short">باقي %1$d مكان</string>
 </resources>

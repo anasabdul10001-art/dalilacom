@@ -194,7 +194,8 @@ storeRouter.get("/products/:id", async (req, res) => {
     orderBy: sorts.popular,
     take: 8,
   });
-  res.json({ ...view(product), currency: await currencyOf(country), related: related.map(view) });
+  const shipping = await prisma.shippingMethod.findMany({ where: { merchantId: product.merchantId, isActive: true }, orderBy: { createdAt: "asc" } });
+  res.json({ ...view(product), currency: await currencyOf(country), shipping: shipping.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })), related: related.map(view) });
 });
 
 /* ---------------- the big rotating banners of the front page ---------------- */

@@ -340,6 +340,7 @@ model MerchantProfile {
   plan                 ServicePlan?          @relation(fields: [planId], references: [id])
   favoritedBy          FavoriteMerchant[]
   discounts            Discount[]
+  shippingMethods      ShippingMethod[]
   discountTransactions DiscountTransaction[]
   products             Product[]
   adBookings           AdBooking[]
@@ -425,6 +426,8 @@ model Order {
   memberDiscountCents Int         @default(0)
   totalCents          Int
   cancelReason        String? // required when the merchant cancels (section 59.6)
+  shippingName        String? // the shipping method the customer chose (snapshot)
+  shippingCents       Int         @default(0) // its cost, already inside totalCents
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
@@ -1459,4 +1462,18 @@ enum DiscountApproval {
   PENDING
   APPROVED
   REJECTED
+}
+
+/// How a shop sends its orders and what that costs; the customer picks one at checkout.
+model ShippingMethod {
+  id         String   @id @default(uuid())
+  merchantId String
+  name       String
+  costCents  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  merchant MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
 }

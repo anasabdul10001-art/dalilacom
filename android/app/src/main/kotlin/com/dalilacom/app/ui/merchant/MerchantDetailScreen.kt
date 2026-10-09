@@ -218,6 +218,8 @@ fun MerchantDetailScreen(
                                                 Text("🏷️ ${discount.title} — ${discount.percent}%", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                                                 Text(com.dalilacom.app.ui.merchantmode.discountScopeText(discount.scope, discount.section, discount.productNames), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
                                                 discount.endDate?.let { Text(stringResource(R.string.disc_until, it.take(10)), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall) }
+                                                discount.myTimesLeft?.let { Text(stringResource(R.string.disc_times_left, it), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+                                                if (discount.maxCustomers != null && discount.peopleLeft != null) Text(stringResource(R.string.disc_places_left, discount.peopleLeft, discount.maxCustomers), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                                                 if (!discount.description.isNullOrBlank()) Text(discount.description, color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
                                             }
                                         }

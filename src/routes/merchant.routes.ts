@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { shopStanding } from "./reviews.routes";
-import { discountScopeInfo, discountState, liveDiscountWhere } from "../lib/discounts";
-import { isStoreSection } from "../lib/storeSections";
+import { discountScopeInfo, discountState, liveDiscountWhere, peopleLeftMap, timesLeftMap } from "../lib/discounts";
+import { optionalUserId } from "../services/viewerCountry.service";
 import { notify } from "../services/notification.service";
 import { z } from "zod";
 import { MerchantApprovalStatus, Prisma, Role } from "@prisma/client";
@@ -242,7 +242,10 @@ merchantRouter.get("/", async (req, res) => {
   const tz = await platformTimeZone();
   const now = new Date();
   const localize = await categoryNameLocalizer(resolveLanguage(req));
-  let merchants = found.map((m) => localize({ ...withOwnerProfile(m), openStatus: computeOpenStatus(m.openingHours, tz, now) }));
+  const placesLeft = await peopleLeftMap(found.flatMap((m) => m.discounts));
+  let merchants = found.map((m) =>
+    localize({ ...withOwnerProfile({ ...m, discounts: m.discounts.map((d) => ({ ...d, peopleLeft: placesLeft.get(d.id) ?? null })) }), openStatus: computeOpenStatus(m.openingHours, tz, now) }),
+  );
   if (openNow === "true") merchants = merchants.filter((m) => m.openStatus.isOpen);
 
   // Nearest-first sorting when the customer's location is known (section 31 "Radius Selector").
@@ -309,12 +312,46 @@ const discountSchema = z.object({
   perCustomerLimit: z.number().int().min(1).max(1000).nullable().optional(),
 });
 
+/** The shop that owns the request, once the admin has approved it: until then merchant mode is closed. */
 async function ownApprovedShop(userId: string) {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId } });
   if (!merchant) return { merchant: null, error: [404, "NOT_FOUND", "Merchant profile not found"] as [number, string, string] };
-  if (merchant.approvalStatus !== "APPROVED") return { merchant: null, error: [403, "FORBIDDEN", "Merchant is not approved yet"] as [number, string, string] };
+  if (merchant.approvalStatus !== "APPROVED") return { merchant: null, error: [403, "FORBIDDEN", "محلك لسا ما انوافق عليه من الإدارة، بتقدر تستخدم وضع التاجر بعد الموافقة"] as [number, string, string] };
   return { merchant, error: null };
 }
+
+/* ---------------- shipping methods: how the shop sends orders, and what it costs ---------------- */
+
+const shippingSchema = z.object({
+  methods: z
+    .array(z.object({ name: z.string().trim().min(2).max(40), costCents: z.number().int().min(0).max(100_000_00) }))
+    .min(1)
+    .max(8),
+});
+
+merchantRouter.get("/shipping-methods", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  const rows = await prisma.shippingMethod.findMany({ where: { merchantId: merchant.id, isActive: true }, orderBy: { createdAt: "asc" } });
+  res.json(rows.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })));
+});
+
+// The whole list at once (the form sends what it shows): the shop needs at least one method.
+merchantRouter.put("/shipping-methods", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const parsed = shippingSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const own = await ownApprovedShop(req.user!.id);
+  if (own.error || !own.merchant) return sendError(res, own.error?.[0] ?? 404, own.error?.[1] ?? "NOT_FOUND", own.error?.[2] ?? "Not found");
+  const merchantId = own.merchant.id;
+  const rows = await prisma.$transaction(async (tx) => {
+    await tx.shippingMethod.deleteMany({ where: { merchantId } }); // orders keep their own copy of the name and cost
+    let at = Date.now();
+    const created = [];
+    for (const m of parsed.data.methods) created.push(await tx.shippingMethod.create({ data: { merchantId, name: m.name, costCents: m.costCents, createdAt: new Date(at++) } }));
+    return created;
+  });
+  res.json(rows.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })));
+});
 
 /** Checks what the form chose against the shop's own data; returns the values to save or the reason it is wrong. */
 async function discountTerms(merchantId: string, input: z.infer<typeof discountSchema>) {
@@ -324,7 +361,8 @@ async function discountTerms(merchantId: string, input: z.infer<typeof discountS
   if (end && end.getTime() < Date.now()) return { error: "تاريخ النهاية لازم يكون بالمستقبل" };
   if (start && end && end.getTime() <= start.getTime()) return { error: "تاريخ النهاية لازم يكون بعد البداية" };
   let productIds: string[] = [];
-  if (input.scope === "SECTION" && !(input.scopeSection && isStoreSection(input.scopeSection))) return { error: "اختر قسمًا صحيحًا" };
+  const sectionName = (input.scopeSection ?? "").trim();
+  if (input.scope === "SECTION" && (sectionName.length < 2 || sectionName.length > 60)) return { error: "اكتب اسم القسم (من حرفين إلى 60 حرفًا)" };
   if (input.scope === "PRODUCTS") {
     productIds = [...new Set(input.productIds ?? [])];
     const own = productIds.length ? await prisma.product.count({ where: { id: { in: productIds }, merchantId } }) : 0;
@@ -336,7 +374,7 @@ async function discountTerms(merchantId: string, input: z.infer<typeof discountS
       percent: input.percent,
       description: input.description || null,
       scope: input.scope,
-      scopeSection: input.scope === "SECTION" ? input.scopeSection! : null,
+      scopeSection: input.scope === "SECTION" ? sectionName : null,
       productIds,
       startDate: start,
       endDate: end,
@@ -374,7 +412,7 @@ merchantRouter.get("/discounts", requireAuth, requireRole(Role.MERCHANT), async 
 merchantRouter.get("/:id", async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
     where: { id: req.params.id },
-    include: { category: true, discounts: { where: liveDiscountWhere(), orderBy: { percent: "desc" } }, user: ownerProfileSelect },
+    include: { category: true, discounts: { where: liveDiscountWhere(), orderBy: { percent: "desc" } }, user: ownerProfileSelect, shippingMethods: { where: { isActive: true }, orderBy: { createdAt: "asc" } } },
   });
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
     return sendError(res, 404, "NOT_FOUND", "Merchant not found");
@@ -383,8 +421,14 @@ merchantRouter.get("/:id", async (req, res) => {
   const standing = await shopStanding(merchant.id); // the stars and the followers are public
   // each live discount comes with what it covers, its dates and its limits (the customer reads them on the shop page)
   const scopeOf = await discountScopeInfo(merchant.discounts);
-  const discounts = merchant.discounts.map((d) => ({ id: d.id, title: d.title, percent: d.percent, description: d.description, endDate: d.endDate, perCustomerLimit: d.perCustomerLimit, maxCustomers: d.maxCustomers, ...scopeOf(d) }));
-  res.json(localize({ ...withOwnerProfile({ ...merchant, discounts }), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
+  // and how many places are left on a discount that limits people, and how many times this person still has
+  const [placesLeft, timesLeft] = await Promise.all([peopleLeftMap(merchant.discounts), timesLeftMap(await optionalUserId(req), merchant.discounts)]);
+  const discounts = merchant.discounts.map((d) => ({
+    id: d.id, title: d.title, percent: d.percent, description: d.description, endDate: d.endDate, perCustomerLimit: d.perCustomerLimit, maxCustomers: d.maxCustomers,
+    peopleLeft: placesLeft.get(d.id) ?? null, myTimesLeft: timesLeft.get(d.id) ?? null, ...scopeOf(d),
+  }));
+  const shippingMethods = merchant.shippingMethods.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents }));
+  res.json(localize({ ...withOwnerProfile({ ...merchant, discounts, shippingMethods }), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
 });
 
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
