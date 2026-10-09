@@ -579,6 +579,7 @@ enum WalletTxType {
   MEMBERSHIP // a customer membership was bought out of the wallet balance
   BROADCAST // a shop paid for an announcement (or got the money back when it was refused)
   AD // a shop paid for advertising space in the store (or got the money back)
+  AI // a shop paid for AI help with its photos or descriptions beyond the free uses
   ADJUSTMENT
 }
 
@@ -1476,4 +1477,15 @@ model ShippingMethod {
   merchant MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@index([merchantId])
+}
+
+/// One use of the AI by a shop (a description from a photo, or an AI photo edit): free ones count against the monthly allowance.
+model AiUse {
+  id        String   @id @default(uuid())
+  userId    String
+  kind      String
+  credits   Int      @default(0) // what it cost; 0 = it was one of the free uses
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

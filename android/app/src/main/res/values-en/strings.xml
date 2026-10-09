@@ -697,4 +697,18 @@
     <string name="shop_refused_sub">Check the reason and contact support, or register a new request.</string>
     <string name="shop_refresh">Refresh status</string>
     <string name="shop_back_to_account">Back to my account</string>
+    <string name="pe_photos">Product photos</string>
+    <string name="ai_edit">Edit photo</string>
+    <string name="ai_edit_title">Edit the product photo</string>
+    <string name="ai_working">Editing the photo...</string>
+    <string name="ai_clean">Quick tidy-up (free): square, white background</string>
+    <string name="ai_white_bg">Remove the background (white)</string>
+    <string name="ai_studio">Professional studio light</string>
+    <string name="ai_recolor">Change the product colour</string>
+    <string name="ai_undo">Undo the last edit</string>
+    <string name="ai_done">Done</string>
+    <string name="ai_free_left">%1$d of %2$d free AI uses left this month</string>
+    <string name="ai_paid_per">Free uses are finished: each use costs %1$d from your balance (balance %2$d)</string>
+    <string name="ai_no_more">Your free uses for this month are finished</string>
+    <string name="ai_unavailable">AI editing is not available right now, only the quick tidy-up works.</string>
 </resources>

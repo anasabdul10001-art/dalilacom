@@ -99,7 +99,6 @@ data class WizardUi(
     val specs: List<SpecDto> = emptyList(),
     val price: String = "",
     val stock: String = "",
-    val enhancing: Int? = null,
     val needShipping: Boolean = false,
     val hintMin: Int? = null,
     val hintMax: Int? = null,
@@ -128,30 +127,9 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
         }
     }
 
-    /** A cleaned-up copy of the photo (white square, centred, even light) that suits Google and the image-reading algorithms. */
-    fun enhance(i: Int) {
-        val p = _ui.value.photos.getOrNull(i) ?: return
-        if (p.enhanced || _ui.value.enhancing != null) return
-        _ui.update { it.copy(enhancing = i, error = null) }
-        viewModelScope.launch {
-            store.enhancePhoto(p.id)
-                .onSuccess { better -> _ui.update { s -> s.copy(enhancing = null, photos = s.photos.mapIndexed { k, x -> if (k == i) WizPhoto(better.url, better.id, x.bytes, enhanced = true) else x }) } }
-                .onFailure { e -> _ui.update { it.copy(enhancing = null, error = e.message) } }
-        }
-    }
-
-    fun enhanceAll() {
-        viewModelScope.launch {
-            for (i in _ui.value.photos.indices) {
-                val p = _ui.value.photos.getOrNull(i) ?: continue
-                if (p.enhanced) continue
-                _ui.update { it.copy(enhancing = i, error = null) }
-                store.enhancePhoto(p.id)
-                    .onSuccess { better -> _ui.update { s -> s.copy(photos = s.photos.mapIndexed { k, x -> if (k == i) WizPhoto(better.url, better.id, x.bytes, enhanced = true) else x }) } }
-                    .onFailure { e -> _ui.update { it.copy(error = e.message) } }
-            }
-            _ui.update { it.copy(enhancing = null) }
-        }
+    /** The shop edits a photo (tidy, remove the background, studio light, colour) and can go back; the new copy replaces the old. */
+    val editor = PhotoEditor(store, viewModelScope) { old, new ->
+        _ui.update { s -> s.copy(photos = s.photos.map { x -> if (x.url == old) WizPhoto(new.url, new.id, x.bytes, enhanced = true) else x }) }
     }
 
     fun removePhoto(i: Int) = _ui.update { it.copy(photos = it.photos.filterIndexed { k, _ -> k != i }) }
@@ -160,22 +138,25 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
         val first = _ui.value.photos.firstOrNull() ?: return
         _ui.update { it.copy(step = "analyzing", error = null) }
         viewModelScope.launch {
-            val r = store.aiDraft(first.id)
-            val d = r?.draft
-            _ui.update {
-                it.copy(
-                    step = "form",
-                    aiAvailable = r?.available ?: false,
-                    hintMin = r?.priceHint?.min, hintMax = r?.priceHint?.max,
-                    name = d?.name ?: it.name,
-                    alternatives = d?.alternatives ?: emptyList(),
-                    description = d?.description ?: it.description,
-                    specs = d?.specs ?: it.specs,
-                    section = d?.section ?: it.section,
-                    condition = d?.condition ?: it.condition,
-                    error = if (r?.available == true && d == null) AppStrings.get(R.string.wiz_ai_miss) else null,
-                )
-            }
+            store.aiDraft(first.id)
+                .onSuccess { r ->
+                    val d = r.draft
+                    _ui.update {
+                        it.copy(
+                            step = "form",
+                            aiAvailable = r.available,
+                            hintMin = r.priceHint?.min, hintMax = r.priceHint?.max,
+                            name = d?.name ?: it.name,
+                            alternatives = d?.alternatives ?: emptyList(),
+                            description = d?.description ?: it.description,
+                            specs = d?.specs ?: it.specs,
+                            section = d?.section ?: it.section,
+                            condition = d?.condition ?: it.condition,
+                            error = if (r.available && d == null) AppStrings.get(R.string.wiz_ai_miss) else null,
+                        )
+                    }
+                }
+                .onFailure { e -> _ui.update { it.copy(step = "form", aiAvailable = false, error = e.message) } }
         }
     }
 
@@ -261,6 +242,7 @@ fun ProductWizardScreen(container: AppContainer, onBack: () -> Unit, onManual: (
         runCatching { speech.launch(intent) }.onFailure { Toast.makeText(context, context.getString(R.string.wiz_no_voice), Toast.LENGTH_SHORT).show() }
     }
 
+    PhotoEditDialog(vm.editor)
     val stepNo = when (ui.step) { "photos" -> 1; "analyzing" -> 2; else -> 3 }
     Column(Modifier.fillMaxSize()) {
         TextButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) { Text("‹  " + stringResource(R.string.store_back)) }
@@ -307,13 +289,10 @@ private fun PhotosStep(ui: WizardUi, vm: ProductWizardViewModel, camera: () -> U
                         if (p.enhanced) coil.compose.AsyncImage(model = com.dalilacom.app.data.network.absoluteUrl(p.url), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                         else if (bmp != null) androidx.compose.foundation.Image(bitmap = bmp, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                         Surface(
-                            onClick = { vm.enhance(i) }, enabled = !p.enhanced && ui.enhancing == null, shape = RoundedCornerShape(8.dp), color = Color(0xB3000000), contentColor = Color.White,
+                            onClick = { vm.editor.open(p.url) }, shape = RoundedCornerShape(8.dp), color = Color(0xB3000000), contentColor = Color.White,
                             modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp),
                         ) {
-                            Text(
-                                if (ui.enhancing == i) "…" else if (p.enhanced) "✓ " + stringResource(R.string.wiz_enhanced) else "✨ " + stringResource(R.string.wiz_enhance),
-                                fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            )
+                            Text("✨ " + stringResource(R.string.ai_edit), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                         }
                         Surface(onClick = { vm.removePhoto(i) }, shape = CircleShape, color = Color(0x99000000), contentColor = Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(30.dp)) { Box(contentAlignment = Alignment.Center) { Text("✕") } }
                         if (i == 0) Text(stringResource(R.string.wiz_main_photo), color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp).background(Color(0xA6000000), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp))
@@ -326,7 +305,6 @@ private fun PhotosStep(ui: WizardUi, vm: ProductWizardViewModel, camera: () -> U
             AddPhotoTile("📷", stringResource(R.string.wiz_take_photo), true, camera, Modifier.weight(1f))
             AddPhotoTile("🖼️", stringResource(R.string.wiz_pick_photo), false, gallery, Modifier.weight(1f))
         }
-        if (ui.photos.size > 1) TextButton(onClick = vm::enhanceAll, enabled = ui.enhancing == null, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("✨  " + stringResource(R.string.wiz_enhance_all)) }
         if (ui.photos.isNotEmpty()) Text(stringResource(R.string.wiz_enhance_note), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         if (ui.uploading) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { CircularProgressIndicator(Modifier.size(22.dp)); Spacer(Modifier.width(10.dp)); Text(stringResource(R.string.wiz_uploading)) }
         ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

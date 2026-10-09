@@ -701,4 +701,18 @@
     <string name="shop_refused_sub">راجع سبب الرفض وتواصل مع الدعم أو سجّل طلب جديد.</string>
     <string name="shop_refresh">تحديث الحالة</string>
     <string name="shop_back_to_account">رجوع لحسابي</string>
+    <string name="pe_photos">صور المنتج</string>
+    <string name="ai_edit">حرّر الصورة</string>
+    <string name="ai_edit_title">تعديل صورة المنتج</string>
+    <string name="ai_working">عم نعدّل الصورة...</string>
+    <string name="ai_clean">تنظيف سريع (مجاني): مربعة وخلفية بيضاء</string>
+    <string name="ai_white_bg">إزالة الخلفية (خلفية بيضاء)</string>
+    <string name="ai_studio">إضاءة استوديو احترافية</string>
+    <string name="ai_recolor">غيّر لون المنتج</string>
+    <string name="ai_undo">تراجع عن آخر تعديل</string>
+    <string name="ai_done">تم</string>
+    <string name="ai_free_left">باقي %1$d من %2$d استخدام مجاني بالذكاء الاصطناعي هالشهر</string>
+    <string name="ai_paid_per">انتهت الاستخدامات المجانية: كل استخدام بـ %1$d من رصيدك (رصيدك %2$d)</string>
+    <string name="ai_no_more">انتهت استخداماتك المجانية هالشهر</string>
+    <string name="ai_unavailable">التعديل بالذكاء الاصطناعي غير متاح حاليًا، بس التنظيف السريع شغّال.</string>
 </resources>

@@ -252,8 +252,6 @@ fun StoreScreen(
     fun goBack() {
         if (vm.clearFilters()) query = "" else onBack()
     }
-    val photoPicker = com.dalilacom.app.ui.common.rememberPhotoPicker { uri -> scope.launch { vm.searchByPhoto(kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.dalilacom.app.ui.common.ImageUtil.maxJpeg(context, uri, 900) }) } }
-    var photoMenu by remember { mutableStateOf(false) }
 
     BackHandler { goBack() }
     LaunchedEffect(ui.error) { ui.error?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() } }
@@ -286,13 +284,6 @@ fun StoreScreen(
                         keyboardActions = KeyboardActions(onSearch = { vm.search(query) }),
                         modifier = Modifier.fillMaxWidth(),
                     )
-                }
-                Box {
-                    IconButton(onClick = { photoMenu = true }, modifier = Modifier.size(36.dp)) { Text("📷", fontSize = 18.sp) }
-                    DropdownMenu(expanded = photoMenu, onDismissRequest = { photoMenu = false }) {
-                        DropdownMenuItem(text = { Text("📷  " + stringResource(R.string.wiz_take_photo)) }, onClick = { photoMenu = false; photoPicker.openCamera() })
-                        DropdownMenuItem(text = { Text("🖼️  " + stringResource(R.string.wiz_pick_photo)) }, onClick = { photoMenu = false; photoPicker.openGallery() })
-                    }
                 }
                 IconButton(onClick = { vm.search(query) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Search, contentDescription = null, tint = Color(0xFF111111), modifier = Modifier.size(20.dp)) }
             }

@@ -42,6 +42,8 @@ export interface PlatformSettings {
     pricePerAnnouncement: number;
   };
   ads: AdSettings;
+  /** The AI for shops (descriptions from photos, photo editing): free uses per month, then a price in wallet credits. */
+  ai: { freePerMonth: number; creditsPerUse: number };
 }
 
 export const DEFAULT_SETTINGS: PlatformSettings = {
@@ -65,6 +67,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
     autoApprove: false,
     bannerSeconds: 5,
   },
+  ai: { freePerMonth: 10, creditsPerUse: 5 },
 };
 
 export async function getSettings(): Promise<PlatformSettings> {
@@ -77,6 +80,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     payment: { ...DEFAULT_SETTINGS.payment, ...(stored.payment ?? {}) },
     broadcasts: { ...DEFAULT_SETTINGS.broadcasts, ...(stored.broadcasts ?? {}) },
     ads: { ...DEFAULT_SETTINGS.ads, ...(stored.ads ?? {}) },
+    ai: { ...DEFAULT_SETTINGS.ai, ...(stored.ai ?? {}) },
   };
 }
 
@@ -89,6 +93,7 @@ export async function saveSettings(patch: Partial<PlatformSettings>) {
     payment: { ...current.payment, ...(patch.payment ?? {}) },
     broadcasts: { ...current.broadcasts, ...(patch.broadcasts ?? {}) },
     ads: { ...current.ads, ...(patch.ads ?? {}) },
+    ai: { ...current.ai, ...(patch.ai ?? {}) },
   };
   for (const [key, value] of Object.entries(next)) {
     await prisma.platformSetting.upsert({ where: { key }, update: { value: value as object }, create: { key, value: value as object } });

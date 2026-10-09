@@ -2,10 +2,13 @@ import express, { Router } from "express";
 import { z } from "zod";
 import { Role } from "@prisma/client";
 import { prisma } from "../prisma";
-import { sendError, sendValidationError } from "../lib/apiError";
+import { ApiError, sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { sniffImageMime } from "../lib/image";
 import { enhanceProductPhoto } from "../lib/photoEnhance";
+import sharp from "sharp";
+import { PHOTO_COLORS, editPhotoWithAi, imageEditAvailable, instructionFor } from "../services/aiImage.service";
+import { aiQuotaFor, ensureCanUseAi, recordAiUse } from "../services/aiQuota.service";
 import { route } from "../lib/asyncRoute";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
@@ -110,6 +113,47 @@ productRouter.post("/photos/:id/enhance", requireAuth, requireRole(Role.MERCHANT
   res.status(201).json({ id: created.id, url: `/store/photos/${created.id}`, from: photo.id });
 }));
 
+/** What the shop has left of its free AI uses this month, and what a use costs after that. */
+productRouter.get("/ai-quota", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  res.json({ ...(await aiQuotaFor(req.user!.id)), photoEdit: imageEditAvailable(), describe: visionAvailable() });
+}));
+
+const editSchema = z.object({ action: z.enum(["clean", "white_bg", "studio", "recolor"]), color: z.enum(PHOTO_COLORS).optional() }).refine((d) => d.action !== "recolor" || !!d.color, { message: "color is required" });
+
+/**
+ * Edit one of the shop's photos into a new copy (the old one stays, so the shop can go back):
+ *  clean = tidy it up here (square, white, even light), free;  white_bg / studio / recolor = the AI, counted against the
+ *  free uses of the month and charged to the wallet after them.
+ */
+productRouter.post("/photos/:id/edit", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const parsed = editSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const found = await getOwnApprovedMerchant(req.user!.id);
+  if ("error" in found) return sendError(res, 403, "FORBIDDEN", found.error ?? "Forbidden");
+  const photo = await prisma.productPhoto.findFirst({ where: { id: req.params.id, merchantId: found.merchant.id } });
+  if (!photo) return sendError(res, 404, "NOT_FOUND", "الصورة غير موجودة");
+  const { action, color } = parsed.data;
+
+  let improved: Buffer;
+  try {
+    if (action === "clean") {
+      improved = await enhanceProductPhoto(Buffer.from(photo.data));
+    } else {
+      if (!imageEditAvailable()) return sendError(res, 503, "UNAVAILABLE", "تعديل الصور بالذكاء الاصطناعي غير متاح حاليًا");
+      await ensureCanUseAi(req.user!.id);
+      const edited = await editPhotoWithAi({ mime: photo.mime, data: Buffer.from(photo.data) }, instructionFor(action, color));
+      if (!edited) return sendError(res, 502, "UNAVAILABLE", "ما قدرنا نعدّل الصورة هلأ، جرّب بعد شوي (ما انحسب عليك شي)");
+      improved = action === "recolor" ? await sharp(edited).rotate().resize(1600, 1600, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 88, mozjpeg: true }).toBuffer() : await enhanceProductPhoto(edited);
+    }
+  } catch (err) {
+    if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
+    return sendError(res, 422, "UNPROCESSABLE", "تعذّر تحسين هالصورة، جرّب صورة ثانية");
+  }
+  const created = await prisma.productPhoto.create({ data: { merchantId: found.merchant.id, mime: "image/jpeg", data: improved }, select: { id: true } });
+  if (action !== "clean") await recordAiUse(req.user!.id, `photo:${action}`);
+  res.status(201).json({ id: created.id, url: `/store/photos/${created.id}`, from: photo.id, quota: await aiQuotaFor(req.user!.id) });
+}));
+
 const drafts = new Map<string, { day: string; n: number }>();
 const DAILY_DRAFTS = 60;
 
@@ -127,6 +171,12 @@ productRouter.post("/ai-draft", requireAuth, requireRole(Role.MERCHANT), route(a
   const used = drafts.get(req.user!.id);
   const count = used && used.day === day ? used.n : 0;
   if (count >= DAILY_DRAFTS) return sendError(res, 429, "RATE_LIMITED", "وصلت للحد اليومي لاقتراحات الصور، كمّل كتابة المنتج بنفسك");
+  try {
+    await ensureCanUseAi(req.user!.id);
+  } catch (err) {
+    if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
+    throw err;
+  }
   drafts.set(req.user!.id, { day, n: count + 1 });
 
   const draft = await draftProductFromPhoto({ mime: photo.mime as "image/jpeg" | "image/png" | "image/webp", data: Buffer.from(photo.data) }, STORE_SECTIONS.map((s) => s.id));
@@ -143,7 +193,8 @@ productRouter.post("/ai-draft", requireAuth, requireRole(Role.MERCHANT), route(a
     const prices = similar.map((p) => p.priceCents).sort((a, b) => a - b);
     if (prices.length >= 3) priceHint = { min: prices[0], median: prices[Math.floor(prices.length / 2)], max: prices[prices.length - 1], count: prices.length };
   }
-  res.json({ available: true, draft, priceHint });
+  if (draft) await recordAiUse(req.user!.id, "describe");
+  res.json({ available: true, draft, priceHint, quota: await aiQuotaFor(req.user!.id) });
 }));
 
 // Merchant: manage their own catalog, including inactive/out-of-stock items (section 59.1)
@@ -173,7 +224,13 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req,
     return sendError(res, 404, "NOT_FOUND", "Product not found");
   }
 
-  const product = await prisma.product.update({ where: { id: existing.id }, data: parsed.data });
+  // the photos: each must be one this shop uploaded; the first is the main one
+  const { images, ...rest } = parsed.data;
+  if (images !== undefined && !(await ownPhotos(merchant.id, images))) return sendError(res, 400, "BAD_REQUEST", "الصورة غير صالحة");
+  const product = await prisma.product.update({
+    where: { id: existing.id },
+    data: { ...rest, ...(images !== undefined ? { images, imageUrl: images[0] ?? null } : {}) },
+  });
   res.json(product);
 });
 

@@ -350,6 +350,8 @@ data class ProductDto(
     val memberPriceCents: Int? = null,
     val stock: Int,
     val isActive: Boolean = true,
+    val images: List<String> = emptyList(),
+    val imageUrl: String? = null,
 )
 
 @Serializable
@@ -504,6 +506,7 @@ data class UpdateProductRequest(
     val memberDiscountEnabled: Boolean? = null,
     val memberPriceCents: Int? = null,
     val isActive: Boolean? = null,
+    val images: List<String>? = null,
 )
 
 @Serializable
@@ -738,7 +741,22 @@ data class MyAdDto(
 data class SpecDto(val label: String, val value: String)
 
 @Serializable
-data class PhotoSearchDto(val title: String = "", val currency: String = "", val items: List<StoreProductDto> = emptyList())
+data class AiQuotaDto(
+    val freePerMonth: Int = 0,
+    val used: Int = 0,
+    val freeLeft: Int = 0,
+    val creditsPerUse: Int = 0,
+    val balance: Int = 0,
+    val photoEdit: Boolean = true,
+    val describe: Boolean = true,
+)
+
+/** action: clean | white_bg | studio | recolor (with a colour). */
+@Serializable
+data class PhotoEditRequest(val action: String, val color: String? = null)
+
+@Serializable
+data class PhotoEditResponse(val id: String, val url: String, val quota: AiQuotaDto? = null)
 
 @Serializable
 data class ProductPhotoDto(val id: String, val url: String)

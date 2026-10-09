@@ -32,6 +32,8 @@ data class ProductEditUiState(
     val isSaving: Boolean = false,
     val saved: Boolean = false,
     val needShipping: Boolean = false,
+    val images: List<String> = emptyList(),
+    val uploadingPhoto: Boolean = false,
     val error: String? = null,
 )
 
@@ -39,6 +41,7 @@ class ProductEditViewModel(
     private val productRepository: ProductRepository,
     private val discoverRepository: DiscoverRepository,
     private val merchantRepository: com.dalilacom.app.data.repository.MerchantRepository,
+    private val storeRepository: com.dalilacom.app.data.repository.StoreRepository,
     private val productId: String?,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProductEditUiState(isNew = productId == null))
@@ -72,6 +75,7 @@ class ProductEditViewModel(
                 memberPriceText = product.memberPriceCents?.let { (it / 100.0).toString() }.orEmpty(),
                 isActive = product.isActive,
                 selectedCategoryId = product.categoryId,
+                images = product.images.ifEmpty { listOfNotNull(product.imageUrl) },
             )
         }
     }
@@ -84,6 +88,30 @@ class ProductEditViewModel(
     fun onMemberPriceChange(value: String) { _uiState.value = _uiState.value.copy(memberPriceText = value) }
     fun onMemberDiscountToggle(enabled: Boolean) { _uiState.value = _uiState.value.copy(memberDiscountEnabled = enabled) }
     fun onActiveToggle(active: Boolean) { _uiState.value = _uiState.value.copy(isActive = active) }
+    /** The photos: add (uploaded now), remove, make one the main (first) one, or improve one for Google. */
+    fun addPhoto(bytes: ByteArray?) {
+        if (bytes == null) { _uiState.value = _uiState.value.copy(error = AppStrings.get(R.string.photo_failed)); return }
+        if (_uiState.value.images.size >= 6) return
+        _uiState.value = _uiState.value.copy(uploadingPhoto = true, error = null)
+        viewModelScope.launch {
+            storeRepository.uploadProductPhoto(bytes)
+                .onSuccess { p -> _uiState.value = _uiState.value.copy(uploadingPhoto = false, images = _uiState.value.images + p.url) }
+                .onFailure { _uiState.value = _uiState.value.copy(uploadingPhoto = false, error = it.message) }
+        }
+    }
+
+    fun removePhoto(i: Int) { _uiState.value = _uiState.value.copy(images = _uiState.value.images.filterIndexed { k, _ -> k != i }) }
+
+    fun makeMainPhoto(i: Int) {
+        val list = _uiState.value.images
+        if (i in 1 until list.size) _uiState.value = _uiState.value.copy(images = listOf(list[i]) + list.filterIndexed { k, _ -> k != i })
+    }
+
+    /** The shop edits a photo (tidy, remove the background, studio light, colour) and can go back; the new copy replaces the old. */
+    val editor = com.dalilacom.app.ui.store.PhotoEditor(storeRepository, viewModelScope) { old, new ->
+        _uiState.value = _uiState.value.copy(images = _uiState.value.images.map { if (it == old) new.url else it })
+    }
+
     fun onCategorySelected(id: String?) { _uiState.value = _uiState.value.copy(selectedCategoryId = id) }
 
     fun save() {
@@ -121,6 +149,7 @@ class ProductEditViewModel(
                         sku = state.sku.trim().ifBlank { null },
                         memberDiscountEnabled = state.memberDiscountEnabled,
                         memberPriceCents = memberPriceCents,
+                        images = state.images.filter { it.startsWith("/store/photos/") },
                     ),
                 )
             } else {
@@ -136,6 +165,7 @@ class ProductEditViewModel(
                         memberDiscountEnabled = state.memberDiscountEnabled,
                         memberPriceCents = memberPriceCents,
                         isActive = state.isActive,
+                        images = state.images.filter { it.startsWith("/store/photos/") },
                     ),
                 )
             }

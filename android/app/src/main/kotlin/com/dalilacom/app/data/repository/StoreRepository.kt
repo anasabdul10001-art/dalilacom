@@ -7,7 +7,6 @@ import com.dalilacom.app.data.network.StoreProductDto
 import com.dalilacom.app.R
 import com.dalilacom.app.data.network.AiDraftRequest
 import com.dalilacom.app.data.network.AiDraftResponseDto
-import com.dalilacom.app.data.network.PhotoSearchDto
 import com.dalilacom.app.data.network.ProductPhotoDto
 import com.dalilacom.app.data.network.StoreSectionDto
 import okhttp3.MediaType.Companion.toMediaType
@@ -47,15 +46,6 @@ class StoreRepository(private val api: ApiService) {
     private fun jpeg(bytes: ByteArray) = bytes.toRequestBody("image/jpeg".toMediaType())
 
     /** The store searched with a photo: what it shows, and the matching products. */
-    suspend fun searchByImage(bytes: ByteArray): Result<PhotoSearchDto> {
-        val response = safeApiCall { api.searchByImage(jpeg(bytes)) } ?: return Result.failure(Exception(AppStrings.get(R.string.photo_offline)))
-        val body = response.body()
-        return if (response.isSuccessful && body != null) {
-            if (body.currency.isNotBlank()) Market.currency = body.currency
-            Result.success(body)
-        } else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
-    }
-
     suspend fun allSections(): List<StoreSectionDto> = safeApiCall { api.storeSections("1") }?.takeIf { it.isSuccessful }?.body().orEmpty()
 
     suspend fun uploadProductPhoto(bytes: ByteArray): Result<ProductPhotoDto> {
@@ -64,14 +54,20 @@ class StoreRepository(private val api: ApiService) {
         return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
     }
 
-    /** A cleaned-up copy of an uploaded photo (white square, centred, even light) that suits Google and image-reading algorithms. */
-    suspend fun enhancePhoto(photoId: String): Result<ProductPhotoDto> {
-        val response = safeApiCall { api.enhanceProductPhoto(photoId) } ?: return Result.failure(Exception(AppStrings.get(R.string.photo_offline)))
+    /** The shop edits one of its photos into a new copy: clean (free) or, with the AI, white_bg / studio / recolor. */
+    suspend fun editPhoto(photoId: String, action: String, color: String? = null): Result<com.dalilacom.app.data.network.PhotoEditResponse> {
+        val response = safeApiCall { api.editProductPhoto(photoId, com.dalilacom.app.data.network.PhotoEditRequest(action, color)) } ?: return Result.failure(Exception(AppStrings.get(R.string.photo_offline)))
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
     }
 
-    suspend fun aiDraft(photoId: String): AiDraftResponseDto? = safeApiCall { api.aiDraft(AiDraftRequest(photoId)) }?.takeIf { it.isSuccessful }?.body()
+    suspend fun aiQuota(): com.dalilacom.app.data.network.AiQuotaDto? = safeApiCall { api.aiQuota() }?.takeIf { it.isSuccessful }?.body()
+
+    suspend fun aiDraft(photoId: String): Result<AiDraftResponseDto> {
+        val response = safeApiCall { api.aiDraft(AiDraftRequest(photoId)) } ?: return Result.failure(Exception(AppStrings.get(R.string.photo_offline)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.wiz_ai_miss))))
+    }
 
     suspend fun banners(): StoreBannersDto? = safeApiCall { api.storeBanners() }?.takeIf { it.isSuccessful }?.body()
 

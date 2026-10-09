@@ -3,6 +3,10 @@ package com.dalilacom.app.ui.merchantmode
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
+import kotlinx.coroutines.launch
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,12 +48,18 @@ fun ProductEditScreen(
 ) {
     val viewModel: ProductEditViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { ProductEditViewModel(container.productRepository, container.discoverRepository, container.merchantRepository, productId) }
+            initializer { ProductEditViewModel(container.productRepository, container.discoverRepository, container.merchantRepository, container.storeRepository, productId) }
         },
     )
     val state by viewModel.uiState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val photoScope = androidx.compose.runtime.rememberCoroutineScope()
+    val picker = com.dalilacom.app.ui.common.rememberPhotoPicker { uri: android.net.Uri ->
+        photoScope.launch { viewModel.addPhoto(kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.dalilacom.app.ui.common.ImageUtil.maxJpeg(context, uri) }) }
+    }
 
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+    com.dalilacom.app.ui.store.PhotoEditDialog(viewModel.editor)
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
@@ -93,6 +103,36 @@ fun ProductEditScreen(
                     modifier = Modifier.weight(1f),
                 )
             }
+            Spacer(Modifier.height(10.dp))
+            Text(androidx.compose.ui.res.stringResource(R.string.pe_photos), style = MaterialTheme.typography.titleSmall)
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                items(state.images.size) { i ->
+                    androidx.compose.foundation.layout.Box(Modifier.size(110.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))) {
+                        coil.compose.AsyncImage(
+                            model = state.images[i].let { if (it.startsWith("/")) com.dalilacom.app.data.network.absoluteUrl(it) else it },
+                            contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize(),
+                        )
+                        androidx.compose.material3.Surface(onClick = { viewModel.removePhoto(i) }, shape = androidx.compose.foundation.shape.CircleShape, color = androidx.compose.ui.graphics.Color(0x99000000), contentColor = androidx.compose.ui.graphics.Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(26.dp)) {
+                            androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) { Text("✕") }
+                        }
+                        if (i == 0) Text(androidx.compose.ui.res.stringResource(R.string.wiz_main_photo), color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.TopStart).padding(4.dp).background(androidx.compose.ui.graphics.Color(0xA6000000), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        else androidx.compose.material3.Surface(onClick = { viewModel.makeMainPhoto(i) }, shape = androidx.compose.foundation.shape.CircleShape, color = androidx.compose.ui.graphics.Color(0x99000000), contentColor = androidx.compose.ui.graphics.Color.White, modifier = Modifier.align(Alignment.TopStart).padding(4.dp).size(26.dp)) {
+                            androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) { Text("★") }
+                        }
+                        androidx.compose.material3.Surface(onClick = { viewModel.editor.open(state.images[i]) }, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp), color = androidx.compose.ui.graphics.Color(0xB3000000), contentColor = androidx.compose.ui.graphics.Color.White, modifier = Modifier.align(Alignment.BottomCenter).padding(4.dp)) {
+                            Text("✨ " + androidx.compose.ui.res.stringResource(R.string.ai_edit), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                        }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                if (state.images.size < 6) {
+                    androidx.compose.material3.OutlinedButton(onClick = picker.openCamera, enabled = !state.uploadingPhoto) { Text("📷  " + androidx.compose.ui.res.stringResource(R.string.wiz_take_photo)) }
+                    androidx.compose.material3.OutlinedButton(onClick = picker.openGallery, enabled = !state.uploadingPhoto) { Text("🖼️  " + androidx.compose.ui.res.stringResource(R.string.wiz_pick_photo)) }
+                }
+                if (state.uploadingPhoto) CircularProgressIndicator(Modifier.size(24.dp))
+            }
+            Text(androidx.compose.ui.res.stringResource(R.string.wiz_enhance_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = state.sku,

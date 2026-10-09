@@ -206,7 +206,7 @@ async function render() {
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
-  el.innerHTML = renderScreen();
+  el.innerHTML = renderScreen() + photoMenuHtml();
   wireUpAfterRender();
   trDom(el); // translate the rendered Arabic when another language is on
   if (keepFocus !== null) {
@@ -1903,28 +1903,6 @@ async function postImage(path, blob) {
   }
 }
 
-/** Search the store with a photo: the shopper takes or picks one, the server says what it shows and finds the matching products. */
-async function storePhotoSearch(input) {
-  const file = input.files && input.files[0];
-  input.value = "";
-  if (!file) return;
-  const st = S._store;
-  st.byPhoto = { title: "", preview: null };
-  st.items = []; st.total = 0; st.busy = true;
-  render();
-  try {
-    const blob = await downscaleImage(file, 900);
-    st.byPhoto.preview = URL.createObjectURL(blob);
-    const { ok, data } = await postImage("/store/search-by-image", blob);
-    st.busy = false;
-    if (ok) { st.byPhoto.title = data.title; st.items = data.items; st.total = data.items.length; if (data.currency) S.currency = data.currency; }
-    else { st.byPhoto = null; S.error = errMsg(data, t("photo.failed")); }
-  } catch (e) {
-    st.busy = false; st.byPhoto = null; S.error = t("photo.failed");
-  }
-  render();
-}
-
 function storeSearch(ev) {
   if (ev) ev.preventDefault();
   const st = S._store;
@@ -2338,11 +2316,10 @@ function screenProductWizard() {
       <h1 class="screen-title">${esc(t("wiz.photoTitle"))}</h1>
       <p class="screen-sub">${esc(t("wiz.photoSub"))}</p>
       <div class="wiz-photos">
-        ${w.photos.map((p, i) => `<div class="wiz-photo"><img src="${esc(p.preview)}" alt=""><button onclick="wizRemovePhoto(${i})" aria-label="x">✕</button>${i === 0 ? `<span>${esc(t("wiz.mainPhoto"))}</span>` : ""}<button class="wiz-enh" ${p.enhancing || p.enhanced ? "disabled" : ""} onclick="wizEnhance(${i})">${p.enhancing ? "…" : p.enhanced ? "✓ " + esc(t("wiz.enhanced")) : "✨ " + esc(t("wiz.enhance"))}</button></div>`).join("")}
+        ${w.photos.map((p, i) => `<div class="wiz-photo"><img src="${esc(p.preview)}" alt=""><button onclick="wizRemovePhoto(${i})" aria-label="x">✕</button>${i === 0 ? `<span>${esc(t("wiz.mainPhoto"))}</span>` : ""}<button class="wiz-enh" onclick="openPhotoMenu('wiz','${esc(p.url)}')">✨ ${esc(t("ai.edit"))}</button></div>`).join("")}
         ${w.photos.length < 4 ? `<label class="wiz-add"><input type="file" accept="image/*" capture="environment" onchange="wizPickFiles(this)" hidden><b>📷</b><span>${esc(t("wiz.takePhoto"))}</span></label>
           <label class="wiz-add alt"><input type="file" accept="image/*" multiple onchange="wizPickFiles(this)" hidden><b>🖼️</b><span>${esc(t("wiz.pickPhoto"))}</span></label>` : ""}
       </div>
-      ${w.photos.length > 1 ? `<button class="link-btn" style="display:block;margin:6px auto" onclick="wizEnhanceAll()">✨ ${esc(t("wiz.enhanceAll"))}</button>` : ""}
       ${w.photos.length ? `<p class="muted" style="text-align:center;font-size:12px">${esc(t("wiz.enhanceNote"))}</p>` : ""}
       ${w.uploading ? `<p class="muted" style="text-align:center">${esc(t("wiz.uploading"))}</p>` : ""}
       ${w.error ? `<div class="error-banner">${esc(w.error)}</div>` : ""}
@@ -2369,6 +2346,7 @@ function screenProductWizard() {
   return `${head}
     <h1 class="screen-title">${esc(t("wiz.reviewTitle"))}</h1>
     ${w.aiAvailable === false ? `<div class="info-banner">${esc(t("wiz.noAi"))}</div>` : `<p class="screen-sub">${esc(t("wiz.reviewSub"))}</p>`}
+    ${w.quota ? `<p class="muted" style="font-size:12px;margin:0 0 8px">✨ ${esc(w.quota.freeLeft > 0 ? t("ai.freeLeft", { n: w.quota.freeLeft, total: w.quota.freePerMonth }) : w.quota.creditsPerUse > 0 ? t("ai.paidPer", { n: w.quota.creditsPerUse, balance: w.quota.balance }) : t("ai.noMore"))}</p>` : ""}
     <div class="wiz-top">${w.photos.slice(0, 4).map((p) => `<img src="${esc(p.preview)}" alt="">`).join("")}</div>
 
     <div class="field"><label>${esc(t("wiz.name"))}</label>
@@ -2432,20 +2410,86 @@ function backToAccount() {
   reset("home");
 }
 
-/** A cleaned-up copy of a photo (white square, centred, even light) that suits Google and the image-reading algorithms. */
-async function wizEnhance(i) {
-  const w = S._wiz;
-  const p = w.photos[i];
-  if (!p || p.enhancing || p.enhanced) return;
-  p.enhancing = true; w.error = null; render();
-  const { ok, data } = await api("POST", `/products/photos/${p.id}/enhance`);
-  p.enhancing = false;
-  if (ok) { p.id = data.id; p.url = data.url; p.preview = data.url; p.enhanced = true; }
-  else w.error = errMsg(data, t("photo.failed"));
+/* ---- editing a product photo: tidy it, remove the background, studio light, change the colour — and go back ---- */
+
+const PHOTO_COLORS = { red: "#d32f2f", blue: "#1976d2", green: "#2e7d32", black: "#111111", white: "#f5f5f5", gold: "#d4af37", silver: "#b0b7bd", pink: "#ec7fa9", purple: "#7b3fa0", orange: "#f57c00", yellow: "#f2c200", brown: "#7b4a2d", gray: "#8a8a8a", beige: "#d9c3a0", navy: "#1b2a5a" };
+
+async function openPhotoMenu(ctx, url) {
+  S._pm = { ctx, url, busy: false, error: null, quota: (S._pm && S._pm.quota) || null };
+  render();
+  const { ok, data } = await api("GET", "/products/ai-quota");
+  if (ok && S._pm) { S._pm.quota = data; render(); }
+}
+function closePhotoMenu() { S._pm = null; render(); }
+
+/** Swaps one photo for its edited copy in whichever screen is being edited; the old one is remembered for undo. */
+function replacePhoto(oldUrl, data) {
+  const m = S._pm;
+  if (m.ctx === "wiz") {
+    const p = S._wiz.photos.find((x) => x.url === oldUrl);
+    if (p) { p.id = data.id; p.url = data.url; p.preview = data.url; p.enhanced = true; }
+  } else {
+    const im = S._prodEdit.images;
+    const i = im.indexOf(oldUrl);
+    if (i >= 0) im[i] = data.url;
+  }
+  m.url = data.url;
+}
+
+async function photoDo(action, color) {
+  const m = S._pm;
+  if (!m || m.busy) return;
+  if (m.ctx === "pe") snapshotProdEditDraft();
+  m.busy = true; m.error = null; render();
+  const id = m.url.split("/").pop();
+  const { ok, data } = await api("POST", `/products/photos/${id}/edit`, color ? { action, color } : { action });
+  m.busy = false;
+  if (!ok) { m.error = errMsg(data, t("photo.failed")); return render(); }
+  S._photoHist = S._photoHist || {};
+  S._photoHist[data.url] = [...(S._photoHist[m.url] || []), m.url];
+  replacePhoto(m.url, data);
+  if (data.quota) m.quota = { ...(m.quota || {}), ...data.quota };
   render();
 }
-async function wizEnhanceAll() {
-  for (let i = 0; i < S._wiz.photos.length; i++) await wizEnhance(i);
+
+function photoUndo() {
+  const m = S._pm;
+  const stack = (S._photoHist || {})[m.url] || [];
+  if (!stack.length) return;
+  const prev = stack[stack.length - 1];
+  const rest = stack.slice(0, -1);
+  const pid = prev.split("/").pop();
+  replacePhoto(m.url, { id: pid, url: prev });
+  S._photoHist[prev] = rest;
+  render();
+}
+
+function photoMenuHtml() {
+  const m = S._pm;
+  if (!m) return "";
+  const q = m.quota;
+  const aiOff = q && q.photoEdit === false;
+  const hasUndo = ((S._photoHist || {})[m.url] || []).length > 0;
+  const quotaLine = !q ? "" : q.freeLeft > 0 ? t("ai.freeLeft", { n: q.freeLeft, total: q.freePerMonth }) : q.creditsPerUse > 0 ? t("ai.paidPer", { n: q.creditsPerUse, balance: q.balance }) : t("ai.noMore");
+  const btn = (label, fn, ai) => `<button class="pm-act" ${m.busy || (ai && aiOff) ? "disabled" : ""} onclick="${fn}">${label}</button>`;
+  return `
+    <div class="pm-overlay" onclick="closePhotoMenu()">
+      <div class="pm-box" onclick="event.stopPropagation()">
+        <div class="pm-head"><b>${esc(t("ai.editTitle"))}</b><button class="link-btn" onclick="closePhotoMenu()" aria-label="x">✕</button></div>
+        <div class="pm-img"><img src="${esc(m.url)}" alt="">${m.busy ? `<div class="pm-wait"><div class="spinner"></div><span>${esc(t("ai.working"))}</span></div>` : ""}</div>
+        ${quotaLine ? `<p class="pm-quota">✨ ${esc(quotaLine)}</p>` : ""}
+        ${aiOff ? `<p class="muted" style="font-size:12px">${esc(t("ai.unavailable"))}</p>` : ""}
+        ${m.error ? `<div class="error-banner">${esc(m.error)}</div>` : ""}
+        ${btn("🧼 " + esc(t("ai.clean")), "photoDo('clean')", false)}
+        ${btn("✂️ " + esc(t("ai.whiteBg")), "photoDo('white_bg')", true)}
+        ${btn("💡 " + esc(t("ai.studio")), "photoDo('studio')", true)}
+        <div class="pm-colors"><span>🎨 ${esc(t("ai.recolor"))}</span>
+          <div>${Object.entries(PHOTO_COLORS).map(([k, hex]) => `<button class="pm-dot" style="background:${hex}" title="${esc(t("color." + k))}" aria-label="${esc(t("color." + k))}" ${m.busy || aiOff ? "disabled" : ""} onclick="photoDo('recolor','${k}')"></button>`).join("")}</div>
+        </div>
+        ${hasUndo ? `<button class="pm-act pm-undo" ${m.busy ? "disabled" : ""} onclick="photoUndo()">↩️ ${esc(t("ai.undo"))}</button>` : ""}
+        <button class="btn" onclick="closePhotoMenu()">${esc(t("ai.done"))}</button>
+      </div>
+    </div>`;
 }
 
 function wizRemovePhoto(i) { S._wiz.photos.splice(i, 1); render(); }
@@ -2459,13 +2503,14 @@ async function wizAnalyze() {
   if (ok) {
     w.aiAvailable = data.available;
     w.priceHint = data.priceHint;
+    w.quota = data.quota || null;
     const d = data.draft;
     if (d) {
       w.name = d.name; w.alternatives = d.alternatives || []; w.description = d.description || ""; w.specs = d.specs || [];
       if (d.section) w.section = d.section;
       if (d.condition) w.condition = d.condition;
     } else if (data.available) w.error = t("wiz.aiMiss");
-  } else w.aiAvailable = false;
+  } else { w.aiAvailable = false; w.error = errMsg(data, null); }
   render();
 }
 
@@ -2666,10 +2711,8 @@ function screenStore() {
         <b class="store-brand">${esc(t("tab.store"))}</b>
         <form class="store-search" onsubmit="storeSearch(event)">
           <input id="store-q" type="search" value="${esc(st.q)}" placeholder="${esc(t("store.searchPlaceholder"))}" />
-          <button type="button" class="photo-btn" title="${esc(t("photo.search"))}" aria-label="${esc(t("photo.search"))}" onclick="qs('store-photo').click()">📷</button>
           <button type="submit" aria-label="search">${ICON.search}</button>
         </form>
-        <input id="store-photo" type="file" accept="image/*" hidden onchange="storePhotoSearch(this)" />
         <button class="store-icon-btn store-cart" onclick="storeToCart()" aria-label="cart">${ICON.bag}${st.cartCount ? `<span class="store-badge">${st.cartCount}</span>` : ""}</button>
       </div>
       <div class="store-tabs">
@@ -4784,7 +4827,7 @@ async function addCatalogDiscount() {
 function screenProductEdit() {
   const productId = S.params.productId;
   if (!S._prodEdit || S._prodEdit.productId !== productId) {
-    S._prodEdit = { productId, loading: true, isNew: !productId, categories: [], name: "", description: "", price: "", stock: "", sku: "", memberDiscountEnabled: false, memberPrice: "", isActive: true, selectedCat: null };
+    S._prodEdit = { productId, loading: true, isNew: !productId, categories: [], name: "", description: "", price: "", stock: "", sku: "", memberDiscountEnabled: false, memberPrice: "", isActive: true, selectedCat: null, images: [] };
     initProductEdit(productId);
   }
   const p = S._prodEdit;
@@ -4799,6 +4842,18 @@ function screenProductEdit() {
       <div class="field"><label>المخزون</label><input id="pe-stock" inputmode="numeric" value="${esc(p.stock)}" placeholder="${esc(t("pe.stockPh"))}" /></div>
     </div>
     <div class="field"><label>SKU (اختياري)</label><input id="pe-sku" value="${esc(p.sku)}" /></div>
+    <div class="section-title">${esc(t("pe.photos"))}</div>
+    <div class="pe-photos">
+      ${(p.images || []).map((u, i) => `
+        <div class="pe-photo">
+          <img src="${esc(u)}" alt="" loading="lazy">
+          ${i === 0 ? `<span class="pe-main">${esc(t("wiz.mainPhoto"))}</span>` : `<button class="pe-btn" onclick="peMainPhoto(${i})">★</button>`}
+          <button class="pe-x" onclick="peRemovePhoto(${i})" aria-label="x">✕</button>
+          <button class="wiz-enh" onclick="snapshotProdEditDraft();openPhotoMenu('pe','${esc(u)}')">✨ ${esc(t("ai.edit"))}</button>
+        </div>`).join("")}
+      ${(p.images || []).length < 6 ? `<label class="wiz-add"><input type="file" accept="image/*" multiple onchange="peAddPhotos(this)" hidden><b>📷</b><span>${esc(t(p.uploading ? "wiz.uploading" : "pe.addPhoto"))}</span></label>` : ""}
+    </div>
+    <p class="muted" style="font-size:12px">${esc(t("wiz.enhanceNote"))}</p>
     <div class="section-title">التصنيف</div>
     <div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
       ${flattenCategories(p.categories).map((c) => `<button class="chip ${p.selectedCat === c.id ? "active" : ""}" onclick="selectProdCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
@@ -4834,6 +4889,7 @@ async function initProductEdit(productId) {
     stock: String(prod.stock), sku: "", memberDiscountEnabled: prod.memberDiscountEnabled,
     memberPrice: prod.memberPriceCents != null ? (prod.memberPriceCents / 100).toString() : "",
     isActive: prod.isActive, selectedCat: prod.categoryId || null,
+    images: Array.isArray(prod.images) && prod.images.length ? prod.images : prod.imageUrl ? [prod.imageUrl] : [],
   };
   render();
 }
@@ -4848,6 +4904,27 @@ function snapshotProdEditDraft() {
   if (qs("pe-member-price")) p.memberPrice = qs("pe-member-price").value;
 }
 
+/** The photos of a product being edited: add, remove, make one the main (first) one, or improve it for Google. */
+async function peAddPhotos(input) {
+  const p = S._prodEdit;
+  snapshotProdEditDraft();
+  const files = Array.from(input.files || []).slice(0, 6 - (p.images || []).length);
+  input.value = "";
+  if (!files.length) return;
+  p.uploading = true; S.error = null; render();
+  for (const file of files) {
+    try {
+      const blob = await downscaleImage(file, 1280, 0.82);
+      const { ok, data } = await postImage("/products/photos", blob);
+      if (ok) p.images.push(data.url);
+      else S.error = errMsg(data, t("photo.failed"));
+    } catch (e) { S.error = t("photo.failed"); }
+  }
+  p.uploading = false;
+  render();
+}
+function peRemovePhoto(i) { snapshotProdEditDraft(); S._prodEdit.images.splice(i, 1); render(); }
+function peMainPhoto(i) { snapshotProdEditDraft(); const im = S._prodEdit.images; im.unshift(im.splice(i, 1)[0]); render(); }
 function selectProdCategory(id) {
   snapshotProdEditDraft();
   S._prodEdit.selectedCat = id;
@@ -4880,6 +4957,7 @@ async function saveProduct() {
   const payload = {
     name, description: description || undefined, priceCents, categoryId: p.selectedCat || undefined,
     stock, sku: sku || undefined, memberDiscountEnabled: p.memberDiscountEnabled, memberPriceCents: memberPriceCents || undefined,
+    images: (p.images || []).filter((u) => /^\/store\/photos\/[0-9a-f-]{36}$/.test(u)),
   };
   S.busy = true; S.error = null; render();
   let res;

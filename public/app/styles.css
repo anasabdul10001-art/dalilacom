@@ -1342,3 +1342,29 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .wiz-photo { position: relative; }
 .wiz-photo .wiz-enh { position: absolute; bottom: 4px; left: 4px; right: 4px; border: 0; border-radius: 8px; padding: 4px 6px; font-size: 11px; font-weight: 700; background: rgba(0, 0, 0, 0.62); color: #fff; cursor: pointer; }
 .wiz-photo .wiz-enh:disabled { opacity: 0.8; }
+
+/* photos of a product being edited */
+.pe-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px; }
+.pe-photo { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
+.pe-photo img { width: 100%; height: 100%; object-fit: cover; }
+.pe-photo .pe-x, .pe-photo .pe-btn { position: absolute; top: 4px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.62); color: #fff; font-size: 13px; cursor: pointer; }
+.pe-photo .pe-x { right: 4px; }
+.pe-photo .pe-btn { left: 4px; }
+.pe-photo .pe-main { position: absolute; top: 4px; left: 4px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: rgba(0, 0, 0, 0.62); color: #fff; }
+.pe-photo .wiz-enh { position: absolute; bottom: 4px; left: 4px; right: 4px; border: 0; border-radius: 8px; padding: 4px 6px; font-size: 11px; font-weight: 700; background: rgba(0, 0, 0, 0.62); color: #fff; cursor: pointer; }
+
+/* editing a product photo */
+.pm-overlay { position: fixed; inset: 0; z-index: 3500; display: flex; align-items: flex-end; justify-content: center; background: rgba(15, 23, 42, 0.5); }
+.pm-box { width: 100%; max-width: 480px; max-height: 92vh; overflow: auto; padding: 14px 16px 18px; border-radius: 22px 22px 0 0; background: var(--bg, #fff); box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3); }
+.pm-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.pm-img { position: relative; border-radius: 14px; overflow: hidden; background: var(--surface); aspect-ratio: 1; max-height: 38vh; margin: 0 auto 8px; }
+.pm-img img { width: 100%; height: 100%; object-fit: contain; }
+.pm-wait { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.78); font-weight: 700; }
+.pm-quota { margin: 4px 0 8px; font-size: 13px; color: var(--primary); font-weight: 700; }
+.pm-act { display: block; width: 100%; margin: 6px 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: inherit; font: inherit; font-weight: 700; text-align: start; cursor: pointer; }
+.pm-act:disabled { opacity: 0.5; }
+.pm-undo { border-color: var(--primary); color: var(--primary); }
+.pm-colors { margin: 8px 0; }
+.pm-colors > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.pm-dot { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(0, 0, 0, 0.18); cursor: pointer; }
+.pm-dot:disabled { opacity: 0.45; }

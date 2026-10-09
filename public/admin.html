@@ -380,7 +380,17 @@
         <button class="small" onclick="loadAiStatus()">🔄 تحديث</button>
         <span id="ai-msg" class="muted" style="margin-right:10px"></span>
         <p class="muted" style="margin-top:14px">المزوّد المُجرَّب أولًا: <b id="ai-active">—</b></p>
-        <p class="muted">البحث بالصورة و"منتج من صورة": <b id="ai-vision">—</b> <small>(بيحتاج مفتاح Gemini أو Mistral أو Claude)</small></p>
+        <p class="muted">"منتج من صورة" (وصف المنتج للتاجر): <b id="ai-vision">—</b> <small>(بيحتاج مفتاح Gemini أو Mistral أو Claude)</small></p>
+      </div>
+      <div class="card">
+        <h3>الذكاء الاصطناعي للتجار</h3>
+        <p class="muted">التاجر بس هو اللي بيستخدمه (وصف المنتج من صورته، وتعديل الصور: إزالة الخلفية والألوان والإضاءة). كل تاجر عنده عدد استخدامات مجانية كل شهر، وبعدها كل استخدام بينخصم من رصيد محفظته. «التنظيف السريع» للصورة مجاني دايمًا.</p>
+        <div class="row">
+          <div><label>الاستخدامات المجانية لكل تاجر بالشهر</label><input id="ai-free" type="number" min="0" /></div>
+          <div><label>سعر كل استخدام بعدها (<span class="credit-name">الرصيد</span>) — 0 = ما في بيع</label><input id="ai-price" type="number" min="0" /></div>
+        </div>
+        <button class="small" style="margin-top:10px" onclick="saveAiQuota()">حفظ</button>
+        <span id="ai-quota-msg" class="muted" style="margin-right:10px"></span>
       </div>
       <div class="card">
         <h3>الجلسة الحالية</h3>
@@ -1219,7 +1229,25 @@ async function demoStore(method) {
 }
 
 // ---- AI provider status ----
+async function loadAiQuota() {
+  const { ok, data } = await api('GET', '/admin/settings');
+  if (!ok || !data.ai) return;
+  document.getElementById('ai-free').value = data.ai.freePerMonth;
+  document.getElementById('ai-price').value = data.ai.creditsPerUse;
+}
+
+async function saveAiQuota() {
+  const msg = document.getElementById('ai-quota-msg');
+  const freePerMonth = Number(document.getElementById('ai-free').value);
+  const creditsPerUse = Number(document.getElementById('ai-price').value);
+  if (!Number.isInteger(freePerMonth) || freePerMonth < 0 || !Number.isInteger(creditsPerUse) || creditsPerUse < 0) { msg.textContent = 'اكتب أرقام صحيحة (صفر أو أكثر)'; return; }
+  msg.textContent = 'عم نحفظ...';
+  const { ok } = await api('PUT', '/admin/settings', { ai: { freePerMonth, creditsPerUse } });
+  msg.textContent = ok ? 'انحفظ ✓' : 'تعذّر الحفظ';
+}
+
 async function loadAiStatus() {
+  loadAiQuota();
   const { ok, data } = await api('GET', '/admin/ai-status');
   if (!ok) { logout(); return; }
   document.getElementById('ai-vision').textContent = data.vision ? 'شغّال ✓' : 'مطفأ — ضيف مفتاح Gemini على Render';

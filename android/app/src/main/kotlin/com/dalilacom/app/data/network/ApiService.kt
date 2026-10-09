@@ -194,8 +194,6 @@ interface ApiService {
     @GET("products/{id}")
     suspend fun getProduct(@Path("id") id: String): Response<ProductDto>
 
-    @POST("store/search-by-image")
-    suspend fun searchByImage(@Body body: RequestBody): Response<PhotoSearchDto>
 
     @GET("store/sections")
     suspend fun storeSections(@Query("all") all: String?): Response<List<StoreSectionDto>>
@@ -342,8 +340,11 @@ interface ApiService {
     @PUT("merchant/shipping-methods")
     suspend fun saveShippingMethods(@Body body: ShippingPutRequest): Response<List<ShippingMethodDto>>
 
-    @POST("products/photos/{id}/enhance")
-    suspend fun enhanceProductPhoto(@Path("id") id: String): Response<ProductPhotoDto>
+    @POST("products/photos/{id}/edit")
+    suspend fun editProductPhoto(@Path("id") id: String, @Body body: PhotoEditRequest): Response<PhotoEditResponse>
+
+    @GET("products/ai-quota")
+    suspend fun aiQuota(): Response<AiQuotaDto>
 
     @GET("orders/mine")
     suspend fun getMyOrders(): Response<List<OrderDto>>

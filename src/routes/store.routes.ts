@@ -7,8 +7,6 @@ import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
 import { DEFAULT_COUNTRY, currencyOf, onlyCountry, viewerCountry } from "../services/viewerCountry.service";
 import { AD_SLOTS, liveAds } from "../services/ads.service";
 import { getSettings } from "../services/settings.service";
-import { describePhotoForSearch, visionAvailable } from "../services/ai.service";
-import { sniffImageMime } from "../lib/image";
 import { normalizeText } from "../services/category.service";
 import { route } from "../lib/asyncRoute";
 
@@ -258,58 +256,3 @@ storeRouter.get("/photos/:id", async (req, res) => {
   res.set({ "Content-Type": photo.mime, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=604800, immutable", "Content-Disposition": "inline" });
   res.send(Buffer.from(photo.data));
 });
-
-const searches = new Map<string, number[]>();
-const SEARCHES_PER_HOUR = 30;
-
-/**
- * Search with a photo: the AI says what the picture shows, and the store's own products (of the shopper's country) are
- * ranked by how many of those words they contain. Without an AI that can see, it says so instead of guessing.
- */
-storeRouter.post("/search-by-image", express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: 1_500_000 }), route(async (req, res) => {
-  const body = req.body;
-  if (!Buffer.isBuffer(body) || body.length === 0) return sendError(res, 415, "UNSUPPORTED_MEDIA", "أرسل الصورة بصيغة JPEG أو PNG أو WebP");
-  const mime = sniffImageMime(body);
-  if (!mime) return sendError(res, 415, "UNSUPPORTED_MEDIA", "الملف ليس صورة صالحة (JPEG أو PNG أو WebP)");
-  if (!visionAvailable()) return sendError(res, 503, "UNAVAILABLE", "البحث بالصورة غير متاح حاليًا");
-
-  const now = Date.now();
-  const recent = (searches.get(req.ip ?? "") ?? []).filter((t) => now - t < 3_600_000);
-  if (recent.length >= SEARCHES_PER_HOUR) return sendError(res, 429, "RATE_LIMITED", "عدد محاولات البحث بالصورة كبير، جرّب بعد قليل");
-  searches.set(req.ip ?? "", [...recent, now]);
-
-  const seen = await describePhotoForSearch({ mime, data: body }, STORE_SECTIONS.map((s) => s.id));
-  if (!seen) return sendError(res, 502, "UNAVAILABLE", "ما قدرنا نتعرف على الصورة، جرّب صورة أوضح");
-
-  const country = await viewerCountry(req);
-  const visible = await visibleFor({}, country);
-  const words = [...new Set(seen.keywords.map((k) => normalizeText(k)).filter((k) => k.length >= 2))].slice(0, 10);
-  const candidates = await prisma.product.findMany({
-    where: {
-      ...visible,
-      OR: [
-        ...words.flatMap((w) => [{ name: { contains: w, mode: "insensitive" as const } }, { description: { contains: w, mode: "insensitive" as const } }]),
-        ...(seen.section ? [{ storeSection: seen.section }] : []),
-      ],
-    },
-    include,
-    take: 120,
-  });
-  const scored = candidates
-    .map((p) => {
-      const name = normalizeText(p.name);
-      const description = normalizeText(p.description ?? "");
-      let score = seen.section && p.storeSection === seen.section ? 2 : 0;
-      for (const w of words) score += name.includes(w) ? 3 : description.includes(w) ? 1 : 0;
-      return { p, score };
-    })
-    .sort((a, b) => b.score - a.score || b.p.soldCount - a.p.soldCount);
-  res.json({
-    title: seen.title,
-    keywords: words,
-    section: seen.section,
-    currency: await currencyOf(country),
-    total: scored.length,
-    items: scored.slice(0, 24).map((x) => view(x.p)),
-  });
-}));

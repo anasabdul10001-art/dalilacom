@@ -145,17 +145,6 @@ class StoreViewModel(
         loadList(false)
     }
 
-    /** Search the store with a photo (already shrunk): the server says what it shows and finds the matching products. */
-    fun searchByPhoto(jpeg: ByteArray?) {
-        if (jpeg == null) { _ui.value = _ui.value.copy(error = com.dalilacom.app.ui.i18n.AppStrings.get(com.dalilacom.app.R.string.photo_failed)); return }
-        _ui.value = _ui.value.copy(byPhoto = PhotoSearchUi(title = "", bytes = jpeg), items = emptyList(), total = 0, busy = true, error = null, query = "", section = "", dealsOnly = false)
-        viewModelScope.launch {
-            store.searchByImage(jpeg)
-                .onSuccess { r -> _ui.value = _ui.value.copy(busy = false, byPhoto = PhotoSearchUi(r.title, jpeg), items = r.items, total = r.items.size) }
-                .onFailure { e -> _ui.value = _ui.value.copy(busy = false, byPhoto = null, error = e.message) }
-        }
-    }
-
     fun setSort(sort: String) {
         _ui.value = _ui.value.copy(sort = sort)
         loadList(false)

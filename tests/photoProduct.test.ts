@@ -126,33 +126,9 @@ describe("a product from a photo", () => {
   });
 });
 
-describe("searching the store with a photo", () => {
-  it("finds the shopper's own country's products that match what the picture shows", async () => {
-    const iso = await reservedIsoCode2(prisma);
-    const other = await reservedIsoCode2(prisma);
-    const mine = await shop(iso);
-    const abroad = await shop(other);
-    const tag = crypto.randomUUID().slice(0, 6);
-    const make = async (s: Awaited<ReturnType<typeof shop>>, name: string, section?: string) =>
-      (await request(app).post("/products").set(s.owner.auth).send({ name, priceCents: 900, stock: 3, categoryId: s.categoryId, ...(section ? { storeSection: section } : {}) })).body.id as string;
-    const headphones = await make(mine, `سماعات ${tag}`, "electronics");
-    const shoes = await make(mine, `حذاء ${tag}`, "fashion");
-    const foreign = await make(abroad, `سماعات ${tag}`, "electronics");
-
-    aiSays({ title: "سماعات", keywords: ["سماعات", "headphones"], section: "electronics" });
-    const res = await request(app).post("/store/search-by-image").set("CF-IPCountry", iso).set("Content-Type", "image/png").send(png());
-    expect(res.status).toBe(200);
-    expect(res.body.title).toBe("سماعات");
-    const ids = res.body.items.map((p: { id: string }) => p.id);
-    expect(ids[0]).toBe(headphones);
-    expect(ids).not.toContain(foreign);
-    expect(ids).not.toContain(shoes);
-  });
-
-  it("refuses what is not a picture, and is honest when no AI can see", async () => {
-    expect((await request(app).post("/store/search-by-image").set("Content-Type", "image/png").send(Buffer.from("not a picture at all"))).status).toBe(415);
-    delete process.env.GEMINI_API_KEY;
+describe("the shopper gets no AI", () => {
+  it("has no search by photo (the AI is for shops only)", async () => {
     const res = await request(app).post("/store/search-by-image").set("Content-Type", "image/png").send(png());
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(404);
   });
 });

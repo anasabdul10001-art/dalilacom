@@ -54,6 +54,13 @@ const settingsSchema = z.object({
     })
     .partial()
     .optional(),
+  ai: z
+    .object({
+      freePerMonth: z.number().int().nonnegative().max(1000000),
+      creditsPerUse: z.number().int().nonnegative().max(10000000),
+    })
+    .partial()
+    .optional(),
   payment: z
     .object({
       usdtTrc20Address: z.string().trim().regex(/^(T[1-9A-HJ-NP-Za-km-z]{33})?$/, "عنوان TRON غير صالح").optional(),
