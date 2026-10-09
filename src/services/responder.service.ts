@@ -1,5 +1,6 @@
 import { ChannelConnection, ResponderStatus, ResponderSubscription, Role, SocialChannel } from "@prisma/client";
 import { prisma } from "../prisma";
+import { liveDiscountWhere } from "../lib/discounts";
 import { decryptJson } from "./crypto.service";
 import { drivers } from "./channels";
 import { IncomingMessage } from "./channels/types";
@@ -137,7 +138,7 @@ async function consumeAi(userId: string, limit: number): Promise<boolean> {
 async function businessInfoFor(userId: string): Promise<string | undefined> {
   const shop = await prisma.merchantProfile.findUnique({
     where: { userId },
-    select: { id: true, businessName: true, address: true, phone: true, category: { select: { name: true } }, discounts: { where: { isActive: true }, select: { title: true, percent: true }, take: 10 } },
+    select: { id: true, businessName: true, address: true, phone: true, category: { select: { name: true } }, discounts: { where: liveDiscountWhere(), select: { title: true, percent: true }, take: 10 } },
   });
   if (!shop) return undefined;
   const products = await prisma.product.findMany({ where: { merchantId: shop.id, isActive: true }, orderBy: { createdAt: "desc" }, take: 25, select: { name: true, priceCents: true, stock: true } });

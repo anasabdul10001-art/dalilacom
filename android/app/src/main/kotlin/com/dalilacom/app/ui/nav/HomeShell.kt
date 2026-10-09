@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Person
@@ -58,6 +59,9 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.card.CardScreen
 import com.dalilacom.app.ui.cart.CartScreen
 import com.dalilacom.app.ui.discover.DiscoverScreen
+import com.dalilacom.app.data.RouteTarget
+import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.foundation.clickable
 import com.dalilacom.app.ui.orders.OrdersScreen
 import com.dalilacom.app.ui.profile.ProfileScreen
 import com.dalilacom.app.ui.theme.DeepRed
@@ -68,7 +72,8 @@ private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) 
     Discover(R.string.tab_map, Icons.Filled.Map),
     /** Not a page of this shell: the button opens the online store screen (open to guests too). */
     Store(R.string.tab_store, Icons.Filled.Storefront),
-    Card(R.string.tab_card, Icons.Filled.CreditCard),
+    /** The discount map; the membership card lives behind a button on it. */
+    Deals(R.string.tab_deals, Icons.Filled.LocalOffer),
     /** Not a page of this shell: the middle button opens the auto-responder screen. */
     Responder(R.string.tab_responder, Icons.Filled.SmartToy),
     Cart(R.string.tab_cart, Icons.Filled.ShoppingCart),
@@ -82,6 +87,12 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     val factory = remember { ViewModelFactory(container) }
     var isGuest by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isGuest = !container.authRepository.hasStoredSession() }
+    // the deals tab opens with an encouraging message, until the person asks never to see it again
+    var showCard by rememberSaveable { mutableStateOf(false) }
+    var dealsIntro by remember { mutableStateOf(false) }
+    var dealsIntroHidden by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { dealsIntroHidden = container.sessionStore.getDealsIntroHidden() }
+    val dealsPendingRoute = remember { MutableStateFlow<RouteTarget?>(null) }
     // every price is shown in the money of the shopper's country
     LaunchedEffect(isGuest, selectedTab) { container.storeRepository.market()?.let { com.dalilacom.app.ui.common.Market.currency = it } }
 
@@ -106,6 +117,13 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     val goLogin = { rootNavController.navigate("login") }
     val goRegister = { rootNavController.navigate("register") }
 
+    if (dealsIntro && selectedTab == HomeTab.Deals) {
+        DealsIntro(
+            onDismiss = { dealsIntro = false },
+            onNever = { dealsIntro = false; dealsIntroHidden = true; scope.launch { container.sessionStore.hideDealsIntro() } },
+        )
+    }
+
     Scaffold(
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
@@ -126,7 +144,13 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     } else {
                         NavigationBarItem(
                             selected = selectedTab == tab && tab != HomeTab.Store,
-                            onClick = { if (tab == HomeTab.Store) rootNavController.navigate("store") else selectedTab = tab },
+                            onClick = {
+                                if (tab == HomeTab.Store) rootNavController.navigate("store")
+                                else {
+                                    if (tab == HomeTab.Deals) { showCard = false; dealsIntro = !dealsIntroHidden }
+                                    selectedTab = tab
+                                }
+                            },
                             icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
                             label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall) },
                         )
@@ -148,15 +172,29 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
                 )
                 HomeTab.Responder, HomeTab.Store -> Unit // never selected: their buttons open their own screens
-                HomeTab.Card ->
-                    if (isGuest) AccountPrompt(
+                HomeTab.Deals ->
+                    if (!showCard) DiscoverScreen(
+                        factory = factory,
+                        isGuest = isGuest,
+                        pendingRoute = dealsPendingRoute,
+                        isDark = isDark,
+                        onSetLanguage = { code -> scope.launch { container.sessionStore.saveLanguage(code) } },
+                        onToggleTheme = { scope.launch { container.sessionStore.saveTheme(if (isDark) "light" else "dark") } },
+                        onLogin = { goLogin() },
+                        onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
+                        dealsMode = true,
+                        onOpenCard = { showCard = true },
+                    ) else if (isGuest) AccountPrompt(
                         icon = Icons.Filled.CreditCard,
                         title = stringResource(R.string.guest_card_title),
                         subtitle = stringResource(R.string.guest_card_sub),
                         perks = listOf(stringResource(R.string.guest_card_p1), stringResource(R.string.guest_card_p2), stringResource(R.string.guest_card_p3)),
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
-                    ) else CardScreen(factory, onRenew = { rootNavController.navigate("pricing") })
+                    ) else Column(Modifier.fillMaxSize()) {
+                        androidx.compose.material3.TextButton(onClick = { showCard = false }) { Text("‹ " + stringResource(R.string.deals_back)) }
+                        CardScreen(factory, onRenew = { rootNavController.navigate("pricing") })
+                    }
                 HomeTab.Cart ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.ShoppingCart,
@@ -243,6 +281,40 @@ private fun AccountPrompt(
         if (extraLabel != null) {
             Spacer(Modifier.height(10.dp))
             TextButton(onClick = onExtra, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(extraLabel, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+        }
+    }
+}
+
+/** The message over the deals tab: the card is free now, so use it and visit the shops with discounts. */
+@Composable
+private fun DealsIntro(onDismiss: () -> Unit, onNever: () -> Unit) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        Box(
+            Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { onDismiss() },
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.material3.Surface(
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                shadowElevation = 12.dp,
+                modifier = Modifier.padding(28.dp).fillMaxWidth().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { },
+            ) {
+                Column(Modifier.padding(horizontal = 22.dp, vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("🎁", style = MaterialTheme.typography.displaySmall)
+                    Spacer(Modifier.height(6.dp))
+                    Text(stringResource(R.string.deals_intro_title), style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.deals_intro_text), style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(18.dp))
+                    androidx.compose.material3.Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)) {
+                        Text(stringResource(R.string.deals_ok), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                    }
+                    androidx.compose.material3.TextButton(onClick = onNever) { Text(stringResource(R.string.deals_never), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+            }
         }
     }
 }

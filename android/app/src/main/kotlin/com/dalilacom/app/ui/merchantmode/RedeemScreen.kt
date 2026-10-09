@@ -6,7 +6,13 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -92,7 +98,27 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
 
             RedeemPhase.VERIFIED -> {
                 Text(AppStrings.get(R.string.fmt_member, state.memberName.orEmpty()), style = MaterialTheme.typography.titleMedium)
-                Text(AppStrings.get(R.string.fmt_discount_pct, state.discountPercent), color = MaterialTheme.colorScheme.primary)
+                if (state.discounts.isEmpty()) {
+                    Text(AppStrings.get(R.string.fmt_discount_pct, state.discountPercent), color = MaterialTheme.colorScheme.primary)
+                } else {
+                    Text(stringResource(R.string.disc_pick_at_till), style = MaterialTheme.typography.titleSmall)
+                    state.discounts.forEach { d ->
+                        val chosen = d.id == state.selectedDiscountId
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(if (chosen) 2.dp else 1.dp, if (chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable(enabled = d.eligible) { viewModel.selectDiscount(d.id) },
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("${d.percent}%  ${d.title}", fontWeight = FontWeight.Bold, color = if (d.eligible) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(discountScopeText(d.scope, d.section, d.productNames), style = MaterialTheme.typography.bodySmall)
+                                if (!d.eligible) Text(stringResource(R.string.disc_used), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                                else d.remainingForMember?.let { Text(stringResource(R.string.disc_left_for_member, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                            }
+                        }
+                    }
+                    if (state.discounts.none { it.eligible }) Text(stringResource(R.string.disc_all_used), color = MaterialTheme.colorScheme.error)
+                }
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = state.billAmountText,
@@ -105,7 +131,7 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
                 if (state.isLoading) {
                     CircularProgressIndicator()
                 } else {
-                    Button(onClick = viewModel::confirmRedeem, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_0b149b76)) }
+                    Button(onClick = viewModel::confirmRedeem, enabled = state.discounts.isEmpty() || state.selectedDiscountId != null, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_0b149b76)) }
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = viewModel::reset, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_e776b020)) }
                 }

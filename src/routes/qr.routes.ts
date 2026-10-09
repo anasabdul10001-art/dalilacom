@@ -9,6 +9,7 @@ import { isMembershipActive } from "../services/membership.service";
 import { recordAffiliateCommissionIfReferred } from "../services/affiliate.service";
 import { notify } from "../services/notification.service";
 import { qrRedeemRateLimiter, qrVerifyRateLimiter } from "../middleware/rateLimit";
+import { discountScopeInfo, liveDiscountWhere, memberUse } from "../lib/discounts";
 
 export const qrRouter = Router();
 
@@ -63,15 +64,20 @@ qrRouter.post("/verify", qrVerifyRateLimiter, requireAuth, requireRole(Role.MERC
     return sendError(res, 400, "BAD_REQUEST", result.error ?? "Bad request");
   }
 
-  const discount = await prisma.discount.findFirst({
-    where: { merchantId: merchant.id, isActive: true },
-    orderBy: { createdAt: "desc" },
-  });
+  // every discount the shop has running, with what this member may still take of each (the shop picks one to apply)
+  const live = await prisma.discount.findMany({ where: { merchantId: merchant.id, ...liveDiscountWhere() }, orderBy: { percent: "desc" } });
+  const scopeOf = await discountScopeInfo(live);
+  const discounts = await Promise.all(live.map(async (d) => {
+    const use = await memberUse(d, result.membership.id);
+    return { id: d.id, title: d.title, percent: d.percent, description: d.description, endDate: d.endDate, eligible: use.eligible, usedByMember: use.used, remainingForMember: use.remaining, ...scopeOf(d) };
+  }));
+  const best = discounts.find((d) => d.eligible) ?? null;
 
   res.json({
     verified: true,
     member: { fullName: result.membership.user.fullName, memberNumber: result.membership.memberNumber },
-    discount: discount ? { id: discount.id, title: discount.title, percent: discount.percent } : null,
+    discount: best ? { id: best.id, title: best.title, percent: best.percent } : null, // what older apps show
+    discounts,
   });
 });
 
@@ -79,6 +85,7 @@ const redeemSchema = z.object({
   memberNumber: z.string(),
   code: z.string().length(6),
   billAmountCents: z.number().int().positive(),
+  discountId: z.string().uuid().optional(), // which of the shop's running discounts to apply (the best one for the member when omitted)
 });
 
 // Merchant: step 2 — enter bill amount & confirm (section 20 "Confirm Discount")
@@ -99,10 +106,19 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
   }
   const { membership, matchedStep } = result;
 
-  const discount = await prisma.discount.findFirst({
-    where: { merchantId: merchant.id, isActive: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const live = await prisma.discount.findMany({ where: { merchantId: merchant.id, ...liveDiscountWhere() }, orderBy: { percent: "desc" } });
+  let discount: (typeof live)[number] | null = live[0] ?? null;
+  if (parsed.data.discountId) {
+    discount = live.find((d) => d.id === parsed.data.discountId) ?? null;
+    if (!discount) return sendError(res, 400, "BAD_REQUEST", "هذا الحسم غير متاح حاليًا");
+  } else if (live.length) {
+    // the best discount this member may still take
+    discount = null;
+    for (const d of live) if ((await memberUse(d, membership.id)).eligible) { discount = d; break; }
+  }
+  if (live.length && (!discount || !(await memberUse(discount, membership.id)).eligible)) {
+    return sendError(res, 409, "LIMIT_REACHED", "هذا الزبون استنفد حد هذا الحسم");
+  }
 
   const percent = discount?.percent ?? 0;
   const { billAmountCents } = parsed.data;
@@ -115,6 +131,15 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
     const fresh = await tx.membership.findUnique({ where: { id: membership.id } });
     if (!fresh || fresh.lastRedeemedTimeStep !== null && matchedStep <= fresh.lastRedeemedTimeStep) {
       throw new Error("CODE_ALREADY_REDEEMED");
+    }
+    // the limits are checked again inside the transaction, so two scans at the same moment cannot both pass
+    if (discount && (discount.perCustomerLimit !== null || discount.maxCustomers !== null)) {
+      const mine = await tx.discountTransaction.count({ where: { discountId: discount.id, membershipId: membership.id } });
+      if (discount.perCustomerLimit !== null && mine >= discount.perCustomerLimit) throw new Error("LIMIT_REACHED");
+      if (discount.maxCustomers !== null && mine === 0) {
+        const people = await tx.discountTransaction.groupBy({ by: ["membershipId"], where: { discountId: discount.id } });
+        if (people.length >= discount.maxCustomers) throw new Error("LIMIT_REACHED");
+      }
     }
     await tx.membership.update({
       where: { id: membership.id },
@@ -142,9 +167,11 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
     return created;
   }).catch((err) => {
     if (err instanceof Error && err.message === "CODE_ALREADY_REDEEMED") return null;
+    if (err instanceof Error && err.message === "LIMIT_REACHED") return "LIMIT" as const;
     throw err;
   });
 
+  if (transaction === "LIMIT") return sendError(res, 409, "LIMIT_REACHED", "هذا الزبون استنفد حد هذا الحسم");
   if (!transaction) {
     return sendError(res, 409, "CONFLICT", "This code was already redeemed");
   }

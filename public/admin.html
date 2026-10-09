@@ -102,6 +102,7 @@
     <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
     <div class="nav-item" data-section="store" onclick="showSection('store')">🛍️ المتجر</div>
+    <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()">🏷️ الحسومات <span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()">📢 إعلانات المتجر <span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
     <div class="logout" onclick="changePassword()">🔑 تغيير كلمة السر</div>
@@ -413,6 +414,20 @@
         <button style="margin-top:12px" onclick="demoStore('POST')">➕ أضف 50 منتج تجريبي</button>
         <button class="danger" style="margin-top:12px;margin-right:8px" onclick="demoStore('DELETE')">🗑️ احذف المنتجات التجريبية</button>
         <p id="store-msg" class="muted" style="margin-top:10px"></p>
+      </div>
+    </div>
+
+    <!-- DISCOUNTS -->
+    <div class="section" id="section-discounts" style="display:none">
+      <h2>حسومات المحلات</h2>
+      <p class="subtitle">كل حسم بيحطه تاجر بيوصل هون، وما بيظهر للزبائن ولا بيتطبّق عند الصندوق إلا بعد موافقتك.</p>
+      <div class="filters">
+        <button class="active" data-dstatus="PENDING" onclick="loadDiscounts('PENDING')">بانتظار الموافقة</button>
+        <button data-dstatus="APPROVED" onclick="loadDiscounts('APPROVED')">مقبولة</button>
+        <button data-dstatus="REJECTED" onclick="loadDiscounts('REJECTED')">مرفوضة</button>
+      </div>
+      <div class="card">
+        <table><thead><tr><th>المتجر</th><th>الحسم</th><th>على شو</th><th>المدة</th><th>الحدود</th><th>ملاحظاته</th><th>الحالة</th><th></th></tr></thead><tbody id="disc-body"></tbody></table>
       </div>
     </div>
 
@@ -908,6 +923,50 @@ async function sendPushTest() {
     ? `انبعت لـ ${data.delivered} من ${data.devices} جهاز — تأكد أنه وصل على الموبايل.`
     : `ما وصل لأي جهاز. ${data.errors.join(' | ')}`;
   loadPushStatus();
+}
+
+// ---- Discounts ----
+let discStatus = 'PENDING';
+const DISC_STATE_AR = { PENDING: 'بانتظار الموافقة', REJECTED: 'مرفوض', PAUSED: 'موقوف', SCHEDULED: 'لسا ما بدأ', LIVE: 'شغّال', ENDED: 'انتهى' };
+
+function discScopeAr(d) {
+  if (d.scope === 'SECTION' && d.section) return 'قسم: ' + d.section.name;
+  if (d.scope === 'PRODUCTS' && d.productNames.length) return 'منتجات: ' + d.productNames.join('، ');
+  return 'كل المحل';
+}
+
+async function loadDiscounts(status) {
+  discStatus = status || discStatus;
+  document.querySelectorAll('[data-dstatus]').forEach(b => b.classList.toggle('active', b.dataset.dstatus === discStatus));
+  const { ok, data } = await api('GET', '/admin/discounts?status=' + discStatus);
+  const body = document.getElementById('disc-body');
+  if (!ok) { body.innerHTML = '<tr><td colspan="8">تعذّر التحميل</td></tr>'; return; }
+  const day = d => d ? new Date(d).toLocaleDateString('ar', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  body.innerHTML = data.length ? data.map(d => `<tr>
+    <td>${esc(d.merchant.businessName)}${d.merchant.phone ? `<br><small class="muted">${esc(d.merchant.phone)}</small>` : ''}</td>
+    <td><b>${d.percent}%</b> ${esc(d.title)}</td>
+    <td>${esc(discScopeAr(d))}</td>
+    <td>${day(d.startDate)} → ${d.endDate ? day(d.endDate) : 'بدون نهاية'}</td>
+    <td>${d.perCustomerLimit ? d.perCustomerLimit + ' مرات لكل زبون' : 'بدون حد للمرات'}<br>${d.maxCustomers ? 'حتى ' + d.maxCustomers + ' شخص' : 'بدون حد للأشخاص'}</td>
+    <td style="max-width:220px">${esc(d.description || '')}${d.rejectionReason ? `<br><small class="muted">رُفض: ${esc(d.rejectionReason)}</small>` : ''}</td>
+    <td><span class="badge ${d.status === 'APPROVED' ? 'APPROVED' : d.status === 'PENDING' ? 'PENDING' : 'REJECTED'}">${esc(DISC_STATE_AR[d.state] || d.state)}</span></td>
+    <td style="white-space:nowrap">${d.status !== 'APPROVED' ? `<button class="small" onclick="reviewDiscount('${d.id}','approve')">موافقة</button>` : ''}${d.status !== 'REJECTED' ? `<button class="small danger" onclick="reviewDiscount('${d.id}','reject')">رفض</button>` : ''}</td></tr>`).join('')
+    : '<tr><td colspan="8" class="muted">ما في حسومات</td></tr>';
+  refreshDiscBadge();
+}
+
+async function refreshDiscBadge() {
+  const { ok, data } = await api('GET', '/admin/discounts?status=PENDING');
+  const badge = document.getElementById('disc-pending-count');
+  if (ok && data.length) { badge.textContent = data.length; badge.style.display = ''; } else badge.style.display = 'none';
+}
+
+async function reviewDiscount(id, action) {
+  let body = {};
+  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل للتاجر، واختياري):'); if (reason === null) return; body = { reason }; }
+  const { ok, data } = await api('POST', '/admin/discounts/' + id + '/' + action, body);
+  if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
+  loadDiscounts(discStatus);
 }
 
 // ---- Store ads and banners ----

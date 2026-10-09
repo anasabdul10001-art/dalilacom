@@ -458,6 +458,16 @@ model Discount {
   isActive   Boolean   @default(true)
   startDate  DateTime?
   endDate    DateTime?
+  // The shop's own terms: what it covers (ALL | SECTION | PRODUCTS), who may use it and how often, and a note for customers.
+  description      String?
+  scope            String    @default("ALL")
+  scopeSection     String?
+  productIds       String[]  @default([])
+  maxCustomers     Int? // how many different people may get it (null = no limit)
+  perCustomerLimit Int? // how many times each person may get it (null = no limit)
+  // The super admin approves every discount before customers can use it.
+  status           DiscountApproval @default(PENDING)
+  rejectionReason  String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -1443,4 +1453,10 @@ model BannerBooking {
 
   @@index([merchantId])
   @@index([status])
+}
+
+enum DiscountApproval {
+  PENDING
+  APPROVED
+  REJECTED
 }

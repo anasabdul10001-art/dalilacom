@@ -41,6 +41,17 @@ import androidx.navigation.NavHostController
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.DocumentPrinter
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.ui.Alignment
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
 
 private enum class MerchantTab(@androidx.annotation.StringRes val labelRes: Int, val icon: ImageVector) {
@@ -61,6 +72,25 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
     // hours/listing screens recomposes this shell, which reloads it too.
     LaunchedEffect(selectedTab) { onboarding = container.merchantRepository.getMerchantMe()?.onboarding ?: onboarding }
 
+    // The camera button floats over every tab: a scanned member code lands in the Redeem tab, already checked.
+    val redeemViewModel: RedeemViewModel = viewModel(factory = factory)
+    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.let { text ->
+            selectedTab = MerchantTab.Redeem
+            redeemViewModel.scanAndVerify(text)
+        }
+    }
+    val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) scanLauncher.launch(ScanOptions().setBeepEnabled(true).setOrientationLocked(false))
+    }
+    fun openScanner() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            scanLauncher.launch(ScanOptions().setBeepEnabled(true).setOrientationLocked(false))
+        } else {
+            cameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -75,7 +105,8 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
             }
         },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+      Box(Modifier.padding(padding).fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
             TextButton(onClick = { rootNavController.popBackStack() }) { Text(AppStrings.get(R.string.s_a24110f8)) }
             onboarding?.takeUnless { it.complete }?.let { steps ->
                 SetupChecklist(
@@ -98,9 +129,19 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                     onAddByPhoto = { rootNavController.navigate("productWizard") },
                     onOpenHours = { rootNavController.navigate("merchantHours") },
                     onOpenProfile = { rootNavController.navigate("merchantProfile") },
+                    onOpenDiscounts = { rootNavController.navigate("discounts") },
                 )
             }
         }
+        if (selectedTab != MerchantTab.Redeem) {
+            FloatingActionButton(
+                onClick = ::openScanner,
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            ) { Icon(Icons.Filled.QrCodeScanner, contentDescription = androidx.compose.ui.res.stringResource(R.string.scan_fab_desc)) }
+        }
+      }
     }
 }
 

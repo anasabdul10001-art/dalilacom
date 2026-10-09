@@ -197,7 +197,8 @@ describe("A real order drives the notifications (section 13)", () => {
 describe("A redeemed discount notifies the member (section 34/13)", () => {
   it("writes a DISCOUNT_RECEIVED notification naming the shop and the percentage", async () => {
     const { owner, merchantId } = await shop();
-    await request(app).post("/merchant/discounts").set("Authorization", owner.bearer).send({ title: "15% off", percent: 15 });
+    const made = await request(app).post("/merchant/discounts").set("Authorization", owner.bearer).send({ title: "15% off", percent: 15 });
+    await prisma.discount.update({ where: { id: made.body.id }, data: { status: "APPROVED" } });
 
     const plan = await prisma.servicePlan.create({ data: { name: `Notif Plan ${Date.now()}`, durationDays: 30, priceCents: 0 } });
     const member = await account("notifmember", "Notif Member");

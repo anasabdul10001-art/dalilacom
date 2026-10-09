@@ -1,3 +1,4 @@
+import { liveDiscountWhere } from "./discounts";
 import fs from "fs";
 import path from "path";
 import { prisma } from "../prisma";
@@ -60,7 +61,7 @@ export async function renderSharePage(merchantId?: unknown): Promise<string> {
   if (typeof merchantId === "string" && /^[0-9a-f-]{36}$/i.test(merchantId)) {
     const shop = await prisma.merchantProfile.findFirst({
       where: { id: merchantId, approvalStatus: "APPROVED" },
-      select: { id: true, businessName: true, address: true, category: { select: { name: true } }, discounts: { where: { isActive: true }, select: { percent: true }, orderBy: { percent: "desc" }, take: 1 } },
+      select: { id: true, businessName: true, address: true, category: { select: { name: true } }, discounts: { where: liveDiscountWhere(), select: { percent: true }, orderBy: { percent: "desc" }, take: 1 } },
     });
     if (shop) {
       const best = shop.discounts[0]?.percent;

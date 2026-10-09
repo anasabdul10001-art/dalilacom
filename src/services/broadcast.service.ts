@@ -1,5 +1,6 @@
 import { NotificationType, Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
+import { liveDiscountWhere } from "../lib/discounts";
 import { notify } from "./notification.service";
 import { screenAnnouncement } from "./ai.service";
 import { getSettings } from "./settings.service";
@@ -190,7 +191,7 @@ async function resolve(sender: Sender, target: BroadcastTarget, message?: Broadc
     : null;
   if (message?.productId && !product) throw new BroadcastError(404, "NOT_FOUND", "Product not found in your shop");
   const discount = message?.discountId
-    ? await prisma.discount.findFirst({ where: { id: message.discountId, merchantId: merchant.id, isActive: true }, select: { id: true, title: true } })
+    ? await prisma.discount.findFirst({ where: { id: message.discountId, merchantId: merchant.id, ...liveDiscountWhere() }, select: { id: true, title: true } })
     : null;
   if (message?.discountId && !discount) throw new BroadcastError(404, "NOT_FOUND", "Offer not found in your shop");
 

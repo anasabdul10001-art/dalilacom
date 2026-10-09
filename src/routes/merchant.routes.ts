@@ -1,5 +1,8 @@
 import { Router } from "express";
 import { shopStanding } from "./reviews.routes";
+import { discountScopeInfo, discountState, liveDiscountWhere } from "../lib/discounts";
+import { isStoreSection } from "../lib/storeSections";
+import { notify } from "../services/notification.service";
 import { z } from "zod";
 import { MerchantApprovalStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
@@ -87,7 +90,7 @@ merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, r
       approved: merchant.approvalStatus === "APPROVED",
       location: merchant.latitude !== null && merchant.longitude !== null,
       hours: computeOpenStatus(merchant.openingHours, "UTC").hasHours,
-      discount: merchant.discounts.some((d) => d.isActive),
+      discount: merchant.discounts.some((d) => d.isActive && d.status !== "REJECTED"),
       product: _count.products > 0,
     },
   });
@@ -233,7 +236,7 @@ merchantRouter.get("/", async (req, res) => {
         : {}),
       ...(hasBox ? { latitude: { gte: minLat, lte: maxLat }, longitude: { gte: minLng, lte: maxLng } } : {}),
     },
-    include: { category: true, discounts: { where: { isActive: true } }, user: ownerProfileSelect },
+    include: { category: true, discounts: { where: liveDiscountWhere() }, user: ownerProfileSelect },
   });
 
   const tz = await platformTimeZone();
@@ -291,17 +294,97 @@ merchantRouter.put("/me/hours", requireAuth, requireRole(Role.MERCHANT), async (
 });
 
 // Public: a merchant's storefront profile (section 8)
+/* ---------------- the shop's discount system ---------------- */
+
+const discountSchema = z.object({
+  title: z.string().trim().min(2).max(80),
+  percent: z.number().int().min(1).max(100),
+  description: z.string().trim().max(500).nullable().optional(),
+  scope: z.enum(["ALL", "SECTION", "PRODUCTS"]).default("ALL"),
+  scopeSection: z.string().nullable().optional(),
+  productIds: z.array(z.string().uuid()).max(30).optional(),
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  maxCustomers: z.number().int().min(1).max(1_000_000).nullable().optional(),
+  perCustomerLimit: z.number().int().min(1).max(1000).nullable().optional(),
+});
+
+async function ownApprovedShop(userId: string) {
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId } });
+  if (!merchant) return { merchant: null, error: [404, "NOT_FOUND", "Merchant profile not found"] as [number, string, string] };
+  if (merchant.approvalStatus !== "APPROVED") return { merchant: null, error: [403, "FORBIDDEN", "Merchant is not approved yet"] as [number, string, string] };
+  return { merchant, error: null };
+}
+
+/** Checks what the form chose against the shop's own data; returns the values to save or the reason it is wrong. */
+async function discountTerms(merchantId: string, input: z.infer<typeof discountSchema>) {
+  const start = input.startDate ? new Date(input.startDate) : null;
+  const end = input.endDate ? new Date(input.endDate) : null;
+  if ((start && Number.isNaN(start.getTime())) || (end && Number.isNaN(end.getTime()))) return { error: "تاريخ غير صالح" };
+  if (end && end.getTime() < Date.now()) return { error: "تاريخ النهاية لازم يكون بالمستقبل" };
+  if (start && end && end.getTime() <= start.getTime()) return { error: "تاريخ النهاية لازم يكون بعد البداية" };
+  let productIds: string[] = [];
+  if (input.scope === "SECTION" && !(input.scopeSection && isStoreSection(input.scopeSection))) return { error: "اختر قسمًا صحيحًا" };
+  if (input.scope === "PRODUCTS") {
+    productIds = [...new Set(input.productIds ?? [])];
+    const own = productIds.length ? await prisma.product.count({ where: { id: { in: productIds }, merchantId } }) : 0;
+    if (productIds.length === 0 || own !== productIds.length) return { error: "اختر منتجًا واحدًا على الأقل من منتجاتك" };
+  }
+  return {
+    data: {
+      title: input.title,
+      percent: input.percent,
+      description: input.description || null,
+      scope: input.scope,
+      scopeSection: input.scope === "SECTION" ? input.scopeSection! : null,
+      productIds,
+      startDate: start,
+      endDate: end,
+      maxCustomers: input.maxCustomers ?? null,
+      perCustomerLimit: input.perCustomerLimit ?? null,
+    },
+  };
+}
+
+async function tellAdminsAboutDiscount(shopName: string, title: string, edited: boolean) {
+  const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+  await Promise.all(admins.map((a) => notify({ userId: a.id, type: "SYSTEM", title: edited ? "حسم معدّل للمراجعة" : "طلب حسم جديد للمراجعة", body: `${shopName}: ${title}`, data: { kind: "DISCOUNT_REVIEW" }, email: false })));
+}
+
+merchantRouter.get("/discounts", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  const rows = await prisma.discount.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: "desc" } });
+  const [usage, people] = await Promise.all([
+    prisma.discountTransaction.groupBy({ by: ["discountId"], where: { merchantId: merchant.id, discountId: { not: null } }, _count: { _all: true }, _sum: { discountAmountCents: true } }),
+    prisma.discountTransaction.groupBy({ by: ["discountId", "membershipId"], where: { merchantId: merchant.id, discountId: { not: null } } }),
+  ]);
+  const scopeOf = await discountScopeInfo(rows);
+  res.json(rows.map((d) => {
+    const u = usage.find((x) => x.discountId === d.id);
+    return {
+      id: d.id, title: d.title, percent: d.percent, description: d.description, startDate: d.startDate, endDate: d.endDate,
+      maxCustomers: d.maxCustomers, perCustomerLimit: d.perCustomerLimit, isActive: d.isActive, status: d.status, rejectionReason: d.rejectionReason,
+      state: discountState(d), productIds: d.productIds, scopeSection: d.scopeSection, ...scopeOf(d),
+      uses: u?._count._all ?? 0, customers: people.filter((p) => p.discountId === d.id).length, savedCents: u?._sum.discountAmountCents ?? 0,
+    };
+  }));
+});
+
 merchantRouter.get("/:id", async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
     where: { id: req.params.id },
-    include: { category: true, discounts: { where: { isActive: true } }, user: ownerProfileSelect },
+    include: { category: true, discounts: { where: liveDiscountWhere(), orderBy: { percent: "desc" } }, user: ownerProfileSelect },
   });
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
     return sendError(res, 404, "NOT_FOUND", "Merchant not found");
   }
   const localize = await categoryNameLocalizer(resolveLanguage(req));
   const standing = await shopStanding(merchant.id); // the stars and the followers are public
-  res.json(localize({ ...withOwnerProfile(merchant), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
+  // each live discount comes with what it covers, its dates and its limits (the customer reads them on the shop page)
+  const scopeOf = await discountScopeInfo(merchant.discounts);
+  const discounts = merchant.discounts.map((d) => ({ id: d.id, title: d.title, percent: d.percent, description: d.description, endDate: d.endDate, perCustomerLimit: d.perCustomerLimit, maxCustomers: d.maxCustomers, ...scopeOf(d) }));
+  res.json(localize({ ...withOwnerProfile({ ...merchant, discounts }), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
 });
 
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
@@ -326,27 +409,53 @@ merchantRouter.post("/:id/reject", requireAuth, requireRole(Role.ADMIN), async (
   res.json({ id: merchant.id, approvalStatus: merchant.approvalStatus, rejectionReason: merchant.rejectionReason });
 });
 
-const createDiscountSchema = z.object({
-  title: z.string().min(2),
-  percent: z.number().int().min(1).max(100),
+merchantRouter.post("/discounts", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const parsed = discountSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const own = await ownApprovedShop(req.user!.id);
+  if (own.error || !own.merchant) return sendError(res, own.error?.[0] ?? 404, own.error?.[1] ?? "NOT_FOUND", own.error?.[2] ?? "Not found");
+  const terms = await discountTerms(own.merchant.id, parsed.data);
+  if ("error" in terms) return sendError(res, 400, "BAD_REQUEST", terms.error!);
+  const discount = await prisma.discount.create({ data: { merchantId: own.merchant.id, ...terms.data } }); // waits for the admin
+  await tellAdminsAboutDiscount(own.merchant.businessName, discount.title, false);
+  res.status(201).json(discount);
 });
 
-merchantRouter.post("/discounts", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
-  const parsed = createDiscountSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return sendValidationError(res, parsed.error);
-  }
+const discountPatchSchema = z.object({ isActive: z.boolean().optional(), endNow: z.literal(true).optional() }).and(discountSchema.partial());
 
-  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
-  if (!merchant) {
-    return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+// Pause, resume or end a discount at once; changing its terms sends it to the admin again.
+merchantRouter.patch("/discounts/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const parsed = discountPatchSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const own = await ownApprovedShop(req.user!.id);
+  if (own.error || !own.merchant) return sendError(res, own.error?.[0] ?? 404, own.error?.[1] ?? "NOT_FOUND", own.error?.[2] ?? "Not found");
+  const existing = await prisma.discount.findFirst({ where: { id: req.params.id, merchantId: own.merchant.id } });
+  if (!existing) return sendError(res, 404, "NOT_FOUND", "الحسم غير موجود");
+  const { isActive, endNow, ...terms } = parsed.data;
+  const changesTerms = Object.keys(terms).length > 0;
+  if (!changesTerms) {
+    const updated = await prisma.discount.update({ where: { id: existing.id }, data: { ...(isActive !== undefined ? { isActive } : {}), ...(endNow ? { endDate: new Date(), isActive: false } : {}) } });
+    return res.json(updated);
   }
-  if (merchant.approvalStatus !== "APPROVED") {
-    return sendError(res, 403, "FORBIDDEN", "Merchant is not approved yet");
-  }
-
-  const discount = await prisma.discount.create({
-    data: { merchantId: merchant.id, title: parsed.data.title, percent: parsed.data.percent },
+  const merged = discountSchema.safeParse({
+    title: existing.title, percent: existing.percent, description: existing.description, scope: existing.scope, scopeSection: existing.scopeSection, productIds: existing.productIds,
+    startDate: existing.startDate?.toISOString() ?? null, endDate: existing.endDate?.toISOString() ?? null, maxCustomers: existing.maxCustomers, perCustomerLimit: existing.perCustomerLimit, ...terms,
   });
-  res.status(201).json(discount);
+  if (!merged.success) return sendValidationError(res, merged.error);
+  const checked = await discountTerms(own.merchant.id, merged.data);
+  if ("error" in checked) return sendError(res, 400, "BAD_REQUEST", checked.error!);
+  const updated = await prisma.discount.update({ where: { id: existing.id }, data: { ...checked.data, status: "PENDING", rejectionReason: null, ...(isActive !== undefined ? { isActive } : {}) } });
+  await tellAdminsAboutDiscount(own.merchant.businessName, updated.title, true);
+  res.json(updated);
+});
+
+merchantRouter.delete("/discounts/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const own = await ownApprovedShop(req.user!.id);
+  if (own.error || !own.merchant) return sendError(res, own.error?.[0] ?? 404, own.error?.[1] ?? "NOT_FOUND", own.error?.[2] ?? "Not found");
+  const existing = await prisma.discount.findFirst({ where: { id: req.params.id, merchantId: own.merchant.id }, include: { _count: { select: { discountTransactions: true } } } });
+  if (!existing) return sendError(res, 404, "NOT_FOUND", "الحسم غير موجود");
+  // one that was already used stays in the history (switched off); one that never was is simply removed
+  if (existing._count.discountTransactions > 0) await prisma.discount.update({ where: { id: existing.id }, data: { isActive: false } });
+  else await prisma.discount.delete({ where: { id: existing.id } });
+  res.json({ ok: true });
 });

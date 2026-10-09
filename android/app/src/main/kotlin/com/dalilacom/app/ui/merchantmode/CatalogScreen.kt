@@ -33,7 +33,7 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.formatCents
 
 @Composable
-fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}) {
+fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}, onOpenDiscounts: () -> Unit = {}) {
     val viewModel: CatalogViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -54,35 +54,16 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
         Text(stringResource(R.string.wiz_start_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.height(12.dp))
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Text(AppStrings.get(R.string.s_bb8520e6), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                if (state.discounts.isEmpty()) {
-                    Text(AppStrings.get(R.string.s_1b98cbb3), style = MaterialTheme.typography.bodySmall)
-                } else {
-                    state.discounts.forEach { discount ->
-                        Text("🏷️ ${discount.title} — ${discount.percent}%", color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = state.discountTitle,
-                        onValueChange = viewModel::onDiscountTitleChange,
-                        label = { Text(AppStrings.get(R.string.s_de747706)) },
-                        modifier = Modifier.weight(2f),
-                    )
-                    OutlinedTextField(
-                        value = state.discountPercent,
-                        onValueChange = viewModel::onDiscountPercentChange,
-                        label = { Text(AppStrings.get(R.string.s_9b30f06e)) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = viewModel::addDiscount, enabled = !state.isAddingDiscount) { Text(AppStrings.get(R.string.s_1699cdea)) }
-            }
+        Button(onClick = onOpenDiscounts, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) {
+            Text("🏷️  " + stringResource(R.string.disc_open), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+        }
+        if (state.discounts.isNotEmpty()) {
+            Text(
+                state.discounts.joinToString("  ·  ") { "${it.title} ${it.percent}%" },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
 
         Spacer(Modifier.height(20.dp))

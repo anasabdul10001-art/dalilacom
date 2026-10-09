@@ -306,6 +306,21 @@ interface ApiService {
     @POST("merchant/discounts")
     suspend fun addDiscount(@Body body: CreateDiscountRequest): Response<DiscountDto>
 
+    @GET("merchant/discounts")
+    suspend fun myDiscounts(): Response<List<MyDiscountDto>>
+
+    @POST("merchant/discounts")
+    suspend fun createDiscount(@Body body: DiscountInput): Response<DiscountDto>
+
+    @PATCH("merchant/discounts/{id}")
+    suspend fun editDiscount(@Path("id") id: String, @Body body: DiscountInput): Response<okhttp3.ResponseBody>
+
+    @PATCH("merchant/discounts/{id}")
+    suspend fun patchDiscount(@Path("id") id: String, @Body body: DiscountPatchRequest): Response<okhttp3.ResponseBody>
+
+    @DELETE("merchant/discounts/{id}")
+    suspend fun deleteDiscount(@Path("id") id: String): Response<okhttp3.ResponseBody>
+
     @GET("cart")
     suspend fun getCart(): Response<CartViewDto>
 

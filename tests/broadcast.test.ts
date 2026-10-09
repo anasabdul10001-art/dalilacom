@@ -56,6 +56,7 @@ async function approvedShop(lat: number | null, lng: number | null) {
   await prisma.user.update({ where: { id: owner.id }, data: { role: "MERCHANT" } });
   const product = await request(app).post("/products").set(owner.auth).send({ name: "Bc product", priceCents: 1000, stock: 5, categoryId: cat.id });
   const discount = await request(app).post("/merchant/discounts").set(owner.auth).send({ title: "20% off", percent: 20 });
+  await prisma.discount.update({ where: { id: discount.body.id }, data: { status: "APPROVED" } }); // the admin approves a discount before it is usable
   return { owner, merchantId: reg.body.id as string, productId: product.body.id as string, discountId: discount.body.id as string };
 }
 

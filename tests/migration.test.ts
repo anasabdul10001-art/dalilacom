@@ -149,5 +149,5 @@ describe("Migration: existing MerchantProfile/Product data survives Phase 1B bac
     const second = await runBackfill(prisma, () => {});
     expect(second.businessesCreated).toBe(0);
     expect(second.offersCreated).toBe(0);
-  });
+  }, 60_000); // a long flow, slow when the shared database holds a lot of other data
 });

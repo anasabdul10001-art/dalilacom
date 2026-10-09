@@ -134,7 +134,8 @@ describe("Security: duplicate / replayed sensitive requests", () => {
       .set("Authorization", `Bearer ${merchantToken}`)
       .send({ businessName: "Test Shop", categoryId: category.id });
     await prisma.merchantProfile.update({ where: { id: merchantReg.body.id }, data: { approvalStatus: "APPROVED" } });
-    await request(app).post("/merchant/discounts").set("Authorization", `Bearer ${merchantToken}`).send({ title: "10% off", percent: 10 });
+    const made = await request(app).post("/merchant/discounts").set("Authorization", `Bearer ${merchantToken}`).send({ title: "10% off", percent: 10 });
+    await prisma.discount.update({ where: { id: made.body.id }, data: { status: "APPROVED" } });
 
     const plan = await prisma.servicePlan.create({ data: { name: `Plan-${Date.now()}`, durationDays: 30, priceCents: 0 } });
     const { token: customerToken } = await registerAndLogin();

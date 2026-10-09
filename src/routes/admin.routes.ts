@@ -10,6 +10,8 @@ import { requireAuth, requireRole } from "../middleware/auth";
 import { addDemoStore, removeDemoStore } from "../services/demoStore.service";
 import { adState, approveAd, linkBannerToBooking, markBannerContacted, rejectAd, rejectBannerBooking } from "../services/ads.service";
 import { visionAvailable } from "../services/ai.service";
+import { notify } from "../services/notification.service";
+import { discountScopeInfo, discountState } from "../lib/discounts";
 import { sniffImageMime } from "../lib/image";
 import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
@@ -328,6 +330,41 @@ adminRouter.post("/ads/:id/reject", route(async (req, res) => {
   await rejectAd(req.params.id, reason.success ? reason.data.reason : undefined);
   res.json({ ok: true });
 }));
+
+/* ---------------- discounts: every shop's discount waits here for approval ---------------- */
+
+adminRouter.get("/discounts", async (req, res) => {
+  const status = typeof req.query.status === "string" ? req.query.status : undefined;
+  const rows = await prisma.discount.findMany({
+    where: status && ["PENDING", "APPROVED", "REJECTED"].includes(status) ? { status: status as "PENDING" } : {},
+    include: { merchant: { select: { id: true, businessName: true, phone: true } } },
+    orderBy: { updatedAt: "desc" },
+    take: 200,
+  });
+  const scopeOf = await discountScopeInfo(rows);
+  res.json(rows.map((d) => ({
+    id: d.id, merchant: d.merchant, title: d.title, percent: d.percent, description: d.description, startDate: d.startDate, endDate: d.endDate,
+    maxCustomers: d.maxCustomers, perCustomerLimit: d.perCustomerLimit, status: d.status, state: discountState(d), rejectionReason: d.rejectionReason, ...scopeOf(d),
+  })));
+});
+
+adminRouter.post("/discounts/:id/approve", async (req, res) => {
+  const d = await prisma.discount.findUnique({ where: { id: req.params.id }, include: { merchant: { select: { userId: true } } } });
+  if (!d) return sendError(res, 404, "NOT_FOUND", "الحسم غير موجود");
+  await prisma.discount.update({ where: { id: d.id }, data: { status: "APPROVED", rejectionReason: null } });
+  await notify({ userId: d.merchant.userId, type: "SYSTEM", title: "تمت الموافقة على حسمك", body: d.title, data: { kind: "DISCOUNT_APPROVED", discountId: d.id }, email: false });
+  res.json({ ok: true });
+});
+
+adminRouter.post("/discounts/:id/reject", async (req, res) => {
+  const reason = z.object({ reason: z.string().trim().max(300).optional() }).safeParse(req.body);
+  const d = await prisma.discount.findUnique({ where: { id: req.params.id }, include: { merchant: { select: { userId: true } } } });
+  if (!d) return sendError(res, 404, "NOT_FOUND", "الحسم غير موجود");
+  const why = reason.success ? reason.data.reason : undefined;
+  await prisma.discount.update({ where: { id: d.id }, data: { status: "REJECTED", rejectionReason: why ?? null } });
+  await notify({ userId: d.merchant.userId, type: "SYSTEM", title: "لم تتم الموافقة على حسمك", body: why ? `${d.title} — السبب: ${why}` : d.title, data: { kind: "DISCOUNT_REJECTED", discountId: d.id }, email: false });
+  res.json({ ok: true });
+});
 
 /* ---------------- big-banner bookings: the shops that asked for one, with the number to call ---------------- */
 

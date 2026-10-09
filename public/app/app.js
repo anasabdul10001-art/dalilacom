@@ -180,6 +180,12 @@ function setHomeTab(tab) {
   // the store is a whole screen of its own: guests may browse it too
   if (tab === "store") return openStore();
   if (tab !== "card") stopQrLoop();
+  // the deals tab is the map of the shops with a discount; it shares the map's state with the plain map tab
+  if (tab === "deals" || tab === "discover") {
+    const d = discoverState();
+    d.discountsOnly = tab === "deals";
+    if (tab === "deals") S._dealsIntro = !dealsIntroHidden();
+  }
   S.homeTab = tab;
   render();
 }
@@ -196,7 +202,7 @@ function root() {
 async function render() {
   const el = root();
   if (!el) return;
-  el.classList.toggle("map-mode", S.screen === "home" && S.homeTab === "discover");
+  el.classList.toggle("map-mode", S.screen === "home" && (S.homeTab === "discover" || S.homeTab === "deals"));
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
@@ -258,6 +264,7 @@ function orderBadge(status) {
 
 const ICON = {
   home: '<svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg>',
+  tag: '<svg viewBox="0 0 24 24"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7a1 1 0 0 1 .7.3l7.8 7.8a1 1 0 0 1 0 1.4l-7.7 7.7a1 1 0 0 1-1.4 0l-7.8-7.8a1 1 0 0 1-.3-.7Z"/><circle cx="8" cy="8" r="1.3"/></svg>',
   card: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>',
   bot: '<svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 16.5h6"/><circle cx="12" cy="3.5" r="1"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>',
@@ -291,6 +298,8 @@ function renderScreen() {
     case "favorites": return screenFavorites();
     case "store": return screenStore();
     case "productWizard": return screenProductWizard();
+    case "discounts": return screenDiscounts();
+    case "discountForm": return screenDiscountForm();
     case "adBook": return screenAdBook();
     case "myAds": return screenMyAds();
     case "merchantHours": return screenMerchantHours();
@@ -597,7 +606,7 @@ function doLogout() {
 const HOME_TABS = [
   { id: "discover", label: "tab.map", icon: "search" },
   { id: "store", label: "tab.store", icon: "store" },
-  { id: "card", label: "tab.card", icon: "card" },
+  { id: "deals", label: "tab.deals", icon: "tag" },
   { id: "responder", label: "tab.responder", icon: "bot", hero: true },
   { id: "cart", label: "tab.cart", icon: "cart" },
   { id: "orders", label: "tab.orders", icon: "orders" },
@@ -608,6 +617,7 @@ function screenHomeShell() {
   const needsAccount = ["card", "cart", "orders", "profile"].includes(S.homeTab) && !S.token;
   const body = needsAccount ? guestPrompt(S.homeTab) : {
     card: tabCard,
+    deals: tabDeals,
     discover: tabDiscover,
     cart: tabCart,
     orders: tabOrders,
@@ -617,7 +627,7 @@ function screenHomeShell() {
     <div>${body}</div>
     <div class="tabbar" id="home-tabbar">
       ${HOME_TABS.map((tab) => `
-        <button class="${S.homeTab === tab.id ? "active" : ""} ${tab.hero ? "hero" : ""}" onclick="setHomeTab('${tab.id}')">
+        <button class="${S.homeTab === tab.id || (tab.id === "deals" && S.homeTab === "card") ? "active" : ""} ${tab.hero ? "hero" : ""}" onclick="setHomeTab('${tab.id}')">
           ${ICON[tab.icon]}<span>${esc(t(tab.label))}</span>
         </button>`).join("")}
     </div>
@@ -647,6 +657,7 @@ function tabCard() {
       ? `<div class="card"><strong>${esc(t(c.isTrial ? "card.trialLeft" : "card.endsSoon", { n: Math.max(left, 0) }))}</strong>${left <= 7 ? `<div style="height:8px"></div>${renewBtn}` : ""}</div>`
       : "";
   return `
+    <button class="btn small outline" style="width:auto;margin-bottom:8px" onclick="setHomeTab('deals')">‹ ${esc(t("deals.back"))}</button>
     <h1 class="screen-title">بطاقتي</h1>
     ${statusCard}
     <div class="member-card">
@@ -785,8 +796,39 @@ function sheetHeights() {
   return { peek: 232, half: Math.round(H * 0.55), full: Math.max(320, H - 150) };
 }
 
+/* ---- Deals tab: the discount map ---- */
+
+function dealsIntroHidden() {
+  try { return localStorage.getItem("dalilacom.dealsIntro") === "hidden"; } catch (e) { return false; }
+}
+function dismissDealsIntro() { S._dealsIntro = false; render(); }
+function hideDealsIntroForever() {
+  try { localStorage.setItem("dalilacom.dealsIntro", "hidden"); } catch (e) {}
+  dismissDealsIntro();
+}
+
+function dealsIntroHtml() {
+  if (!S._dealsIntro) return "";
+  return `
+    <div class="deals-intro" onclick="dismissDealsIntro()">
+      <div class="deals-box" onclick="event.stopPropagation()">
+        <div class="deals-emoji">🎁</div>
+        <h2>${esc(t("deals.introTitle"))}</h2>
+        <p>${esc(t("deals.introText"))}</p>
+        <button class="btn" onclick="dismissDealsIntro()">${esc(t("deals.ok"))}</button>
+        <button class="deals-never" onclick="hideDealsIntroForever()">${esc(t("deals.never"))}</button>
+      </div>
+    </div>`;
+}
+
+function tabDeals() {
+  return dealsIntroHtml() + tabDiscover();
+}
+
 function tabDiscover() {
   const d = discoverState();
+  const deals = S.homeTab === "deals";
+  if (deals) d.discountsOnly = true;
   if (!d.locAsked) { d.locAsked = true; requestDiscoverLocation(); } // ask for the position as soon as the map opens
   const list = visibleMerchants(d);
   if (d.selectedId) list.sort((x, y) => (y.id === d.selectedId) - (x.id === d.selectedId));
@@ -809,9 +851,10 @@ function tabDiscover() {
           ${suggestHtml(d)}
         </div>
         <div class="float-chips">
-          <button class="chip ${!d.categoryId && !d.openNow && !d.discountsOnly ? "active" : ""}" onclick="onDiscoverReset()">${esc(t("filter.all"))}</button>
+          ${deals ? `<button class="chip" onclick="setHomeTab('card')">💳 ${esc(t("deals.myCard"))}</button>` : ""}
+          <button class="chip ${!d.categoryId && !d.openNow && (deals || !d.discountsOnly) ? "active" : ""}" onclick="onDiscoverReset()">${esc(t("filter.all"))}</button>
           <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">${esc(t("filter.openNow"))}</button>
-          <button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">${esc(t("filter.discounts"))}</button>
+          ${deals ? "" : `<button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">${esc(t("filter.discounts"))}</button>`}
           ${categoryChipsHtml(d)}
         </div>
         ${d.locError ? `<div class="float-note">📍 ${esc(d.locError)}</div>` : ""}
@@ -827,15 +870,16 @@ function tabDiscover() {
       <div class="sheet" id="sheet">
         <div class="sheet-handle" onpointerdown="sheetDragStart(event)" onclick="sheetToggle()"><span></span></div>
         <div class="sheet-head">
-          <strong>${esc(d.userLoc ? t("sheet.nearby") : t("sheet.directory"))}</strong>
+          <strong>${esc(deals ? t("deals.sheetTitle") : d.userLoc ? t("sheet.nearby") : t("sheet.directory"))}</strong>
           <span class="badge info">${esc(t("sheet.count", { n: list.length }))}</span>
         </div>
-        ${(d.userLoc || d.bounds) ? `<div class="sheet-chips">
+        ${(d.userLoc || d.bounds || deals) ? `<div class="sheet-chips">
           ${d.bounds ? `<button class="chip active" onclick="clearSearchArea()">${esc(t("area.clear"))}</button>` : ""}
-          ${d.userLoc ? [null, 2, 5, 10, 25].map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${esc(r ? t("radius.km", { n: r }) : t("radius.any"))}</button>`).join("") : ""}
+          ${deals && !d.userLoc ? `<button class="chip" onclick="requestDiscoverLocation(true)">📍 ${esc(t("deals.locate"))}</button>` : ""}
+          ${d.userLoc ? (deals ? [null, 1, 3, 5, 10, 25] : [null, 2, 5, 10, 25]).map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${esc(r ? t("radius.km", { n: r }) : t("radius.any"))}</button>`).join("") : ""}
         </div>` : ""}
         <div class="sheet-list">
-          ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">${esc(d.radiusKm ? t("sheet.emptyRadius", { n: d.radiusKm }) : t("sheet.empty"))}</div>`)}
+          ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">${esc(d.radiusKm ? t("sheet.emptyRadius", { n: d.radiusKm }) : deals ? t("deals.empty") : t("sheet.empty"))}</div>`)}
         </div>
       </div>
       ${browseHtml(d)}
@@ -924,7 +968,7 @@ function onDiscoverSubmit() { pushRecent(S._discover.query); S._discover.showSug
 function onDiscoverClear() { S._discover.query = ""; S._discover.suggest = null; searchMerchants(); }
 function pickRecent(q) { S._discover.query = q; S._discover.showSuggest = false; pushRecent(q); searchMerchants(); }
 function pickCategory(id) { S._discover.query = ""; S._discover.categoryId = id; S._discover.showSuggest = false; searchMerchants(); }
-function onDiscoverReset() { Object.assign(S._discover, { categoryId: "", openNow: false, discountsOnly: false }); searchMerchants(); }
+function onDiscoverReset() { Object.assign(S._discover, { categoryId: "", openNow: false, discountsOnly: S.homeTab === "deals" }); searchMerchants(); }
 function toggleDiscoverFlag(flag) { S._discover[flag] = !S._discover[flag]; render(); }
 function setDiscoverRadius(km) { S._discover.radiusKm = km; S._radiusFit = true; render(); }
 function onDiscoverCategory(id) { S._discover.categoryId = S._discover.categoryId === id ? "" : id; searchMerchants(); }
@@ -1440,7 +1484,7 @@ function screenMerchantDetail() {
         ${x.bio ? `<p class="place-bio" style="margin-top:0">${esc(x.bio)}</p>` : ""}
         ${x.address ? `<div class="place-row">📍 ${esc(x.address)}</div>` : ""}
         ${phone ? `<div class="place-row">📞 <a href="tel:${esc(phone)}">${esc(phone)}</a></div>` : ""}
-        ${(x.discounts || []).length ? `<div class="section-title">${esc(t("place.discounts"))}</div>${x.discounts.map((d) => `<div class="badge info" style="margin-bottom:6px">🏷️ ${esc(d.title)} — ${d.percent}%</div>`).join("")}` : ""}
+        ${(x.discounts || []).length ? `<div class="section-title">${esc(t("place.discounts"))}</div>${x.discounts.map((d) => customerDiscountCard(d)).join("")}` : ""}
         ${hoursTable(x)}
       </section>`;
   } else if (m.tab === "all") {
@@ -3913,6 +3957,7 @@ function screenMerchantModeShell() {
     <button class="back-btn" onclick="back()">‹ رجوع لحساب الزبون</button>
     ${merchantChecklistHtml()}
     <div>${body}</div>
+    <button class="scan-fab" onclick="openScanner()" aria-label="${esc(t("scan.title"))}" title="${esc(t("scan.title"))}">📷</button>
     <div class="tabbar">
       ${MERCHANT_TABS.map((t) => `
         <button class="${S.merchantTab === t.id ? "active" : ""}" onclick="setMerchantTab('${t.id}')">
@@ -4053,6 +4098,183 @@ async function promoSend() {
   render();
 }
 
+/* ---------------- the shop's discount system ---------------- */
+
+const DISC_PERCENTS = [5, 10, 15, 20, 25, 30, 40, 50];
+
+/** What a discount covers, in a sentence (works for the shop's own list and for the public cards). */
+function discScopeText(d) {
+  if (d.scope === "SECTION" && d.section) return t("disc.onSection", { name: LANG === "ar" ? d.section.name : d.section.nameEn });
+  if (d.scope === "PRODUCTS" && d.productNames && d.productNames.length) return t("disc.onProducts", { names: d.productNames.slice(0, 3).join("، ") + (d.productNames.length > 3 ? "…" : "") });
+  return t("disc.onAll");
+}
+
+/** A discount as a customer sees it: the percent, what it covers, until when, how many times. */
+function customerDiscountCard(d) {
+  const bits = [discScopeText(d)];
+  if (d.endDate) bits.push(t("disc.until", { date: new Date(d.endDate).toLocaleDateString(LANG, { day: "numeric", month: "short" }) }));
+  if (d.perCustomerLimit) bits.push(t("disc.perCustomer", { n: d.perCustomerLimit }));
+  return `<div class="disc-card"><b>${d.percent}%</b><div><strong>${esc(d.title)}</strong>${d.description ? `<p>${esc(d.description)}</p>` : ""}<small>${esc(bits.join(" · "))}</small></div></div>`;
+}
+
+const DISC_STATE = { PENDING: "disc.st.PENDING", REJECTED: "disc.st.REJECTED", PAUSED: "disc.st.PAUSED", SCHEDULED: "disc.st.SCHEDULED", LIVE: "disc.st.LIVE", ENDED: "disc.st.ENDED" };
+
+function screenDiscounts() {
+  if (!S._disc) { S._disc = { loading: true }; loadDiscounts(); }
+  const d = S._disc;
+  if (d.loading) return `${backRow()}<h1 class="screen-title">${esc(t("disc.title"))}</h1>${spinner()}`;
+  return `
+    ${backRow()}
+    <h1 class="screen-title">${esc(t("disc.title"))}</h1>
+    <p class="screen-sub">${esc(t("disc.sub"))}</p>
+    <button class="btn" onclick="openDiscountForm(null)">➕ ${esc(t("disc.new"))}</button>
+    <div style="height:12px"></div>
+    ${errorBanner()}
+    ${d.list.length === 0 ? `<div class="empty-state">${esc(t("disc.none"))}</div>` : d.list.map((x) => `
+      <div class="card disc-item">
+        <div class="title-line"><strong>🏷️ ${esc(x.title)} — ${x.percent}%</strong><span class="badge ${x.state === "LIVE" ? "success" : x.state === "PENDING" || x.state === "SCHEDULED" ? "warning" : "neutral"}">${esc(t(DISC_STATE[x.state]))}</span></div>
+        <p class="muted">${esc(discScopeText(x))}</p>
+        <p class="muted">${x.startDate ? esc(t("disc.from", { date: new Date(x.startDate).toLocaleDateString(LANG, { day: "numeric", month: "short" }) })) + " " : ""}${x.endDate ? esc(t("disc.until", { date: new Date(x.endDate).toLocaleDateString(LANG, { day: "numeric", month: "short" }) })) : esc(t("disc.noEnd"))}</p>
+        <p class="muted">${x.perCustomerLimit ? esc(t("disc.perCustomer", { n: x.perCustomerLimit })) : esc(t("disc.perCustomerAny"))} · ${x.maxCustomers ? esc(t("disc.maxPeople", { n: x.maxCustomers })) : esc(t("disc.maxPeopleAny"))}</p>
+        ${x.description ? `<p>${esc(x.description)}</p>` : ""}
+        ${x.rejectionReason ? `<div class="error-banner">${esc(t("disc.refusedBecause"))} ${esc(x.rejectionReason)}</div>` : ""}
+        ${x.status === "APPROVED" ? `<p class="muted">📊 ${esc(t("disc.stats", { uses: x.uses, people: x.customers }))}</p>` : ""}
+        <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:6px">
+          ${x.status === "APPROVED" && x.state !== "ENDED" ? `<button class="btn small outline" style="width:auto" onclick="discToggle('${x.id}',${x.isActive ? "false" : "true"})">${esc(x.isActive ? t("disc.pause") : t("disc.resume"))}</button>` : ""}
+          ${x.state === "LIVE" ? `<button class="btn small outline" style="width:auto" onclick="discEndNow('${x.id}')">${esc(t("disc.endNow"))}</button>` : ""}
+          <button class="btn small outline" style="width:auto" onclick="openDiscountForm('${x.id}')">${esc(t("disc.edit"))}</button>
+          <button class="btn small danger" style="width:auto" onclick="discDelete('${x.id}')">${esc(t("disc.delete"))}</button>
+        </div>
+      </div>`).join("")}`;
+}
+
+async function loadDiscounts() {
+  const [list, mine, sections] = await Promise.all([api("GET", "/merchant/discounts"), api("GET", "/products/mine"), api("GET", "/store/sections?all=1")]);
+  S._disc = { loading: false, list: list.ok ? list.data : [], products: mine.ok ? mine.data.filter((p) => p.isActive) : [], sections: sections.ok ? sections.data : [] };
+  render();
+}
+
+async function discToggle(id, active) {
+  const { ok, data } = await api("PATCH", "/merchant/discounts/" + id, { isActive: active });
+  if (!ok) S.error = errMsg(data, t("disc.failed"));
+  loadDiscounts();
+}
+
+async function discEndNow(id) {
+  if (!confirm(t("disc.endConfirm"))) return;
+  const { ok, data } = await api("PATCH", "/merchant/discounts/" + id, { endNow: true });
+  if (!ok) S.error = errMsg(data, t("disc.failed"));
+  loadDiscounts();
+}
+
+async function discDelete(id) {
+  if (!confirm(t("disc.deleteConfirm"))) return;
+  const { ok, data } = await api("DELETE", "/merchant/discounts/" + id);
+  if (!ok) S.error = errMsg(data, t("disc.failed"));
+  loadDiscounts();
+}
+
+function openDiscountForm(id) {
+  const x = id && S._disc ? S._disc.list.find((d) => d.id === id) : null;
+  const day = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : "");
+  S._df = x
+    ? { id: x.id, title: x.title, percent: x.percent, scope: x.scope, section: x.scopeSection || "", productIds: x.productIds || [], start: day(x.startDate), endPreset: x.endDate ? "custom" : "none", end: day(x.endDate), maxCustomers: x.maxCustomers || "", perCustomer: x.perCustomerLimit || "", description: x.description || "" }
+    : { id: null, title: "", percent: 10, scope: "ALL", section: "", productIds: [], start: "", endPreset: "none", end: "", maxCustomers: "", perCustomer: "", description: "" };
+  S._df.busy = false; S._df.error = null;
+  go("discountForm");
+}
+
+function screenDiscountForm() {
+  if (!S._df) return screenDiscounts();
+  const f = S._df;
+  const sections = (S._disc && S._disc.sections) || [];
+  const products = (S._disc && S._disc.products) || [];
+  const chip = (label, on, fn) => `<button class="chip ${on ? "active" : ""}" onclick="${fn}">${esc(label)}</button>`;
+  return `
+    ${backRow()}
+    <h1 class="screen-title">${esc(f.id ? t("disc.editTitle") : t("disc.new"))}</h1>
+    ${f.id ? `<div class="info-banner">${esc(t("disc.editNote"))}</div>` : ""}
+
+    <div class="field"><label>${esc(t("disc.name"))}</label><input value="${esc(f.title)}" oninput="S._df.title=this.value" placeholder="${esc(t("disc.namePh"))}"></div>
+
+    <div class="field"><label>${esc(t("disc.percent"))}</label>
+      <div class="chips-row">${DISC_PERCENTS.map((p) => chip(p + "%", f.percent === p, `S._df.percent=${p};render()`)).join("")}</div>
+      <input type="number" inputmode="numeric" min="1" max="100" value="${esc(f.percent)}" oninput="S._df.percent=Number(this.value)||0" style="margin-top:8px"></div>
+
+    <div class="field"><label>${esc(t("disc.scope"))}</label>
+      <div class="chips-row">
+        ${chip(t("disc.scopeAll"), f.scope === "ALL", "S._df.scope='ALL';render()")}
+        ${chip(t("disc.scopeSection"), f.scope === "SECTION", "S._df.scope='SECTION';render()")}
+        ${chip(t("disc.scopeProducts"), f.scope === "PRODUCTS", "S._df.scope='PRODUCTS';render()")}
+      </div>
+      ${f.scope === "SECTION" ? `<select onchange="S._df.section=this.value" style="margin-top:8px"><option value="">—</option>${sections.map((x) => `<option value="${x.id}" ${f.section === x.id ? "selected" : ""}>${esc(storeSecName(x))}</option>`).join("")}</select>` : ""}
+      ${f.scope === "PRODUCTS" ? `<div class="disc-products">${products.length ? products.map((p) => `<label><input type="checkbox" ${f.productIds.includes(p.id) ? "checked" : ""} onchange="discToggleProduct('${p.id}',this.checked)"> ${esc(p.name)}</label>`).join("") : `<p class="muted">${esc(t("disc.noProducts"))}</p>`}</div>` : ""}
+    </div>
+
+    <div class="field"><label>${esc(t("disc.period"))}</label>
+      <div class="row">
+        <div class="field"><label class="muted">${esc(t("disc.startsOn"))}</label><input type="date" value="${esc(f.start)}" onchange="S._df.start=this.value"></div>
+      </div>
+      <label class="muted">${esc(t("disc.endsOn"))}</label>
+      <div class="chips-row">
+        ${[["none", t("disc.noEnd")], ["7", t("disc.week")], ["14", t("disc.twoWeeks")], ["30", t("disc.month")], ["90", t("disc.threeMonths")], ["custom", t("disc.customDate")]].map(([k, l]) => chip(l, f.endPreset === k, `discEndPreset('${k}')`)).join("")}
+      </div>
+      ${f.endPreset === "custom" ? `<input type="date" value="${esc(f.end)}" onchange="S._df.end=this.value" style="margin-top:8px">` : f.end ? `<p class="muted" style="margin:6px 0 0">${esc(t("disc.endsAt", { date: f.end }))}</p>` : ""}
+    </div>
+
+    <div class="field"><label>${esc(t("disc.limits"))}</label>
+      <label class="muted">${esc(t("disc.perCustomerLabel"))}</label>
+      <div class="chips-row">${[["", t("disc.noLimit")], [1, "1"], [2, "2"], [3, "3"], [5, "5"], [10, "10"]].map(([v, l]) => chip(l, String(f.perCustomer) === String(v), `S._df.perCustomer='${v}';render()`)).join("")}</div>
+      <label class="muted" style="margin-top:8px;display:block">${esc(t("disc.maxPeopleLabel"))}</label>
+      <div class="chips-row">${[["", t("disc.noLimit")], [10, "10"], [25, "25"], [50, "50"], [100, "100"], [500, "500"]].map(([v, l]) => chip(l, String(f.maxCustomers) === String(v), `S._df.maxCustomers='${v}';render()`)).join("")}</div>
+    </div>
+
+    <div class="field"><label>${esc(t("disc.notes"))}</label>
+      <textarea rows="3" maxlength="500" oninput="S._df.description=this.value" placeholder="${esc(t("disc.notesPh"))}">${esc(f.description)}</textarea></div>
+
+    ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}
+    <p class="muted">${esc(t("disc.reviewNote"))}</p>
+    <button class="btn" ${f.busy ? "disabled" : ""} onclick="saveDiscount()">${esc(f.busy ? t("disc.sending") : t("disc.send"))}</button>`;
+}
+
+function discToggleProduct(id, on) {
+  const f = S._df;
+  f.productIds = on ? [...new Set([...f.productIds, id])] : f.productIds.filter((x) => x !== id);
+}
+
+function discEndPreset(k) {
+  const f = S._df;
+  f.endPreset = k;
+  if (k === "none") f.end = "";
+  else if (k !== "custom") {
+    const from = f.start ? new Date(f.start) : new Date();
+    from.setDate(from.getDate() + Number(k));
+    f.end = from.toISOString().slice(0, 10);
+  }
+  render();
+}
+
+async function saveDiscount() {
+  const f = S._df;
+  const num = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
+  const body = {
+    title: f.title.trim(), percent: Number(f.percent), description: f.description.trim() || null, scope: f.scope,
+    scopeSection: f.scope === "SECTION" ? f.section || null : null, productIds: f.scope === "PRODUCTS" ? f.productIds : [],
+    startDate: f.start ? new Date(f.start + "T00:00:00").toISOString() : null,
+    endDate: f.end ? new Date(f.end + "T23:59:59").toISOString() : null,
+    maxCustomers: num(f.maxCustomers), perCustomerLimit: num(f.perCustomer),
+  };
+  if (body.title.length < 2) { f.error = t("disc.needName"); return render(); }
+  if (!(body.percent >= 1 && body.percent <= 100)) { f.error = t("disc.needPercent"); return render(); }
+  f.busy = true; f.error = null; render();
+  const res = f.id ? await api("PATCH", "/merchant/discounts/" + f.id, body) : await api("POST", "/merchant/discounts", body);
+  f.busy = false;
+  if (!res.ok) { f.error = errMsg(res.data, t("disc.failed")); return render(); }
+  S._disc = null; S._catalog = null;
+  back();
+  toast(t("disc.sent"));
+}
+
 /* ---- Redeem tab ---- */
 
 function tabRedeem() {
@@ -4072,7 +4294,14 @@ function tabRedeem() {
     return `
       <h1 class="screen-title">تأكيد حسم</h1>
       <p><strong>العضو:</strong> ${esc(r.memberName)}</p>
-      <p style="color:var(--primary)"><strong>نسبة الحسم:</strong> ${r.discountPercent}%</p>
+      ${(r.discounts || []).length ? `
+        <div class="section-title">${esc(t("disc.pickAtTill"))}</div>
+        <div class="disc-pick">${r.discounts.map((d) => `
+          <button class="${r.discountId === d.id ? "on" : ""}" ${d.eligible ? "" : "disabled"} onclick="S._redeem.discountId='${d.id}';S._redeem.discountPercent=${d.percent};render()">
+            <b>${d.percent}%</b><span>${esc(d.title)}</span>
+            <small>${esc(discScopeText(d))}${d.eligible ? (d.remainingForMember !== null ? " · " + esc(t("disc.leftForMember", { n: d.remainingForMember })) : "") : " · " + esc(t("disc.used"))}</small>
+          </button>`).join("")}</div>
+        ${r.discounts.every((d) => !d.eligible) ? `<div class="error-banner">${esc(t("disc.allUsed"))}</div>` : ""}` : `<p style="color:var(--primary)"><strong>نسبة الحسم:</strong> ${r.discountPercent}%</p>`}
       <div class="field"><label>قيمة الفاتورة</label><input id="rd-bill" type="number" placeholder="0.00" value="${esc(r.billText || "")}" /></div>
       ${errorBanner()}
       <button class="btn" ${S.busy ? "disabled" : ""} onclick="confirmRedeem()">تأكيد الحسم</button>
@@ -4111,7 +4340,9 @@ async function verifyRedeem() {
   const { ok, data } = await api("POST", "/qr/verify", { memberNumber, code });
   S.busy = false;
   if (ok) {
-    S._redeem = { phase: "verified", memberNumber, code, memberName: data.member.fullName, discountPercent: data.discount ? data.discount.percent : 0 };
+    const all = data.discounts || [];
+    const first = all.find((d) => d.eligible);
+    S._redeem = { phase: "verified", memberNumber, code, memberName: data.member.fullName, discountPercent: first ? first.percent : data.discount ? data.discount.percent : 0, discounts: all, discountId: first ? first.id : null };
   } else {
     S.error = errMsg(data, "الكود غير صالح أو منتهي");
   }
@@ -4125,11 +4356,83 @@ async function confirmRedeem() {
   if (!billAmountCents || billAmountCents <= 0) { S.error = "دخّل قيمة فاتورة صحيحة"; return render(); }
   S.busy = true; S.error = null; render();
   const r = S._redeem;
-  const { ok, data } = await api("POST", "/qr/redeem", { memberNumber: r.memberNumber, code: r.code, billAmountCents });
+  const { ok, data } = await api("POST", "/qr/redeem", { memberNumber: r.memberNumber, code: r.code, billAmountCents, ...(r.discountId ? { discountId: r.discountId } : {}) });
   S.busy = false;
   if (ok) { r.phase = "done"; r.receipt = data; }
   else S.error = errMsg(data, "تعذّر تأكيد الحسم");
   render();
+}
+
+/* ---- the camera that reads a member's card code (from anywhere in the shop's side of the app) ---- */
+
+let scanState = null;
+
+async function openScanner() {
+  closeScanner();
+  const box = document.createElement("div");
+  box.id = "scan-modal";
+  box.innerHTML = `
+    <div class="scan-back" onclick="closeScanner()"></div>
+    <div class="scan-card">
+      <video id="scan-video" playsinline muted></video>
+      <div class="scan-frame"></div>
+      <p id="scan-msg">${esc(t("scan.hint"))}</p>
+      <button class="btn outline" onclick="closeScanner()">${esc(t("rv.cancel"))}</button>
+    </div>`;
+  document.body.appendChild(box);
+  const msg = document.getElementById("scan-msg");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    const video = document.getElementById("scan-video");
+    video.srcObject = stream;
+    await video.play();
+    scanState = { stream, stop: false };
+    let detector = null;
+    if ("BarcodeDetector" in window) { try { detector = new BarcodeDetector({ formats: ["qr_code"] }); } catch (e) {} }
+    if (!detector && !window.jsQR) await new Promise((res) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"; sc.onload = res; sc.onerror = res; document.head.appendChild(sc); });
+    const canvas = document.createElement("canvas");
+    const loop = async () => {
+      if (!scanState || scanState.stop) return;
+      let text = null;
+      try {
+        if (detector) { const found = await detector.detect(video); if (found.length) text = found[0].rawValue; }
+        else if (window.jsQR && video.videoWidth) {
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          const g = canvas.getContext("2d"); g.drawImage(video, 0, 0);
+          const hit = jsQR(g.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+          if (hit) text = hit.data;
+        }
+      } catch (e) {}
+      if (text && /^[^:]+:\d{6}$/.test(text.trim())) { closeScanner(); return onScanned(text.trim()); }
+      requestAnimationFrame(() => setTimeout(loop, 120));
+    };
+    loop();
+  } catch (e) {
+    msg.textContent = t("scan.denied");
+  }
+}
+
+function closeScanner() {
+  if (scanState) { scanState.stop = true; try { scanState.stream.getTracks().forEach((tr) => tr.stop()); } catch (e) {} scanState = null; }
+  const box = document.getElementById("scan-modal");
+  if (box) box.remove();
+}
+
+/** The code of the card ("DLK-...:123456") was read: go to the till screen and check it at once. */
+function onScanned(text) {
+  const [memberNumber, code] = text.split(":");
+  S.merchantTab = "redeem";
+  S._redeem = { phase: "input", memberNumber, code };
+  render();
+  S.busy = false;
+  api("POST", "/qr/verify", { memberNumber, code }).then(({ ok, data }) => {
+    if (ok) {
+      const all = data.discounts || [];
+      const first = all.find((d) => d.eligible);
+      S._redeem = { phase: "verified", memberNumber, code, memberName: data.member.fullName, discountPercent: first ? first.percent : data.discount ? data.discount.percent : 0, discounts: all, discountId: first ? first.id : null };
+    } else S.error = errMsg(data, "الكود غير صالح أو منتهي");
+    render();
+  });
 }
 
 /* ---- Merchant Orders tab ---- */
@@ -4196,15 +4499,9 @@ function tabCatalog() {
       <button class="btn outline" onclick="S._hours=null;go('merchantHours')">🕒 ساعات العمل</button>
     </div>
     <div class="card">
-      <div class="section-title" style="margin-top:0">الحسومات</div>
-      ${(c.discounts || []).length ? c.discounts.map((d) => `<p style="color:var(--primary)">🏷️ ${esc(d.title)} — ${d.percent}%</p>`).join("") : `<p class="muted">ما في حسومات بعد</p>`}
-      <div class="divider"></div>
-      <div class="row">
-        <input id="cat-disc-title" placeholder="عنوان الحسم" value="${esc(c.discTitle || "")}" />
-        <input id="cat-disc-percent" placeholder="نسبة %" style="max-width:70px" value="${esc(c.discPercent || "")}" />
-      </div>
-      <div style="height:8px"></div>
-      <button class="btn small" onclick="addCatalogDiscount()">إضافة حسم</button>
+      <div class="section-title" style="margin-top:0">${esc(t("disc.title"))}</div>
+      ${(c.discounts || []).length ? c.discounts.map((d) => `<p style="color:var(--primary)">🏷️ ${esc(d.title)} — ${d.percent}%</p>`).join("") : `<p class="muted">${esc(t("disc.none"))}</p>`}
+      <button class="btn" style="margin-top:8px" onclick="S._disc=null;go('discounts')">🏷️ ${esc(t("disc.open"))}</button>
     </div>
 
     <div class="card">
@@ -4784,7 +5081,7 @@ function wireUpAfterRender() {
   if (S.screen === "home" && S.homeTab === "card" && S._card && S._card.memberNumber) {
     renderQrOnly();
   }
-  if (S.screen === "home" && S.homeTab === "discover" && S._discover) {
+  if (S.screen === "home" && (S.homeTab === "discover" || S.homeTab === "deals") && S._discover) {
     renderDiscoverMap();
   }
   if (S.screen === "merchantRegister" || S.screen === "merchantProfile") renderPicker();

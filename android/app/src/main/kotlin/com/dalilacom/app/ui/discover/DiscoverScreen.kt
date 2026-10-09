@@ -111,8 +111,12 @@ fun DiscoverScreen(
     onSetLanguage: (String) -> Unit,
     onLogin: () -> Unit,
     onMerchantClick: (String) -> Unit,
+    /** The deals tab: the same map, but only shops with a running discount, with its own filters (and a way to the card). */
+    dealsMode: Boolean = false,
+    onOpenCard: () -> Unit = {},
 ) {
-    val viewModel: DiscoverViewModel = viewModel(factory = factory)
+    val viewModel: DiscoverViewModel = viewModel(key = if (dealsMode) "deals" else null, factory = factory)
+    if (dealsMode) LaunchedEffect(Unit) { viewModel.onDiscountsOnlyChange(true) }
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -211,6 +215,7 @@ fun DiscoverScreen(
         sheetContent = {
             DirectorySheet(
                 state = state,
+                dealsMode = dealsMode,
                 onMerchantClick = onMerchantClick,
                 onDirections = { merchant ->
                     val lat = merchant.latitude
@@ -305,9 +310,10 @@ fun DiscoverScreen(
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    item { MapChip(stringResource(R.string.filter_all), state.selectedCategoryId == null && !state.discountsOnly && !state.openNow) { viewModel.resetFilters() } }
+                    if (dealsMode) item { MapChip("💳 " + stringResource(R.string.deals_my_card), false) { onOpenCard() } }
+                    item { MapChip(stringResource(R.string.filter_all), state.selectedCategoryId == null && (dealsMode || !state.discountsOnly) && !state.openNow) { viewModel.resetFilters(keepDiscounts = dealsMode) } }
                     item { MapChip(stringResource(R.string.filter_open_now), state.openNow) { viewModel.onOpenNowChange(!state.openNow) } }
-                    item { MapChip(stringResource(R.string.filter_discounts), state.discountsOnly) { viewModel.onDiscountsOnlyChange(!state.discountsOnly) } }
+                    if (!dealsMode) item { MapChip(stringResource(R.string.filter_discounts), state.discountsOnly) { viewModel.onDiscountsOnlyChange(!state.discountsOnly) } }
                     item { MapChip(stringResource(R.string.filter_sections), false) { viewModel.openBrowse() } }
                     state.selectedCategoryId?.let { picked ->
                         categoryIndex[picked]?.let { node -> item { MapChip("${node.icon.orEmpty()} ${node.name} ✕", true) { viewModel.onCategorySelected(null) } } }
@@ -316,13 +322,17 @@ fun DiscoverScreen(
                         MapChip("${category.icon.orEmpty()} ${category.name}".trim(), state.selectedCategoryId == category.id) { viewModel.onCategorySelected(category.id) }
                     }
                 }
+                if (route == null && dealsMode && state.userLocation == null) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.padding(horizontal = 12.dp)) { MapChip("📍 " + stringResource(R.string.deals_locate), false) { requestLocation() } }
+                }
                 if (route == null && state.userLocation != null) {
                     Spacer(Modifier.height(8.dp))
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf<Double?>(null, 2.0, 5.0, 10.0, 25.0).forEach { radius ->
+                        (if (dealsMode) listOf<Double?>(null, 1.0, 3.0, 5.0, 10.0, 25.0) else listOf<Double?>(null, 2.0, 5.0, 10.0, 25.0)).forEach { radius ->
                             item {
                                 MapChip(
                                     if (radius == null) stringResource(R.string.radius_any) else stringResource(R.string.radius_km, radius.toInt()),
@@ -516,6 +526,7 @@ private fun LocationNotice(status: LocationStatus, onRetry: () -> Unit) {
 @Composable
 private fun DirectorySheet(
     state: DiscoverUiState,
+    dealsMode: Boolean,
     onMerchantClick: (String) -> Unit,
     onDirections: (MerchantDto) -> Unit,
     onToggleSaved: (String) -> Unit,
@@ -527,7 +538,7 @@ private fun DirectorySheet(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                stringResource(if (state.userLocation != null) R.string.sheet_nearby else R.string.sheet_directory),
+                stringResource(if (dealsMode) R.string.deals_sheet_title else if (state.userLocation != null) R.string.sheet_nearby else R.string.sheet_directory),
                 style = MaterialTheme.typography.titleMedium,
             )
             Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
@@ -541,7 +552,7 @@ private fun DirectorySheet(
         }
         if (state.merchants.isEmpty()) {
             Text(
-                if (state.isLoading) stringResource(R.string.sheet_loading) else if (state.radiusKm != null) stringResource(R.string.sheet_empty_radius, state.radiusKm.toInt()) else stringResource(R.string.sheet_empty),
+                if (state.isLoading) stringResource(R.string.sheet_loading) else if (state.radiusKm != null) stringResource(R.string.sheet_empty_radius, state.radiusKm.toInt()) else stringResource(if (dealsMode) R.string.deals_empty else R.string.sheet_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(20.dp),

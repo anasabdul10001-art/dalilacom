@@ -23,6 +23,7 @@ import com.dalilacom.app.data.RouteTarget
 import com.dalilacom.app.ui.merchant.MerchantDetailScreen
 import com.dalilacom.app.ui.merchant.MerchantProfileScreen
 import com.dalilacom.app.ui.merchant.MerchantRegisterScreen
+import com.dalilacom.app.ui.merchantmode.DiscountsScreen
 import com.dalilacom.app.ui.merchantmode.MerchantModeShell
 import com.dalilacom.app.ui.merchantmode.ProductEditScreen
 import com.dalilacom.app.ui.notifications.NotificationsScreen
@@ -158,6 +159,9 @@ fun DalilacomNavGraph(
                 onOpenMerchant = { id -> navController.navigate("merchant/$id") },
                 onLogin = { navController.navigate("login") },
             )
+        }
+        composable("discounts") {
+            DiscountsScreen(factory = ViewModelFactory(container), onBack = { navController.popBackStack() })
         }
         composable("store") {
             StoreScreen(

@@ -1295,3 +1295,37 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 @media (min-width: 900px) { .store-circles span { width: 88px; height: 88px; border-radius: 50%; } }
 
 .store-adstrip-btns { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---- discounts and the shop's scanner ---- */
+.chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips-row .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.disc-products { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; }
+.disc-products label { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.disc-card { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; margin-bottom: 8px; border-radius: 12px; background: color-mix(in srgb, var(--primary) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border)); }
+.disc-card > b { flex: none; min-width: 54px; text-align: center; padding: 8px 6px; border-radius: 10px; background: var(--primary); color: #fff; font-size: 17px; }
+.disc-card p { margin: 3px 0 0; font-size: 13px; }
+.disc-card small { display: block; margin-top: 3px; color: var(--text-muted); }
+.disc-pick { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.disc-pick button { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; text-align: start; padding: 10px 12px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.disc-pick button b { grid-row: span 2; align-self: center; font-size: 22px; color: var(--primary); }
+.disc-pick button small { color: var(--text-muted); }
+.disc-pick button.on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--surface)); }
+.disc-pick button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.scan-fab { position: fixed; z-index: 900; inset-inline-end: 18px; bottom: 96px; width: 58px; height: 58px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.85); background: rgba(186, 42, 52, 0.62); color: #fff; font-size: 26px; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+.scan-fab:hover { background: rgba(186, 42, 52, 0.9); }
+#scan-modal { position: fixed; inset: 0; z-index: 2100; display: flex; align-items: center; justify-content: center; padding: 14px; }
+.scan-back { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.7); }
+.scan-card { position: relative; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 18px; background: var(--surface); color: var(--text); text-align: center; }
+.scan-card video { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; background: #000; }
+.scan-frame { position: absolute; top: 16px; inset-inline: 16px; aspect-ratio: 1; border-radius: 12px; pointer-events: none; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.9); clip-path: inset(0 round 12px); }
+
+/* deals tab: the encouraging overlay over the discount map */
+.deals-intro { position: fixed; inset: 0; z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(15, 23, 42, 0.42); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); animation: dealsFade .25s ease; }
+.deals-box { width: 100%; max-width: 340px; text-align: center; padding: 26px 22px 18px; border-radius: 24px; background: rgba(255, 255, 255, 0.86); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
+:root[data-theme="dark"] .deals-box { background: rgba(30, 33, 40, 0.88); color: #fff; }
+.deals-box .deals-emoji { font-size: 44px; line-height: 1; margin-bottom: 6px; }
+.deals-box h2 { margin: 6px 0 8px; font-size: 21px; }
+.deals-box p { margin: 0 0 16px; font-size: 15px; line-height: 1.7; opacity: .85; }
+.deals-never { display: block; width: 100%; margin-top: 8px; padding: 10px; border: 0; background: none; color: inherit; opacity: .6; font: inherit; font-size: 13px; cursor: pointer; }
+@keyframes dealsFade { from { opacity: 0; } to { opacity: 1; } }

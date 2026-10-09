@@ -85,7 +85,7 @@ describe("Share preview cards", () => {
     const category = await prisma.category.create({ data: { name: "مطاعم الاختبار", slug: `share-${Date.now()}` } });
     const owner = await prisma.user.create({ data: { email: `share${Date.now()}@example.com`, passwordHash: "x", fullName: "Owner", role: "MERCHANT" } });
     const shop = await prisma.merchantProfile.create({ data: { userId: owner.id, businessName: 'مطعم "الياسمين" <b>', categoryId: category.id, address: "دمشق - المزة", approvalStatus: "APPROVED" } });
-    await prisma.discount.create({ data: { merchantId: shop.id, title: "خصم", percent: 15, isActive: true } });
+    await prisma.discount.create({ data: { merchantId: shop.id, title: "خصم", percent: 15, isActive: true, status: "APPROVED" } });
     const page = await request(app).get(`/?merchant=${shop.id}`);
     expect(page.text).toContain("مطعم &quot;الياسمين&quot; &lt;b&gt; — دليلكم"); // escaped, never raw HTML
     expect(page.text).toContain("خصم 15%");

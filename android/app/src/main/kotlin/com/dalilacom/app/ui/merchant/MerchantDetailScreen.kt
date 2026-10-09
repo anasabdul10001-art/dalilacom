@@ -214,7 +214,12 @@ fun MerchantDetailScreen(
                                     SectionTitle(stringResource(R.string.place_discounts))
                                     merchant.discounts.forEach { discount ->
                                         Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.padding(bottom = 6.dp)) {
-                                            Text("🏷️ ${discount.title} — ${discount.percent}%", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                                                Text("🏷️ ${discount.title} — ${discount.percent}%", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                                Text(com.dalilacom.app.ui.merchantmode.discountScopeText(discount.scope, discount.section, discount.productNames), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
+                                                discount.endDate?.let { Text(stringResource(R.string.disc_until, it.take(10)), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall) }
+                                                if (!discount.description.isNullOrBlank()) Text(discount.description, color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
+                                            }
                                         }
                                     }
                                 }

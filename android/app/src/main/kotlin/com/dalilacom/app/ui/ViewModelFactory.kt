@@ -10,6 +10,7 @@ import com.dalilacom.app.ui.discover.DiscoverViewModel
 import com.dalilacom.app.ui.merchant.MerchantProfileViewModel
 import com.dalilacom.app.ui.merchant.MerchantRegisterViewModel
 import com.dalilacom.app.ui.merchantmode.CatalogViewModel
+import com.dalilacom.app.ui.merchantmode.DiscountsViewModel
 import com.dalilacom.app.ui.merchantmode.MerchantOrdersViewModel
 import com.dalilacom.app.ui.merchantmode.RedeemViewModel
 import com.dalilacom.app.ui.notifications.NotificationsViewModel
@@ -40,6 +41,7 @@ class ViewModelFactory(private val container: AppContainer) : ViewModelProvider.
         MerchantProfileViewModel::class.java ->
             MerchantProfileViewModel(container.merchantRepository, container.discoverRepository) as T
         MerchantOrdersViewModel::class.java -> MerchantOrdersViewModel(container.orderRepository, container.reviewsRepository) as T
+        DiscountsViewModel::class.java -> DiscountsViewModel(container.merchantRepository, container.productRepository, container.storeRepository) as T
         RedeemViewModel::class.java -> RedeemViewModel(container.merchantRepository) as T
         CatalogViewModel::class.java -> CatalogViewModel(container.merchantRepository, container.productRepository) as T
         ResponderViewModel::class.java -> ResponderViewModel(container.responderRepository) as T

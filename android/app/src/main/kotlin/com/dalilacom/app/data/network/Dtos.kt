@@ -199,10 +199,81 @@ data class CategoryDto(
 )
 
 @Serializable
+data class DiscountSectionDto(val id: String, val name: String, val nameEn: String = "")
+
+/** A discount as customers see it on a shop page: what it covers, until when, and its limits. */
+@Serializable
 data class DiscountDto(
     val id: String,
     val title: String,
     val percent: Int,
+    val description: String? = null,
+    val endDate: String? = null,
+    val perCustomerLimit: Int? = null,
+    val maxCustomers: Int? = null,
+    val scope: String = "ALL",
+    val section: DiscountSectionDto? = null,
+    val productNames: List<String> = emptyList(),
+)
+
+/** A discount in the shop's own list, with its state, review result and how it has been used. */
+@Serializable
+data class MyDiscountDto(
+    val id: String,
+    val title: String,
+    val percent: Int,
+    val description: String? = null,
+    val startDate: String? = null,
+    val endDate: String? = null,
+    val maxCustomers: Int? = null,
+    val perCustomerLimit: Int? = null,
+    val isActive: Boolean = true,
+    val status: String = "PENDING",
+    val rejectionReason: String? = null,
+    val state: String = "PENDING",
+    val productIds: List<String> = emptyList(),
+    val scopeSection: String? = null,
+    val scope: String = "ALL",
+    val section: DiscountSectionDto? = null,
+    val productNames: List<String> = emptyList(),
+    val uses: Int = 0,
+    val customers: Int = 0,
+    val savedCents: Int = 0,
+)
+
+/** What the form sends; null fields are sent too so an edit can clear a limit or an end date. */
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+@Serializable
+data class DiscountInput(
+    @kotlinx.serialization.EncodeDefault val title: String,
+    @kotlinx.serialization.EncodeDefault val percent: Int,
+    @kotlinx.serialization.EncodeDefault val description: String? = null,
+    @kotlinx.serialization.EncodeDefault val scope: String = "ALL",
+    @kotlinx.serialization.EncodeDefault val scopeSection: String? = null,
+    @kotlinx.serialization.EncodeDefault val productIds: List<String> = emptyList(),
+    @kotlinx.serialization.EncodeDefault val startDate: String? = null,
+    @kotlinx.serialization.EncodeDefault val endDate: String? = null,
+    @kotlinx.serialization.EncodeDefault val maxCustomers: Int? = null,
+    @kotlinx.serialization.EncodeDefault val perCustomerLimit: Int? = null,
+)
+
+@Serializable
+data class DiscountPatchRequest(val isActive: Boolean? = null, val endNow: Boolean? = null)
+
+/** One of the shop's running discounts, as seen when a member is scanned. */
+@Serializable
+data class VerifiedDiscountDto(
+    val id: String,
+    val title: String,
+    val percent: Int,
+    val description: String? = null,
+    val endDate: String? = null,
+    val eligible: Boolean = true,
+    val usedByMember: Int = 0,
+    val remainingForMember: Int? = null,
+    val scope: String = "ALL",
+    val section: DiscountSectionDto? = null,
+    val productNames: List<String> = emptyList(),
 )
 
 @Serializable
@@ -369,10 +440,11 @@ data class VerifyResponse(
     val verified: Boolean,
     val member: VerifiedMemberDto,
     val discount: DiscountDto? = null,
+    val discounts: List<VerifiedDiscountDto> = emptyList(),
 )
 
 @Serializable
-data class RedeemRequest(val memberNumber: String, val code: String, val billAmountCents: Int)
+data class RedeemRequest(val memberNumber: String, val code: String, val billAmountCents: Int, val discountId: String? = null)
 
 @Serializable
 data class RedeemResponse(

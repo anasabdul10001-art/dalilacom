@@ -63,6 +63,19 @@ export const en: LanguagePack = {
     "بانرك الكبير صار جاهزًا": "Your big banner is ready",
     "تم تجهيز بانرك وجدولته على الصفحة الأولى للمتجر.": "Your banner was made and scheduled on the store's front page.",
 
+    "تمت الموافقة على حسمك": "Your discount was approved",
+    "لم تتم الموافقة على حسمك": "Your discount was not approved",
+    "الحسم غير موجود": "Discount not found",
+    "تاريخ غير صالح": "Invalid date",
+    "تاريخ النهاية لازم يكون بالمستقبل": "The end date must be in the future",
+    "تاريخ النهاية لازم يكون بعد البداية": "The end date must be after the start",
+    "اختر قسمًا صحيحًا": "Choose a valid section",
+    "اختر منتجًا واحدًا على الأقل من منتجاتك": "Choose at least one of your own products",
+    "حسم معدّل للمراجعة": "Edited discount to review",
+    "طلب حسم جديد للمراجعة": "New discount to review",
+    "هذا الحسم غير متاح حاليًا": "This discount isn't available right now",
+    "هذا الزبون استنفد حد هذا الحسم": "This customer used up this discount's limit",
+
     // ---- auth ----
     "البريد الإلكتروني أو كلمة السر غير صحيحة": "Incorrect email or password",
     "هذا الحساب معطّل، تواصل مع الدعم": "This account is disabled — contact support",
@@ -254,6 +267,7 @@ export const en: LanguagePack = {
     "صدر هذا الإيصال عبر منصة دليلكم": "This receipt was issued through the Dalilacom platform",
   },
   patterns: [
+    [/^(.+) — السبب: (.+)$/, "$1 — Reason: $2"],
     [/^(.+): (★+)$/, "$1: $2"],
     [/^السبب: (.+)\. تم إرجاع المبلغ لمحفظتك\.$/, "Reason: $1. The money was returned to your wallet."],
     [/^مرحبًا،\n\nلتفعيل حسابك على دليلكم اضغط الرابط التالي \(صالح لمدة (\d+(?:\.\d+)?) ساعة\):\n(\S+)\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة\.$/, "Hello,\n\nTo activate your Dalilacom account, open the link below (valid for $1 hours):\n$2\n\nIf you didn't request this, ignore this message."],

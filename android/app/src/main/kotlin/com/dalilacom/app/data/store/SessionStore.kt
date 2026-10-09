@@ -29,6 +29,15 @@ class SessionStore(private val context: Context) {
         runCatching { context.dalilacomDataStore.edit { it[shareLocationKey] = on } }
     }
 
+    private val dealsIntroKey = androidx.datastore.preferences.core.booleanPreferencesKey("deals_intro_hidden")
+
+    /** Whether the person asked never to see the message that opens the deals tab again. */
+    suspend fun getDealsIntroHidden(): Boolean = runCatching { context.dalilacomDataStore.data.map { it[dealsIntroKey] ?: false }.first() }.getOrDefault(false)
+
+    suspend fun hideDealsIntro() {
+        runCatching { context.dalilacomDataStore.edit { it[dealsIntroKey] = true } }
+    }
+
     /** The language the user picked; null = the default (Arabic). */
     val languageFlow: Flow<String?> = context.dalilacomDataStore.data.map { it[languageKey] }
 

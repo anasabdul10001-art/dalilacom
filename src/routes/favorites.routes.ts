@@ -7,6 +7,7 @@ import { computeOpenStatus } from "../services/hours.service";
 import { ownerProfileSelect, withOwnerProfile } from "../lib/profile";
 import { resolveLanguage } from "../lib/languages";
 import { categoryNameLocalizer } from "../services/category.service";
+import { liveDiscountWhere } from "../lib/discounts";
 
 export const favoritesRouter = Router();
 favoritesRouter.use(requireAuth);
@@ -16,7 +17,7 @@ favoritesRouter.get("/", async (req, res) => {
   const localize = await categoryNameLocalizer(resolveLanguage(req));
   const favorites = await prisma.favoriteMerchant.findMany({
     where: { userId: req.user!.id, merchant: { approvalStatus: "APPROVED" } },
-    include: { merchant: { include: { category: true, discounts: { where: { isActive: true } }, user: ownerProfileSelect } } },
+    include: { merchant: { include: { category: true, discounts: { where: liveDiscountWhere() }, user: ownerProfileSelect } } },
     orderBy: { createdAt: "desc" },
   });
   const tz = (await getDefaultCountry()).timezone ?? "UTC";

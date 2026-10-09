@@ -152,8 +152,8 @@ class DiscoverViewModel(
         search()
     }
 
-    fun resetFilters() {
-        _uiState.update { recompute(it.copy(selectedCategoryId = null, openNow = false, discountsOnly = false)) }
+    fun resetFilters(keepDiscounts: Boolean = false) {
+        _uiState.update { recompute(it.copy(selectedCategoryId = null, openNow = false, discountsOnly = keepDiscounts)) }
         search()
     }
 
