@@ -12,6 +12,7 @@ DICT.en = {
   "area.search": "🔍 Search this area", "area.clear": "✕ Clear area",
   "fab.myLocation": "My location", "fab.darkMode": "Dark mode", "fab.lightMode": "Light mode", "fab.language": "Language",
   "loc.unsupported": "This browser doesn't support location",
+  "loc.deniedIos": "Location is blocked for this site. On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using the App. Then in Safari tap “aA” → Website Settings → Location → Allow", "loc.inapp": "Open the site in Safari or Chrome (not inside the Facebook or Instagram app) so it can find your location", "loc.unavailable": "We could not reach your location right now. Make sure location services are on for your device and try again", "loc.retry": "Try again",
   "loc.denied": "We couldn't get your location — allow location access in the browser to see what's nearest",
 
   "sheet.nearby": "Places near you", "sheet.directory": "Places directory", "sheet.count": "{n} places",

@@ -857,7 +857,7 @@ function tabDiscover() {
           ${deals ? "" : `<button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">${esc(t("filter.discounts"))}</button>`}
           ${categoryChipsHtml(d)}
         </div>
-        ${d.locError ? `<div class="float-note">📍 ${esc(d.locError)}</div>` : ""}
+        ${d.locError ? `<div class="float-note">📍 ${esc(d.locError)} <button class="chip" style="margin-top:6px" onclick="requestDiscoverLocation(true)">${esc(t("loc.retry"))}</button></div>` : ""}
       </div>
 
       <button id="area-btn" class="area-btn" style="display:${d.areaDirty ? "block" : "none"}" onclick="searchThisArea()">${esc(t("area.search"))}</button>
@@ -1000,12 +1000,21 @@ function requestDiscoverLocation(recenter) {
       if (recenter) S._centeredUser = false;
       render();
     },
-    () => {
-      d.locError = t("loc.denied");
+    (err) => {
+      d.locError = locErrorText(err && err.code);
       render();
     },
-    { enableHighAccuracy: true, timeout: 10000 },
+    // not high accuracy: on an iPhone that can wait a long time indoors and then fail; a minute-old fix is fine here
+    { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 },
   );
+}
+
+// Why the position could not be had, with what to do about it on this device.
+function locErrorText(code) {
+  const ua = navigator.userAgent || "";
+  if (/FBAN|FBAV|Instagram|Line\/|MicroMessenger|TikTok/i.test(ua)) return t("loc.inapp");
+  if (code === 1) return /iPhone|iPad|iPod/i.test(ua) ? t("loc.deniedIos") : t("loc.denied");
+  return t("loc.unavailable");
 }
 
 async function searchMerchants() {
