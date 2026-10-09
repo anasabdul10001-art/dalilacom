@@ -5,8 +5,8 @@ import { prisma } from "../src/prisma";
 import { aiAvailable, aiProviderStatus, aiUsage, classifyIntent, generateReply, resetAiProviderState } from "../src/services/ai.service";
 import { uniqueEmail } from "./helpers";
 
-const KEYS = ["GROQ_API_KEY", "CEREBRAS_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY", "NVIDIA_API_KEY", "ANTHROPIC_API_KEY"];
-const MODELS = ["CEREBRAS_MODEL", "GEMINI_MODEL", "OPENROUTER_MODEL", "MISTRAL_MODEL", "NVIDIA_MODEL", "AI_PROVIDER_ORDER", "AI_TIMEOUT_MS"];
+const KEYS = ["GROQ_API_KEY", "CEREBRAS_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY", "NVIDIA_API_KEY", "SAMBANOVA_API_KEY", "TOGETHER_API_KEY", "HUGGINGFACE_API_KEY", "GITHUB_MODELS_API_KEY", "DEEPSEEK_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"];
+const MODELS = ["CEREBRAS_MODEL", "GEMINI_MODEL", "OPENROUTER_MODEL", "MISTRAL_MODEL", "NVIDIA_MODEL", "SAMBANOVA_MODEL", "TOGETHER_MODEL", "HUGGINGFACE_MODEL", "GITHUB_MODELS_MODEL", "DEEPSEEK_MODEL", "OPENAI_MODEL", "AI_PROVIDER_ORDER", "AI_TIMEOUT_MS"];
 
 beforeEach(() => {
   resetAiProviderState();
@@ -31,6 +31,12 @@ const HOSTS: Record<string, string> = {
   "openrouter.ai": "openrouter",
   "api.mistral.ai": "mistral",
   "integrate.api.nvidia.com": "nvidia",
+  "api.sambanova.ai": "sambanova",
+  "api.together.xyz": "together",
+  "router.huggingface.co": "huggingface",
+  "models.inference.ai.azure.com": "github",
+  "api.deepseek.com": "deepseek",
+  "api.openai.com": "openai",
   "api.anthropic.com": "anthropic",
 };
 
@@ -63,7 +69,7 @@ describe("Which providers exist and in what order", () => {
   it("lists every provider with the free ones before Anthropic, and reports the first configured as active", () => {
     expect(aiAvailable()).toBe(false);
     expect(aiProviderStatus().activeProvider).toBeNull();
-    expect(aiProviderStatus().providers.map((p) => p.id)).toEqual(["groq", "cerebras", "gemini", "openrouter", "mistral", "nvidia", "anthropic"]);
+    expect(aiProviderStatus().providers.map((p) => p.id)).toEqual(["groq", "cerebras", "sambanova", "gemini", "openrouter", "mistral", "nvidia", "together", "huggingface", "github", "deepseek", "openai", "anthropic"]);
 
     withKeys("MISTRAL", "ANTHROPIC");
     expect(aiAvailable()).toBe(true);
@@ -104,6 +110,27 @@ describe("Talking to each provider", () => {
     expect(byProvider.gemini.body.model).toBe("gemini-test");
     expect(byProvider.nvidia.body.model).toBe("nvidia/test-model");
     expect((byProvider.openrouter.init.headers as Record<string, string>)["X-Title"]).toBe("Dalilacom");
+  });
+
+  it("also reaches SambaNova, Together, Hugging Face, GitHub Models, DeepSeek and OpenAI, each with its own key, address and model", async () => {
+    withKeys("SAMBANOVA", "TOGETHER", "HUGGINGFACE", "GITHUB_MODELS", "DEEPSEEK", "OPENAI");
+    process.env.DEEPSEEK_MODEL = "deepseek-test";
+    const calls = stubProviders({
+      sambanova: { status: 500 }, together: { status: 429 }, huggingface: { status: 401 }, github: { status: 500 }, deepseek: { status: 500 }, openai: { status: 200, text: " other " },
+    });
+    expect(await classifyIntent("hi")).toBe("other");
+    expect(order(calls)).toEqual(["sambanova", "together", "huggingface", "github", "deepseek", "openai"]);
+    const by = Object.fromEntries(calls.map((c) => [c.provider, c]));
+    expect(by.sambanova.url).toBe("https://api.sambanova.ai/v1/chat/completions");
+    expect(by.together.url).toBe("https://api.together.xyz/v1/chat/completions");
+    expect(by.huggingface.url).toBe("https://router.huggingface.co/v1/chat/completions");
+    expect(by.github.url).toBe("https://models.inference.ai.azure.com/chat/completions");
+    expect(by.deepseek.url).toBe("https://api.deepseek.com/chat/completions");
+    expect(by.openai.url).toBe("https://api.openai.com/v1/chat/completions");
+    expect((by.github.init.headers as Record<string, string>).authorization).toBe("Bearer test-github_models-key");
+    expect((by.openai.init.headers as Record<string, string>).authorization).toBe("Bearer test-openai-key");
+    expect(by.deepseek.body.model).toBe("deepseek-test");
+    expect(by.openai.body.model).toBe("gpt-4o-mini");
   });
 
   it("keeps Anthropic as the last resort, in its own request shape", async () => {
@@ -221,9 +248,9 @@ describe("Every switch is recorded in the database and shown to the admin", () =
     const login = await request(app).post("/auth/login").send({ email, password: "correct-horse-battery-staple" });
     const res = await request(app).get("/admin/ai-status").set("Authorization", `Bearer ${login.body.token}`);
     expect(res.status).toBe(200);
-    expect(res.body.providers.map((p: { id: string }) => p.id)).toEqual(["groq", "cerebras", "gemini", "openrouter", "mistral", "nvidia", "anthropic"]);
+    expect(res.body.providers.map((p: { id: string }) => p.id)).toEqual(["groq", "cerebras", "sambanova", "gemini", "openrouter", "mistral", "nvidia", "together", "huggingface", "github", "deepseek", "openai", "anthropic"]);
     expect(res.body.providers.find((p: { id: string }) => p.id === "groq")).toMatchObject({ configured: true, lastError: "provider error (500)" });
-    expect(Object.keys(res.body.usage).sort()).toEqual(["anthropic", "cerebras", "gemini", "groq", "lastProvider", "lastUsedAt", "mistral", "nvidia", "openrouter"]);
+    expect(Object.keys(res.body.usage).sort()).toEqual(["anthropic", "cerebras", "deepseek", "gemini", "github", "groq", "huggingface", "lastProvider", "lastUsedAt", "mistral", "nvidia", "openai", "openrouter", "sambanova", "together"]);
     expect(res.body.usageTotals.gemini.successes).toBeGreaterThan(0);
     expect(JSON.stringify(res.body)).not.toContain("test-groq-key");
   });

@@ -38,6 +38,18 @@ services:
         sync: false
       - key: NVIDIA_API_KEY
         sync: false
+      - key: SAMBANOVA_API_KEY
+        sync: false
+      - key: TOGETHER_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+      - key: GITHUB_MODELS_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
       # Set once in the Render dashboard to bootstrap the first admin (never generated/committed —
       # section: Admin Credentials). Leave unset after the admin exists; use /auth/forgot-password
       # to change the password afterwards.
@@ -136,6 +148,18 @@ services:
       - key: MISTRAL_API_KEY
         sync: false
       - key: NVIDIA_API_KEY
+        sync: false
+      - key: SAMBANOVA_API_KEY
+        sync: false
+      - key: TOGETHER_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+      - key: GITHUB_MODELS_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
         sync: false
       # Set once in the Render dashboard to bootstrap the first admin (never generated/committed —
       # section: Admin Credentials). Leave unset after the admin exists; use /auth/forgot-password

@@ -1,9 +1,10 @@
 // Replies written by an AI provider. The keys live only in the server environment — never in any client.
 // Providers are tried in order and the next one takes over when one fails: Groq first (fast and free), then the other
-// free tiers (Cerebras, Gemini, OpenRouter, Mistral, NVIDIA NIM), and Anthropic last as the paid safety net.
+// free tiers (Cerebras, SambaNova, Gemini, OpenRouter, Mistral, NVIDIA NIM, Together, Hugging Face, GitHub Models), then the cheap
+// paid ones (DeepSeek, OpenAI), and Anthropic last as the paid safety net.
 import { prisma } from "../prisma";
 
-const PROVIDER_IDS = ["groq", "cerebras", "gemini", "openrouter", "mistral", "nvidia", "anthropic"] as const;
+const PROVIDER_IDS = ["groq", "cerebras", "sambanova", "gemini", "openrouter", "mistral", "nvidia", "together", "huggingface", "github", "deepseek", "openai", "anthropic"] as const;
 type Provider = (typeof PROVIDER_IDS)[number];
 type ProviderUsage = { attempts: number; successes: number; failures: number };
 
@@ -22,6 +23,7 @@ interface ProviderDef {
 const DEFAULT_ORDER: ProviderDef[] = [
   { id: "groq", label: "Groq", keyEnv: "GROQ_API_KEY", kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", model: () => "llama-3.3-70b-versatile" },
   { id: "cerebras", label: "Cerebras", keyEnv: "CEREBRAS_API_KEY", kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", model: () => process.env.CEREBRAS_MODEL || "llama-3.3-70b" },
+  { id: "sambanova", label: "SambaNova", keyEnv: "SAMBANOVA_API_KEY", kind: "openai", url: "https://api.sambanova.ai/v1/chat/completions", model: () => process.env.SAMBANOVA_MODEL || "Meta-Llama-3.3-70B-Instruct" },
   {
     id: "gemini",
     label: "Google Gemini",
@@ -48,6 +50,12 @@ const DEFAULT_ORDER: ProviderDef[] = [
     url: "https://integrate.api.nvidia.com/v1/chat/completions",
     model: () => process.env.NVIDIA_MODEL || "meta/llama-3.3-70b-instruct",
   },
+  { id: "together", label: "Together AI", keyEnv: "TOGETHER_API_KEY", kind: "openai", url: "https://api.together.xyz/v1/chat/completions", model: () => process.env.TOGETHER_MODEL || "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
+  { id: "huggingface", label: "Hugging Face", keyEnv: "HUGGINGFACE_API_KEY", kind: "openai", url: "https://router.huggingface.co/v1/chat/completions", model: () => process.env.HUGGINGFACE_MODEL || "meta-llama/Llama-3.3-70B-Instruct" },
+  // GitHub Models: a free tier for a GitHub account's personal access token; it reads pictures too.
+  { id: "github", label: "GitHub Models", keyEnv: "GITHUB_MODELS_API_KEY", kind: "openai", url: "https://models.inference.ai.azure.com/chat/completions", model: () => process.env.GITHUB_MODELS_MODEL || "gpt-4o-mini" },
+  { id: "deepseek", label: "DeepSeek", keyEnv: "DEEPSEEK_API_KEY", kind: "openai", url: "https://api.deepseek.com/chat/completions", model: () => process.env.DEEPSEEK_MODEL || "deepseek-chat" },
+  { id: "openai", label: "OpenAI", keyEnv: "OPENAI_API_KEY", kind: "openai", url: "https://api.openai.com/v1/chat/completions", model: () => process.env.OPENAI_MODEL || "gpt-4o-mini" },
   { id: "anthropic", label: "Anthropic Claude", keyEnv: "ANTHROPIC_API_KEY", kind: "anthropic", url: "https://api.anthropic.com/v1/messages", model: () => process.env.RESPONDER_AI_MODEL ?? "claude-haiku-4-5-20251001" },
 ];
 
@@ -398,8 +406,8 @@ export interface PhotoInput {
   data: Buffer;
 }
 
-/** The providers that can see: Gemini, Mistral and Claude (the others only read text). */
-const VISION_IDS: Provider[] = ["gemini", "mistral", "anthropic"];
+/** The providers that can see: Gemini, Mistral, GitHub Models, OpenAI and Claude (the others only read text). */
+const VISION_IDS: Provider[] = ["gemini", "mistral", "github", "openai", "anthropic"];
 
 export const visionAvailable = (): boolean => orderedProviders().some((def) => VISION_IDS.includes(def.id) && isConfigured(def));
 
