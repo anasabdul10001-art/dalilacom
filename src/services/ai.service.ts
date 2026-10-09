@@ -339,7 +339,7 @@ function classifyStatus(status: number, retryAfter: string | null): { reason: st
   return { reason: `request refused (${status})`, cooldownMs: 5 * MINUTE }; // e.g. 404: the model name is wrong
 }
 
-/** The text models this key may really use, best first (a few), read from the provider's own model list. */
+/** The text models this key may really use, best first (up to eight), read from the provider's own model list. */
 async function discoverModels(def: ProviderDef, apiKey: string): Promise<string[]> {
   try {
     const res = await fetch(def.url.replace(/\/chat\/completions$/, "/models"), { headers: { authorization: `Bearer ${apiKey}`, ...(def.headers?.() ?? {}) }, signal: AbortSignal.timeout(8000) });
@@ -347,10 +347,10 @@ async function discoverModels(def: ProviderDef, apiKey: string): Promise<string[
     const body = (await res.json()) as { data?: { id?: unknown }[] };
     const ids = (body.data ?? []).map((m) => (typeof m.id === "string" ? m.id.replace(/^models\//, "") : "")).filter((id) => id && !/(embed|whisper|tts|guard|moderation|image|audio|safeguard|ocr|rerank|vision|-vl|reward|nemoretriever|parse|clip)/i.test(id));
     const ranked: string[] = [];
-    for (const wanted of [/llama-3\.3-70b/i, /gpt-oss-120b/i, /llama-4/i, /qwen.*(72b|235b|32b)/i, /deepseek.*(v3|chat)/i, /70b/i, /gpt-oss-20b/i, /flash/i, /small|large/i, /instruct|chat|versatile/i, /8b|7b/i]) {
+    for (const wanted of [/llama-3\.3-70b/i, /gpt-oss-120b/i, /llama-4/i, /nemotron.*(super|120b|70b)/i, /deepseek.*(v4|v3|chat)/i, /qwen3.*(80b|235b|32b)/i, /qwen.*(72b|235b|32b)/i, /kimi/i, /70b/i, /gpt-oss-20b/i, /flash/i, /small|large/i, /instruct|chat|versatile/i, /8b|7b/i]) {
       for (const id of ids) if (wanted.test(id) && !ranked.includes(id)) ranked.push(id);
     }
-    return [...ranked, ...ids.filter((id) => !ranked.includes(id))].slice(0, 4);
+    return [...ranked, ...ids.filter((id) => !ranked.includes(id))].slice(0, 8);
   } catch {
     return [];
   }
