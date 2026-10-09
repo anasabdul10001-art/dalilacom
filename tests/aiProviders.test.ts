@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll, afterEach, beforeEach, vi } from "vites
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
-import { aiAvailable, aiProviderStatus, aiUsage, classifyIntent, generateReply, resetAiProviderState } from "../src/services/ai.service";
+import { aiAvailable, aiProviderStatus, aiUsage, classifyIntent, generateReply, resetAiProviderState, testProvider } from "../src/services/ai.service";
 import { uniqueEmail } from "./helpers";
 
 const KEYS = ["GROQ_API_KEY", "CEREBRAS_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY", "NVIDIA_API_KEY", "SAMBANOVA_API_KEY", "TOGETHER_API_KEY", "HUGGINGFACE_API_KEY", "GITHUB_MODELS_API_KEY", "DEEPSEEK_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"];
@@ -149,6 +149,21 @@ describe("Talking to each provider", () => {
     withKeys("CEREBRAS");
     stubProviders({ cerebras: { status: 200, text: "We open at nine." } });
     expect(await generateReply({ message: "when do you open?" })).toBe("We open at nine.");
+  });
+});
+
+describe("Trying one provider on its own", () => {
+  it("asks only that provider and says whether it really answered", async () => {
+    expect(await testProvider("nope")).toBeNull();
+    expect(await testProvider("sambanova")).toEqual({ ok: false, reason: "no key set", ms: 0 });
+
+    withKeys("SAMBANOVA", "GROQ");
+    const calls = stubProviders({ sambanova: { status: 200, text: "ok" } });
+    expect(await testProvider("sambanova")).toMatchObject({ ok: true, reason: null });
+    expect(order(calls)).toEqual(["sambanova"]); // Groq, ahead of it in the chain, is not asked
+
+    stubProviders({ sambanova: { status: 401 } });
+    expect(await testProvider("sambanova")).toMatchObject({ ok: false, reason: "key rejected (401)" });
   });
 });
 

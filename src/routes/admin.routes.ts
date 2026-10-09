@@ -16,7 +16,7 @@ import { sniffImageMime } from "../lib/image";
 import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
-import { aiProviderStatus, aiTotals, aiUsage } from "../services/ai.service";
+import { aiProviderStatus, aiTotals, aiUsage, testProvider } from "../services/ai.service";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole(Role.ADMIN));
@@ -280,6 +280,14 @@ adminRouter.get("/ai-status", async (_req, res) => {
     usage: aiUsage(), // this process, exact
     usageTotals: await aiTotals(), // durable, survives deploys; null if the database is unreachable
   });
+});
+
+// Asks one provider a tiny real question, so a newly added key is proven by an actual answer.
+adminRouter.post("/ai-test", async (req, res) => {
+  const provider = typeof req.body?.provider === "string" ? req.body.provider : "";
+  const result = await testProvider(provider);
+  if (!result) return sendError(res, 404, "NOT_FOUND", "Unknown provider");
+  res.json(result);
 });
 
 // Sample shops and 50 sample products for the online store, to judge its look before real merchants fill it.

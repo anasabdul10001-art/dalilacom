@@ -386,7 +386,7 @@
         <h3>الجلسة الحالية</h3>
         <p class="muted">أرقام الخدمة الشغّالة هلق بالضبط — تتصفّر مع كل نشر أو نوم للخطة المجانية.</p>
         <table style="margin-top:12px">
-          <thead><tr><th>المزوّد</th><th>المفتاح مضبوط؟</th><th>محاولات</th><th>نجاح</th><th>فشل</th></tr></thead>
+          <thead><tr><th>المزوّد</th><th>المفتاح مضبوط؟</th><th>محاولات</th><th>نجاح</th><th>فشل</th><th>تجربة</th></tr></thead>
           <tbody id="ai-session-body"></tbody>
         </table>
         <p class="muted" style="margin-top:14px">آخر مزوّد جاوب فعلًا: <b id="ai-last">—</b> — <b id="ai-last-at">—</b></p>
@@ -925,6 +925,15 @@ async function sendPushTest() {
   loadPushStatus();
 }
 
+async function testAiProvider(id, btn) {
+  const out = document.getElementById('ai-test-' + id);
+  btn.disabled = true; out.textContent = ' عم نجرّب...';
+  const { ok, data } = await api('POST', '/admin/ai-test', { provider: id });
+  btn.disabled = false;
+  if (!ok) { out.textContent = ' تعذّر الاختبار'; return; }
+  out.textContent = data.ok ? ` ✅ ردّ بـ ${data.ms}ms` : ` ❌ ${data.reason}`;
+}
+
 // ---- Discounts ----
 let discStatus = 'PENDING';
 const DISC_STATE_AR = { PENDING: 'بانتظار الموافقة', REJECTED: 'مرفوض', PAUSED: 'موقوف', SCHEDULED: 'لسا ما بدأ', LIVE: 'شغّال', ENDED: 'انتهى' };
@@ -1222,7 +1231,7 @@ async function loadAiStatus() {
       + (p.cooldownSeconds > 0 ? `<br><small class="muted">⏸ يرتاح ${esc(p.cooldownSeconds)} ث — ${esc(p.lastError || '')}</small>` : (p.lastError ? `<br><small class="muted">آخر خطأ: ${esc(p.lastError)}</small>` : '')),
     configured: p.configured,
   }));
-  const rows = (usage) => providers.map(p => {
+  const rows = (usage, withTest) => providers.map(p => {
     const u = usage[p.key] || { attempts: 0, successes: 0, failures: 0 };
     return `
       <tr>
@@ -1231,10 +1240,11 @@ async function loadAiStatus() {
         <td>${u.attempts}</td>
         <td>${u.successes}</td>
         <td>${u.failures}</td>
+        ${withTest ? `<td>${p.configured ? `<button class="small" onclick="testAiProvider('${p.key}', this)">جرّب</button><span id="ai-test-${p.key}" class="muted"></span>` : ''}</td>` : ''}
       </tr>`;
   }).join('');
 
-  document.getElementById('ai-session-body').innerHTML = rows(data.usage);
+  document.getElementById('ai-session-body').innerHTML = rows(data.usage, true);
   document.getElementById('ai-active').textContent = data.activeProvider || 'لا يوجد أي مزوّد مضبوط';
   document.getElementById('ai-last').textContent = data.usage.lastProvider || '—';
   document.getElementById('ai-last-at').textContent = data.usage.lastUsedAt ? new Date(data.usage.lastUsedAt).toLocaleString() : 'لا ردّ بعد';

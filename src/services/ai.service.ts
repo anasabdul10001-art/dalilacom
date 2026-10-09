@@ -385,6 +385,19 @@ async function callProvider(def: ProviderDef, system: string, user: string, maxT
   }
 }
 
+/**
+ * One real, tiny question to one named provider (the admin's "try it" button), skipping the chain and any cool-down, so
+ * a freshly added key is proven by an actual answer. Null when there is no such provider.
+ */
+export async function testProvider(id: string): Promise<{ ok: boolean; reason: string | null; ms: number } | null> {
+  const def = DEFAULT_ORDER.find((p) => p.id === id);
+  if (!def) return null;
+  if (!isConfigured(def)) return { ok: false, reason: "no key set", ms: 0 };
+  const started = Date.now();
+  const answer = await callProvider(def, "Reply with the single word: ok", "ping", 10);
+  return { ok: answer !== null, reason: answer !== null ? null : lastError.get(def.id) ?? "no answer", ms: Date.now() - started };
+}
+
 /** The first provider that answers wins; providers benched by a recent failure go to the back of the line. */
 async function ask(system: string, user: string, maxTokens: number): Promise<string | null> {
   const configured = orderedProviders().filter(isConfigured);
