@@ -1329,3 +1329,16 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .deals-box p { margin: 0 0 16px; font-size: 15px; line-height: 1.7; opacity: .85; }
 .deals-never { display: block; width: 100%; margin-top: 8px; padding: 10px; border: 0; background: none; color: inherit; opacity: .6; font: inherit; font-size: 13px; cursor: pointer; }
 @keyframes dealsFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* shipping methods, stock and photo improvement */
+.ship-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.ship-row input:first-child { flex: 2; }
+.ship-row input:nth-child(2) { flex: 1; min-width: 80px; }
+.ship-choice .ship-opt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 6px 0; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
+.ship-choice .ship-opt span { flex: 1; }
+.ship-choice .ship-opt.on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.pd-ship { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; }
+.pd-ship > div { display: flex; justify-content: space-between; padding-top: 6px; }
+.wiz-photo { position: relative; }
+.wiz-photo .wiz-enh { position: absolute; bottom: 4px; left: 4px; right: 4px; border: 0; border-radius: 8px; padding: 4px 6px; font-size: 11px; font-weight: 700; background: rgba(0, 0, 0, 0.62); color: #fff; cursor: pointer; }
+.wiz-photo .wiz-enh:disabled { opacity: 0.8; }

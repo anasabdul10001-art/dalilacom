@@ -2,7 +2,9 @@ package com.dalilacom.app.ui.cart
 
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,11 +68,36 @@ fun CartScreen(factory: ViewModelFactory, onCheckoutSuccess: () -> Unit) {
                         )
                     }
                 }
+                state.shipping.filter { it.methods.isNotEmpty() }.forEach { group ->
+                    val shop = state.items.firstOrNull { it.product.merchant.id == group.merchantId }?.product?.merchant?.businessName.orEmpty()
+                    Card(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text("🚚 " + stringResource(R.string.ship_choose_for, shop), style = MaterialTheme.typography.titleSmall)
+                            group.methods.forEach { m ->
+                                Row(
+                                    Modifier.fillMaxWidth().clickable { viewModel.pick(group.merchantId, m.id) }.padding(vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    androidx.compose.material3.RadioButton(selected = state.picks[group.merchantId] == m.id, onClick = { viewModel.pick(group.merchantId, m.id) })
+                                    Text(m.name, Modifier.weight(1f))
+                                    Text(if (m.costCents > 0) formatCents(m.costCents) else stringResource(R.string.ship_free), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
+                val shippingCost = viewModel.shippingTotal(state)
+                if (shippingCost > 0) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(stringResource(R.string.ship_title))
+                        Text(formatCents(shippingCost))
+                    }
+                }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(AppStrings.get(R.string.s_413c51af), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        formatCents(state.totalCents),
+                        formatCents(state.totalCents + shippingCost),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )

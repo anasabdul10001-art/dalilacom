@@ -86,6 +86,16 @@ class MerchantRepository(
         else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
     }
 
+    suspend fun shippingMethods(): List<com.dalilacom.app.data.network.ShippingMethodDto> =
+        safeApiCall { api.shippingMethods() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
+    suspend fun saveShippingMethods(methods: List<com.dalilacom.app.data.network.ShippingItemRequest>): Result<List<com.dalilacom.app.data.network.ShippingMethodDto>> {
+        val response = safeApiCall { api.saveShippingMethods(com.dalilacom.app.data.network.ShippingPutRequest(methods)) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.ship_failed))))
+    }
+
     suspend fun myDiscounts(): List<MyDiscountDto> =
         safeApiCall { api.myDiscounts() }?.takeIf { it.isSuccessful }?.body().orEmpty()
 

@@ -33,7 +33,7 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.formatCents
 
 @Composable
-fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}, onOpenDiscounts: () -> Unit = {}) {
+fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}, onOpenDiscounts: () -> Unit = {}, onOpenShipping: () -> Unit = {}) {
     val viewModel: CatalogViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -46,6 +46,8 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
             androidx.compose.material3.OutlinedButton(onClick = onOpenProfile, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.s_8008e7e0)) }
             androidx.compose.material3.OutlinedButton(onClick = onOpenHours, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.s_4a3ccec5)) }
         }
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.material3.OutlinedButton(onClick = onOpenShipping, modifier = Modifier.fillMaxWidth()) { Text("🚚  " + stringResource(R.string.ship_title)) }
         Spacer(Modifier.height(12.dp))
 
         Button(onClick = onAddByPhoto, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(56.dp)) {

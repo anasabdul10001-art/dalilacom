@@ -64,6 +64,13 @@ class StoreRepository(private val api: ApiService) {
         return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
     }
 
+    /** A cleaned-up copy of an uploaded photo (white square, centred, even light) that suits Google and image-reading algorithms. */
+    suspend fun enhancePhoto(photoId: String): Result<ProductPhotoDto> {
+        val response = safeApiCall { api.enhanceProductPhoto(photoId) } ?: return Result.failure(Exception(AppStrings.get(R.string.photo_offline)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
+    }
+
     suspend fun aiDraft(photoId: String): AiDraftResponseDto? = safeApiCall { api.aiDraft(AiDraftRequest(photoId)) }?.takeIf { it.isSuccessful }?.body()
 
     suspend fun banners(): StoreBannersDto? = safeApiCall { api.storeBanners() }?.takeIf { it.isSuccessful }?.body()

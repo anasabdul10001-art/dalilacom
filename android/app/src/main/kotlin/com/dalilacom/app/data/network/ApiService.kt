@@ -334,7 +334,16 @@ interface ApiService {
     suspend fun removeCartItem(@Path("id") id: String): Response<CartViewDto>
 
     @POST("cart/checkout")
-    suspend fun checkout(): Response<List<OrderDto>>
+    suspend fun checkout(@Body body: CheckoutRequest): Response<List<OrderDto>>
+
+    @GET("merchant/shipping-methods")
+    suspend fun shippingMethods(): Response<List<ShippingMethodDto>>
+
+    @PUT("merchant/shipping-methods")
+    suspend fun saveShippingMethods(@Body body: ShippingPutRequest): Response<List<ShippingMethodDto>>
+
+    @POST("products/photos/{id}/enhance")
+    suspend fun enhanceProductPhoto(@Path("id") id: String): Response<ProductPhotoDto>
 
     @GET("orders/mine")
     suspend fun getMyOrders(): Response<List<OrderDto>>

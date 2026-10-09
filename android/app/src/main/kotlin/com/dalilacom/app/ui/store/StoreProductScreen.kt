@@ -1,5 +1,6 @@
 package com.dalilacom.app.ui.store
 
+import com.dalilacom.app.ui.common.formatCents
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -208,10 +209,23 @@ fun StoreProductScreen(
                         Text(stringResource(R.string.store_sold_by), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         TextButton(onClick = { onOpenMerchant(product.merchant.id) }) { Text(product.merchant.name, fontWeight = FontWeight.Bold) }
                     }
+                    if (product.shipping.isNotEmpty()) {
+                        Surface(shape = RoundedCornerShape(8.dp), border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                                Text("🚚 " + stringResource(R.string.ship_title), fontWeight = FontWeight.Bold)
+                                product.shipping.forEach { m ->
+                                    Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                        Text(m.name, Modifier.weight(1f))
+                                        Text(if (m.costCents > 0) formatCents(m.costCents) else stringResource(R.string.ship_free), fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
                     if (product.stock <= 0) Text(stringResource(R.string.store_unavailable), color = MaterialTheme.colorScheme.error)
                     else {
                         Text(
-                            if (product.stock <= 5) stringResource(R.string.store_last_pieces, product.stock) else "✓ " + stringResource(R.string.store_in_stock),
+                            "✓ " + stringResource(R.string.store_stock_count, product.stock),
                             color = if (product.stock <= 5) MaterialTheme.colorScheme.error else androidx.compose.ui.graphics.Color(0xFF2E7D32),
                             fontWeight = FontWeight.Bold,
                         )

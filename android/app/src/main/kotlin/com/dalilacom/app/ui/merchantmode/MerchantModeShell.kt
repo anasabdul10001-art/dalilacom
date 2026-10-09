@@ -68,9 +68,17 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var onboarding by remember { mutableStateOf<OnboardingDto?>(null) }
+    var me by remember { mutableStateOf<com.dalilacom.app.data.network.MerchantMeDto?>(null) }
+    var meLoaded by remember { mutableStateOf(false) }
+    var meTick by remember { mutableStateOf(0) }
     // Re-read when the tab changes (a discount or product may just have been added); coming back from the
     // hours/listing screens recomposes this shell, which reloads it too.
-    LaunchedEffect(selectedTab) { onboarding = container.merchantRepository.getMerchantMe()?.onboarding ?: onboarding }
+    LaunchedEffect(selectedTab, meTick) {
+        val m = container.merchantRepository.getMerchantMe()
+        if (m != null) me = m
+        onboarding = m?.onboarding ?: onboarding
+        meLoaded = true
+    }
 
     // The camera button floats over every tab: a scanned member code lands in the Redeem tab, already checked.
     val redeemViewModel: RedeemViewModel = viewModel(factory = factory)
@@ -89,6 +97,16 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
         } else {
             cameraPermission.launch(Manifest.permission.CAMERA)
         }
+    }
+
+    // merchant mode opens only once the admin has approved the shop
+    if (!meLoaded) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator() }
+        return
+    }
+    if (me?.approvalStatus != "APPROVED") {
+        PendingApproval(refused = me?.approvalStatus == "REJECTED", reason = me?.rejectionReason, onRefresh = { meLoaded = false; meTick++ }, onBack = { rootNavController.popBackStack() })
+        return
     }
 
     Scaffold(
@@ -130,6 +148,7 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                     onOpenHours = { rootNavController.navigate("merchantHours") },
                     onOpenProfile = { rootNavController.navigate("merchantProfile") },
                     onOpenDiscounts = { rootNavController.navigate("discounts") },
+                    onOpenShipping = { rootNavController.navigate("shipping") },
                 )
             }
         }
@@ -188,5 +207,26 @@ private fun ChecklistItem(done: Boolean, label: String, onClick: (() -> Unit)?) 
             style = MaterialTheme.typography.bodyMedium,
             color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
         )
+    }
+}
+
+
+/** What a shop owner sees until the admin approves the shop: merchant mode stays closed. */
+@Composable
+private fun PendingApproval(refused: Boolean, reason: String?, onRefresh: () -> Unit, onBack: () -> Unit) {
+    Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        androidx.compose.material3.Text(if (refused) "⛔" else "⏳", style = MaterialTheme.typography.displayMedium)
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(if (refused) R.string.shop_refused_title else R.string.shop_pending_title), style = MaterialTheme.typography.headlineSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Spacer(Modifier.height(8.dp))
+        androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(if (refused) R.string.shop_refused_sub else R.string.shop_pending_sub), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        if (refused && !reason.isNullOrBlank()) {
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.material3.Text(reason, color = MaterialTheme.colorScheme.error, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
+        Spacer(Modifier.height(20.dp))
+        androidx.compose.material3.Button(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.shop_refresh)) }
+        Spacer(Modifier.height(8.dp))
+        androidx.compose.material3.OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.shop_back_to_account)) }
     }
 }

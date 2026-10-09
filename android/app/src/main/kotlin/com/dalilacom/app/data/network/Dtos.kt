@@ -378,7 +378,24 @@ data class CartItemDto(
 )
 
 @Serializable
-data class CartViewDto(val items: List<CartItemDto> = emptyList(), val totalCents: Int = 0)
+data class ShippingMethodDto(val id: String, val name: String, val costCents: Int = 0)
+
+@Serializable
+data class ShippingItemRequest(val name: String, val costCents: Int)
+
+@Serializable
+data class ShippingPutRequest(val methods: List<ShippingItemRequest>)
+
+/** How one shop in the cart can send its order. */
+@Serializable
+data class CartShippingDto(val merchantId: String, val methods: List<ShippingMethodDto> = emptyList())
+
+/** The shipping method chosen for each shop, by shop id. */
+@Serializable
+data class CheckoutRequest(val shipping: Map<String, String> = emptyMap())
+
+@Serializable
+data class CartViewDto(val items: List<CartItemDto> = emptyList(), val shipping: List<CartShippingDto> = emptyList(), val totalCents: Int = 0)
 
 @Serializable
 data class AddCartItemRequest(val productId: String, val quantity: Int = 1)
@@ -404,6 +421,8 @@ data class OrderDto(
     val memberDiscountCents: Int = 0,
     val totalCents: Int,
     val cancelReason: String? = null,
+    val shippingName: String? = null,
+    val shippingCents: Int = 0,
     val createdAt: String,
     val merchant: MerchantSummaryDto? = null,
     val user: UserNameDto? = null,
@@ -492,6 +511,7 @@ data class MerchantMeDto(
     val id: String,
     val businessName: String,
     val approvalStatus: String,
+    val rejectionReason: String? = null,
     val categoryId: String? = null,
     val address: String? = null,
     val phone: String? = null,
@@ -640,6 +660,7 @@ data class StoreProductDto(
     val merchant: StoreShopDto,
     val related: List<StoreProductDto> = emptyList(),
     val currency: String = "",
+    val shipping: List<ShippingMethodDto> = emptyList(),
 )
 
 @Serializable

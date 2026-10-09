@@ -22,7 +22,7 @@ data class ProductEditUiState(
     val name: String = "",
     val description: String = "",
     val priceText: String = "",
-    val stockText: String = "0",
+    val stockText: String = "",
     val sku: String = "",
     val memberDiscountEnabled: Boolean = false,
     val memberPriceText: String = "",
@@ -31,12 +31,14 @@ data class ProductEditUiState(
     val selectedCategoryId: String? = null,
     val isSaving: Boolean = false,
     val saved: Boolean = false,
+    val needShipping: Boolean = false,
     val error: String? = null,
 )
 
 class ProductEditViewModel(
     private val productRepository: ProductRepository,
     private val discoverRepository: DiscoverRepository,
+    private val merchantRepository: com.dalilacom.app.data.repository.MerchantRepository,
     private val productId: String?,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProductEditUiState(isNew = productId == null))
@@ -101,8 +103,13 @@ class ProductEditViewModel(
             }
         }
 
-        _uiState.value = state.copy(isSaving = true, error = null)
+        _uiState.value = state.copy(isSaving = true, error = null, needShipping = false)
         viewModelScope.launch {
+            // a new product needs the shop's shipping methods first
+            if (productId == null && merchantRepository.shippingMethods().isEmpty()) {
+                _uiState.value = _uiState.value.copy(isSaving = false, needShipping = true, error = AppStrings.get(R.string.ship_need))
+                return@launch
+            }
             val result = if (productId == null) {
                 productRepository.createProduct(
                     CreateProductRequest(

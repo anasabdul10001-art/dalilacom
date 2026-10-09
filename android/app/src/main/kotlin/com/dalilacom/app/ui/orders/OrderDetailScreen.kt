@@ -76,6 +76,12 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
                 }
 
                 Spacer(Modifier.height(12.dp))
+                order.shippingName?.let { name ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("🚚 $name")
+                        Text(if (order.shippingCents > 0) formatCents(order.shippingCents) else stringResource(R.string.ship_free))
+                    }
+                }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(AppStrings.get(R.string.s_413c51af), style = MaterialTheme.typography.titleMedium)
                     Text(formatCents(order.totalCents), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)

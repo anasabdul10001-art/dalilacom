@@ -40,10 +40,11 @@ fun ProductEditScreen(
     productId: String?,
     onSaved: () -> Unit,
     onBack: () -> Unit,
+    onOpenShipping: () -> Unit = {},
 ) {
     val viewModel: ProductEditViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { ProductEditViewModel(container.productRepository, container.discoverRepository, productId) }
+            initializer { ProductEditViewModel(container.productRepository, container.discoverRepository, container.merchantRepository, productId) }
         },
     )
     val state by viewModel.uiState.collectAsState()
@@ -87,6 +88,8 @@ fun ProductEditScreen(
                     value = state.stockText,
                     onValueChange = viewModel::onStockChange,
                     label = { Text(AppStrings.get(R.string.s_d697a2b1)) },
+                    placeholder = { Text(androidx.compose.ui.res.stringResource(R.string.stock_ph)) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                 )
             }

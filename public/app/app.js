@@ -291,6 +291,7 @@ function renderScreen() {
     case "orderDetail": return screenOrderDetail();
     case "merchantRegister": return screenMerchantRegister();
     case "merchantMode": return screenMerchantModeShell();
+    case "shippingMethods": return screenShipping();
     case "productEdit": return screenProductEdit();
     case "affiliateMine": return screenAffiliateMine();
     case "wallet": return screenWallet();
@@ -597,6 +598,7 @@ async function deleteMyAccount() {
 function doLogout() {
   api("POST", "/auth/logout");
   clearToken();
+  S._mstat = null; S._ship = null; S._shipPick = {};
   S.homeTab = "discover";
   reset("home");
 }
@@ -1242,13 +1244,37 @@ function tabCart() {
     <h1 class="screen-title">سلتي</h1>
     ${items.length === 0 ? `<div class="empty-state">سلتك فاضية</div>` : items.map(cartItemHtml).join("")}
     ${items.length > 0 ? `
+      ${(c.shipping || []).filter((x) => x.methods.length).map((x) => shipChoiceHtml(x, items)).join("")}
       <div class="divider"></div>
-      <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(c.totalCents)}</span></div>
+      ${shipTotal(c) > 0 ? `<div class="title-line"><span>${esc(t("ship.title"))}</span><span class="price">${fmt(shipTotal(c))}</span></div>` : ""}
+      <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(c.totalCents + shipTotal(c))}</span></div>
       <div style="height:10px"></div>
       <button class="btn" onclick="doCheckout()">إتمام الطلب</button>
     ` : ""}
     ${errorBanner()}
   `;
+}
+
+/** What the chosen shipping methods cost, all shops together. */
+function shipTotal(c) {
+  const pick = S._shipPick || {};
+  return (c.shipping || []).reduce((sum, x) => sum + ((x.methods.find((m) => m.id === pick[x.merchantId]) || {}).costCents || 0), 0);
+}
+
+function pickShip(merchantId, methodId) {
+  S._shipPick = S._shipPick || {};
+  S._shipPick[merchantId] = methodId;
+  render();
+}
+
+function shipChoiceHtml(x, items) {
+  const shop = (items.find((i) => i.product.merchant.id === x.merchantId) || { product: { merchant: { businessName: "" } } }).product.merchant.businessName;
+  const pick = (S._shipPick || {})[x.merchantId];
+  return `
+    <div class="card ship-choice">
+      <div class="section-title" style="margin-top:0">🚚 ${esc(t("ship.chooseFor", { shop }))}</div>
+      ${x.methods.map((m) => `<label class="ship-opt ${pick === m.id ? "on" : ""}"><input type="radio" name="ship-${x.merchantId}" ${pick === m.id ? "checked" : ""} onchange="pickShip('${x.merchantId}','${m.id}')"><span>${esc(m.name)}</span><b>${m.costCents ? fmt(m.costCents) : esc(t("ship.free"))}</b></label>`).join("")}
+    </div>`;
 }
 
 function cartItemHtml(i) {
@@ -1274,7 +1300,10 @@ function cartItemHtml(i) {
 
 async function loadCart() {
   const { ok, data } = await api("GET", "/cart");
-  S._cart = { loading: false, items: ok ? data.items : [], totalCents: ok ? data.totalCents : 0 };
+  S._cart = { loading: false, items: ok ? data.items : [], shipping: ok ? data.shipping || [] : [], totalCents: ok ? data.totalCents : 0 };
+  // a shop with a single method needs no choosing
+  S._shipPick = S._shipPick || {};
+  (S._cart.shipping || []).forEach((x) => { if (x.methods.length === 1) S._shipPick[x.merchantId] = x.methods[0].id; });
   render();
 }
 
@@ -1293,8 +1322,13 @@ async function addToCart(productId, quantity) {
 }
 
 async function doCheckout() {
+  const pick = S._shipPick || {};
+  const missing = ((S._cart && S._cart.shipping) || []).some((x) => x.methods.length && !x.methods.some((m) => m.id === pick[x.merchantId]));
+  if (missing) { S.error = t("ship.pickAll"); return render(); }
+  const shipping = {};
+  ((S._cart && S._cart.shipping) || []).forEach((x) => { if (pick[x.merchantId]) shipping[x.merchantId] = pick[x.merchantId]; });
   S.busy = true; render();
-  const { ok, data } = await api("POST", "/cart/checkout");
+  const { ok, data } = await api("POST", "/cart/checkout", { shipping });
   S.busy = false;
   if (ok) {
     S._cart = null;
@@ -1348,7 +1382,7 @@ function tabProfile() {
       <div style="height:14px"></div>
       ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
       ${S.role === "MERCHANT"
-        ? `<button class="btn" style="max-width:240px" onclick="go('merchantMode')">${esc(t("profile.merchantMode"))}</button>`
+        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;go('merchantMode')">${esc(t("profile.merchantMode"))}</button>`
         : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`}
       <div style="height:10px"></div>
       <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
@@ -2264,7 +2298,7 @@ async function cancelMyAd(id) {
 /* ---------------- a product from a photo (for shops that are not used to typing) ---------------- */
 
 function openProductWizard() {
-  S._wiz = { step: "photos", photos: [], specs: [], stock: 1, condition: "NEW", section: "", name: "", description: "", price: "", alternatives: [], busy: false, error: null };
+  S._wiz = { step: "photos", photos: [], specs: [], stock: "", condition: "NEW", section: "", name: "", description: "", price: "", alternatives: [], busy: false, error: null };
   go("productWizard");
   if (!S._wizSections) api("GET", "/store/sections?all=1").then((r) => { if (r.ok) { S._wizSections = r.data; render(); } });
 }
@@ -2304,10 +2338,12 @@ function screenProductWizard() {
       <h1 class="screen-title">${esc(t("wiz.photoTitle"))}</h1>
       <p class="screen-sub">${esc(t("wiz.photoSub"))}</p>
       <div class="wiz-photos">
-        ${w.photos.map((p, i) => `<div class="wiz-photo"><img src="${esc(p.preview)}" alt=""><button onclick="wizRemovePhoto(${i})" aria-label="x">✕</button>${i === 0 ? `<span>${esc(t("wiz.mainPhoto"))}</span>` : ""}</div>`).join("")}
+        ${w.photos.map((p, i) => `<div class="wiz-photo"><img src="${esc(p.preview)}" alt=""><button onclick="wizRemovePhoto(${i})" aria-label="x">✕</button>${i === 0 ? `<span>${esc(t("wiz.mainPhoto"))}</span>` : ""}<button class="wiz-enh" ${p.enhancing || p.enhanced ? "disabled" : ""} onclick="wizEnhance(${i})">${p.enhancing ? "…" : p.enhanced ? "✓ " + esc(t("wiz.enhanced")) : "✨ " + esc(t("wiz.enhance"))}</button></div>`).join("")}
         ${w.photos.length < 4 ? `<label class="wiz-add"><input type="file" accept="image/*" capture="environment" onchange="wizPickFiles(this)" hidden><b>📷</b><span>${esc(t("wiz.takePhoto"))}</span></label>
           <label class="wiz-add alt"><input type="file" accept="image/*" multiple onchange="wizPickFiles(this)" hidden><b>🖼️</b><span>${esc(t("wiz.pickPhoto"))}</span></label>` : ""}
       </div>
+      ${w.photos.length > 1 ? `<button class="link-btn" style="display:block;margin:6px auto" onclick="wizEnhanceAll()">✨ ${esc(t("wiz.enhanceAll"))}</button>` : ""}
+      ${w.photos.length ? `<p class="muted" style="text-align:center;font-size:12px">${esc(t("wiz.enhanceNote"))}</p>` : ""}
       ${w.uploading ? `<p class="muted" style="text-align:center">${esc(t("wiz.uploading"))}</p>` : ""}
       ${w.error ? `<div class="error-banner">${esc(w.error)}</div>` : ""}
       <button class="btn wiz-go" ${w.photos.length === 0 || w.uploading ? "disabled" : ""} onclick="wizAnalyze()">${esc(t("wiz.next"))} ›</button>
@@ -2322,6 +2358,10 @@ function screenProductWizard() {
         <button class="btn" onclick="openProductWizard()">📷 ${esc(t("wiz.another"))}</button>
         <div style="height:10px"></div>
         <button class="btn outline" onclick="go('productDetail',{productId:'${w.createdId}'})">${esc(t("wiz.viewIt"))}</button>
+        <div style="height:10px"></div>
+        <button class="btn secondary" onclick="backToShop()">🏪 ${esc(t("wiz.backToShop"))}</button>
+        <div style="height:10px"></div>
+        <button class="btn secondary" onclick="backToAccount()">👤 ${esc(t("wiz.backToAccount"))}</button>
       </div>`;
   }
   const cur = S.currency || "EUR";
@@ -2354,7 +2394,7 @@ function screenProductWizard() {
       ${w.priceHint ? `<p class="muted" style="margin:6px 0 0">💡 ${esc(t("wiz.priceHint", { min: fmt(w.priceHint.min), max: fmt(w.priceHint.max) }))}</p>` : ""}</div>
 
     <div class="field"><label>${esc(t("wiz.stock"))}</label>
-      <div class="stepper"><button onclick="S._wiz.stock=Math.max(1,S._wiz.stock-1);render()">−</button><span>${w.stock}</span><button onclick="S._wiz.stock+=1;render()">+</button></div></div>
+      <input type="number" inputmode="numeric" min="1" value="${esc(w.stock)}" oninput="S._wiz.stock=this.value" placeholder="${esc(t("wiz.stockPh"))}"></div>
 
     ${w.error ? `<div class="error-banner">${esc(w.error)}</div>` : ""}
     <button class="btn wiz-go" ${w.busy ? "disabled" : ""} onclick="wizPublish()">✅ ${esc(w.busy ? t("wiz.publishing") : t("wiz.publish"))}</button>`;
@@ -2376,6 +2416,36 @@ async function wizPickFiles(input) {
   }
   w.uploading = false;
   render();
+}
+
+/** Back to merchant mode (the shop's own screen), as if its button had just been pressed. */
+function backToShop() {
+  S.homeTab = "profile";
+  S.stack = [{ screen: "home", params: {}, homeTab: "profile", merchantTab: "redeem" }];
+  S.merchantTab = "catalog"; S.screen = "merchantMode"; S.params = {}; S.error = null; S._catalog = null;
+  render();
+}
+
+/** Back to the account tab, as if it had just been pressed. */
+function backToAccount() {
+  S.homeTab = "profile";
+  reset("home");
+}
+
+/** A cleaned-up copy of a photo (white square, centred, even light) that suits Google and the image-reading algorithms. */
+async function wizEnhance(i) {
+  const w = S._wiz;
+  const p = w.photos[i];
+  if (!p || p.enhancing || p.enhanced) return;
+  p.enhancing = true; w.error = null; render();
+  const { ok, data } = await api("POST", `/products/photos/${p.id}/enhance`);
+  p.enhancing = false;
+  if (ok) { p.id = data.id; p.url = data.url; p.preview = data.url; p.enhanced = true; }
+  else w.error = errMsg(data, t("photo.failed"));
+  render();
+}
+async function wizEnhanceAll() {
+  for (let i = 0; i < S._wiz.photos.length; i++) await wizEnhance(i);
 }
 
 function wizRemovePhoto(i) { S._wiz.photos.splice(i, 1); render(); }
@@ -2416,9 +2486,12 @@ async function wizPublish() {
   if (!w.name.trim()) { w.error = t("wiz.needName"); return render(); }
   if (!w.section) { w.error = t("wiz.needSection"); return render(); }
   if (!(price > 0)) { w.error = t("wiz.needPrice"); return render(); }
+  const stock = parseInt(latinDigits(String(w.stock)), 10);
+  if (!(stock >= 1)) { w.error = t("wiz.needStock"); return render(); }
+  if (!(await shipGuard())) return;
   w.busy = true; w.error = null; render();
   const body = {
-    name: w.name.trim(), description: w.description.trim() || undefined, priceCents: Math.round(price * 100), stock: w.stock,
+    name: w.name.trim(), description: w.description.trim() || undefined, priceCents: Math.round(price * 100), stock,
     storeSection: w.section, condition: w.condition, images: w.photos.map((p) => p.url),
     specs: w.specs.filter((x) => x.label.trim() && x.value.trim()).map((x) => ({ label: x.label.trim(), value: x.value.trim() })),
   };
@@ -2644,8 +2717,9 @@ function screenProductDetail() {
           </div>` : ""}
           <div class="pd-rows">
             <div><span>${esc(t("store.soldBy"))}</span><a onclick="go('merchantDetail',{merchantId:'${prod.merchant.id}'})">${esc(prod.merchant.name)}</a></div>
-            <div><span>${esc(t("store.availability"))}</span>${available ? `<b class="${prod.stock <= 5 ? "low" : "ok"}">${prod.stock <= 5 ? esc(t("store.lastPieces", { n: prod.stock })) : "✓ " + esc(t("store.inStock"))}</b>` : `<b class="low">${esc(t("store.unavailable"))}</b>`}</div>
+            <div><span>${esc(t("store.availability"))}</span>${available ? `<b class="${prod.stock <= 5 ? "low" : "ok"}">✓ ${esc(t("store.stockCount", { n: prod.stock }))}</b>` : `<b class="low">${esc(t("store.unavailable"))}</b>`}</div>
           </div>
+          ${(prod.shipping || []).length ? `<div class="pd-ship"><b>🚚 ${esc(t("ship.methods"))}</b>${prod.shipping.map((m) => `<div><span>${esc(m.name)}</span><span>${m.costCents ? fmt(m.costCents) : esc(t("ship.free"))}</span></div>`).join("")}</div>` : ""}
           ${available ? `
             <div class="stepper"><button onclick="changeProductQty(-1)">−</button><span>${p.qty}</span><button onclick="changeProductQty(1)">+</button></div>
             <div class="pd-actions">
@@ -2720,6 +2794,7 @@ function screenOrderDetail() {
         <span class="price">${fmt(it.unitPriceCents * it.quantity)}</span>
       </div>`).join("")}
     <div class="divider"></div>
+    ${ord.shippingName ? `<div class="list-row" style="padding:6px 0"><span>🚚 ${esc(ord.shippingName)}</span><span class="price">${ord.shippingCents ? fmt(ord.shippingCents) : esc(t("ship.free"))}</span></div>` : ""}
     <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(ord.totalCents)}</span></div>
     ${ord.memberDiscountCents > 0 ? `<p class="muted">وفّرت ${fmt(ord.memberDiscountCents)} بسعر أعضاء دليلكم</p>` : ""}
     ${ord.status === "DELIVERED" && ord.rated ? `
@@ -3958,7 +4033,25 @@ const MERCHANT_TABS = [
   { id: "promo", label: "إعلاناتي", icon: "bell" },
 ];
 
+/** Merchant mode opens only once the admin has approved the shop: until then the shop owner sees where the request stands. */
 function screenMerchantModeShell() {
+  if (!S._mstat) { S._mstat = { loading: true }; loadMerchantStatus(); }
+  const m = S._mstat;
+  if (m.loading) return `<button class="back-btn" onclick="back()">‹ ${esc(t("shop.backToAccount"))}</button>${spinner()}`;
+  if (m.approvalStatus !== "APPROVED") {
+    const refused = m.approvalStatus === "REJECTED";
+    return `
+      <button class="back-btn" onclick="back()">‹ ${esc(t("shop.backToAccount"))}</button>
+      <div class="guest-prompt">
+        <div class="guest-ico">${refused ? "⛔" : "⏳"}</div>
+        <h1 class="screen-title" style="margin:0">${esc(t(refused ? "shop.refusedTitle" : "shop.pendingTitle"))}</h1>
+        <p class="screen-sub">${esc(t(refused ? "shop.refusedSub" : "shop.pendingSub"))}</p>
+        ${refused && m.rejectionReason ? `<div class="error-banner">${esc(m.rejectionReason)}</div>` : ""}
+        <button class="btn" onclick="S._mstat=null;render()">${esc(t("shop.refresh"))}</button>
+        <div style="height:10px"></div>
+        <button class="btn outline" onclick="back()">${esc(t("shop.backToAccount"))}</button>
+      </div>`;
+  }
   const body = { redeem: tabRedeem, orders: tabMerchantOrders, catalog: tabCatalog, promo: tabPromo }[S.merchantTab]();
   return `
     <button class="back-btn" onclick="back()">‹ رجوع لحساب الزبون</button>
@@ -3972,6 +4065,76 @@ function screenMerchantModeShell() {
         </button>`).join("")}
     </div>
   `;
+}
+
+async function loadMerchantStatus() {
+  const { ok, data } = await api("GET", "/merchant/me");
+  S._mstat = { loading: false, approvalStatus: ok ? data.approvalStatus : "PENDING", rejectionReason: ok ? data.rejectionReason : null };
+  render();
+}
+
+/* ---- shipping methods: how the shop sends orders, and what it costs ---- */
+
+async function openShipping() {
+  S._ship = { loading: true, rows: [], error: null, busy: false };
+  go("shippingMethods");
+  const { ok, data } = await api("GET", "/merchant/shipping-methods");
+  S._ship.loading = false;
+  S._ship.rows = ok && data.length ? data.map((m) => ({ name: m.name, cost: String(m.costCents / 100) })) : [{ name: "", cost: "" }];
+  render();
+}
+
+/** A shop must list at least one shipping method before it can add a product; if it has none, send it to add them. */
+async function shipGuard() {
+  const { ok, data } = await api("GET", "/merchant/shipping-methods");
+  if (ok && data.length) return true;
+  toast(t("ship.need"));
+  openShipping();
+  return false;
+}
+
+function screenShipping() {
+  if (!S._ship) { openShipping(); return spinner(); }
+  const f = S._ship;
+  if (f.loading) return `${backRow()}<h1 class="screen-title">${esc(t("ship.title"))}</h1>${spinner()}`;
+  const cur = S.currency === "USD" ? "$" : S.currency === "EUR" ? "€" : S.currency || "";
+  const presets = ["ship.pickup", "ship.local", "ship.country"];
+  return `
+    ${backRow()}
+    <h1 class="screen-title">${esc(t("ship.title"))}</h1>
+    <p class="screen-sub">${esc(t("ship.sub"))}</p>
+    <div class="chips-row">${presets.map((k) => `<button class="chip" onclick="shipAddPreset('${k}')">+ ${esc(t(k))}</button>`).join("")}</div>
+    ${f.rows.map((r, i) => `
+      <div class="ship-row">
+        <input value="${esc(r.name)}" oninput="S._ship.rows[${i}].name=this.value" placeholder="${esc(t("ship.namePh"))}">
+        <input type="number" inputmode="decimal" min="0" step="0.01" value="${esc(r.cost)}" oninput="S._ship.rows[${i}].cost=this.value" placeholder="${esc(t("ship.costPh", { cur }))}">
+        <button class="link-btn" onclick="S._ship.rows.splice(${i},1);render()" aria-label="x">✕</button>
+      </div>`).join("")}
+    ${f.rows.length < 8 ? `<button class="link-btn" onclick="S._ship.rows.push({name:'',cost:''});render()">+ ${esc(t("ship.add"))}</button>` : ""}
+    <p class="muted">${esc(t("ship.freeNote"))}</p>
+    ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}
+    <button class="btn" ${f.busy ? "disabled" : ""} onclick="saveShipping()">${esc(f.busy ? t("ship.saving") : t("ship.save"))}</button>`;
+}
+
+function shipAddPreset(k) {
+  const f = S._ship;
+  const name = t(k);
+  if (f.rows.length === 1 && !f.rows[0].name && !f.rows[0].cost) f.rows = [];
+  if (!f.rows.some((r) => r.name === name) && f.rows.length < 8) f.rows.push({ name, cost: k === "ship.pickup" ? "0" : "" });
+  render();
+}
+
+async function saveShipping() {
+  const f = S._ship;
+  const rows = f.rows.filter((r) => r.name.trim() || String(r.cost).trim());
+  const methods = rows.map((r) => ({ name: r.name.trim(), costCents: Math.round(Number(String(latinDigits(r.cost) || "0").replace(",", ".")) * 100) }));
+  if (!methods.length || methods.some((m) => m.name.length < 2 || !(m.costCents >= 0))) { f.error = t("ship.invalid"); return render(); }
+  f.busy = true; f.error = null; render();
+  const { ok, data } = await api("PUT", "/merchant/shipping-methods", { methods });
+  f.busy = false;
+  if (!ok) { f.error = errMsg(data, t("ship.failed")); return render(); }
+  back();
+  toast(t("ship.saved"));
 }
 
 /* ---- Announcements tab: a notice to people around the shop, reviewed by the platform before it goes out ---- */
@@ -4511,6 +4674,7 @@ function tabCatalog() {
       <button class="btn outline" onclick="S._mprof=null;go('merchantProfile')">📍 بيانات المحل ومكانه</button>
       <button class="btn outline" onclick="S._hours=null;go('merchantHours')">🕒 ساعات العمل</button>
     </div>
+    <button class="btn outline" style="margin-bottom:12px" onclick="openShipping()">🚚 ${esc(t("ship.title"))}</button>
     <div class="card">
       <div class="section-title" style="margin-top:0">${esc(t("disc.title"))}</div>
       ${(c.discounts || []).length ? c.discounts.map((d) => `<p style="color:var(--primary)">🏷️ ${esc(d.title)} — ${d.percent}%</p>`).join("") : `<p class="muted">${esc(t("disc.none"))}</p>`}
@@ -4620,7 +4784,7 @@ async function addCatalogDiscount() {
 function screenProductEdit() {
   const productId = S.params.productId;
   if (!S._prodEdit || S._prodEdit.productId !== productId) {
-    S._prodEdit = { productId, loading: true, isNew: !productId, categories: [], name: "", description: "", price: "", stock: "0", sku: "", memberDiscountEnabled: false, memberPrice: "", isActive: true, selectedCat: null };
+    S._prodEdit = { productId, loading: true, isNew: !productId, categories: [], name: "", description: "", price: "", stock: "", sku: "", memberDiscountEnabled: false, memberPrice: "", isActive: true, selectedCat: null };
     initProductEdit(productId);
   }
   const p = S._prodEdit;
@@ -4632,7 +4796,7 @@ function screenProductEdit() {
     <div class="field"><label>الوصف (اختياري)</label><input id="pe-desc" value="${esc(p.description)}" /></div>
     <div class="row">
       <div class="field"><label>السعر</label><input id="pe-price" value="${esc(p.price)}" /></div>
-      <div class="field"><label>المخزون</label><input id="pe-stock" value="${esc(p.stock)}" /></div>
+      <div class="field"><label>المخزون</label><input id="pe-stock" inputmode="numeric" value="${esc(p.stock)}" placeholder="${esc(t("pe.stockPh"))}" /></div>
     </div>
     <div class="field"><label>SKU (اختياري)</label><input id="pe-sku" value="${esc(p.sku)}" /></div>
     <div class="section-title">التصنيف</div>
@@ -4707,6 +4871,7 @@ async function saveProduct() {
   const stock = parseInt(latinDigits(p.stock), 10);
   const sku = p.sku.trim();
   if (!name || !priceCents || priceCents <= 0 || isNaN(stock) || stock < 0) { S.error = "تأكد من اسم المنتج والسعر والمخزون"; return render(); }
+  if (p.isNew && !(await shipGuard())) return;
   let memberPriceCents = null;
   if (p.memberDiscountEnabled) {
     memberPriceCents = Math.round(parseFloat(latinDigits(p.memberPrice)) * 100);

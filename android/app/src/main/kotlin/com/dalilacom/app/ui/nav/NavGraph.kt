@@ -160,6 +160,9 @@ fun DalilacomNavGraph(
                 onLogin = { navController.navigate("login") },
             )
         }
+        composable("shipping") {
+            com.dalilacom.app.ui.merchantmode.ShippingScreen(container = container, onBack = { navController.popBackStack() })
+        }
         composable("discounts") {
             DiscountsScreen(factory = ViewModelFactory(container), onBack = { navController.popBackStack() })
         }
@@ -175,7 +178,7 @@ fun DalilacomNavGraph(
             )
         }
         composable("productWizard") {
-            ProductWizardScreen(container = container, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") })
+            ProductWizardScreen(container = container, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") }, onOpenShipping = { navController.navigate("shipping") }, onBackToShop = { navController.popBackStack("merchantMode", inclusive = false) }, onBackToAccount = { navController.popBackStack("home", inclusive = false) })
         }
         composable("adBook?kind={kind}", arguments = listOf(androidx.navigation.navArgument("kind") { defaultValue = "space" })) { entry ->
             AdBookScreen(container = container, kind = entry.arguments?.getString("kind") ?: "space", onBack = { navController.popBackStack() }, onWallet = { navController.navigate("wallet") }, onMyAds = { navController.navigate("myAds") })
@@ -270,6 +273,7 @@ fun DalilacomNavGraph(
                 productId = backStackEntry.arguments?.getString("productId"),
                 onSaved = { navController.popBackStack() },
                 onBack = { navController.popBackStack() },
+                onOpenShipping = { navController.navigate("shipping") },
             )
         }
     }
