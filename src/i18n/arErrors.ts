@@ -60,6 +60,7 @@ const MESSAGES: Record<string, string> = {
   "You cannot disable your own account": "ما بتقدر تعطّل حسابك",
   "You cannot delete your own account": "ما بتقدر تحذف حسابك",
   "An admin account cannot be deleted": "حساب الأدمن ما بينحذف",
+  "An admin account can only be changed by its owner": "حساب الأدمن محمي: بس صاحبه بيقدر يعدّل عليه",
   "An admin account's role cannot be changed here": "دور حساب الأدمن ما بيتغيّر من هون",
   "That email is already used by another account": "هذا الإيميل مستعمل بحساب ثاني",
   "That phone number is already used by another account": "رقم الهاتف مستعمل بحساب ثاني",

@@ -219,13 +219,15 @@ const editUserSchema = z.object({
 
 // Edit any detail of an account, switch it off (or back on), or set a new password. Switching an account off, changing its
 // email or password ends its sessions. An admin can't switch off their own account, so at least one enabled admin always
-// remains, and an admin account's role is not changed from here.
+// remains. An admin account is protected: only its owner may edit it, and its role is not changed from here.
 adminRouter.patch("/users/:id", route(async (req, res) => {
   const parsed = editUserSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const input = parsed.data;
   const target = await prisma.user.findUnique({ where: userId(req.params.id), select: { id: true, role: true, email: true } });
   if (!target) return sendError(res, 404, "NOT_FOUND", "User not found");
+  // an admin account is protected: no other admin can change its role or any of its details
+  if (target.role === "ADMIN" && target.id !== req.user!.id) return sendError(res, 403, "FORBIDDEN", "An admin account can only be changed by its owner");
   if (input.isDisabled && target.id === req.user!.id) return sendError(res, 409, "CONFLICT", "You cannot disable your own account");
   if (input.role && target.role === "ADMIN") return sendError(res, 409, "CONFLICT", "An admin account's role cannot be changed here");
   if (input.email && input.email !== target.email) {
@@ -255,8 +257,7 @@ adminRouter.patch("/users/:id", route(async (req, res) => {
 adminRouter.delete("/users/:id", route(async (req, res) => {
   const target = await prisma.user.findUnique({ where: userId(req.params.id), select: { id: true, role: true } });
   if (!target) return sendError(res, 404, "NOT_FOUND", "User not found");
-  if (target.id === req.user!.id) return sendError(res, 409, "CONFLICT", "You cannot delete your own account");
-  if (target.role === "ADMIN") return sendError(res, 409, "CONFLICT", "An admin account cannot be deleted");
+  if (target.role === "ADMIN") return sendError(res, 403, "FORBIDDEN", target.id === req.user!.id ? "An admin account cannot be deleted" : "An admin account can only be changed by its owner");
   res.json({ result: await eraseAccount(target.id) });
 }));
 

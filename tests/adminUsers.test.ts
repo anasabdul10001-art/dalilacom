@@ -58,6 +58,22 @@ describe("the admin edits and deletes accounts", () => {
     expect((await request(app).patch(`/admin/users/${boss.id}`).set(boss.auth).send({ isDisabled: true })).status).toBe(409);
   });
 
+  it("protects an admin account: no other admin can change its role or details, switch it off or delete it", async () => {
+    const a = await account("uprotA", { role: "ADMIN" });
+    const b = await account("uprotB", { role: "ADMIN" });
+    for (const body of [{ role: "CUSTOMER" }, { fullName: "اسم مسروق" }, { email: uniqueEmail("hijack") }, { newPassword: "hijacked-password-1" }, { isDisabled: true }]) {
+      const res = await request(app).patch(`/admin/users/${a.id}`).set(b.auth).send(body);
+      expect(res.status).toBe(403);
+      expect(res.body.error.message).toMatch(/[؀-ۿ]/);
+    }
+    expect((await request(app).delete(`/admin/users/${a.id}`).set(b.auth)).status).toBe(403);
+    const still = await prisma.user.findUniqueOrThrow({ where: { id: a.id } });
+    expect(still).toMatchObject({ role: "ADMIN", email: a.email, isDisabled: false });
+    expect((await request(app).post("/auth/login").send({ email: a.email, password })).status).toBe(200);
+    // the owner may edit their own details
+    expect((await request(app).patch(`/admin/users/${a.id}`).set(a.auth).send({ fullName: "اسمي الجديد" })).status).toBe(200);
+  });
+
   it("deletes an account for good when nothing depends on it", async () => {
     const boss = await account("uboss3", { role: "ADMIN" });
     const person = await account("udelete");
@@ -78,9 +94,9 @@ describe("the admin edits and deletes accounts", () => {
     expect(res.body.result).toBe("anonymized");
     expect(await prisma.user.findUnique({ where: { id: person.id } })).toMatchObject({ isDisabled: true, fullName: "حساب محذوف", phone: null });
 
-    expect((await request(app).delete(`/admin/users/${boss.id}`).set(boss.auth)).status).toBe(409);
+    expect((await request(app).delete(`/admin/users/${boss.id}`).set(boss.auth)).status).toBe(403);
     const other = await account("uboss5", { role: "ADMIN" });
-    expect((await request(app).delete(`/admin/users/${other.id}`).set(boss.auth)).status).toBe(409);
+    expect((await request(app).delete(`/admin/users/${other.id}`).set(boss.auth)).status).toBe(403);
     const customer = await account("ucust");
     expect((await request(app).delete(`/admin/users/${customer.id}`).set(customer.auth)).status).toBe(403);
   });

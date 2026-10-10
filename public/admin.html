@@ -238,7 +238,7 @@
     <!-- USERS: who is who -->
     <div class="section" id="section-users" style="display:none">
       <h2>المستخدمون</h2>
-      <p class="subtitle">ابحث عن أي حساب بالاسم أو الإيميل أو الهاتف، وشوف دوره وحالته. زر «تعديل» بيفتح كل تفاصيل الحساب (الاسم والإيميل والهاتف والدور وكلمة السر...) مع التعطيل والحذف النهائي. تعطيل الحساب بيوقفه فورًا وبينهي جلساته. الترقية لأدمن بتتم فقط من إعدادات السيرفر (SUPER_ADMIN_EMAIL).</p>
+      <p class="subtitle">ابحث عن أي حساب بالاسم أو الإيميل أو الهاتف، وشوف دوره وحالته. حسابات الأدمن محمية: ما حدا بيعدّل على حساب أدمن غير صاحبه. زر «تعديل» بيفتح كل تفاصيل الحساب (الاسم والإيميل والهاتف والدور وكلمة السر...) مع التعطيل والحذف النهائي. تعطيل الحساب بيوقفه فورًا وبينهي جلساته. الترقية لأدمن بتتم فقط من إعدادات السيرفر (SUPER_ADMIN_EMAIL).</p>
       <div class="card">
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input id="users-q" placeholder="اسم أو إيميل أو هاتف" style="flex:2;min-width:200px" onkeydown="if(event.key==='Enter') loadUsers()" />
@@ -685,6 +685,7 @@ async function loadUsers() {
   const role = document.getElementById('users-role').value;
   if (q) params.set('q', q);
   if (role) params.set('role', role);
+  if (!state.myId) { const me = await api('GET', '/profile/me'); if (me.ok) state.myId = me.data.id; }
   const { ok, data } = await api('GET', '/admin/users?' + params.toString());
   if (!ok) { body.innerHTML = ''; msg.textContent = errText(data, 'تعذّر التحميل'); return; }
   msg.textContent = data.length >= 100 ? 'أول 100 نتيجة — ضيّق البحث لتشوف غيرها' : '';
@@ -695,7 +696,7 @@ async function loadUsers() {
       <td class="muted" style="direction:ltr;text-align:right">${esc(u.phone || '—')}</td>
       <td><span class="badge ${u.role === 'ADMIN' ? 'APPROVED' : 'inactive'}">${esc(ROLE_LABEL[u.role] || u.role)}</span></td>
       <td><span class="badge ${u.isDisabled ? 'REJECTED' : 'active'}">${u.isDisabled ? 'معطّل' : 'فعّال'}</span></td>
-      <td style="white-space:nowrap"><button class="small" onclick="openUserEdit('${esc(u.id)}')">✏️ تعديل</button> <button class="small" style="${u.isDisabled ? '' : 'background:#777'}" onclick="toggleUser('${esc(u.id)}', ${!u.isDisabled})">${u.isDisabled ? 'تفعيل' : 'تعطيل'}</button></td>
+      <td style="white-space:nowrap">${u.role === 'ADMIN' && u.id !== state.myId ? '<span class="muted" title="حساب أدمن محمي: بس صاحبه بيعدّل عليه">🔒 محمي</span>' : `<button class="small" onclick="openUserEdit('${esc(u.id)}')">✏️ تعديل</button> <button class="small" style="${u.isDisabled ? '' : 'background:#777'}" onclick="toggleUser('${esc(u.id)}', ${!u.isDisabled})">${u.isDisabled ? 'تفعيل' : 'تعطيل'}</button>`}</td>
     </tr>`).join('') : '<tr><td colspan="6" class="muted">ما في نتائج</td></tr>';
 }
 
