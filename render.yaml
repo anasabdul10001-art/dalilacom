@@ -8,10 +8,11 @@ services:
     buildCommand: npm install --include=dev && npm run build && npm run deploy:migrate && npm run prisma:seed && npm run backfill:1b
     startCommand: npm start
     envVars:
+      # The database address is set by hand in the Render dashboard (Neon, a free Postgres without an expiry date), so a
+      # Blueprint sync never puts back the old Render database. Use the DIRECT (non-pooled) Neon address with
+      # ?sslmode=require&connect_timeout=15 (the build runs the migrations on it).
       - key: DATABASE_URL
-        fromDatabase:
-          name: dalilacom-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: QR_TOKEN_TTL_SECONDS
@@ -112,10 +113,11 @@ services:
     buildCommand: npm install --include=dev && npm run build && npm run deploy:migrate && npm run prisma:seed && npm run backfill:1b
     startCommand: npm start
     envVars:
+      # The database address is set by hand in the Render dashboard (Neon, a free Postgres without an expiry date), so a
+      # Blueprint sync never puts back the old Render database. Use the DIRECT (non-pooled) Neon address with
+      # ?sslmode=require&connect_timeout=15 (the build runs the migrations on it).
       - key: DATABASE_URL
-        fromDatabase:
-          name: dalilacom-db
-          property: connectionString
+        sync: false
       # Paste the SAME value as the testing service: both share one database, so sign-ins must be valid on both.
       - key: JWT_SECRET
         sync: false
