@@ -149,6 +149,7 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                     onOpenProfile = { rootNavController.navigate("merchantProfile") },
                     onOpenDiscounts = { rootNavController.navigate("discounts") },
                     onOpenShipping = { rootNavController.navigate("shipping") },
+                    onOpenAiPlans = { rootNavController.navigate("aiPlans") },
                 )
             }
         }

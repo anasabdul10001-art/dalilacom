@@ -389,6 +389,11 @@
           <div><label>الاستخدامات المجانية لكل تاجر بالشهر</label><input id="ai-free" type="number" min="0" /></div>
           <div><label>سعر كل استخدام بعدها (<span class="credit-name">الرصيد</span>) — 0 = ما في بيع</label><input id="ai-price" type="number" min="0" /></div>
         </div>
+        <h4 style="margin:16px 0 6px">الباقات الشهرية (سعر ثابت)</h4>
+        <p class="muted">التاجر بيشتري باقة من محفظته: عدد استخدامات مضمون لعدد أيام. استخدامات الباقة بتنصرف أول، وبعدها المجاني، وبعدها الدفع لكل استخدام. شراء باقة ثانية والباقة شغّالة بيضيف الأيام والاستخدامات عليها.</p>
+        <table><thead><tr><th>الاسم</th><th style="width:14%">الأيام</th><th style="width:16%">الاستخدامات</th><th style="width:20%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ai-packs"></tbody></table>
+        <button class="small" style="margin-top:8px" onclick="aiPackAdd()">+ باقة</button>
+        <br>
         <button class="small" style="margin-top:10px" onclick="saveAiQuota()">حفظ</button>
         <span id="ai-quota-msg" class="muted" style="margin-right:10px"></span>
       </div>
@@ -1229,11 +1234,31 @@ async function demoStore(method) {
 }
 
 // ---- AI provider status ----
+let aiPacks = [];
+
+function renderAiPacks() {
+  document.getElementById('ai-packs').innerHTML = aiPacks.map((p, i) => `
+    <tr>
+      <td><input value="${esc(p.name)}" oninput="aiPacks[${i}].name=this.value"></td>
+      <td><input type="number" min="1" max="365" value="${p.days}" oninput="aiPacks[${i}].days=Number(this.value)"></td>
+      <td><input type="number" min="1" value="${p.uses}" oninput="aiPacks[${i}].uses=Number(this.value)"></td>
+      <td><input type="number" min="0" value="${p.credits}" oninput="aiPacks[${i}].credits=Number(this.value)"></td>
+      <td><button class="small danger" onclick="aiPacks.splice(${i},1);renderAiPacks()">✕</button></td>
+    </tr>`).join('');
+}
+
+function aiPackAdd() {
+  aiPacks.push({ id: 'p-' + Date.now().toString(36), name: '', days: 30, uses: 100, credits: 1000 });
+  renderAiPacks();
+}
+
 async function loadAiQuota() {
   const { ok, data } = await api('GET', '/admin/settings');
   if (!ok || !data.ai) return;
   document.getElementById('ai-free').value = data.ai.freePerMonth;
   document.getElementById('ai-price').value = data.ai.creditsPerUse;
+  aiPacks = (data.ai.packages || []).map((p) => ({ ...p }));
+  renderAiPacks();
 }
 
 async function saveAiQuota() {
@@ -1241,8 +1266,9 @@ async function saveAiQuota() {
   const freePerMonth = Number(document.getElementById('ai-free').value);
   const creditsPerUse = Number(document.getElementById('ai-price').value);
   if (!Number.isInteger(freePerMonth) || freePerMonth < 0 || !Number.isInteger(creditsPerUse) || creditsPerUse < 0) { msg.textContent = 'اكتب أرقام صحيحة (صفر أو أكثر)'; return; }
+  if (aiPacks.some((p) => p.name.trim().length < 2 || !(p.days >= 1) || !(p.uses >= 1) || !(p.credits >= 0))) { msg.textContent = 'عبّي اسم وأيام واستخدامات وسعر لكل باقة'; return; }
   msg.textContent = 'عم نحفظ...';
-  const { ok } = await api('PUT', '/admin/settings', { ai: { freePerMonth, creditsPerUse } });
+  const { ok } = await api('PUT', '/admin/settings', { ai: { freePerMonth, creditsPerUse, packages: aiPacks.map((p) => ({ id: p.id, name: p.name.trim(), days: p.days, uses: p.uses, credits: p.credits })) } });
   msg.textContent = ok ? 'انحفظ ✓' : 'تعذّر الحفظ';
 }
 

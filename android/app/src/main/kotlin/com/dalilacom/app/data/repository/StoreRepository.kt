@@ -61,6 +61,14 @@ class StoreRepository(private val api: ApiService) {
         return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
     }
 
+    suspend fun aiPackages(): com.dalilacom.app.data.network.AiPackagesDto? = safeApiCall { api.aiPackages() }?.takeIf { it.isSuccessful }?.body()
+
+    suspend fun buyAiPackage(id: String): Result<com.dalilacom.app.data.network.AiQuotaDto> {
+        val response = safeApiCall { api.aiSubscribe(com.dalilacom.app.data.network.AiSubscribeRequest(id)) } ?: return Result.failure(Exception(AppStrings.get(R.string.photo_offline)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body.quota) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
+    }
+
     suspend fun aiQuota(): com.dalilacom.app.data.network.AiQuotaDto? = safeApiCall { api.aiQuota() }?.takeIf { it.isSuccessful }?.body()
 
     suspend fun aiDraft(photoId: String): Result<AiDraftResponseDto> {

@@ -58,6 +58,17 @@ const settingsSchema = z.object({
     .object({
       freePerMonth: z.number().int().nonnegative().max(1000000),
       creditsPerUse: z.number().int().nonnegative().max(10000000),
+      packages: z
+        .array(
+          z.object({
+            id: z.string().regex(/^[a-z0-9-]{2,30}$/),
+            name: z.string().trim().min(2).max(40),
+            days: z.number().int().min(1).max(365),
+            uses: z.number().int().min(1).max(1000000),
+            credits: z.number().int().nonnegative().max(100000000),
+          }),
+        )
+        .max(8),
     })
     .partial()
     .optional(),

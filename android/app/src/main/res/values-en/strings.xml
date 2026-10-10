@@ -711,4 +711,18 @@
     <string name="ai_paid_per">Free uses are finished: each use costs %1$d from your balance (balance %2$d)</string>
     <string name="ai_no_more">Your free uses for this month are finished</string>
     <string name="ai_unavailable">AI editing is not available right now, only the quick tidy-up works.</string>
+    <string name="ai_plans_title">AI packages</string>
+    <string name="ai_plans_sub">Subscribe to a monthly package at a fixed price: a guaranteed number of uses for describing products and editing photos.</string>
+    <string name="ai_no_plan">You have no running package. You have free uses every month, then you pay per use.</string>
+    <string name="ai_sub_left">%1$d of %2$d uses left in your package until %3$s</string>
+    <string name="ai_balance_line">Your balance: %1$d</string>
+    <string name="ai_top_up">Top up the wallet</string>
+    <string name="ai_price">%1$d from your balance</string>
+    <string name="ai_pack_line">%1$d uses for %2$d days</string>
+    <string name="ai_buy">Subscribe</string>
+    <string name="ai_add_more">Add to the package</string>
+    <string name="ai_buying">Buying...</string>
+    <string name="ai_confirm_buy">Buy \u201c%1$s\u201d for %2$d from your balance?</string>
+    <string name="ai_no_packages">No packages available right now</string>
+    <string name="ai_plans_note">The package uses are spent first, then your free uses, then you pay per use. Buying a package while you have one running adds the days and uses to it.</string>
 </resources>

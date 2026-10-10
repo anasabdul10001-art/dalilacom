@@ -105,7 +105,7 @@ private val COLORS = listOf(
 
 /** The window over the screen with the photo and what can be done to it. */
 @Composable
-fun PhotoEditDialog(editor: PhotoEditor) {
+fun PhotoEditDialog(editor: PhotoEditor, onOpenPlans: () -> Unit = {}) {
     val s by editor.state.collectAsState()
     val url = s.url ?: return
     val q = s.quota
@@ -125,6 +125,7 @@ fun PhotoEditDialog(editor: PhotoEditor) {
                 }
                 if (q != null) Text(
                     "✨ " + when {
+                        (q.subscription?.left ?: 0) > 0 -> stringResource(R.string.ai_sub_left, q.subscription!!.left, q.subscription.uses, q.subscription.endDate.take(10))
                         q.freeLeft > 0 -> stringResource(R.string.ai_free_left, q.freeLeft, q.freePerMonth)
                         q.creditsPerUse > 0 -> stringResource(R.string.ai_paid_per, q.creditsPerUse, q.balance)
                         else -> stringResource(R.string.ai_no_more)
@@ -145,6 +146,7 @@ fun PhotoEditDialog(editor: PhotoEditor) {
                         ) {}
                     }
                 }
+                TextButton(onClick = { editor.close(); onOpenPlans() }, modifier = Modifier.fillMaxWidth()) { Text("📦  " + stringResource(R.string.ai_plans_title)) }
                 if (canUndo) OutlinedButton(onClick = { editor.undo() }, enabled = !s.busy, modifier = Modifier.fillMaxWidth()) { Text("↩️  " + stringResource(R.string.ai_undo)) }
             }
         },

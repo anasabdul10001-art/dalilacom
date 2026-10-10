@@ -346,6 +346,12 @@ interface ApiService {
     @GET("products/ai-quota")
     suspend fun aiQuota(): Response<AiQuotaDto>
 
+    @GET("products/ai-packages")
+    suspend fun aiPackages(): Response<AiPackagesDto>
+
+    @POST("products/ai-subscribe")
+    suspend fun aiSubscribe(@Body body: AiSubscribeRequest): Response<AiSubscribeResponse>
+
     @GET("orders/mine")
     suspend fun getMyOrders(): Response<List<OrderDto>>
 

@@ -109,6 +109,49 @@ describe("the allowance of AI uses", () => {
     expect((await edit(other, photo.id, { action: "clean" })).status).toBe(404);
   });
 
+  it("sells a monthly package at a fixed price: its uses come first, buying again adds to it", async () => {
+    const s = await shop();
+    process.env.GEMINI_API_KEY = "test-gemini-key";
+    await aiPaints();
+    const photo = await upload(s);
+    await prisma.aiUse.createMany({ data: Array.from({ length: 10 }, () => ({ userId: s.id, kind: "photo:white_bg" })) }); // the free ones are gone
+
+    const list = (await request(app).get("/products/ai-packages").set(s.auth)).body;
+    expect(list.packages.map((p: { id: string }) => p.id)).toEqual(["basic", "pro"]);
+    expect(list.quota.subscription).toBeNull();
+
+    // not enough money: refused, nothing bought
+    expect((await request(app).post("/products/ai-subscribe").set(s.auth).send({ packageId: "basic" })).status).toBe(402);
+    expect((await request(app).post("/products/ai-subscribe").set(s.auth).send({ packageId: "nope-pack" })).status).toBe(404);
+
+    await prisma.wallet.upsert({ where: { userId: s.id }, update: { balance: 4000 }, create: { userId: s.id, balance: 4000 } });
+    const bought = await request(app).post("/products/ai-subscribe").set(s.auth).send({ packageId: "basic" });
+    expect(bought.status).toBe(201);
+    expect(bought.body.quota.subscription).toMatchObject({ name: "الباقة الأساسية", uses: 100, used: 0, left: 100 });
+    expect((await prisma.wallet.findUnique({ where: { userId: s.id } }))!.balance).toBe(4000 - 1500);
+
+    // an edit now spends a package use, not money
+    const edited = await edit(s, photo.id, { action: "white_bg" });
+    expect(edited.status).toBe(201);
+    expect(edited.body.quota.subscription).toMatchObject({ used: 1, left: 99 });
+    expect((await prisma.wallet.findUnique({ where: { userId: s.id } }))!.balance).toBe(2500);
+
+    // buying again while it runs adds the days and the uses to the same package
+    const before = (await prisma.aiSubscription.findFirst({ where: { userId: s.id } }))!;
+    await prisma.wallet.update({ where: { userId: s.id }, data: { balance: 6500 } });
+    expect((await request(app).post("/products/ai-subscribe").set(s.auth).send({ packageId: "pro" })).status).toBe(201);
+    const after = await prisma.aiSubscription.findMany({ where: { userId: s.id } });
+    expect(after).toHaveLength(1);
+    expect(after[0].uses).toBe(100 + 400);
+    expect(after[0].endDate.getTime() - before.endDate.getTime()).toBe(30 * 86_400_000);
+
+    // when the package is used up, it falls back to paying per use
+    await prisma.aiSubscription.update({ where: { id: after[0].id }, data: { uses: 1 } });
+    const next = await edit(s, photo.id, { action: "studio" });
+    expect(next.status).toBe(201);
+    expect((await prisma.wallet.findUnique({ where: { userId: s.id } }))!.balance).toBe(6500 - 4000 - 5);
+  });
+
   it("is set by the admin, and a description from a photo is one of the uses", async () => {
     const admin = uniqueEmail("aiadmin");
     await request(app).post("/auth/register").send({ email: admin, password, fullName: "Admin" });
@@ -119,7 +162,11 @@ describe("the allowance of AI uses", () => {
     try {
       const put = await request(app).put("/admin/settings").set(auth).send({ ai: { freePerMonth: 3, creditsPerUse: 8 } });
       expect(put.status).toBe(200);
-      expect(put.body.ai).toEqual({ freePerMonth: 3, creditsPerUse: 8 });
+      expect(put.body.ai).toMatchObject({ freePerMonth: 3, creditsPerUse: 8 });
+      const packs = await request(app).put("/admin/settings").set(auth).send({ ai: { packages: [{ id: "gold", name: "ذهبية", days: 30, uses: 50, credits: 900 }] } });
+      expect(packs.status).toBe(200);
+      expect(packs.body.ai.packages).toEqual([{ id: "gold", name: "ذهبية", days: 30, uses: 50, credits: 900 }]);
+      expect((await request(app).put("/admin/settings").set(auth).send({ ai: { packages: [{ id: "BAD ID", name: "x", days: 0, uses: 0, credits: -1 }] } })).status).toBe(400);
       const s = await shop();
       expect((await request(app).get("/products/ai-quota").set(s.auth)).body).toMatchObject({ freePerMonth: 3, freeLeft: 3, creditsPerUse: 8 });
       expect((await request(app).get("/products/ai-quota")).status).toBe(401);

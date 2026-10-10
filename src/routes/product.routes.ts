@@ -8,7 +8,8 @@ import { sniffImageMime } from "../lib/image";
 import { enhanceProductPhoto } from "../lib/photoEnhance";
 import sharp from "sharp";
 import { PHOTO_COLORS, editPhotoWithAi, imageEditAvailable, instructionFor } from "../services/aiImage.service";
-import { aiQuotaFor, ensureCanUseAi, recordAiUse } from "../services/aiQuota.service";
+import { aiQuotaFor, buyAiPackage, ensureCanUseAi, recordAiUse } from "../services/aiQuota.service";
+import { getSettings } from "../services/settings.service";
 import { route } from "../lib/asyncRoute";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
@@ -116,6 +117,26 @@ productRouter.post("/photos/:id/enhance", requireAuth, requireRole(Role.MERCHANT
 /** What the shop has left of its free AI uses this month, and what a use costs after that. */
 productRouter.get("/ai-quota", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   res.json({ ...(await aiQuotaFor(req.user!.id)), photoEdit: imageEditAvailable(), describe: visionAvailable() });
+}));
+
+/** The monthly packages a shop can buy, and the one it has now. */
+productRouter.get("/ai-packages", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const [settings, quota] = await Promise.all([getSettings(), aiQuotaFor(req.user!.id)]);
+  res.json({ packages: settings.ai.packages, quota });
+}));
+
+productRouter.post("/ai-subscribe", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const parsed = z.object({ packageId: z.string().min(2).max(30) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const found = await getOwnApprovedMerchant(req.user!.id);
+  if ("error" in found) return sendError(res, 403, "FORBIDDEN", found.error ?? "Forbidden");
+  try {
+    await buyAiPackage(req.user!.id, parsed.data.packageId);
+  } catch (err) {
+    if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
+    throw err;
+  }
+  res.status(201).json({ quota: await aiQuotaFor(req.user!.id) });
 }));
 
 const editSchema = z.object({ action: z.enum(["clean", "white_bg", "studio", "recolor"]), color: z.enum(PHOTO_COLORS).optional() }).refine((d) => d.action !== "recolor" || !!d.color, { message: "color is required" });

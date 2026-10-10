@@ -741,6 +741,21 @@ data class MyAdDto(
 data class SpecDto(val label: String, val value: String)
 
 @Serializable
+data class AiSubscriptionDto(val name: String, val uses: Int = 0, val used: Int = 0, val left: Int = 0, val endDate: String = "")
+
+@Serializable
+data class AiPackageDto(val id: String, val name: String, val days: Int = 30, val uses: Int = 0, val credits: Int = 0)
+
+@Serializable
+data class AiPackagesDto(val packages: List<AiPackageDto> = emptyList(), val quota: AiQuotaDto = AiQuotaDto())
+
+@Serializable
+data class AiSubscribeRequest(val packageId: String)
+
+@Serializable
+data class AiSubscribeResponse(val quota: AiQuotaDto = AiQuotaDto())
+
+@Serializable
 data class AiQuotaDto(
     val freePerMonth: Int = 0,
     val used: Int = 0,
@@ -749,6 +764,7 @@ data class AiQuotaDto(
     val balance: Int = 0,
     val photoEdit: Boolean = true,
     val describe: Boolean = true,
+    val subscription: AiSubscriptionDto? = null,
 )
 
 /** action: clean | white_bg | studio | recolor (with a colour). */

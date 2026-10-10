@@ -160,6 +160,9 @@ fun DalilacomNavGraph(
                 onLogin = { navController.navigate("login") },
             )
         }
+        composable("aiPlans") {
+            com.dalilacom.app.ui.store.AiPlansScreen(container = container, onBack = { navController.popBackStack() }, onWallet = { navController.navigate("wallet") })
+        }
         composable("shipping") {
             com.dalilacom.app.ui.merchantmode.ShippingScreen(container = container, onBack = { navController.popBackStack() })
         }
@@ -178,7 +181,7 @@ fun DalilacomNavGraph(
             )
         }
         composable("productWizard") {
-            ProductWizardScreen(container = container, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") }, onOpenShipping = { navController.navigate("shipping") }, onBackToShop = { navController.popBackStack("merchantMode", inclusive = false) }, onBackToAccount = { navController.popBackStack("home", inclusive = false) })
+            ProductWizardScreen(container = container, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") }, onOpenShipping = { navController.navigate("shipping") }, onOpenAiPlans = { navController.navigate("aiPlans") }, onBackToShop = { navController.popBackStack("merchantMode", inclusive = false) }, onBackToAccount = { navController.popBackStack("home", inclusive = false) })
         }
         composable("adBook?kind={kind}", arguments = listOf(androidx.navigation.navArgument("kind") { defaultValue = "space" })) { entry ->
             AdBookScreen(container = container, kind = entry.arguments?.getString("kind") ?: "space", onBack = { navController.popBackStack() }, onWallet = { navController.navigate("wallet") }, onMyAds = { navController.navigate("myAds") })
@@ -274,6 +277,7 @@ fun DalilacomNavGraph(
                 onSaved = { navController.popBackStack() },
                 onBack = { navController.popBackStack() },
                 onOpenShipping = { navController.navigate("shipping") },
+                onOpenAiPlans = { navController.navigate("aiPlans") },
             )
         }
     }

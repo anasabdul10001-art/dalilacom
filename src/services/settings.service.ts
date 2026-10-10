@@ -19,6 +19,15 @@ export interface AdSettings {
   bannerSeconds: number;
 }
 
+/** A monthly AI package a shop can buy: a fixed price in wallet credits for a number of uses over some days. */
+export interface AiPackage {
+  id: string;
+  name: string;
+  days: number;
+  uses: number;
+  credits: number;
+}
+
 export interface PlatformSettings {
   creditName: string;
   creditsPerUsd: number;
@@ -43,7 +52,7 @@ export interface PlatformSettings {
   };
   ads: AdSettings;
   /** The AI for shops (descriptions from photos, photo editing): free uses per month, then a price in wallet credits. */
-  ai: { freePerMonth: number; creditsPerUse: number };
+  ai: { freePerMonth: number; creditsPerUse: number; packages: AiPackage[] };
 }
 
 export const DEFAULT_SETTINGS: PlatformSettings = {
@@ -67,7 +76,14 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
     autoApprove: false,
     bannerSeconds: 5,
   },
-  ai: { freePerMonth: 10, creditsPerUse: 5 },
+  ai: {
+    freePerMonth: 10,
+    creditsPerUse: 5,
+    packages: [
+      { id: "basic", name: "الباقة الأساسية", days: 30, uses: 100, credits: 1500 },
+      { id: "pro", name: "الباقة الاحترافية", days: 30, uses: 400, credits: 4000 },
+    ],
+  },
 };
 
 export async function getSettings(): Promise<PlatformSettings> {

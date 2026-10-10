@@ -45,6 +45,7 @@ fun ProductEditScreen(
     onSaved: () -> Unit,
     onBack: () -> Unit,
     onOpenShipping: () -> Unit = {},
+    onOpenAiPlans: () -> Unit = {},
 ) {
     val viewModel: ProductEditViewModel = viewModel(
         factory = viewModelFactory {
@@ -59,7 +60,7 @@ fun ProductEditScreen(
     }
 
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
-    com.dalilacom.app.ui.store.PhotoEditDialog(viewModel.editor)
+    com.dalilacom.app.ui.store.PhotoEditDialog(viewModel.editor, onOpenAiPlans)
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }

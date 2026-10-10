@@ -715,4 +715,18 @@
     <string name="ai_paid_per">انتهت الاستخدامات المجانية: كل استخدام بـ %1$d من رصيدك (رصيدك %2$d)</string>
     <string name="ai_no_more">انتهت استخداماتك المجانية هالشهر</string>
     <string name="ai_unavailable">التعديل بالذكاء الاصطناعي غير متاح حاليًا، بس التنظيف السريع شغّال.</string>
+    <string name="ai_plans_title">باقات الذكاء الاصطناعي</string>
+    <string name="ai_plans_sub">اشترك بباقة شهرية بسعر ثابت: عدد استخدامات مضمون لوصف المنتجات وتعديل الصور.</string>
+    <string name="ai_no_plan">ما عندك باقة شغّالة. عندك استخدامات مجانية كل شهر، وبعدها الدفع لكل استخدام.</string>
+    <string name="ai_sub_left">باقي %1$d من %2$d استخدام بباقتك حتى %3$s</string>
+    <string name="ai_balance_line">رصيدك: %1$d</string>
+    <string name="ai_top_up">اشحن المحفظة</string>
+    <string name="ai_price">%1$d من الرصيد</string>
+    <string name="ai_pack_line">%1$d استخدام لمدة %2$d يوم</string>
+    <string name="ai_buy">اشترك</string>
+    <string name="ai_add_more">أضف للباقة</string>
+    <string name="ai_buying">عم نشتري...</string>
+    <string name="ai_confirm_buy">تشتري «%1$s» بـ %2$d من رصيدك؟</string>
+    <string name="ai_no_packages">ما في باقات متاحة هلأ</string>
+    <string name="ai_plans_note">استخدامات الباقة بتنصرف أول، وبعدها استخداماتك المجانية، وبعدها الدفع لكل استخدام. شراء باقة وأنت عندك باقة شغّالة بيضيف الأيام والاستخدامات عليها.</string>
 </resources>

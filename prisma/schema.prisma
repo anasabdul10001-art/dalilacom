@@ -1484,8 +1484,23 @@ model AiUse {
   id        String   @id @default(uuid())
   userId    String
   kind      String
-  credits   Int      @default(0) // what it cost; 0 = it was one of the free uses
+  credits   Int      @default(0) // what it cost; 0 = it was a free use or part of a package
+  subscriptionId String? // set when a monthly package paid for it
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// A shop's monthly AI package (fixed price, a number of uses, a period): bought from the wallet, extended by buying again.
+model AiSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  packageId String
+  name      String
+  uses      Int // uses included in the period bought so far
+  startDate DateTime @default(now())
+  endDate   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId, endDate])
 }

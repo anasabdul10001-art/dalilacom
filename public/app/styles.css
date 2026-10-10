@@ -1368,3 +1368,5 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .pm-colors > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .pm-dot { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(0, 0, 0, 0.18); cursor: pointer; }
 .pm-dot:disabled { opacity: 0.45; }
+.ai-current { border-color: var(--primary); }
+.ai-pack .btn { margin-top: 4px; }

@@ -292,6 +292,7 @@ function renderScreen() {
     case "merchantRegister": return screenMerchantRegister();
     case "merchantMode": return screenMerchantModeShell();
     case "shippingMethods": return screenShipping();
+    case "aiPlans": return screenAiPlans();
     case "productEdit": return screenProductEdit();
     case "affiliateMine": return screenAffiliateMine();
     case "wallet": return screenWallet();
@@ -2346,7 +2347,7 @@ function screenProductWizard() {
   return `${head}
     <h1 class="screen-title">${esc(t("wiz.reviewTitle"))}</h1>
     ${w.aiAvailable === false ? `<div class="info-banner">${esc(t("wiz.noAi"))}</div>` : `<p class="screen-sub">${esc(t("wiz.reviewSub"))}</p>`}
-    ${w.quota ? `<p class="muted" style="font-size:12px;margin:0 0 8px">✨ ${esc(w.quota.freeLeft > 0 ? t("ai.freeLeft", { n: w.quota.freeLeft, total: w.quota.freePerMonth }) : w.quota.creditsPerUse > 0 ? t("ai.paidPer", { n: w.quota.creditsPerUse, balance: w.quota.balance }) : t("ai.noMore"))}</p>` : ""}
+    ${w.quota ? `<p class="muted" style="font-size:12px;margin:0 0 8px">✨ ${esc(w.quota.subscription && w.quota.subscription.left > 0 ? t("ai.subLeft", { n: w.quota.subscription.left, total: w.quota.subscription.uses, date: new Date(w.quota.subscription.endDate).toLocaleDateString(LANG, { day: "numeric", month: "short" }) }) : w.quota.freeLeft > 0 ? t("ai.freeLeft", { n: w.quota.freeLeft, total: w.quota.freePerMonth }) : w.quota.creditsPerUse > 0 ? t("ai.paidPer", { n: w.quota.creditsPerUse, balance: w.quota.balance }) : t("ai.noMore"))}</p>` : ""}
     <div class="wiz-top">${w.photos.slice(0, 4).map((p) => `<img src="${esc(p.preview)}" alt="">`).join("")}</div>
 
     <div class="field"><label>${esc(t("wiz.name"))}</label>
@@ -2410,6 +2411,54 @@ function backToAccount() {
   reset("home");
 }
 
+/* ---- monthly AI packages: a fixed price for a number of uses ---- */
+
+async function openAiPlans() {
+  S._aip = { loading: true, packages: [], quota: null, busy: null, error: null };
+  go("aiPlans");
+  const { ok, data } = await api("GET", "/products/ai-packages");
+  S._aip.loading = false;
+  if (ok) { S._aip.packages = data.packages; S._aip.quota = data.quota; }
+  else S._aip.error = errMsg(data, t("photo.failed"));
+  render();
+}
+
+function screenAiPlans() {
+  if (!S._aip) { openAiPlans(); return spinner(); }
+  const f = S._aip;
+  if (f.loading) return `${backRow()}<h1 class="screen-title">${esc(t("ai.plansTitle"))}</h1>${spinner()}`;
+  const q = f.quota;
+  const sub = q && q.subscription;
+  const day = (iso) => new Date(iso).toLocaleDateString(LANG, { day: "numeric", month: "short", year: "numeric" });
+  return `
+    ${backRow()}
+    <h1 class="screen-title">✨ ${esc(t("ai.plansTitle"))}</h1>
+    <p class="screen-sub">${esc(t("ai.plansSub"))}</p>
+    ${sub ? `<div class="card ai-current"><b>${esc(sub.name)}</b><p style="margin:4px 0 0">${esc(t("ai.subLeft", { n: sub.left, total: sub.uses, date: day(sub.endDate) }))}</p></div>` : `<div class="info-banner">${esc(t("ai.noPlan"))}</div>`}
+    ${q ? `<p class="muted">${esc(t("ai.balanceLine", { n: q.balance }))} · <a onclick="S._wallet=null;go('wallet')">${esc(t("ai.topUp"))}</a></p>` : ""}
+    ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}
+    ${f.packages.map((p) => `
+      <div class="card ai-pack">
+        <div class="title-line"><strong>${esc(LANG === "ar" ? p.name : t("ai.pkg." + p.id) === "ai.pkg." + p.id ? p.name : t("ai.pkg." + p.id))}</strong><span class="price" style="color:var(--primary)">${esc(t("ai.price", { n: p.credits }))}</span></div>
+        <p class="muted" style="margin:6px 0">${esc(t("ai.packLine", { uses: p.uses, days: p.days }))}</p>
+        <button class="btn" ${f.busy ? "disabled" : ""} onclick="buyAiPackage('${p.id}')">${esc(f.busy === p.id ? t("ai.buying") : sub ? t("ai.addMore") : t("ai.buy"))}</button>
+      </div>`).join("")}
+    ${f.packages.length === 0 ? `<div class="empty-state">${esc(t("ai.noPackages"))}</div>` : ""}
+    <p class="muted" style="font-size:12px">${esc(t("ai.plansNote"))}</p>`;
+}
+
+async function buyAiPackage(id) {
+  const f = S._aip;
+  const pack = f.packages.find((p) => p.id === id);
+  if (!pack || !confirm(t("ai.confirmBuy", { name: pack.name, n: pack.credits }))) return;
+  f.busy = id; f.error = null; render();
+  const { ok, data } = await api("POST", "/products/ai-subscribe", { packageId: id });
+  f.busy = null;
+  if (ok) { f.quota = data.quota; S._pm = null; toast(t("ai.bought")); }
+  else f.error = errMsg(data, t("photo.failed"));
+  render();
+}
+
 /* ---- editing a product photo: tidy it, remove the background, studio light, change the colour — and go back ---- */
 
 const PHOTO_COLORS = { red: "#d32f2f", blue: "#1976d2", green: "#2e7d32", black: "#111111", white: "#f5f5f5", gold: "#d4af37", silver: "#b0b7bd", pink: "#ec7fa9", purple: "#7b3fa0", orange: "#f57c00", yellow: "#f2c200", brown: "#7b4a2d", gray: "#8a8a8a", beige: "#d9c3a0", navy: "#1b2a5a" };
@@ -2470,7 +2519,7 @@ function photoMenuHtml() {
   const q = m.quota;
   const aiOff = q && q.photoEdit === false;
   const hasUndo = ((S._photoHist || {})[m.url] || []).length > 0;
-  const quotaLine = !q ? "" : q.freeLeft > 0 ? t("ai.freeLeft", { n: q.freeLeft, total: q.freePerMonth }) : q.creditsPerUse > 0 ? t("ai.paidPer", { n: q.creditsPerUse, balance: q.balance }) : t("ai.noMore");
+  const quotaLine = !q ? "" : q.subscription && q.subscription.left > 0 ? t("ai.subLeft", { n: q.subscription.left, total: q.subscription.uses, date: new Date(q.subscription.endDate).toLocaleDateString(LANG, { day: "numeric", month: "short" }) }) : q.freeLeft > 0 ? t("ai.freeLeft", { n: q.freeLeft, total: q.freePerMonth }) : q.creditsPerUse > 0 ? t("ai.paidPer", { n: q.creditsPerUse, balance: q.balance }) : t("ai.noMore");
   const btn = (label, fn, ai) => `<button class="pm-act" ${m.busy || (ai && aiOff) ? "disabled" : ""} onclick="${fn}">${label}</button>`;
   return `
     <div class="pm-overlay" onclick="closePhotoMenu()">
@@ -2487,6 +2536,7 @@ function photoMenuHtml() {
           <div>${Object.entries(PHOTO_COLORS).map(([k, hex]) => `<button class="pm-dot" style="background:${hex}" title="${esc(t("color." + k))}" aria-label="${esc(t("color." + k))}" ${m.busy || aiOff ? "disabled" : ""} onclick="photoDo('recolor','${k}')"></button>`).join("")}</div>
         </div>
         ${hasUndo ? `<button class="pm-act pm-undo" ${m.busy ? "disabled" : ""} onclick="photoUndo()">↩️ ${esc(t("ai.undo"))}</button>` : ""}
+        <button class="link-btn" style="display:block;margin:8px auto" onclick="S._pm=null;openAiPlans()">📦 ${esc(t("ai.plansTitle"))}</button>
         <button class="btn" onclick="closePhotoMenu()">${esc(t("ai.done"))}</button>
       </div>
     </div>`;
@@ -4718,6 +4768,7 @@ function tabCatalog() {
       <button class="btn outline" onclick="S._hours=null;go('merchantHours')">🕒 ساعات العمل</button>
     </div>
     <button class="btn outline" style="margin-bottom:12px" onclick="openShipping()">🚚 ${esc(t("ship.title"))}</button>
+    <button class="btn outline" style="margin-bottom:12px" onclick="openAiPlans()">✨ ${esc(t("ai.plansTitle"))}</button>
     <div class="card">
       <div class="section-title" style="margin-top:0">${esc(t("disc.title"))}</div>
       ${(c.discounts || []).length ? c.discounts.map((d) => `<p style="color:var(--primary)">🏷️ ${esc(d.title)} — ${d.percent}%</p>`).join("") : `<p class="muted">${esc(t("disc.none"))}</p>`}

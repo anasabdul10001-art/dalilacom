@@ -214,7 +214,7 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
 }
 
 @Composable
-fun ProductWizardScreen(container: AppContainer, onBack: () -> Unit, onManual: () -> Unit, onOpenProduct: (String) -> Unit, onOpenShipping: () -> Unit = {}, onBackToShop: () -> Unit = {}, onBackToAccount: () -> Unit = {}) {
+fun ProductWizardScreen(container: AppContainer, onBack: () -> Unit, onManual: () -> Unit, onOpenProduct: (String) -> Unit, onOpenShipping: () -> Unit = {}, onBackToShop: () -> Unit = {}, onBackToAccount: () -> Unit = {}, onOpenAiPlans: () -> Unit = {}) {
     val vm: ProductWizardViewModel = viewModel(factory = viewModelFactory { initializer { ProductWizardViewModel(container.storeRepository, container.productRepository, container.merchantRepository) } })
     val ui by vm.ui.collectAsState()
     val context = LocalContext.current
@@ -242,7 +242,7 @@ fun ProductWizardScreen(container: AppContainer, onBack: () -> Unit, onManual: (
         runCatching { speech.launch(intent) }.onFailure { Toast.makeText(context, context.getString(R.string.wiz_no_voice), Toast.LENGTH_SHORT).show() }
     }
 
-    PhotoEditDialog(vm.editor)
+    PhotoEditDialog(vm.editor, onOpenAiPlans)
     val stepNo = when (ui.step) { "photos" -> 1; "analyzing" -> 2; else -> 3 }
     Column(Modifier.fillMaxSize()) {
         TextButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) { Text("‹  " + stringResource(R.string.store_back)) }
