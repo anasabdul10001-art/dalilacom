@@ -5,7 +5,7 @@ import express, { Router } from "express";
 import { z } from "zod";
 import { ChannelDriver, Prisma, Role, TopUpStatus } from "@prisma/client";
 import { prisma } from "../prisma";
-import { sendError, sendValidationError } from "../lib/apiError";
+import { ApiError, sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { addDemoStore, removeDemoStore } from "../services/demoStore.service";
 import { adState, approveAd, linkBannerToBooking, markBannerContacted, rejectAd, rejectBannerBooking } from "../services/ads.service";
@@ -17,6 +17,7 @@ import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
 import { aiProviderStatus, aiTotals, aiUsage, testProvider } from "../services/ai.service";
+import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion } from "../services/categorySuggestion.service";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole(Role.ADMIN));
@@ -88,6 +89,55 @@ const settingsSchema = z.object({
     })
     .optional(),
 });
+
+/* ---------------- professions the shops proposed ---------------- */
+
+adminRouter.get("/category-suggestions", route(async (req, res) => {
+  const status = z.enum(["PENDING", "APPROVED", "MERGED", "REJECTED"]).catch("PENDING").parse(req.query.status);
+  res.json(await listSuggestions(status));
+}));
+
+const approveSuggestionSchema = z.object({
+  nameAr: z.string().trim().min(2).max(60),
+  nameEn: z.string().trim().max(80).optional(),
+  parentId: z.string().uuid().nullable().optional(),
+  icon: z.string().max(8).nullable().optional(),
+  synonyms: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
+});
+
+adminRouter.post("/category-suggestions/:id/approve", route(async (req, res) => {
+  const parsed = approveSuggestionSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    res.json(await approveSuggestion(req.params.id, parsed.data));
+  } catch (err) {
+    if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
+    throw err;
+  }
+}));
+
+adminRouter.post("/category-suggestions/:id/merge", route(async (req, res) => {
+  const parsed = z.object({ categoryId: z.string().uuid() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    res.json(await mergeSuggestion(req.params.id, parsed.data.categoryId));
+  } catch (err) {
+    if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
+    throw err;
+  }
+}));
+
+adminRouter.post("/category-suggestions/:id/reject", route(async (req, res) => {
+  const parsed = z.object({ reason: z.string().trim().max(200).default("") }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    await rejectSuggestion(req.params.id, parsed.data.reason);
+  } catch (err) {
+    if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
+    throw err;
+  }
+  res.json({ ok: true });
+}));
 
 adminRouter.get("/settings", async (_req, res) => {
   res.json(await getSettings());

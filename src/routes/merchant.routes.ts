@@ -2,6 +2,7 @@ import { Router } from "express";
 import { shopStanding } from "./reviews.routes";
 import { discountScopeInfo, discountState, liveDiscountWhere, peopleLeftMap, timesLeftMap } from "../lib/discounts";
 import { optionalUserId } from "../services/viewerCountry.service";
+import { createSuggestion } from "../services/categorySuggestion.service";
 import { notify } from "../services/notification.service";
 import { z } from "zod";
 import { MerchantApprovalStatus, Prisma, Role } from "@prisma/client";
@@ -32,6 +33,8 @@ const registerMerchantSchema = z
     ...coordinates,
     phone: z.string().optional(),
     whatsapp: z.string().optional(),
+    /** The shop could not find its profession: the one it proposes (it sits under the closest one it picked until the admin decides). */
+    suggestedCategory: z.string().trim().min(2).max(60).optional(),
   })
   .refine(bothOrNeitherCoordinate, { message: "latitude and longitude must be provided together" });
 
@@ -59,19 +62,32 @@ merchantRouter.post("/register", requireAuth, async (req, res) => {
   const defaultCountry = await getDefaultCountry();
 
   const merchant = await prisma.$transaction(async (tx) => {
+    const { suggestedCategory: _suggested, ...fields } = parsed.data;
     const profile = await tx.merchantProfile.create({
-      data: { userId: req.user!.id, ...parsed.data },
+      data: { userId: req.user!.id, ...fields },
     });
     await tx.user.update({ where: { id: req.user!.id }, data: { role: Role.MERCHANT } });
     await createBusinessFromMerchantProfile(tx, profile, defaultCountry.id);
     return profile;
   });
 
+  if (parsed.data.suggestedCategory) await createSuggestion(merchant.id, req.user!.id, parsed.data.suggestedCategory, parsed.data.categoryId);
+
   res.status(201).json({
     id: merchant.id,
     businessName: merchant.businessName,
     approvalStatus: merchant.approvalStatus,
   });
+});
+
+// A shop that cannot find its profession proposes one (it stays under the closest profession it chose until the admin decides).
+merchantRouter.post("/category-suggestions", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(2).max(60) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  const row = await createSuggestion(merchant.id, req.user!.id, parsed.data.name, merchant.categoryId);
+  res.status(201).json({ id: row.id, name: row.name, status: row.status });
 });
 
 merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
@@ -83,9 +99,11 @@ merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, r
     return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   }
   const { _count, ...profile } = withOwnerProfile(merchant);
+  const suggestion = await prisma.categorySuggestion.findFirst({ where: { merchantId: merchant.id }, orderBy: { createdAt: "desc" }, select: { name: true, status: true, note: true } });
   // What still stands between this merchant and being found on the map — drives the setup checklist.
   res.json({
     ...profile,
+    categorySuggestion: suggestion,
     onboarding: {
       approved: merchant.approvalStatus === "APPROVED",
       location: merchant.latitude !== null && merchant.longitude !== null,

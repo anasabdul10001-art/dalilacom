@@ -1507,3 +1507,27 @@ model AiSubscription {
 
   @@index([userId, endDate])
 }
+
+enum CategorySuggestionStatus {
+  PENDING
+  APPROVED // became a new profession
+  MERGED // was added to a profession that already exists
+  REJECTED
+}
+
+/// A shop that could not find its profession in the list and proposed one; the admin accepts, edits or merges it.
+model CategorySuggestion {
+  id         String                   @id @default(uuid())
+  merchantId String
+  userId     String
+  name       String
+  nearestId  String? // the closest profession the shop picked meanwhile (where it sits until the admin decides)
+  status     CategorySuggestionStatus @default(PENDING)
+  categoryId String? // where it ended up: the new profession, or the one it was merged into
+  note       String? // the admin's reason when refused
+  createdAt  DateTime                 @default(now())
+  resolvedAt DateTime?
+
+  @@index([status, createdAt])
+  @@index([merchantId])
+}
