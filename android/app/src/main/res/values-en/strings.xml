@@ -730,4 +730,16 @@
     <string name="ai_auto_renew_off">It will not renew: when it ends you need to buy again.</string>
     <string name="hours_always">Open all the time (24 hours)</string>
     <string name="hours_day24">Open 24 hours this day</string>
+    <string name="cat_search">Find your profession</string>
+    <string name="cat_search_ph">Type your profession: gym, barber, plumber, coach, online seller...</string>
+    <string name="cat_no_hit">Nothing found with that name, try another word or choose from the lists below</string>
+    <string name="cat_or_browse">Or choose from the lists:</string>
+    <string name="cat_not_found">Can\'t find my profession? Suggest it</string>
+    <string name="cat_sug_ph">Write your profession\'s name</string>
+    <string name="cat_sug_note">Pick the closest profession from the lists above. Your shop works under it, and the team reviews your suggestion and adds it or moves you to an existing profession.</string>
+    <string name="cat_sug_send">Send the suggestion</string>
+    <string name="cat_sug_sent">Your suggestion reached the team ✓</string>
+    <string name="cat_sug_pending">Your suggestion “%1$s” is being reviewed</string>
+    <string name="cat_sug_rejected">Your suggestion “%1$s” was not accepted</string>
+    <string name="cat_online_note">Your work is online, so you do not need to set a place on the map.</string>
 </resources>

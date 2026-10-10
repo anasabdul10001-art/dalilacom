@@ -2963,7 +2963,7 @@ function screenMerchantRegister() {
       <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="رقم الهاتف" value="${esc(m.phone || "")}" /></div>
       <div class="field"><label>واتساب (اختياري)</label><input id="mr-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
     </div>
-    ${pickerHtml()}
+    ${catIsOnline(m.categories, m.selectedCat) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     ${errorBanner()}
     <button class="btn" ${S.busy ? "disabled" : ""} onclick="submitMerchantRegister()">سجّل</button>
   `;
@@ -2991,14 +2991,17 @@ async function submitMerchantRegister() {
   const address = qs("mr-address").value.trim();
   const phone = qs("mr-phone").value.trim();
   const whatsapp = (qs("mr-whatsapp").value || "").replace(/\D/g, "");
-  const pin = S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
+  const online = catIsOnline(S._merchReg.categories, categoryId);
+  const pin = !online && S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
+  const proposed = S._catSugOpen && (S._catSug || "").trim().length >= 2 ? { suggestedCategory: S._catSug.trim() } : {};
   S.busy = true; render();
-  const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined, whatsapp: whatsapp || undefined, ...pin });
+  const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined, whatsapp: whatsapp || undefined, ...pin, ...proposed });
   S.busy = false;
   if (ok) {
     S.role = "MERCHANT";
     localStorage.setItem("dlk_role", "MERCHANT");
     S._merchReg = null;
+    S._catSug = ""; S._catSugOpen = false;
     S._onboarding = null;
     back();
   } else {
@@ -3088,13 +3091,15 @@ function screenMerchantProfile() {
     <h1 class="screen-title">بيانات المحل ومكانه</h1>
     <p class="screen-sub">هي اللي بتظهر للزبائن على الخريطة وبصفحة محلك</p>
     <div class="field"><label>اسم المحل</label><input id="mp-name" value="${esc(m.name || "")}" /></div>
-    ${categoryPickerHtml(m.categories || [], m.categoryId, "mprofCategory")}
+    ${m.suggestion && m.suggestion.status === "PENDING" ? `<div class="info-banner">${esc(t("cat.sugPending", { name: m.suggestion.name }))}</div>` : ""}
+    ${m.suggestion && m.suggestion.status === "REJECTED" ? `<div class="error-banner">${esc(t("cat.sugRejected", { name: m.suggestion.name }))}${m.suggestion.note ? " — " + esc(m.suggestion.note) : ""}</div>` : ""}
+    ${categoryPickerHtml(m.categories || [], m.categoryId, "mprofCategory", "sendCategorySuggestion()")}
     <div class="field"><label>العنوان</label><input id="mp-address" value="${esc(m.address || "")}" /></div>
     <div class="row">
       <div class="field"><label>الهاتف</label><input id="mp-phone" value="${esc(m.phone || "")}" /></div>
       <div class="field"><label>واتساب (مع رمز الدولة)</label><input id="mp-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
     </div>
-    ${pickerHtml()}
+    ${catIsOnline(m.categories || [], m.categoryId) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     ${errorBanner()}
     <button class="btn" onclick="saveMerchantProfile()">حفظ</button>
     ${m.msg ? `<p class="muted" style="text-align:center;margin-top:8px">${esc(m.msg)}</p>` : ""}
@@ -3104,7 +3109,7 @@ function screenMerchantProfile() {
 async function loadMerchantProfile() {
   const [me, cats] = await Promise.all([api("GET", "/merchant/me"), api("GET", "/categories?lang=" + LANG)]);
   const d = me.ok ? me.data : {};
-  S._mprof = { loading: false, name: d.businessName, categoryId: d.categoryId, address: d.address, phone: d.phone, whatsapp: d.whatsapp, categories: cats.ok ? cats.data : [], msg: "" };
+  S._mprof = { loading: false, suggestion: d.categorySuggestion || null, name: d.businessName, categoryId: d.categoryId, address: d.address, phone: d.phone, whatsapp: d.whatsapp, categories: cats.ok ? cats.data : [], msg: "" };
   pickReset(d.latitude != null ? d.latitude : null, d.longitude != null ? d.longitude : null);
   render();
 }
@@ -3113,13 +3118,22 @@ function snapshotMprof() {
   const m = S._mprof;
   [["name", "mp-name"], ["address", "mp-address"], ["phone", "mp-phone"], ["whatsapp", "mp-whatsapp"]].forEach(([k, id]) => { if (qs(id)) m[k] = qs(id).value; });
 }
+async function sendCategorySuggestion() {
+  const name = (S._catSug || "").trim();
+  if (name.length < 2) { toast(t("cat.sugNeed")); return; }
+  const { ok, data } = await api("POST", "/merchant/category-suggestions", { name });
+  if (ok) { S._catSug = ""; S._catSugOpen = false; S._mprof = null; toast(t("cat.sugSent")); }
+  else toast(errMsg(data, t("photo.failed")));
+  render();
+}
+
 function mprofCategory(id) { snapshotMprof(); S._mprof.categoryId = id; render(); }
 
 async function saveMerchantProfile() {
   snapshotMprof();
   const m = S._mprof;
   const body = { businessName: (m.name || "").trim(), ...(m.categoryId ? { categoryId: m.categoryId } : {}), address: (m.address || "").trim() || null, phone: (m.phone || "").trim() || null, whatsapp: (m.whatsapp || "").replace(/\D/g, "") || null };
-  if (S._pick && S._pick.lat != null) { body.latitude = S._pick.lat; body.longitude = S._pick.lng; }
+  if (S._pick && S._pick.lat != null && !catIsOnline(m.categories || [], m.categoryId)) { body.latitude = S._pick.lat; body.longitude = S._pick.lng; }
   S.error = null;
   const { ok, data } = await api("PATCH", "/merchant/me", body);
   m.msg = ok ? "✅ انحفظت بيانات المحل" : "";
@@ -4020,7 +4034,43 @@ function categoryChipsHtml(d) {
 
 // Section > profession > specialty as cascading selects, for the merchant forms. `pick(id)` receives the
 // most specific choice made so far ('' when cleared).
-function categoryPickerHtml(tree, selectedId, pick) {
+/** Is the chosen profession one that works online (the shop then needs no place on the map)? */
+function catIsOnline(tree, id) {
+  const e = id ? indexTree(tree).get(id) : null;
+  return !!(e && e.node.online);
+}
+
+let _catTimer = null;
+/** Types a few letters of the profession: the closest professions appear at once, with where each one sits. */
+function catSearch(q, pick) {
+  clearTimeout(_catTimer);
+  const box = document.getElementById("cat-hits");
+  if (!box) return;
+  if (q.trim().length < 2) { box.innerHTML = ""; return; }
+  _catTimer = setTimeout(async () => {
+    const { ok, data } = await api("GET", "/categories/search?q=" + encodeURIComponent(q.trim()) + "&lang=" + LANG);
+    const el = document.getElementById("cat-hits");
+    if (!el) return;
+    el.innerHTML = ok && data.length
+      ? data.map((h) => `<button type="button" class="cat-hit" onclick="catPickHit('${pick}','${h.id}')"><span>${esc((h.icon ? h.icon + " " : "") + h.name)}</span><small>${esc(h.path)}</small></button>`).join("")
+      : `<p class="muted" style="margin:6px 0">${esc(t("cat.noHit"))}</p>`;
+  }, 250);
+}
+function catPickHit(pick, id) { window[pick](id); }
+
+/** "I could not find my profession": the shop writes it, picks the closest one below, and the admin decides. */
+function catSuggestHtml(onSend) {
+  return `
+    <div class="cat-suggest">
+      <button type="button" class="link-btn" onclick="S._catSugOpen=!S._catSugOpen;render()">${esc(t("cat.notFound"))}</button>
+      ${S._catSugOpen ? `
+        <input id="cat-sug" value="${esc(S._catSug || "")}" maxlength="60" placeholder="${esc(t("cat.sugPh"))}" oninput="S._catSug=this.value" />
+        <p class="muted" style="margin:6px 0">${esc(t("cat.sugNote"))}</p>
+        ${onSend ? `<button type="button" class="btn small" onclick="${onSend}">${esc(t("cat.sugSend"))}</button>` : ""}` : ""}
+    </div>`;
+}
+
+function categoryPickerHtml(tree, selectedId, pick, onSend) {
   const index = indexTree(tree);
   const chain = [];
   for (let e = selectedId ? index.get(selectedId) : null; e; e = e.parent ? index.get(e.parent.id) : null) chain.unshift(e.node);
@@ -4039,7 +4089,10 @@ function categoryPickerHtml(tree, selectedId, pick) {
     parentId = chosen.id;
     options = chosen.children || [];
   }
-  return html;
+  const search = `<div class="field cat-search"><label>${esc(t("cat.search"))}</label>
+    <input id="cat-q" type="search" autocomplete="off" placeholder="${esc(t("cat.searchPh"))}" oninput="catSearch(this.value,'${pick}')" />
+    <div id="cat-hits" class="cat-hits"></div></div>`;
+  return search + `<div class="muted" style="font-size:12px;margin:-4px 0 6px">${esc(t("cat.orBrowse"))}</div>` + html + catSuggestHtml(onSend);
 }
 
 function toggleLangMenu() { S._langMenu = !S._langMenu; render(); }

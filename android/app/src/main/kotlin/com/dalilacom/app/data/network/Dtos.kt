@@ -195,8 +195,27 @@ data class CategoryDto(
     val slug: String,
     val icon: String? = null,
     val merchantCount: Int = 0,
+    /** Work done online: a shop in this profession needs no place on the map. */
+    val online: Boolean = false,
     val children: List<CategoryDto> = emptyList(),
 )
+
+/** One result of typing a profession: the profession and where it sits (section > profession). */
+@Serializable
+data class CategoryHitDto(
+    val id: String,
+    val name: String,
+    val path: String = "",
+    val icon: String? = null,
+    val online: Boolean = false,
+)
+
+/** A profession a shop proposed, and what the team decided. */
+@Serializable
+data class CategorySuggestionDto(val name: String, val status: String, val note: String? = null)
+
+@Serializable
+data class CategorySuggestRequest(val name: String)
 
 @Serializable
 data class DiscountSectionDto(val id: String, val name: String, val nameEn: String = "")
@@ -447,6 +466,7 @@ data class RegisterMerchantRequest(
     val whatsapp: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val suggestedCategory: String? = null,
 )
 
 @Serializable
@@ -524,6 +544,8 @@ data class MerchantMeDto(
     val discounts: List<DiscountDto> = emptyList(),
     val openingHours: Map<String, List<HourRangeDto>>? = null,
     val onboarding: OnboardingDto? = null,
+    val categorySuggestion: CategorySuggestionDto? = null,
+    val categoryOnline: Boolean = false,
 )
 
 /** What still stands between a merchant and being found on the map. */

@@ -85,7 +85,32 @@ export const DOCTOR_EXTRA: CategorySeed[] = [
 
 /* ---------- new sections ---------- */
 
+/** Works from home or from the phone: no shop to find on the map, so no place is asked for. */
+const online = (node: CategorySeed): CategorySeed => ({ ...node, online: true, children: node.children?.map(online) });
+
+export const ONLINE_SECTION: CategorySeed = online(
+  c("online", "البيع والعمل عبر الإنترنت (بدون مقر)", "Online sellers & remote work (no premises)", "🌐", "اونلاين|انترنت|بدون محل|من البيت|اون لاين|عبر الانترنت|سوشيال ميديا|فيسبوك|انستغرام", "online|internet|no shop|from home|social media|instagram|facebook", [
+    c("ol-store", "متجر إلكتروني", "Online store", "🛒", "متجر الكتروني|موقع بيع|متجر انترنت|بيع بالانترنت|ايكوميرس|توصيل لكل المحافظات", "online store|e-commerce|web shop|ecommerce"),
+    c("ol-social", "بيع عبر السوشيال ميديا", "Selling on social media", "📱", "فيسبوك|انستغرام|تيك توك|واتساب|بيع صفحة|صفحة بيع|ستوري|بيع عبر الصفحات|تلغرام", "facebook|instagram|tiktok|whatsapp|telegram|page seller|social selling"),
+    c("ol-handmade", "مشاريع منزلية ومنتجات يدوية", "Home projects & handmade", "🏡", "مشروع منزلي|شغل يدوي|منتجات يدوية|من البيت|صناعة منزلية|هاند ميد|اشغال", "home business|handmade|made at home|crafts"),
+    c("ol-food", "طبخ وحلويات منزلية بالطلب", "Home-cooked food & sweets on order", "🍰", "طبخ بيت|حلويات بيت|بالطلب|اكل بيتي|كيك بيت|مونة|عزايم|تورتات|وجبات", "home cooking|home bakery|on order|homemade food|cakes|meal prep"),
+    c("ol-clothing", "ملابس وإكسسوارات أونلاين", "Clothes & accessories online", "👗", "ملابس اونلاين|بيع ملابس|اكسسوارات|حقائب|احذية|اون لاين|بوتيك اونلاين", "online clothing|fashion|accessories|bags|shoes|online boutique"),
+    c("ol-electronics", "إلكترونيات وموبايلات أونلاين", "Electronics & phones online", "📱", "الكترونيات اونلاين|موبايلات|اكسسوارات موبايل|سماعات|شواحن|اجهزة", "online electronics|phones|phone accessories|headphones|chargers|gadgets"),
+    c("ol-cosmetics", "مكياج وعطور وعناية أونلاين", "Makeup, perfume & care online", "💄", "مكياج اونلاين|عطور|كريمات|عناية|بيع مستحضرات|مستحضرات تجميل", "online makeup|perfume|creams|care|cosmetics"),
+    c("ol-home", "أدوات منزلية وديكور أونلاين", "Home goods & decor online", "🏠", "اغراض منزلية|ديكور|مطبخ|اواني|مفروشات|هدايا|بيع اغراض", "home goods|decor|kitchenware|linen|gifts"),
+    c("ol-kids", "ألعاب وملابس أطفال أونلاين", "Toys & kids' items online", "🧸", "العاب اطفال|ملابس اطفال|مستلزمات بيبي|اطفال اونلاين", "toys|kids clothes|baby items|kids online"),
+    c("ol-dropship", "وسيط وتجارة بالعمولة (دروبشيبينغ)", "Reselling & dropshipping", "📦", "دروبشيبينغ|وسيط|تاجر شنطة|بيع بالعمولة|اعادة بيع|تسويق بالعمولة|سمسار", "dropshipping|reselling|middleman|commission selling|affiliate"),
+    c("ol-wholesale", "تجارة جملة أونلاين", "Wholesale online", "🏭", "جملة|تاجر جملة|توريد|بيع بالجملة|استيراد|مستورد", "wholesale|supplier|bulk|import|importer"),
+    c("ol-freelance", "خدمات عن بُعد وعمل حر", "Freelance & remote services", "💼", "عمل حر|فريلانسر|عن بعد|ريموت|تصميم|برمجة|ترجمة|كتابة محتوى|مونتاج|تسويق الكتروني", "freelance|remote|design|programming|translation|content writing|editing|digital marketing"),
+    c("ol-courses", "دورات ودروس أونلاين", "Online courses & lessons", "🎓", "دورات اونلاين|دروس اونلاين|تعليم عن بعد|زوم|مدرس اونلاين|كورسات|محاضرات", "online courses|online lessons|remote teaching|zoom|online tutor|lectures"),
+    c("ol-consult", "استشارات عن بُعد", "Remote consulting", "📞", "استشارات|استشارة|اونلاين|محامي اونلاين|طبيب اونلاين|مدرب اونلاين|كوتش", "consulting|consultation|online lawyer|online doctor|online coach"),
+    c("ol-digital", "منتجات رقمية وخدمات تقنية", "Digital products & tech services", "💾", "منتجات رقمية|اشتراكات|تطبيقات|حسابات|بطاقات|شحن العاب|برامج|قوالب", "digital products|subscriptions|apps|accounts|gift cards|game top-up|software|templates"),
+    c("ol-other", "أعمال أخرى عبر الإنترنت", "Other online work", "🧩", "اخرى|متنوع|عام|اونلاين", "other|misc|general|online"),
+  ]),
+);
+
 export const MORE_SECTIONS: CategorySeed[] = [
+  ONLINE_SECTION,
   c("services-home", "الخدمات المنزلية والصيانة", "Home services & repairs", "🛠️", "خدمات|صيانة|فني|تصليح|معلم|حرفي|مهنة", "services|repairs|handyman|technician|maintenance", [
     c("svc-plumber", "سباكة (مواسرجي)", "Plumber", "🚰", "سباك|سباكة|مواسرجي|تمديدات|صرف صحي|تسريب|مجاري|سخان", "plumber|plumbing|pipes|drain|leak|sewage", [
       c("svc-plumber-leaks", "كشف وإصلاح تسريبات", "Leak detection & repair", "💧", "تسريب|نش|رطوبة|كشف تسريب|تسرب مياه", "leak detection|water leak|dampness"),
@@ -134,7 +159,7 @@ export const MORE_SECTIONS: CategorySeed[] = [
     c("svc-locksmith", "أقفال ومفاتيح", "Locksmith", "🔑", "قفال|اقفال|مفاتيح|نسخ مفتاح|فتح باب|خزنة|كوداتور|قفل سيارة", "locksmith|locks|keys|safe|door opening|car key"),
     c("svc-garden", "حدائق وتنسيق", "Gardens & landscaping", "🌳", "حدائق|تنسيق حدائق|عشب|ري|تقليم|حدائق منزلية|مشتل", "gardens|landscaping|lawn|irrigation|pruning"),
     c("svc-satellite", "ستالايت وشبكات وإنترنت", "Satellite & networks", "📡", "ستالايت|دش|رسيفر|انترنت|راوتر|شبكات|واي فاي|تمديد انترنت", "satellite|dish|receiver|internet|router|wifi|networking"),
-    c("svc-solar", "تركيب ألواح وأنظمة شمسية", "Solar installation", "☀️", "طاقة شمسية|الواح شمسية|انفرتر|بطاريات شمسية|نظام شمسي|تركيب الواح", "solar installation|solar panels|inverter|solar system"),
+    c("svc-solar", "فني تركيب وصيانة طاقة شمسية", "Solar installer & technician", "☀️", "فني طاقة شمسية|تركيب منظومة|صيانة انفرتر|تمديد نظام شمسي|معلم طاقة شمسية|تركيب طاقة", "solar installer|solar technician|inverter service|solar wiring"),
     c("svc-laundry", "مغاسل وكوي", "Laundry & dry cleaning", "👔", "مغسلة|كوي|دراي كلين|غسيل ملابس|تنظيف جاف|غسيل بطانيات", "laundry|dry cleaning|ironing|clothes washing"),
     c("svc-handyman", "فني صيانة عام (معلم)", "General handyman", "🧰", "معلم|فني|صيانة عامة|تصليحات|تركيبات|فك وتركيب|اعمال بسيطة", "handyman|odd jobs|general repairs|installations"),
     c("svc-curtains", "ستائر وبرادي وتركيب", "Curtains & blinds", "🪟", "ستائر|برادي|ستارة|رولر|ستائر طبية|تركيب ستائر|بيرق", "curtains|blinds|roller|window treatments"),

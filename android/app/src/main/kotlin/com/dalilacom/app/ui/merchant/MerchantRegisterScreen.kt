@@ -31,7 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.ui.ViewModelFactory
-import com.dalilacom.app.ui.common.CategoryPicker
+import com.dalilacom.app.ui.common.ProfessionPicker
+import com.dalilacom.app.ui.common.isOnlineCategory
+import androidx.compose.ui.res.stringResource
 import com.dalilacom.app.ui.common.LocationPicker
 
 @Composable
@@ -45,6 +47,8 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
     var whatsapp by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
     var location by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var suggestion by remember { mutableStateOf("") }
+    val online = isOnlineCategory(state.categories, selectedCategoryId)
 
     LaunchedEffect(state.result) {
         if (state.result != null) onRegistered()
@@ -64,7 +68,10 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
         )
         Spacer(Modifier.height(12.dp))
 
-        CategoryPicker(tree = state.categories, selectedId = selectedCategoryId, onSelect = { selectedCategoryId = it })
+        ProfessionPicker(
+            tree = state.categories, selectedId = selectedCategoryId, onSelect = { selectedCategoryId = it },
+            search = viewModel::searchCategories, suggestion = suggestion, onSuggestion = { suggestion = it },
+        )
         Spacer(Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -88,14 +95,18 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(16.dp))
-        LocationPicker(value = location, onChange = { location = it })
+        if (online) {
+            Text(stringResource(R.string.cat_online_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        } else {
+            LocationPicker(value = location, onChange = { location = it })
+        }
         Spacer(Modifier.height(20.dp))
 
         if (state.isSubmitting) {
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.register(businessName.trim(), selectedCategoryId, address.trim(), phone.trim(), whatsapp, location) },
+                onClick = { viewModel.register(businessName.trim(), selectedCategoryId, address.trim(), phone.trim(), whatsapp, if (online) null else location, suggestion) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(AppStrings.get(R.string.s_41066d88)) }
         }

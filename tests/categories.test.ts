@@ -96,6 +96,37 @@ describe("The sections tree", () => {
     expect(JSON.stringify(foundCoach)).toContain("coach");
   });
 
+  it("is a large and consistent list: unique slugs, every node named in Arabic and English, search words everywhere", () => {
+    const slugs: string[] = [];
+    const bare: string[] = [];
+    const walk = (list: typeof CATEGORY_TREE, depth: number) => {
+      for (const n of list) {
+        slugs.push(n.slug);
+        expect(n.ar.trim().length).toBeGreaterThan(1);
+        expect(n.en.trim().length).toBeGreaterThan(1);
+        if (depth <= 1 && !n.synAr) bare.push(n.slug);
+        if (n.children) walk(n.children, depth + 1);
+      }
+    };
+    walk(CATEGORY_TREE, 0);
+    expect(slugs.length - new Set(slugs).size).toBe(0); // no slug twice
+    expect(CATEGORY_TREE.length).toBeGreaterThanOrEqual(30); // sections
+    expect(slugs.length).toBeGreaterThanOrEqual(420); // sections, professions and specialties together
+    expect(bare).toEqual([]); // every section and profession has words people type
+  });
+
+  it("marks the online section so a shop that works online needs no place on the map", async () => {
+    await seedCategories(prisma);
+    const tree = (await request(app).get("/categories")).body;
+    const online = find(tree, "online");
+    expect(online.online).toBe(true);
+    expect(online.children.length).toBeGreaterThanOrEqual(10);
+    expect(online.children.every((c: any) => c.online === true)).toBe(true);
+    expect(find(tree, "gym").online).toBe(false);
+    const hit = (await request(app).get("/categories/search").query({ q: "فيسبوك" })).body;
+    expect(hit.some((h: any) => h.online === true)).toBe(true);
+  });
+
   it("names every node in Arabic by default and in English on request", async () => {
     const ar = (await request(app).get("/categories")).body;
     expect(find(ar, "health").name).toBe("الطبي");

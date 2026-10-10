@@ -734,4 +734,16 @@
     <string name="ai_auto_renew_off">ما رح تتجدد: لما تنتهي لازم تشتري من جديد.</string>
     <string name="hours_always">مفتوح دائماً (24 ساعة)</string>
     <string name="hours_day24">مفتوح 24 ساعة هاليوم</string>
+    <string name="cat_search">ابحث عن مهنتك</string>
+    <string name="cat_search_ph">اكتب مهنتك: جيم، حلاق، سباك، مدرب، بيع أونلاين...</string>
+    <string name="cat_no_hit">ما لقينا شي بهالاسم، جرّب كلمة تانية أو اختار من القوائم تحت</string>
+    <string name="cat_or_browse">أو اختار من القوائم:</string>
+    <string name="cat_not_found">ما لقيت مهنتي؟ اقترحها</string>
+    <string name="cat_sug_ph">اكتب اسم مهنتك</string>
+    <string name="cat_sug_note">اختار أقرب مهنة من القوائم فوق. محلك بيشتغل تحتها، والإدارة بتراجع اقتراحك وبتضيفه أو بتنقلك لمهنة موجودة.</string>
+    <string name="cat_sug_send">أرسل الاقتراح</string>
+    <string name="cat_sug_sent">وصل اقتراحك للإدارة ✓</string>
+    <string name="cat_sug_pending">اقتراحك «%1$s» قيد مراجعة الإدارة</string>
+    <string name="cat_sug_rejected">ما انقبل اقتراحك «%1$s»</string>
+    <string name="cat_online_note">مهنتك بتشتغل أونلاين، فما لازم تحدد مكان على الخريطة.</string>
 </resources>

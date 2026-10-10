@@ -16,6 +16,8 @@ export interface CategorySeed {
   /** extra search words, "|"-separated, per language */
   synAr?: string;
   synEn?: string;
+  /** work done online: the shop needs no place on the map */
+  online?: boolean;
   /** other languages: `tr: { de: { name: "Zahnarzt", syn: "zahnarzt|zähne" } }` (see docs/I18N.md) */
   tr?: Record<string, { name: string; syn?: string }>;
   children?: CategorySeed[];
@@ -24,6 +26,8 @@ export interface CategorySeed {
 const c = (slug: string, ar: string, en: string, icon?: string, synAr?: string, synEn?: string, children?: CategorySeed[]): CategorySeed => ({
   slug, ar, en, icon, synAr, synEn, children,
 });
+
+import { BEAUTY_KINDS, CAFE_KINDS, CLOTHING_KINDS, DOCTOR_EXTRA, MORE_SECTIONS, RESTAURANT_KINDS } from "./categories.more";
 
 export const CATEGORY_TREE: CategorySeed[] = [
   c("health", "الطبي", "Medical", "🩺", "صحة|طب|علاج|عيادة|عيادات", "health|medicine|clinic|healthcare", [
@@ -47,6 +51,7 @@ export const CATEGORY_TREE: CategorySeed[] = [
       c("health-doctors-plastic", "جراحة تجميلية", "Plastic surgeon", "✨", "تجميل|شد|نفخ|حقن|بوتوكس|فيلر|عمليات تجميل", "plastic surgeon|cosmetic surgery|botox|filler|rhinoplasty"),
       c("health-doctors-oncology", "أورام", "Oncologist", "🎗️", "سرطان|اورام|علاج كيماوي", "oncologist|cancer|chemotherapy"),
       c("health-doctors-vascular", "أوعية وجراحة وعائية", "Vascular surgeon", "🩸", "دوالي|اوعية دموية|جلطة", "vascular|varicose veins|thrombosis"),
+      ...DOCTOR_EXTRA,
     ]),
     c("health-pharmacy", "صيدليات", "Pharmacies", "💊", "صيدلية|دواء|ادوية|صيدلي|مناوبة", "pharmacy|drugstore|medicine|chemist"),
     c("health-lab", "مخابر ومختبرات طبية", "Medical labs", "🔬", "مخبر|مختبر|تحاليل|تحليل دم|فحوصات|مخابر", "lab|laboratory|blood test|tests|diagnostics"),
@@ -151,8 +156,10 @@ export const CATEGORY_TREE: CategorySeed[] = [
     c("companies-hr", "توظيف واستشارات إدارية", "Recruitment & consulting", "🤝", "توظيف|موارد بشرية|استشارات|تدريب|دورات|ادارة", "recruitment|hr|consulting|training|courses|management"),
   ]),
 
-  c("restaurants", "مطاعم", "Restaurants", "🍽️", "مطعم|اكل|وجبات|شاورما|مشاوي|فروج|برغر|بيتزا", "restaurant|food|meals|shawarma|grill|burger|pizza"),
-  c("cafes", "مقاهي", "Cafes", "☕", "مقهى|كافيه|قهوة|نرجيلة|حلويات", "cafe|coffee|coffee shop|hookah|desserts"),
-  c("clothing", "ملابس", "Clothing", "👗", "ملابس|ثياب|احذية|بوتيك|موضة|اطفال ملابس", "clothing|clothes|fashion|boutique|shoes"),
-  c("beauty", "تجميل وعناية", "Beauty & care", "💇", "حلاق|صالون|تجميل|سبا|مكياج|عناية|عروس|حلاقة", "barber|salon|beauty|spa|makeup|hair|bridal"),
+  c("restaurants", "مطاعم", "Restaurants", "🍽️", "مطعم|اكل|وجبات|شاورما|مشاوي|فروج|برغر|بيتزا", "restaurant|food|meals|shawarma|grill|burger|pizza", RESTAURANT_KINDS),
+  c("cafes", "مقاهي", "Cafes", "☕", "مقهى|كافيه|قهوة|نرجيلة|حلويات", "cafe|coffee|coffee shop|hookah|desserts", CAFE_KINDS),
+  c("clothing", "ملابس", "Clothing", "👗", "ملابس|ثياب|احذية|بوتيك|موضة|اطفال ملابس", "clothing|clothes|fashion|boutique|shoes", CLOTHING_KINDS),
+  c("beauty", "تجميل وعناية", "Beauty & care", "💇", "حلاق|صالون|تجميل|سبا|مكياج|عناية|عروس|حلاقة", "barber|salon|beauty|spa|makeup|hair|bridal", BEAUTY_KINDS),
+
+  ...MORE_SECTIONS,
 ];

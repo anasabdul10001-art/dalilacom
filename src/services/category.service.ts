@@ -45,6 +45,7 @@ export interface CategoryNode {
   slug: string;
   parentId: string | null;
   icon: string | null;
+  isOnline: boolean;
   sortOrder: number;
   names: Record<string, string>; // lang -> name; the default language comes from Category.name
   haystack: string[]; // every normalised name + synonym, in every language
@@ -72,7 +73,7 @@ export async function loadCategoryTree() {
       }
       for (const s of t.synonyms) haystack.add(normalizeText(s));
     }
-    byId.set(r.id, { id: r.id, slug: r.slug, parentId: r.parentId, icon: r.icon, sortOrder: r.sortOrder, names, haystack: [...haystack].filter(Boolean), children: [] });
+    byId.set(r.id, { id: r.id, slug: r.slug, parentId: r.parentId, icon: r.icon, isOnline: r.isOnline, sortOrder: r.sortOrder, names, haystack: [...haystack].filter(Boolean), children: [] });
   }
   const roots: CategoryNode[] = [];
   for (const node of byId.values()) {
@@ -121,6 +122,8 @@ export interface CategoryShape {
   slug: string;
   name: string;
   icon: string | null;
+  /** work done online: the shop needs no place on the map */
+  online: boolean;
   merchantCount: number;
   children: CategoryShape[];
 }
@@ -133,6 +136,7 @@ export async function categoryTreeFor(lang: string): Promise<CategoryShape[]> {
     slug: n.slug,
     name: localizedName(n, lang),
     icon: n.icon,
+    online: n.isOnline,
     merchantCount: counts.get(n.id) ?? 0,
     children: n.children.map(shape),
   });
@@ -158,6 +162,7 @@ export interface CategoryHit {
   slug: string;
   name: string;
   icon: string | null;
+  online: boolean; // work done online: needs no place on the map
   path: string; // "الطبي › أطباء › أسنان"
   depth: number;
   merchantCount: number;
@@ -208,6 +213,7 @@ export async function searchCategories(query: string, lang: string, limit = 8): 
       slug: n.slug,
       name: localizedName(n, lang),
       icon: n.icon,
+      online: n.isOnline,
       path: pathOf(n),
       depth: depthOf(n),
       merchantCount: counts.get(n.id) ?? 0,

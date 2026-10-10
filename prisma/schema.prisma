@@ -301,6 +301,7 @@ model Category {
   slug      String   @unique
   parentId  String?
   icon      String? // emoji shown on browse tiles
+  isOnline  Boolean  @default(false) // work done online: the shop needs no place on the map
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 

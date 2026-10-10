@@ -8,6 +8,10 @@ import com.dalilacom.app.data.network.safeApiCall
 
 class DiscoverRepository(private val api: ApiService) {
 
+    /** The professions closest to what was typed, each with where it sits in the list. */
+    suspend fun searchCategories(query: String): List<com.dalilacom.app.data.network.CategoryHitDto> =
+        safeApiCall { api.searchCategories(query) }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
     suspend fun getCategories(): List<CategoryDto> {
         val response = safeApiCall { api.getCategories() } ?: return emptyList()
         return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()

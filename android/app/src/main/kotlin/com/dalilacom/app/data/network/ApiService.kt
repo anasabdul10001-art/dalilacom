@@ -157,6 +157,12 @@ interface ApiService {
     @GET("categories")
     suspend fun getCategories(): Response<List<CategoryDto>>
 
+    @GET("categories/search")
+    suspend fun searchCategories(@Query("q") query: String): Response<List<CategoryHitDto>>
+
+    @POST("merchant/category-suggestions")
+    suspend fun suggestCategory(@Body body: CategorySuggestRequest): Response<Unit>
+
     @GET("merchant")
     suspend fun searchMerchants(
         @Query("q") query: String? = null,

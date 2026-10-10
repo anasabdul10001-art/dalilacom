@@ -37,7 +37,10 @@ import com.dalilacom.app.data.repository.DiscoverRepository
 import com.dalilacom.app.data.repository.MerchantRepository
 import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.data.network.CategoryDto
-import com.dalilacom.app.ui.common.CategoryPicker
+import androidx.compose.ui.res.stringResource
+import com.dalilacom.app.ui.common.ProfessionPicker
+import com.dalilacom.app.ui.common.isOnlineCategory
+import com.dalilacom.app.data.network.CategorySuggestionDto
 import com.dalilacom.app.ui.common.LocationPicker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,6 +58,8 @@ data class MerchantProfileUiState(
     val phone: String = "",
     val whatsapp: String = "",
     val location: Pair<Double, Double>? = null,
+    val suggestion: String = "",
+    val categorySuggestion: CategorySuggestionDto? = null,
     val message: String? = null,
     val isError: Boolean = false,
 )
@@ -79,11 +84,32 @@ class MerchantProfileViewModel(
                 phone = me?.phone.orEmpty(),
                 whatsapp = me?.whatsapp.orEmpty(),
                 location = if (me?.latitude != null && me.longitude != null) me.latitude to me.longitude else null,
+                categorySuggestion = me?.categorySuggestion,
             )
         }
     }
 
     fun onName(value: String) = _uiState.update { it.copy(businessName = value, message = null) }
+    suspend fun searchCategories(query: String) = discover.searchCategories(query)
+    fun onSuggestion(value: String) = _uiState.update { it.copy(suggestion = value, message = null) }
+
+    fun sendSuggestion() {
+        val name = _uiState.value.suggestion.trim()
+        if (name.length < 2) return
+        viewModelScope.launch {
+            val result = merchants.suggestCategory(name)
+            val fresh = if (result.isSuccess) merchants.getMerchantMe()?.categorySuggestion else null
+            _uiState.update {
+                it.copy(
+                    isError = result.isFailure,
+                    message = result.exceptionOrNull()?.message ?: AppStrings.get(R.string.cat_sug_sent),
+                    suggestion = if (result.isSuccess) "" else it.suggestion,
+                    categorySuggestion = fresh ?: it.categorySuggestion,
+                )
+            }
+        }
+    }
+
     fun onCategory(id: String?) = _uiState.update { it.copy(categoryId = id, message = null) }
     fun onAddress(value: String) = _uiState.update { it.copy(address = value, message = null) }
     fun onPhone(value: String) = _uiState.update { it.copy(phone = value, message = null) }
@@ -105,8 +131,8 @@ class MerchantProfileViewModel(
                     address = s.address.trim(),
                     phone = s.phone.trim(),
                     whatsapp = s.whatsapp.filter { it.isDigit() },
-                    latitude = s.location?.first,
-                    longitude = s.location?.second,
+                    latitude = if (isOnlineCategory(s.categories, s.categoryId)) null else s.location?.first,
+                    longitude = if (isOnlineCategory(s.categories, s.categoryId)) null else s.location?.second,
                 ),
             )
             _uiState.update {
@@ -143,7 +169,18 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
-            CategoryPicker(tree = state.categories, selectedId = state.categoryId, onSelect = viewModel::onCategory)
+            state.categorySuggestion?.let {
+                when (it.status) {
+                    "PENDING" -> Text(stringResource(R.string.cat_sug_pending, it.name), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+                    "REJECTED" -> Text(stringResource(R.string.cat_sug_rejected, it.name) + (it.note?.takeIf { n -> n.isNotBlank() }?.let { n -> " — $n" } ?: ""), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            ProfessionPicker(
+                tree = state.categories, selectedId = state.categoryId, onSelect = viewModel::onCategory,
+                search = viewModel::searchCategories, suggestion = state.suggestion, onSuggestion = viewModel::onSuggestion,
+                onSendSuggestion = viewModel::sendSuggestion,
+            )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(value = state.address, onValueChange = viewModel::onAddress, label = { Text(AppStrings.get(R.string.s_baffa49c)) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
@@ -156,7 +193,11 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(16.dp))
-            LocationPicker(value = state.location, onChange = viewModel::onLocation)
+            if (isOnlineCategory(state.categories, state.categoryId)) {
+                Text(stringResource(R.string.cat_online_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            } else {
+                LocationPicker(value = state.location, onChange = viewModel::onLocation)
+            }
             Spacer(Modifier.height(16.dp))
             Button(onClick = viewModel::save, enabled = !state.isSaving, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Text(AppStrings.get(R.string.s_56ee6e0d))

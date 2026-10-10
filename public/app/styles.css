@@ -1370,3 +1370,11 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .pm-dot:disabled { opacity: 0.45; }
 .ai-current { border-color: var(--primary); }
 .ai-pack .btn { margin-top: 4px; }
+
+/* finding a profession */
+.cat-hits { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.cat-hit { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: inherit; font: inherit; cursor: pointer; }
+.cat-hit span { font-weight: 700; }
+.cat-hit small { color: var(--muted, #888); font-size: 12px; }
+.cat-suggest { margin: 4px 0 10px; }
+.cat-suggest input { margin-top: 6px; }

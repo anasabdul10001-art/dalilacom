@@ -102,6 +102,7 @@
     <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
     <div class="nav-item" data-section="store" onclick="showSection('store')">🛍️ المتجر</div>
+    <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()">💡 اقتراحات المهن <span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()">🏷️ الحسومات <span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()">📢 إعلانات المتجر <span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
@@ -432,6 +433,19 @@
       </div>
     </div>
 
+    <!-- PROFESSION SUGGESTIONS -->
+    <div class="section" id="section-suggestions" style="display:none">
+      <h2>اقتراحات المهن</h2>
+      <p class="subtitle">التاجر اللي ما لقي مهنته بيكتبها، وبيبقى محله تحت أقرب مهنة. إنت بتقبلها كمهنة جديدة (وبتعدّل اسمها وتترجمها وتحدد مكانها)، أو بتضيفها لمهنة موجودة، أو بترفضها.</p>
+      <div class="filters">
+        <button class="active" data-sstatus="PENDING" onclick="loadSuggestions('PENDING')">بانتظار القرار</button>
+        <button data-sstatus="APPROVED" onclick="loadSuggestions('APPROVED')">أُضيفت كمهنة جديدة</button>
+        <button data-sstatus="MERGED" onclick="loadSuggestions('MERGED')">أُضيفت لمهنة موجودة</button>
+        <button data-sstatus="REJECTED" onclick="loadSuggestions('REJECTED')">مرفوضة</button>
+      </div>
+      <div id="sug-list"></div>
+    </div>
+
     <!-- DISCOUNTS -->
     <div class="section" id="section-discounts" style="display:none">
       <h2>حسومات المحلات</h2>
@@ -621,6 +635,7 @@ function enterApp() {
   geoInit();
   loadAiStatus();
   loadTopups('PENDING');
+  refreshSugBadge();
 }
 
 function showSection(name) {
@@ -991,6 +1006,84 @@ async function reviewDiscount(id, action) {
   const { ok, data } = await api('POST', '/admin/discounts/' + id + '/' + action, body);
   if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
   loadDiscounts(discStatus);
+}
+
+// ---- Profession suggestions ----
+let sugStatus = 'PENDING';
+let sugOptions = '';
+
+async function loadSuggestions(status) {
+  sugStatus = status || sugStatus;
+  document.querySelectorAll('[data-sstatus]').forEach(b => b.classList.toggle('active', b.dataset.sstatus === sugStatus));
+  if (!state.categoriesFlat || !state.categoriesFlat.length) await loadCategories();
+  const flat = state.categoriesFlat || [];
+  sugOptions = flat.map(c => `<option value="${c.id}">${'— '.repeat(c.depth)}${esc(c.name)}</option>`).join('');
+  const box = document.getElementById('sug-list');
+  const { ok, data } = await api('GET', '/admin/category-suggestions?status=' + sugStatus);
+  if (!ok) { box.innerHTML = '<div class="card muted">تعذّر التحميل</div>'; return; }
+  const day = d => new Date(d).toLocaleDateString('ar', { day: 'numeric', month: 'short', year: 'numeric' });
+  box.innerHTML = data.length ? data.map(s => {
+    const shop = s.merchant ? `${esc(s.merchant.businessName)}${s.merchant.phone ? ' · ' + esc(s.merchant.phone) : ''}` : '—';
+    if (s.status !== 'PENDING') {
+      return `<div class="card"><b>${esc(s.name)}</b> <span class="muted">— ${shop} — ${day(s.createdAt)}</span>
+        ${s.categoryPath ? `<div class="muted">صارت: ${esc(s.categoryPath)}</div>` : ''}
+        ${s.note ? `<div class="muted">ملاحظة: ${esc(s.note)}</div>` : ''}</div>`;
+    }
+    return `<div class="card" id="sug-${s.id}">
+      <div><b style="font-size:17px">${esc(s.name)}</b> <span class="muted">— ${shop} — ${day(s.createdAt)}</span></div>
+      <div class="muted" style="margin:4px 0 10px">أقرب مهنة اختارها: ${esc(s.nearestPath || '—')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
+        <label>اسمها بالعربي<br><input id="sug-ar-${s.id}" value="${esc(s.name)}" style="width:190px" /></label>
+        <label>اسمها بالإنكليزي<br><input id="sug-en-${s.id}" placeholder="Name in English" style="width:190px" dir="ltr" /></label>
+        <label>أيقونة<br><input id="sug-ic-${s.id}" maxlength="4" style="width:60px" /></label>
+        <label>مكانها<br><select id="sug-par-${s.id}" style="width:230px"><option value="">— قسم رئيسي —</option>${sugOptions}</select></label>
+        <label>كلمات بحث إضافية<br><input id="sug-sy-${s.id}" placeholder="كلمة|كلمة|كلمة" style="width:190px" /></label>
+        <button class="small" onclick="approveSuggestion('${s.id}')">✅ قبول كمهنة جديدة</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-top:10px">
+        <label>أو أضفها لمهنة موجودة<br><select id="sug-mrg-${s.id}" style="width:300px"><option value="">— اختر المهنة —</option>${sugOptions}</select></label>
+        <button class="small" onclick="mergeSuggestion('${s.id}')">➕ أضفها لهالمهنة</button>
+        <button class="small danger" onclick="rejectSuggestion('${s.id}')">رفض</button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="card muted">ما في اقتراحات</div>';
+  data.filter(s => s.status === 'PENDING').forEach(s => { const el = document.getElementById('sug-par-' + s.id); if (el && s.nearestId) el.value = s.nearestId; });
+  refreshSugBadge();
+}
+
+async function refreshSugBadge() {
+  const { ok, data } = await api('GET', '/admin/category-suggestions?status=PENDING');
+  const badge = document.getElementById('sug-pending-count');
+  if (ok && data.length) { badge.textContent = data.length; badge.style.display = ''; } else badge.style.display = 'none';
+}
+
+async function approveSuggestion(id) {
+  const v = k => document.getElementById('sug-' + k + '-' + id).value.trim();
+  const body = { nameAr: v('ar'), parentId: v('par') || null };
+  if (v('en')) body.nameEn = v('en');
+  if (v('ic')) body.icon = v('ic');
+  const syn = v('sy').split(/[|،,]/).map(x => x.trim()).filter(Boolean);
+  if (syn.length) body.synonyms = syn;
+  const { ok, data } = await api('POST', '/admin/category-suggestions/' + id + '/approve', body);
+  if (!ok) { alert(errText(data, 'تعذّر التنفيذ')); return; }
+  loadCategories();
+  loadSuggestions();
+}
+
+async function mergeSuggestion(id) {
+  const categoryId = document.getElementById('sug-mrg-' + id).value;
+  if (!categoryId) { alert('اختر المهنة اللي بدك تضيفها لها'); return; }
+  const { ok, data } = await api('POST', '/admin/category-suggestions/' + id + '/merge', { categoryId });
+  if (!ok) { alert(errText(data, 'تعذّر التنفيذ')); return; }
+  loadSuggestions();
+}
+
+async function rejectSuggestion(id) {
+  const reason = prompt('سبب الرفض (بيوصل للتاجر، واختياري):');
+  if (reason === null) return;
+  const { ok, data } = await api('POST', '/admin/category-suggestions/' + id + '/reject', { reason });
+  if (!ok) { alert(errText(data, 'تعذّر التنفيذ')); return; }
+  loadSuggestions();
 }
 
 // ---- Store ads and banners ----

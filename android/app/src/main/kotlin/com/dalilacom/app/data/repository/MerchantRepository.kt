@@ -31,9 +31,10 @@ class MerchantRepository(
         phone: String?,
         whatsapp: String? = null,
         location: Pair<Double, Double>? = null,
+        suggestedCategory: String? = null,
     ): Result<RegisterMerchantResponse> {
         val response = safeApiCall {
-            api.registerMerchant(RegisterMerchantRequest(businessName, categoryId, address, phone, whatsapp, location?.first, location?.second))
+            api.registerMerchant(RegisterMerchantRequest(businessName, categoryId, address, phone, whatsapp, location?.first, location?.second, suggestedCategory))
         }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
@@ -84,6 +85,13 @@ class MerchantRepository(
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body)
         else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
+    }
+
+    /** A shop that could not find its profession writes it; the team accepts it, adds it to an existing one or refuses it. */
+    suspend fun suggestCategory(name: String): Result<Unit> {
+        val response = safeApiCall { api.suggestCategory(com.dalilacom.app.data.network.CategorySuggestRequest(name)) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
     }
 
     suspend fun shippingMethods(): List<com.dalilacom.app.data.network.ShippingMethodDto> =

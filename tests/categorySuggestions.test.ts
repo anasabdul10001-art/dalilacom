@@ -30,6 +30,34 @@ async function shopWithSuggestion(nearestId: string, name: string) {
   return { owner, id: reg.body.id as string };
 }
 
+describe("a shop that works online", () => {
+  it("is not asked for a place on the map; a shop with premises still is", async () => {
+    const online = await prisma.category.create({ data: { name: "بيع أونلاين تجريبي", slug: `sug-${crypto.randomUUID().slice(0, 8)}`, isOnline: true } });
+    const physical = await parent("محل عادي");
+    const a = await account("onlineshop");
+    expect((await request(app).post("/merchant/register").set(a.auth).send({ businessName: `Online ${crypto.randomUUID().slice(0, 6)}`, categoryId: online.id })).status).toBe(201);
+    const me = (await request(app).get("/merchant/me").set(a.auth)).body;
+    expect(me.categoryOnline).toBe(true);
+    expect(me.onboarding.location).toBe(true);
+
+    const b = await account("physicalshop");
+    expect((await request(app).post("/merchant/register").set(b.auth).send({ businessName: `Physical ${crypto.randomUUID().slice(0, 6)}`, categoryId: physical.id })).status).toBe(201);
+    const meB = (await request(app).get("/merchant/me").set(b.auth)).body;
+    expect(meB.categoryOnline).toBe(false);
+    expect(meB.onboarding.location).toBe(false);
+  });
+
+  it("a profession approved under an online one is online too", async () => {
+    const online = await prisma.category.create({ data: { name: "قسم أونلاين", slug: `sug-${crypto.randomUUID().slice(0, 8)}`, isOnline: true } });
+    const s = await shopWithSuggestion(online.id, "بيع بالتقسيط أونلاين");
+    const row = (await prisma.categorySuggestion.findFirst({ where: { merchantId: s.id } }))!;
+    const admin = await account("sugadmin2", { role: "ADMIN" });
+    const res = await request(app).post(`/admin/category-suggestions/${row.id}/approve`).set(admin.auth).send({ nameAr: "تقسيط أونلاين", parentId: online.id });
+    expect(res.status).toBe(200);
+    expect((await prisma.category.findUnique({ where: { id: res.body.id } }))!.isOnline).toBe(true);
+  });
+});
+
 describe("a shop that cannot find its profession", () => {
   it("proposes one while registering; it sits under the closest profession and the admin sees it", async () => {
     const near = await parent("قريبة");

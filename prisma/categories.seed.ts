@@ -12,7 +12,7 @@ export async function seedCategories(prisma: PrismaClient): Promise<number> {
   let count = 0;
   const walk = async (nodes: CategorySeed[], parentId: string | null) => {
     for (const [index, node] of nodes.entries()) {
-      const data = { name: node.ar, parentId, icon: node.icon ?? null, sortOrder: (index + 1) * 10 };
+      const data = { name: node.ar, parentId, icon: node.icon ?? null, sortOrder: (index + 1) * 10, isOnline: node.online === true };
       const category = await prisma.category.upsert({ where: { slug: node.slug }, update: data, create: { slug: node.slug, ...data } });
       // Arabic is the base language (Category.name); its row only carries the words people type.
       await prisma.categoryTranslation.upsert({

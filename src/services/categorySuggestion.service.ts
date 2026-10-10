@@ -75,7 +75,8 @@ export async function approveSuggestion(id: string, input: { nameAr: string; nam
   if (input.parentId && !(await prisma.category.findUnique({ where: { id: input.parentId } }))) throw new ApiError(404, "NOT_FOUND", "Parent category not found");
   const parentId = input.parentId === undefined ? row.nearestId : input.parentId;
   const slug = `p-${Math.random().toString(36).slice(2, 8)}`;
-  const category = await prisma.category.create({ data: { slug, name: input.nameAr.trim(), parentId: parentId ?? null, icon: input.icon ?? null, sortOrder: 1000 } });
+  const parent = parentId ? await prisma.category.findUnique({ where: { id: parentId }, select: { isOnline: true } }) : null;
+  const category = await prisma.category.create({ data: { slug, name: input.nameAr.trim(), parentId: parentId ?? null, icon: input.icon ?? null, sortOrder: 1000, isOnline: parent?.isOnline ?? false } });
   await prisma.categoryTranslation.create({ data: { categoryId: category.id, lang: "ar", name: null, synonyms: words([row.name, ...(input.synonyms ?? [])]) } });
   if (input.nameEn?.trim()) await prisma.categoryTranslation.create({ data: { categoryId: category.id, lang: "en", name: input.nameEn.trim(), synonyms: [] } });
   invalidateCategoryCache();

@@ -99,14 +99,16 @@ merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, r
     return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   }
   const { _count, ...profile } = withOwnerProfile(merchant);
+  const categoryRow = await prisma.category.findUnique({ where: { id: merchant.categoryId }, select: { isOnline: true } });
   const suggestion = await prisma.categorySuggestion.findFirst({ where: { merchantId: merchant.id }, orderBy: { createdAt: "desc" }, select: { name: true, status: true, note: true } });
   // What still stands between this merchant and being found on the map — drives the setup checklist.
   res.json({
     ...profile,
     categorySuggestion: suggestion,
+    categoryOnline: categoryRow?.isOnline ?? false,
     onboarding: {
       approved: merchant.approvalStatus === "APPROVED",
-      location: merchant.latitude !== null && merchant.longitude !== null,
+      location: (merchant.latitude !== null && merchant.longitude !== null) || (categoryRow?.isOnline ?? false), // a shop that works online needs no place
       hours: computeOpenStatus(merchant.openingHours, "UTC").hasHours,
       discount: merchant.discounts.some((d) => d.isActive && d.status !== "REJECTED"),
       product: _count.products > 0,

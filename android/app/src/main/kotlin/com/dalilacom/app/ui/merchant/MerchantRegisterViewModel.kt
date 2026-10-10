@@ -35,7 +35,9 @@ class MerchantRegisterViewModel(
         }
     }
 
-    fun register(businessName: String, categoryId: String?, address: String, phone: String, whatsapp: String, location: Pair<Double, Double>?) {
+    suspend fun searchCategories(query: String) = discoverRepository.searchCategories(query)
+
+    fun register(businessName: String, categoryId: String?, address: String, phone: String, whatsapp: String, location: Pair<Double, Double>?, suggestedCategory: String? = null) {
         if (businessName.isBlank() || categoryId == null) {
             _uiState.value = _uiState.value.copy(error = AppStrings.get(R.string.s_d5a3c41f))
             return
@@ -44,7 +46,7 @@ class MerchantRegisterViewModel(
         viewModelScope.launch {
             merchantRepository.registerMerchant(
                 businessName, categoryId, address.ifBlank { null }, phone.ifBlank { null },
-                whatsapp.filter { it.isDigit() }.ifBlank { null }, location,
+                whatsapp.filter { it.isDigit() }.ifBlank { null }, location, suggestedCategory?.trim()?.takeIf { it.length >= 2 },
             )
                 .onSuccess { _uiState.value = _uiState.value.copy(isSubmitting = false, result = it) }
                 .onFailure { _uiState.value = _uiState.value.copy(isSubmitting = false, error = it.message) }
