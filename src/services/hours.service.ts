@@ -3,7 +3,16 @@ import { z } from "zod";
 export const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const; // same order as JS getDay()
 export type DayKey = (typeof DAY_KEYS)[number];
 
-const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "الوقت لازم يكون بصيغة HH:mm");
+/** "11", "9:5", "١١:٣٠" (Arabic-Indic digits) and "11.30" all mean what they say: turned into HH:mm before it is checked. */
+export function normalizeClock(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  let t = value.trim().replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0)).replace(/[.٫٬,]/g, ":");
+  if (/^\d{1,2}$/.test(t)) t = `${t}:00`;
+  const m = t.match(/^(\d{1,2}):(\d{1,2})$/);
+  return m ? `${m[1].padStart(2, "0")}:${m[2].padStart(2, "0")}` : t;
+}
+
+const hhmm = z.preprocess(normalizeClock, z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "الوقت لازم يكون بصيغة HH:mm"));
 const ranges = z.array(z.object({ open: hhmm, close: hhmm })).max(3);
 
 /** Weekly opening hours; a day that's missing or empty means closed that day. */

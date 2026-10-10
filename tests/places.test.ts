@@ -92,6 +92,21 @@ describe("Merchant hours, open-now filter, search area and suggestions", () => {
     expect(cleared.body.openStatus.hasHours).toBe(false);
   });
 
+  it("accepts a time however it was typed: a lone hour, Arabic-Indic digits, one-digit parts", async () => {
+    const { token } = await makeMerchant({ name: `HoursTyped ${crypto.randomUUID()}` });
+    const put = (range: object) => request(app).put("/merchant/me/hours").set("Authorization", `Bearer ${token}`).send({ openingHours: { mon: [range] } });
+    const lone = await put({ open: "9", close: "23" });
+    expect(lone.status).toBe(200);
+    expect(lone.body.openingHours.mon).toEqual([{ open: "09:00", close: "23:00" }]);
+    const arabic = await put({ open: "٠٩:٣٠", close: "١١:٤٥" });
+    expect(arabic.status).toBe(200);
+    expect(arabic.body.openingHours.mon).toEqual([{ open: "09:30", close: "11:45" }]);
+    const short = await put({ open: "9:5", close: "22:0" });
+    expect(short.body.openingHours.mon).toEqual([{ open: "09:05", close: "22:00" }]);
+    expect((await put({ open: "25", close: "22:00" })).status).toBe(400);
+    expect((await put({ open: "9am", close: "22:00" })).status).toBe(400);
+  });
+
   it("only merchants can set hours", async () => {
     const email = uniqueEmail("plaincustomer");
     await request(app).post("/auth/register").send({ email, password: "correct-horse-battery-staple", fullName: "Customer" });

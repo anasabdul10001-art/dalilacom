@@ -732,4 +732,6 @@
     <string name="ai_auto_renew">تجديد تلقائي من الرصيد</string>
     <string name="ai_auto_renew_on">لما تنتهي الباقة بتتجدد لحالها من رصيد محفظتك بنفس السعر. إذا الرصيد ما كفى بنخبرك وبتتجدد أول ما تشحن.</string>
     <string name="ai_auto_renew_off">ما رح تتجدد: لما تنتهي لازم تشتري من جديد.</string>
+    <string name="hours_always">مفتوح دائماً (24 ساعة)</string>
+    <string name="hours_day24">مفتوح 24 ساعة هاليوم</string>
 </resources>

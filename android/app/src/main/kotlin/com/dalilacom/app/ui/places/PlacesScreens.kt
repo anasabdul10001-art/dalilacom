@@ -163,6 +163,11 @@ class HoursViewModel(private val merchants: MerchantRepository, private val plac
     fun setOpen(day: String, time: String) = change(day) { it.copy(open = time) }
     fun setClose(day: String, time: String) = change(day) { it.copy(close = time) }
 
+    /** Open around the clock, every day (open and close are the same time: the server reads that as 24 hours). */
+    fun alwaysOpen() = _uiState.update { it.copy(days = DAY_ORDER.associateWith { DayEdit(true, "00:00", "00:00") }, message = null) }
+
+    fun setDay24(day: String, on: Boolean) = change(day) { if (on) it.copy(open = "00:00", close = "00:00") else it.copy(open = "09:00", close = "22:00") }
+
     fun copyFirstOpenDayToAll() {
         val first = DAY_ORDER.map { _uiState.value.days.getValue(it) }.firstOrNull { it.on }
         if (first == null) {
@@ -194,7 +199,7 @@ fun HoursScreen(factory: ViewModelFactory, onBack: () -> Unit) {
     fun pickTime(current: String, onPicked: (String) -> Unit) {
         TimePickerDialog(
             context,
-            { _, hour, minute -> onPicked("%02d:%02d".format(hour, minute)) },
+            { _, hour, minute -> onPicked("%02d:%02d".format(java.util.Locale.US, hour, minute)) },
             current.take(2).toIntOrNull() ?: 9,
             current.drop(3).take(2).toIntOrNull() ?: 0,
             true,
@@ -216,7 +221,12 @@ fun HoursScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = viewModel::copyFirstOpenDayToAll, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.s_bb31982c), maxLines = 2) }
+                OutlinedButton(onClick = viewModel::alwaysOpen, modifier = Modifier.weight(1f)) { Text(androidx.compose.ui.res.stringResource(R.string.hours_always), maxLines = 2) }
+            }
+            Spacer(Modifier.height(8.dp))
             DAY_ORDER.forEach { day ->
                 val x = state.days.getValue(day)
                 Surface(
@@ -230,19 +240,23 @@ fun HoursScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                             Switch(checked = x.on, onCheckedChange = { viewModel.setOn(day, it) })
                         }
                         if (x.on) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                                androidx.compose.material3.Checkbox(checked = x.open == x.close, onCheckedChange = { viewModel.setDay24(day, it) })
+                                Text(androidx.compose.ui.res.stringResource(R.string.hours_day24), style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        if (x.on && x.open != x.close) {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 6.dp)) {
                                 OutlinedButton(onClick = { pickTime(x.open) { viewModel.setOpen(day, it) } }, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.fmt_from, formatClock(x.open))) }
                                 OutlinedButton(onClick = { pickTime(x.close) { viewModel.setClose(day, it) } }, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.fmt_to, formatClock(x.close))) }
                             }
-                        } else {
+                        } else if (!x.on) {
                             Text(AppStrings.get(R.string.s_d59687ba), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
             Spacer(Modifier.height(12.dp))
-            OutlinedButton(onClick = viewModel::copyFirstOpenDayToAll, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_bb31982c)) }
-            Spacer(Modifier.height(8.dp))
             Button(onClick = viewModel::save, enabled = !state.isSaving, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Text(AppStrings.get(R.string.s_222d012d))
             }

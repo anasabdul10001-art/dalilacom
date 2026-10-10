@@ -728,4 +728,6 @@
     <string name="ai_auto_renew">Renew automatically from the balance</string>
     <string name="ai_auto_renew_on">When the package ends it renews by itself from your wallet at the same price. If the balance is not enough we tell you, and it renews as soon as you top up.</string>
     <string name="ai_auto_renew_off">It will not renew: when it ends you need to buy again.</string>
+    <string name="hours_always">Open all the time (24 hours)</string>
+    <string name="hours_day24">Open 24 hours this day</string>
 </resources>

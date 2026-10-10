@@ -1607,6 +1607,10 @@ function screenMerchantHours() {
     <h1 class="screen-title">ساعات العمل</h1>
     <p class="screen-sub">حدّد أيام دوامك وأوقاته — بيظهر للزبائن «مفتوح الآن» أو «مغلق». إذا سكّرت بعد منتصف الليل اكتب وقت إغلاق أصغر من الفتح (مثلًا 18:00 – 02:00).</p>
     ${errorBanner()}
+    <div class="row" style="gap:8px;margin-bottom:10px">
+      <button class="btn outline" onclick="hoursCopyToAll()">${esc(t("hours.copyAll"))}</button>
+      <button class="btn outline" onclick="hoursAlways()">${esc(t("hours.always"))}</button>
+    </div>
     ${DAY_ORDER.map((day) => {
       const x = h.days[day];
       return `<div class="card">
@@ -1614,14 +1618,13 @@ function screenMerchantHours() {
           <input type="checkbox" style="width:auto" ${x.on ? "checked" : ""} onchange="hoursSet('${day}','on',this.checked)" />
           <strong>${DAY_LABEL[day]}</strong>${x.on ? "" : `<span class="muted">مغلق</span>`}
         </label>
-        ${x.on ? `<div class="row" style="gap:8px;margin-top:8px">
+        ${x.on ? `<label class="row" style="gap:8px;align-items:center;cursor:pointer;margin-top:8px"><input type="checkbox" style="width:auto" ${x.open === x.close ? "checked" : ""} onchange="hoursDayAlways('${day}',this.checked)" /><span>${esc(t("hours.day24"))}</span></label>` : ""}
+        ${x.on && x.open !== x.close ? `<div class="row" style="gap:8px;margin-top:8px">
           <div class="field" style="flex:1;margin:0"><label>من</label><input type="time" value="${x.open}" onchange="hoursSet('${day}','open',this.value)" /></div>
           <div class="field" style="flex:1;margin:0"><label>إلى</label><input type="time" value="${x.close}" onchange="hoursSet('${day}','close',this.value)" /></div>
         </div>` : ""}
       </div>`;
     }).join("")}
-    <button class="btn outline" onclick="hoursCopyToAll()">نسخ أول يوم مفتوح لكل الأيام</button>
-    <div style="height:10px"></div>
     <button class="btn" onclick="saveMerchantHours()">حفظ ساعات العمل</button>
     ${h.msg ? `<p class="muted" style="text-align:center;margin-top:8px">${esc(h.msg)}</p>` : ""}
   `;
@@ -1649,6 +1652,19 @@ function hoursCopyToAll() {
   const firstOn = DAY_ORDER.map((d) => S._hours.days[d]).find((x) => x.on);
   if (!firstOn) { S._hours.msg = "فعّل يوم واحد على الأقل أول"; return render(); }
   DAY_ORDER.forEach((d) => { S._hours.days[d] = { on: true, open: firstOn.open, close: firstOn.close }; });
+  render();
+}
+
+/** Open around the clock, every day (open and close are the same time, which the server reads as 24 hours). */
+function hoursAlways() {
+  DAY_ORDER.forEach((d) => { S._hours.days[d] = { on: true, open: "00:00", close: "00:00" }; });
+  S._hours.msg = "";
+  render();
+}
+
+function hoursDayAlways(day, on) {
+  const x = S._hours.days[day];
+  if (on) { x.open = "00:00"; x.close = "00:00"; } else { x.open = "09:00"; x.close = "22:00"; }
   render();
 }
 

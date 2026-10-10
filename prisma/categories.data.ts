@@ -63,6 +63,9 @@ export const CATEGORY_TREE: CategorySeed[] = [
     c("gym", "الجيمات والنوادي الرياضية", "Gyms & fitness clubs", "🏋️", "جيم|جيمات|نادي رياضي|نادي لياقة|صالة رياضية|صالة تمارين|هيلث كلوب|نادي صحي", "gym|gyms|fitness club|health club|fitness center|workout", [
       c("gym-bodybuilding", "بناء أجسام وأثقال", "Bodybuilding & weights", "💪", "كمال اجسام|بناء اجسام|اثقال|حديد|تضخيم|عضلات", "bodybuilding|weights|weightlifting|muscle|strength"),
       c("gym-fitness", "لياقة بدنية وتخسيس", "Fitness & weight loss", "🏃", "لياقة|تخسيس|رشاقة|حرق دهون|كارديو|تنحيف|رجيم", "fitness|weight loss|cardio|slimming|fat loss|aerobics"),
+      c("gym-men", "نادي رجالي", "Men's gym", "👨", "نادي رجالي|جيم رجالي|للرجال|شباب|رجال فقط", "men's gym|men only|male fitness"),
+      c("gym-mixed", "نادي مختلط", "Mixed gym", "👫", "نادي مختلط|جيم مختلط|رجال ونساء|للجنسين|عائلي", "mixed gym|co-ed|unisex gym|family gym"),
+      c("gym-split", "أوقات منفصلة للنساء والرجال", "Separate hours for women and men", "🕒", "اوقات نساء|اوقات رجال|دوام نسائي|دوام رجالي|اوقات منفصلة|فترة نسائية|فترة رجالية|وقت للنساء|وقت للرجال", "separate hours|women's hours|men's hours|women only times|split schedule"),
       c("gym-women", "نادي نسائي", "Women's gym", "👩", "نادي نسائي|جيم نسائي|جيم حريمي|نسائي|سيدات|للنساء|بنات", "women's gym|ladies gym|female fitness|women only"),
       c("gym-crossfit", "كروس فيت ووظيفي", "CrossFit & functional", "🔥", "كروس فيت|تدريب وظيفي|هيت|دائري|كالستنكس", "crossfit|functional training|hiit|circuit|calisthenics"),
     ]),
