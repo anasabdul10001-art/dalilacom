@@ -8,6 +8,7 @@ const MESSAGES: Record<string, string> = {
   "Merchant profile not found": "ما عندك محل مسجّل",
   "Merchant profile already exists": "عندك محل مسجّل أصلًا",
   "Merchant not found": "المحل غير موجود",
+  "Too many branches": "وصلت للحد الأقصى من الفروع",
   "Business not found": "النشاط غير موجود",
   "Product not found": "المنتج غير موجود",
   "Order not found": "الطلب غير موجود",

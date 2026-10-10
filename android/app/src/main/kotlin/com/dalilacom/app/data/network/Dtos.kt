@@ -316,6 +316,32 @@ data class MerchantDto(
     val rating: Double = 0.0,
     val ratingCount: Int = 0,
     val followersCount: Int = 0,
+    /** The branch this entry is shown at (the nearest one to the customer), when the shop has several places. */
+    val branchName: String? = null,
+    val branchCount: Int = 0,
+    val branches: List<BranchDto> = emptyList(),
+)
+
+/** Another place of the same shop, maybe in another city. */
+@Serializable
+data class BranchDto(
+    val id: String,
+    val name: String,
+    val city: String? = null,
+    val address: String? = null,
+    val phone: String? = null,
+    val latitude: Double,
+    val longitude: Double,
+)
+
+@Serializable
+data class BranchRequest(
+    val name: String,
+    val city: String? = null,
+    val address: String? = null,
+    val phone: String? = null,
+    val latitude: Double,
+    val longitude: Double,
 )
 
 @Serializable

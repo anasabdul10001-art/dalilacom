@@ -94,6 +94,22 @@ class MerchantRepository(
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
     }
 
+    suspend fun branches(): List<com.dalilacom.app.data.network.BranchDto> =
+        safeApiCall { api.branches() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
+    suspend fun saveBranch(id: String?, request: com.dalilacom.app.data.network.BranchRequest): Result<com.dalilacom.app.data.network.BranchDto> {
+        val response = safeApiCall { if (id == null) api.addBranch(request) else api.updateBranch(id, request) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.br_failed))))
+    }
+
+    suspend fun deleteBranch(id: String): Result<Unit> {
+        val response = safeApiCall { api.deleteBranch(id) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.br_failed))))
+    }
+
     suspend fun shippingMethods(): List<com.dalilacom.app.data.network.ShippingMethodDto> =
         safeApiCall { api.shippingMethods() }?.takeIf { it.isSuccessful }?.body().orEmpty()
 

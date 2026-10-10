@@ -746,4 +746,24 @@
     <string name="cat_sug_pending">اقتراحك «%1$s» قيد مراجعة الإدارة</string>
     <string name="cat_sug_rejected">ما انقبل اقتراحك «%1$s»</string>
     <string name="cat_online_note">مهنتك بتشتغل أونلاين، فما لازم تحدد مكان على الخريطة.</string>
+    <string name="br_title">فروع المحل</string>
+    <string name="br_sub">إذا محلك إله أكتر من فرع، حتى بمدن تانية، ضيف كل فرع بمكانه. الزبون بيلاقي أقرب فرع إله، وبصفحة المحل بيشوف كل الفروع. المنتجات والحسومات واحدة لكل الفروع.</string>
+    <string name="br_add">إضافة فرع</string>
+    <string name="br_edit">تعديل</string>
+    <string name="br_delete">حذف</string>
+    <string name="br_none">ما عندك فروع إضافية بعد</string>
+    <string name="br_name">اسم الفرع</string>
+    <string name="br_name_ph">مثلًا: فرع حلب</string>
+    <string name="br_city">المدينة</string>
+    <string name="br_address">العنوان</string>
+    <string name="br_phone">هاتف الفرع (اختياري)</string>
+    <string name="br_pick">مكان الفرع على الخريطة</string>
+    <string name="br_save">حفظ الفرع</string>
+    <string name="br_saving">جاري الحفظ...</string>
+    <string name="br_cancel">إلغاء</string>
+    <string name="br_need_name">اكتب اسم الفرع (حرفين على الأقل)</string>
+    <string name="br_need_pin">حدد مكان الفرع على الخريطة</string>
+    <string name="br_failed">ما قدرنا ننفّذ الطلب</string>
+    <string name="br_confirm_del">حذف هالفرع؟</string>
+    <string name="br_shop_branches">فروعنا (%1$d)</string>
 </resources>

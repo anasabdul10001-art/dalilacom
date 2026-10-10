@@ -340,6 +340,18 @@ interface ApiService {
     @POST("cart/checkout")
     suspend fun checkout(@Body body: CheckoutRequest): Response<List<OrderDto>>
 
+    @GET("merchant/branches")
+    suspend fun branches(): Response<List<BranchDto>>
+
+    @POST("merchant/branches")
+    suspend fun addBranch(@Body body: BranchRequest): Response<BranchDto>
+
+    @PATCH("merchant/branches/{id}")
+    suspend fun updateBranch(@Path("id") id: String, @Body body: BranchRequest): Response<BranchDto>
+
+    @DELETE("merchant/branches/{id}")
+    suspend fun deleteBranch(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
     @GET("merchant/shipping-methods")
     suspend fun shippingMethods(): Response<List<ShippingMethodDto>>
 

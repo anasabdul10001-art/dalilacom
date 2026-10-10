@@ -292,6 +292,7 @@ function renderScreen() {
     case "merchantRegister": return screenMerchantRegister();
     case "merchantMode": return screenMerchantModeShell();
     case "shippingMethods": return screenShipping();
+    case "merchantBranches": return screenBranches();
     case "aiPlans": return screenAiPlans();
     case "productEdit": return screenProductEdit();
     case "affiliateMine": return screenAffiliateMine();
@@ -1159,7 +1160,7 @@ function merchantRowHtml(m) {
       <div class="title-line">
         <div style="display:flex;align-items:center;gap:10px;min-width:0">
           ${avatarHtml(m.avatarUrl, m.businessName)}
-          <div style="min-width:0"><strong>${esc(m.businessName)}</strong><p class="muted" style="margin:0">${esc(catName(m.category))}${m.address ? " · " + esc(m.address) : ""}</p></div>
+          <div style="min-width:0"><strong>${esc(m.businessName)}</strong><p class="muted" style="margin:0">${esc(catName(m.category))}${m.branchName ? " · 🏬 " + esc(m.branchName) : ""}${m.address ? " · " + esc(m.address) : ""}</p></div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
           ${m.distanceKm != null ? `<span class="badge neutral">${m.distanceKm < 1 ? Math.round(m.distanceKm * 1000) + " " + esc(t("unit.m")) : m.distanceKm.toFixed(1) + " " + esc(t("unit.km"))}</span>` : ""}
@@ -1526,6 +1527,7 @@ function screenMerchantDetail() {
         ${x.bio ? `<p class="place-bio" style="margin-top:0">${esc(x.bio)}</p>` : ""}
         ${x.address ? `<div class="place-row">📍 ${esc(x.address)}</div>` : ""}
         ${phone ? `<div class="place-row">📞 <a href="tel:${esc(phone)}">${esc(phone)}</a></div>` : ""}
+        ${(x.branches || []).length ? `<div class="section-title">🏬 ${esc(t("br.shopBranches", { n: x.branches.length + (hasCoords ? 1 : 0) }))}</div>${x.branches.map((b) => `<div class="place-row"><b>${esc(b.name)}</b>${b.city || b.address ? " — " + esc([b.city, b.address].filter(Boolean).join("، ")) : ""}${b.phone ? ` · <a href="tel:${esc(b.phone)}">${esc(b.phone)}</a>` : ""} · <a href="https://www.google.com/maps/dir/?api=1&destination=${b.latitude},${b.longitude}" target="_blank" rel="noopener">${esc(t("card.directions"))}</a></div>`).join("")}` : ""}
         ${(x.discounts || []).length ? `<div class="section-title">${esc(t("place.discounts"))}</div>${x.discounts.map((d) => customerDiscountCard(d)).join("")}` : ""}
         ${hoursTable(x)}
       </section>`;
@@ -3013,11 +3015,11 @@ async function submitMerchantRegister() {
 /* ---- merchant: pin the shop on the map ---- */
 
 // One Leaflet instance kept alive across re-renders (re-parented into #pick-slot each time).
-function pickerHtml() {
+function pickerHtml(label) {
   const p = S._pick || {};
   return `
     <div class="field">
-      <label>مكان محلك على الخريطة — بهالطريقة بيلاقيك الزبائن</label>
+      <label>${label ? esc(label) : "مكان محلك على الخريطة — بهالطريقة بيلاقيك الزبائن"}</label>
       <div id="pick-slot" class="pick-map"></div>
       <div class="row" style="margin-top:6px;gap:8px;align-items:center">
         <button class="btn small outline" style="width:auto;flex:none" onclick="pickUseMyLocation()">📍 استخدم موقعي الحالي</button>
@@ -4245,6 +4247,81 @@ async function loadMerchantStatus() {
   render();
 }
 
+/* ---- branches: other places of the same shop, maybe in another city ---- */
+
+async function openBranches() {
+  S._br = { loading: true, list: [], form: null, busy: false, error: null };
+  go("merchantBranches");
+  const { ok, data } = await api("GET", "/merchant/branches");
+  S._br.loading = false;
+  S._br.list = ok ? data : [];
+  render();
+}
+
+function branchForm(b) {
+  S._br.form = { id: b ? b.id : null, name: b ? b.name : "", city: b ? b.city || "" : "", address: b ? b.address || "" : "", phone: b ? b.phone || "" : "" };
+  S._br.error = null;
+  pickReset(b ? b.latitude : null, b ? b.longitude : null);
+  render();
+}
+
+function screenBranches() {
+  if (!S._br) { openBranches(); return spinner(); }
+  const f = S._br;
+  if (f.loading) return `${backRow()}<h1 class="screen-title">${esc(t("br.title"))}</h1>${spinner()}`;
+  if (f.form) {
+    const x = f.form;
+    return `
+      ${backRow()}
+      <h1 class="screen-title">${esc(x.id ? t("br.edit") : t("br.add"))}</h1>
+      <div class="field"><label>${esc(t("br.name"))}</label><input value="${esc(x.name)}" maxlength="60" placeholder="${esc(t("br.namePh"))}" oninput="S._br.form.name=this.value"></div>
+      <div class="field"><label>${esc(t("br.city"))}</label><input value="${esc(x.city)}" maxlength="60" oninput="S._br.form.city=this.value"></div>
+      <div class="field"><label>${esc(t("br.address"))}</label><input value="${esc(x.address)}" maxlength="200" oninput="S._br.form.address=this.value"></div>
+      <div class="field"><label>${esc(t("br.phone"))}</label><input type="tel" value="${esc(x.phone)}" maxlength="30" oninput="S._br.form.phone=this.value"></div>
+      ${pickerHtml(t("br.pickLabel"))}
+      ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}
+      <button class="btn" ${f.busy ? "disabled" : ""} onclick="saveBranch()">${esc(f.busy ? t("br.saving") : t("br.save"))}</button>
+      <button class="link-btn" style="display:block;margin:8px auto" onclick="S._br.form=null;render()">${esc(t("br.cancel"))}</button>`;
+  }
+  return `
+    ${backRow()}
+    <h1 class="screen-title">${esc(t("br.title"))}</h1>
+    <p class="screen-sub">${esc(t("br.sub"))}</p>
+    ${f.list.length ? f.list.map((b) => `
+      <div class="card">
+        <div class="title-line"><strong>🏬 ${esc(b.name)}</strong>
+          <span><button class="link-btn" onclick="branchForm(S._br.list.find((z) => z.id === '${b.id}'))">${esc(t("br.edit"))}</button>
+          <button class="link-btn" onclick="deleteBranch('${b.id}')">${esc(t("br.delete"))}</button></span></div>
+        <p class="muted" style="margin:4px 0 0">${esc([b.city, b.address].filter(Boolean).join(" · "))}${b.phone ? " · " + esc(b.phone) : ""}</p>
+      </div>`).join("") : `<p class="muted">${esc(t("br.none"))}</p>`}
+    <button class="btn" onclick="branchForm(null)">+ ${esc(t("br.add"))}</button>`;
+}
+
+async function saveBranch() {
+  const f = S._br;
+  const x = f.form;
+  if (x.name.trim().length < 2) { f.error = t("br.needName"); return render(); }
+  if (!S._pick || S._pick.lat == null) { f.error = t("br.needPin"); return render(); }
+  const body = { name: x.name.trim(), city: x.city.trim() || null, address: x.address.trim() || null, phone: x.phone.trim() || null, latitude: S._pick.lat, longitude: S._pick.lng };
+  f.busy = true; f.error = null; render();
+  const { ok, data } = x.id ? await api("PATCH", "/merchant/branches/" + x.id, body) : await api("POST", "/merchant/branches", body);
+  f.busy = false;
+  if (!ok) { f.error = errMsg(data, t("br.failed")); return render(); }
+  f.form = null;
+  toast(t("br.saved"));
+  const list = await api("GET", "/merchant/branches");
+  f.list = list.ok ? list.data : f.list;
+  render();
+}
+
+async function deleteBranch(id) {
+  if (!confirm(t("br.confirmDel"))) return;
+  const { ok, data } = await api("DELETE", "/merchant/branches/" + id);
+  if (!ok) return toast(errMsg(data, t("br.failed")));
+  S._br.list = S._br.list.filter((b) => b.id !== id);
+  render();
+}
+
 /* ---- shipping methods: how the shop sends orders, and what it costs ---- */
 
 async function openShipping() {
@@ -4846,6 +4923,7 @@ function tabCatalog() {
       <button class="btn outline" onclick="S._mprof=null;go('merchantProfile')">📍 بيانات المحل ومكانه</button>
       <button class="btn outline" onclick="S._hours=null;go('merchantHours')">🕒 ساعات العمل</button>
     </div>
+    <button class="btn outline" style="margin-bottom:12px" onclick="openBranches()">🏬 ${esc(t("br.title"))}</button>
     <button class="btn outline" style="margin-bottom:12px" onclick="openShipping()">🚚 ${esc(t("ship.title"))}</button>
     <button class="btn outline" style="margin-bottom:12px" onclick="openAiPlans()">✨ ${esc(t("ai.plansTitle"))}</button>
     <div class="card">
@@ -5470,7 +5548,7 @@ function wireUpAfterRender() {
   if (S.screen === "home" && (S.homeTab === "discover" || S.homeTab === "deals") && S._discover) {
     renderDiscoverMap();
   }
-  if (S.screen === "merchantRegister" || S.screen === "merchantProfile") renderPicker();
+  if (S.screen === "merchantRegister" || S.screen === "merchantProfile" || S.screen === "merchantBranches") renderPicker();
   if (S.screen === "store" && S._store && S._store.banners && S._store.banners.list.length > 1) { if (!S._sliderTimer) storeSliderRestart(); }
   else if (S._sliderTimer) { clearInterval(S._sliderTimer); S._sliderTimer = null; }
 }

@@ -33,7 +33,7 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.formatCents
 
 @Composable
-fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}, onOpenDiscounts: () -> Unit = {}, onOpenShipping: () -> Unit = {}, onOpenAiPlans: () -> Unit = {}) {
+fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}, onOpenDiscounts: () -> Unit = {}, onOpenShipping: () -> Unit = {}, onOpenAiPlans: () -> Unit = {}, onOpenBranches: () -> Unit = {}) {
     val viewModel: CatalogViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -47,6 +47,8 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
             androidx.compose.material3.OutlinedButton(onClick = onOpenHours, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.s_4a3ccec5)) }
         }
         Spacer(Modifier.height(12.dp))
+        androidx.compose.material3.OutlinedButton(onClick = onOpenBranches, modifier = Modifier.fillMaxWidth()) { Text("🏬  " + stringResource(R.string.br_title)) }
+        Spacer(Modifier.height(8.dp))
         androidx.compose.material3.OutlinedButton(onClick = onOpenShipping, modifier = Modifier.fillMaxWidth()) { Text("🚚  " + stringResource(R.string.ship_title)) }
         Spacer(Modifier.height(8.dp))
         androidx.compose.material3.OutlinedButton(onClick = onOpenAiPlans, modifier = Modifier.fillMaxWidth()) { Text("✨  " + stringResource(R.string.ai_plans_title)) }

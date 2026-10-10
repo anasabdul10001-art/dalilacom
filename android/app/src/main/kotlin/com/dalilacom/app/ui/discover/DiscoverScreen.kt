@@ -604,7 +604,7 @@ private fun MerchantCard(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(merchant.businessName, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val subtitle = listOfNotNull(categoryName ?: merchant.category?.name, merchant.address).joinToString(" • ")
+                    val subtitle = listOfNotNull(categoryName ?: merchant.category?.name, merchant.branchName?.let { "🏬 $it" }, merchant.address).joinToString(" • ")
                     if (subtitle.isNotBlank()) {
                         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }

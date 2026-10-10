@@ -163,6 +163,9 @@ fun DalilacomNavGraph(
         composable("aiPlans") {
             com.dalilacom.app.ui.store.AiPlansScreen(container = container, onBack = { navController.popBackStack() }, onWallet = { navController.navigate("wallet") })
         }
+        composable("branches") {
+            com.dalilacom.app.ui.merchantmode.BranchesScreen(container = container, onBack = { navController.popBackStack() })
+        }
         composable("shipping") {
             com.dalilacom.app.ui.merchantmode.ShippingScreen(container = container, onBack = { navController.popBackStack() })
         }

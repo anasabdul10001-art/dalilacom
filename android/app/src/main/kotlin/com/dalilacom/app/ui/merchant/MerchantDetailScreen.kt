@@ -210,6 +210,24 @@ fun MerchantDetailScreen(
                                 merchant.bio?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(10.dp)) }
                                 merchant.address?.let { Text("📍 $it", style = MaterialTheme.typography.bodyMedium) }
                                 merchant.phone?.takeIf { it.isNotBlank() }?.let { Spacer(Modifier.height(6.dp)); Text("📞 $it", style = MaterialTheme.typography.bodyMedium) }
+                                if (merchant.branches.isNotEmpty()) {
+                                    SectionTitle("🏬 " + stringResource(R.string.br_shop_branches, merchant.branches.size + (if (merchant.latitude != null) 1 else 0)))
+                                    merchant.branches.forEach { b ->
+                                        val where = listOfNotNull(b.city, b.address).filter { it.isNotBlank() }.joinToString(" - ")
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+                                            Column(Modifier.weight(1f)) {
+                                                Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                                if (where.isNotBlank()) Text(where, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                b.phone?.takeIf { it.isNotBlank() }?.let { Text("📞 $it", style = MaterialTheme.typography.bodySmall) }
+                                            }
+                                            val ctx = androidx.compose.ui.platform.LocalContext.current
+                                            OutlinedButton(onClick = {
+                                                val uri = android.net.Uri.parse("geo:${b.latitude},${b.longitude}?q=${b.latitude},${b.longitude}(${android.net.Uri.encode(b.name)})")
+                                                runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri)) }
+                                            }, shape = RoundedCornerShape(10.dp)) { Text(stringResource(R.string.place_directions), fontSize = 12.sp) }
+                                        }
+                                    }
+                                }
                                 if (merchant.discounts.isNotEmpty()) {
                                     SectionTitle(stringResource(R.string.place_discounts))
                                     merchant.discounts.forEach { discount ->

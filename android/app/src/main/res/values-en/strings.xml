@@ -742,4 +742,24 @@
     <string name="cat_sug_pending">Your suggestion “%1$s” is being reviewed</string>
     <string name="cat_sug_rejected">Your suggestion “%1$s” was not accepted</string>
     <string name="cat_online_note">Your work is online, so you do not need to set a place on the map.</string>
+    <string name="br_title">Shop branches</string>
+    <string name="br_sub">If your shop has more than one branch, even in other cities, add each one with its place. Customers find the nearest branch, and the shop page lists them all. Products and discounts are the same for every branch.</string>
+    <string name="br_add">Add a branch</string>
+    <string name="br_edit">Edit</string>
+    <string name="br_delete">Delete</string>
+    <string name="br_none">No extra branches yet</string>
+    <string name="br_name">Branch name</string>
+    <string name="br_name_ph">e.g. Aleppo branch</string>
+    <string name="br_city">City</string>
+    <string name="br_address">Address</string>
+    <string name="br_phone">Branch phone (optional)</string>
+    <string name="br_pick">Branch place on the map</string>
+    <string name="br_save">Save the branch</string>
+    <string name="br_saving">Saving...</string>
+    <string name="br_cancel">Cancel</string>
+    <string name="br_need_name">Write the branch name (at least 2 letters)</string>
+    <string name="br_need_pin">Set the branch place on the map</string>
+    <string name="br_failed">The request could not be done</string>
+    <string name="br_confirm_del">Delete this branch?</string>
+    <string name="br_shop_branches">Our branches (%1$d)</string>
 </resources>

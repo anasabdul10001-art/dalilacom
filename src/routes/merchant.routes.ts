@@ -250,22 +250,54 @@ merchantRouter.get("/", async (req, res) => {
               { businessName: { contains: q, mode: "insensitive" } },
               { category: { name: { contains: q, mode: "insensitive" } } },
               { address: { contains: q, mode: "insensitive" } },
+              { branches: { some: { isActive: true, OR: [{ name: { contains: q, mode: "insensitive" } }, { city: { contains: q, mode: "insensitive" } }, { address: { contains: q, mode: "insensitive" } }] } } },
               ...(matchedCategoryIds.length ? [{ categoryId: { in: matchedCategoryIds } }] : []),
             ],
           }
         : {}),
-      ...(hasBox ? { latitude: { gte: minLat, lte: maxLat }, longitude: { gte: minLng, lte: maxLng } } : {}),
+      // a shop is in the visible rectangle when its main place or any of its branches is
+      ...(hasBox
+        ? {
+            AND: [
+              {
+                OR: [
+                  { latitude: { gte: minLat, lte: maxLat }, longitude: { gte: minLng, lte: maxLng } },
+                  { branches: { some: { isActive: true, latitude: { gte: minLat, lte: maxLat }, longitude: { gte: minLng, lte: maxLng } } } },
+                ],
+              },
+            ],
+          }
+        : {}),
     },
-    include: { category: true, discounts: { where: liveDiscountWhere() }, user: ownerProfileSelect },
+    include: { category: true, discounts: { where: liveDiscountWhere() }, user: ownerProfileSelect, branches: { where: { isActive: true }, orderBy: { createdAt: "asc" } } },
   });
 
   const tz = await platformTimeZone();
   const now = new Date();
   const localize = await categoryNameLocalizer(resolveLanguage(req));
   const placesLeft = await peopleLeftMap(found.flatMap((m) => m.discounts));
-  let merchants = found.map((m) =>
-    localize({ ...withOwnerProfile({ ...m, discounts: m.discounts.map((d) => ({ ...d, peopleLeft: placesLeft.get(d.id) ?? null })) }), openStatus: computeOpenStatus(m.openingHours, tz, now) }),
-  );
+  const inBox = (la: number, ln: number) => !hasBox || (la >= minLat! && la <= maxLat! && ln >= minLng! && ln <= maxLng!);
+  let merchants = found.flatMap((m) => {
+    const { branches, ...shop } = m;
+    // one entry per shop (so a shop never shows twice): at the place that fits the search best — the nearest one to the
+    // customer, otherwise the first one inside the visible map; the other places are listed on the shop page
+    const places = [
+      ...(m.latitude !== null && m.longitude !== null ? [{ branchId: null as string | null, branchName: null as string | null, latitude: m.latitude, longitude: m.longitude, address: m.address, phone: m.phone }] : []),
+      ...branches.map((b) => ({ branchId: b.id as string | null, branchName: b.name as string | null, latitude: b.latitude, longitude: b.longitude, address: b.address ?? b.city, phone: b.phone ?? m.phone })),
+    ].filter((p) => inBox(p.latitude, p.longitude));
+    const best = lat !== undefined && lng !== undefined ? [...places].sort((a, b) => haversineDistanceKm(lat, lng, a.latitude, a.longitude) - haversineDistanceKm(lat, lng, b.latitude, b.longitude))[0] : places[0];
+    if (hasBox && !best) return [];
+    const at = best ? { latitude: best.latitude, longitude: best.longitude, address: best.address, phone: best.phone } : {};
+    return [
+      localize({
+        ...withOwnerProfile({ ...shop, ...at, discounts: m.discounts.map((d) => ({ ...d, peopleLeft: placesLeft.get(d.id) ?? null })) }),
+        branchId: best?.branchId ?? null,
+        branchName: best?.branchName ?? null,
+        branchCount: branches.length,
+        openStatus: computeOpenStatus(m.openingHours, tz, now),
+      }),
+    ];
+  });
   if (openNow === "true") merchants = merchants.filter((m) => m.openStatus.isOpen);
 
   // Nearest-first sorting when the customer's location is known (section 31 "Radius Selector").
@@ -373,6 +405,57 @@ merchantRouter.put("/shipping-methods", requireAuth, requireRole(Role.MERCHANT),
   res.json(rows.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })));
 });
 
+/* ---------------- the shop's other places (branches) ---------------- */
+
+const MAX_BRANCHES = 30;
+const branchJson = (b: { id: string; name: string; city: string | null; address: string | null; phone: string | null; latitude: number; longitude: number }) => ({
+  id: b.id, name: b.name, city: b.city, address: b.address, phone: b.phone, latitude: b.latitude, longitude: b.longitude,
+});
+const branchSchema = z.object({
+  name: z.string().trim().min(2).max(60),
+  city: z.string().trim().max(60).nullable().optional(),
+  address: z.string().trim().max(200).nullable().optional(),
+  phone: z.string().trim().max(30).nullable().optional(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+merchantRouter.get("/branches", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  const rows = await prisma.shopBranch.findMany({ where: { merchantId: merchant.id, isActive: true }, orderBy: { createdAt: "asc" } });
+  res.json(rows.map(branchJson));
+});
+
+merchantRouter.post("/branches", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const parsed = branchSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const own = await ownApprovedShop(req.user!.id);
+  if (own.error || !own.merchant) return sendError(res, own.error?.[0] ?? 404, own.error?.[1] ?? "NOT_FOUND", own.error?.[2] ?? "Not found");
+  if ((await prisma.shopBranch.count({ where: { merchantId: own.merchant.id, isActive: true } })) >= MAX_BRANCHES) return sendError(res, 400, "BAD_REQUEST", "Too many branches");
+  const row = await prisma.shopBranch.create({ data: { merchantId: own.merchant.id, ...parsed.data } });
+  res.status(201).json(branchJson(row));
+});
+
+merchantRouter.patch("/branches/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const parsed = branchSchema.partial().safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  const row = await prisma.shopBranch.findFirst({ where: { id: req.params.id, merchantId: merchant.id, isActive: true } });
+  if (!row) return sendError(res, 404, "NOT_FOUND", "Branch not found");
+  res.json(branchJson(await prisma.shopBranch.update({ where: { id: row.id }, data: parsed.data })));
+});
+
+merchantRouter.delete("/branches/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  const row = await prisma.shopBranch.findFirst({ where: { id: req.params.id, merchantId: merchant.id, isActive: true } });
+  if (!row) return sendError(res, 404, "NOT_FOUND", "Branch not found");
+  await prisma.shopBranch.update({ where: { id: row.id }, data: { isActive: false } });
+  res.json({ ok: true });
+});
+
 /** Checks what the form chose against the shop's own data; returns the values to save or the reason it is wrong. */
 async function discountTerms(merchantId: string, input: z.infer<typeof discountSchema>) {
   const start = input.startDate ? new Date(input.startDate) : null;
@@ -432,7 +515,7 @@ merchantRouter.get("/discounts", requireAuth, requireRole(Role.MERCHANT), async 
 merchantRouter.get("/:id", async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
     where: { id: req.params.id },
-    include: { category: true, discounts: { where: liveDiscountWhere(), orderBy: { percent: "desc" } }, user: ownerProfileSelect, shippingMethods: { where: { isActive: true }, orderBy: { createdAt: "asc" } } },
+    include: { category: true, discounts: { where: liveDiscountWhere(), orderBy: { percent: "desc" } }, user: ownerProfileSelect, shippingMethods: { where: { isActive: true }, orderBy: { createdAt: "asc" } }, branches: { where: { isActive: true }, orderBy: { createdAt: "asc" } } },
   });
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
     return sendError(res, 404, "NOT_FOUND", "Merchant not found");
@@ -448,7 +531,8 @@ merchantRouter.get("/:id", async (req, res) => {
     peopleLeft: placesLeft.get(d.id) ?? null, myTimesLeft: timesLeft.get(d.id) ?? null, ...scopeOf(d),
   }));
   const shippingMethods = merchant.shippingMethods.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents }));
-  res.json(localize({ ...withOwnerProfile({ ...merchant, discounts, shippingMethods }), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
+  const branches = merchant.branches.map(branchJson);
+  res.json(localize({ ...withOwnerProfile({ ...merchant, discounts, shippingMethods, branches }), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
 });
 
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {

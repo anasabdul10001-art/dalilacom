@@ -348,8 +348,29 @@ model MerchantProfile {
   bannerBookings       BannerBooking[]
   orders               Order[]
   affiliates           MerchantAffiliate[]
+  branches             ShopBranch[]
 
   @@index([categoryId])
+}
+
+// One more place of the same shop (a second branch, maybe in another city). The shop page, its products and its
+// discounts stay the shop's own; a branch only adds a name, a place on the map and its own address and phone.
+model ShopBranch {
+  id         String   @id @default(uuid())
+  merchantId String
+  name       String // "فرع المزة"
+  city       String?
+  address    String?
+  phone      String?
+  latitude   Float
+  longitude  Float
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  merchant MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
 }
 
 // A product in a merchant's e-commerce store (section 5/26)
