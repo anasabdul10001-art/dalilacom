@@ -59,6 +59,45 @@ export async function anonymizeAccount(userId: string): Promise<void> {
   });
 }
 
+/**
+ * The admin's "delete for good": the account and everything of its own are removed. When invoices, orders, wallet records
+ * or a shop with products still hang on it, the books need the row, so it is anonymised instead (see above).
+ * Returns what happened.
+ */
+export async function eraseAccount(userId: string): Promise<"deleted" | "anonymized"> {
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.cartItem.deleteMany({ where: { cart: { userId } } });
+      await tx.cart.deleteMany({ where: { userId } });
+      await tx.responderInteraction.deleteMany({ where: { userId } });
+      await tx.responderRule.deleteMany({ where: { userId } });
+      await tx.channelConnection.deleteMany({ where: { userId } });
+      await tx.responderSubscription.deleteMany({ where: { userId } });
+      await tx.address.deleteMany({ where: { userId } });
+      await tx.userAvatar.deleteMany({ where: { userId } });
+      await tx.deviceToken.deleteMany({ where: { userId } });
+      await tx.socialIdentity.deleteMany({ where: { userId } });
+      await tx.loginTicket.deleteMany({ where: { userId } });
+      await tx.notification.deleteMany({ where: { userId } });
+      await tx.notificationPreference.deleteMany({ where: { userId } });
+      await tx.favoriteMerchant.deleteMany({ where: { userId } });
+      await tx.metaOAuthSession.deleteMany({ where: { userId } });
+      await tx.emailVerificationToken.deleteMany({ where: { userId } });
+      await tx.passwordResetToken.deleteMany({ where: { userId } });
+      await tx.emailChangeToken.deleteMany({ where: { userId } });
+      await tx.securityEvent.deleteMany({ where: { userId } });
+      await tx.businessMember.deleteMany({ where: { userId } });
+      await tx.wallet.deleteMany({ where: { userId } });
+      await tx.merchantProfile.deleteMany({ where: { userId } }); // refused by the database when the shop has products, orders or discounts
+      await tx.user.delete({ where: { id: userId } });
+    });
+    return "deleted";
+  } catch {
+    await anonymizeAccount(userId);
+    return "anonymized";
+  }
+}
+
 /** Removes only the link between a Facebook account and a Dalilacom account (what Facebook's "remove app" asks for). */
 export async function unlinkFacebook(providerUserId: string): Promise<number> {
   const removed = await prisma.socialIdentity.deleteMany({ where: { provider: "FACEBOOK", providerUserId } });

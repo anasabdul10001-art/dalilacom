@@ -17,6 +17,9 @@ import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
 import { aiProviderStatus, aiTotals, aiUsage, testProvider } from "../services/ai.service";
+import bcrypt from "bcryptjs";
+import { eraseAccount } from "../services/accountDeletion.service";
+import { isSupportedLanguage } from "../lib/languages";
 import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion } from "../services/categorySuggestion.service";
 
 export const adminRouter = Router();
@@ -175,23 +178,87 @@ adminRouter.get("/users", async (req, res) => {
   res.json(users);
 });
 
-// Switching an account off (or back on) ends its sessions. An admin can't switch off their own account, so at least one
-// enabled admin always remains (whoever is making the request).
-adminRouter.patch("/users/:id", async (req, res) => {
-  const parsed = z.object({ isDisabled: z.boolean() }).safeParse(req.body);
+const userId = (id: string) => ({ id });
+
+/** Everything about one account, for the admin's edit window. */
+adminRouter.get("/users/:id", route(async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: userId(req.params.id),
+    select: {
+      id: true, email: true, fullName: true, phone: true, role: true, isDisabled: true, isEmailVerified: true, bio: true, language: true,
+      countryCode: true, vatNumber: true, createdAt: true, updatedAt: true,
+      wallet: { select: { balance: true } },
+      merchantProfile: { select: { id: true, businessName: true, approvalStatus: true } },
+      _count: { select: { orders: true, memberships: true } },
+    },
+  });
+  if (!user) return sendError(res, 404, "NOT_FOUND", "User not found");
+  const { wallet, _count, ...rest } = user;
+  res.json({ ...rest, walletBalance: wallet?.balance ?? 0, ordersCount: _count.orders, membershipsCount: _count.memberships });
+}));
+
+const editUserSchema = z.object({
+  isDisabled: z.boolean().optional(),
+  fullName: z.string().trim().min(2).max(80).optional(),
+  email: z.string().trim().toLowerCase().email().optional(),
+  phone: z
+    .string()
+    .trim()
+    .transform((value) => value.replace(/[\s-]/g, ""))
+    .refine((value) => value === "" || /^\+?\d{6,15}$/.test(value), "Invalid phone number")
+    .nullable()
+    .optional(),
+  role: z.enum(["CUSTOMER", "MERCHANT"]).optional(), // a promotion to admin is made only through the server settings
+  isEmailVerified: z.boolean().optional(),
+  bio: z.string().trim().max(500).nullable().optional(),
+  language: z.string().refine(isSupportedLanguage, "unsupported language").optional(),
+  countryCode: z.string().trim().length(2).toUpperCase().nullable().optional(),
+  vatNumber: z.string().trim().max(30).nullable().optional(),
+  newPassword: z.string().min(8).max(200).optional(),
+});
+
+// Edit any detail of an account, switch it off (or back on), or set a new password. Switching an account off, changing its
+// email or password ends its sessions. An admin can't switch off their own account, so at least one enabled admin always
+// remains, and an admin account's role is not changed from here.
+adminRouter.patch("/users/:id", route(async (req, res) => {
+  const parsed = editUserSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, role: true, isDisabled: true } });
+  const input = parsed.data;
+  const target = await prisma.user.findUnique({ where: userId(req.params.id), select: { id: true, role: true, email: true } });
   if (!target) return sendError(res, 404, "NOT_FOUND", "User not found");
-  if (parsed.data.isDisabled) {
-    if (target.id === req.user!.id) return sendError(res, 409, "CONFLICT", "You cannot disable your own account");
+  if (input.isDisabled && target.id === req.user!.id) return sendError(res, 409, "CONFLICT", "You cannot disable your own account");
+  if (input.role && target.role === "ADMIN") return sendError(res, 409, "CONFLICT", "An admin account's role cannot be changed here");
+  if (input.email && input.email !== target.email) {
+    if (await prisma.user.findFirst({ where: { email: input.email, id: { not: target.id } }, select: { id: true } })) return sendError(res, 409, "CONFLICT", "That email is already used by another account");
   }
+  if (input.phone) {
+    if (await prisma.user.findFirst({ where: { phone: input.phone, id: { not: target.id } }, select: { id: true } })) return sendError(res, 409, "CONFLICT", "That phone number is already used by another account");
+  }
+  const { newPassword, phone, ...rest } = input;
+  const endSessions = input.isDisabled === true || newPassword !== undefined || (input.email !== undefined && input.email !== target.email);
   const updated = await prisma.user.update({
     where: { id: target.id },
-    data: { isDisabled: parsed.data.isDisabled, ...(parsed.data.isDisabled ? { tokenVersion: { increment: 1 } } : {}) },
+    data: {
+      ...rest,
+      ...(phone !== undefined ? { phone: phone === "" ? null : phone } : {}),
+      ...(input.email !== undefined && input.email !== target.email && input.isEmailVerified === undefined ? { isEmailVerified: false } : {}),
+      ...(newPassword !== undefined ? { passwordHash: await bcrypt.hash(newPassword, 12) } : {}),
+      ...(endSessions ? { tokenVersion: { increment: 1 } } : {}),
+    },
     select: { id: true, isDisabled: true },
   });
   res.json(updated);
-});
+}));
+
+// Delete an account for good. It is removed completely when nothing else depends on it; when orders, wallet records or a
+// shop with products still hang on it, the account stays only as an anonymous, disabled row (the books need it).
+adminRouter.delete("/users/:id", route(async (req, res) => {
+  const target = await prisma.user.findUnique({ where: userId(req.params.id), select: { id: true, role: true } });
+  if (!target) return sendError(res, 404, "NOT_FOUND", "User not found");
+  if (target.id === req.user!.id) return sendError(res, 409, "CONFLICT", "You cannot delete your own account");
+  if (target.role === "ADMIN") return sendError(res, 409, "CONFLICT", "An admin account cannot be deleted");
+  res.json({ result: await eraseAccount(target.id) });
+}));
 
 /* ---------------- a shop's plan decides how many announcements it may send ---------------- */
 

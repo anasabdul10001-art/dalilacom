@@ -238,7 +238,7 @@
     <!-- USERS: who is who -->
     <div class="section" id="section-users" style="display:none">
       <h2>المستخدمون</h2>
-      <p class="subtitle">ابحث عن أي حساب بالاسم أو الإيميل أو الهاتف، وشوف دوره وحالته. تعطيل الحساب بيوقفه فورًا وبينهي جلساته. الترقية لأدمن بتتم فقط من إعدادات السيرفر (SUPER_ADMIN_EMAIL).</p>
+      <p class="subtitle">ابحث عن أي حساب بالاسم أو الإيميل أو الهاتف، وشوف دوره وحالته. زر «تعديل» بيفتح كل تفاصيل الحساب (الاسم والإيميل والهاتف والدور وكلمة السر...) مع التعطيل والحذف النهائي. تعطيل الحساب بيوقفه فورًا وبينهي جلساته. الترقية لأدمن بتتم فقط من إعدادات السيرفر (SUPER_ADMIN_EMAIL).</p>
       <div class="card">
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input id="users-q" placeholder="اسم أو إيميل أو هاتف" style="flex:2;min-width:200px" onkeydown="if(event.key==='Enter') loadUsers()" />
@@ -255,6 +255,36 @@
           <tbody id="users-body"></tbody>
         </table>
         <p id="users-msg" class="muted" style="margin-top:8px"></p>
+      </div>
+      <div id="user-edit" class="card" style="display:none;margin-top:14px;border:2px solid var(--primary, #0a7)">
+        <h3 id="ue-title">تعديل الحساب</h3>
+        <p id="ue-info" class="muted"></p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+          <label>الاسم الكامل<input id="ue-name" /></label>
+          <label>الإيميل<input id="ue-email" dir="ltr" /></label>
+          <label>الهاتف<input id="ue-phone" dir="ltr" placeholder="+963..." /></label>
+          <label>الدور
+            <select id="ue-role"><option value="CUSTOMER">زبون</option><option value="MERCHANT">تاجر</option><option value="ADMIN" disabled>أدمن</option></select>
+          </label>
+          <label>اللغة
+            <select id="ue-lang"><option value="ar">العربية</option><option value="en">English</option></select>
+          </label>
+          <label>رمز الدولة (حرفين)<input id="ue-country" dir="ltr" maxlength="2" placeholder="SY" /></label>
+          <label>الرقم الضريبي<input id="ue-vat" dir="ltr" /></label>
+          <label>كلمة سر جديدة (اتركها فاضية إذا ما بدك تغيّرها)<input id="ue-pass" type="text" dir="ltr" autocomplete="off" placeholder="8 خانات على الأقل" /></label>
+        </div>
+        <label style="display:block;margin-top:10px">نبذة<textarea id="ue-bio" rows="2" style="width:100%"></textarea></label>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px">
+          <label><input type="checkbox" id="ue-verified" /> الإيميل مؤكَّد</label>
+          <label><input type="checkbox" id="ue-disabled" /> الحساب معطّل</label>
+        </div>
+        <p id="ue-msg" class="muted" style="margin-top:8px"></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="saveUserEdit()">💾 حفظ</button>
+          <button class="secondary" onclick="closeUserEdit()">إغلاق</button>
+          <span style="flex:1"></span>
+          <button class="danger" id="ue-delete" onclick="deleteUserForGood()">🗑️ حذف نهائي</button>
+        </div>
       </div>
     </div>
 
@@ -665,8 +695,68 @@ async function loadUsers() {
       <td class="muted" style="direction:ltr;text-align:right">${esc(u.phone || '—')}</td>
       <td><span class="badge ${u.role === 'ADMIN' ? 'APPROVED' : 'inactive'}">${esc(ROLE_LABEL[u.role] || u.role)}</span></td>
       <td><span class="badge ${u.isDisabled ? 'REJECTED' : 'active'}">${u.isDisabled ? 'معطّل' : 'فعّال'}</span></td>
-      <td><button class="small" style="${u.isDisabled ? '' : 'background:#777'}" onclick="toggleUser('${esc(u.id)}', ${!u.isDisabled})">${u.isDisabled ? 'تفعيل' : 'تعطيل'}</button></td>
+      <td style="white-space:nowrap"><button class="small" onclick="openUserEdit('${esc(u.id)}')">✏️ تعديل</button> <button class="small" style="${u.isDisabled ? '' : 'background:#777'}" onclick="toggleUser('${esc(u.id)}', ${!u.isDisabled})">${u.isDisabled ? 'تفعيل' : 'تعطيل'}</button></td>
     </tr>`).join('') : '<tr><td colspan="6" class="muted">ما في نتائج</td></tr>';
+}
+
+let editingUserId = null;
+
+async function openUserEdit(id) {
+  const { ok, data } = await api('GET', '/admin/users/' + id);
+  const msg = document.getElementById('users-msg');
+  if (!ok) { msg.textContent = errText(data, 'تعذّر التحميل'); return; }
+  editingUserId = id;
+  const set = (k, v) => { document.getElementById('ue-' + k).value = v ?? ''; };
+  set('name', data.fullName); set('email', data.email); set('phone', data.phone); set('role', data.role);
+  set('lang', data.language || 'ar'); set('country', data.countryCode); set('vat', data.vatNumber); set('pass', ''); set('bio', data.bio);
+  document.getElementById('ue-verified').checked = !!data.isEmailVerified;
+  document.getElementById('ue-disabled').checked = !!data.isDisabled;
+  const isAdmin = data.role === 'ADMIN';
+  document.getElementById('ue-role').disabled = isAdmin;
+  document.getElementById('ue-delete').style.display = isAdmin ? 'none' : '';
+  const day = d => new Date(d).toLocaleDateString('ar', { day: 'numeric', month: 'short', year: 'numeric' });
+  document.getElementById('ue-title').textContent = 'تعديل حساب: ' + data.fullName;
+  document.getElementById('ue-info').textContent = 'انفتح الحساب ' + day(data.createdAt) + ' · رصيد المحفظة ' + data.walletBalance + ' · الطلبات ' + data.ordersCount + ' · العضويات ' + data.membershipsCount + (data.merchantProfile ? ' · المحل: ' + data.merchantProfile.businessName : '');
+  document.getElementById('ue-msg').textContent = '';
+  const box = document.getElementById('user-edit');
+  box.style.display = '';
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function closeUserEdit() {
+  editingUserId = null;
+  document.getElementById('user-edit').style.display = 'none';
+}
+
+async function saveUserEdit() {
+  const v = k => document.getElementById('ue-' + k).value.trim();
+  const msg = document.getElementById('ue-msg');
+  const body = {
+    fullName: v('name'), email: v('email'), phone: v('phone') || null, language: v('lang'),
+    countryCode: v('country') || null, vatNumber: v('vat') || null, bio: v('bio') || null,
+    isEmailVerified: document.getElementById('ue-verified').checked,
+    isDisabled: document.getElementById('ue-disabled').checked,
+  };
+  if (!document.getElementById('ue-role').disabled) body.role = v('role');
+  if (v('pass')) body.newPassword = v('pass');
+  if (body.isDisabled && !confirm('الحساب معطّل: بيطلع من كل أجهزته. متأكد؟')) return;
+  const { ok, data } = await api('PATCH', '/admin/users/' + editingUserId, body);
+  if (!ok) { msg.textContent = errText(data, 'تعذّر الحفظ'); return; }
+  msg.textContent = 'انحفظ ✓';
+  loadUsers();
+}
+
+async function deleteUserForGood() {
+  if (!confirm('حذف هذا الحساب نهائيًا؟ ما في رجعة.')) return;
+  if (!confirm('تأكيد أخير: بيتمسح الحساب وكل بياناته الشخصية.')) return;
+  const { ok, data } = await api('DELETE', '/admin/users/' + editingUserId);
+  const msg = document.getElementById('users-msg');
+  if (!ok) { document.getElementById('ue-msg').textContent = errText(data, 'تعذّر الحذف'); return; }
+  closeUserEdit();
+  loadUsers();
+  msg.textContent = data.result === 'deleted'
+    ? 'انحذف الحساب نهائيًا.'
+    : 'عند الحساب طلبات أو حركات مالية مسجّلة، فانمسحت كل بياناته الشخصية وبقي سجل مجهول وغير فعّال للحسابات المالية.';
 }
 
 async function toggleUser(id, disable) {
