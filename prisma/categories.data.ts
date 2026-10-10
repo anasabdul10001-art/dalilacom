@@ -59,6 +59,39 @@ export const CATEGORY_TREE: CategorySeed[] = [
     c("health-dental-lab", "مخابر وأجهزة أسنان", "Dental labs & supplies", "🦷", "مخبر اسنان|تقويم اسنان|مواد اسنان|اجهزة طبية|مستلزمات طبية", "dental lab|dental supplies|medical supplies|medical equipment"),
   ]),
 
+  c("sport", "الرياضة", "Sports & fitness", "🏅", "رياضة|رياضي|لياقة|لياقه|جيم|نادي|تمارين|تدريب|كمال اجسام|صحة بدنية", "sport|sports|fitness|gym|training|workout|exercise|bodybuilding", [
+    c("gym", "الجيمات والنوادي الرياضية", "Gyms & fitness clubs", "🏋️", "جيم|جيمات|نادي رياضي|نادي لياقة|صالة رياضية|صالة تمارين|هيلث كلوب|نادي صحي", "gym|gyms|fitness club|health club|fitness center|workout", [
+      c("gym-bodybuilding", "بناء أجسام وأثقال", "Bodybuilding & weights", "💪", "كمال اجسام|بناء اجسام|اثقال|حديد|تضخيم|عضلات", "bodybuilding|weights|weightlifting|muscle|strength"),
+      c("gym-fitness", "لياقة بدنية وتخسيس", "Fitness & weight loss", "🏃", "لياقة|تخسيس|رشاقة|حرق دهون|كارديو|تنحيف|رجيم", "fitness|weight loss|cardio|slimming|fat loss|aerobics"),
+      c("gym-women", "نادي نسائي", "Women's gym", "👩", "نادي نسائي|جيم نسائي|جيم حريمي|نسائي|سيدات|للنساء|بنات", "women's gym|ladies gym|female fitness|women only"),
+      c("gym-crossfit", "كروس فيت ووظيفي", "CrossFit & functional", "🔥", "كروس فيت|تدريب وظيفي|هيت|دائري|كالستنكس", "crossfit|functional training|hiit|circuit|calisthenics"),
+    ]),
+    c("coach", "المدربون", "Coaches & trainers", "🧑‍🏫", "مدرب|كوتش|كوتشات|مدربين|مدرب رياضي|مدرب شخصي|اشراف تدريب", "coach|coaches|trainer|personal trainer|fitness coach", [
+      c("coach-personal", "مدرب شخصي", "Personal trainer", "🎯", "مدرب شخصي|كوتش شخصي|تدريب خاص|برنامج تمارين|اونلاين", "personal trainer|private coach|one to one|training plan|online coaching"),
+      c("coach-bodybuilding", "مدرب كمال أجسام", "Bodybuilding coach", "🏆", "مدرب كمال اجسام|مدرب بناء اجسام|مدرب حديد|تحضير بطولات", "bodybuilding coach|muscle coach|contest prep|strength coach"),
+      c("coach-fitness", "مدرب لياقة وتخسيس", "Fitness & weight-loss coach", "⚖️", "مدرب لياقة|مدرب تخسيس|مدرب رشاقة|كوتش تخسيس|برنامج رجيم", "fitness coach|weight loss coach|slimming coach|diet plan"),
+      c("coach-football", "مدرب كرة قدم", "Football coach", "⚽", "مدرب كرة|مدرب كرة قدم|كابتن|مدرب ناشئين|اكاديمية", "football coach|soccer coach|youth coach|academy"),
+      c("coach-swimming", "مدرب سباحة", "Swimming coach", "🏊", "مدرب سباحة|تعليم سباحة|كابتن سباحة|انقاذ", "swimming coach|swim teacher|swimming lessons|lifeguard"),
+      c("coach-martial", "مدرب فنون قتالية", "Martial arts coach", "🥋", "مدرب كاراتيه|مدرب تايكواندو|مدرب ملاكمة|مدرب جودو|مدرب فنون قتالية", "martial arts coach|karate coach|taekwondo coach|boxing coach|judo coach"),
+      c("coach-yoga", "مدرب يوغا وبيلاتس", "Yoga & pilates coach", "🧘", "مدرب يوغا|مدربة يوغا|بيلاتس|استرخاء|تأمل|مرونة", "yoga instructor|pilates instructor|stretching|meditation|flexibility"),
+      c("coach-nutrition", "أخصائي تغذية رياضية", "Sports nutritionist", "🥗", "تغذية رياضية|اخصائي تغذية|دايت|نظام غذائي|مكملات|بروتين", "sports nutritionist|dietitian|diet|nutrition plan|supplements advice"),
+    ]),
+    c("sport-martial", "فنون قتالية", "Martial arts", "🥊", "فنون قتالية|كاراتيه|تايكواندو|ملاكمة|بوكسينغ|جودو|كيك بوكسينغ|مصارعة|ام ام اي", "martial arts|karate|taekwondo|boxing|judo|kickboxing|wrestling|mma", [
+      c("sport-martial-karate", "كاراتيه وتايكواندو وجودو", "Karate, taekwondo & judo", "🥋", "كاراتيه|تايكواندو|جودو|حزام", "karate|taekwondo|judo|belt"),
+      c("sport-martial-boxing", "ملاكمة وكيك بوكسينغ", "Boxing & kickboxing", "🥊", "ملاكمة|بوكسينغ|كيك بوكسينغ|مواي تاي", "boxing|kickboxing|muay thai"),
+      c("sport-martial-mma", "مصارعة وفنون مختلطة", "Wrestling & MMA", "🤼", "مصارعة|ام ام اي|فنون مختلطة|برازيلي جيو جيتسو", "wrestling|mma|mixed martial arts|jiu jitsu"),
+    ]),
+    c("sport-swimming", "مسابح", "Swimming pools", "🏊", "مسبح|مسابح|سباحة|حمام سباحة|مسبح خاص|مسبح اطفال", "swimming pool|pool|swim|swimming|kids pool"),
+    c("sport-football", "ملاعب وأكاديميات كرة", "Pitches & football academies", "🏟️", "ملعب|ملاعب|ملعب خماسي|كرة قدم|كرة سلة|كرة طائرة|اكاديمية كرة|حجز ملعب", "pitch|stadium|football field|five-a-side|basketball|volleyball|football academy|book a pitch"),
+    c("sport-yoga", "يوغا وبيلاتس ورقص رياضي", "Yoga, pilates & dance fitness", "🧘", "يوغا|بيلاتس|زومبا|رقص رياضي|ايروبيك|استرخاء", "yoga|pilates|zumba|dance fitness|aerobics|relaxation"),
+    c("sport-physio", "علاج إصابات رياضية وتدليك", "Sports injury & massage", "💆", "اصابات رياضية|تدليك رياضي|مساج رياضي|علاج طبيعي رياضي|تأهيل لاعبين", "sports injury|sports massage|physio|rehab|athlete recovery"),
+    c("sport-stores", "ملابس ومعدات ومكملات رياضية", "Sportswear, equipment & supplements", "🛍️", "ملابس رياضية|معدات رياضية|اجهزة رياضية|مكملات غذائية|بروتين|احذية رياضية|دراجات", "sportswear|sports equipment|gym equipment|supplements|protein|sneakers|bikes", [
+      c("sport-stores-wear", "ملابس وأحذية رياضية", "Sportswear & shoes", "👟", "ملابس رياضية|احذية رياضية|شورت|ترنج|كابات|حقيبة رياضية", "sportswear|sneakers|tracksuit|gym bag|sports shoes"),
+      c("sport-stores-equipment", "معدات وأجهزة رياضية", "Equipment & machines", "🏓", "اجهزة رياضية|معدات|اوزان|دمبل|مشاية|دراجة ثابتة|كرات", "gym equipment|machines|dumbbells|treadmill|exercise bike|balls"),
+      c("sport-stores-supplements", "مكملات غذائية رياضية", "Sports supplements", "🧃", "مكملات|بروتين|كرياتين|فيتامينات|احماض امينية|مكملات رياضية", "supplements|protein|creatine|vitamins|amino acids|sports nutrition"),
+    ]),
+  ]),
+
   c("electronics", "الإلكترونيات", "Electronics", "🔌", "الكترونيات|كهربائيات|اجهزة", "electronics|electrical|gadgets", [
     c("electronics-appliances", "كهربائيات منزلية", "Home appliances", "🧺", "كهربائيات|براد|ثلاجة|غسالة|غسالات|فرن|غاز|سخان|مكيف|مروحة", "appliances|fridge|refrigerator|washing machine|oven|heater|ac|air conditioner", [
       c("electronics-appliances-fridges", "برادات وغسالات", "Fridges & washers", "🧊", "براد|برادات|ثلاجة|غسالة|غسالات|ناشفة|جلاية", "fridge|refrigerator|washer|washing machine|dryer|dishwasher"),

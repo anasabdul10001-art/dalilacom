@@ -78,6 +78,24 @@ describe("The sections tree", () => {
     expect(CATEGORY_TREE.length).toBeGreaterThanOrEqual(5);
   });
 
+  it("has the sports section: gyms and coaches first, each with its specialties, found by what people type", async () => {
+    await seedCategories(prisma);
+    const ar = (await request(app).get("/categories")).body;
+    const sport = find(ar, "sport");
+    expect(sport.name).toBe("الرياضة");
+    const kids = sport.children.map((c: any) => c.slug);
+    expect(kids.slice(0, 2)).toEqual(["gym", "coach"]); // the two that matter most come first
+    expect(find(ar, "gym").children.length).toBeGreaterThanOrEqual(3);
+    expect(find(ar, "coach").children.map((c: any) => c.slug)).toEqual(expect.arrayContaining(["coach-personal", "coach-bodybuilding", "coach-fitness", "coach-nutrition"]));
+    const en = (await request(app).get("/categories").query({ lang: "en" })).body;
+    expect(find(en, "gym").name).toBe("Gyms & fitness clubs");
+    expect(find(en, "coach").name).toBe("Coaches & trainers");
+    const found = (await request(app).get("/categories/search").query({ q: "جيم" })).body;
+    expect(JSON.stringify(found)).toContain("gym");
+    const foundCoach = (await request(app).get("/categories/search").query({ q: "كوتش" })).body;
+    expect(JSON.stringify(foundCoach)).toContain("coach");
+  });
+
   it("names every node in Arabic by default and in English on request", async () => {
     const ar = (await request(app).get("/categories")).body;
     expect(find(ar, "health").name).toBe("الطبي");
