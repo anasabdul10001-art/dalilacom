@@ -1500,6 +1500,9 @@ model AiSubscription {
   uses      Int // uses included in the period bought so far
   startDate DateTime @default(now())
   endDate   DateTime
+  autoRenew Boolean  @default(true) // buy the same package again from the wallet when this one ends
+  renewedAt DateTime? // set once the renewal was done (or the package was replaced)
+  renewFailedAt DateTime? // the shop was told that the wallet could not pay the renewal
   createdAt DateTime @default(now())
 
   @@index([userId, endDate])

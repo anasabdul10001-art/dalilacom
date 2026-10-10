@@ -85,6 +85,13 @@ fun AiPlansScreen(container: AppContainer, onBack: () -> Unit, onWallet: () -> U
                 if (sub != null) {
                     Text(sub.name, fontWeight = FontWeight.Bold)
                     Text(stringResource(R.string.ai_sub_left, sub.left, sub.uses, sub.endDate.take(10)))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                        Text(stringResource(R.string.ai_auto_renew), modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                        androidx.compose.material3.Switch(checked = sub.autoRenew, onCheckedChange = { on ->
+                            scope.launch { container.storeRepository.setAiAutoRenew(on).onSuccess { quota = it }.onFailure { error = it.message } }
+                        })
+                    }
+                    Text(stringResource(if (sub.autoRenew) R.string.ai_auto_renew_on else R.string.ai_auto_renew_off), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else Text(stringResource(R.string.ai_no_plan))
             }
         }

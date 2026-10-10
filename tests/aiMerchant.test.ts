@@ -152,6 +152,59 @@ describe("the allowance of AI uses", () => {
     expect((await prisma.wallet.findUnique({ where: { userId: s.id } }))!.balance).toBe(6500 - 4000 - 5);
   });
 
+  it("renews an ended package by itself from the wallet, tells the shop once when the money is missing, and can be switched off", async () => {
+    const s = await shop();
+    const ended = async (autoRenew = true) =>
+      prisma.aiSubscription.create({ data: { userId: s.id, packageId: "basic", name: "الباقة الأساسية", uses: 100, startDate: new Date(Date.now() - 31 * 86_400_000), endDate: new Date(Date.now() - 1000), autoRenew } });
+    const wallet = (balance: number) => prisma.wallet.upsert({ where: { userId: s.id }, update: { balance }, create: { userId: s.id, balance } });
+
+    // not enough money: not renewed, and the shop is told - once
+    const first = await ended();
+    await wallet(100);
+    expect((await request(app).get("/products/ai-quota").set(s.auth)).body.subscription).toBeNull();
+    await request(app).get("/products/ai-quota").set(s.auth);
+    const told = await prisma.notification.count({ where: { userId: s.id, type: "SYSTEM" } });
+    expect(told).toBe(1);
+    expect((await prisma.walletTransaction.count({ where: { userId: s.id, type: "AI" } }))).toBe(0);
+
+    // the shop tops up: the next look renews it for another period at the same price
+    await wallet(2000);
+    const quota = (await request(app).get("/products/ai-quota").set(s.auth)).body;
+    expect(quota.subscription).toMatchObject({ name: "الباقة الأساسية", uses: 100, left: 100, autoRenew: true });
+    expect((await prisma.wallet.findUnique({ where: { userId: s.id } }))!.balance).toBe(500);
+    expect((await prisma.aiSubscription.findUnique({ where: { id: first.id } }))!.renewedAt).not.toBeNull();
+    const days = (new Date(quota.subscription.endDate).getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(29.9);
+    expect(await prisma.aiSubscription.count({ where: { userId: s.id } })).toBe(2);
+    await request(app).get("/products/ai-quota").set(s.auth); // looking again renews nothing more
+    expect(await prisma.aiSubscription.count({ where: { userId: s.id } })).toBe(2);
+
+    // switched off: the next one that ends is not renewed
+    const off = await request(app).patch("/products/ai-subscription").set(s.auth).send({ autoRenew: false });
+    expect(off.status).toBe(200);
+    expect(off.body.quota.subscription.autoRenew).toBe(false);
+    await prisma.aiSubscription.updateMany({ where: { userId: s.id, renewedAt: null }, data: { endDate: new Date(Date.now() - 1000) } });
+    await wallet(5000);
+    expect((await request(app).get("/products/ai-quota").set(s.auth)).body.subscription).toBeNull();
+    expect((await prisma.wallet.findUnique({ where: { userId: s.id } }))!.balance).toBe(5000);
+    expect((await request(app).patch("/products/ai-subscription").set(s.auth).send({ autoRenew: "yes" })).status).toBe(400);
+  });
+
+  it("the hourly sweep renews every ended package that wants it, and drops one whose package is no longer sold", async () => {
+    const { renewAllDueAiPackages } = await import("../src/services/aiQuota.service");
+    const a = await shop();
+    const b = await shop();
+    const old = (userId: string, packageId: string) =>
+      prisma.aiSubscription.create({ data: { userId, packageId, name: "x", uses: 10, startDate: new Date(Date.now() - 40 * 86_400_000), endDate: new Date(Date.now() - 5000) } });
+    await prisma.wallet.upsert({ where: { userId: a.id }, update: { balance: 3000 }, create: { userId: a.id, balance: 3000 } });
+    await old(a.id, "basic");
+    const gone = await old(b.id, "no-such-package");
+    expect(await renewAllDueAiPackages()).toBeGreaterThanOrEqual(1);
+    expect(await prisma.aiSubscription.count({ where: { userId: a.id } })).toBe(2);
+    expect((await prisma.aiSubscription.findUnique({ where: { id: gone.id } }))).toMatchObject({ autoRenew: false });
+    expect(await prisma.aiSubscription.count({ where: { userId: b.id } })).toBe(1);
+  });
+
   it("is set by the admin, and a description from a photo is one of the uses", async () => {
     const admin = uniqueEmail("aiadmin");
     await request(app).post("/auth/register").send({ email: admin, password, fullName: "Admin" });

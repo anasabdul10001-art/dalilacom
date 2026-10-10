@@ -36,6 +36,7 @@ import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { localizeResponses } from "./lib/localize";
 import { ApiError, sendError, sendValidationError } from "./lib/apiError";
+import { renewAllDueAiPackages } from "./services/aiQuota.service";
 
 const app = express();
 app.set("trust proxy", 1); // Render sits behind a proxy — needed for correct req.ip / X-Forwarded-For
@@ -147,6 +148,10 @@ if (process.env.NODE_ENV !== "test") {
   app.listen(port, () => {
     console.log(`DALILACOM API listening on :${port}`);
   });
+  // AI packages that ended are renewed from the shop's wallet (also done at the moment a shop looks, for a service that slept)
+  const sweep = () => renewAllDueAiPackages().catch((err) => console.error("AI package renewal failed:", err instanceof Error ? err.message : err));
+  setTimeout(sweep, 30_000).unref();
+  setInterval(sweep, 60 * 60 * 1000).unref();
 }
 
 export { app };

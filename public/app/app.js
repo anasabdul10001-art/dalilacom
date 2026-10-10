@@ -2434,7 +2434,9 @@ function screenAiPlans() {
     ${backRow()}
     <h1 class="screen-title">✨ ${esc(t("ai.plansTitle"))}</h1>
     <p class="screen-sub">${esc(t("ai.plansSub"))}</p>
-    ${sub ? `<div class="card ai-current"><b>${esc(sub.name)}</b><p style="margin:4px 0 0">${esc(t("ai.subLeft", { n: sub.left, total: sub.uses, date: day(sub.endDate) }))}</p></div>` : `<div class="info-banner">${esc(t("ai.noPlan"))}</div>`}
+    ${sub ? `<div class="card ai-current"><b>${esc(sub.name)}</b><p style="margin:4px 0 0">${esc(t("ai.subLeft", { n: sub.left, total: sub.uses, date: day(sub.endDate) }))}</p>
+      <label class="switch-row" style="margin-top:8px"><span>${esc(t("ai.autoRenew"))}</span><span class="switch"><input type="checkbox" ${sub.autoRenew ? "checked" : ""} onchange="setAiAutoRenew(this.checked)" /><span class="track"></span></span></label>
+      <p class="muted" style="margin:4px 0 0;font-size:12px">${esc(sub.autoRenew ? t("ai.autoRenewOn") : t("ai.autoRenewOff"))}</p></div>` : `<div class="info-banner">${esc(t("ai.noPlan"))}</div>`}
     ${q ? `<p class="muted">${esc(t("ai.balanceLine", { n: q.balance }))} · <a onclick="S._wallet=null;go('wallet')">${esc(t("ai.topUp"))}</a></p>` : ""}
     ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}
     ${f.packages.map((p) => `
@@ -2445,6 +2447,14 @@ function screenAiPlans() {
       </div>`).join("")}
     ${f.packages.length === 0 ? `<div class="empty-state">${esc(t("ai.noPackages"))}</div>` : ""}
     <p class="muted" style="font-size:12px">${esc(t("ai.plansNote"))}</p>`;
+}
+
+async function setAiAutoRenew(on) {
+  const f = S._aip;
+  f.error = null;
+  const { ok, data } = await api("PATCH", "/products/ai-subscription", { autoRenew: on });
+  if (ok) f.quota = data.quota; else f.error = errMsg(data, t("photo.failed"));
+  render();
 }
 
 async function buyAiPackage(id) {

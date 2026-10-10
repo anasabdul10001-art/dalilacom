@@ -725,4 +725,7 @@
     <string name="ai_confirm_buy">Buy \u201c%1$s\u201d for %2$d from your balance?</string>
     <string name="ai_no_packages">No packages available right now</string>
     <string name="ai_plans_note">The package uses are spent first, then your free uses, then you pay per use. Buying a package while you have one running adds the days and uses to it.</string>
+    <string name="ai_auto_renew">Renew automatically from the balance</string>
+    <string name="ai_auto_renew_on">When the package ends it renews by itself from your wallet at the same price. If the balance is not enough we tell you, and it renews as soon as you top up.</string>
+    <string name="ai_auto_renew_off">It will not renew: when it ends you need to buy again.</string>
 </resources>

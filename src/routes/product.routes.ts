@@ -8,7 +8,7 @@ import { sniffImageMime } from "../lib/image";
 import { enhanceProductPhoto } from "../lib/photoEnhance";
 import sharp from "sharp";
 import { PHOTO_COLORS, editPhotoWithAi, imageEditAvailable, instructionFor } from "../services/aiImage.service";
-import { aiQuotaFor, buyAiPackage, ensureCanUseAi, recordAiUse } from "../services/aiQuota.service";
+import { aiQuotaFor, buyAiPackage, ensureCanUseAi, recordAiUse, setAiAutoRenew } from "../services/aiQuota.service";
 import { getSettings } from "../services/settings.service";
 import { route } from "../lib/asyncRoute";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
@@ -137,6 +137,18 @@ productRouter.post("/ai-subscribe", requireAuth, requireRole(Role.MERCHANT), rou
     throw err;
   }
   res.status(201).json({ quota: await aiQuotaFor(req.user!.id) });
+}));
+
+productRouter.patch("/ai-subscription", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const parsed = z.object({ autoRenew: z.boolean() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    await setAiAutoRenew(req.user!.id, parsed.data.autoRenew);
+  } catch (err) {
+    if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
+    throw err;
+  }
+  res.json({ quota: await aiQuotaFor(req.user!.id) });
 }));
 
 const editSchema = z.object({ action: z.enum(["clean", "white_bg", "studio", "recolor"]), color: z.enum(PHOTO_COLORS).optional() }).refine((d) => d.action !== "recolor" || !!d.color, { message: "color is required" });

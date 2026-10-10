@@ -81,6 +81,8 @@ export const en: LanguagePack = {
     "رصيدك ما بيكفي لهالباقة — اشحن محفظتك": "Your balance is not enough for this package — top up your wallet",
     "الباقة الأساسية": "Basic package",
     "الباقة الاحترافية": "Professional package",
+    "ما عندك باقة": "You have no package",
+    "ما انجددت باقة الذكاء الاصطناعي ⚠️": "Your AI package was not renewed ⚠️",
     "اكتب اسم القسم (من حرفين إلى 60 حرفًا)": "Write the section name (2 to 60 characters)",
     "اختر منتجًا واحدًا على الأقل من منتجاتك": "Choose at least one of your own products",
     "حسم معدّل للمراجعة": "Edited discount to review",

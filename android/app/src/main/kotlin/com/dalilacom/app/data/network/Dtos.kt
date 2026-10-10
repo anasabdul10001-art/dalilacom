@@ -741,7 +741,7 @@ data class MyAdDto(
 data class SpecDto(val label: String, val value: String)
 
 @Serializable
-data class AiSubscriptionDto(val name: String, val uses: Int = 0, val used: Int = 0, val left: Int = 0, val endDate: String = "")
+data class AiSubscriptionDto(val name: String, val uses: Int = 0, val used: Int = 0, val left: Int = 0, val endDate: String = "", val autoRenew: Boolean = true)
 
 @Serializable
 data class AiPackageDto(val id: String, val name: String, val days: Int = 30, val uses: Int = 0, val credits: Int = 0)
@@ -751,6 +751,9 @@ data class AiPackagesDto(val packages: List<AiPackageDto> = emptyList(), val quo
 
 @Serializable
 data class AiSubscribeRequest(val packageId: String)
+
+@Serializable
+data class AiAutoRenewRequest(val autoRenew: Boolean)
 
 @Serializable
 data class AiSubscribeResponse(val quota: AiQuotaDto = AiQuotaDto())

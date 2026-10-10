@@ -349,6 +349,9 @@ interface ApiService {
     @GET("products/ai-packages")
     suspend fun aiPackages(): Response<AiPackagesDto>
 
+    @PATCH("products/ai-subscription")
+    suspend fun aiAutoRenew(@Body body: AiAutoRenewRequest): Response<AiSubscribeResponse>
+
     @POST("products/ai-subscribe")
     suspend fun aiSubscribe(@Body body: AiSubscribeRequest): Response<AiSubscribeResponse>
 

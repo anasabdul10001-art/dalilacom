@@ -729,4 +729,7 @@
     <string name="ai_confirm_buy">تشتري «%1$s» بـ %2$d من رصيدك؟</string>
     <string name="ai_no_packages">ما في باقات متاحة هلأ</string>
     <string name="ai_plans_note">استخدامات الباقة بتنصرف أول، وبعدها استخداماتك المجانية، وبعدها الدفع لكل استخدام. شراء باقة وأنت عندك باقة شغّالة بيضيف الأيام والاستخدامات عليها.</string>
+    <string name="ai_auto_renew">تجديد تلقائي من الرصيد</string>
+    <string name="ai_auto_renew_on">لما تنتهي الباقة بتتجدد لحالها من رصيد محفظتك بنفس السعر. إذا الرصيد ما كفى بنخبرك وبتتجدد أول ما تشحن.</string>
+    <string name="ai_auto_renew_off">ما رح تتجدد: لما تنتهي لازم تشتري من جديد.</string>
 </resources>
