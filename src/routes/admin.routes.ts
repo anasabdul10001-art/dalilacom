@@ -22,6 +22,7 @@ import { eraseAccount } from "../services/accountDeletion.service";
 import { isSupportedLanguage } from "../lib/languages";
 import { editPhotoWithAi, imageEditAvailable, lastImageEditError } from "../services/aiImage.service";
 import sharp from "sharp";
+import { invalidateProductCategories } from "../services/productCategory.service";
 import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion } from "../services/categorySuggestion.service";
 
 export const adminRouter = Router();
@@ -410,6 +411,38 @@ adminRouter.post("/push-test", async (req, res) => {
   const delivered = await sendPushToUser(req.user!.id, { title, body, data: { type: "TEST" } }, errors);
   res.json({ devices, delivered, errors });
 });
+
+/* ---------------- the product categories shops added themselves ---------------- */
+
+adminRouter.get("/product-categories", route(async (_req, res) => {
+  const rows = await prisma.productCategory.findMany({ where: { isCustom: true }, orderBy: { createdAt: "desc" }, take: 300, include: { _count: { select: { products: true } }, parent: { select: { name: true } } } });
+  const shops = await prisma.merchantProfile.findMany({ where: { id: { in: rows.map((r) => r.createdById).filter((x): x is string => !!x) } }, select: { id: true, businessName: true } });
+  res.json(rows.map((r) => ({ id: r.id, name: r.name, nameEn: r.nameEn, parentName: r.parent?.name ?? null, productCount: r._count.products, createdAt: r.createdAt, shop: shops.find((s) => s.id === r.createdById)?.businessName ?? null })));
+}));
+
+adminRouter.patch("/product-categories/:id", route(async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(2).max(40).optional(), nameEn: z.string().trim().max(60).nullable().optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const row = await prisma.productCategory.findUnique({ where: { id: req.params.id } });
+  if (!row) return sendError(res, 404, "NOT_FOUND", "Category not found");
+  await prisma.productCategory.update({ where: { id: row.id }, data: { ...(parsed.data.name ? { name: parsed.data.name } : {}), ...(parsed.data.nameEn !== undefined ? { nameEn: parsed.data.nameEn || null } : {}) } });
+  invalidateProductCategories();
+  res.json({ ok: true });
+}));
+
+// Deleting one hands its products and its sub-categories to the category above it.
+adminRouter.delete("/product-categories/:id", route(async (req, res) => {
+  const row = await prisma.productCategory.findUnique({ where: { id: req.params.id } });
+  if (!row) return sendError(res, 404, "NOT_FOUND", "Category not found");
+  if (!row.isCustom) return sendError(res, 409, "CONFLICT", "Only a category a shop added can be deleted");
+  await prisma.$transaction([
+    prisma.product.updateMany({ where: { productCategoryId: row.id }, data: { productCategoryId: row.parentId } }),
+    prisma.productCategory.updateMany({ where: { parentId: row.id }, data: { parentId: row.parentId } }),
+    prisma.productCategory.delete({ where: { id: row.id } }),
+  ]);
+  invalidateProductCategories();
+  res.json({ ok: true });
+}));
 
 // Asks the image model to edit a tiny picture and says what happened: the answer when "photo editing does nothing".
 adminRouter.post("/ai-image-test", route(async (_req, res) => {

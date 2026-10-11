@@ -762,4 +762,17 @@
     <string name="br_failed">The request could not be done</string>
     <string name="br_confirm_del">Delete this branch?</string>
     <string name="br_shop_branches">Our branches (%1$d)</string>
+    <string name="pc_title">Product category</string>
+    <string name="pc_search">Find your product\'s category</string>
+    <string name="pc_search_ph">Type your product: dress, laptop, perfume, sports shoes...</string>
+    <string name="pc_no_hit">Nothing found with that name, browse the lists or add a new category</string>
+    <string name="pc_browse">Or browse the categories:</string>
+    <string name="pc_all">All</string>
+    <string name="pc_add">Add a category</string>
+    <string name="pc_add_under">It will be added under “%1$s”</string>
+    <string name="pc_add_need">First choose the department or category to add it under</string>
+    <string name="pc_add_ph">New category name</string>
+    <string name="pc_add_send">Add the category</string>
+    <string name="pc_add_short">Write the category name (at least 2 letters)</string>
+    <string name="pc_add_failed">The category could not be added</string>
 </resources>

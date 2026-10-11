@@ -75,6 +75,20 @@ class StoreRepository(private val api: ApiService) {
         return if (response.isSuccessful && body != null) Result.success(body.quota) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.photo_failed))))
     }
 
+    suspend fun productCategories(): List<com.dalilacom.app.data.network.ProductCategoryDto> =
+        safeApiCall { api.productCategories() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
+    suspend fun searchProductCategories(query: String): List<com.dalilacom.app.data.network.ProductCategoryHitDto> =
+        safeApiCall { api.searchProductCategories(query) }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
+    /** A shop adds a category of its own under an existing one; returns its id. */
+    suspend fun addProductCategory(name: String, parentId: String): Result<String> {
+        val response = safeApiCall { api.addProductCategory(com.dalilacom.app.data.network.AddProductCategoryRequest(name, parentId)) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.photo_offline)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body.id) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.pc_add_failed))))
+    }
+
     suspend fun aiQuota(): com.dalilacom.app.data.network.AiQuotaDto? = safeApiCall { api.aiQuota() }?.takeIf { it.isSuccessful }?.body()
 
     suspend fun aiDraft(photoId: String): Result<AiDraftResponseDto> {

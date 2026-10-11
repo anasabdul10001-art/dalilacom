@@ -29,6 +29,8 @@ data class ProductEditUiState(
     val isActive: Boolean = true,
     val categoryOptions: List<CategoryOption> = emptyList(),
     val selectedCategoryId: String? = null,
+    val productCategories: List<com.dalilacom.app.data.network.ProductCategoryDto> = emptyList(),
+    val selectedProductCategoryId: String? = null,
     val isSaving: Boolean = false,
     val saved: Boolean = false,
     val needShipping: Boolean = false,
@@ -49,6 +51,7 @@ class ProductEditViewModel(
 
     init {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(productCategories = storeRepository.productCategories())
             val categories = discoverRepository.getCategories()
             val options = categories.flatMap { top ->
                 listOf(CategoryOption(top.id, top.name)) +
@@ -75,6 +78,7 @@ class ProductEditViewModel(
                 memberPriceText = product.memberPriceCents?.let { (it / 100.0).toString() }.orEmpty(),
                 isActive = product.isActive,
                 selectedCategoryId = product.categoryId,
+                selectedProductCategoryId = product.productCategoryId,
                 images = product.images.ifEmpty { listOfNotNull(product.imageUrl) },
             )
         }
@@ -113,6 +117,10 @@ class ProductEditViewModel(
     }
 
     fun onCategorySelected(id: String?) { _uiState.value = _uiState.value.copy(selectedCategoryId = id) }
+    fun onProductCategorySelected(id: String) { _uiState.value = _uiState.value.copy(selectedProductCategoryId = id) }
+    suspend fun searchProductCategories(query: String) = storeRepository.searchProductCategories(query)
+    suspend fun addProductCategory(name: String, parentId: String): Result<String> =
+        storeRepository.addProductCategory(name, parentId).onSuccess { _uiState.value = _uiState.value.copy(productCategories = storeRepository.productCategories()) }
 
     fun save() {
         val state = _uiState.value
@@ -144,7 +152,7 @@ class ProductEditViewModel(
                         name = state.name.trim(),
                         description = state.description.trim().ifBlank { null },
                         priceCents = priceCents,
-                        categoryId = state.selectedCategoryId,
+                        productCategoryId = state.selectedProductCategoryId,
                         stock = stock,
                         sku = state.sku.trim().ifBlank { null },
                         memberDiscountEnabled = state.memberDiscountEnabled,
@@ -159,7 +167,7 @@ class ProductEditViewModel(
                         name = state.name.trim(),
                         description = state.description.trim().ifBlank { null },
                         priceCents = priceCents,
-                        categoryId = state.selectedCategoryId,
+                        productCategoryId = state.selectedProductCategoryId,
                         stock = stock,
                         sku = state.sku.trim().ifBlank { null },
                         memberDiscountEnabled = state.memberDiscountEnabled,

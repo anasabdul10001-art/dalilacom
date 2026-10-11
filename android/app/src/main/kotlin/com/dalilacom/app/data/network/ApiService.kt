@@ -201,6 +201,15 @@ interface ApiService {
     suspend fun getProduct(@Path("id") id: String): Response<ProductDto>
 
 
+    @GET("product-categories")
+    suspend fun productCategories(): Response<List<ProductCategoryDto>>
+
+    @GET("product-categories/search")
+    suspend fun searchProductCategories(@Query("q") query: String): Response<List<ProductCategoryHitDto>>
+
+    @POST("product-categories")
+    suspend fun addProductCategory(@Body body: AddProductCategoryRequest): Response<AddProductCategoryResponse>
+
     @GET("store/sections")
     suspend fun storeSections(@Query("all") all: String?): Response<List<StoreSectionDto>>
 

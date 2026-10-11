@@ -32,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -143,19 +144,15 @@ fun ProductEditScreen(
             )
             Spacer(Modifier.height(16.dp))
 
-            Text(AppStrings.get(R.string.s_7c75fec5), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.pc_title), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(4.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.categoryOptions) { option ->
-                    FilterChip(
-                        selected = state.selectedCategoryId == option.id,
-                        onClick = {
-                            viewModel.onCategorySelected(if (state.selectedCategoryId == option.id) null else option.id)
-                        },
-                        label = { Text(option.label) },
-                    )
-                }
-            }
+            com.dalilacom.app.ui.common.ProductCategoryPicker(
+                tree = state.productCategories,
+                selectedId = state.selectedProductCategoryId,
+                onSelect = viewModel::onProductCategorySelected,
+                search = viewModel::searchProductCategories,
+                add = viewModel::addProductCategory,
+            )
             Spacer(Modifier.height(16.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {

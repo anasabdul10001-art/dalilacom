@@ -2300,7 +2300,7 @@ async function cancelMyAd(id) {
 /* ---------------- a product from a photo (for shops that are not used to typing) ---------------- */
 
 function openProductWizard() {
-  S._wiz = { step: "photos", photos: [], specs: [], stock: "", condition: "NEW", section: "", name: "", description: "", price: "", alternatives: [], busy: false, error: null };
+  S._pcat = null; S._wiz = { step: "photos", photos: [], specs: [], stock: "", condition: "NEW", section: "", categoryId: "", name: "", description: "", price: "", alternatives: [], busy: false, error: null };
   go("productWizard");
   if (!S._wizSections) api("GET", "/store/sections?all=1").then((r) => { if (r.ok) { S._wizSections = r.data; render(); } });
 }
@@ -2378,7 +2378,7 @@ function screenProductWizard() {
       ${w.alternatives.length ? `<div class="wiz-chips">${w.alternatives.map((n) => `<button onclick="S._wiz.name='${esc(n).replace(/'/g, "&#39;")}';render()">${esc(n)}</button>`).join("")}</div>` : ""}</div>
 
     <div class="field"><label>${esc(t("wiz.section"))}</label>
-      <div class="wiz-tiles">${(S._wizSections || []).map((x) => `<button class="${w.section === x.id ? "on" : ""}" onclick="S._wiz.section='${x.id}';render()"><img src="${esc(x.image)}" alt="" loading="lazy">${esc(storeSecName(x))}</button>`).join("")}</div></div>
+      ${pcatPickerHtml(w.categoryId, "wizPickCategory")}</div>
 
     <div class="field"><label>${esc(t("wiz.condition"))}</label>
       <div class="wiz-seg"><button class="${w.condition === "NEW" ? "on" : ""}" onclick="S._wiz.condition='NEW';render()">${esc(t("wiz.cond.NEW"))}</button><button class="${w.condition === "USED" ? "on" : ""}" onclick="S._wiz.condition='USED';render()">${esc(t("wiz.cond.USED"))}</button></div></div>
@@ -2591,6 +2591,7 @@ async function wizAnalyze() {
     if (d) {
       w.name = d.name; w.alternatives = d.alternatives || []; w.description = d.description || ""; w.specs = d.specs || [];
       if (d.section) w.section = d.section;
+      if (data.productCategoryId && !w.categoryId) { w.categoryId = data.productCategoryId; if (S._pcat && S._pcat.tree.length) pcatPick("wizPickCategory", data.productCategoryId); }
       if (d.condition) w.condition = d.condition;
     } else if (data.available) w.error = t("wiz.aiMiss");
   } else { w.aiAvailable = false; w.error = errMsg(data, null); }
@@ -2608,11 +2609,13 @@ function wizAutoDescription() {
   render();
 }
 
+function wizPickCategory(id) { S._wiz.categoryId = id; render(); }
+
 async function wizPublish() {
   const w = S._wiz;
   const price = Number(String(w.price).replace(",", "."));
   if (!w.name.trim()) { w.error = t("wiz.needName"); return render(); }
-  if (!w.section) { w.error = t("wiz.needSection"); return render(); }
+  if (!w.categoryId) { w.error = t("wiz.needSection"); return render(); }
   if (!(price > 0)) { w.error = t("wiz.needPrice"); return render(); }
   const stock = parseInt(latinDigits(String(w.stock)), 10);
   if (!(stock >= 1)) { w.error = t("wiz.needStock"); return render(); }
@@ -2620,7 +2623,7 @@ async function wizPublish() {
   w.busy = true; w.error = null; render();
   const body = {
     name: w.name.trim(), description: w.description.trim() || undefined, priceCents: Math.round(price * 100), stock,
-    storeSection: w.section, condition: w.condition, images: w.photos.map((p) => p.url),
+    productCategoryId: w.categoryId, condition: w.condition, images: w.photos.map((p) => p.url),
     specs: w.specs.filter((x) => x.label.trim() && x.value.trim()).map((x) => ({ label: x.label.trim(), value: x.value.trim() })),
   };
   const { ok, data } = await api("POST", "/products", body);
@@ -4065,6 +4068,90 @@ function catSearch(q, pick) {
 }
 function catPickHit(pick, id) { window[pick](id); }
 
+/* ---- the category a product is filed under (not the shop's profession): search first, then browse, or add one ---- */
+
+function pcatEnsure() {
+  const c = S._pcat;
+  if (c && c.lang === LANG && (c.tree.length || c.loading)) return;
+  S._pcat = { lang: LANG, tree: [], loading: true, path: [], q: "", adding: false, addName: "", error: null };
+  api("GET", "/product-categories?lang=" + LANG).then((r) => { S._pcat.tree = r.ok ? r.data : []; S._pcat.loading = false; render(); });
+}
+
+function pcatPath(id) {
+  const index = indexTree(S._pcat.tree);
+  const names = [];
+  for (let cur = index.get(id); cur; cur = cur.parent ? index.get(cur.parent.id) : null) names.unshift(cur.node.name);
+  return names.join(" › ");
+}
+
+let _pcatTimer = null;
+function pcatSearch(q, pick) {
+  clearTimeout(_pcatTimer);
+  const box = document.getElementById("pc-hits");
+  if (!box) return;
+  if (q.trim().length < 2) { box.innerHTML = ""; return; }
+  _pcatTimer = setTimeout(async () => {
+    const { ok, data } = await api("GET", "/product-categories/search?q=" + encodeURIComponent(q.trim()) + "&lang=" + LANG);
+    const el = document.getElementById("pc-hits");
+    if (!el) return;
+    el.innerHTML = ok && data.length
+      ? data.map((h) => `<button type="button" class="cat-hit" onclick="pcatPick('${pick}','${h.id}')"><span>${esc((h.icon ? h.icon + " " : "") + h.name)}</span><small>${esc(h.path)}</small></button>`).join("")
+      : `<p class="muted" style="margin:6px 0">${esc(t("pc.noHit"))}</p>`;
+  }, 250);
+}
+
+/** Choosing a category also opens it, so its sub-categories can narrow it down. */
+function pcatPick(pick, id) {
+  const index = indexTree(S._pcat.tree);
+  const path = [];
+  for (let cur = index.get(id); cur; cur = cur.parent ? index.get(cur.parent.id) : null) path.unshift(cur.node.id);
+  S._pcat.path = path;
+  S._pcat.error = null;
+  window[pick](id);
+}
+
+function pcatDrill(pick, id) { if (id) pcatPick(pick, id); else { S._pcat.path = []; render(); } }
+
+function pcatPickerHtml(selectedId, pick) {
+  pcatEnsure();
+  const c = S._pcat;
+  if (c.loading) return spinner();
+  const index = indexTree(c.tree);
+  const here = c.path.length ? index.get(c.path[c.path.length - 1]) : null;
+  const level = here ? here.node.children || [] : c.tree;
+  const crumbs = [`<button type="button" class="link-btn" onclick="pcatDrill('${pick}',null)">${esc(t("pc.all"))}</button>`, ...c.path.map((id) => `<button type="button" class="link-btn" onclick="pcatDrill('${pick}','${id}')">${esc(index.get(id).node.name)}</button>`)].join(" › ");
+  return `
+    <div class="field cat-search"><label>${esc(t("pc.search"))}</label>
+      <input id="pc-q" type="search" autocomplete="off" placeholder="${esc(t("pc.searchPh"))}" oninput="pcatSearch(this.value,'${pick}')" />
+      <div id="pc-hits" class="cat-hits"></div></div>
+    ${selectedId && index.get(selectedId) ? `<div class="info-banner">✓ ${esc(pcatPath(selectedId))}</div>` : ""}
+    <div class="muted" style="font-size:12px;margin:4px 0">${esc(t("pc.browse"))}</div>
+    <div class="muted" style="font-size:13px;margin-bottom:6px">${crumbs}</div>
+    <div class="chip-row" style="flex-wrap:wrap">${level.map((n) => `<button type="button" class="chip ${selectedId === n.id ? "active" : ""}" onclick="pcatPick('${pick}','${n.id}')">${esc((n.icon ? n.icon + " " : "") + n.name)}</button>`).join("")}</div>
+    <div class="cat-suggest">
+      <button type="button" class="link-btn" onclick="S._pcat.adding=!S._pcat.adding;render()">+ ${esc(t("pc.add"))}</button>
+      ${c.adding ? `
+        <p class="muted" style="margin:6px 0">${esc(here ? t("pc.addUnder", { name: here.node.name }) : t("pc.addNeed"))}</p>
+        ${here ? `<input id="pc-add" value="${esc(c.addName)}" maxlength="40" placeholder="${esc(t("pc.addPh"))}" oninput="S._pcat.addName=this.value" />
+        <button type="button" class="btn small" style="margin-top:6px" onclick="pcatAdd('${pick}')">${esc(t("pc.addSend"))}</button>` : ""}
+        ${c.error ? `<div class="error-banner">${esc(c.error)}</div>` : ""}` : ""}
+    </div>`;
+}
+
+async function pcatAdd(pick) {
+  const c = S._pcat;
+  const parentId = c.path[c.path.length - 1];
+  const name = (c.addName || "").trim();
+  if (name.length < 2) { c.error = t("pc.addShort"); return render(); }
+  const { ok, data } = await api("POST", "/product-categories", { name, parentId });
+  if (!ok) { c.error = errMsg(data, t("pc.addFailed")); return render(); }
+  c.addName = ""; c.adding = false; c.error = null;
+  const r = await api("GET", "/product-categories?lang=" + LANG);
+  if (r.ok) c.tree = r.data;
+  toast(t("pc.added"));
+  pcatPick(pick, data.id);
+}
+
 /** "I could not find my profession": the shop writes it, picks the closest one below, and the admin decides. */
 function catSuggestHtml(onSend) {
   return `
@@ -5040,7 +5127,7 @@ async function addCatalogDiscount() {
 function screenProductEdit() {
   const productId = S.params.productId;
   if (!S._prodEdit || S._prodEdit.productId !== productId) {
-    S._prodEdit = { productId, loading: true, isNew: !productId, categories: [], name: "", description: "", price: "", stock: "", sku: "", memberDiscountEnabled: false, memberPrice: "", isActive: true, selectedCat: null, images: [] };
+    S._pcat = null; S._prodEdit = { productId, loading: true, isNew: !productId, categories: [], name: "", description: "", price: "", stock: "", sku: "", memberDiscountEnabled: false, memberPrice: "", isActive: true, selectedCat: null, images: [] };
     initProductEdit(productId);
   }
   const p = S._prodEdit;
@@ -5067,10 +5154,8 @@ function screenProductEdit() {
       ${(p.images || []).length < 6 ? `<label class="wiz-add"><input type="file" accept="image/*" multiple onchange="peAddPhotos(this)" hidden><b>📷</b><span>${esc(t(p.uploading ? "wiz.uploading" : "pe.addPhoto"))}</span></label>` : ""}
     </div>
     <p class="muted" style="font-size:12px">${esc(t("wiz.enhanceNote"))}</p>
-    <div class="section-title">التصنيف</div>
-    <div class="chip-row" style="overflow-x:auto;flex-wrap:nowrap">
-      ${flattenCategories(p.categories).map((c) => `<button class="chip ${p.selectedCat === c.id ? "active" : ""}" onclick="selectProdCategory('${c.id}')">${esc(c.name)}</button>`).join("")}
-    </div>
+    <div class="section-title">${esc(t("pc.title"))}</div>
+    ${pcatPickerHtml(p.productCategoryId, "selectProdCategory")}
     <div class="switch-row">
       <span>حسم أعضاء دليلكم</span>
       <label class="switch"><input type="checkbox" id="pe-member-toggle" ${p.memberDiscountEnabled ? "checked" : ""} onchange="toggleMemberDiscount(this.checked)" /><span class="track"></span></label>
@@ -5101,7 +5186,7 @@ async function initProductEdit(productId) {
     name: prod.name, description: prod.description || "", price: (prod.priceCents / 100).toString(),
     stock: String(prod.stock), sku: "", memberDiscountEnabled: prod.memberDiscountEnabled,
     memberPrice: prod.memberPriceCents != null ? (prod.memberPriceCents / 100).toString() : "",
-    isActive: prod.isActive, selectedCat: prod.categoryId || null,
+    isActive: prod.isActive, selectedCat: prod.categoryId || null, productCategoryId: prod.productCategoryId || null,
     images: Array.isArray(prod.images) && prod.images.length ? prod.images : prod.imageUrl ? [prod.imageUrl] : [],
   };
   render();
@@ -5140,7 +5225,7 @@ function peRemovePhoto(i) { snapshotProdEditDraft(); S._prodEdit.images.splice(i
 function peMainPhoto(i) { snapshotProdEditDraft(); const im = S._prodEdit.images; im.unshift(im.splice(i, 1)[0]); render(); }
 function selectProdCategory(id) {
   snapshotProdEditDraft();
-  S._prodEdit.selectedCat = id;
+  S._prodEdit.productCategoryId = id;
   render();
 }
 function toggleMemberDiscount(checked) {
@@ -5168,7 +5253,7 @@ async function saveProduct() {
     if (!memberPriceCents || memberPriceCents <= 0 || memberPriceCents >= priceCents) { S.error = "سعر العضو لازم يكون أقل من السعر الأصلي"; return render(); }
   }
   const payload = {
-    name, description: description || undefined, priceCents, categoryId: p.selectedCat || undefined,
+    name, description: description || undefined, priceCents, productCategoryId: p.productCategoryId || undefined,
     stock, sku: sku || undefined, memberDiscountEnabled: p.memberDiscountEnabled, memberPriceCents: memberPriceCents || undefined,
     images: (p.images || []).filter((u) => /^\/store\/photos\/[0-9a-f-]{36}$/.test(u)),
   };

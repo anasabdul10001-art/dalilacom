@@ -378,6 +378,7 @@ model Product {
   id                    String   @id @default(uuid())
   merchantId            String
   categoryId            String?
+  productCategoryId     String? // the product category (ProductCategory), not the shop's profession
   name                  String
   description           String?
   priceCents            Int
@@ -409,6 +410,8 @@ model Product {
 
   @@index([merchantId])
   @@index([storeSection])
+  productCategory ProductCategory? @relation(fields: [productCategoryId], references: [id])
+  @@index([productCategoryId])
 }
 
 // One active cart per customer (section 6)
@@ -1564,4 +1567,28 @@ model ContentTranslation {
   createdAt  DateTime @default(now())
 
   @@unique([sourceHash, lang])
+}
+
+// The categories a shop files its PRODUCTS under: departments > categories > kinds. Not the professions a shop is registered
+// under (Category). The seeded ones come from prisma/productCategories.data.ts; a shop may add one of its own (isCustom).
+model ProductCategory {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String // Arabic, the base language
+  nameEn      String?
+  synonyms    String[] @default([]) // the words people type, in any language
+  icon        String?
+  section     String? // departments only: the store section (see storeSections.ts) its products appear in
+  parentId    String?
+  sortOrder   Int      @default(0)
+  isCustom    Boolean  @default(false)
+  createdById String? // the shop that added it (custom ones)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   ProductCategory?  @relation("ProductCategoryTree", fields: [parentId], references: [id])
+  children ProductCategory[] @relation("ProductCategoryTree")
+  products Product[]
+
+  @@index([parentId])
 }

@@ -30,11 +30,11 @@ export function normalizeText(input: string): string {
 }
 
 /** Drops the definite article so "الاطباء" finds "اطباء". */
-function stem(word: string): string {
+export function stem(word: string): string {
   return word.length > 3 && word.startsWith("ال") ? word.slice(2) : word;
 }
 
-function words(normalized: string): string[] {
+export function words(normalized: string): string[] {
   return normalized.split(" ").filter(Boolean).map(stem);
 }
 
@@ -170,8 +170,13 @@ export interface CategoryHit {
 }
 
 function scoreNode(node: CategoryNode, q: string, queryWords: string[]): number {
+  return scoreHaystack(node.haystack, q, queryWords);
+}
+
+/** How well a typed query matches a list of normalised names and synonyms (0-100); shared by every searchable tree. */
+export function scoreHaystack(haystack: string[], q: string, queryWords: string[]): number {
   let best = 0;
-  for (const item of node.haystack) {
+  for (const item of haystack) {
     if (item === q) best = Math.max(best, 100);
     else if (item.startsWith(q)) best = Math.max(best, 80);
     const itemWords = words(item);

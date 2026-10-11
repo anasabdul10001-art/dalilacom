@@ -94,6 +94,8 @@ data class WizardUi(
     val name: String = "",
     val alternatives: List<String> = emptyList(),
     val section: String = "",
+    val productCategories: List<com.dalilacom.app.data.network.ProductCategoryDto> = emptyList(),
+    val categoryId: String = "",
     val condition: String = "NEW",
     val description: String = "",
     val specs: List<SpecDto> = emptyList(),
@@ -112,10 +114,10 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
     val ui: StateFlow<WizardUi> = _ui.asStateFlow()
 
     init {
-        viewModelScope.launch { _ui.update { it.copy(sections = store.allSections()) } }
+        viewModelScope.launch { _ui.update { it.copy(sections = store.allSections(), productCategories = store.productCategories()) } }
     }
 
-    fun reset() = _ui.update { WizardUi(sections = it.sections) }
+    fun reset() = _ui.update { WizardUi(sections = it.sections, productCategories = it.productCategories) }
 
     fun addPhoto(bytes: ByteArray?) {
         if (bytes == null) { _ui.update { it.copy(error = AppStrings.get(R.string.photo_failed)) }; return }
@@ -151,6 +153,7 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
                             description = d?.description ?: it.description,
                             specs = d?.specs ?: it.specs,
                             section = d?.section ?: it.section,
+                            categoryId = r.productCategoryId ?: it.categoryId,
                             condition = d?.condition ?: it.condition,
                             error = if (r.available && d == null) AppStrings.get(R.string.wiz_ai_miss) else null,
                         )
@@ -164,6 +167,10 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
     fun setDescription(v: String) = _ui.update { it.copy(description = v) }
     fun setPrice(v: String) = _ui.update { it.copy(price = v) }
     fun setSection(v: String) = _ui.update { it.copy(section = v) }
+    fun setCategory(v: String) = _ui.update { it.copy(categoryId = v) }
+    suspend fun searchCategories(q: String) = store.searchProductCategories(q)
+    suspend fun addCategory(name: String, parentId: String): Result<String> =
+        store.addProductCategory(name, parentId).onSuccess { _ui.update { s -> s.copy(productCategories = store.productCategories()) } }
     fun setCondition(v: String) = _ui.update { it.copy(condition = v) }
     fun setStock(v: String) = _ui.update { it.copy(stock = v.filter(Char::isDigit).take(6)) }
     fun addSpec() = _ui.update { it.copy(specs = it.specs + SpecDto("", "")) }
@@ -185,7 +192,7 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
         val price = s.price.replace(",", ".").toDoubleOrNull()
         when {
             s.name.isBlank() -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_name)) }; return }
-            s.section.isBlank() -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_section)) }; return }
+            s.categoryId.isBlank() -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_section)) }; return }
             price == null || price <= 0 -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_price)) }; return }
             (s.stock.toIntOrNull() ?: 0) < 1 -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_stock)) }; return }
         }
@@ -201,7 +208,7 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
                 description = s.description.trim().ifBlank { null },
                 priceCents = Math.round(price!! * 100).toInt(),
                 stock = s.stock.toInt(),
-                storeSection = s.section,
+                productCategoryId = s.categoryId,
                 condition = s.condition,
                 images = s.photos.map { it.url },
                 specs = s.specs.filter { it.label.isNotBlank() && it.value.isNotBlank() }.map { SpecDto(it.label.trim(), it.value.trim()) },
@@ -346,24 +353,13 @@ private fun FormStep(ui: WizardUi, vm: ProductWizardViewModel, listen: (String) 
         }
 
         FieldLabel(stringResource(R.string.wiz_section))
-        ui.sections.chunked(2).forEach { pair ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                pair.forEach { s ->
-                    val on = ui.section == s.id
-                    Surface(
-                        onClick = { vm.setSection(s.id) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(2.dp, if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-                        color = if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.09f) else MaterialTheme.colorScheme.surface,
-                    ) { Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (s.image.isNotBlank()) coil.compose.AsyncImage(model = com.dalilacom.app.data.network.absoluteUrl(s.image), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(40.dp).clip(CircleShape)) else Text(s.icon, fontSize = 22.sp)
-                        Text(s.label(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    } }
-                }
-                if (pair.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
+        com.dalilacom.app.ui.common.ProductCategoryPicker(
+            tree = ui.productCategories,
+            selectedId = ui.categoryId.ifBlank { null },
+            onSelect = vm::setCategory,
+            search = vm::searchCategories,
+            add = vm::addCategory,
+        )
 
         FieldLabel(stringResource(R.string.wiz_condition))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

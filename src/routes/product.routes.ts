@@ -12,6 +12,7 @@ import { aiQuotaFor, buyAiPackage, ensureCanUseAi, recordAiUse, setAiAutoRenew }
 import { getSettings } from "../services/settings.service";
 import { route } from "../lib/asyncRoute";
 import { resolveLanguage } from "../lib/languages";
+import { sectionOfProductCategory } from "../services/productCategory.service";
 import { translateProducts } from "../services/contentTranslation.service";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
@@ -30,6 +31,7 @@ const productFieldsSchema = z.object({
   description: z.string().optional(),
   priceCents: z.number().int().positive(),
   categoryId: z.string().uuid().optional(),
+  productCategoryId: z.string().uuid().optional(), // where the product is filed (ProductCategory)
   stock: z.number().int().nonnegative().default(0),
   sku: z.string().optional(),
   memberDiscountEnabled: z.boolean().default(false),
@@ -79,8 +81,14 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res
 
   if (!(await ownPhotos(result.merchant.id, parsed.data.images))) return sendError(res, 400, "BAD_REQUEST", "الصورة غير صالحة");
   const { images, ...rest } = parsed.data;
+  // the department of the chosen category decides which store section the product appears in
+  let filedSection: string | null = null;
+  if (rest.productCategoryId) {
+    filedSection = await sectionOfProductCategory(rest.productCategoryId);
+    if (!(await prisma.productCategory.findUnique({ where: { id: rest.productCategoryId }, select: { id: true } }))) return sendError(res, 404, "NOT_FOUND", "Category not found");
+  }
   const product = await prisma.product.create({
-    data: { merchantId: result.merchant.id, ...rest, ...(images?.length ? { images, imageUrl: images[0] } : {}) },
+    data: { merchantId: result.merchant.id, ...rest, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images?.length ? { images, imageUrl: images[0] } : {}) },
   });
   res.status(201).json(product);
 });
@@ -244,7 +252,9 @@ productRouter.post("/ai-draft", requireAuth, requireRole(Role.MERCHANT), route(a
     if (prices.length >= 3) priceHint = { min: prices[0], median: prices[Math.floor(prices.length / 2)], max: prices[prices.length - 1], count: prices.length };
   }
   if (draft) await recordAiUse(req.user!.id, "describe");
-  res.json({ available: true, draft, priceHint, quota: await aiQuotaFor(req.user!.id) });
+  // the department that matches the section the AI picked: the category the shop starts from (it can refine it)
+  const department = draft?.section ? await prisma.productCategory.findUnique({ where: { slug: `p-${draft.section}` }, select: { id: true } }) : null;
+  res.json({ available: true, draft, priceHint, productCategoryId: department?.id ?? null, quota: await aiQuotaFor(req.user!.id) });
 }));
 
 // Merchant: manage their own catalog, including inactive/out-of-stock items (section 59.1)
@@ -277,9 +287,14 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req,
   // the photos: each must be one this shop uploaded; the first is the main one
   const { images, ...rest } = parsed.data;
   if (images !== undefined && !(await ownPhotos(merchant.id, images))) return sendError(res, 400, "BAD_REQUEST", "الصورة غير صالحة");
+  let filedSection: string | null = null;
+  if (rest.productCategoryId) {
+    if (!(await prisma.productCategory.findUnique({ where: { id: rest.productCategoryId }, select: { id: true } }))) return sendError(res, 404, "NOT_FOUND", "Category not found");
+    filedSection = await sectionOfProductCategory(rest.productCategoryId);
+  }
   const product = await prisma.product.update({
     where: { id: existing.id },
-    data: { ...rest, ...(images !== undefined ? { images, imageUrl: images[0] ?? null } : {}) },
+    data: { ...rest, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images !== undefined ? { images, imageUrl: images[0] ?? null } : {}) },
   });
   res.json(product);
 });

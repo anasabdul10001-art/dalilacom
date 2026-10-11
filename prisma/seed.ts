@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { seedCategories } from "./categories.seed";
+import { seedProductCategories } from "./productCategories.seed";
 import { seedGeo } from "./geo.seed";
 import { ensureSuperAdmin } from "./admin.seed";
 
@@ -33,6 +34,7 @@ async function main() {
   // Sections, professions and specialties (Arabic + English) — see prisma/categories.data.ts.
   // The admin can add more categories any time; only the slugs defined in that file are refreshed here.
   console.log(`Seeded ${await seedCategories(prisma)} categories`);
+  console.log(`Seeded ${await seedProductCategories(prisma)} product categories`);
   // Governorates, cities and neighbourhoods of Syria to start from; the admin manages them from the panel afterwards.
   console.log(`Geography: ${(await seedGeo(prisma)).created} new places`);
   // Channels the super admin offers by default. Meta ones are listed but can't be connected until a Meta

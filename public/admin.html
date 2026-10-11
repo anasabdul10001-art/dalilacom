@@ -102,6 +102,7 @@
     <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
     <div class="nav-item" data-section="store" onclick="showSection('store')">🛍️ المتجر</div>
+    <div class="nav-item" data-section="pcats" onclick="showSection('pcats'); loadProductCats()">🏷️ تصنيفات المنتجات</div>
     <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()">💡 اقتراحات المهن <span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()">🏷️ الحسومات <span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()">📢 إعلانات المتجر <span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
@@ -462,6 +463,16 @@
         <button style="margin-top:12px" onclick="demoStore('POST')">➕ أضف 50 منتج تجريبي</button>
         <button class="danger" style="margin-top:12px;margin-right:8px" onclick="demoStore('DELETE')">🗑️ احذف المنتجات التجريبية</button>
         <p id="store-msg" class="muted" style="margin-top:10px"></p>
+      </div>
+    </div>
+
+    <!-- PRODUCT CATEGORIES ADDED BY SHOPS -->
+    <div class="section" id="section-pcats" style="display:none">
+      <h2>تصنيفات المنتجات اللي أضافها التجار</h2>
+      <p class="subtitle">القائمة الأساسية جاهزة، والتاجر بيقدر يضيف تصنيف ينفع فوراً. هون بتشوف اللي أضافوه، وبتعدّل اسمه أو ترجمته، أو بتحذفه فتنتقل منتجاته للتصنيف الأعلى منه.</p>
+      <div class="card">
+        <table><thead><tr><th>التصنيف</th><th>بالإنكليزي</th><th>تحت</th><th>المحل</th><th>منتجات</th><th></th></tr></thead><tbody id="pcats-body"></tbody></table>
+        <p id="pcats-msg" class="muted"></p>
       </div>
     </div>
 
@@ -1099,6 +1110,35 @@ async function reviewDiscount(id, action) {
   const { ok, data } = await api('POST', '/admin/discounts/' + id + '/' + action, body);
   if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
   loadDiscounts(discStatus);
+}
+
+// ---- Product categories shops added ----
+async function loadProductCats() {
+  const body = document.getElementById('pcats-body');
+  const { ok, data } = await api('GET', '/admin/product-categories');
+  if (!ok) { body.innerHTML = '<tr><td colspan="6">تعذّر التحميل</td></tr>'; return; }
+  body.innerHTML = data.length ? data.map(c => `<tr>
+    <td><input id="pc-ar-${c.id}" value="${esc(c.name)}" style="width:150px" /></td>
+    <td><input id="pc-en-${c.id}" value="${esc(c.nameEn || '')}" dir="ltr" style="width:150px" placeholder="English" /></td>
+    <td class="muted">${esc(c.parentName || '—')}</td>
+    <td class="muted">${esc(c.shop || '—')}</td>
+    <td>${c.productCount}</td>
+    <td style="white-space:nowrap"><button class="small" onclick="savePcat('${c.id}')">حفظ</button> <button class="small danger" onclick="deletePcat('${c.id}')">حذف</button></td>
+  </tr>`).join('') : '<tr><td colspan="6" class="muted">ما أضاف حدا تصنيف بعد</td></tr>';
+}
+
+async function savePcat(id) {
+  const name = document.getElementById('pc-ar-' + id).value.trim();
+  const nameEn = document.getElementById('pc-en-' + id).value.trim();
+  const { ok, data } = await api('PATCH', '/admin/product-categories/' + id, { name, nameEn: nameEn || null });
+  document.getElementById('pcats-msg').textContent = ok ? 'انحفظ ✓' : errText(data, 'تعذّر الحفظ');
+}
+
+async function deletePcat(id) {
+  if (!confirm('حذف هذا التصنيف؟ منتجاته بتنتقل للتصنيف الأعلى.')) return;
+  const { ok, data } = await api('DELETE', '/admin/product-categories/' + id);
+  if (!ok) { document.getElementById('pcats-msg').textContent = errText(data, 'تعذّر الحذف'); return; }
+  loadProductCats();
 }
 
 // ---- Profession suggestions ----

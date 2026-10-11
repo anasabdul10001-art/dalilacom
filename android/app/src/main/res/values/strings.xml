@@ -766,4 +766,17 @@
     <string name="br_failed">ما قدرنا ننفّذ الطلب</string>
     <string name="br_confirm_del">حذف هالفرع؟</string>
     <string name="br_shop_branches">فروعنا (%1$d)</string>
+    <string name="pc_title">تصنيف المنتج</string>
+    <string name="pc_search">ابحث عن تصنيف منتجك</string>
+    <string name="pc_search_ph">اكتب منتجك: فستان، لابتوب، عطر، حذاء رياضي...</string>
+    <string name="pc_no_hit">ما لقينا شي بهالاسم، تصفّح القوائم أو أضف تصنيف جديد</string>
+    <string name="pc_browse">أو تصفّح التصنيفات:</string>
+    <string name="pc_all">الكل</string>
+    <string name="pc_add">إضافة تصنيف</string>
+    <string name="pc_add_under">بيتضاف تحت «%1$s»</string>
+    <string name="pc_add_need">اختر أول القسم أو التصنيف اللي بدك تضيف تحته</string>
+    <string name="pc_add_ph">اسم التصنيف الجديد</string>
+    <string name="pc_add_send">أضف التصنيف</string>
+    <string name="pc_add_short">اكتب اسم التصنيف (حرفين على الأقل)</string>
+    <string name="pc_add_failed">ما قدرنا نضيف التصنيف</string>
 </resources>

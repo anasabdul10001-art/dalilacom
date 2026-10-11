@@ -388,6 +388,7 @@ data class ProductDto(
     val id: String,
     val merchantId: String,
     val categoryId: String? = null,
+    val productCategoryId: String? = null,
     val name: String,
     val description: String? = null,
     val priceCents: Int,
@@ -531,6 +532,7 @@ data class CreateProductRequest(
     val description: String? = null,
     val priceCents: Int,
     val categoryId: String? = null,
+    val productCategoryId: String? = null,
     val stock: Int = 0,
     val sku: String? = null,
     val memberDiscountEnabled: Boolean = false,
@@ -547,6 +549,7 @@ data class UpdateProductRequest(
     val description: String? = null,
     val priceCents: Int? = null,
     val categoryId: String? = null,
+    val productCategoryId: String? = null,
     val stock: Int? = null,
     val sku: String? = null,
     val memberDiscountEnabled: Boolean? = null,
@@ -845,7 +848,7 @@ data class AiDraftDto(
 data class PriceHintDto(val min: Int = 0, val median: Int = 0, val max: Int = 0, val count: Int = 0)
 
 @Serializable
-data class AiDraftResponseDto(val available: Boolean = false, val draft: AiDraftDto? = null, val priceHint: PriceHintDto? = null)
+data class AiDraftResponseDto(val available: Boolean = false, val draft: AiDraftDto? = null, val priceHint: PriceHintDto? = null, val productCategoryId: String? = null)
 
 /* ---------------- ratings and comments ---------------- */
 
@@ -901,3 +904,24 @@ data class BannerBookingDto(
     val phone: String = "",
     val rejectionReason: String? = null,
 )
+
+/** A category a product is filed under (department > category > kind), named in the app's language. */
+@Serializable
+data class ProductCategoryDto(
+    val id: String,
+    val slug: String = "",
+    val name: String,
+    val icon: String? = null,
+    val custom: Boolean = false,
+    val children: List<ProductCategoryDto> = emptyList(),
+)
+
+/** One result of typing a product category, with where it sits. */
+@Serializable
+data class ProductCategoryHitDto(val id: String, val name: String, val path: String = "", val icon: String? = null)
+
+@Serializable
+data class AddProductCategoryRequest(val name: String, val parentId: String)
+
+@Serializable
+data class AddProductCategoryResponse(val id: String, val created: Boolean = true, val name: String = "")
