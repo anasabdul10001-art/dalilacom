@@ -13,6 +13,8 @@ import { getSettings } from "../services/settings.service";
 import { route } from "../lib/asyncRoute";
 import { resolveLanguage } from "../lib/languages";
 import { sectionOfProductCategory } from "../services/productCategory.service";
+import { REVIEWED_FIELDS, moderateProduct } from "../services/productModeration.service";
+import { optionalUserId } from "../services/viewerCountry.service";
 import { translateProducts } from "../services/contentTranslation.service";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
@@ -90,7 +92,8 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res
   const product = await prisma.product.create({
     data: { merchantId: result.merchant.id, ...rest, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images?.length ? { images, imageUrl: images[0] } : {}) },
   });
-  res.status(201).json(product);
+  const outcome = await moderateProduct(product.id); // looked at before anyone sees it
+  res.status(201).json({ ...product, moderation: outcome.moderation, moderationNote: outcome.note });
 });
 
 /* ---------------- a product from a photo: upload, then let the AI suggest the words ---------------- */
@@ -296,7 +299,10 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req,
     where: { id: existing.id },
     data: { ...rest, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images !== undefined ? { images, imageUrl: images[0] ?? null } : {}) },
   });
-  res.json(product);
+  // a change to what shoppers read or see has to be looked at again; a price or a stock change does not
+  const changed = REVIEWED_FIELDS.some((f) => (f === "images" ? images !== undefined : (rest as Record<string, unknown>)[f] !== undefined));
+  const outcome = changed ? await moderateProduct(product.id) : { moderation: product.moderation, note: product.moderationNote };
+  res.json({ ...product, moderation: outcome.moderation, moderationNote: outcome.note });
 });
 
 const listProductsSchema = z.object({
@@ -316,6 +322,7 @@ productRouter.get("/", async (req, res) => {
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
+      moderation: "APPROVED",
       ...(merchantId ? { merchantId } : {}),
       ...(categoryId ? { categoryId } : {}),
       ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
@@ -328,9 +335,13 @@ productRouter.get("/", async (req, res) => {
 });
 
 productRouter.get("/:id", async (req, res) => {
-  const product = await prisma.product.findUnique({ where: { id: req.params.id } });
+  const product = await prisma.product.findUnique({ where: { id: req.params.id }, include: { merchant: { select: { userId: true } } } });
   if (!product || !product.isActive) {
     return sendError(res, 404, "NOT_FOUND", "Product not found");
   }
-  res.json(product);
+  // one that is waiting or refused is seen only by its own shop
+  if (product.moderation !== "APPROVED" && (await optionalUserId(req)) !== product.merchant.userId) return sendError(res, 404, "NOT_FOUND", "Product not found");
+  const { merchant: _owner, ...shown } = product;
+  void _owner;
+  res.json(shown);
 });

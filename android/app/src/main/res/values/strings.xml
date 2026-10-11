@@ -779,4 +779,12 @@
     <string name="pc_add_send">أضف التصنيف</string>
     <string name="pc_add_short">اكتب اسم التصنيف (حرفين على الأقل)</string>
     <string name="pc_add_failed">ما قدرنا نضيف التصنيف</string>
+    <string name="promo_choose_region">اختر المحافظة</string>
+    <string name="photo_rules">ارفع صورة من الاستديو بس. الأفضل تكون الخلفية سادة والصورة واضحة وجيدة، ويكون المنتج بالنص. كل منتج بيتراجع قبل النشر، والصورة الرديئة أو غير اللائقة بتنرفض.</string>
+    <string name="wiz_pending_title">منتجك قيد المراجعة</string>
+    <string name="wiz_pending_sub">راجعناه وبنتأكد منه، ولما ينقبل بيصير بالمتجر وبيجيك إشعار.</string>
+    <string name="wiz_rejected_title">ما انقبل المنتج</string>
+    <string name="wiz_rejected_sub">السبب: %1$s. عدّل الصورة أو الوصف وجرّب من جديد.</string>
+    <string name="rev_pending">قيد المراجعة، ما بيظهر للزبائن قبل ما ينقبل</string>
+    <string name="rev_rejected">ما انقبل: %1$s</string>
 </resources>

@@ -121,20 +121,18 @@ fun ProductEditScreen(
                         else androidx.compose.material3.Surface(onClick = { viewModel.makeMainPhoto(i) }, shape = androidx.compose.foundation.shape.CircleShape, color = androidx.compose.ui.graphics.Color(0x99000000), contentColor = androidx.compose.ui.graphics.Color.White, modifier = Modifier.align(Alignment.TopStart).padding(4.dp).size(26.dp)) {
                             androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) { Text("★") }
                         }
-                        androidx.compose.material3.Surface(onClick = { viewModel.editor.open(state.images[i]) }, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp), color = androidx.compose.ui.graphics.Color(0xB3000000), contentColor = androidx.compose.ui.graphics.Color.White, modifier = Modifier.align(Alignment.BottomCenter).padding(4.dp)) {
-                            Text("✨ " + androidx.compose.ui.res.stringResource(R.string.ai_edit), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
-                        }
                     }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                 if (state.images.size < 6) {
-                    androidx.compose.material3.OutlinedButton(onClick = picker.openCamera, enabled = !state.uploadingPhoto) { Text("📷  " + androidx.compose.ui.res.stringResource(R.string.wiz_take_photo)) }
                     androidx.compose.material3.OutlinedButton(onClick = picker.openGallery, enabled = !state.uploadingPhoto) { Text("🖼️  " + androidx.compose.ui.res.stringResource(R.string.wiz_pick_photo)) }
                 }
                 if (state.uploadingPhoto) CircularProgressIndicator(Modifier.size(24.dp))
             }
-            Text(androidx.compose.ui.res.stringResource(R.string.wiz_enhance_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.material3.Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
+                Text(androidx.compose.ui.res.stringResource(R.string.photo_rules), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+            }
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = state.sku,

@@ -775,4 +775,12 @@
     <string name="pc_add_send">Add the category</string>
     <string name="pc_add_short">Write the category name (at least 2 letters)</string>
     <string name="pc_add_failed">The category could not be added</string>
+    <string name="promo_choose_region">Choose the governorate</string>
+    <string name="photo_rules">Upload a photo from your gallery only. The background should preferably be plain, and the photo clear and of good quality, with the product in the middle. Every product is reviewed before it is published, and a poor or unsuitable photo is refused.</string>
+    <string name="wiz_pending_title">Your product is under review</string>
+    <string name="wiz_pending_sub">We are checking it. Once accepted it goes into the store and you get a notification.</string>
+    <string name="wiz_rejected_title">The product was not accepted</string>
+    <string name="wiz_rejected_sub">Reason: %1$s. Change the photo or the description and try again.</string>
+    <string name="rev_pending">Under review, shoppers do not see it until it is accepted</string>
+    <string name="rev_rejected">Not accepted: %1$s</string>
 </resources>

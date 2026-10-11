@@ -69,6 +69,7 @@ export async function bookAd(input: BookInput): Promise<AdBooking> {
 
   const product = await prisma.product.findUnique({ where: { id: input.productId } });
   if (!product || product.merchantId !== merchant.id) throw new AdError(404, "NOT_FOUND", "المنتج غير موجود في متجرك");
+  if (product.moderation !== "APPROVED") throw new AdError(400, "BAD_REQUEST", "المنتج لسا ما انقبل من المراجعة");
   if (!product.isActive || product.stock <= 0) throw new AdError(400, "BAD_REQUEST", "المنتج لازم يكون ظاهر ومتوفر بالمخزون ليتم الإعلان عنه");
 
   const now = new Date();

@@ -398,6 +398,9 @@ data class ProductDto(
     val isActive: Boolean = true,
     val images: List<String> = emptyList(),
     val imageUrl: String? = null,
+    /** APPROVED (shown), PENDING (being reviewed) or REJECTED. */
+    val moderation: String = "APPROVED",
+    val moderationNote: String? = null,
 )
 
 @Serializable

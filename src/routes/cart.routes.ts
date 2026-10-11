@@ -73,7 +73,7 @@ cartRouter.post("/items", requireAuth, async (req, res) => {
   const { productId, quantity } = parsed.data;
 
   const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product || !product.isActive) {
+  if (!product || !product.isActive || product.moderation !== "APPROVED") {
     return sendError(res, 404, "NOT_FOUND", "Product not found");
   }
 

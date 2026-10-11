@@ -2339,12 +2339,11 @@ function screenProductWizard() {
     return `${head}
       <h1 class="screen-title">${esc(t("wiz.photoTitle"))}</h1>
       <p class="screen-sub">${esc(t("wiz.photoSub"))}</p>
+      <div class="info-banner">${esc(t("photo.rules"))}</div>
       <div class="wiz-photos">
-        ${w.photos.map((p, i) => `<div class="wiz-photo"><img src="${esc(p.preview)}" alt=""><button onclick="wizRemovePhoto(${i})" aria-label="x">✕</button>${i === 0 ? `<span>${esc(t("wiz.mainPhoto"))}</span>` : ""}<button class="wiz-enh" onclick="openPhotoMenu('wiz','${esc(p.url)}')">✨ ${esc(t("ai.edit"))}</button></div>`).join("")}
-        ${w.photos.length < 4 ? `<label class="wiz-add"><input type="file" accept="image/*" capture="environment" onchange="wizPickFiles(this)" hidden><b>📷</b><span>${esc(t("wiz.takePhoto"))}</span></label>
-          <label class="wiz-add alt"><input type="file" accept="image/*" multiple onchange="wizPickFiles(this)" hidden><b>🖼️</b><span>${esc(t("wiz.pickPhoto"))}</span></label>` : ""}
+        ${w.photos.map((p, i) => `<div class="wiz-photo"><img src="${esc(p.preview)}" alt=""><button onclick="wizRemovePhoto(${i})" aria-label="x">✕</button>${i === 0 ? `<span>${esc(t("wiz.mainPhoto"))}</span>` : ""}</div>`).join("")}
+        ${w.photos.length < 4 ? `<label class="wiz-add"><input type="file" accept="image/*" multiple onchange="wizPickFiles(this)" hidden><b>🖼️</b><span>${esc(t("wiz.pickPhoto"))}</span></label>` : ""}
       </div>
-      ${w.photos.length ? `<p class="muted" style="text-align:center;font-size:12px">${esc(t("wiz.enhanceNote"))}</p>` : ""}
       ${w.uploading ? `<p class="muted" style="text-align:center">${esc(t("wiz.uploading"))}</p>` : ""}
       ${w.error ? `<div class="error-banner">${esc(w.error)}</div>` : ""}
       <button class="btn wiz-go" ${w.photos.length === 0 || w.uploading ? "disabled" : ""} onclick="wizAnalyze()">${esc(t("wiz.next"))} ›</button>
@@ -2355,10 +2354,14 @@ function screenProductWizard() {
   }
   if (w.step === "done") {
     return `${head}
-      <div class="wiz-done"><div class="wiz-done-ico">🎉</div><h1>${esc(t("wiz.doneTitle"))}</h1><p class="muted">${esc(t("wiz.doneSub"))}</p>
+      <div class="wiz-done"><div class="wiz-done-ico">${w.moderation === "REJECTED" ? "⚠️" : w.moderation === "PENDING" ? "⏳" : "🎉"}</div>
+        <h1>${esc(t(w.moderation === "REJECTED" ? "wiz.rejectedTitle" : w.moderation === "PENDING" ? "wiz.pendingTitle" : "wiz.doneTitle"))}</h1>
+        <p class="muted">${esc(w.moderation === "REJECTED" ? t("wiz.rejectedSub", { why: w.moderationNote || "" }) : t(w.moderation === "PENDING" ? "wiz.pendingSub" : "wiz.doneSub"))}</p>
         <button class="btn" onclick="openProductWizard()">📷 ${esc(t("wiz.another"))}</button>
         <div style="height:10px"></div>
-        <button class="btn outline" onclick="go('productDetail',{productId:'${w.createdId}'})">${esc(t("wiz.viewIt"))}</button>
+        ${w.moderation === "APPROVED" || !w.moderation
+          ? `<button class="btn outline" onclick="go('productDetail',{productId:'${w.createdId}'})">${esc(t("wiz.viewIt"))}</button>`
+          : `<button class="btn outline" onclick="go('productEdit',{productId:'${w.createdId}'})">${esc(t("wiz.editIt"))}</button>`}
         <div style="height:10px"></div>
         <button class="btn secondary" onclick="backToShop()">🏪 ${esc(t("wiz.backToShop"))}</button>
         <div style="height:10px"></div>
@@ -2628,7 +2631,7 @@ async function wizPublish() {
   };
   const { ok, data } = await api("POST", "/products", body);
   w.busy = false;
-  if (ok) { w.step = "done"; w.createdId = data.id; S._catalog = null; }
+  if (ok) { w.step = "done"; w.createdId = data.id; w.moderation = data.moderation; w.moderationNote = data.moderationNote; S._catalog = null; }
   else w.error = errMsg(data, t("wiz.failed"));
   render();
 }
@@ -4496,7 +4499,7 @@ function promoError(data, fallback) {
 }
 
 function tabPromo() {
-  if (!S._promo) { S._promo = { loading: true, audience: "radius", cityId: "", radius: "5", title: "", body: "", productId: "", discountId: "" }; loadPromo(); }
+  if (!S._promo) { S._promo = { loading: true, audience: "radius", regionId: "", regions: [], cityId: "", radius: "5", title: "", body: "", productId: "", discountId: "" }; loadPromo(); }
   const p = S._promo;
   if (p.loading) return `<h1 class="screen-title">إعلاناتي</h1>${spinner()}`;
   const option = (value, label, chosen) => `<option value="${esc(value)}" ${chosen === value ? "selected" : ""}>${esc(label)}</option>`;
@@ -4507,7 +4510,8 @@ function tabPromo() {
       <div class="field"><label>لمن تريد الإرسال؟</label>
         <select id="pr-audience" onchange="promoRead(); render()">${option("radius", "حول محلي", p.audience)}${option("city", "مدينة", p.audience)}${option("followers", "متابعيّ", p.audience)}</select></div>
       ${p.audience === "city"
-        ? `<div class="field"><label>المدينة</label><select id="pr-city">${option("", "— اختر مدينة —", p.cityId)}${(p.cities || []).map((c) => option(c.id, geoName(c), p.cityId)).join("")}</select></div>`
+        ? `<div class="field"><label>${esc(t("promo.region"))}</label><select id="pr-region" onchange="promoRegion(this.value)">${option("", "— " + t("promo.pickRegion") + " —", p.regionId)}${(p.regions || []).map((c) => option(c.id, geoName(c), p.regionId)).join("")}</select></div>
+          ${p.regionId ? `<div class="field"><label>${esc(t("promo.city"))}</label><select id="pr-city">${option("", "— " + t("promo.pickCity") + " —", p.cityId)}${(p.cities || []).map((c) => option(c.id, geoName(c), p.cityId)).join("")}</select></div>` : ""}`
         : p.audience === "followers" ? "" : `<div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" inputmode="decimal" value="${esc(p.radius)}" /></div>`}
       <div class="field"><label>العنوان</label><input id="pr-title" maxlength="100" value="${esc(p.title)}" /></div>
       <div class="field"><label>النص</label><textarea id="pr-body" maxlength="500" rows="3">${esc(p.body)}</textarea></div>
@@ -4538,10 +4542,14 @@ function tabPromo() {
 }
 
 async function loadPromo() {
-  const [history, me, products, cities] = await Promise.all([api("GET", "/broadcasts"), api("GET", "/merchant/me"), api("GET", "/products/mine"), api("GET", "/geo/units?level=CITY")]);
+  const [history, me, products, countries] = await Promise.all([api("GET", "/broadcasts"), api("GET", "/merchant/me"), api("GET", "/products/mine"), api("GET", "/geo/countries")]);
+  // the governorates first, like the sign-up page; the cities come once a governorate is chosen
+  const country = countries.ok && countries.data.length ? countries.data[0] : null;
+  const regions = country ? await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "REGION" })) : { ok: false };
   Object.assign(S._promo, {
     loading: false,
-    cities: cities.ok ? cities.data : [],
+    regions: regions.ok ? regions.data : [],
+    cities: [],
     history: history.ok ? history.data : [],
     discounts: me.ok ? (me.data.discounts || []).filter((d) => d.isActive !== false) : [],
     products: products.ok ? products.data.filter((x) => x.isActive !== false) : [],
@@ -4549,8 +4557,21 @@ async function loadPromo() {
   render();
 }
 
+/** A governorate was chosen: its cities are loaded (and the old city choice is dropped). */
+async function promoRegion(regionId) {
+  promoRead(true);
+  const p = S._promo;
+  p.regionId = regionId;
+  p.cityId = "";
+  p.cities = [];
+  render();
+  if (!regionId) return;
+  const { ok, data } = await api("GET", "/geo/units?" + new URLSearchParams({ parentId: regionId, level: "CITY" }));
+  if (S._promo === p && p.regionId === regionId) { p.cities = ok ? data : []; render(); }
+}
+
 /** Reads the form into the state so a re-render never loses what was typed; returns who it is for, or null when something is missing. */
-function promoRead() {
+function promoRead(quiet) {
   const p = S._promo;
   p.audience = qs("pr-audience").value;
   if (qs("pr-radius")) p.radius = qs("pr-radius").value;
@@ -4560,6 +4581,7 @@ function promoRead() {
   p.productId = qs("pr-product").value;
   p.discountId = qs("pr-discount").value;
   p.error = null;
+  if (quiet) return null; // only saving what was typed: no checks, no message
   if (p.audience === "followers") return { followers: true };
   if (p.audience === "city") {
     if (!p.cityId) { p.error = "اختر المدينة"; return null; }
@@ -5060,6 +5082,8 @@ function tabCatalog() {
     ${(c.products || []).length === 0 ? `<div class="empty-state">ما في منتجات بعد</div>` : c.products.map((p) => `
       <div class="card clickable" onclick="go('productEdit', {productId:'${p.id}'})">
         <div class="title-line"><strong>${esc(p.name)}</strong><span class="badge ${p.isActive ? "success" : "neutral"}">${p.isActive ? "نشط" : "غير نشط"}</span></div>
+        ${p.moderation === "PENDING" ? `<p class="info-banner">⏳ ${esc(t("rev.pending"))}</p>` : ""}
+        ${p.moderation === "REJECTED" ? `<p class="error-banner">⚠️ ${esc(t("rev.rejected", { why: p.moderationNote || "" }))}</p>` : ""}
         <p class="muted">${fmt(p.priceCents)} — مخزون: ${p.stock}</p>
       </div>`).join("")}
     ${errorBanner()}
@@ -5149,11 +5173,10 @@ function screenProductEdit() {
           <img src="${esc(u)}" alt="" loading="lazy">
           ${i === 0 ? `<span class="pe-main">${esc(t("wiz.mainPhoto"))}</span>` : `<button class="pe-btn" onclick="peMainPhoto(${i})">★</button>`}
           <button class="pe-x" onclick="peRemovePhoto(${i})" aria-label="x">✕</button>
-          <button class="wiz-enh" onclick="snapshotProdEditDraft();openPhotoMenu('pe','${esc(u)}')">✨ ${esc(t("ai.edit"))}</button>
         </div>`).join("")}
       ${(p.images || []).length < 6 ? `<label class="wiz-add"><input type="file" accept="image/*" multiple onchange="peAddPhotos(this)" hidden><b>📷</b><span>${esc(t(p.uploading ? "wiz.uploading" : "pe.addPhoto"))}</span></label>` : ""}
     </div>
-    <p class="muted" style="font-size:12px">${esc(t("wiz.enhanceNote"))}</p>
+    <div class="info-banner">${esc(t("photo.rules"))}</div>
     <div class="section-title">${esc(t("pc.title"))}</div>
     ${pcatPickerHtml(p.productCategoryId, "selectProdCategory")}
     <div class="switch-row">
@@ -5262,8 +5285,12 @@ async function saveProduct() {
   if (p.isNew) res = await api("POST", "/products", payload);
   else res = await api("PATCH", "/products/" + p.productId, { ...payload, isActive: p.isActive });
   S.busy = false;
-  if (res.ok) { S._catalog = null; back(); }
-  else { S.error = errMsg(res.data, "تعذّر حفظ المنتج"); render(); }
+  if (res.ok) {
+    S._catalog = null;
+    back();
+    if (res.data.moderation === "PENDING") toast(t("rev.pending"));
+    else if (res.data.moderation === "REJECTED") toast(t("rev.rejected", { why: res.data.moderationNote || "" }));
+  } else { S.error = errMsg(res.data, "تعذّر حفظ المنتج"); render(); }
 }
 
 

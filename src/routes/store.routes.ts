@@ -94,7 +94,7 @@ async function visibleFor(query: unknown, country: string): Promise<Prisma.Produ
     });
     merchant.id = { in: near.filter((m) => distanceKm(lat, lng, m.latitude!, m.longitude!) <= radiusKm).map((m) => m.id) };
   }
-  return { isActive: true, stock: { gt: 0 }, merchant };
+  return { isActive: true, stock: { gt: 0 }, moderation: "APPROVED", merchant };
 }
 
 const include = { merchant: { select: { id: true, businessName: true } } } as const;
@@ -192,7 +192,7 @@ storeRouter.get("/products/:id", async (req, res) => {
   const country = await viewerCountry(req);
   const visible = await visibleFor({}, country);
   // a product of another country's shop does not exist for this shopper
-  const product = await prisma.product.findFirst({ where: { id: req.params.id, isActive: true, merchant: visible.merchant }, include });
+  const product = await prisma.product.findFirst({ where: { id: req.params.id, isActive: true, moderation: "APPROVED", merchant: visible.merchant }, include });
   if (!product) return sendError(res, 404, "NOT_FOUND", "Product not found");
   const related = await prisma.product.findMany({
     where: { ...visible, id: { not: product.id }, ...(product.storeSection ? { storeSection: product.storeSection } : { merchantId: product.merchantId }) },

@@ -23,6 +23,7 @@ import { isSupportedLanguage } from "../lib/languages";
 import { editPhotoWithAi, imageEditAvailable, lastImageEditError } from "../services/aiImage.service";
 import sharp from "sharp";
 import { invalidateProductCategories } from "../services/productCategory.service";
+import { decideProduct } from "../services/productModeration.service";
 import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion } from "../services/categorySuggestion.service";
 
 export const adminRouter = Router();
@@ -441,6 +442,35 @@ adminRouter.delete("/product-categories/:id", route(async (req, res) => {
     prisma.productCategory.delete({ where: { id: row.id } }),
   ]);
   invalidateProductCategories();
+  res.json({ ok: true });
+}));
+
+/* ---------------- products waiting to be looked at ---------------- */
+
+adminRouter.get("/products", route(async (req, res) => {
+  const status = z.enum(["PENDING", "REJECTED", "APPROVED"]).catch("PENDING").parse(req.query.status);
+  const rows = await prisma.product.findMany({
+    where: { moderation: status },
+    orderBy: { updatedAt: status === "PENDING" ? "asc" : "desc" },
+    take: 100,
+    include: { merchant: { select: { businessName: true, phone: true } } },
+  });
+  res.json(rows.map((p) => ({
+    id: p.id, name: p.name, description: p.description, priceCents: p.priceCents, specs: Array.isArray(p.specs) ? p.specs : [],
+    images: p.images.length ? p.images : p.imageUrl ? [p.imageUrl] : [], moderation: p.moderation, note: p.moderationNote, createdAt: p.createdAt,
+    shop: p.merchant.businessName, phone: p.merchant.phone,
+  })));
+}));
+
+adminRouter.post("/products/:id/approve", route(async (req, res) => {
+  if (!(await decideProduct(req.params.id, true, ""))) return sendError(res, 404, "NOT_FOUND", "Product not found");
+  res.json({ ok: true });
+}));
+
+adminRouter.post("/products/:id/reject", route(async (req, res) => {
+  const parsed = z.object({ reason: z.string().trim().max(200).default("") }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  if (!(await decideProduct(req.params.id, false, parsed.data.reason))) return sendError(res, 404, "NOT_FOUND", "Product not found");
   res.json({ ok: true });
 }));
 

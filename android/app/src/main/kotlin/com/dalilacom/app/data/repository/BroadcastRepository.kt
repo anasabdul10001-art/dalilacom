@@ -24,6 +24,16 @@ class BroadcastRepository(private val api: ApiService) {
         return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()
     }
 
+    /** The governorates of the platform's country: the first list of the city choice (like the sign-up page). */
+    suspend fun regions(): List<com.dalilacom.app.data.network.GeoUnitDto> {
+        val country = safeApiCall { api.geoCountries() }?.takeIf { it.isSuccessful }?.body()?.firstOrNull() ?: return emptyList()
+        return safeApiCall { api.geoChildren(country.id, "REGION", null) }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    }
+
+    /** The cities of one governorate. */
+    suspend fun citiesOf(regionId: String): List<com.dalilacom.app.data.network.GeoUnitDto> =
+        safeApiCall { api.geoChildren(null, "CITY", regionId) }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
     suspend fun preview(request: BroadcastPreviewRequest): Result<BroadcastPreviewDto> {
         val response = safeApiCall { api.previewBroadcast(request) }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))

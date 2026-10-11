@@ -378,6 +378,9 @@ model Product {
   id                    String   @id @default(uuid())
   merchantId            String
   categoryId            String?
+  moderation            ProductModeration @default(APPROVED) // only approved products are shown to shoppers
+  moderationNote        String? // why it waits or was refused
+  moderatedAt           DateTime?
   productCategoryId     String? // the product category (ProductCategory), not the shop's profession
   name                  String
   description           String?
@@ -1591,4 +1594,11 @@ model ProductCategory {
   products Product[]
 
   @@index([parentId])
+}
+
+// Every new or changed product is looked at before it is shown: the AI first, then an admin when it is unsure.
+enum ProductModeration {
+  APPROVED
+  PENDING
+  REJECTED
 }

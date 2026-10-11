@@ -103,6 +103,7 @@
     <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
     <div class="nav-item" data-section="store" onclick="showSection('store')">🛍️ المتجر</div>
     <div class="nav-item" data-section="pcats" onclick="showSection('pcats'); loadProductCats()">🏷️ تصنيفات المنتجات</div>
+    <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()">🛡️ مراجعة المنتجات <span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()">💡 اقتراحات المهن <span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()">🏷️ الحسومات <span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()">📢 إعلانات المتجر <span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
@@ -476,6 +477,18 @@
       </div>
     </div>
 
+    <!-- PRODUCTS WAITING FOR REVIEW -->
+    <div class="section" id="section-prodreview" style="display:none">
+      <h2>مراجعة المنتجات</h2>
+      <p class="subtitle">الذكاء الاصطناعي بيقرأ كل منتج جديد قبل ما يظهر. المنتج الواضح الغير لائق بينرفض لحاله، والعادي بيظهر، واللي ما تأكد منه (أو لما ما يجاوب الذكاء الاصطناعي) بيجي لهون لتقرر إنت.</p>
+      <div class="filters">
+        <button class="active" data-pstatus="PENDING" onclick="loadProductReview('PENDING')">بانتظار القرار</button>
+        <button data-pstatus="REJECTED" onclick="loadProductReview('REJECTED')">مرفوضة</button>
+        <button data-pstatus="APPROVED" onclick="loadProductReview('APPROVED')">مقبولة</button>
+      </div>
+      <div id="prev-list"></div>
+    </div>
+
     <!-- PROFESSION SUGGESTIONS -->
     <div class="section" id="section-suggestions" style="display:none">
       <h2>اقتراحات المهن</h2>
@@ -679,6 +692,7 @@ function enterApp() {
   loadAiStatus();
   loadTopups('PENDING');
   refreshSugBadge();
+  refreshProductReviewBadge();
 }
 
 function showSection(name) {
@@ -1139,6 +1153,43 @@ async function deletePcat(id) {
   const { ok, data } = await api('DELETE', '/admin/product-categories/' + id);
   if (!ok) { document.getElementById('pcats-msg').textContent = errText(data, 'تعذّر الحذف'); return; }
   loadProductCats();
+}
+
+// ---- Products waiting for review ----
+let prevStatus = 'PENDING';
+
+async function loadProductReview(status) {
+  prevStatus = status || prevStatus;
+  document.querySelectorAll('[data-pstatus]').forEach(b => b.classList.toggle('active', b.dataset.pstatus === prevStatus));
+  const box = document.getElementById('prev-list');
+  const { ok, data } = await api('GET', '/admin/products?status=' + prevStatus);
+  if (!ok) { box.innerHTML = '<div class="card muted">تعذّر التحميل</div>'; return; }
+  box.innerHTML = data.length ? data.map(p => `<div class="card">
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${p.images.slice(0, 4).map(u => `<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid #ddd" /></a>`).join('') || '<span class="muted">بدون صورة</span>'}</div>
+      <div style="flex:1;min-width:220px">
+        <b style="font-size:16px">${esc(p.name)}</b> <span class="muted">— ${esc(p.shop)}${p.phone ? ' · ' + esc(p.phone) : ''}</span>
+        <p style="margin:6px 0">${esc(p.description || '')}</p>
+        ${p.specs.length ? `<p class="muted">${p.specs.map(s => esc(s.label) + ': ' + esc(s.value)).join(' · ')}</p>` : ''}
+        ${p.note ? `<p class="muted">ملاحظة الذكاء الاصطناعي / الإدارة: ${esc(p.note)}</p>` : ''}
+        <div style="margin-top:8px">${p.moderation !== 'APPROVED' ? `<button class="small" onclick="decideProduct('${p.id}','approve')">✅ قبول</button> ` : ''}${p.moderation !== 'REJECTED' ? `<button class="small danger" onclick="decideProduct('${p.id}','reject')">رفض</button>` : ''}</div>
+      </div>
+    </div></div>`).join('') : '<div class="card muted">ما في منتجات</div>';
+  refreshProductReviewBadge();
+}
+
+async function refreshProductReviewBadge() {
+  const { ok, data } = await api('GET', '/admin/products?status=PENDING');
+  const badge = document.getElementById('prev-pending-count');
+  if (ok && data.length) { badge.textContent = data.length; badge.style.display = ''; } else badge.style.display = 'none';
+}
+
+async function decideProduct(id, action) {
+  let body = {};
+  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل للتاجر):'); if (reason === null) return; body = { reason }; }
+  const { ok, data } = await api('POST', '/admin/products/' + id + '/' + action, body);
+  if (!ok) { alert(errText(data, 'تعذّر التنفيذ')); return; }
+  loadProductReview();
 }
 
 // ---- Profession suggestions ----

@@ -60,6 +60,8 @@ data class PromoUiState(
     val isLoading: Boolean = true,
     /** Who it is for: "radius" (around the shop), "city" or "followers". */
     val audience: String = "radius",
+    val regionId: String? = null,
+    val regions: List<GeoUnitDto> = emptyList(),
     val cityId: String? = null,
     val cities: List<GeoUnitDto> = emptyList(),
     val radius: String = "5",
@@ -92,7 +94,7 @@ class PromoViewModel(
                 it.copy(
                     isLoading = false,
                     discounts = me?.discounts.orEmpty(),
-                    cities = broadcasts.cities(),
+                    regions = broadcasts.regions(),
                     products = products.getMyProducts().filter { p -> p.isActive },
                     history = broadcasts.history(),
                 )
@@ -102,6 +104,13 @@ class PromoViewModel(
 
     fun onRadius(value: String) = _uiState.update { it.copy(radius = value, error = null) }
     fun onAudience(value: String) = _uiState.update { it.copy(audience = value, error = null, info = null) }
+    fun pickRegion(id: String) {
+        _uiState.update { it.copy(regionId = id, cityId = null, cities = emptyList(), error = null, info = null) }
+        viewModelScope.launch {
+            val cities = broadcasts.citiesOf(id)
+            _uiState.update { if (it.regionId == id) it.copy(cities = cities) else it }
+        }
+    }
     fun pickCity(id: String) = _uiState.update { it.copy(cityId = id, error = null, info = null) }
     fun onTitle(value: String) = _uiState.update { it.copy(title = value, error = null) }
     fun onBody(value: String) = _uiState.update { it.copy(body = value, error = null) }
@@ -194,15 +203,31 @@ fun PromoScreen(factory: ViewModelFactory) {
             }
         }
         if (state.audience == "city") item {
-            var open by remember { mutableStateOf(false) }
-            val chosen = state.cities.firstOrNull { it.id == state.cityId }
-            Box {
-                OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(chosen?.title() ?: AppStrings.get(R.string.promo_choose_city))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                var openRegion by remember { mutableStateOf(false) }
+                val region = state.regions.firstOrNull { it.id == state.regionId }
+                Box {
+                    OutlinedButton(onClick = { openRegion = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(region?.title() ?: AppStrings.get(R.string.promo_choose_region))
+                    }
+                    DropdownMenu(expanded = openRegion, onDismissRequest = { openRegion = false }) {
+                        state.regions.forEach { r ->
+                            DropdownMenuItem(text = { Text(r.title()) }, onClick = { viewModel.pickRegion(r.id); openRegion = false })
+                        }
+                    }
                 }
-                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                    state.cities.forEach { city ->
-                        DropdownMenuItem(text = { Text(city.title()) }, onClick = { viewModel.pickCity(city.id); open = false })
+                if (state.regionId != null) {
+                    var open by remember { mutableStateOf(false) }
+                    val chosen = state.cities.firstOrNull { it.id == state.cityId }
+                    Box {
+                        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(chosen?.title() ?: AppStrings.get(R.string.promo_choose_city))
+                        }
+                        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                            state.cities.forEach { city ->
+                                DropdownMenuItem(text = { Text(city.title()) }, onClick = { viewModel.pickCity(city.id); open = false })
+                            }
+                        }
                     }
                 }
             }

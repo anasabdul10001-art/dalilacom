@@ -110,6 +110,8 @@ private fun CatalogProductRow(product: ProductDto, onClick: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+            if (product.moderation == "PENDING") Text("⏳ " + androidx.compose.ui.res.stringResource(R.string.rev_pending), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+            if (product.moderation == "REJECTED") Text("⚠️ " + androidx.compose.ui.res.stringResource(R.string.rev_rejected, product.moderationNote.orEmpty()), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             Text(AppStrings.get(R.string.fmt_price_stock, formatCents(product.priceCents), product.stock), style = MaterialTheme.typography.bodySmall)
         }
     }

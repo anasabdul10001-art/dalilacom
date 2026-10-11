@@ -107,6 +107,8 @@ data class WizardUi(
     val busy: Boolean = false,
     val error: String? = null,
     val createdId: String? = null,
+    val moderation: String = "APPROVED",
+    val moderationNote: String? = null,
 )
 
 class ProductWizardViewModel(private val store: StoreRepository, private val products: ProductRepository, private val merchant: com.dalilacom.app.data.repository.MerchantRepository) : ViewModel() {
@@ -214,7 +216,7 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
                 specs = s.specs.filter { it.label.isNotBlank() && it.value.isNotBlank() }.map { SpecDto(it.label.trim(), it.value.trim()) },
             )
             products.createProduct(request)
-                .onSuccess { p -> _ui.update { it.copy(busy = false, step = "done", createdId = p.id) } }
+                .onSuccess { p -> _ui.update { it.copy(busy = false, step = "done", createdId = p.id, moderation = p.moderation, moderationNote = p.moderationNote) } }
                 .onFailure { e -> _ui.update { it.copy(busy = false, error = e.message) } }
         }
     }
@@ -265,14 +267,19 @@ fun ProductWizardScreen(container: AppContainer, onBack: () -> Unit, onManual: (
                 Text(stringResource(R.string.wiz_analyzing_sub), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             "done" -> Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text("🎉", fontSize = 72.sp)
-                Text(stringResource(R.string.wiz_done_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                Text(stringResource(R.string.wiz_done_sub), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(when (ui.moderation) { "REJECTED" -> "⚠️"; "PENDING" -> "⏳"; else -> "🎉" }, fontSize = 72.sp)
+                Text(stringResource(when (ui.moderation) { "REJECTED" -> R.string.wiz_rejected_title; "PENDING" -> R.string.wiz_pending_title; else -> R.string.wiz_done_title }), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text(
+                    when (ui.moderation) { "REJECTED" -> stringResource(R.string.wiz_rejected_sub, ui.moderationNote.orEmpty()); "PENDING" -> stringResource(R.string.wiz_pending_sub); else -> stringResource(R.string.wiz_done_sub) },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(Modifier.height(20.dp))
                 Button(onClick = vm::reset, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("📷  " + stringResource(R.string.wiz_another)) }
                 Spacer(Modifier.height(10.dp))
-                OutlinedButton(onClick = { ui.createdId?.let(onOpenProduct) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(stringResource(R.string.wiz_view_it)) }
-                Spacer(Modifier.height(10.dp))
+                if (ui.moderation == "APPROVED") {
+                    OutlinedButton(onClick = { ui.createdId?.let(onOpenProduct) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(stringResource(R.string.wiz_view_it)) }
+                    Spacer(Modifier.height(10.dp))
+                }
                 OutlinedButton(onClick = onBackToShop, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("🏪  " + stringResource(R.string.wiz_back_to_shop)) }
                 Spacer(Modifier.height(10.dp))
                 TextButton(onClick = onBackToAccount, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("👤  " + stringResource(R.string.wiz_back_to_account)) }
@@ -287,6 +294,9 @@ private fun PhotosStep(ui: WizardUi, vm: ProductWizardViewModel, camera: () -> U
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.wiz_photo_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
         Text(stringResource(R.string.wiz_photo_sub), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
+            Text(stringResource(R.string.photo_rules), modifier = Modifier.padding(12.dp), fontSize = 13.sp)
+        }
         val tiles = ui.photos.mapIndexed { i, p -> i to p }
         tiles.chunked(2).forEach { pair ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -295,12 +305,6 @@ private fun PhotosStep(ui: WizardUi, vm: ProductWizardViewModel, camera: () -> U
                         val bmp = androidx.compose.runtime.remember(p.id) { BitmapFactory.decodeByteArray(p.bytes, 0, p.bytes.size)?.asImageBitmap() }
                         if (p.enhanced) coil.compose.AsyncImage(model = com.dalilacom.app.data.network.absoluteUrl(p.url), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                         else if (bmp != null) androidx.compose.foundation.Image(bitmap = bmp, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                        Surface(
-                            onClick = { vm.editor.open(p.url) }, shape = RoundedCornerShape(8.dp), color = Color(0xB3000000), contentColor = Color.White,
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp),
-                        ) {
-                            Text("✨ " + stringResource(R.string.ai_edit), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                        }
                         Surface(onClick = { vm.removePhoto(i) }, shape = CircleShape, color = Color(0x99000000), contentColor = Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(30.dp)) { Box(contentAlignment = Alignment.Center) { Text("✕") } }
                         if (i == 0) Text(stringResource(R.string.wiz_main_photo), color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp).background(Color(0xA6000000), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp))
                     }
@@ -309,10 +313,8 @@ private fun PhotosStep(ui: WizardUi, vm: ProductWizardViewModel, camera: () -> U
             }
         }
         if (ui.photos.size < 4) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            AddPhotoTile("📷", stringResource(R.string.wiz_take_photo), true, camera, Modifier.weight(1f))
-            AddPhotoTile("🖼️", stringResource(R.string.wiz_pick_photo), false, gallery, Modifier.weight(1f))
+            AddPhotoTile("🖼️", stringResource(R.string.wiz_pick_photo), true, gallery, Modifier.weight(1f))
         }
-        if (ui.photos.isNotEmpty()) Text(stringResource(R.string.wiz_enhance_note), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         if (ui.uploading) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { CircularProgressIndicator(Modifier.size(22.dp)); Spacer(Modifier.width(10.dp)); Text(stringResource(R.string.wiz_uploading)) }
         ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(onClick = vm::analyze, enabled = ui.photos.isNotEmpty() && !ui.uploading, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(54.dp)) { Text(stringResource(R.string.wiz_next) + "  ›", fontSize = 17.sp, fontWeight = FontWeight.Bold) }
