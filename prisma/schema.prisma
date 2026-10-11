@@ -1553,3 +1553,15 @@ model CategorySuggestion {
   @@index([status, createdAt])
   @@index([merchantId])
 }
+
+// What a text somebody typed (a product description, a shop's bio, a comment...) reads like in another language.
+// Translated once by the AI and kept, so each text costs one translation per language. Keyed by a hash of the text.
+model ContentTranslation {
+  id         String   @id @default(uuid())
+  sourceHash String
+  lang       String
+  text       String
+  createdAt  DateTime @default(now())
+
+  @@unique([sourceHash, lang])
+}

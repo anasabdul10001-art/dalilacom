@@ -5,6 +5,11 @@ initLanguage(); // language files are loaded by now (index.html order)
 
 // A phone/keyboard set to Arabic or Persian types its own digit shapes, which parseInt/parseFloat reject.
 // Every number typed into a form goes through latinDigits() first. (Built from char codes so no Arabic text sits in the code.)
+/** A country, governorate, city or neighbourhood named in the reader's language. */
+function geoName(u) {
+  return LANG === "ar" ? u.nameArabic || u.name : u.nameEnglish || u.name;
+}
+
 function latinDigits(text) {
   const ch = (n) => String.fromCharCode(n);
   return String(text == null ? "" : text)
@@ -470,9 +475,9 @@ function screenRegister() {
   const draft = S.params.draft || {};
   if (!S._regGeo) { S._regGeo = { countries: [], regions: [], cities: [], loading: true }; loadRegGeo(); }
   const g = S._regGeo;
-  const countryOpts = g.countries.map((c) => `<option value="${esc(c.isoCode2)}" ${draft.country === c.isoCode2 ? "selected" : ""}>${esc(c.nameArabic || c.name)}</option>`).join("");
-  const regionOpts = g.regions.map((c) => `<option value="${esc(c.id)}" ${draft.region === c.id ? "selected" : ""}>${esc(c.nameArabic || c.name)}</option>`).join("");
-  const cityOpts = g.cities.map((c) => `<option value="${esc(c.id)}" ${draft.city === c.id ? "selected" : ""}>${esc(c.nameArabic || c.name)}</option>`).join("");
+  const countryOpts = g.countries.map((c) => `<option value="${esc(c.isoCode2)}" ${draft.country === c.isoCode2 ? "selected" : ""}>${esc(geoName(c))}</option>`).join("");
+  const regionOpts = g.regions.map((c) => `<option value="${esc(c.id)}" ${draft.region === c.id ? "selected" : ""}>${esc(geoName(c))}</option>`).join("");
+  const cityOpts = g.cities.map((c) => `<option value="${esc(c.id)}" ${draft.city === c.id ? "selected" : ""}>${esc(geoName(c))}</option>`).join("");
   const cityHint = g.regions.length && !draft.region ? "— اختر المحافظة أول —" : g.cities.length ? "— اختر المدينة —" : "— اختر الدولة أول —";
   return `
     <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
@@ -1864,7 +1869,7 @@ async function loadStoreHome() {
   if (ok && !st.countryName) {
     const countries = await api("GET", "/geo/countries");
     const c = countries.ok ? countries.data.find((x) => x.isoCode2 === data.country) : null;
-    if (c && S._store === st) { st.countryName = LANG === "ar" ? c.nameArabic || c.name : c.nameEnglish || c.name; render(); }
+    if (c && S._store === st) { st.countryName = LANG === "ar" ? geoName(c) : c.nameEnglish || c.name; render(); }
   }
 }
 
@@ -3587,7 +3592,7 @@ function screenAccount() {
   const a = S._acct;
   if (a.loading) return backRow() + `<h1 class="screen-title">إعدادات الحساب</h1>${spinner()}`;
   const p = a.profile;
-  const unitName = (u) => u.nameArabic || u.name;
+  const unitName = (u) => geoName(u);
   const opt = (value, label, chosen) => `<option value="${esc(value)}" ${String(chosen || "") === String(value) ? "selected" : ""}>${esc(label)}</option>`;
   const note = a.msg ? `<div class="card" style="border-color:var(--primary)">${esc(a.msg)}</div>` : "";
   const err = a.err ? `<div class="error-banner">${esc(a.err)}</div>` : "";
@@ -4415,7 +4420,7 @@ function tabPromo() {
       <div class="field"><label>لمن تريد الإرسال؟</label>
         <select id="pr-audience" onchange="promoRead(); render()">${option("radius", "حول محلي", p.audience)}${option("city", "مدينة", p.audience)}${option("followers", "متابعيّ", p.audience)}</select></div>
       ${p.audience === "city"
-        ? `<div class="field"><label>المدينة</label><select id="pr-city">${option("", "— اختر مدينة —", p.cityId)}${(p.cities || []).map((c) => option(c.id, c.nameArabic || c.name, p.cityId)).join("")}</select></div>`
+        ? `<div class="field"><label>المدينة</label><select id="pr-city">${option("", "— اختر مدينة —", p.cityId)}${(p.cities || []).map((c) => option(c.id, geoName(c), p.cityId)).join("")}</select></div>`
         : p.audience === "followers" ? "" : `<div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" inputmode="decimal" value="${esc(p.radius)}" /></div>`}
       <div class="field"><label>العنوان</label><input id="pr-title" maxlength="100" value="${esc(p.title)}" /></div>
       <div class="field"><label>النص</label><textarea id="pr-body" maxlength="500" rows="3">${esc(p.body)}</textarea></div>

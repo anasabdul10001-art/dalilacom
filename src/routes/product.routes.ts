@@ -11,6 +11,8 @@ import { PHOTO_COLORS, editPhotoWithAi, imageEditAvailable, instructionFor } fro
 import { aiQuotaFor, buyAiPackage, ensureCanUseAi, recordAiUse, setAiAutoRenew } from "../services/aiQuota.service";
 import { getSettings } from "../services/settings.service";
 import { route } from "../lib/asyncRoute";
+import { resolveLanguage } from "../lib/languages";
+import { translateProducts } from "../services/contentTranslation.service";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
 
@@ -290,7 +292,9 @@ productRouter.get("/", async (req, res) => {
     },
     orderBy: { createdAt: "desc" },
   });
-  res.json(products);
+  const shown = products.map((p) => ({ ...p })); // copies: what is translated here is never saved
+  await translateProducts(resolveLanguage(req), shown);
+  res.json(shown);
 });
 
 productRouter.get("/:id", async (req, res) => {

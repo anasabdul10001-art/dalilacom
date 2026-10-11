@@ -4,6 +4,7 @@ import { discountScopeInfo, discountState, liveDiscountWhere, peopleLeftMap, tim
 import { optionalUserId } from "../services/viewerCountry.service";
 import { createSuggestion } from "../services/categorySuggestion.service";
 import { notify } from "../services/notification.service";
+import { translateRecords } from "../services/contentTranslation.service";
 import { z } from "zod";
 import { MerchantApprovalStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
@@ -299,6 +300,10 @@ merchantRouter.get("/", async (req, res) => {
     ];
   });
   if (openNow === "true") merchants = merchants.filter((m) => m.openStatus.isOpen);
+  // what the shops wrote (bio, address, branch name, discount texts) in the reader's language; shop names stay as written
+  const shown = merchants as unknown as Record<string, unknown>[];
+  await translateRecords(resolveLanguage(req), shown, ["bio", "address", "branchName"]);
+  await translateRecords(resolveLanguage(req), shown.flatMap((m) => (Array.isArray(m.discounts) ? (m.discounts as Record<string, unknown>[]) : [])), ["title", "description"]);
 
   // Nearest-first sorting when the customer's location is known (section 31 "Radius Selector").
   // Done in the app layer rather than PostGIS for now — fine at this data volume, revisit later.
@@ -532,7 +537,12 @@ merchantRouter.get("/:id", async (req, res) => {
   }));
   const shippingMethods = merchant.shippingMethods.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents }));
   const branches = merchant.branches.map(branchJson);
-  res.json(localize({ ...withOwnerProfile({ ...merchant, discounts, shippingMethods, branches }), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }));
+  const page = localize({ ...withOwnerProfile({ ...merchant, discounts, shippingMethods, branches }), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }) as unknown as Record<string, unknown>;
+  const lang = resolveLanguage(req);
+  await translateRecords(lang, [page], ["bio", "address"]);
+  await translateRecords(lang, branches as unknown as Record<string, unknown>[], ["name", "city", "address"]);
+  await translateRecords(lang, discounts as unknown as Record<string, unknown>[], ["title", "description"]);
+  res.json(page);
 });
 
 merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {

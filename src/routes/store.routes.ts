@@ -9,6 +9,8 @@ import { AD_SLOTS, liveAds } from "../services/ads.service";
 import { getSettings } from "../services/settings.service";
 import { normalizeText } from "../services/category.service";
 import { route } from "../lib/asyncRoute";
+import { resolveLanguage } from "../lib/languages";
+import { translateProducts, translateRecords } from "../services/contentTranslation.service";
 
 /**
  * The online store: every shop's products in one place, like a marketplace. Read-only and public; buying goes
@@ -138,7 +140,11 @@ storeRouter.get("/home", async (req, res) => {
   const cheapest = [...settings.ads.packages].sort((a, b) => a.credits - b.credits)[0];
   const adOffer = cheapest ? { fromCredits: cheapest.credits, days: cheapest.days, creditName: settings.creditName } : null;
 
-  res.json({ country, currency: await currencyOf(country), sections, slots, adOffer, bestSellers: best.map(view), deals: deals.map(view), newest: newest.map(view) });
+  const bestSellers = best.map(view);
+  const dealViews = deals.map(view);
+  const newViews = newest.map(view);
+  await translateProducts(resolveLanguage(req), [...bestSellers, ...dealViews, ...newViews, ...slots.map((x) => x!.product)]); // the reader's language
+  res.json({ country, currency: await currencyOf(country), sections, slots, adOffer, bestSellers, deals: dealViews, newest: newViews });
 });
 
 const listSchema = z.object({
@@ -171,7 +177,9 @@ storeRouter.get("/products", async (req, res) => {
     prisma.product.count({ where }),
     prisma.product.findMany({ where, include, orderBy: sorts[sort], take: limit, skip: offset }),
   ]);
-  res.json({ total, currency: await currencyOf(country), items: items.map(view) });
+  const views = items.map(view);
+  await translateProducts(resolveLanguage(req), views);
+  res.json({ total, currency: await currencyOf(country), items: views });
 });
 
 storeRouter.get("/sections", async (req, res) => {
@@ -193,7 +201,12 @@ storeRouter.get("/products/:id", async (req, res) => {
     take: 8,
   });
   const shipping = await prisma.shippingMethod.findMany({ where: { merchantId: product.merchantId, isActive: true }, orderBy: { createdAt: "asc" } });
-  res.json({ ...view(product), currency: await currencyOf(country), shipping: shipping.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })), related: related.map(view) });
+  const main = view(product);
+  const relatedViews = related.map(view);
+  const shippingViews = shipping.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents }));
+  await translateProducts(resolveLanguage(req), [main, ...relatedViews]);
+  await translateRecords(resolveLanguage(req), shippingViews, ["name"]);
+  res.json({ ...main, currency: await currencyOf(country), shipping: shippingViews, related: relatedViews });
 });
 
 /* ---------------- the big rotating banners of the front page ---------------- */

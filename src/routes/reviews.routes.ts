@@ -5,6 +5,8 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { route } from "../lib/asyncRoute";
+import { resolveLanguage } from "../lib/languages";
+import { translateRecords } from "../services/contentTranslation.service";
 import { optionalUserId } from "../services/viewerCountry.service";
 import { notify } from "../services/notification.service";
 
@@ -92,9 +94,11 @@ reviewsRouter.get("/products/:id", route(async (req, res) => {
     me && me !== product.merchant.userId ? boughtProduct(me, product.id) : false,
   ]);
   const nameOf = await pageOf(page);
+  const items = page.map((r) => ({ id: r.id, stars: r.stars, comment: r.comment, name: nameOf(r.userId), verified: true, createdAt: r.createdAt, mine: r.userId === me }));
+  await translateRecords(resolveLanguage(req), items.filter((i) => !i.mine), ["comment"]); // other people's comments in the reader's language
   res.json({
     summary: summarize(all.map((r) => r.stars)),
-    items: page.map((r) => ({ id: r.id, stars: r.stars, comment: r.comment, name: nameOf(r.userId), verified: true, createdAt: r.createdAt, mine: r.userId === me })),
+    items,
     canReview,
     mine: mine ? { stars: mine.stars, comment: mine.comment } : null,
   });
@@ -142,10 +146,12 @@ reviewsRouter.get("/shops/:id", route(async (req, res) => {
     prisma.favoriteMerchant.count({ where: { merchantId: shop.id } }),
   ]);
   const nameOf = await pageOf(page);
+  const items = page.map((r) => ({ id: r.id, stars: r.stars, comment: r.comment, name: nameOf(r.userId), verified: true, createdAt: r.createdAt, mine: r.userId === me }));
+  await translateRecords(resolveLanguage(req), items.filter((i) => !i.mine), ["comment"]);
   res.json({
     summary: summarize(all.map((r) => r.stars)),
     followersCount: followers,
-    items: page.map((r) => ({ id: r.id, stars: r.stars, comment: r.comment, name: nameOf(r.userId), verified: true, createdAt: r.createdAt, mine: r.userId === me })),
+    items,
     canReview,
     mine: mine ? { stars: mine.stars, comment: mine.comment } : null,
   });

@@ -31,6 +31,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.R
+import com.dalilacom.app.ui.common.title
 import com.dalilacom.app.data.network.BroadcastDto
 import com.dalilacom.app.data.network.BroadcastRequest
 import com.dalilacom.app.data.network.DiscountDto
@@ -197,11 +198,11 @@ fun PromoScreen(factory: ViewModelFactory) {
             val chosen = state.cities.firstOrNull { it.id == state.cityId }
             Box {
                 OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(chosen?.let { it.nameArabic ?: it.name } ?: AppStrings.get(R.string.promo_choose_city))
+                    Text(chosen?.title() ?: AppStrings.get(R.string.promo_choose_city))
                 }
                 DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                     state.cities.forEach { city ->
-                        DropdownMenuItem(text = { Text(city.nameArabic ?: city.name) }, onClick = { viewModel.pickCity(city.id); open = false })
+                        DropdownMenuItem(text = { Text(city.title()) }, onClick = { viewModel.pickCity(city.id); open = false })
                     }
                 }
             }
