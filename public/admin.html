@@ -409,6 +409,8 @@
       <p class="subtitle">أي مزوّد مضبوط على السيرفر، ومين فعليًا جاوب — من ذاكرة الخدمة الحالية ومن قاعدة البيانات.</p>
       <div class="card">
         <button class="small" onclick="loadAiStatus()">🔄 تحديث</button>
+        <button class="small" onclick="testImageEdit()">🖼️ اختبار تعديل الصور</button>
+        <span id="ai-image-msg" class="muted" style="margin-right:10px"></span>
         <span id="ai-msg" class="muted" style="margin-right:10px"></span>
         <p class="muted" style="margin-top:14px">المزوّد المُجرَّب أولًا: <b id="ai-active">—</b></p>
         <p class="muted">"منتج من صورة" (وصف المنتج للتاجر): <b id="ai-vision">—</b> <small>(بيحتاج مفتاح Gemini أو Mistral أو Claude)</small></p>
@@ -1434,6 +1436,14 @@ function renderAiPacks() {
 function aiPackAdd() {
   aiPacks.push({ id: 'p-' + Date.now().toString(36), name: '', days: 30, uses: 100, credits: 1000 });
   renderAiPacks();
+}
+
+async function testImageEdit() {
+  const msg = document.getElementById('ai-image-msg');
+  msg.textContent = 'جاري الاختبار...';
+  const { ok, data } = await api('POST', '/admin/ai-image-test');
+  if (!ok) { msg.textContent = errText(data, 'تعذّر الاختبار'); return; }
+  msg.textContent = data.ok ? 'تعديل الصور بالذكاء الاصطناعي شغّال ✓ (' + data.ms + ' ms)' : 'ما اشتغل: ' + (data.reason || 'سبب غير معروف');
 }
 
 async function loadAiQuota() {

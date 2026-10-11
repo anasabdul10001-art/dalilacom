@@ -5,7 +5,7 @@ import { prisma } from "../prisma";
 import { ApiError, sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { sniffImageMime } from "../lib/image";
-import { enhanceProductPhoto } from "../lib/photoEnhance";
+import { enhanceProductPhoto, recolorLocal, removeBackgroundLocal } from "../lib/photoEnhance";
 import sharp from "sharp";
 import { PHOTO_COLORS, editPhotoWithAi, imageEditAvailable, instructionFor } from "../services/aiImage.service";
 import { aiQuotaFor, buyAiPackage, ensureCanUseAi, recordAiUse, setAiAutoRenew } from "../services/aiQuota.service";
@@ -170,23 +170,38 @@ productRouter.post("/photos/:id/edit", requireAuth, requireRole(Role.MERCHANT), 
   const { action, color } = parsed.data;
 
   let improved: Buffer;
+  let engine: "ai" | "local" = "local";
   try {
     if (action === "clean") {
       improved = await enhanceProductPhoto(Buffer.from(photo.data));
     } else {
-      if (!imageEditAvailable()) return sendError(res, 503, "UNAVAILABLE", "تعديل الصور بالذكاء الاصطناعي غير متاح حاليًا");
-      await ensureCanUseAi(req.user!.id);
-      const edited = await editPhotoWithAi({ mime: photo.mime, data: Buffer.from(photo.data) }, instructionFor(action, color));
-      if (!edited) return sendError(res, 502, "UNAVAILABLE", "ما قدرنا نعدّل الصورة هلأ، جرّب بعد شوي (ما انحسب عليك شي)");
-      improved = action === "recolor" ? await sharp(edited).rotate().resize(1600, 1600, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 88, mozjpeg: true }).toBuffer() : await enhanceProductPhoto(edited);
+      // the AI first (counted against the free uses, then the wallet); when it cannot do it, the picture is edited here
+      // for free, which works on a plain backdrop
+      let edited: Buffer | null = null;
+      if (imageEditAvailable()) {
+        await ensureCanUseAi(req.user!.id);
+        edited = await editPhotoWithAi({ mime: photo.mime, data: Buffer.from(photo.data) }, instructionFor(action, color));
+      }
+      if (edited) {
+        engine = "ai";
+        improved = action === "recolor" ? await sharp(edited).rotate().resize(1600, 1600, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 88, mozjpeg: true }).toBuffer() : await enhanceProductPhoto(edited);
+      } else if (action === "recolor") {
+        const local = await recolorLocal(Buffer.from(photo.data), color ?? "red");
+        if (!local) return sendError(res, 422, "UNPROCESSABLE", "The background is too busy to change the colour: try a photo with a plain background");
+        improved = local;
+      } else {
+        const cut = await removeBackgroundLocal(Buffer.from(photo.data));
+        if (!cut) return sendError(res, 422, "UNPROCESSABLE", "The background is too busy to remove: try a photo with a plain background");
+        improved = await enhanceProductPhoto(cut);
+      }
     }
   } catch (err) {
     if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
     return sendError(res, 422, "UNPROCESSABLE", "تعذّر تحسين هالصورة، جرّب صورة ثانية");
   }
   const created = await prisma.productPhoto.create({ data: { merchantId: found.merchant.id, mime: "image/jpeg", data: improved }, select: { id: true } });
-  if (action !== "clean") await recordAiUse(req.user!.id, `photo:${action}`);
-  res.status(201).json({ id: created.id, url: `/store/photos/${created.id}`, from: photo.id, quota: await aiQuotaFor(req.user!.id) });
+  if (engine === "ai") await recordAiUse(req.user!.id, `photo:${action}`); // only a real AI edit is counted
+  res.status(201).json({ id: created.id, url: `/store/photos/${created.id}`, from: photo.id, engine, quota: await aiQuotaFor(req.user!.id) });
 }));
 
 const drafts = new Map<string, { day: string; n: number }>();

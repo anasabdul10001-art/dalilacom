@@ -34,6 +34,8 @@ const MESSAGES: Record<string, string> = {
   "Offer not found": "العرض غير موجود",
   "Country not found": "البلد غير موجود",
   "Geo unit not found": "المنطقة غير موجودة",
+  "The background is too busy to change the colour: try a photo with a plain background": "ما قدرنا نغيّر اللون: الخلفية مزدحمة. جرّب صورة بخلفية سادة",
+  "The background is too busy to remove: try a photo with a plain background": "ما قدرنا نزيل الخلفية: مزدحمة. جرّب صورة بخلفية سادة",
   "Branch not found": "الفرع غير موجود",
   "Affiliate not found": "المسوّق غير موجود",
   "Invalid referral code": "رمز الإحالة غير صحيح",

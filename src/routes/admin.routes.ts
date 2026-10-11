@@ -20,6 +20,8 @@ import { aiProviderStatus, aiTotals, aiUsage, testProvider } from "../services/a
 import bcrypt from "bcryptjs";
 import { eraseAccount } from "../services/accountDeletion.service";
 import { isSupportedLanguage } from "../lib/languages";
+import { editPhotoWithAi, imageEditAvailable, lastImageEditError } from "../services/aiImage.service";
+import sharp from "sharp";
 import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion } from "../services/categorySuggestion.service";
 
 export const adminRouter = Router();
@@ -408,6 +410,15 @@ adminRouter.post("/push-test", async (req, res) => {
   const delivered = await sendPushToUser(req.user!.id, { title, body, data: { type: "TEST" } }, errors);
   res.json({ devices, delivered, errors });
 });
+
+// Asks the image model to edit a tiny picture and says what happened: the answer when "photo editing does nothing".
+adminRouter.post("/ai-image-test", route(async (_req, res) => {
+  if (!imageEditAvailable()) return res.json({ ok: false, reason: "GEMINI_API_KEY is not set on the server" });
+  const sample = await sharp({ create: { width: 256, height: 256, channels: 3, background: "#d33" } }).png().toBuffer();
+  const started = Date.now();
+  const edited = await editPhotoWithAi({ mime: "image/png", data: sample }, "Change the colour of this picture to blue. Output only the edited image.");
+  res.json({ ok: !!edited, ms: Date.now() - started, reason: edited ? null : lastImageEditError() });
+}));
 
 adminRouter.get("/ai-status", async (_req, res) => {
   res.json({
