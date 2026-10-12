@@ -162,6 +162,8 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             return@Column
         }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            Text(stringResource(R.string.mp_sec_name), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(6.dp))
             OutlinedTextField(
                 value = state.businessName,
                 onValueChange = viewModel::onName,
@@ -169,6 +171,8 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
+            Text(stringResource(R.string.mp_sec_profession), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(6.dp))
             state.categorySuggestion?.let {
                 when (it.status) {
                     "PENDING" -> Text(stringResource(R.string.cat_sug_pending, it.name), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
@@ -182,7 +186,9 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 onSendSuggestion = viewModel::sendSuggestion,
             )
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(value = state.address, onValueChange = viewModel::onAddress, label = { Text(AppStrings.get(R.string.s_baffa49c)) }, modifier = Modifier.fillMaxWidth())
+            Text(stringResource(R.string.mp_sec_contact), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(6.dp))
+            OutlinedTextField(value = state.address, onValueChange = viewModel::onAddress, label = { Text(AppStrings.get(R.string.s_baffa49c)) }, placeholder = { Text(stringResource(R.string.mp_address_ph)) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(value = state.phone, onValueChange = viewModel::onPhone, label = { Text(AppStrings.get(R.string.s_760c65a1)) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
@@ -193,6 +199,8 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(16.dp))
+            Text(stringResource(R.string.mp_sec_map), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(6.dp))
             if (isOnlineCategory(state.categories, state.categoryId)) {
                 Text(stringResource(R.string.cat_online_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
             } else {

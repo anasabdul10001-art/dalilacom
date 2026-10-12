@@ -784,4 +784,9 @@
     <string name="rev_pending">Under review, shoppers do not see it until it is accepted</string>
     <string name="rev_rejected">Not accepted: %1$s</string>
     <string name="scan_hint">Put the code inside the square</string>
+    <string name="mp_sec_name">Shop name</string>
+    <string name="mp_sec_profession">Profession</string>
+    <string name="mp_sec_contact">Address and contact</string>
+    <string name="mp_sec_map">Shop place on the map</string>
+    <string name="mp_address_ph">e.g. Damascus, Mazzeh, Jalaa street</string>
 </resources>

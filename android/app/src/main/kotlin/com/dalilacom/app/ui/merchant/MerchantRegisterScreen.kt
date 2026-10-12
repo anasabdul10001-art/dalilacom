@@ -60,6 +60,8 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
         Text(AppStrings.get(R.string.s_c03965c6), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(20.dp))
 
+        Text(stringResource(R.string.mp_sec_name), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = businessName,
             onValueChange = { businessName = it },
@@ -68,16 +70,21 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
         )
         Spacer(Modifier.height(12.dp))
 
+        Text(stringResource(R.string.mp_sec_profession), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(6.dp))
         ProfessionPicker(
             tree = state.categories, selectedId = selectedCategoryId, onSelect = { selectedCategoryId = it },
             search = viewModel::searchCategories, suggestion = suggestion, onSuggestion = { suggestion = it },
         )
         Spacer(Modifier.height(12.dp))
 
+        Text(stringResource(R.string.mp_sec_contact), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = address,
             onValueChange = { address = it },
             label = { Text(AppStrings.get(R.string.s_ddb9dbdc)) },
+            placeholder = { Text(stringResource(R.string.mp_address_ph)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
@@ -95,6 +102,8 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.mp_sec_map), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(6.dp))
         if (online) {
             Text(stringResource(R.string.cat_online_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
         } else {

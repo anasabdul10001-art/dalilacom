@@ -788,4 +788,9 @@
     <string name="rev_pending">قيد المراجعة، ما بيظهر للزبائن قبل ما ينقبل</string>
     <string name="rev_rejected">ما انقبل: %1$s</string>
     <string name="scan_hint">ضع الكود داخل المربع</string>
+    <string name="mp_sec_name">اسم المحل</string>
+    <string name="mp_sec_profession">المهنة</string>
+    <string name="mp_sec_contact">العنوان والتواصل</string>
+    <string name="mp_sec_map">مكان المحل على الخريطة</string>
+    <string name="mp_address_ph">مثلًا: دمشق، المزة، شارع الجلاء</string>
 </resources>

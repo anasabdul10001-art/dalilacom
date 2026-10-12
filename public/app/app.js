@@ -2969,13 +2969,17 @@ function screenMerchantRegister() {
     ${backRow()}
     <h1 class="screen-title">سجّل كتاجر</h1>
     <p class="screen-sub">بيصير حسابك تاجر بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</p>
+    <div class="section-title">${esc(t("mp.secName"))}</div>
     <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="اسم محلك" value="${esc(m.name || "")}" /></div>
+    <div class="section-title">${esc(t("mp.secProfession"))}</div>
     ${categoryPickerHtml(m.categories, m.selectedCat, "selectMerchCategory")}
-    <div class="field"><label>العنوان (اختياري)</label><input id="mr-address" placeholder="العنوان" value="${esc(m.address || "")}" /></div>
+    <div class="section-title">${esc(t("mp.secContact"))}</div>
+    <div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" /></div>
     <div class="row">
       <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="رقم الهاتف" value="${esc(m.phone || "")}" /></div>
       <div class="field"><label>واتساب (اختياري)</label><input id="mr-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
     </div>
+    <div class="section-title">${esc(t("mp.secMap"))}</div>
     ${catIsOnline(m.categories, m.selectedCat) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     ${errorBanner()}
     <button class="btn" ${S.busy ? "disabled" : ""} onclick="submitMerchantRegister()">سجّل</button>
@@ -3103,15 +3107,19 @@ function screenMerchantProfile() {
     ${backRow()}
     <h1 class="screen-title">بيانات المحل ومكانه</h1>
     <p class="screen-sub">هي اللي بتظهر للزبائن على الخريطة وبصفحة محلك</p>
+    <div class="section-title">${esc(t("mp.secName"))}</div>
     <div class="field"><label>اسم المحل</label><input id="mp-name" value="${esc(m.name || "")}" /></div>
+    <div class="section-title">${esc(t("mp.secProfession"))}</div>
     ${m.suggestion && m.suggestion.status === "PENDING" ? `<div class="info-banner">${esc(t("cat.sugPending", { name: m.suggestion.name }))}</div>` : ""}
     ${m.suggestion && m.suggestion.status === "REJECTED" ? `<div class="error-banner">${esc(t("cat.sugRejected", { name: m.suggestion.name }))}${m.suggestion.note ? " — " + esc(m.suggestion.note) : ""}</div>` : ""}
     ${categoryPickerHtml(m.categories || [], m.categoryId, "mprofCategory", "sendCategorySuggestion()")}
-    <div class="field"><label>العنوان</label><input id="mp-address" value="${esc(m.address || "")}" /></div>
+    <div class="section-title">${esc(t("mp.secContact"))}</div>
+    <div class="field"><label>${esc(t("mp.address"))}</label><input id="mp-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" /></div>
     <div class="row">
       <div class="field"><label>الهاتف</label><input id="mp-phone" value="${esc(m.phone || "")}" /></div>
       <div class="field"><label>واتساب (مع رمز الدولة)</label><input id="mp-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
     </div>
+    <div class="section-title">${esc(t("mp.secMap"))}</div>
     ${catIsOnline(m.categories || [], m.categoryId) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     ${errorBanner()}
     <button class="btn" onclick="saveMerchantProfile()">حفظ</button>
