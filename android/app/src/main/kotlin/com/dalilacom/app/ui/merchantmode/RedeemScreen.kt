@@ -53,14 +53,14 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        if (granted) scanLauncher.launch(ScanOptions().setBeepEnabled(true).setOrientationLocked(false))
+        if (granted) scanLauncher.launch(com.dalilacom.app.ui.common.qrScanOptions())
     }
 
     fun launchScan() {
         val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED
         if (granted) {
-            scanLauncher.launch(ScanOptions().setBeepEnabled(true).setOrientationLocked(false))
+            scanLauncher.launch(com.dalilacom.app.ui.common.qrScanOptions())
         } else {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }

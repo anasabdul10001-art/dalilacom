@@ -89,11 +89,11 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
         }
     }
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) scanLauncher.launch(ScanOptions().setBeepEnabled(true).setOrientationLocked(false))
+        if (granted) scanLauncher.launch(com.dalilacom.app.ui.common.qrScanOptions())
     }
     fun openScanner() {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            scanLauncher.launch(ScanOptions().setBeepEnabled(true).setOrientationLocked(false))
+            scanLauncher.launch(com.dalilacom.app.ui.common.qrScanOptions())
         } else {
             cameraPermission.launch(Manifest.permission.CAMERA)
         }
