@@ -860,7 +860,8 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
 .intro-card p { margin: 6px 0; }
 
 .social-or { text-align: center; color: var(--text-muted); margin: 14px 0 8px; font-size: 13px; }
-.social-btn { display: block; text-align: center; text-decoration: none; margin-bottom: 8px; }
+.social-btn { display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; margin-bottom: 8px; }
+.social-ico { width: 22px; height: 22px; flex: none; }
 
 .switch-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; cursor: pointer; }
 .switch-row input { width: 18px; height: 18px; }
@@ -1099,10 +1100,11 @@ body.navigating .tabbar { display: none; }
   .store-hero { grid-template-columns: 1fr 3.2fr 1fr; padding: 0; }
   .store-picks { display: flex; flex-direction: column; gap: 10px; }
   .store-picks .store-pic { aspect-ratio: 16 / 9.4; }
-  .store-banner { min-height: 0; padding: 36px 44px; }
-  .store-banner h1 { font-size: 46px; }
-  .store-banner p { font-size: 22px; }
-  .store-banner i { font-size: 180px; }
+  /* the big banner takes the height of the ad pictures beside it (it never makes the row taller than they are) */
+  .store-hero > .store-banner { min-height: 0; contain: size; padding: clamp(18px, 2.4vw, 36px) clamp(22px, 3vw, 44px); }
+  .store-banner h1 { font-size: clamp(24px, 2.8vw, 46px); }
+  .store-banner p { font-size: clamp(14px, 1.5vw, 22px); }
+  .store-banner i { font-size: clamp(100px, 11vw, 180px); }
   .store-circles { gap: 22px; justify-content: center; }
   .store-circles button { width: 96px; }
   .store-circles span { width: 84px; height: 84px; border-radius: 28px; font-size: 40px; }
@@ -1172,9 +1174,9 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 
 @media (min-width: 900px) {
   .store-slider { min-height: 0; }
-  .store-slide { padding: 36px 70px; }
-  .store-slide h1 { font-size: 46px; }
-  .store-slide p { font-size: 22px; }
+  .store-slide { padding: clamp(18px, 2.4vw, 36px) clamp(36px, 4.5vw, 70px); }
+  .store-slide h1 { font-size: clamp(24px, 2.8vw, 46px); }
+  .store-slide p { font-size: clamp(14px, 1.5vw, 22px); }
   .store-slotstrip { display: none; }
   .store-picks .store-slot .store-pic { aspect-ratio: 16 / 9.4; }
   .store-adstrip { margin-inline: 28px; }
@@ -1397,7 +1399,7 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .rfab { width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--surface); box-shadow: 0 4px 14px rgba(0, 0, 0, .3); cursor: pointer; padding: 0; }
 .rfab:active, .map-fab.card-fab:active, .map-fab.disc-fab:active { transform: scale(.94); }
 .fab-stack { position: fixed; inset-inline-start: 12px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 500; display: flex; flex-direction: column; gap: 10px; }
-@media (min-width: 900px) { .fab-stack { bottom: 24px; } }
+@media (min-width: 900px) { .fab-stack { bottom: 24px; inset-inline-start: 96px; } } /* the rail is 84px wide: the buttons sit beside it, not under it */
 .mfab-pop { position: fixed; z-index: 502; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; pointer-events: none; }
 .mfab-pop > * { pointer-events: auto; }
 .mfab-menu { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }

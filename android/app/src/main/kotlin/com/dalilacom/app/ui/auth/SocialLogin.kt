@@ -29,6 +29,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.Image
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,11 +59,15 @@ fun SocialButtons(viewModel: AuthViewModel) {
         Text(AppStrings.get(R.string.social_or), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (providers.google) {
             OutlinedButton(onClick = { open("google") }, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Image(painterResource(R.drawable.ic_google), contentDescription = null, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(10.dp))
                 Text(AppStrings.get(R.string.social_google))
             }
         }
         if (providers.facebook) {
             OutlinedButton(onClick = { open("facebook") }, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Image(painterResource(R.drawable.ic_facebook), contentDescription = null, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(10.dp))
                 Text(AppStrings.get(R.string.social_facebook))
             }
         }
