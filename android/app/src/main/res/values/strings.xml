@@ -94,8 +94,8 @@
 
     <string name="profile_title">حسابي</string>
     <string name="profile_edit">✏️ تعديل ملفي الشخصي</string>
-    <string name="profile_merchant_mode">وضع التاجر</string>
-    <string name="profile_register_merchant">سجّل كتاجر</string>
+    <string name="profile_merchant_mode">وضع النشاط</string>
+    <string name="profile_register_merchant">سجّل كصاحب نشاط</string>
     <string name="profile_favorites">♥ أماكني المحفوظة</string>
     <string name="profile_responder">المجيب الآلي</string>
     <string name="profile_wallet">محفظتي</string>
@@ -110,7 +110,7 @@
     <string name="guest_register">إنشاء حساب جديد</string>
     <string name="guest_card_title">بطاقة دليلكم</string>
     <string name="guest_card_sub">افتح حساب لتحصل على بطاقة الحسم الرقمية وتوفّر بكل محل على الخريطة.</string>
-    <string name="guest_card_p1">حسم فوري عند أي تاجر مشترك</string>
+    <string name="guest_card_p1">حسم فوري عند أي صاحب نشاط مشترك</string>
     <string name="guest_card_p2">كود QR يتجدّد لحمايتك</string>
     <string name="guest_card_p3">سجل بكل حسوماتك</string>
     <string name="guest_cart_title">سلة مشترياتك</string>
@@ -122,9 +122,9 @@
     <string name="guest_orders_p1">تتبّع كل طلب خطوة بخطوة</string>
     <string name="guest_orders_p2">إلغاء الطلب قبل الشحن</string>
     <string name="guest_profile_title">افتح حسابك</string>
-    <string name="guest_profile_sub">الخريطة ودليل المحلات مفتوحين للكل. الحساب بتحتاجه إذا بدك بطاقة حسم أو تسجّل محلك كتاجر.</string>
+    <string name="guest_profile_sub">الخريطة ودليل المحلات مفتوحين للكل. الحساب بتحتاجه إذا بدك بطاقة حسم أو تسجّل محلك كصاحب نشاط.</string>
     <string name="guest_profile_p1">احصل على بطاقة الحسم</string>
-    <string name="guest_profile_p2">سجّل محلك كتاجر وأضف منتجاتك وعروضك</string>
+    <string name="guest_profile_p2">سجّل محلك كصاحب نشاط وأضف منتجاتك وعروضك</string>
     <string name="guest_profile_p3">فعّل المجيب الآلي لمحادثات زبائنك</string>
 
     <string name="browse_title">تصفّح الأقسام</string>
@@ -159,9 +159,9 @@
     <string name="pricing_sub">كل خدمات دليلكم بأسعارها — والسعر اللي بتشوفه هو سعر بلدك.</string>
     <string name="pricing_link">💳 الباقات والأسعار</string>
     <string name="service_membership">عضوية الزبون (بطاقة الحسم)</string>
-    <string name="service_merchant">باقات التاجر</string>
+    <string name="service_merchant">باقات النشاط</string>
     <string name="service_responder_customer">المجيب الآلي — للزبائن</string>
-    <string name="service_responder_merchant">المجيب الآلي — للتجار</string>
+    <string name="service_responder_merchant">المجيب الآلي — لأصحاب الأنشطة</string>
     <string name="pricing_free">مجاني</string>
     <string name="pricing_not_priced">السعر غير محدد بعد</string>
     <string name="pricing_credits">%1$d %2$s</string>
@@ -173,7 +173,7 @@
     <string name="pricing_empty">ما في باقات متاحة حاليًا</string>
     <string name="pricing_subscribed">تم الاشتراك ✅</string>
     <string name="intro_card_title">أهلًا بك في بطاقة دليلكم 👋</string>
-    <string name="intro_card_body">بطاقة رقمية تعطيك حسومات عند المتاجر المشاركة، بس تعرض رمزك على التاجر.</string>
+    <string name="intro_card_body">بطاقة رقمية تعطيك حسومات عند المتاجر المشاركة، بس تعرض رمزك على صاحب النشاط.</string>
     <string name="intro_trial">جرّب الخدمة مجانًا لمدة %1$d يوم. بعدها %2$s كل %3$d يوم.</string>
     <string name="intro_no_trial">الاشتراك %1$s كل %2$d يوم.</string>
     <string name="intro_after_continue">بتبدأ تستخدم الخدمة مجانًا، ولما تنتهي المدة بتجدّد من الخطط المتاحة.</string>
@@ -265,9 +265,9 @@
     <string name="account_choose">— اختر —</string>
     <string name="account_choose_country">اختر البلد</string>
     <string name="account_failed">تعذّر تنفيذ الطلب</string>
-    <string name="review_title">مراجعة إعلانات التجار</string>
+    <string name="review_title">مراجعة إعلانات أصحاب الأنشطة</string>
     <string name="review_refresh">تحديث</string>
-    <string name="review_hint">لا يصل أي إعلان من تاجر لأحد قبل موافقتك. الفحص الآلي توصية فقط — القرار لك.</string>
+    <string name="review_hint">لا يصل أي إعلان من صاحب نشاط لأحد قبل موافقتك. الفحص الآلي توصية فقط — القرار لك.</string>
     <string name="review_empty">لا شيء بانتظار المراجعة</string>
     <string name="review_followers">متابعو المتجر</string>
     <string name="review_place">مكان محدد</string>
@@ -281,7 +281,7 @@
     <string name="fmt_review_ai">الفحص الآلي: %1$s</string>
     <string name="review_publish">✓ نشر</string>
     <string name="review_refuse">✕ رفض</string>
-    <string name="review_reason">سبب الرفض (سيقرأه التاجر)</string>
+    <string name="review_reason">سبب الرفض (سيقرأه صاحب النشاط)</string>
     <string name="review_published">تم النشر ✅</string>
     <string name="review_refused">تم الرفض</string>
     <string name="account_new_email">الإيميل الجديد</string>
@@ -689,14 +689,14 @@
     <string name="store_stock_count">المتوفر: %1$d قطعة</string>
     <string name="stock_ph">اكتب الكمية المتوفرة</string>
     <string name="wiz_need_stock">اكتب الكمية المتوفرة (رقم أكبر من صفر)</string>
-    <string name="wiz_back_to_shop">رجوع لوضع التاجر</string>
+    <string name="wiz_back_to_shop">رجوع لوضع النشاط</string>
     <string name="wiz_back_to_account">رجوع لحسابي</string>
     <string name="wiz_enhance">حسّن الصورة</string>
     <string name="wiz_enhanced">محسّنة</string>
     <string name="wiz_enhance_all">حسّن كل الصور</string>
     <string name="wiz_enhance_note">التحسين بيخلّي الصورة مربعة بخلفية بيضاء ومنتجك بالنص وإضاءتها متوازنة، وهيك بتناسب Google ومحركات البحث.</string>
     <string name="shop_pending_title">طلب محلك قيد المراجعة</string>
-    <string name="shop_pending_sub">فريق دليلكم عم يراجع طلب تسجيل محلك. بتقدر تستخدم وضع التاجر وتفتح متجرك بعد الموافقة، وبيوصلك إشعار أول ما تتم.</string>
+    <string name="shop_pending_sub">فريق دليلكم عم يراجع طلب تسجيل محلك. بتقدر تستخدم وضع النشاط وتفتح متجرك بعد الموافقة، وبيوصلك إشعار أول ما تتم.</string>
     <string name="shop_refused_title">ما انقبل طلب محلك</string>
     <string name="shop_refused_sub">راجع سبب الرفض وتواصل مع الدعم أو سجّل طلب جديد.</string>
     <string name="shop_refresh">تحديث الحالة</string>
@@ -811,4 +811,10 @@
     <string name="cd_ends_in">ينتهي بعد</string>
     <string name="cd_ended">انتهى</string>
     <string name="cd_days">%1$d يوم %2$s</string>
+    <string name="reg_who">كيف بدك تستخدم دليلكم؟</string>
+    <string name="reg_biz_title">لدي نشاط وأريد الانضمام</string>
+    <string name="reg_biz_sub">للشركات والمتاجر والأطباء والمحامين والحرفيين ومقدمي الخدمات.</string>
+    <string name="reg_user_title">أبحث وأستفيد من دليلكم</string>
+    <string name="reg_user_sub">لمن يريد اكتشاف الأماكن والخدمات والمنتجات والاستفادة من العروض.</string>
+    <string name="reg_biz_note">رح نطلب منك بيانات نشاطك بعد إنشاء الحساب</string>
 </resources>

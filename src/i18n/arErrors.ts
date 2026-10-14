@@ -19,7 +19,7 @@ const MESSAGES: Record<string, string> = {
   "Cart is empty": "السلة فاضية",
   "One of the products in your cart is no longer available": "أحد منتجات سلتك لم يعد متوفرًا",
   "Plan not found": "الباقة غير موجودة",
-  "Choose one of the merchant plans": "اختر إحدى باقات التجار",
+  "Choose one of the merchant plans": "اختر إحدى باقات أصحاب الأنشطة",
   "User not found": "المستخدم غير موجود",
   "No user with that email": "ما في مستخدم بهذا الإيميل",
   "No active membership": "ما عندك عضوية فعّالة",

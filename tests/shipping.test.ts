@@ -40,7 +40,7 @@ describe("a shop that is not approved yet", () => {
     const s = await shop(false);
     const put = await request(app).put("/merchant/shipping-methods").set(s.owner.auth).send({ methods: [{ name: "توصيل", costCents: 200 }] });
     expect(put.status).toBe(403);
-    expect(put.body.error.message).toBe("محلك لسا ما انوافق عليه من الإدارة، بتقدر تستخدم وضع التاجر بعد الموافقة");
+    expect(put.body.error.message).toBe("محلك لسا ما انوافق عليه من الإدارة، بتقدر تستخدم وضع النشاط بعد الموافقة");
     const discount = await request(app).post("/merchant/discounts").set(s.owner.auth).send({ title: "عرض", percent: 10 });
     expect(discount.status).toBe(403);
     expect(discount.body.error.message).toContain("محلك لسا ما انوافق");

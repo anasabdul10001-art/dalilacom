@@ -1410,3 +1410,11 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .disc-cd { margin-top: 4px; font-size: 13px; color: var(--primary, #c8283a); font-weight: 700; }
 .disc-left { height: 5px; border-radius: 5px; background: rgba(128, 128, 128, .25); margin-top: 6px; overflow: hidden; }
 .disc-left i { display: block; height: 100%; background: var(--primary, #c8283a); border-radius: 5px; }
+
+/* sign-up: who are you, as two cards */
+.intent-cards { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 14px; }
+.intent-card { display: flex; align-items: center; gap: 14px; text-align: start; padding: 14px 16px; border: 1.5px solid var(--border, #ddd); border-radius: 16px; background: var(--surface, #fff); color: inherit; font: inherit; cursor: pointer; }
+.intent-card.on { border-color: var(--primary, #c8283a); box-shadow: 0 0 0 2px rgba(200, 40, 58, .18); }
+.intent-card .ic { font-size: 26px; flex: none; }
+.intent-card b { display: block; font-size: 16px; margin-bottom: 2px; }
+.intent-card small { display: block; color: var(--muted, #888); line-height: 1.45; }

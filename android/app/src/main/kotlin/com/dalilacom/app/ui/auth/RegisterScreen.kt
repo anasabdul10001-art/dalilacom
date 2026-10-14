@@ -29,6 +29,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -69,27 +72,14 @@ fun RegisterScreen(
         Text(AppStrings.get(R.string.s_bb6cc0f4), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(16.dp))
 
-        Text(AppStrings.get(R.string.s_10ceb09f), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.reg_who), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = signupIntent == SignupIntent.CUSTOMER,
-                onClick = { signupIntent = SignupIntent.CUSTOMER },
-                label = { Text(AppStrings.get(R.string.s_58c8a282)) },
-            )
-            FilterChip(
-                selected = signupIntent == SignupIntent.MERCHANT,
-                onClick = { signupIntent = SignupIntent.MERCHANT },
-                label = { Text(AppStrings.get(R.string.s_625e3fc7)) },
-            )
-        }
+        IntentCard("🏪", stringResource(R.string.reg_biz_title), stringResource(R.string.reg_biz_sub), signupIntent == SignupIntent.MERCHANT) { signupIntent = SignupIntent.MERCHANT }
+        Spacer(Modifier.height(10.dp))
+        IntentCard("👤", stringResource(R.string.reg_user_title), stringResource(R.string.reg_user_sub), signupIntent == SignupIntent.CUSTOMER) { signupIntent = SignupIntent.CUSTOMER }
         if (signupIntent == SignupIntent.MERCHANT) {
             Spacer(Modifier.height(6.dp))
-            Text(
-                AppStrings.get(R.string.s_1e3477e2),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Text(stringResource(R.string.reg_biz_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
         }
         Spacer(Modifier.height(20.dp))
 
@@ -150,6 +140,26 @@ fun RegisterScreen(
         Spacer(Modifier.height(12.dp))
         TextButton(onClick = onNavigateToLogin) {
             Text(AppStrings.get(R.string.s_d97a32ee))
+        }
+    }
+}
+
+/** One of the two sign-up choices: an icon, what it is, and who it is for. */
+@androidx.compose.runtime.Composable
+private fun IntentCard(icon: String, title: String, subtitle: String, selected: Boolean, onClick: () -> Unit) {
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, fontSize = 26.sp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

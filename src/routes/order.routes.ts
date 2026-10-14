@@ -8,8 +8,8 @@ import { notify } from "../services/notification.service";
 
 /** Customer-facing wording for each order state (section 13: "تغيير حالة الطلب"). */
 const STATUS_MESSAGE: Record<OrderStatus, string> = {
-  PENDING: "طلبك وصل وبانتظار تأكيد التاجر.",
-  CONFIRMED: "التاجر أكّد طلبك وبلّش يجهّزو.",
+  PENDING: "طلبك وصل وبانتظار تأكيد صاحب النشاط.",
+  CONFIRMED: "صاحب النشاط أكّد طلبك وبلّش يجهّزو.",
   PREPARING: "طلبك عم يتحضّر هلق.",
   SHIPPED: "طلبك انطلق للتوصيل 🚚",
   DELIVERED: "طلبك وصل! منتمنى تكون التجربة حلوة ⭐",

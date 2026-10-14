@@ -92,7 +92,7 @@
 <div id="app">
   <div class="sidebar">
     <h2><img class="badge-logo" src="/brand/logo.png" alt="DALILACOM"> دليلكم</h2>
-    <div class="nav-item active" data-section="merchants" onclick="showSection('merchants')">🏪 التجار</div>
+    <div class="nav-item active" data-section="merchants" onclick="showSection('merchants')">🏪 أصحاب الأنشطة</div>
     <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
     <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 الباقات والأسعار</div>
     <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
@@ -115,7 +115,7 @@
   <div class="main">
     <!-- MERCHANTS -->
     <div class="section" id="section-merchants">
-      <h2>التجار</h2>
+      <h2>أصحاب الأنشطة</h2>
       <p class="subtitle">مراجعة طلبات التسجيل والموافقة/الرفض</p>
       <div class="filters">
         <button class="active" data-status="" onclick="loadMerchants('')">الكل</button>
@@ -162,7 +162,7 @@
           <div><label>نوع الخدمة</label>
             <select id="np-service">
               <option value="MEMBERSHIP">عضوية الزبون (بطاقة الحسم)</option>
-              <option value="MERCHANT_ACCOUNT">باقة التاجر</option>
+              <option value="MERCHANT_ACCOUNT">باقة النشاط</option>
             </select></div>
           <div><label>الاسم</label><input id="np-name" placeholder="Monthly" /></div>
         </div>
@@ -206,7 +206,7 @@
         </div>
         <div class="row">
           <div><label>سعر الزبون / فترة</label><input id="rs-price-customer" /></div>
-          <div><label>سعر التاجر / فترة</label><input id="rs-price-merchant" /></div>
+          <div><label>سعر صاحب النشاط / فترة</label><input id="rs-price-merchant" /></div>
         </div>
         <div class="row">
           <div><label>مدة الاشتراك (يوم)</label><input id="rs-period" /></div>
@@ -247,7 +247,7 @@
           <select id="users-role" style="flex:1;min-width:140px" onchange="loadUsers()">
             <option value="">كل الأدوار</option>
             <option value="ADMIN">أدمن</option>
-            <option value="MERCHANT">تاجر</option>
+            <option value="MERCHANT">صاحب نشاط</option>
             <option value="CUSTOMER">زبون</option>
           </select>
           <button onclick="loadUsers()">🔍 بحث</button>
@@ -266,7 +266,7 @@
           <label>الإيميل<input id="ue-email" dir="ltr" /></label>
           <label>الهاتف<input id="ue-phone" dir="ltr" placeholder="+963..." /></label>
           <label>الدور
-            <select id="ue-role"><option value="CUSTOMER">زبون</option><option value="MERCHANT">تاجر</option><option value="ADMIN" disabled>أدمن</option></select>
+            <select id="ue-role"><option value="CUSTOMER">زبون</option><option value="MERCHANT">صاحب نشاط</option><option value="ADMIN" disabled>أدمن</option></select>
           </label>
           <label>اللغة
             <select id="ue-lang"><option value="ar">العربية</option><option value="en">English</option></select>
@@ -293,7 +293,7 @@
     <!-- GEOGRAPHY: governorates > cities > neighbourhoods -->
     <div class="section" id="section-geo" style="display:none">
       <h2>المدن والمناطق والأحياء</h2>
-      <p class="subtitle">المحافظة ثم المدينة ثم الحي. اختر مكانًا لتشوف اللي تحته وتضيف عليه. التجار بيكفيهم يختاروا المدينة، والأحياء اختيارية.</p>
+      <p class="subtitle">المحافظة ثم المدينة ثم الحي. اختر مكانًا لتشوف اللي تحته وتضيف عليه. أصحاب الأنشطة بيكفيهم يختاروا المدينة، والأحياء اختيارية.</p>
       <div class="card">
         <label>البلد</label>
         <select id="geo-country" onchange="geoPickCountry()"><option value="">— اختر بلدًا —</option></select>
@@ -320,11 +320,11 @@
     <!-- ANNOUNCEMENTS (broadcast by place) -->
     <div class="section" id="section-broadcasts" style="display:none">
       <h2>الإعلانات</h2>
-      <p class="subtitle">أرسل إشعارًا لكل من في بلد أو منطقة أو مدينة أو حي، وراجع إعلانات التجار قبل نشرها.</p>
+      <p class="subtitle">أرسل إشعارًا لكل من في بلد أو منطقة أو مدينة أو حي، وراجع إعلانات أصحاب الأنشطة قبل نشرها.</p>
 
       <div class="card">
-        <h3>حدود إعلانات التجار</h3>
-        <p class="muted">الإعلانات المُضمَّنة بباقة المتجر مجانية، وكل إعلان بعدها بيُخصم سعره من محفظة المتجر (وبيرجع له إذا انرفض). عدد الإعلانات بالشهر يحدّده نوع اشتراك المتجر (حقل «حد الرسائل الجماعية بالشهر» بباقات التجار، وتعيّن الباقة لكل متجر من قسم التجار). المتجر بلا باقة يأخذ الرقم الافتراضي هون. الصفر يعني ممنوع.</p>
+        <h3>حدود إعلانات أصحاب الأنشطة</h3>
+        <p class="muted">الإعلانات المُضمَّنة بباقة المتجر مجانية، وكل إعلان بعدها بيُخصم سعره من محفظة المتجر (وبيرجع له إذا انرفض). عدد الإعلانات بالشهر يحدّده نوع اشتراك المتجر (حقل «حد الرسائل الجماعية بالشهر» بباقات أصحاب الأنشطة، وتعيّن الباقة لكل متجر من قسم أصحاب الأنشطة). المتجر بلا باقة يأخذ الرقم الافتراضي هون. الصفر يعني ممنوع.</p>
         <label>الرقم الافتراضي لإعلانات المتجر بالشهر</label>
         <input id="bc-limit-default" inputmode="numeric" />
         <label>سعر الإعلان الواحد بعد المُضمَّن بالباقة (بوحدات دليلكم كوين، الصفر = غير معروض للبيع)</label>
@@ -338,8 +338,8 @@
       </div>
 
       <div class="card">
-        <h3>إعلانات التجار بانتظار المراجعة</h3>
-        <p class="muted">لا يصل أي إعلان من تاجر لأحد قبل موافقتك. الفحص الآلي توصية فقط — القرار لك.</p>
+        <h3>إعلانات أصحاب الأنشطة بانتظار المراجعة</h3>
+        <p class="muted">لا يصل أي إعلان من صاحب نشاط لأحد قبل موافقتك. الفحص الآلي توصية فقط — القرار لك.</p>
         <table style="margin-top:12px">
           <thead><tr><th>المتجر</th><th>الإعلان</th><th>الفحص الآلي</th><th>الجمهور</th><th></th></tr></thead>
           <tbody id="bc-pending-body"></tbody>
@@ -360,7 +360,7 @@
         <select id="bc-role" onchange="bcPreview()">
           <option value="">الجميع</option>
           <option value="CUSTOMER">الزبائن فقط</option>
-          <option value="MERCHANT">التجار فقط</option>
+          <option value="MERCHANT">أصحاب الأنشطة فقط</option>
         </select>
         <p id="bc-count" class="muted" style="margin:10px 0"></p>
         <label>العنوان</label>
@@ -415,17 +415,17 @@
         <span id="ai-image-msg" class="muted" style="margin-right:10px"></span>
         <span id="ai-msg" class="muted" style="margin-right:10px"></span>
         <p class="muted" style="margin-top:14px">المزوّد المُجرَّب أولًا: <b id="ai-active">—</b></p>
-        <p class="muted">"منتج من صورة" (وصف المنتج للتاجر): <b id="ai-vision">—</b> <small>(بيحتاج مفتاح Gemini أو Mistral أو Claude)</small></p>
+        <p class="muted">"منتج من صورة" (وصف المنتج لصاحب النشاط): <b id="ai-vision">—</b> <small>(بيحتاج مفتاح Gemini أو Mistral أو Claude)</small></p>
       </div>
       <div class="card">
-        <h3>الذكاء الاصطناعي للتجار</h3>
-        <p class="muted">التاجر بس هو اللي بيستخدمه (وصف المنتج من صورته، وتعديل الصور: إزالة الخلفية والألوان والإضاءة). كل تاجر عنده عدد استخدامات مجانية كل شهر، وبعدها كل استخدام بينخصم من رصيد محفظته. «التنظيف السريع» للصورة مجاني دايمًا.</p>
+        <h3>الذكاء الاصطناعي لأصحاب الأنشطة</h3>
+        <p class="muted">صاحب النشاط بس هو اللي بيستخدمه (وصف المنتج من صورته، وتعديل الصور: إزالة الخلفية والألوان والإضاءة). كل صاحب نشاط عنده عدد استخدامات مجانية كل شهر، وبعدها كل استخدام بينخصم من رصيد محفظته. «التنظيف السريع» للصورة مجاني دايمًا.</p>
         <div class="row">
-          <div><label>الاستخدامات المجانية لكل تاجر بالشهر</label><input id="ai-free" type="number" min="0" /></div>
+          <div><label>الاستخدامات المجانية لكل صاحب نشاط بالشهر</label><input id="ai-free" type="number" min="0" /></div>
           <div><label>سعر كل استخدام بعدها (<span class="credit-name">الرصيد</span>) — 0 = ما في بيع</label><input id="ai-price" type="number" min="0" /></div>
         </div>
         <h4 style="margin:16px 0 6px">الباقات الشهرية (سعر ثابت)</h4>
-        <p class="muted">التاجر بيشتري باقة من محفظته: عدد استخدامات مضمون لعدد أيام. استخدامات الباقة بتنصرف أول، وبعدها المجاني، وبعدها الدفع لكل استخدام. شراء باقة ثانية والباقة شغّالة بيضيف الأيام والاستخدامات عليها.</p>
+        <p class="muted">صاحب النشاط بيشتري باقة من محفظته: عدد استخدامات مضمون لعدد أيام. استخدامات الباقة بتنصرف أول، وبعدها المجاني، وبعدها الدفع لكل استخدام. شراء باقة ثانية والباقة شغّالة بيضيف الأيام والاستخدامات عليها.</p>
         <table><thead><tr><th>الاسم</th><th style="width:14%">الأيام</th><th style="width:16%">الاستخدامات</th><th style="width:20%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ai-packs"></tbody></table>
         <button class="small" style="margin-top:8px" onclick="aiPackAdd()">+ باقة</button>
         <br>
@@ -457,7 +457,7 @@
     <!-- STORE -->
     <div class="section" id="section-store" style="display:none">
       <h2>المتجر الإلكتروني</h2>
-      <p class="subtitle">منتجات كل المتاجر بمكان واحد. قبل ما يعبّيه التجار، ضيف منتجات تجريبية لتشوف شكله.</p>
+      <p class="subtitle">منتجات كل المتاجر بمكان واحد. قبل ما يعبّيه أصحاب الأنشطة، ضيف منتجات تجريبية لتشوف شكله.</p>
       <div class="card">
         <h3>منتجات تجريبية</h3>
         <p class="muted">يضيف 5 متاجر وهمية و50 منتج موزّعة على أقسام المتجر. الحذف يمسح هالتجريبي فقط ولا يمس بيانات حقيقية.</p>
@@ -469,8 +469,8 @@
 
     <!-- PRODUCT CATEGORIES ADDED BY SHOPS -->
     <div class="section" id="section-pcats" style="display:none">
-      <h2>تصنيفات المنتجات اللي أضافها التجار</h2>
-      <p class="subtitle">القائمة الأساسية جاهزة، والتاجر بيقدر يضيف تصنيف ينفع فوراً. هون بتشوف اللي أضافوه، وبتعدّل اسمه أو ترجمته، أو بتحذفه فتنتقل منتجاته للتصنيف الأعلى منه.</p>
+      <h2>تصنيفات المنتجات اللي أضافها أصحاب الأنشطة</h2>
+      <p class="subtitle">القائمة الأساسية جاهزة، وصاحب النشاط بيقدر يضيف تصنيف ينفع فوراً. هون بتشوف اللي أضافوه، وبتعدّل اسمه أو ترجمته، أو بتحذفه فتنتقل منتجاته للتصنيف الأعلى منه.</p>
       <div class="card">
         <table><thead><tr><th>التصنيف</th><th>بالإنكليزي</th><th>تحت</th><th>المحل</th><th>منتجات</th><th></th></tr></thead><tbody id="pcats-body"></tbody></table>
         <p id="pcats-msg" class="muted"></p>
@@ -492,7 +492,7 @@
     <!-- PROFESSION SUGGESTIONS -->
     <div class="section" id="section-suggestions" style="display:none">
       <h2>اقتراحات المهن</h2>
-      <p class="subtitle">التاجر اللي ما لقي مهنته بيكتبها، وبيبقى محله تحت أقرب مهنة. إنت بتقبلها كمهنة جديدة (وبتعدّل اسمها وتترجمها وتحدد مكانها)، أو بتضيفها لمهنة موجودة، أو بترفضها.</p>
+      <p class="subtitle">صاحب النشاط اللي ما لقي مهنته بيكتبها، وبيبقى محله تحت أقرب مهنة. إنت بتقبلها كمهنة جديدة (وبتعدّل اسمها وتترجمها وتحدد مكانها)، أو بتضيفها لمهنة موجودة، أو بترفضها.</p>
       <div class="filters">
         <button class="active" data-sstatus="PENDING" onclick="loadSuggestions('PENDING')">بانتظار القرار</button>
         <button data-sstatus="APPROVED" onclick="loadSuggestions('APPROVED')">أُضيفت كمهنة جديدة</button>
@@ -505,7 +505,7 @@
     <!-- DISCOUNTS -->
     <div class="section" id="section-discounts" style="display:none">
       <h2>حسومات المحلات</h2>
-      <p class="subtitle">كل حسم بيحطه تاجر بيوصل هون، وما بيظهر للزبائن ولا بيتطبّق عند الصندوق إلا بعد موافقتك.</p>
+      <p class="subtitle">كل حسم بيحطه صاحب نشاط بيوصل هون، وما بيظهر للزبائن ولا بيتطبّق عند الصندوق إلا بعد موافقتك.</p>
       <div class="filters">
         <button class="active" data-dstatus="PENDING" onclick="loadDiscounts('PENDING')">بانتظار الموافقة</button>
         <button data-dstatus="APPROVED" onclick="loadDiscounts('APPROVED')">مقبولة</button>
@@ -519,15 +519,15 @@
     <!-- STORE ADS AND BANNERS -->
     <div class="section" id="section-ads" style="display:none">
       <h2>إعلانات المتجر</h2>
-      <p class="subtitle">المساحات الإعلانية (6 مساحات لكل دولة بجانب البانر الكبير) يستأجرها التجار من محفظتهم، والبانرات الكبيرة إنت اللي بتتحكم فيها.</p>
+      <p class="subtitle">المساحات الإعلانية (6 مساحات لكل دولة بجانب البانر الكبير) يستأجرها أصحاب الأنشطة من محفظتهم، والبانرات الكبيرة إنت اللي بتتحكم فيها.</p>
 
       <div class="card">
         <h3>الأسعار والمدد</h3>
-        <p class="muted">كل سطر: عدد أيام وسعره بوحدة المحفظة. التاجر بيشوف هالخيارات بس. احذف السطر لتوقف بيع هالمدة.</p>
+        <p class="muted">كل سطر: عدد أيام وسعره بوحدة المحفظة. صاحب النشاط بيشوف هالخيارات بس. احذف السطر لتوقف بيع هالمدة.</p>
         <table><thead><tr><th style="width:30%">عدد الأيام</th><th style="width:40%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ads-packages"></tbody></table>
         <button class="secondary" style="margin-top:10px" onclick="addAdPackage()">➕ أضف مدة</button>
         <h3 style="margin-top:18px">أسعار البانر الكبير</h3>
-        <p class="muted">التاجر بيشوف هالمدد والأسعار ويحجز، وبيترك رقمه، وإنت بتتواصل معه وبتجهّز البانر.</p>
+        <p class="muted">صاحب النشاط بيشوف هالمدد والأسعار ويحجز، وبيترك رقمه، وإنت بتتواصل معه وبتجهّز البانر.</p>
         <table><thead><tr><th style="width:30%">عدد الأيام</th><th style="width:40%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ads-banner-packages"></tbody></table>
         <button class="secondary" style="margin-top:10px" onclick="addAdPackage(null, null, 'ads-banner-packages')">➕ أضف مدة</button>
         <div class="row" style="margin-top:14px">
@@ -552,7 +552,7 @@
 
       <div class="card">
         <h3>حجوزات البانر الكبير <span id="bb-count" class="badge PENDING" style="display:none"></span></h3>
-        <p class="muted">التاجر دفع وترك رقمه. اتصل فيه، واتفقوا شو بده يكتب بالبانر، وبعدين اضغط "جهّز البانر" لتعبّي النموذج تحت.</p>
+        <p class="muted">صاحب النشاط دفع وترك رقمه. اتصل فيه، واتفقوا شو بده يكتب بالبانر، وبعدين اضغط "جهّز البانر" لتعبّي النموذج تحت.</p>
         <div class="filters">
           <button class="active" data-bbstatus="PENDING" onclick="loadBannerBookings('PENDING')">جديدة</button>
           <button data-bbstatus="CONTACTED" onclick="loadBannerBookings('CONTACTED')">تم التواصل</button>
@@ -702,7 +702,7 @@ function showSection(name) {
 }
 
 // ---- Users ----
-const ROLE_LABEL = { ADMIN: 'أدمن', MERCHANT: 'تاجر', CUSTOMER: 'زبون' };
+const ROLE_LABEL = { ADMIN: 'أدمن', MERCHANT: 'صاحب نشاط', CUSTOMER: 'زبون' };
 
 async function loadUsers() {
   const body = document.getElementById('users-body');
@@ -899,7 +899,7 @@ async function geoSave(id) {
 }
 
 async function geoHide(id) {
-  if (!confirm('إخفاء هذا المكان؟ ما رح يظهر بالقوائم (الحسابات والتجار المرتبطين فيه ما بيتأثروا).')) return;
+  if (!confirm('إخفاء هذا المكان؟ ما رح يظهر بالقوائم (الحسابات وأصحاب الأنشطة المرتبطين فيه ما بيتأثروا).')) return;
   const { ok, data } = await api('PATCH', '/geo/units/' + id, { isActive: false });
   if (!ok) { document.getElementById('geo-msg').textContent = errText(data, 'تعذّر الإخفاء'); return; }
   await geoRefreshPickers(geoLevel());
@@ -1041,7 +1041,7 @@ async function bcApprove(id) {
   loadBroadcasts();
 }
 async function bcReject(id) {
-  const reason = prompt('سبب الرفض (سيقرأه التاجر):');
+  const reason = prompt('سبب الرفض (سيقرأه صاحب النشاط):');
   if (!reason || reason.trim().length < 3) return;
   const { ok, data } = await api('POST', '/broadcasts/' + id + '/reject', { reason: reason.trim() });
   if (!ok) alert(errText(data, 'تعذّر الرفض'));
@@ -1120,7 +1120,7 @@ async function refreshDiscBadge() {
 
 async function reviewDiscount(id, action) {
   let body = {};
-  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل للتاجر، واختياري):'); if (reason === null) return; body = { reason }; }
+  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط، واختياري):'); if (reason === null) return; body = { reason }; }
   const { ok, data } = await api('POST', '/admin/discounts/' + id + '/' + action, body);
   if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
   loadDiscounts(discStatus);
@@ -1186,7 +1186,7 @@ async function refreshProductReviewBadge() {
 
 async function decideProduct(id, action) {
   let body = {};
-  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل للتاجر):'); if (reason === null) return; body = { reason }; }
+  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط):'); if (reason === null) return; body = { reason }; }
   const { ok, data } = await api('POST', '/admin/products/' + id + '/' + action, body);
   if (!ok) { alert(errText(data, 'تعذّر التنفيذ')); return; }
   loadProductReview();
@@ -1263,7 +1263,7 @@ async function mergeSuggestion(id) {
 }
 
 async function rejectSuggestion(id) {
-  const reason = prompt('سبب الرفض (بيوصل للتاجر، واختياري):');
+  const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط، واختياري):');
   if (reason === null) return;
   const { ok, data } = await api('POST', '/admin/category-suggestions/' + id + '/reject', { reason });
   if (!ok) { alert(errText(data, 'تعذّر التنفيذ')); return; }
@@ -1349,7 +1349,7 @@ async function bannerBookingContacted(id) {
 }
 
 async function bannerBookingReject(id) {
-  const reason = prompt('سبب الرفض (بيوصل للتاجر، واختياري، وبيرجع له المبلغ):');
+  const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط، واختياري، وبيرجع له المبلغ):');
   if (reason === null) return;
   const { ok, data } = await api('POST', '/admin/banner-bookings/' + id + '/reject', { reason });
   if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
@@ -1402,7 +1402,7 @@ async function refreshAdsBadge() {
 
 async function reviewAd(id, action) {
   let body = {};
-  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل للتاجر، واختياري):'); if (reason === null) return; body = { reason }; }
+  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط، واختياري):'); if (reason === null) return; body = { reason }; }
   const { ok, data } = await api('POST', '/admin/ads/' + id + '/' + action, body);
   if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
   loadAdBookings(adStatus);
@@ -1626,7 +1626,7 @@ async function loadMerchants(status) {
         <button class="small" onclick="approveMerchant('${m.id}')">✅ موافقة</button>
         <button class="small danger" onclick="rejectMerchant('${m.id}')">❌ رفض</button>
       ` : ''}</td>
-    </tr>`).join('') || `<tr><td colspan="8" class="muted">لا يوجد تجار بهذه الحالة</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="8" class="muted">لا يوجد أصحاب أنشطة بهذه الحالة</td></tr>`;
 }
 async function assignMerchantPlan(id, planId) {
   const { ok, data } = await api('PUT', '/admin/merchants/' + id + '/plan', { planId: planId || null });
@@ -1693,7 +1693,7 @@ async function deleteCategory(id) {
   const { ok, data } = await api('DELETE', '/categories/' + id);
   if (!ok) {
     alert(data.error === 'Category is still in use and can\'t be deleted'
-      ? `ما بقدر أحذفه — مستخدم حاليًا (تصنيفات فرعية: ${data.childCount}, تجار: ${data.merchantCount}, منتجات: ${data.productCount})`
+      ? `ما بقدر أحذفه — مستخدم حاليًا (تصنيفات فرعية: ${data.childCount}, أصحاب أنشطة: ${data.merchantCount}, منتجات: ${data.productCount})`
       : (data.error || 'تعذّر الحذف'));
     return;
   }
@@ -1703,9 +1703,9 @@ async function deleteCategory(id) {
 // ---- plans, country prices, tax ----
 const SERVICE_LABEL = {
   MEMBERSHIP: 'عضوية الزبون',
-  MERCHANT_ACCOUNT: 'باقة التاجر',
+  MERCHANT_ACCOUNT: 'باقة النشاط',
   RESPONDER_CUSTOMER: 'المجيب الآلي — زبون',
-  RESPONDER_MERCHANT: 'المجيب الآلي — تاجر',
+  RESPONDER_MERCHANT: 'المجيب الآلي — نشاط',
 };
 const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT'];
 let planCountries = [];

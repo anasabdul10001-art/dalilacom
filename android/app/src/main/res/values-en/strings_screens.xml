@@ -95,13 +95,13 @@
     <string name="s_60e251d0" formatted="false">Don\'t have an account? Create one</string>
     <string name="s_615e65ba" formatted="false">SKU (optional)</string>
     <string name="s_621e568d" formatted="false">Top up</string>
-    <string name="s_625e3fc7" formatted="false">Merchant</string>
+    <string name="s_625e3fc7" formatted="false">Business</string>
     <string name="s_6310b20d" formatted="false">Choose the page</string>
     <string name="s_64cf6641" formatted="false">My profile</string>
     <string name="s_6617ed19" formatted="false">We couldn\'t get your location — tap the map to set it by hand</string>
     <string name="s_66414100" formatted="false">Topped up and balance added</string>
     <string name="s_67636cc3" formatted="false">Send top-up request</string>
-    <string name="s_676f8348" formatted="false">Couldn\'t register the merchant account</string>
+    <string name="s_676f8348" formatted="false">Couldn\'t register the business account</string>
     <string name="s_6793a69f" formatted="false">Products</string>
     <string name="s_69bbe90d" formatted="false">No products yet</string>
     <string name="s_69c86923" formatted="false">‹ Back</string>
@@ -113,7 +113,7 @@
     <string name="s_70a771db" formatted="false">Couldn\'t confirm the discount</string>
     <string name="s_7121fbcc" formatted="false">Facebook connected ✅</string>
     <string name="s_746ec1bd" formatted="false">The member price must be lower than the regular price</string>
-    <string name="s_749f9cfe" formatted="false">Register as a merchant</string>
+    <string name="s_749f9cfe" formatted="false">Register as a business</string>
     <string name="s_760c65a1" formatted="false">Phone</string>
     <string name="s_77eb6cfd" formatted="false">About you or your shop (shown to customers and on invoices)</string>
     <string name="s_79e32d1f" formatted="false">⏳ Your request is waiting for admin approval — your shop won\'t appear on the map before that.</string>
@@ -202,7 +202,7 @@
     <string name="s_bc12337c" formatted="false">Couldn\'t load the connections</string>
     <string name="s_bdb567d9" formatted="false">Couldn\'t cancel the order</string>
     <string name="s_beb6f577" formatted="false">The code is invalid or expired</string>
-    <string name="s_c03965c6" formatted="false">Your account becomes a merchant account after admin approval, then your shop appears on the map</string>
+    <string name="s_c03965c6" formatted="false">Your account becomes a business account after admin approval, then your shop appears on the map</string>
     <string name="s_c2cbfa91" formatted="false">📄 Export invoice (PDF)</string>
     <string name="s_c31663d5" formatted="false">My wallet</string>
     <string name="s_c33c7465" formatted="false">You have no rules yet</string>

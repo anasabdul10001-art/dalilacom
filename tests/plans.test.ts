@@ -111,7 +111,7 @@ describe("The pricing catalogue (sections 24/60/64)", () => {
       .send({
         service: "MERCHANT_ACCOUNT",
         name: `باقة متجر ${Date.now()}`,
-        description: "للتجار الصغار",
+        description: "لأصحاب الأنشطة الصغار",
         durationDays: 30,
         trialDays: 7,
         priceCents: 1900,

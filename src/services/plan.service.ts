@@ -149,7 +149,7 @@ export async function getCatalog(countryCode: string | null, lang: string = DEFA
   const all = [
     ...fromCatalog,
     fromSettings("RESPONDER_CUSTOMER", responder.priceCustomer, translateText("المجيب الآلي — زبون", lang)),
-    fromSettings("RESPONDER_MERCHANT", responder.priceMerchant, translateText("المجيب الآلي — تاجر", lang)),
+    fromSettings("RESPONDER_MERCHANT", responder.priceMerchant, translateText("المجيب الآلي — نشاط", lang)),
   ];
 
   const services: CatalogService[] = SERVICE_ORDER.map((service) => ({

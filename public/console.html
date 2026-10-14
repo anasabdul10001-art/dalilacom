@@ -46,7 +46,7 @@
 
 <div class="tabs">
   <div class="tab active" data-tab="customer">👤 زبون</div>
-  <div class="tab" data-tab="merchant">🏪 تاجر</div>
+  <div class="tab" data-tab="merchant">🏪 صاحب نشاط</div>
   <div class="tab" data-tab="admin">🛡️ أدمن</div>
   <div class="tab" data-tab="log">📜 السجل</div>
 </div>
@@ -77,7 +77,7 @@
   </div>
 
   <div class="card">
-    <h3>اكتشف التجار</h3>
+    <h3>اكتشف أصحاب الأنشطة</h3>
     <div class="row">
       <div><label>بحث بالاسم</label><input id="search-q" placeholder="Cafe..." /></div>
       <div><label>تصنيف</label><select id="search-category"><option value="">الكل</option></select></div>
@@ -117,7 +117,7 @@
 <!-- MERCHANT -->
 <div class="panel" id="panel-merchant">
   <div class="card">
-    <h3>حساب التاجر</h3>
+    <h3>حساب النشاط</h3>
     <div id="merchant-status" class="status bad">غير مسجل دخول</div>
     <div class="row">
       <div><label>الإيميل</label><input id="m-email" placeholder="cafe@test.com" /></div>
@@ -142,7 +142,7 @@
     </div>
     <label>العنوان</label>
     <input id="m-address" placeholder="Damascus Center" />
-    <button onclick="registerMerchantProfile()">تسجيل كتاجر (بانتظار موافقة الأدمن)</button>
+    <button onclick="registerMerchantProfile()">تسجيل كصاحب نشاط (بانتظار موافقة الأدمن)</button>
     <button class="secondary" onclick="loadMerchantMe()">اعرض ملفي التجاري</button>
     <div id="merchant-me"></div>
   </div>
@@ -185,7 +185,7 @@
   </div>
 
   <div class="card">
-    <h3>طلباتي (كتاجر)</h3>
+    <h3>طلباتي (كصاحب نشاط)</h3>
     <button onclick="loadMerchantOrders()">تحديث الطلبات</button>
     <div id="merchant-orders"></div>
   </div>
@@ -204,7 +204,7 @@
   </div>
 
   <div class="card">
-    <h3>التجار بانتظار الموافقة</h3>
+    <h3>أصحاب الأنشطة بانتظار الموافقة</h3>
     <button onclick="loadPending()">تحديث القائمة</button>
     <div id="pending-list"></div>
   </div>
@@ -545,7 +545,7 @@ async function loadPending() {
     <div class="item">${m.businessName} — ${m.user.fullName} (${m.user.email})
       <button class="small" onclick="approveMerchant('${m.id}')">✅ موافقة</button>
       <button class="small secondary" onclick="rejectMerchant('${m.id}')">❌ رفض</button>
-    </div>`).join('') || '<div class="muted">لا يوجد تجار بانتظار الموافقة</div>';
+    </div>`).join('') || '<div class="muted">لا يوجد أصحاب أنشطة بانتظار الموافقة</div>';
 }
 async function approveMerchant(id) {
   await api('POST', '/merchant/' + id + '/approve', null, state.adminToken);

@@ -238,7 +238,7 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
         userId,
         type: "ORDER_PLACED",
         title: "تم استلام طلبك ✅",
-        body: `طلبك ${order.orderNumber} وصل للتاجر. رح يوصلك تحديث كل ما تتغير حالته.`,
+        body: `طلبك ${order.orderNumber} وصل لصاحب النشاط. رح يوصلك تحديث كل ما تتغير حالته.`,
         data: { orderId: order.id, orderNumber: order.orderNumber, merchantId: order.merchantId },
       });
     }

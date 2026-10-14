@@ -587,12 +587,14 @@ function screenRegister() {
   return `
     <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
     <h1 class="screen-title">إنشاء حساب جديد</h1>
-    <p class="screen-sub">بدك تسجّل كـ:</p>
-    <div class="chip-row">
-      <button class="chip ${intent === "CUSTOMER" ? "active" : ""}" onclick="setRegisterIntent('CUSTOMER')">زائر</button>
-      <button class="chip ${intent === "MERCHANT" ? "active" : ""}" onclick="setRegisterIntent('MERCHANT')">تاجر</button>
+    <p class="screen-sub">${esc(t("reg.who"))}</p>
+    <div class="intent-cards">
+      <button class="intent-card ${intent === "MERCHANT" ? "on" : ""}" onclick="setRegisterIntent('MERCHANT')">
+        <span class="ic">🏪</span><div><b>${esc(t("reg.bizTitle"))}</b><small>${esc(t("reg.bizSub"))}</small></div></button>
+      <button class="intent-card ${intent === "CUSTOMER" ? "on" : ""}" onclick="setRegisterIntent('CUSTOMER')">
+        <span class="ic">👤</span><div><b>${esc(t("reg.userTitle"))}</b><small>${esc(t("reg.userSub"))}</small></div></button>
     </div>
-    ${intent === "MERCHANT" ? `<p class="muted" style="color:var(--primary);margin-bottom:12px">رح نطلب منك بيانات محلك بعد إنشاء الحساب</p>` : ""}
+    ${intent === "MERCHANT" ? `<p class="muted" style="color:var(--primary);margin-bottom:12px">${esc(t("reg.bizNote"))}</p>` : ""}
     <div class="field"><label>الاسم الكامل</label><input id="f-name" placeholder="اسمك" value="${esc(draft.name || "")}" /></div>
     <div class="field"><label>الإيميل</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
     <div class="field"><label>كلمة السر (8 أحرف على الأقل)</label><input id="f-password" type="password" placeholder="••••••••" value="${esc(draft.password || "")}" /></div>
@@ -1522,15 +1524,15 @@ function screenAffiliateMine() {
   return `
     ${backRow()}
     <h1 class="screen-title">مسوّقياتي</h1>
-    <p class="screen-sub">التجار اللي إنت مسوّق عندهم، وعمولاتك من كل واحد</p>
-    ${list.length === 0 ? `<div class="empty-state">لسا ما انضممت كمسوّق لأي تاجر — التاجر هو اللي بضيفك لفريقه</div>` : list.map((x) => `
+    <p class="screen-sub">أصحاب الأنشطة اللي إنت مسوّق عندهم، وعمولاتك من كل واحد</p>
+    ${list.length === 0 ? `<div class="empty-state">لسا ما انضممت كمسوّق لأي صاحب نشاط — صاحب النشاط هو اللي بضيفك لفريقه</div>` : list.map((x) => `
       <div class="card">
         <div class="title-line"><strong>${esc(x.merchant.businessName)}</strong><span class="badge ${x.isActive ? "success" : "neutral"}">${x.isActive ? "نشط" : "غير نشط"}</span></div>
         <p class="muted">عمولتك: ${x.commissionType === "PERCENT" ? x.commissionValue + "% من كل عملية" : fmt(x.commissionValue) + " لكل عملية"}</p>
         <p class="muted">زبائن أحلتهم: ${x.referredCount} — إجمالي عمولاتك: <strong style="color:var(--primary)">${fmt(x.totalCommissionCents)}</strong></p>
         ${x.sampleLink
           ? `<div class="field"><label>رابط الإحالة (انسخه وشاركه)</label><input readonly value="${esc(x.sampleLink)}" onclick="this.select()" /></div>`
-          : `<p class="muted">كودك: <strong>${esc(x.referralCode)}</strong> — ما عند هالتاجر منتجات بعد لتولّد رابط</p>`}
+          : `<p class="muted">كودك: <strong>${esc(x.referralCode)}</strong> — ما عند هالنشاط منتجات بعد لتولّد رابط</p>`}
       </div>`).join("")}
   `;
 }
@@ -3069,8 +3071,8 @@ function screenMerchantRegister() {
   const m = S._merchReg;
   return `
     ${backRow()}
-    <h1 class="screen-title">سجّل كتاجر</h1>
-    <p class="screen-sub">بيصير حسابك تاجر بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</p>
+    <h1 class="screen-title">سجّل كصاحب نشاط</h1>
+    <p class="screen-sub">بيصير حسابك صاحب نشاط بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</p>
     <div class="section-title">${esc(t("mp.secName"))}</div>
     <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="اسم محلك" value="${esc(m.name || "")}" /></div>
     <div class="section-title">${esc(t("mp.secProfession"))}</div>
@@ -3124,7 +3126,7 @@ async function submitMerchantRegister() {
     S._onboarding = null;
     back();
   } else {
-    S.error = errMsg(data, "تعذّر تسجيل حساب التاجر");
+    S.error = errMsg(data, "تعذّر تسجيل حساب النشاط");
     render();
   }
 }

@@ -373,7 +373,7 @@ const discountSchema = z.object({
 async function ownApprovedShop(userId: string) {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId } });
   if (!merchant) return { merchant: null, error: [404, "NOT_FOUND", "Merchant profile not found"] as [number, string, string] };
-  if (merchant.approvalStatus !== "APPROVED") return { merchant: null, error: [403, "FORBIDDEN", "محلك لسا ما انوافق عليه من الإدارة، بتقدر تستخدم وضع التاجر بعد الموافقة"] as [number, string, string] };
+  if (merchant.approvalStatus !== "APPROVED") return { merchant: null, error: [403, "FORBIDDEN", "محلك لسا ما انوافق عليه من الإدارة، بتقدر تستخدم وضع النشاط بعد الموافقة"] as [number, string, string] };
   return { merchant, error: null };
 }
 
