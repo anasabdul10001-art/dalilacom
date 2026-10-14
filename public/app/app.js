@@ -410,6 +410,7 @@ function renderScreen() {
     case "productEdit": return screenProductEdit();
     case "affiliateMine": return screenAffiliateMine();
     case "marketing": return screenMarketing();
+    case "adminReview": return screenAdminReview();
     case "wallet": return screenWallet();
     case "responder": return screenResponder();
     case "favorites": return screenFavorites();
@@ -1535,6 +1536,7 @@ function tabProfile() {
       <div style="height:10px"></div>
       ${(() => { if (S._refMe == null) { loadRefMe(); return ""; } return `<button class="btn outline" style="max-width:240px" onclick="go('marketing')">📣 ${esc(t(S._refMe.isMarketer ? "ref.title" : "ref.become"))}</button><div style="height:10px"></div>`; })()}
       <div style="height:10px"></div>
+      ${S.role === "ADMIN" ? `<button class="btn" style="max-width:240px" onclick="S._adr=null;go('adminReview')">📣 ${esc(t("adr.title"))}</button><div style="height:10px"></div>` : ""}
       <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
       <div style="height:14px"></div>
       <button class="btn secondary" style="max-width:240px" onclick="doLogout()">${esc(t("profile.logout"))}</button>
@@ -1656,6 +1658,91 @@ function screenMarketing() {
       ${me.team.length ? me.team.map((m) => `<div class="card"><div class="title-line"><strong>${esc(m.name)}</strong>${m.active ? "" : `<span class="badge neutral">${esc(t("ref.off"))}</span>`}</div>
         <p class="muted">${esc(t("ref.memberRow", { n: m.people, e: m.earned + " " + cn }))}</p></div>`).join("") : `<p class="muted">${esc(t("ref.noTeam"))}</p>`}` : ""}
   `;
+}
+
+/* ================= ADMIN: review the announcements shops want to send ================= */
+
+function screenAdminReview() {
+  if (S.role !== "ADMIN") return backRow() + `<div class="empty-state">${esc(t("adr.adminOnly"))}</div>`;
+  if (!S._adr) { S._adr = { loading: true, items: [], rejecting: null }; loadAdminReview(); }
+  const a = S._adr;
+  if (a.loading) return backRow() + `<h1 class="screen-title">${esc(t("adr.title"))}</h1>${spinner()}`;
+  return `
+    ${backRow()}
+    <div class="adr-head">
+      <h1 class="screen-title">${esc(t("adr.title"))}</h1>
+      <button class="btn small outline" style="width:auto" onclick="S._adr=null;render()">↻ ${esc(t("adr.refresh"))}</button>
+    </div>
+    <div class="adr-hint">ℹ️ ${esc(t("adr.hint"))}</div>
+    ${a.msg ? `<div class="adr-note">${esc(a.msg)}</div>` : ""}
+    ${a.err ? `<div class="error-banner">${esc(a.err)}</div>` : ""}
+    ${a.items.length ? a.items.map(adrCardHtml).join("") : `<div class="empty-state">✅ ${esc(t("adr.empty"))}</div>`}
+  `;
+}
+
+function adrCardHtml(it) {
+  const a = S._adr;
+  const shop = (it.sender && ((it.sender.merchantProfile && it.sender.merchantProfile.businessName) || it.sender.email)) || "—";
+  const where = it.scope === "RADIUS" ? t("adr.radius", { n: it.radiusKm != null ? it.radiusKm : "?" }) : it.scope === "FOLLOWERS" ? t("adr.followers") : t("adr.place");
+  const verdict = it.aiVerdict === "OK" ? "ok" : it.aiVerdict === "REVIEW" ? "warn" : "none";
+  const verdictText = t(verdict === "ok" ? "adr.aiOk" : verdict === "warn" ? "adr.aiReview" : "adr.aiNone");
+  const reasons = (it.aiReasons || []).filter(Boolean);
+  const busy = a.busyId === it.id;
+  return `
+    <div class="adr-card">
+      <div class="adr-top">
+        <div class="adr-av">${esc(String(shop).trim().slice(0, 1).toUpperCase())}</div>
+        <div class="adr-shop"><b>${esc(shop)}</b><small>${esc(it.sender && it.sender.fullName ? it.sender.fullName : "")}</small></div>
+      </div>
+      <h3 class="adr-title">${esc(it.title)}</h3>
+      <div class="adr-body">${esc(it.body)}</div>
+      <div class="adr-chips">
+        <span class="adr-chip">🎯 ${esc(t("adr.reach", { where, n: it.targeted }))}</span>
+        ${it.productId ? `<span class="adr-chip">${esc(t("adr.hasProduct"))}</span>` : ""}
+        ${it.discountId ? `<span class="adr-chip">${esc(t("adr.hasOffer"))}</span>` : ""}
+      </div>
+      <div class="adr-ai ${verdict}">
+        <b>${verdict === "ok" ? "✓" : verdict === "warn" ? "⚠" : "•"} ${esc(t("adr.ai", { v: verdictText }))}</b>
+        ${reasons.length ? `<ul>${reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+      </div>
+      ${a.rejecting === it.id ? `
+        <div class="field"><label>${esc(t("adr.reason"))}</label><textarea id="adr-reason" rows="2" placeholder="${esc(t("adr.reasonPh"))}"></textarea></div>
+        <div class="adr-actions">
+          <button class="btn danger" ${busy ? "disabled" : ""} onclick="adrReject('${esc(it.id)}')">${esc(t("adr.confirmRefuse"))}</button>
+          <button class="btn outline" onclick="S._adr.rejecting=null;render()">${esc(t("adr.cancel"))}</button>
+        </div>` : `
+        <div class="adr-actions">
+          <button class="btn adr-ok" ${busy ? "disabled" : ""} onclick="adrApprove('${esc(it.id)}')">✓ ${esc(t("adr.publish"))}</button>
+          <button class="btn outline adr-no" ${busy ? "disabled" : ""} onclick="S._adr.rejecting='${esc(it.id)}';render()">✕ ${esc(t("adr.refuse"))}</button>
+        </div>`}
+    </div>`;
+}
+
+async function loadAdminReview() {
+  const { ok, data } = await api("GET", "/broadcasts?status=PENDING_REVIEW");
+  const prev = S._adr || {};
+  S._adr = { loading: false, items: ok ? data : [], rejecting: null, err: ok ? null : errMsg(data, t("adr.failed")), msg: prev.msg };
+  render();
+}
+
+async function adrApprove(id) {
+  S._adr.busyId = id; render();
+  const { ok, data } = await api("POST", `/broadcasts/${id}/approve`);
+  const msg = ok ? t("adr.published") : null;
+  await loadAdminReview();
+  S._adr.msg = msg; S._adr.err = ok ? null : errMsg(data, t("adr.failed"));
+  render();
+}
+
+async function adrReject(id) {
+  const reason = ((qs("adr-reason") || {}).value || "").trim();
+  if (reason.length < 3) { S._adr.err = t("adr.needReason"); return render(); }
+  S._adr.busyId = id; render();
+  const { ok, data } = await api("POST", `/broadcasts/${id}/reject`, { reason });
+  const msg = ok ? t("adr.refused") : null;
+  await loadAdminReview();
+  S._adr.msg = msg; S._adr.err = ok ? null : errMsg(data, t("adr.failed"));
+  render();
 }
 
 /* ================= AFFILIATE — MY EARNINGS (customer side) ================= */

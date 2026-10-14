@@ -1436,3 +1436,27 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .cal-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12.5px; }
 .cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .cal-legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+/* the admin's queue of shops' announcements */
+.adr-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.adr-hint { margin: 4px 0 14px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--primary) 7%, var(--surface)); color: var(--text); font-size: 13.5px; line-height: 1.7; }
+.adr-note { margin-bottom: 12px; padding: 10px 14px; border-radius: 12px; background: #e6f4ea; color: #1b5e20; font-weight: 700; }
+.adr-card { margin-bottom: 16px; padding: 18px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 4px 16px -8px rgba(0, 0, 0, 0.25); }
+.adr-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.adr-av { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: #fff; font-size: 20px; font-weight: 800; }
+.adr-shop { display: flex; flex-direction: column; min-width: 0; }
+.adr-shop b { font-size: 16px; color: var(--primary); }
+.adr-shop small { color: var(--text-muted); font-size: 12.5px; }
+.adr-title { margin: 0 0 8px; font-size: 19px; line-height: 1.5; }
+.adr-body { margin-bottom: 12px; padding: 14px 16px; border-radius: 14px; background: color-mix(in srgb, var(--text) 5%, transparent); font-size: 15.5px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+.adr-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.adr-chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 13px; line-height: 1.4; }
+.adr-ai { margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; font-size: 14px; line-height: 1.7; }
+.adr-ai.ok { background: #e6f4ea; color: #1b5e20; }
+.adr-ai.warn { background: #fff4e0; color: #8a4b00; }
+.adr-ai.none { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text-muted); }
+.adr-ai ul { margin: 6px 0 0; padding-inline-start: 20px; }
+.adr-actions { display: flex; gap: 10px; }
+.adr-actions .btn { flex: 1; height: 48px; font-size: 15px; }
+.adr-ok { background: #2e9b57; }
+.adr-no { color: #b3261e; border-color: #b3261e; }

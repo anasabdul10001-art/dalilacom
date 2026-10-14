@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +29,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.background
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -78,55 +90,93 @@ class ReviewViewModel(private val repository: BroadcastRepository) : ViewModel()
     fun reject(id: String, reason: String) = act(id, AppStrings.get(R.string.review_refused)) { repository.reject(id, reason.trim()) }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ReviewScreen(factory: ViewModelFactory, onBack: () -> Unit) {
     val viewModel: ReviewViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
     var rejecting by remember { mutableStateOf<ReviewItemDto?>(null) }
     var reason by remember { mutableStateOf("") }
+    val green = Color(0xFF2E9B57)
 
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text(AppStrings.get(R.string.back)) }
-            Text(AppStrings.get(R.string.review_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
-            TextButton(onClick = viewModel::refresh) { Text(AppStrings.get(R.string.review_refresh)) }
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = viewModel::refresh) { Text("↻  " + AppStrings.get(R.string.review_refresh)) }
         }
+        Text(
+            AppStrings.get(R.string.review_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 20.dp),
+        )
         if (state.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@Column
         }
-        LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
-                Text(AppStrings.get(R.string.review_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), modifier = Modifier.fillMaxWidth()) {
+                    Text("ℹ️  " + AppStrings.get(R.string.review_hint), style = MaterialTheme.typography.bodyMedium, lineHeight = 24.sp, modifier = Modifier.padding(14.dp))
+                }
+                state.message?.let { Text(it, color = green, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
+                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
             }
-            if (state.items.isEmpty()) item { Text(AppStrings.get(R.string.review_empty), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (state.items.isEmpty()) item {
+                Text("✅  " + AppStrings.get(R.string.review_empty), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp))
+            }
             items(state.items, key = { it.id }) { item ->
                 val shop = item.sender?.merchantProfile?.businessName ?: item.sender?.email ?: "—"
-                Surface(shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(shop, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        Text(item.title, style = MaterialTheme.typography.titleMedium)
-                        Text(item.body, style = MaterialTheme.typography.bodyMedium)
-                        val where = when (item.scope) {
-                            "RADIUS" -> AppStrings.get(R.string.fmt_review_radius, item.radiusKm?.toString() ?: "?")
-                            "FOLLOWERS" -> AppStrings.get(R.string.review_followers)
-                            else -> AppStrings.get(R.string.review_place)
+                val where = when (item.scope) {
+                    "RADIUS" -> AppStrings.get(R.string.fmt_review_radius, item.radiusKm?.toString() ?: "?")
+                    "FOLLOWERS" -> AppStrings.get(R.string.review_followers)
+                    else -> AppStrings.get(R.string.review_place)
+                }
+                val (verdictText, verdictBg, verdictFg, mark) = when (item.aiVerdict) {
+                    "OK" -> listOf(AppStrings.get(R.string.review_ai_ok), Color(0xFFE6F4EA), Color(0xFF1B5E20), "✓")
+                    "REVIEW" -> listOf(AppStrings.get(R.string.review_ai_review), Color(0xFFFFF4E0), Color(0xFF8A4B00), "⚠")
+                    else -> listOf(AppStrings.get(R.string.review_ai_none), MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "•")
+                }
+                val busy = state.busyId == item.id
+                Surface(shape = RoundedCornerShape(22.dp), tonalElevation = 2.dp, shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+                                Text(shop.trim().take(1).uppercase(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(shop, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                item.sender?.fullName?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            }
                         }
-                        Text(AppStrings.get(R.string.fmt_review_reach, where, item.targeted), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (item.productId != null) Text(AppStrings.get(R.string.review_has_product), style = MaterialTheme.typography.bodySmall)
-                        if (item.discountId != null) Text(AppStrings.get(R.string.review_has_offer), style = MaterialTheme.typography.bodySmall)
-                        val verdict = when (item.aiVerdict) {
-                            "OK" -> AppStrings.get(R.string.review_ai_ok)
-                            "REVIEW" -> AppStrings.get(R.string.review_ai_review)
-                            else -> AppStrings.get(R.string.review_ai_none)
+                        Text(item.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, lineHeight = 28.sp)
+                        Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), modifier = Modifier.fillMaxWidth()) {
+                            Text(item.body, style = MaterialTheme.typography.bodyLarge, lineHeight = 26.sp, modifier = Modifier.padding(14.dp))
                         }
-                        Text(AppStrings.get(R.string.fmt_review_ai, verdict), style = MaterialTheme.typography.bodySmall, color = if (item.aiVerdict == "REVIEW") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-                        item.aiReasons?.takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" — "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { viewModel.approve(item.id) }, enabled = state.busyId != item.id) { Text(AppStrings.get(R.string.review_publish)) }
-                            OutlinedButton(onClick = { rejecting = item; reason = "" }, enabled = state.busyId != item.id) { Text(AppStrings.get(R.string.review_refuse)) }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ReviewChip("🎯  " + AppStrings.get(R.string.fmt_review_reach, where, item.targeted))
+                            if (item.productId != null) ReviewChip(AppStrings.get(R.string.review_has_product))
+                            if (item.discountId != null) ReviewChip(AppStrings.get(R.string.review_has_offer))
+                        }
+                        Surface(shape = RoundedCornerShape(14.dp), color = verdictBg as Color, modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("$mark  " + AppStrings.get(R.string.fmt_review_ai, verdictText as String), color = verdictFg as Color, fontWeight = FontWeight.Bold, lineHeight = 22.sp)
+                                item.aiReasons?.filter { it.isNotBlank() }?.forEach { Text("•  $it", color = verdictFg, style = MaterialTheme.typography.bodyMedium, lineHeight = 22.sp) }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = { viewModel.approve(item.id) }, enabled = !busy,
+                                colors = ButtonDefaults.buttonColors(containerColor = green),
+                                shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).height(50.dp),
+                            ) { Text(AppStrings.get(R.string.review_publish), fontWeight = FontWeight.Bold) }
+                            OutlinedButton(
+                                onClick = { rejecting = item; reason = "" }, enabled = !busy,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).height(50.dp),
+                            ) { Text(AppStrings.get(R.string.review_refuse), fontWeight = FontWeight.Bold) }
                         }
                     }
                 }
@@ -139,12 +189,19 @@ fun ReviewScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             onDismissRequest = { rejecting = null },
             title = { Text(AppStrings.get(R.string.review_refuse)) },
             text = {
-                OutlinedTextField(reason, { reason = it }, label = { Text(AppStrings.get(R.string.review_reason)) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(reason, { reason = it }, label = { Text(AppStrings.get(R.string.review_reason)) }, minLines = 3, modifier = Modifier.fillMaxWidth())
             },
             confirmButton = {
                 TextButton(enabled = reason.trim().length >= 3, onClick = { viewModel.reject(target.id, reason); rejecting = null }) { Text(AppStrings.get(R.string.review_refuse)) }
             },
             dismissButton = { TextButton(onClick = { rejecting = null }) { Text(AppStrings.get(R.string.account_cancel)) } },
         )
+    }
+}
+
+@Composable
+private fun ReviewChip(text: String) {
+    Surface(shape = RoundedCornerShape(999.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
     }
 }
