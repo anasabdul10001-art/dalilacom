@@ -1404,3 +1404,9 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .mfab-menu button { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 0; border-radius: 16px; background: var(--surface, #fff); color: inherit; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); white-space: nowrap; }
 .mfab-menu button span { font-size: 18px; }
 .mfab-shade { position: fixed; inset: 0; z-index: 501; background: rgba(0, 0, 0, .2); }
+
+/* a discount's live countdown and the places left */
+.cd { font-variant-numeric: tabular-nums; font-weight: 700; }
+.disc-cd { margin-top: 4px; font-size: 13px; color: var(--primary, #c8283a); font-weight: 700; }
+.disc-left { height: 5px; border-radius: 5px; background: rgba(128, 128, 128, .25); margin-top: 6px; overflow: hidden; }
+.disc-left i { display: block; height: 100%; background: var(--primary, #c8283a); border-radius: 5px; }

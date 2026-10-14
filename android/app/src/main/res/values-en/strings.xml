@@ -804,4 +804,7 @@
     <string name="account_look">Appearance and language</string>
     <string name="account_dark">Dark mode</string>
     <string name="account_language">Language</string>
+    <string name="cd_ends_in">Ends in</string>
+    <string name="cd_ended">Ended</string>
+    <string name="cd_days">%1$dd %2$s</string>
 </resources>

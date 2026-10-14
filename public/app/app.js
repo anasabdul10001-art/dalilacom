@@ -1276,7 +1276,7 @@ function merchantRowHtml(m) {
       </div>
       <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
         ${openBadge(m.openStatus)}
-        ${(m.discounts || []).map((dc) => `<span class="badge info">🏷️ ${esc(dc.title)} — ${dc.percent}%${dc.peopleLeft != null ? " · " + esc(t("disc.placesLeftShort", { n: dc.peopleLeft })) : ""}</span>`).join("")}
+        ${(m.discounts || []).map((dc) => `<span class="badge info">🏷️ ${esc(dc.title)} — ${dc.percent}%${dc.peopleLeft != null ? " · " + esc(t("disc.placesLeftShort", { n: dc.peopleLeft })) : ""}${dc.endDate ? ` · ⏳ ${countdownHtml(dc.endDate)}` : ""}</span>`).join("")}
       </div>
       <div class="place-card-actions">
         <button class="btn small" style="width:auto" onclick="event.stopPropagation();go('merchantDetail',{merchantId:'${m.id}'})">${esc(t("card.details"))}</button>
@@ -4782,6 +4782,22 @@ function discScopeText(d) {
   return t("disc.onAll");
 }
 
+/** A live countdown to a date: it ticks every second wherever it is on the page. */
+function countdownText(endIso) {
+  const ms = new Date(endIso).getTime() - Date.now();
+  if (!(ms > 0)) return t("cd.ended");
+  const total = Math.floor(ms / 1000);
+  const d = Math.floor(total / 86400);
+  const hh = String(Math.floor((total % 86400) / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+  const ss = String(total % 60).padStart(2, "0");
+  return (d ? d + " " + t("cd.day") + " " : "") + hh + ":" + mm + ":" + ss;
+}
+function countdownHtml(endIso) {
+  return endIso ? `<span class="cd" data-end="${esc(endIso)}">${esc(countdownText(endIso))}</span>` : "";
+}
+setInterval(() => document.querySelectorAll(".cd[data-end]").forEach((el) => { el.textContent = countdownText(el.dataset.end); }), 1000);
+
 /** A discount as a customer sees it: the percent, what it covers, until when, how many times. */
 function customerDiscountCard(d) {
   const bits = [discScopeText(d)];
@@ -4789,7 +4805,9 @@ function customerDiscountCard(d) {
   if (d.perCustomerLimit) bits.push(t("disc.perCustomer", { n: d.perCustomerLimit }));
   if (d.myTimesLeft != null) bits.push(t("disc.timesLeft", { n: d.myTimesLeft }));
   if (d.maxCustomers && d.peopleLeft != null) bits.push(t("disc.placesLeft", { n: d.peopleLeft, max: d.maxCustomers }));
-  return `<div class="disc-card"><b>${d.percent}%</b><div><strong>${esc(d.title)}</strong>${d.description ? `<p>${esc(d.description)}</p>` : ""}<small>${esc(bits.join(" · "))}</small></div></div>`;
+  const bar = d.maxCustomers && d.peopleLeft != null ? `<div class="disc-left" title="${esc(t("disc.placesLeft", { n: d.peopleLeft, max: d.maxCustomers }))}"><i style="width:${Math.max(0, Math.min(100, (d.peopleLeft / d.maxCustomers) * 100))}%"></i></div>` : "";
+  const clock = d.endDate ? `<div class="disc-cd">⏳ ${esc(t("cd.endsIn"))} ${countdownHtml(d.endDate)}</div>` : "";
+  return `<div class="disc-card"><b>${d.percent}%</b><div><strong>${esc(d.title)}</strong>${d.description ? `<p>${esc(d.description)}</p>` : ""}<small>${esc(bits.join(" · "))}</small>${clock}${bar}</div></div>`;
 }
 
 const DISC_STATE = { PENDING: "disc.st.PENDING", REJECTED: "disc.st.REJECTED", PAUSED: "disc.st.PAUSED", SCHEDULED: "disc.st.SCHEDULED", LIVE: "disc.st.LIVE", ENDED: "disc.st.ENDED" };
