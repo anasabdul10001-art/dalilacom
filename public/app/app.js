@@ -792,7 +792,7 @@ function tabCard() {
       <div style="font-size:13px;margin-top:2px">${esc((c.validUntil || "").slice(0, 10))}</div>
     </div>
     <div class="qr-wrap"><div id="qr-canvas"></div></div>
-    <div class="otp-code">${(c.code || "------").split("").join(" ")}</div>
+    <div class="otp-code">${fullCodeText(c.memberNumber, c.code)}</div>
     <div class="countdown">بيتجدد خلال ${c.secondsRemaining ?? 0} ثانية</div>
     ${errorBanner()}
   `;
@@ -851,9 +851,22 @@ async function startQrLoop() {
   tick();
 }
 
+/** The code a cashier can type in one field: the member number's digits, then the 6-digit code that changes every 30 seconds ("5276 4426 0196 3873"). */
+function fullCodeText(memberNumber, code) {
+  const digits = String(memberNumber || "").replace(/\D/g, "") + String(code || "");
+  return digits ? digits.replace(/(.{4})/g, "$1 ").trim() : "------";
+}
+
+/** The other way round: whatever the cashier typed (with spaces, dashes or the DLK- prefix) becomes the member number and the code. */
+function parseFullCode(text) {
+  const digits = latinDigits(String(text || "")).replace(/\D/g, "");
+  if (digits.length < 7) return null;
+  return { memberNumber: "DLK-" + digits.slice(0, -6), code: digits.slice(-6) };
+}
+
 function renderQrOnly() {
   const codeEl = document.querySelector(".otp-code");
-  if (codeEl) codeEl.textContent = (S._card.code || "------").split("").join(" ");
+  if (codeEl) codeEl.textContent = fullCodeText(S._card.memberNumber, S._card.code);
   const qrEl = qs("qr-canvas");
   if (qrEl && window.QRCode) {
     qrEl.innerHTML = "";
@@ -5196,8 +5209,7 @@ function tabRedeem() {
     return `
       <h1 class="screen-title">تأكيد حسم</h1>
       <p class="screen-sub">دخّل بيانات عضوية الزبون</p>
-      <div class="field"><label>رقم العضوية</label><input id="rd-member" placeholder="DLK-XXXXXXXXXX" value="${esc(r.memberNumber)}" /></div>
-      <div class="field"><label>الكود (6 أرقام)</label><input id="rd-code" placeholder="123456" maxlength="6" value="${esc(r.code)}" /></div>
+      <div class="field"><label>${esc(t("rd.full"))}</label><input id="rd-full" dir="ltr" inputmode="numeric" autocomplete="off" placeholder="0000 0000 0000 0000" value="${esc(r.full || "")}" /><p class="muted" style="margin:4px 0 0">${esc(t("rd.fullHint"))}</p></div>
       ${errorBanner()}
       <button class="btn" ${S.busy ? "disabled" : ""} onclick="verifyRedeem()">تحقق</button>
     `;
@@ -5243,11 +5255,13 @@ function resetRedeem() {
 }
 
 async function verifyRedeem() {
-  const memberNumber = qs("rd-member").value.trim();
-  const code = qs("rd-code").value.trim();
+  const full = qs("rd-full").value.trim();
+  S._redeem.full = full;
+  const parsed = parseFullCode(full);
+  if (!parsed) { S.error = t("rd.fullBad"); return render(); }
+  const { memberNumber, code } = parsed;
   S._redeem.memberNumber = memberNumber;
   S._redeem.code = code;
-  if (!memberNumber || code.length !== 6) { S.error = "دخّل رقم العضوية والكود المكوّن من 6 أرقام"; return render(); }
   S.busy = true; S.error = null; render();
   const { ok, data } = await api("POST", "/qr/verify", { memberNumber, code });
   S.busy = false;

@@ -77,16 +77,10 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
                 Text(AppStrings.get(R.string.s_9a2547dd), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = state.memberNumber,
-                    onValueChange = viewModel::onMemberNumberChange,
-                    label = { Text(AppStrings.get(R.string.s_8522fb76)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = state.code,
-                    onValueChange = viewModel::onCodeChange,
-                    label = { Text(AppStrings.get(R.string.s_ed8f478b)) },
+                    value = state.fullText,
+                    onValueChange = viewModel::onFullCodeChange,
+                    label = { Text(stringResource(R.string.redeem_full)) },
+                    supportingText = { Text(stringResource(R.string.redeem_full_hint)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )

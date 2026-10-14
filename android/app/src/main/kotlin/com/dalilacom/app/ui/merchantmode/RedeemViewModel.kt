@@ -16,6 +16,8 @@ import com.dalilacom.app.ui.common.parseCents
 enum class RedeemPhase { INPUT, VERIFIED, DONE }
 
 data class RedeemUiState(
+    /** What the cashier typed: the member number's digits then the 6-digit code, in one field. */
+    val fullText: String = "",
     val memberNumber: String = "",
     val code: String = "",
     val phase: RedeemPhase = RedeemPhase.INPUT,
@@ -37,7 +39,7 @@ class RedeemViewModel(private val repository: MerchantRepository) : ViewModel() 
     fun onScanned(rawText: String) {
         val parts = rawText.split(":", limit = 2)
         if (parts.size == 2) {
-            _uiState.value = _uiState.value.copy(memberNumber = parts[0], code = parts[1], error = null)
+            _uiState.value = _uiState.value.copy(memberNumber = parts[0], code = parts[1], fullText = parts[0].filter { it.isDigit() } + parts[1], error = null)
         } else {
             _uiState.value = _uiState.value.copy(error = AppStrings.get(R.string.s_8970aed0))
         }
@@ -55,12 +57,15 @@ class RedeemViewModel(private val repository: MerchantRepository) : ViewModel() 
         _uiState.value = _uiState.value.copy(selectedDiscountId = d.id, discountPercent = d.percent)
     }
 
-    fun onMemberNumberChange(value: String) {
-        _uiState.value = _uiState.value.copy(memberNumber = value)
-    }
-
-    fun onCodeChange(value: String) {
-        _uiState.value = _uiState.value.copy(code = value)
+    /** One field: the digits typed (spaces, dashes or the DLK- prefix are ignored) are the member number followed by the 6-digit code. */
+    fun onFullCodeChange(value: String) {
+        val digits = value.filter { it.isDigit() }
+        val ok = digits.length > 6
+        _uiState.value = _uiState.value.copy(
+            fullText = value,
+            memberNumber = if (ok) "DLK-" + digits.dropLast(6) else "",
+            code = if (ok) digits.takeLast(6) else "",
+        )
     }
 
     fun onBillAmountChange(value: String) {
@@ -70,7 +75,7 @@ class RedeemViewModel(private val repository: MerchantRepository) : ViewModel() 
     fun verify() {
         val state = _uiState.value
         if (state.memberNumber.isBlank() || state.code.length != 6) {
-            _uiState.value = state.copy(error = AppStrings.get(R.string.s_48e7fe4b))
+            _uiState.value = state.copy(error = AppStrings.get(R.string.redeem_full_bad))
             return
         }
         _uiState.value = state.copy(isLoading = true, error = null)

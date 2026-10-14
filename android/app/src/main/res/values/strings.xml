@@ -867,4 +867,7 @@
     <string name="ref_sent">وصل طلبك، الإدارة رح تراجعه ✓</string>
     <string name="ref_pending">طلبك بانتظار قرار الإدارة</string>
     <string name="ref_rejected">طلبك السابق ما انقبل. فيك تطلب من جديد.</string>
+    <string name="redeem_full">كود العضوية</string>
+    <string name="redeem_full_hint">الأرقام الكبيرة تحت الـ QR على بطاقة الزبون (16 رقم)</string>
+    <string name="redeem_full_bad">اكتب كود العضوية كامل كما هو على بطاقة الزبون</string>
 </resources>

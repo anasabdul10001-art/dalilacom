@@ -174,8 +174,9 @@ private fun MembershipCardContent(state: CardUiState, onRenew: () -> Unit) {
             Text(AppStrings.get(R.string.s_51963665), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(8.dp))
             Text(
-                text = code.chunked(1).joinToString(" "),
-                fontSize = 36.sp,
+                // the member number's digits then the changing code, in one line a cashier can type
+                text = (state.memberNumber.orEmpty().filter { it.isDigit() } + code).chunked(4).joinToString(" "),
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = PrimaryRed,
             )

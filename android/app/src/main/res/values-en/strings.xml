@@ -863,4 +863,7 @@
     <string name="ref_sent">Your request was sent, the administration will review it ✓</string>
     <string name="ref_pending">Your request is waiting for the administration\'s decision</string>
     <string name="ref_rejected">Your earlier request was not accepted. You can ask again.</string>
+    <string name="redeem_full">Membership code</string>
+    <string name="redeem_full_hint">The big numbers under the QR on the customer\'s card (16 digits)</string>
+    <string name="redeem_full_bad">Type the whole membership code as shown on the customer\'s card</string>
 </resources>
