@@ -4712,6 +4712,17 @@ function screenMerchantModeShell() {
   if (!S._mstat) { S._mstat = { loading: true }; loadMerchantStatus(); }
   const m = S._mstat;
   if (m.loading) return `<button class="back-btn" onclick="back()">‹ ${esc(t("shop.backToAccount"))}</button>${spinner()}`;
+  if (m.noShop) {
+    // an account made a business account (for example by the admin) but no shop was ever registered: the form is the way forward
+    return `
+      <button class="back-btn" onclick="back()">‹ ${esc(t("shop.backToAccount"))}</button>
+      <div class="guest-prompt">
+        <div class="guest-ico">🏪</div>
+        <h1 class="screen-title" style="margin:0">${esc(t("shop.noneTitle"))}</h1>
+        <p class="screen-sub">${esc(t("shop.noneSub"))}</p>
+        <button class="btn" onclick="S._mstat=null;go('merchantRegister')">${esc(t("shop.noneButton"))}</button>
+      </div>`;
+  }
   if (m.approvalStatus !== "APPROVED") {
     const refused = m.approvalStatus === "REJECTED";
     return `
@@ -4742,8 +4753,8 @@ function screenMerchantModeShell() {
 }
 
 async function loadMerchantStatus() {
-  const { ok, data } = await api("GET", "/merchant/me");
-  S._mstat = { loading: false, approvalStatus: ok ? data.approvalStatus : "PENDING", rejectionReason: ok ? data.rejectionReason : null };
+  const { ok, status, data } = await api("GET", "/merchant/me");
+  S._mstat = { loading: false, approvalStatus: ok ? data.approvalStatus : "PENDING", rejectionReason: ok ? data.rejectionReason : null, noShop: !ok && status === 404 };
   render();
 }
 

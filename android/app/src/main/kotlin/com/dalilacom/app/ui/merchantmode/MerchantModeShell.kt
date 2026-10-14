@@ -105,6 +105,23 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator() }
         return
     }
+    if (me == null) {
+        // a business account with no shop registered (for example made so by the admin): the form is the way forward
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            androidx.compose.material3.Text("🏪", style = MaterialTheme.typography.displayMedium)
+            Spacer(Modifier.height(12.dp))
+            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.shop_none_title), style = MaterialTheme.typography.headlineSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.shop_none_sub), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(20.dp))
+            androidx.compose.material3.Button(onClick = { rootNavController.navigate("merchantRegister") }, modifier = Modifier.fillMaxWidth()) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.shop_none_button)) }
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.material3.OutlinedButton(onClick = { meLoaded = false; meTick++ }, modifier = Modifier.fillMaxWidth()) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.shop_refresh)) }
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.material3.OutlinedButton(onClick = { rootNavController.popBackStack() }, modifier = Modifier.fillMaxWidth()) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.shop_back_to_account)) }
+        }
+        return
+    }
     if (me?.approvalStatus != "APPROVED") {
         PendingApproval(refused = me?.approvalStatus == "REJECTED", reason = me?.rejectionReason, onRefresh = { meLoaded = false; meTick++ }, onBack = { rootNavController.popBackStack() })
         return

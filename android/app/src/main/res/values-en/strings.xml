@@ -867,4 +867,7 @@
     <string name="redeem_full_hint">The big numbers under the QR on the customer\'s card (16 digits)</string>
     <string name="redeem_full_bad">Type the whole membership code as shown on the customer\'s card</string>
     <string name="addr_need">Write the shop\'s address, or pin its place on the map and the address fills itself in</string>
+    <string name="shop_none_title">You have not registered your business yet</string>
+    <string name="shop_none_sub">Your account is a business account, but you need to fill in the shop\'s details (name, profession, address) so the administration can review it.</string>
+    <string name="shop_none_button">Register your business</string>
 </resources>
