@@ -11,7 +11,12 @@ function loadSavedLang() {
     const saved = localStorage.getItem("dlk_lang");
     if (saved && LANGS[saved]) return saved;
   } catch (e) {}
-  return DEFAULT_LANG; // Arabic first — the browser's language is not guessed
+  // nothing chosen yet: the browser's language when the site has it, otherwise English
+  for (const l of navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""]) {
+    const code = String(l).slice(0, 2).toLowerCase();
+    if (LANGS[code]) return code;
+  }
+  return LANGS.en ? "en" : DEFAULT_LANG;
 }
 
 let LANG = DEFAULT_LANG;

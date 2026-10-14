@@ -24,7 +24,21 @@ object AppLanguages {
         // </languages>
     )
 
-    fun find(code: String?): AppLanguage = all.firstOrNull { it.code == code } ?: all.first { it.code == DEFAULT }
+    /** Opens in English when the phone's language is neither of the languages the app has. */
+    const val FALLBACK = "en"
+
+    /** The language the person chose, else the phone's own (when the app has it), else English. */
+    fun find(code: String?): AppLanguage =
+        all.firstOrNull { it.code == code } ?: deviceLanguage() ?: all.first { it.code == FALLBACK }
+
+    private fun deviceLanguage(): AppLanguage? {
+        val locales = androidx.core.os.LocaleListCompat.getAdjustedDefault()
+        for (i in 0 until locales.size()) {
+            val tag = locales[i]?.language ?: continue
+            all.firstOrNull { it.code == tag }?.let { return it }
+        }
+        return null
+    }
 }
 
 /** The strings of the language currently on screen, for code that runs outside a composable. */

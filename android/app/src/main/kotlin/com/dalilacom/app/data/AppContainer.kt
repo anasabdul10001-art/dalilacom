@@ -32,7 +32,7 @@ class AppContainer(context: Context) {
     val sessionExpired = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val api = ApiClient.create(
         tokenStore,
-        languageProvider = { kotlinx.coroutines.runBlocking { sessionStore.getLanguage() } ?: "ar" },
+        languageProvider = { com.dalilacom.app.ui.i18n.AppLanguages.find(kotlinx.coroutines.runBlocking { sessionStore.getLanguage() }).code },
         onSessionExpired = {
             kotlinx.coroutines.runBlocking { tokenStore.clearToken(); sessionStore.clearRole() }
             sessionExpired.tryEmit(Unit)

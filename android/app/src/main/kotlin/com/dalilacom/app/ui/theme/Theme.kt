@@ -95,6 +95,8 @@ private val AppShapes = Shapes(
     extraLarge = RoundedCornerShape(28.dp),
 )
 
+private const val MAX_FONT_SCALE = 1.2f
+
 @Composable
 fun DalilacomTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -104,7 +106,13 @@ fun DalilacomTheme(
     val colors = if (darkTheme) DarkColors else LightColors
     // All screens are Arabic today, so the whole UI is laid out right-to-left regardless of the
     // phone's language (a later localization pass will make this follow the device locale).
-    CompositionLocalProvider(LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+    // The phone's font size is followed only up to 1.2x: beyond it the bars and buttons are too narrow and words break letter by letter.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val capped = androidx.compose.ui.unit.Density(density.density, fontScale = density.fontScale.coerceAtMost(MAX_FONT_SCALE))
+    CompositionLocalProvider(
+        LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr,
+        androidx.compose.ui.platform.LocalDensity provides capped,
+    ) {
         MaterialTheme(colorScheme = colors, typography = AppTypography, shapes = AppShapes, content = content)
     }
 }

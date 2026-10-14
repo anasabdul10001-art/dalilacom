@@ -149,7 +149,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                                     contentAlignment = Alignment.Center,
                                 ) { Icon(tab.icon, contentDescription = stringResource(tab.labelRes), tint = Color.White) }
                             },
-                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, color = PrimaryRed) },
+                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, color = PrimaryRed, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                         )
                     } else {
                         NavigationBarItem(
@@ -162,7 +162,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                                 }
                             },
                             icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
-                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall) },
+                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                         )
                     }
                 }
