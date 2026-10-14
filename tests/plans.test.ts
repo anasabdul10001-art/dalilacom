@@ -256,4 +256,15 @@ describe("The account's country drives the price", () => {
     const bad = await request(app).patch("/profile/me").set("Authorization", user.bearer).send({ countryCode: "France" });
     expect(bad.status).toBe(400);
   });
+
+  it("a plan priced 0 is free everywhere: the catalogue says 0 credits and anyone can take the card without a wallet", async () => {
+    const plan = await prisma.servicePlan.create({ data: { service: "MEMBERSHIP", name: `Free card ${Date.now()}`, durationDays: 30, priceCents: 0, currency: "EUR", priceCredits: null } });
+    const catalogue = (await request(app).get("/plans/catalog")).body;
+    const row = catalogue.services.find((g: { service: string }) => g.service === "MEMBERSHIP").plans.find((p: { id: string }) => p.id === plan.id);
+    expect(row.priceCredits).toBe(0);
+    const person = await account("freecard");
+    const bought = await request(app).post("/membership/subscribe").set("Authorization", person.bearer).send({ planId: plan.id });
+    expect(bought.status).toBe(201);
+    expect(bought.body).toMatchObject({ status: "ACTIVE", creditsPaid: 0 });
+  });
 });

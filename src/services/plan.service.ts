@@ -65,7 +65,9 @@ function priceFor(plan: PlanWithPrices, countryId: string | null) {
   const override = countryId ? plan.prices.find((p) => p.countryId === countryId) : undefined;
   if (!override) {
     return {
-      priceCredits: plan.priceCredits,
+      // a plan that costs nothing is free in credits too (the subscribe endpoint charges 0 for it): without this the pricing
+      // pages showed "price not set yet" and offered no button for a plan the admin had set to 0
+      priceCredits: plan.priceCents === 0 ? 0 : plan.priceCredits,
       cashAmountCents: plan.priceCents,
       currency: plan.currency,
       priceFrom: "default" as const,
