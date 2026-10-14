@@ -64,6 +64,9 @@ export const en: LanguagePack = {
     "تم تجهيز بانرك وجدولته على الصفحة الأولى للمتجر.": "Your banner was made and scheduled on the store's front page.",
 
     "تمت الموافقة على حسمك": "Your discount was approved",
+    "تمت الموافقة على طلبك لتصبح مسوقًا": "Your request to become a marketer was approved",
+    "لم تتم الموافقة على طلبك لتصبح مسوقًا": "Your request to become a marketer was not approved",
+    "افتح التسويق لدليلكم من حسابك لتجد رابطك": "Open Market Dalilacom in your account to find your link",
     "لم تتم الموافقة على حسمك": "Your discount was not approved",
     "الحسم غير موجود": "Discount not found",
     "تاريخ غير صالح": "Invalid date",

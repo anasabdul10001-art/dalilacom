@@ -107,7 +107,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         _places.value = _places.value.copy(cityId = city.id)
     }
 
-    fun register(email: String, password: String, fullName: String) {
+    fun register(email: String, password: String, fullName: String, referralCode: String = "") {
         if (email.isBlank() || password.isBlank() || fullName.isBlank()) {
             _uiState.value = AuthUiState.Error(AppStrings.get(R.string.s_c5324447))
             return
@@ -116,7 +116,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         val p = _places.value
         val countryCode = p.countries.firstOrNull { it.id == p.countryId }?.isoCode2
         viewModelScope.launch {
-            repository.register(email, password, fullName, countryCode, p.cityId)
+            repository.register(email, password, fullName, countryCode, p.cityId, referralCode)
                 .onSuccess { _uiState.value = AuthUiState.Success }
                 .onFailure { _uiState.value = AuthUiState.Error(it.message ?: AppStrings.get(R.string.s_6c21e27c)) }
         }

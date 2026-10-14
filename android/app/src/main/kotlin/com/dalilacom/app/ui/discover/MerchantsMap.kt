@@ -56,6 +56,63 @@ private fun dot(context: Context, fill: Int, sizeDp: Int): GradientDrawable {
     }
 }
 
+/**
+ * A shop's pin: a round head with its logo (or the first letter of its name) and a point at the bottom; a shop with a discount
+ * wears a small yellow tag on top. The bottom tip is where the place is, so the marker is anchored there.
+ */
+private fun pinIcon(context: Context, name: String, logo: Bitmap?, hasDiscount: Boolean, selected: Boolean): BitmapDrawable {
+    val d = context.resources.displayMetrics.density
+    val head = (if (selected) 48 else 40) * d
+    val ring = 3 * d
+    val pad = 10 * d // room for the discount tag that sticks out
+    val tail = 9 * d
+    val width = (head + pad * 2).toInt()
+    val height = (head + tail + pad).toInt()
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val cx = width / 2f
+    val cy = pad + head / 2f
+    val fill = when { selected -> Color.BLACK; hasDiscount -> Color.parseColor("#BA2A34"); else -> Color.parseColor("#777777") }
+    paint.color = Color.WHITE
+    canvas.drawPath(Path().apply { moveTo(cx - 9 * d, cy + head / 2 - 3 * d); lineTo(cx, cy + head / 2 + tail); lineTo(cx + 9 * d, cy + head / 2 - 3 * d); close() }, paint)
+    canvas.drawCircle(cx, cy, head / 2f, paint)
+    paint.color = fill
+    canvas.drawPath(Path().apply { moveTo(cx - 7 * d, cy + head / 2 - 2 * d); lineTo(cx, cy + head / 2 + tail - 2.5f * d); lineTo(cx + 7 * d, cy + head / 2 - 2 * d); close() }, paint)
+    canvas.drawCircle(cx, cy, head / 2f - 1.5f * d, paint)
+    val inner = head / 2f - ring
+    if (logo != null) {
+        val save = canvas.save()
+        canvas.clipPath(Path().apply { addCircle(cx, cy, inner, Path.Direction.CW) })
+        val side = minOf(logo.width, logo.height)
+        val src = android.graphics.Rect((logo.width - side) / 2, (logo.height - side) / 2, (logo.width + side) / 2, (logo.height + side) / 2)
+        canvas.drawBitmap(logo, src, android.graphics.RectF(cx - inner, cy - inner, cx + inner, cy + inner), Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+        canvas.restoreToCount(save)
+    } else {
+        paint.color = Color.WHITE
+        paint.textAlign = Paint.Align.CENTER
+        paint.isFakeBoldText = true
+        paint.textSize = (if (selected) 22 else 18) * d
+        val letter = name.trim().take(1).uppercase().ifEmpty { "?" }
+        canvas.drawText(letter, cx, cy - (paint.descent() + paint.ascent()) / 2, paint)
+    }
+    if (hasDiscount) {
+        val r = 10 * d
+        val bx = cx + head / 2f - 2 * d
+        val by = pad + 2 * d
+        paint.color = Color.WHITE
+        canvas.drawCircle(bx, by, r + 2 * d, paint)
+        paint.color = Color.parseColor("#FFB300")
+        canvas.drawCircle(bx, by, r, paint)
+        paint.color = Color.parseColor("#111111")
+        paint.textAlign = Paint.Align.CENTER
+        paint.isFakeBoldText = true
+        paint.textSize = 13 * d
+        canvas.drawText("%", bx, by - (paint.descent() + paint.ascent()) / 2, paint)
+    }
+    return BitmapDrawable(context.resources, bitmap)
+}
+
 private fun clusterIcon(context: Context, count: Int): BitmapDrawable {
     val d = context.resources.displayMetrics.density
     val size = (44 * d).toInt()
@@ -141,6 +198,7 @@ fun MerchantsMap(
         }
     }
     val handler = remember { Handler(Looper.getMainLooper()) }
+    val logos = remember { HashMap<String, Bitmap?>() } // shop logos for the pins, by address
     val ignoreMovesUntil = remember { LongArray(1) }
     fun programmatic(block: () -> Unit) {
         ignoreMovesUntil[0] = SystemClock.uptimeMillis() + 1500
@@ -229,18 +287,19 @@ fun MerchantsMap(
         for (merchant in singles) {
             val hasDiscount = merchant.discounts.isNotEmpty()
             val selected = merchant.id == latestSelected
+            val logoUrl = merchant.avatarUrl?.takeIf { it.isNotBlank() }?.let { if (it.startsWith("http")) it else com.dalilacom.app.data.network.absoluteUrl(it) }
+            if (logoUrl != null && logoUrl !in logos) {
+                logos[logoUrl] = null // asked once; the pins are drawn again when the picture arrives
+                coil.Coil.imageLoader(context).enqueue(
+                    coil.request.ImageRequest.Builder(context).data(logoUrl).allowHardware(false)
+                        .target { drawable -> (drawable as? BitmapDrawable)?.bitmap?.let { logos[logoUrl] = it; map.post { redraw(map) } } }
+                        .build(),
+                )
+            }
             Marker(map).apply {
                 position = GeoPoint(merchant.latitude!!, merchant.longitude!!)
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                icon = dot(
-                    context,
-                    when {
-                        selected -> Color.BLACK
-                        hasDiscount -> Color.parseColor("#BA2A34")
-                        else -> Color.parseColor("#777777")
-                    },
-                    if (selected) 26 else 20,
-                )
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                icon = pinIcon(context, merchant.businessName, logoUrl?.let { logos[it] }, hasDiscount, selected)
                 title = merchant.businessName
                 setInfoWindow(null)
                 setOnMarkerClickListener { _, _ -> latestOnSelect(merchant.id); true }

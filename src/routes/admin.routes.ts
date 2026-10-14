@@ -24,6 +24,7 @@ import { editPhotoWithAi, imageEditAvailable, lastImageEditError } from "../serv
 import sharp from "sharp";
 import { invalidateProductCategories } from "../services/productCategory.service";
 import { decideProduct } from "../services/productModeration.service";
+import { createMarketer, decideMarketerRequest, listMarketerRequests, listMarketers, updateMarketer } from "../services/referral.service";
 import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion } from "../services/categorySuggestion.service";
 
 export const adminRouter = Router();
@@ -59,6 +60,15 @@ const settingsSchema = z.object({
       bannerPackages: z.array(z.object({ days: z.number().int().min(1).max(365), credits: z.number().int().nonnegative().max(100000000) })).max(12),
       autoApprove: z.boolean(),
       bannerSeconds: z.number().int().min(2).max(60),
+    })
+    .partial()
+    .optional(),
+  referral: z
+    .object({
+      marketerPercent: z.number().min(0).max(100),
+      marketerSignupCredits: z.number().int().nonnegative().max(100000000),
+      managerPercent: z.number().min(0).max(100),
+      managerSignupCredits: z.number().int().nonnegative().max(100000000),
     })
     .partial()
     .optional(),
@@ -159,6 +169,47 @@ adminRouter.put("/settings", async (req, res) => {
   }
   res.json(await saveSettings(parsed.data as any));
 });
+
+/* ---------------- marketers: people who bring others to Dalilacom through a referral link ---------------- */
+
+const optPercent = z.number().min(0).max(100).nullable().optional();
+const optCredits = z.number().int().nonnegative().max(100000000).nullable().optional();
+const marketerBase = { kind: z.enum(["MANAGER", "MARKETER"]), channel: z.enum(["ELECTRONIC", "FIELD"]).optional(), parentId: z.string().uuid().nullable().optional(), percent: optPercent, signupCredits: optCredits, teamPercent: optPercent, teamSignupCredits: optCredits };
+
+adminRouter.get("/marketers", route(async (_req, res) => {
+  res.json({ marketers: await listMarketers() });
+}));
+
+adminRouter.get("/marketer-requests", route(async (req, res) => {
+  const status = z.enum(["PENDING", "APPROVED", "REJECTED"]).catch("PENDING").parse(req.query.status);
+  res.json({ requests: await listMarketerRequests(status) });
+}));
+
+adminRouter.post("/marketer-requests/:id/approve", route(async (req, res) => {
+  const parsed = z.object({ kind: z.enum(["MANAGER", "MARKETER"]).optional(), parentId: z.string().uuid().nullable().optional() }).safeParse(req.body ?? {});
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await decideMarketerRequest(String(req.params.id), true, parsed.data);
+  res.json({ ok: true });
+}));
+
+adminRouter.post("/marketer-requests/:id/reject", route(async (req, res) => {
+  await decideMarketerRequest(String(req.params.id), false);
+  res.json({ ok: true });
+}));
+
+adminRouter.post("/marketers", route(async (req, res) => {
+  const parsed = z.object({ email: z.string().trim().email(), ...marketerBase }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const row = await createMarketer(parsed.data);
+  res.status(201).json({ id: row.id, code: row.code });
+}));
+
+adminRouter.patch("/marketers/:id", route(async (req, res) => {
+  const parsed = z.object({ ...marketerBase, isActive: z.boolean().optional() }).partial().safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await updateMarketer(String(req.params.id), parsed.data);
+  res.json({ ok: true });
+}));
 
 /* ---------------- accounts: who is who, and switching one off ---------------- */
 

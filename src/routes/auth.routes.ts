@@ -1,3 +1,4 @@
+import { attachReferral, payForSignup } from "../services/referral.service";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -76,12 +77,13 @@ const registerSchema = z.object({
   // Where the person lives, picked from the lists on the sign-up page. Optional; what does not match our lists is simply ignored.
   countryCode: z.string().trim().length(2).toUpperCase().optional(),
   cityId: z.string().uuid().optional(),
+  referralCode: z.string().trim().max(20).optional(), // the marketer's code from the link the person came with
 });
 
 authRouter.post("/register", registerRateLimiter, async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const { email, phone, password, fullName, countryCode, cityId } = parsed.data;
+  const { email, phone, password, fullName, countryCode, cityId, referralCode } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -102,6 +104,7 @@ authRouter.post("/register", registerRateLimiter, async (req, res) => {
     data: { email, phone, passwordHash, fullName, language: resolveLanguage(req), ...place },
   });
 
+  await attachReferral(user.id, referralCode).catch(() => false); // a wrong or old code never stops a sign-up
   const rawToken = await issueVerificationToken(user.id);
   await sendVerificationEmail(user.email, rawToken, resolveLanguage(req));
   await logSecurityEvent({ userId: user.id, type: "REGISTER", req });
@@ -187,6 +190,7 @@ async function consumeVerificationToken(rawToken: string) {
     }),
   ]);
   await logSecurityEvent({ userId: record.userId, type: "EMAIL_VERIFIED" });
+  await payForSignup(record.userId).catch(() => undefined); // the marketer who brought this person earns his fixed amount
   return { outcome: "VERIFIED" as const };
 }
 

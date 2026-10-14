@@ -867,7 +867,7 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
 
 /* ================= website layout: like a maps site (the Android app keeps its own design) =================
    Wide screens drop the phone frame: a slim rail with the logo and tabs, a results panel, and the map filling the rest.
-   Phones get the same screen without the frame. */
+   Phones and tablets get the same screen full width, without any frame. */
 
 @media (min-width: 900px) {
   body { display: block; padding: 0; gap: 0; height: 100vh; overflow: hidden; }
@@ -910,7 +910,7 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
   html[dir="rtl"] .mapfull .leaflet-top.leaflet-right { right: auto; left: 0; }
 }
 
-@media (max-width: 599px) {
+@media (max-width: 899px) {
   body { display: block; padding: 0; gap: 0; }
   .page-head { display: none; }
   .device { width: 100vw; max-width: none; height: 100vh; height: 100dvh; max-height: none; border-radius: 0; padding: 0; box-shadow: none; }

@@ -89,6 +89,13 @@ DICT.ar = {
 
   "profile.edit": "✏️ تعديل ملفي الشخصي", "profile.myAccount": "حسابي",
   "profile.merchantMode": "وضع النشاط", "profile.registerMerchant": "سجّل كصاحب نشاط",
+  "ref.become": "طلب التحويل إلى مسوّق", "ref.becomeSub": "اختر نوع التسويق اللي بيناسبك. الإدارة بتراجع طلبك وبتعلمك بالقرار.", "ref.phone": "رقم هاتفك (للتواصل)", "ref.note": "ملاحظة (اختياري)",
+  "ref.electronic": "مسوّق إلكتروني", "ref.electronicSub": "بتشارك رابطك عبر الإنترنت ومواقع التواصل", "ref.field": "مسوّق ميداني", "ref.fieldSub": "بتزور الناس والمحلات وبتعرّفهم على دليلكم",
+  "ref.sent": "وصل طلبك، الإدارة رح تراجعه ✓", "ref.pending": "طلبك بانتظار قرار الإدارة", "ref.rejected": "طلبك السابق ما انقبل. فيك تطلب من جديد.",
+  "ref.title": "التسويق لدليلكم", "ref.sub": "شارك رابطك. كل شخص يسجّل منه بتربح عنه مبلغ، وبتربح نسبة من اللي بيدفعه كمان.", "ref.subManager": "شارك رابطك أو خلّي فريقك يشاركوا روابطهم. بتربح عن كل شخص بيجيبه فريقك.",
+  "ref.link": "رابط الإحالة", "ref.copy": "نسخ الرابط", "ref.code": "الرمز", "ref.copied": "اتنسخ ✓", "ref.people": "الناس اللي جبتهم", "ref.earned": "أرباحك", "ref.teamPeople": "الناس اللي جابهم فريقك", "ref.fromTeam": "أرباحك من الفريق",
+  "ref.team": "فريقي", "ref.noTeam": "ما في مسوّقين بفريقك بعد", "ref.off": "موقوف", "ref.memberRow": "جاب {n} شخص — ربح {e}", "ref.none": "حسابك مو مسوّق. تواصل مع الإدارة إذا بدك تصير مسوّق.",
+  "ref.enter": "عندك رمز إحالة؟", "ref.apply": "تطبيق الرمز", "ref.ok": "تم تطبيق الرمز ✓", "ref.bad": "الرمز غير صحيح", "ref.already": "أنت مسجّل برمز إحالة أصلًا", "ref.codeOptional": "رمز الإحالة (اختياري)",
   "profile.store": "🛍️ المتجر", "profile.affiliates": "مسوّقياتي", "profile.responder": "🤖 المجيب الآلي",
   "store.add": "أضف للسلة", "store.added": "أُضيف", "store.all": "الكل", "store.more": "عرض المزيد", "store.noResults": "ما لقينا منتجات مطابقة",
   "store.resultsFor": "نتائج البحث عن", "store.searchPlaceholder": "ابحث عن منتج أو متجر",

@@ -50,31 +50,33 @@ enum AffiliateSourceType {
 }
 
 model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
-  phone           String?   @unique
-  passwordHash    String
-  fullName        String
-  role            Role      @default(CUSTOMER)
-  tokenVersion    Int       @default(0) // bumped on logout / password reset to invalidate existing JWTs (section 56)
-  isEmailVerified Boolean   @default(false)
-  isDisabled      Boolean   @default(false) // admin-controlled kill switch, blocks login regardless of tokenVersion
+  id                String    @id @default(uuid())
+  email             String    @unique
+  phone             String?   @unique
+  passwordHash      String
+  fullName          String
+  role              Role      @default(CUSTOMER)
+  tokenVersion      Int       @default(0) // bumped on logout / password reset to invalidate existing JWTs (section 56)
+  isEmailVerified   Boolean   @default(false)
+  referredById      String? // the marketer whose link or code this account came from
+  referredAt        DateTime?
+  isDisabled        Boolean   @default(false) // admin-controlled kill switch, blocks login regardless of tokenVersion
   // Last place the app reported (rounded to ~1 km), so a merchant can announce "within 5 km of my shop".
   // Optional: only set while the person uses the map with location allowed; cleared by DELETE /profile/location.
   lastLatitude      Float?
   lastLongitude     Float?
   locationUpdatedAt DateTime?
-  bio             String? // short public description shown on the account's profile / shop page
-  language        String? // preferred language (ar, en, ...): what push notifications and emails are written in
+  bio               String? // short public description shown on the account's profile / shop page
+  language          String? // preferred language (ar, en, ...): what push notifications and emails are written in
   // Country/city used for per-country pricing and tax (sections 64/58). Deliberately a plain ISO-2
   // code rather than a relation: it is set from the account's own claims/address and never needs a
   // join to render a price. `cityId` points at a GeoUnit.
-  countryCode     String?
-  cityId          String?
-  vatNumber       String? // EU business customers: shown on invoices, enables reverse charge later
-  avatarUpdatedAt DateTime? // set when a profile photo exists; also the cache-busting version in its URL
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  countryCode       String?
+  cityId            String?
+  vatNumber         String? // EU business customers: shown on invoices, enables reverse charge later
+  avatarUpdatedAt   DateTime? // set when a profile photo exists; also the cache-busting version in its URL
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   memberships     Membership[]
   merchantProfile MerchantProfile?
@@ -108,6 +110,10 @@ model User {
   loginTickets            LoginTicket[]
   notificationPreferences NotificationPreference[]
   metaOAuthSessions       MetaOAuthSession[]
+
+  marketer         Marketer?         @relation("MarketerUser")
+  marketerRequests MarketerRequest[]
+  referredBy       Marketer?         @relation("ReferredBy", fields: [referredById], references: [id])
 }
 
 // Only a SHA-256 hash of the raw token is ever stored — the raw value exists only in the
@@ -376,7 +382,7 @@ model ShopBranch {
 
 // A product in a merchant's e-commerce store (section 5/26)
 model Product {
-  id                    String   @id @default(uuid())
+  id                    String            @id @default(uuid())
   merchantId            String
   categoryId            String?
   moderation            ProductModeration @default(APPROVED) // only approved products are shown to shoppers
@@ -386,24 +392,24 @@ model Product {
   name                  String
   description           String?
   priceCents            Int
-  memberDiscountEnabled Boolean  @default(false)
+  memberDiscountEnabled Boolean           @default(false)
   memberPriceCents      Int? // set by the merchant when memberDiscountEnabled (section 5 example: €100 -> €85)
-  stock                 Int      @default(0)
+  stock                 Int               @default(0)
   sku                   String?
-  isActive              Boolean  @default(true) // merchant-controlled visibility, independent of stock (section 59.1)
+  isActive              Boolean           @default(true) // merchant-controlled visibility, independent of stock (section 59.1)
   // The online store: a picture (a generated one is drawn from `icon` when there is no photo), the section it is
   // listed under, and the figures a shopper looks at.
   imageUrl              String?
-  images                String[] @default([]) // every picture, the first one is imageUrl
+  images                String[]          @default([]) // every picture, the first one is imageUrl
   specs                 Json? // [{ label, value }] shown as the product's details
   condition             String? // NEW | USED
   icon                  String?
   storeSection          String?
-  rating                Float    @default(0)
-  ratingCount           Int      @default(0)
-  soldCount             Int      @default(0)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  rating                Float             @default(0)
+  ratingCount           Int               @default(0)
+  soldCount             Int               @default(0)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   merchant           MerchantProfile     @relation(fields: [merchantId], references: [id])
   category           Category?           @relation(fields: [categoryId], references: [id])
@@ -411,10 +417,10 @@ model Product {
   orderItems         OrderItem[]
   affiliateReferrals AffiliateReferral[]
   adBookings         AdBooking[]
+  productCategory    ProductCategory?    @relation(fields: [productCategoryId], references: [id])
 
   @@index([merchantId])
   @@index([storeSection])
-  productCategory ProductCategory? @relation(fields: [productCategoryId], references: [id])
   @@index([productCategoryId])
 }
 
@@ -483,25 +489,25 @@ model OrderItem {
 
 // A discount rule offered by a merchant (section 4)
 model Discount {
-  id         String    @id @default(uuid())
-  merchantId String
-  title      String
-  percent    Int
-  isActive   Boolean   @default(true)
-  startDate  DateTime?
-  endDate    DateTime?
+  id               String           @id @default(uuid())
+  merchantId       String
+  title            String
+  percent          Int
+  isActive         Boolean          @default(true)
+  startDate        DateTime?
+  endDate          DateTime?
   // The shop's own terms: what it covers (ALL | SECTION | PRODUCTS), who may use it and how often, and a note for customers.
   description      String?
-  scope            String    @default("ALL")
+  scope            String           @default("ALL")
   scopeSection     String?
-  productIds       String[]  @default([])
+  productIds       String[]         @default([])
   maxCustomers     Int? // how many different people may get it (null = no limit)
   perCustomerLimit Int? // how many times each person may get it (null = no limit)
   // The super admin approves every discount before customers can use it.
   status           DiscountApproval @default(PENDING)
   rejectionReason  String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   merchant             MerchantProfile       @relation(fields: [merchantId], references: [id])
   discountTransactions DiscountTransaction[]
@@ -609,6 +615,7 @@ enum WalletTxType {
   BROADCAST // a shop paid for an announcement (or got the money back when it was refused)
   AD // a shop paid for advertising space in the store (or got the money back)
   AI // a shop paid for AI help with its photos or descriptions beyond the free uses
+  COMMISSION // a marketer or marketing manager earned a commission (or a fixed amount for a sign-up)
   ADJUSTMENT
 }
 
@@ -1270,31 +1277,31 @@ model MetaOAuthSession {
 // An announcement sent to everyone in a place (admin: anywhere; merchant: with their own product/offer attached).
 // Kept as history, and it is what the merchant's daily limit is counted from.
 model Broadcast {
-  id           String   @id @default(uuid())
-  senderId     String
-  senderRole   Role
-  scope        String // COUNTRY | PLACE | RADIUS
-  countryId    String?
-  geoUnitId    String?
-  latitude     Float?
-  longitude    Float?
-  radiusKm     Float?
-  audienceRole Role?
-  title        String
-  body         String
-  productId    String?
-  discountId   String?
-  targeted     Int // sent: how many were reached; pending: the estimate at submission
-  delivered    Int
+  id             String    @id @default(uuid())
+  senderId       String
+  senderRole     Role
+  scope          String // COUNTRY | PLACE | RADIUS
+  countryId      String?
+  geoUnitId      String?
+  latitude       Float?
+  longitude      Float?
+  radiusKm       Float?
+  audienceRole   Role?
+  title          String
+  body           String
+  productId      String?
+  discountId     String?
+  targeted       Int // sent: how many were reached; pending: the estimate at submission
+  delivered      Int
   // A merchant's announcement is reviewed (by an AI screen, then always by an admin) before anyone receives it.
-  status       String   @default("SENT") // PENDING_REVIEW | SENT | REJECTED
-  aiVerdict    String? // OK | REVIEW | BLOCK; null when no AI provider was available
-  aiReasons    Json?
-  reviewNote   String? // why it was rejected
-  reviewedById String?
-  reviewedAt   DateTime?
-  creditsCharged Int     @default(0) // what the shop paid for it (0 = covered by its plan); refunded if refused
-  createdAt    DateTime @default(now())
+  status         String    @default("SENT") // PENDING_REVIEW | SENT | REJECTED
+  aiVerdict      String? // OK | REVIEW | BLOCK; null when no AI provider was available
+  aiReasons      Json?
+  reviewNote     String? // why it was rejected
+  reviewedById   String?
+  reviewedAt     DateTime?
+  creditsCharged Int       @default(0) // what the shop paid for it (0 = covered by its plan); refunded if refused
+  createdAt      DateTime  @default(now())
 
   sender User @relation(fields: [senderId], references: [id])
 
@@ -1510,29 +1517,29 @@ model ShippingMethod {
 
 /// One use of the AI by a shop (a description from a photo, or an AI photo edit): free ones count against the monthly allowance.
 model AiUse {
-  id        String   @id @default(uuid())
-  userId    String
-  kind      String
-  credits   Int      @default(0) // what it cost; 0 = it was a free use or part of a package
+  id             String   @id @default(uuid())
+  userId         String
+  kind           String
+  credits        Int      @default(0) // what it cost; 0 = it was a free use or part of a package
   subscriptionId String? // set when a monthly package paid for it
-  createdAt DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   @@index([userId, createdAt])
 }
 
 /// A shop's monthly AI package (fixed price, a number of uses, a period): bought from the wallet, extended by buying again.
 model AiSubscription {
-  id        String   @id @default(uuid())
-  userId    String
-  packageId String
-  name      String
-  uses      Int // uses included in the period bought so far
-  startDate DateTime @default(now())
-  endDate   DateTime
-  autoRenew Boolean  @default(true) // buy the same package again from the wallet when this one ends
-  renewedAt DateTime? // set once the renewal was done (or the package was replaced)
+  id            String    @id @default(uuid())
+  userId        String
+  packageId     String
+  name          String
+  uses          Int // uses included in the period bought so far
+  startDate     DateTime  @default(now())
+  endDate       DateTime
+  autoRenew     Boolean   @default(true) // buy the same package again from the wallet when this one ends
+  renewedAt     DateTime? // set once the renewal was done (or the package was replaced)
   renewFailedAt DateTime? // the shop was told that the wallet could not pay the renewal
-  createdAt DateTime @default(now())
+  createdAt     DateTime  @default(now())
 
   @@index([userId, endDate])
 }
@@ -1602,4 +1609,73 @@ enum ProductModeration {
   APPROVED
   PENDING
   REJECTED
+}
+
+// People who bring Dalilacom's services to others through a referral link. A marketing manager has marketers under him.
+// How a marketer works: online (links shared on the internet) or in the field (meeting people in person).
+enum MarketerChannel {
+  ELECTRONIC
+  FIELD
+}
+
+enum MarketerKind {
+  MANAGER
+  MARKETER
+}
+
+model Marketer {
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  kind              MarketerKind
+  channel           MarketerChannel @default(ELECTRONIC)
+  parentId          String? // the marketing manager above a marketer
+  code              String          @unique // the referral code in the link
+  percent           Float? // own share of what the people he brought spend (null = the platform default)
+  signupCredits     Int? // own fixed amount per verified sign-up (null = the platform default)
+  teamPercent       Float? // manager: share of what his team's people spend (null = the platform default)
+  teamSignupCredits Int? // manager: fixed amount per verified sign-up of his team (null = the platform default)
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+
+  user     User              @relation("MarketerUser", fields: [userId], references: [id])
+  parent   Marketer?         @relation("Team", fields: [parentId], references: [id])
+  members  Marketer[]        @relation("Team")
+  referred User[]            @relation("ReferredBy")
+  earnings MarketerEarning[]
+
+  @@index([parentId])
+}
+
+// What each marketer earned, one row per earning, so the amounts can be explained.
+model MarketerEarning {
+  id            String   @id @default(uuid())
+  marketerId    String
+  kind          String // SIGNUP | PAYMENT
+  amount        Int // wallet credits
+  fromUserId    String? // the referred person it came from
+  viaMarketerId String? // a manager's earning: the marketer of his team who brought that person
+  ref           String?
+  createdAt     DateTime @default(now())
+
+  marketer Marketer @relation(fields: [marketerId], references: [id])
+
+  @@index([marketerId])
+  @@index([fromUserId])
+}
+
+// A person asks to become a marketer; the admin accepts (a Marketer is made) or refuses.
+model MarketerRequest {
+  id        String          @id @default(uuid())
+  userId    String
+  channel   MarketerChannel
+  phone     String?
+  note      String?
+  status    String          @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt DateTime        @default(now())
+  decidedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
 }

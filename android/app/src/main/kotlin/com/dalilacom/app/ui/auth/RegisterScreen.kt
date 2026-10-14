@@ -53,6 +53,7 @@ fun RegisterScreen(
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var referralCode by remember { mutableStateOf("") }
     var signupIntent by remember { mutableStateOf(SignupIntent.CUSTOMER) }
     val places by viewModel.places.collectAsState()
     LaunchedEffect(Unit) { viewModel.loadPlaces() }
@@ -119,6 +120,14 @@ fun RegisterScreen(
                 PlaceDropdown(AppStrings.get(R.string.account_city), places.cities, places.cityId) { viewModel.pickCity(it) }
             }
         }
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = referralCode,
+            onValueChange = { referralCode = it.uppercase() },
+            label = { Text(stringResource(R.string.ref_code_optional)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Spacer(Modifier.height(20.dp))
 
         if (uiState is AuthUiState.Error) {
@@ -130,7 +139,7 @@ fun RegisterScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.register(email.trim(), password, fullName.trim()) },
+                onClick = { viewModel.register(email.trim(), password, fullName.trim(), referralCode) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(AppStrings.get(R.string.s_a40a6e99)) }
         }

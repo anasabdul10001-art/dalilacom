@@ -94,6 +94,20 @@ class MerchantRepository(
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
     }
 
+    suspend fun referralMe(): com.dalilacom.app.data.network.ReferralMeDto? =
+        safeApiCall { api.referralMe() }?.takeIf { it.isSuccessful }?.body()
+
+    /** A person who came without a code (for example with Google) enters the one he was given. Returns the server's answer. */
+    suspend fun useReferral(code: String): com.dalilacom.app.data.network.UseReferralResponse? =
+        safeApiCall { api.useReferral(com.dalilacom.app.data.network.UseReferralRequest(code.trim())) }?.takeIf { it.isSuccessful }?.body()
+
+    /** Asks to become an online ("ELECTRONIC") or field ("FIELD") marketer; the administration decides. */
+    suspend fun requestMarketer(channel: String, phone: String, note: String): Result<Unit> {
+        val response = safeApiCall { api.requestMarketer(com.dalilacom.app.data.network.MarketerRequestBody(channel, phone.trim().ifEmpty { null }, note.trim().ifEmpty { null })) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
+    }
+
     suspend fun storePlans(): com.dalilacom.app.data.network.StorePlansDto? =
         safeApiCall { api.storePlans() }?.takeIf { it.isSuccessful }?.body()
 

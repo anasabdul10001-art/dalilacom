@@ -32,6 +32,7 @@ import { notificationRouter } from "./routes/notification.routes";
 import { planRouter } from "./routes/plan.routes";
 import { broadcastRouter } from "./routes/broadcast.routes";
 import { socialRouter } from "./routes/social.routes";
+import { referralRouter } from "./routes/referral.routes";
 import { legalRouter } from "./routes/legal.routes";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
@@ -119,6 +120,7 @@ app.use("/profile", profileRouter);
 app.use("/invoices", invoiceRouter);
 app.use("/notifications", notificationRouter);
 app.use("/plans", planRouter);
+app.use("/referral", referralRouter);
 app.use("/broadcasts", broadcastRouter);
 
 app.use((_req, res) => {

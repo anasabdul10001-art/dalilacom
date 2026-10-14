@@ -52,6 +52,7 @@ fun ProfileScreen(
     onOpenStore: () -> Unit = {},
     onOpenMyAds: () -> Unit = {},
     onOpenWallet: () -> Unit,
+    onOpenMarketing: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     var role by remember { mutableStateOf<String?>(null) }
@@ -139,6 +140,8 @@ fun ProfileScreen(
         }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onOpenWallet, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_wallet)) }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onOpenMarketing, modifier = Modifier.fillMaxWidth()) { Text("📣 " + stringResource(R.string.ref_title)) }
         Spacer(Modifier.height(16.dp))
 
         Button(onClick = {

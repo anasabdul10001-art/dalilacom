@@ -53,6 +53,12 @@ export interface PlatformSettings {
   ads: AdSettings;
   /** The AI for shops (descriptions from photos, photo editing): free uses per month, then a price in wallet credits. */
   ai: { freePerMonth: number; creditsPerUse: number; packages: AiPackage[] };
+  /**
+   * What marketers earn (0 = nothing until the owner sets it). A marketer gets `marketerPercent` of what the people he
+   * brought spend and `marketerSignupCredits` for each of them who verifies the account; a marketing manager gets
+   * `managerPercent` and `managerSignupCredits` for the people his team brought. A person's own numbers override these.
+   */
+  referral: { marketerPercent: number; marketerSignupCredits: number; managerPercent: number; managerSignupCredits: number };
 }
 
 export const DEFAULT_SETTINGS: PlatformSettings = {
@@ -76,6 +82,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
     autoApprove: false,
     bannerSeconds: 5,
   },
+  referral: { marketerPercent: 0, marketerSignupCredits: 0, managerPercent: 0, managerSignupCredits: 0 },
   ai: {
     freePerMonth: 10,
     creditsPerUse: 5,
@@ -97,6 +104,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     broadcasts: { ...DEFAULT_SETTINGS.broadcasts, ...(stored.broadcasts ?? {}) },
     ads: { ...DEFAULT_SETTINGS.ads, ...(stored.ads ?? {}) },
     ai: { ...DEFAULT_SETTINGS.ai, ...(stored.ai ?? {}) },
+    referral: { ...DEFAULT_SETTINGS.referral, ...(stored.referral ?? {}) },
   };
 }
 
@@ -110,6 +118,7 @@ export async function saveSettings(patch: Partial<PlatformSettings>) {
     broadcasts: { ...current.broadcasts, ...(patch.broadcasts ?? {}) },
     ads: { ...current.ads, ...(patch.ads ?? {}) },
     ai: { ...current.ai, ...(patch.ai ?? {}) },
+    referral: { ...current.referral, ...(patch.referral ?? {}) },
   };
   for (const [key, value] of Object.entries(next)) {
     await prisma.platformSetting.upsert({ where: { key }, update: { value: value as object }, create: { key, value: value as object } });

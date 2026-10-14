@@ -355,6 +355,15 @@ interface ApiService {
     @POST("cart/checkout")
     suspend fun checkout(@Body body: CheckoutRequest): Response<List<OrderDto>>
 
+    @GET("referral/me")
+    suspend fun referralMe(): Response<ReferralMeDto>
+
+    @POST("referral/request")
+    suspend fun requestMarketer(@Body body: MarketerRequestBody): Response<Unit>
+
+    @POST("referral/use")
+    suspend fun useReferral(@Body body: UseReferralRequest): Response<UseReferralResponse>
+
     @GET("merchant/store-plans")
     suspend fun storePlans(): Response<StorePlansDto>
 

@@ -90,6 +90,13 @@ DICT.en = {
 
   "profile.edit": "✏️ Edit my profile", "profile.myAccount": "My account",
   "profile.merchantMode": "Business mode", "profile.registerMerchant": "Register as a business",
+  "ref.become": "Ask to become a marketer", "ref.becomeSub": "Choose the kind of marketing that suits you. The administration reviews your request and lets you know.", "ref.phone": "Your phone (to reach you)", "ref.note": "Note (optional)",
+  "ref.electronic": "Online marketer", "ref.electronicSub": "You share your link on the internet and social media", "ref.field": "Field marketer", "ref.fieldSub": "You visit people and shops and introduce them to Dalilacom",
+  "ref.sent": "Your request was sent, the administration will review it ✓", "ref.pending": "Your request is waiting for the administration's decision", "ref.rejected": "Your earlier request was not accepted. You can ask again.",
+  "ref.title": "Market Dalilacom", "ref.sub": "Share your link. You earn an amount for every person who signs up with it, and a share of what they pay.", "ref.subManager": "Share your link, or let your team share theirs. You earn on everyone your team brings.",
+  "ref.link": "Referral link", "ref.copy": "Copy the link", "ref.code": "Code", "ref.copied": "Copied ✓", "ref.people": "People you brought", "ref.earned": "Your earnings", "ref.teamPeople": "People your team brought", "ref.fromTeam": "Your earnings from the team",
+  "ref.team": "My team", "ref.noTeam": "No marketers in your team yet", "ref.off": "Switched off", "ref.memberRow": "Brought {n} people — earned {e}", "ref.none": "Your account is not a marketer. Contact the administration to become one.",
+  "ref.enter": "Have a referral code?", "ref.apply": "Apply the code", "ref.ok": "Code applied ✓", "ref.bad": "That code is not valid", "ref.already": "You already signed up with a referral code", "ref.codeOptional": "Referral code (optional)",
   "profile.store": "🛍️ Store", "profile.affiliates": "My affiliations", "profile.responder": "🤖 Auto-responder",
   "store.add": "Add to cart", "store.added": "Added", "store.all": "All", "store.more": "Show more", "store.noResults": "No matching products",
   "store.resultsFor": "Results for", "store.searchPlaceholder": "Search products or shops",

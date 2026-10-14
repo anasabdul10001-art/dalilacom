@@ -1,3 +1,4 @@
+import { commissionOnSpending } from "./referral.service";
 import { Prisma, WalletTxType } from "@prisma/client";
 
 export class InsufficientBalanceError extends Error {
@@ -24,6 +25,8 @@ export async function adjustBalance(
   }
   const updated = await tx.wallet.update({ where: { userId }, data: { balance: { increment: amount } } });
   const created = await tx.walletTransaction.create({ data: { userId, type, amount, ref } });
+  // what a referred person spends earns the marketer who brought him (and the manager above) their share
+  if (amount < 0) await commissionOnSpending(tx, userId, -amount, type, ref);
   return { balance: updated.balance, transactionId: created.id };
 }
 

@@ -3,7 +3,7 @@ package com.dalilacom.app.data.network
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class RegisterRequest(val email: String, val password: String, val fullName: String, val countryCode: String? = null, val cityId: String? = null)
+data class RegisterRequest(val email: String, val password: String, val fullName: String, val countryCode: String? = null, val cityId: String? = null, val referralCode: String? = null)
 
 @Serializable
 data class LoginRequest(val email: String, val password: String)
@@ -967,3 +967,36 @@ data class AdDayDto(val date: String, val free: Int = 0, val canStart: Boolean =
 
 @Serializable
 data class AdAvailabilityDto(val slots: Int = 6, val days: List<AdDayDto> = emptyList())
+
+/** A marketer's own page: the link to share, the people brought, what was earned (a manager also sees his team). */
+@Serializable
+data class ReferralTeamMemberDto(val id: String = "", val name: String = "", val active: Boolean = true, val people: Int = 0, val earned: Int = 0)
+
+@Serializable
+data class ReferralRequestDto(val channel: String = "", val status: String = "")
+
+@Serializable
+data class MarketerRequestBody(val channel: String, val phone: String? = null, val note: String? = null)
+
+@Serializable
+data class ReferralMeDto(
+    val isMarketer: Boolean = false,
+    val referred: Boolean = false,
+    val request: ReferralRequestDto? = null,
+    val kind: String = "",
+    val channel: String = "",
+    val code: String = "",
+    val link: String = "",
+    val people: Int = 0,
+    val earned: Int = 0,
+    val team: List<ReferralTeamMemberDto> = emptyList(),
+    val teamPeople: Int = 0,
+    val earnedFromTeam: Int = 0,
+    val creditName: String = "",
+)
+
+@Serializable
+data class UseReferralRequest(val code: String)
+
+@Serializable
+data class UseReferralResponse(val ok: Boolean = false, val reason: String? = null)

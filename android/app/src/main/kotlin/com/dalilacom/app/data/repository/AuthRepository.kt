@@ -29,8 +29,8 @@ class AuthRepository(
     suspend fun units(countryId: String? = null, level: String? = null, parentId: String? = null): List<GeoUnitDto> =
         safeApiCall { api.geoChildren(countryId, level, parentId) }?.takeIf { it.isSuccessful }?.body().orEmpty()
 
-    suspend fun register(email: String, password: String, fullName: String, countryCode: String? = null, cityId: String? = null): Result<UserDto> {
-        val response = safeApiCall { api.register(RegisterRequest(email, password, fullName, countryCode, cityId)) }
+    suspend fun register(email: String, password: String, fullName: String, countryCode: String? = null, cityId: String? = null, referralCode: String? = null): Result<UserDto> {
+        val response = safeApiCall { api.register(RegisterRequest(email, password, fullName, countryCode, cityId, referralCode?.trim()?.takeIf { it.isNotEmpty() })) }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {

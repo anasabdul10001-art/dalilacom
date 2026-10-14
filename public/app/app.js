@@ -118,6 +118,7 @@ function setToken(token, role) {
   if (S._discover) loadFavIds();
   loadMarket(); // the account's own country decides the currency
   saveAccountLanguage(); // push notifications and emails are written in this language
+  claimStoredJoin(); // a code from a referral link, for accounts made with Google or Facebook
 }
 
 function saveAccountLanguage() {
@@ -133,6 +134,7 @@ function clearToken() {
   if (S._discover) S._discover.favIds = [];
   S._favorites = null;
   S.account = null;
+  S._refMe = null;
   S._onboarding = null;
   S._mprof = null;
   S._profile = null;
@@ -407,6 +409,7 @@ function renderScreen() {
     case "aiPlans": return screenAiPlans();
     case "productEdit": return screenProductEdit();
     case "affiliateMine": return screenAffiliateMine();
+    case "marketing": return screenMarketing();
     case "wallet": return screenWallet();
     case "responder": return screenResponder();
     case "favorites": return screenFavorites();
@@ -602,6 +605,7 @@ function screenRegister() {
     <div class="field"><label>الدولة</label><select id="f-country" onchange="regPickCountry()"><option value="">— اختر الدولة —</option>${countryOpts}</select></div>
     ${g.regions.length ? `<div class="field"><label>المحافظة</label><select id="f-region" onchange="regPickRegion()"><option value="">— اختر المحافظة —</option>${regionOpts}</select></div>` : ""}
     <div class="field"><label>المدينة</label><select id="f-city" ${g.cities.length ? "" : "disabled"}><option value="">${cityHint}</option>${cityOpts}</select></div>
+    <div class="field"><label>${esc(t("ref.codeOptional"))}</label><input id="f-ref" dir="ltr" autocapitalize="characters" value="${esc(draft.ref !== undefined ? draft.ref : storedJoin())}" /></div>
     ${errorBanner()}
     <button class="btn" onclick="doRegister()">إنشاء الحساب</button>
     ${socialButtonsHtml()}
@@ -617,6 +621,7 @@ function snapshotRegisterDraft() {
     country: qs("f-country") ? qs("f-country").value : (S.params.draft || {}).country,
     region: qs("f-region") ? qs("f-region").value : (S.params.draft || {}).region,
     city: qs("f-city") ? qs("f-city").value : (S.params.draft || {}).city,
+    ref: qs("f-ref") ? qs("f-ref").value : (S.params.draft || {}).ref,
   };
 }
 
@@ -685,9 +690,11 @@ async function doRegister() {
   const d = S.params.draft || {};
   if (d.country) body.countryCode = d.country;
   if (d.city) body.cityId = d.city;
+  if (d.ref && d.ref.trim()) body.referralCode = d.ref.trim();
   const { ok, data } = await api("POST", "/auth/register", body);
   S.busy = false;
   if (ok) {
+    forgetJoin();
     setToken(data.token, data.user.role);
     const wantsMerchant = S.params.intent === "MERCHANT";
     reset("home");
@@ -1233,11 +1240,16 @@ function syncMapMarkers() {
     located.forEach((m) => {
       const hasDiscount = (m.discounts || []).length > 0;
       const selected = d.selectedId === m.id;
-      const size = selected ? 36 : 28;
+      // the pin carries the shop's logo, or the first letter of its name; a shop with a discount wears a small tag on top
+      const size = selected ? 46 : 38;
       const bg = selected ? "#111" : hasDiscount ? "#ba2a34" : "#8a7a78";
+      const inner = m.avatarUrl
+        ? `<img src="${esc(m.avatarUrl)}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;transform:rotate(45deg);background:#fff">`
+        : `<span style="transform:rotate(45deg);font-weight:800;font-size:${selected ? 19 : 16}px;line-height:1">${esc((m.businessName || "?").trim().slice(0, 1).toUpperCase())}</span>`;
+      const badge = hasDiscount ? `<span style="position:absolute;top:-9px;right:-9px;width:20px;height:20px;border-radius:50%;background:#ffb300;color:#111;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 5px rgba(0,0,0,.4);z-index:2">🏷️</span>` : "";
       const icon = L.divIcon({
         className: "",
-        html: `<div style="background:${bg};color:#fff;width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.4);border:2px solid #fff"><span style="transform:rotate(45deg);font-size:${selected ? 16 : 13}px">${hasDiscount ? "🏷️" : "📍"}</span></div>`,
+        html: `<div style="position:relative;width:${size}px;height:${size}px"><div style="background:${bg};color:#fff;width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.4);border:3px solid ${bg}">${inner}</div>${badge}</div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size],
       });
@@ -1507,6 +1519,7 @@ function tabProfile() {
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>
       <div style="height:10px"></div>
+      ${(() => { if (S._refMe == null) { loadRefMe(); return ""; } return `<button class="btn outline" style="max-width:240px" onclick="go('marketing')">📣 ${esc(t(S._refMe.isMarketer ? "ref.title" : "ref.become"))}</button><div style="height:10px"></div>`; })()}
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
       <div style="height:14px"></div>
@@ -1514,6 +1527,120 @@ function tabProfile() {
       <div style="height:10px"></div>
       <button class="link-btn" style="color:var(--danger, #b71c1c)" onclick="deleteMyAccount()">${esc(t("profile.deleteAccount"))}</button>
     </div>
+  `;
+}
+
+/* ================= MARKETING: my referral link, the people I brought, what I earned ================= */
+
+const JOIN_KEY = "dlk_join";
+
+/** A link with ?join=CODE remembers the code until the person signs up (or signs in with Google or Facebook). */
+function captureJoin() {
+  const q = new URLSearchParams(location.search);
+  const code = (q.get("join") || "").trim().toUpperCase();
+  if (!code) return;
+  try { localStorage.setItem(JOIN_KEY, code); } catch (e) {}
+  q.delete("join");
+  try { history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : "")); } catch (e) {}
+}
+const storedJoin = () => { try { return localStorage.getItem(JOIN_KEY) || ""; } catch (e) { return ""; } };
+const forgetJoin = () => { try { localStorage.removeItem(JOIN_KEY); } catch (e) {} };
+
+/** A person who signed in or up with a social account claims the remembered code once. */
+async function claimStoredJoin() {
+  const code = storedJoin();
+  if (!code || !S.token) return;
+  forgetJoin();
+  await api("POST", "/referral/use", { code });
+  S._refMe = null;
+}
+
+async function loadRefMe() {
+  const { ok, data } = await api("GET", "/referral/me");
+  S._refMe = ok ? data : { isMarketer: false };
+  render();
+}
+
+async function refUseCode() {
+  const code = (qs("ref-code") || {}).value || "";
+  if (!code.trim()) return;
+  const { ok, data } = await api("POST", "/referral/use", { code: code.trim() });
+  toast(ok && data.ok ? t("ref.ok") : data && data.reason === "ALREADY" ? t("ref.already") : t("ref.bad"));
+  S._refMe = null;
+  S._acct = null;
+  if (S.screen === "account") loadAccount();
+}
+
+function refCopy(text) {
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast(t("ref.copied")), () => prompt(t("ref.link"), text));
+  else prompt(t("ref.link"), text);
+}
+
+/** The card shown on the account settings of a person who came without a code: "have a referral code?". */
+function refEnterCardHtml() {
+  const me = S._refMe;
+  if (!me) { loadRefMe(); return ""; }
+  if (me.isMarketer || me.referred) return "";
+  return `<div class="card">
+    <div class="section-title" style="margin-top:0">${esc(t("ref.enter"))}</div>
+    <div class="field"><input id="ref-code" dir="ltr" autocapitalize="characters" /></div>
+    <button class="btn small" onclick="refUseCode()">${esc(t("ref.apply"))}</button>
+  </div>`;
+}
+
+/** Not a marketer yet: ask to become one (online or in the field), or enter a referral code. */
+function becomeMarketerHtml(me) {
+  const req = me.request;
+  const status = req && req.status === "PENDING" ? `<div class="card" style="border-color:var(--primary)">${esc(t("ref.pending"))}</div>`
+    : req && req.status === "REJECTED" ? `<p class="muted">${esc(t("ref.rejected"))}</p>` : "";
+  const form = req && req.status === "PENDING" ? "" : `
+    <div class="card">
+      <p class="muted">${esc(t("ref.becomeSub"))}</p>
+      <div class="field"><label>${esc(t("ref.phone"))}</label><input id="ref-phone" dir="ltr" inputmode="tel" /></div>
+      <div class="field"><label>${esc(t("ref.note"))}</label><input id="ref-note" /></div>
+      <div class="intent-cards">
+        <button class="intent-card" onclick="refRequest('ELECTRONIC')"><span class="ic">💻</span><div><b>${esc(t("ref.electronic"))}</b><small>${esc(t("ref.electronicSub"))}</small></div></button>
+        <button class="intent-card" onclick="refRequest('FIELD')"><span class="ic">🚶</span><div><b>${esc(t("ref.field"))}</b><small>${esc(t("ref.fieldSub"))}</small></div></button>
+      </div>
+    </div>`;
+  return `<h1 class="screen-title">📣 ${esc(t("ref.become"))}</h1>${status}${form}${refEnterCardHtml()}`;
+}
+
+async function refRequest(channel) {
+  const phone = ((qs("ref-phone") || {}).value || "").trim();
+  const note = ((qs("ref-note") || {}).value || "").trim();
+  const { ok, data } = await api("POST", "/referral/request", { channel, phone: phone || undefined, note: note || undefined });
+  toast(ok ? t("ref.sent") : errMsg(data, t("ref.bad")));
+  S._refMe = null;
+  render();
+}
+
+function screenMarketing() {
+  const me = S._refMe;
+  if (!me) { loadRefMe(); return backRow() + spinner(); }
+  if (!me.isMarketer) return backRow() + becomeMarketerHtml(me);
+  const cn = me.creditName || "";
+  const manager = me.kind === "MANAGER";
+  return `
+    ${backRow()}
+    <h1 class="screen-title">📣 ${esc(t("ref.title"))}</h1>
+    <p class="screen-sub">${esc(t(manager ? "ref.subManager" : "ref.sub"))} <span class="badge neutral">${esc(t(me.channel === "FIELD" ? "ref.field" : "ref.electronic"))}</span></p>
+    <div class="card">
+      <div class="field"><label>${esc(t("ref.link"))}</label><input readonly dir="ltr" value="${esc(me.link)}" onclick="this.select()" /></div>
+      <div class="row">
+        <button class="btn small" onclick="refCopy('${esc(me.link)}')">${esc(t("ref.copy"))}</button>
+        <button class="btn small outline" onclick="refCopy('${esc(me.code)}')">${esc(t("ref.code"))}: ${esc(me.code)}</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="list-row"><span>${esc(t("ref.people"))}</span><strong>${me.people}</strong></div>
+      <div class="list-row"><span>${esc(t("ref.earned"))}</span><strong style="color:var(--primary)">${me.earned} ${esc(cn)}</strong></div>
+      ${manager ? `<div class="list-row"><span>${esc(t("ref.teamPeople"))}</span><strong>${me.teamPeople}</strong></div>
+      <div class="list-row"><span>${esc(t("ref.fromTeam"))}</span><strong>${me.earnedFromTeam} ${esc(cn)}</strong></div>` : ""}
+    </div>
+    ${manager ? `<div class="section-title">${esc(t("ref.team"))}</div>
+      ${me.team.length ? me.team.map((m) => `<div class="card"><div class="title-line"><strong>${esc(m.name)}</strong>${m.active ? "" : `<span class="badge neutral">${esc(t("ref.off"))}</span>`}</div>
+        <p class="muted">${esc(t("ref.memberRow", { n: m.people, e: m.earned + " " + cn }))}</p></div>`).join("") : `<p class="muted">${esc(t("ref.noTeam"))}</p>`}` : ""}
   `;
 }
 
@@ -3783,6 +3910,7 @@ function screenAccount() {
     <h1 class="screen-title">إعدادات الحساب</h1>
     ${note}${err}
     ${lookAndLanguageHtml()}
+    ${refEnterCardHtml()}
 
     <div class="card">
       <div class="section-title" style="margin-top:0">الإيميل</div>
@@ -5961,6 +6089,7 @@ function bootMetaReturn() {
 }
 
 loadMarket();
+captureJoin();
 
 bootSocialReturn().then((social) => {
   if (social) return;

@@ -104,6 +104,7 @@
     <div class="nav-item" data-section="store" onclick="showSection('store')">🛍️ المتجر</div>
     <div class="nav-item" data-section="pcats" onclick="showSection('pcats'); loadProductCats()">🏷️ تصنيفات المنتجات</div>
     <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()">🛡️ مراجعة المنتجات <span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
+    <div class="nav-item" data-section="marketers" onclick="showSection('marketers'); loadMarketers()">📣 المسوّقون</div>
     <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()">💡 اقتراحات المهن <span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()">🏷️ الحسومات <span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()">📢 إعلانات المتجر <span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
@@ -489,6 +490,43 @@
       <div id="prev-list"></div>
     </div>
 
+    <!-- MARKETERS -->
+    <div class="section" id="section-marketers" style="display:none">
+      <h2>المسوّقون</h2>
+      <p class="subtitle">مسوّق بيجيب ناس لدليلكم برابطه. مدير التسويق تحته مسوّقين وبيربح من كل اللي بيجيبهم فريقه. الربح بيدخل لمحفظة الشخص: مبلغ ثابت عن كل تسجيل مؤكَّد، ونسبة من اللي بيدفعه الشخص من محفظته (باقات، إعلانات، ذكاء اصطناعي). صفر يعني بلا ربح.</p>
+      <div class="card" id="mkreq-card" style="display:none">
+        <h3>طلبات التحويل إلى مسوّق</h3>
+        <table><thead><tr><th>الاسم</th><th>النوع</th><th>الهاتف</th><th>ملاحظة</th><th></th></tr></thead><tbody id="mkreq-body"></tbody></table>
+      </div>
+      <div class="card">
+        <h3>الأرقام العامة (لمن ما يكون له أرقام خاصة)</h3>
+        <div class="grid2">
+          <div class="field"><label>نسبة المسوّق %</label><input id="ref-mpct" type="number" min="0" max="100" step="0.1"></div>
+          <div class="field"><label>مبلغ المسوّق عن كل تسجيل</label><input id="ref-mfix" type="number" min="0" step="1"></div>
+          <div class="field"><label>نسبة مدير التسويق على فريقه %</label><input id="ref-gpct" type="number" min="0" max="100" step="0.1"></div>
+          <div class="field"><label>مبلغ مدير التسويق عن كل تسجيل لفريقه</label><input id="ref-gfix" type="number" min="0" step="1"></div>
+        </div>
+        <button onclick="saveReferralDefaults()">حفظ</button> <span id="ref-defaults-msg" class="muted"></span>
+      </div>
+      <div class="card">
+        <h3 id="mk-form-title">إضافة مسوّق أو مدير تسويق</h3>
+        <div class="grid2">
+          <div class="field"><label>إيميل الحساب (لازم يكون مسجّل)</label><input id="mk-email" type="email" dir="ltr"></div>
+          <div class="field"><label>النوع</label><select id="mk-kind" onchange="mkKindChanged()"><option value="MARKETER">مسوّق</option><option value="MANAGER">مدير تسويق</option></select></div>
+          <div class="field"><label>طريقة التسويق</label><select id="mk-channel"><option value="ELECTRONIC">إلكتروني</option><option value="FIELD">ميداني</option></select></div>
+          <div class="field" id="mk-parent-wrap"><label>مدير التسويق فوقه</label><select id="mk-parent"></select></div>
+          <div class="field"><label>نسبته % (فارغ = العامة)</label><input id="mk-pct" type="number" min="0" max="100" step="0.1"></div>
+          <div class="field"><label>مبلغه عن كل تسجيل (فارغ = العام)</label><input id="mk-fix" type="number" min="0" step="1"></div>
+          <div class="field" id="mk-tpct-wrap"><label>نسبته على فريقه % (فارغ = العامة)</label><input id="mk-tpct" type="number" min="0" max="100" step="0.1"></div>
+          <div class="field" id="mk-tfix-wrap"><label>مبلغه عن تسجيل فريقه (فارغ = العام)</label><input id="mk-tfix" type="number" min="0" step="1"></div>
+        </div>
+        <button onclick="saveMarketer()">حفظ</button> <button class="small" style="background:#777" onclick="resetMarketerForm()">جديد</button> <span id="mk-msg" class="muted"></span>
+      </div>
+      <div class="card">
+        <table><thead><tr><th>الاسم</th><th>النوع</th><th>الطريقة</th><th>الكود</th><th>تحت</th><th>الأرقام</th><th>جابهم</th><th>ربح</th><th></th></tr></thead><tbody id="mk-body"></tbody></table>
+      </div>
+    </div>
+
     <!-- PROFESSION SUGGESTIONS -->
     <div class="section" id="section-suggestions" style="display:none">
       <h2>اقتراحات المهن</h2>
@@ -699,6 +737,130 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- Marketers ----
+let marketersList = [];
+let editingMarketerId = null;
+const numOrNull = (id) => { const v = document.getElementById(id).value.trim(); return v === '' ? null : Number(v); };
+
+function mkKindChanged() {
+  const manager = document.getElementById('mk-kind').value === 'MANAGER';
+  document.getElementById('mk-parent-wrap').style.display = manager ? 'none' : '';
+  document.getElementById('mk-tpct-wrap').style.display = manager ? '' : 'none';
+  document.getElementById('mk-tfix-wrap').style.display = manager ? '' : 'none';
+}
+
+function resetMarketerForm() {
+  editingMarketerId = null;
+  ['mk-email', 'mk-pct', 'mk-fix', 'mk-tpct', 'mk-tfix'].forEach((id) => { document.getElementById(id).value = ''; });
+  document.getElementById('mk-email').disabled = false;
+  document.getElementById('mk-kind').value = 'MARKETER';
+  document.getElementById('mk-channel').value = 'ELECTRONIC';
+  document.getElementById('mk-form-title').textContent = 'إضافة مسوّق أو مدير تسويق';
+  mkKindChanged();
+}
+
+async function loadMarketerRequests() {
+  const { ok, data } = await api('GET', '/admin/marketer-requests?status=PENDING');
+  const list = ok ? data.requests : [];
+  document.getElementById('mkreq-card').style.display = list.length ? '' : 'none';
+  document.getElementById('mkreq-body').innerHTML = list.map(r => `
+    <tr>
+      <td>${esc(r.name)}<br><small class="muted" style="direction:ltr">${esc(r.email)}</small></td>
+      <td>${r.channel === 'FIELD' ? 'ميداني' : 'إلكتروني'}</td>
+      <td style="direction:ltr;text-align:right">${esc(r.phone || '—')}</td>
+      <td>${esc(r.note || '—')}</td>
+      <td style="white-space:nowrap"><button class="small" onclick="decideMarketerRequest('${esc(r.id)}', true)">قبول</button> <button class="small" style="background:#777" onclick="decideMarketerRequest('${esc(r.id)}', false)">رفض</button></td>
+    </tr>`).join('');
+}
+
+async function decideMarketerRequest(id, approve) {
+  const { ok, data } = await api('POST', '/admin/marketer-requests/' + id + (approve ? '/approve' : '/reject'), {});
+  if (!ok) document.getElementById('mk-msg').textContent = errText(data, 'تعذّر الحفظ');
+  loadMarketers();
+}
+
+async function loadMarketers() {
+  loadMarketerRequests();
+  const [s, m] = await Promise.all([api('GET', '/admin/settings'), api('GET', '/admin/marketers')]);
+  if (s.ok) {
+    const r = s.data.referral || {};
+    document.getElementById('ref-mpct').value = r.marketerPercent ?? 0;
+    document.getElementById('ref-mfix').value = r.marketerSignupCredits ?? 0;
+    document.getElementById('ref-gpct').value = r.managerPercent ?? 0;
+    document.getElementById('ref-gfix').value = r.managerSignupCredits ?? 0;
+  }
+  marketersList = m.ok ? m.data.marketers : [];
+  const managers = marketersList.filter((x) => x.kind === 'MANAGER' && x.isActive);
+  document.getElementById('mk-parent').innerHTML = '<option value="">بلا مدير</option>' + managers.map((x) => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+  const val = (v, suffix) => (v == null ? 'العام' : v + suffix);
+  document.getElementById('mk-body').innerHTML = marketersList.length ? marketersList.map((x) => `
+    <tr>
+      <td>${esc(x.name)}<br><small class="muted" style="direction:ltr">${esc(x.email)}</small></td>
+      <td>${x.kind === 'MANAGER' ? 'مدير تسويق' : 'مسوّق'}</td>
+      <td>${x.channel === 'FIELD' ? 'ميداني' : 'إلكتروني'}</td>
+      <td style="direction:ltr;text-align:right"><b>${esc(x.code)}</b></td>
+      <td>${esc(x.parentName || '—')}</td>
+      <td><small>نسبة: ${val(x.percent, '%')} / مبلغ: ${val(x.signupCredits, '')}${x.kind === 'MANAGER' ? `<br>على فريقه — نسبة: ${val(x.teamPercent, '%')} / مبلغ: ${val(x.teamSignupCredits, '')}` : ''}</small></td>
+      <td>${x.people}</td>
+      <td>${x.earned}</td>
+      <td style="white-space:nowrap"><button class="small" onclick="copyMarketerLink('${esc(x.id)}')">نسخ الرابط</button> <button class="small" onclick="editMarketer('${esc(x.id)}')">✏️</button> <button class="small" style="${x.isActive ? 'background:#777' : ''}" onclick="toggleMarketer('${esc(x.id)}', ${!x.isActive})">${x.isActive ? 'تعطيل' : 'تفعيل'}</button></td>
+    </tr>`).join('') : '<tr><td colspan="9" class="muted">ما في مسوّقين بعد</td></tr>';
+  mkKindChanged();
+}
+
+async function saveReferralDefaults() {
+  const num = (id) => Number(document.getElementById(id).value) || 0;
+  const { ok, data } = await api('PUT', '/admin/settings', { referral: { marketerPercent: num('ref-mpct'), marketerSignupCredits: Math.round(num('ref-mfix')), managerPercent: num('ref-gpct'), managerSignupCredits: Math.round(num('ref-gfix')) } });
+  document.getElementById('ref-defaults-msg').textContent = ok ? 'انحفظ ✓' : errText(data, 'تعذّر الحفظ');
+}
+
+async function saveMarketer() {
+  const msg = document.getElementById('mk-msg');
+  const manager = document.getElementById('mk-kind').value === 'MANAGER';
+  const body = { kind: document.getElementById('mk-kind').value, channel: document.getElementById('mk-channel').value, percent: numOrNull('mk-pct'), signupCredits: numOrNull('mk-fix') };
+  if (manager) { body.teamPercent = numOrNull('mk-tpct'); body.teamSignupCredits = numOrNull('mk-tfix'); body.parentId = null; }
+  else body.parentId = document.getElementById('mk-parent').value || null;
+  let res;
+  if (editingMarketerId) res = await api('PATCH', '/admin/marketers/' + editingMarketerId, body);
+  else {
+    body.email = document.getElementById('mk-email').value.trim();
+    res = await api('POST', '/admin/marketers', body);
+  }
+  if (!res.ok) { msg.textContent = errText(res.data, 'تعذّر الحفظ'); return; }
+  msg.textContent = 'انحفظ ✓';
+  resetMarketerForm();
+  loadMarketers();
+}
+
+function editMarketer(id) {
+  const x = marketersList.find((m) => m.id === id);
+  if (!x) return;
+  editingMarketerId = id;
+  document.getElementById('mk-email').value = x.email;
+  document.getElementById('mk-email').disabled = true;
+  document.getElementById('mk-kind').value = x.kind;
+  document.getElementById('mk-channel').value = x.channel || 'ELECTRONIC';
+  document.getElementById('mk-parent').value = x.parentId || '';
+  document.getElementById('mk-pct').value = x.percent ?? '';
+  document.getElementById('mk-fix').value = x.signupCredits ?? '';
+  document.getElementById('mk-tpct').value = x.teamPercent ?? '';
+  document.getElementById('mk-tfix').value = x.teamSignupCredits ?? '';
+  document.getElementById('mk-form-title').textContent = 'تعديل: ' + x.name;
+  mkKindChanged();
+  document.getElementById('mk-form-title').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function toggleMarketer(id, isActive) {
+  const { ok, data } = await api('PATCH', '/admin/marketers/' + id, { isActive });
+  if (!ok) document.getElementById('mk-msg').textContent = errText(data, 'تعذّر الحفظ');
+  loadMarketers();
+}
+
+function copyMarketerLink(id) {
+  const x = marketersList.find((m) => m.id === id);
+  if (x && navigator.clipboard) navigator.clipboard.writeText(x.link).then(() => { document.getElementById('mk-msg').textContent = 'اننسخ الرابط ✓'; });
 }
 
 // ---- Users ----
