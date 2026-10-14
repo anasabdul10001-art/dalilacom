@@ -886,7 +886,7 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
   /* ordinary screens: a centred column next to the rail */
   .screen-body:not(.map-mode) { padding: 28px 24px 48px; display: flex; flex-direction: column; align-items: center; }
   .screen-body:not(.map-mode):has(> .tabbar) { padding-inline-start: 108px; }
-  .screen-body:not(.map-mode) > *:not(.tabbar) { width: 100%; max-width: 700px; flex: none; }
+  .screen-body:not(.map-mode) > *:not(.tabbar):not(.scan-fab) { width: 100%; max-width: 700px; flex: none; }
 
   /* the discover screen: results panel on the starting edge, map on the rest */
   .mapfull { inset-inline-start: 84px; }
