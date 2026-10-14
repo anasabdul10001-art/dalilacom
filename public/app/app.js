@@ -5294,7 +5294,7 @@ async function openScanner() {
   document.body.appendChild(box);
   const msg = document.getElementById("scan-msg");
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } });
     const video = document.getElementById("scan-video");
     video.srcObject = stream;
     await video.play();
@@ -5311,7 +5311,7 @@ async function openScanner() {
         else if (window.jsQR && video.videoWidth) {
           canvas.width = video.videoWidth; canvas.height = video.videoHeight;
           const g = canvas.getContext("2d"); g.drawImage(video, 0, 0);
-          const hit = jsQR(g.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+          const hit = jsQR(g.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: "attemptBoth" }); // a card shown in dark mode is light on dark
           if (hit) text = hit.data;
         }
       } catch (e) {}

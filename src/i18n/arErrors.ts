@@ -53,6 +53,8 @@ const MESSAGES: Record<string, string> = {
   "Invalid referral code": "رمز الإحالة غير صحيح",
   "This user is already one of your affiliates": "هذا المستخدم مسوّق عندك أصلًا",
   "This user is already a member of this business": "هذا المستخدم عضو بهذا النشاط أصلًا",
+  "Invalid or expired code": "الكود غلط أو انتهت مدته. الكود بيتغيّر كل نصف دقيقة، اطلب من الزبون الكود الحالي",
+  "Membership not found or inactive": "رقم العضوية غلط أو العضوية منتهية",
   "This code was already redeemed": "هذا الكود انستخدم من قبل",
   "No photo": "ما في صورة",
   "No picture": "ما في صورة",
