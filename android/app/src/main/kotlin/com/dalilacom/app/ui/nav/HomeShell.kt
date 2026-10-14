@@ -173,7 +173,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                 )
                 HomeTab.Responder, HomeTab.Store -> Unit // never selected: their buttons open their own screens
                 HomeTab.Deals ->
-                    if (!showCard) DiscoverScreen(
+                    DiscoverScreen(
                         factory = factory,
                         isGuest = isGuest,
                         pendingRoute = dealsPendingRoute,
@@ -183,18 +183,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onLogin = { goLogin() },
                         onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
                         dealsMode = true,
-                        onOpenCard = { showCard = true },
-                    ) else if (isGuest) AccountPrompt(
-                        icon = Icons.Filled.CreditCard,
-                        title = stringResource(R.string.guest_card_title),
-                        subtitle = stringResource(R.string.guest_card_sub),
-                        perks = listOf(stringResource(R.string.guest_card_p1), stringResource(R.string.guest_card_p2), stringResource(R.string.guest_card_p3)),
-                        onLogin = { goLogin() },
-                        onRegister = { goRegister() },
-                    ) else Column(Modifier.fillMaxSize()) {
-                        androidx.compose.material3.TextButton(onClick = { showCard = false }) { Text("‹ " + stringResource(R.string.deals_back)) }
-                        CardScreen(factory, onRenew = { rootNavController.navigate("pricing") })
-                    }
+                    )
                 HomeTab.Cart ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.ShoppingCart,
@@ -311,6 +300,29 @@ private fun DealsIntro(onDismiss: () -> Unit, onNever: () -> Unit) {
                     androidx.compose.material3.TextButton(onClick = onNever) { Text(stringResource(R.string.deals_never), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             }
+        }
+    }
+}
+
+/** The member card as a page of its own: the floating button opens it from any screen. */
+@Composable
+fun CardRoute(rootNavController: NavHostController, container: AppContainer) {
+    val factory = remember { ViewModelFactory(container) }
+    var isGuest by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) { isGuest = !container.authRepository.hasStoredSession() }
+    Column(Modifier.fillMaxSize()) {
+        androidx.compose.material3.TextButton(onClick = { rootNavController.popBackStack() }) { Text("\u2039 " + stringResource(R.string.deals_back)) }
+        when (isGuest) {
+            null -> Unit
+            true -> AccountPrompt(
+                icon = Icons.Filled.CreditCard,
+                title = stringResource(R.string.guest_card_title),
+                subtitle = stringResource(R.string.guest_card_sub),
+                perks = listOf(stringResource(R.string.guest_card_p1), stringResource(R.string.guest_card_p2), stringResource(R.string.guest_card_p3)),
+                onLogin = { rootNavController.navigate("login") },
+                onRegister = { rootNavController.navigate("register") },
+            )
+            false -> CardScreen(factory, onRenew = { rootNavController.navigate("pricing") })
         }
     }
 }

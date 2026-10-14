@@ -204,6 +204,80 @@ function root() {
   return document.getElementById("screen-body");
 }
 
+/* ---- the floating card button: on every page except where it would be in the way ---- */
+
+const CARD_FAB_HIDDEN = ["login", "register", "merchantMode", "merchantRegister", "merchantProfile", "merchantHours", "shippingMethods", "branches", "merchantBranches", "productEdit", "discounts", "aiPlans", "adBook", "pricing"];
+
+function cardFabHtml() {
+  // a shop keeps both floating buttons everywhere; only the sign-in pages are free of them
+  const hidden = S.role === "MERCHANT" ? ["login", "register"] : CARD_FAB_HIDDEN;
+  if (hidden.includes(S.screen)) return "";
+  if (S.screen === "home" && S.homeTab === "card") return "";
+  return `<button class="card-fab" onclick="openMyCard()" aria-label="${esc(t("deals.myCard"))}">
+    <span class="card-fab-chip"></span>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.6"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/></svg>
+    <b>${esc(t("deals.myCard"))}</b>
+  </button>`;
+}
+
+/** The shop's own floating button: add a discount, or give a customer a discount (scan the card, or type the member number). */
+function merchantFabHtml() {
+  if (S.role !== "MERCHANT" || !S.token || ["login", "register", "merchantRegister"].includes(S.screen)) return "";
+  const open = !!S._mfabOpen;
+  mfabStartTips();
+  return `${open ? `<div class="mfab-shade" onclick="S._mfabOpen=false;render()"></div>` : ""}
+  <div class="mfab-wrap">
+    <div id="mfab-tip" class="mfab-tip" style="display:none"><button class="mfab-tip-x" onclick="mfabTipClose(event)" aria-label="x">✕</button><span id="mfab-tip-text" onclick="mfabGo('add')"></span></div>
+    ${open ? `<div class="mfab-menu">
+      <button onclick="mfabGo('add')"><span>➕</span>${esc(t("fab.addDiscount"))}</button>
+      <button onclick="mfabGo('give')"><span>🎟️</span>${esc(t("fab.giveDiscount"))}</button>
+    </div>` : ""}
+    <button class="mfab" onclick="S._mfabOpen=!S._mfabOpen;render()" aria-label="${esc(t("fab.discount"))}">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>
+      <b>${esc(t("fab.discount"))}</b>
+    </button>
+  </div>`;
+}
+
+/** Every so often a short hint says why a discount is good for the shop (the true reasons), until the shop closes it. */
+let _mfabTimer = null;
+function mfabStartTips() {
+  if (_mfabTimer || S._mfabTipsOff) return;
+  const tips = t("fab.tips").split("||");
+  let i = 0;
+  const show = () => {
+    const box = document.getElementById("mfab-tip");
+    const text = document.getElementById("mfab-tip-text");
+    if (!box || !text || S._mfabTipsOff || S._mfabOpen) return;
+    text.textContent = tips[i++ % tips.length];
+    box.style.display = "";
+    setTimeout(() => { const b = document.getElementById("mfab-tip"); if (b) b.style.display = "none"; }, 9000);
+  };
+  setTimeout(show, 5000);
+  _mfabTimer = setInterval(show, 38000);
+}
+function mfabTipClose(ev) {
+  ev.stopPropagation();
+  S._mfabTipsOff = true;
+  const b = document.getElementById("mfab-tip");
+  if (b) b.style.display = "none";
+}
+
+function mfabGo(what) {
+  S._mfabOpen = false;
+  if (what === "add") { S._disc = null; return go("discounts"); }
+  S.merchantTab = "redeem"; // where a member's code is scanned and the discount given
+  if (S.screen !== "merchantMode") return go("merchantMode");
+  render();
+}
+
+/** The card is a page of the home screen; a guest is taken to sign in first. */
+function openMyCard() {
+  if (!S.token) return go("login");
+  reset("home");
+  setHomeTab("card");
+}
+
 async function render() {
   const el = root();
   if (!el) return;
@@ -211,7 +285,7 @@ async function render() {
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
-  el.innerHTML = renderScreen() + photoMenuHtml();
+  el.innerHTML = renderScreen() + photoMenuHtml() + cardFabHtml() + merchantFabHtml();
   wireUpAfterRender();
   trDom(el); // translate the rendered Arabic when another language is on
   if (keepFocus !== null) {
@@ -636,7 +710,7 @@ function screenHomeShell() {
     <div>${body}</div>
     <div class="tabbar" id="home-tabbar">
       ${HOME_TABS.map((tab) => `
-        <button class="${S.homeTab === tab.id || (tab.id === "deals" && S.homeTab === "card") ? "active" : ""} ${tab.hero ? "hero" : ""}" onclick="setHomeTab('${tab.id}')">
+        <button class="${S.homeTab === tab.id ? "active" : ""} ${tab.hero ? "hero" : ""}" onclick="setHomeTab('${tab.id}')">
           ${ICON[tab.icon]}<span>${esc(t(tab.label))}</span>
         </button>`).join("")}
     </div>
@@ -860,7 +934,6 @@ function tabDiscover() {
           ${suggestHtml(d)}
         </div>
         <div class="float-chips">
-          ${deals ? `<button class="chip" onclick="setHomeTab('card')">💳 ${esc(t("deals.myCard"))}</button>` : ""}
           <button class="chip ${!d.categoryId && !d.openNow && (deals || !d.discountsOnly) ? "active" : ""}" onclick="onDiscoverReset()">${esc(t("filter.all"))}</button>
           <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">${esc(t("filter.openNow"))}</button>
           ${deals ? "" : `<button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">${esc(t("filter.discounts"))}</button>`}

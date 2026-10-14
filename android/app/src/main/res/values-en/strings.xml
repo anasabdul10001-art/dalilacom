@@ -789,4 +789,16 @@
     <string name="mp_sec_contact">Address and contact</string>
     <string name="mp_sec_map">Shop place on the map</string>
     <string name="mp_address_ph">e.g. Damascus, Mazzeh, Jalaa street</string>
+    <string name="fab_discount">Discount</string>
+    <string name="fab_add_discount">Add a discount</string>
+    <string name="fab_give_discount">Give a customer a discount</string>
+    <string-array name="fab_tips">
+        <item>Why offer a discount? Shops with a discount appear in the Deals tab, which shoppers open to look for offers.</item>
+        <item>Free advertising for your shop: a discount badge shows on the map and on its page, and every user sees it.</item>
+        <item>Dalilacom card holders look for shops that give a discount, so you win more customers.</item>
+        <item>A clear discount makes the customer choose you over the shop next door.</item>
+        <item>You are in control: the discount for the whole shop or for chosen products, how long, and how many times.</item>
+        <item>When a customer shows their card code, you see their discount and confirm it in seconds.</item>
+        <item>A small discount today, regular customers tomorrow.</item>
+    </string-array>
 </resources>

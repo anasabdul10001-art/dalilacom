@@ -9,6 +9,16 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import com.dalilacom.app.ui.common.CardFab
+import com.dalilacom.app.ui.common.showCardFabOn
+import com.dalilacom.app.ui.common.showMerchantFabOn
+import com.dalilacom.app.ui.common.MerchantFab
+import androidx.compose.runtime.collectAsState
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.dalilacom.app.data.AppContainer
@@ -78,6 +88,9 @@ fun DalilacomNavGraph(
         onSocialReturnConsumed()
     }
 
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
+    Box(Modifier.fillMaxSize()) {
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(
@@ -125,6 +138,9 @@ fun DalilacomNavGraph(
                 },
                 onNavigateToLogin = { navController.popBackStack() },
             )
+        }
+        composable("card") {
+            CardRoute(rootNavController = navController, container = container)
         }
         composable("home") {
             HomeShell(rootNavController = navController, container = container)
@@ -283,5 +299,14 @@ fun DalilacomNavGraph(
                 onOpenAiPlans = { navController.navigate("aiPlans") },
             )
         }
+    }
+    if (showCardFabOn(currentRoute, isMerchant)) CardFab(onClick = { navController.navigate("card") })
+    if (isMerchant && showMerchantFabOn(currentRoute)) {
+        MerchantFab(
+            raised = currentRoute?.startsWith("merchantMode") == true, // the shop's own screen already has the scan button at the bottom corner
+            onAddDiscount = { navController.navigate("discounts") },
+            onGiveDiscount = { navController.navigate("merchantMode") }, // opens on the tab where a member's code is scanned
+        )
+    }
     }
 }

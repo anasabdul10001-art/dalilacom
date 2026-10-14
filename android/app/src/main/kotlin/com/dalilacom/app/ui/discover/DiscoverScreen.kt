@@ -310,7 +310,6 @@ fun DiscoverScreen(
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (dealsMode) item { MapChip("💳 " + stringResource(R.string.deals_my_card), false) { onOpenCard() } }
                     item { MapChip(stringResource(R.string.filter_all), state.selectedCategoryId == null && (dealsMode || !state.discountsOnly) && !state.openNow) { viewModel.resetFilters(keepDiscounts = dealsMode) } }
                     item { MapChip(stringResource(R.string.filter_open_now), state.openNow) { viewModel.onOpenNowChange(!state.openNow) } }
                     if (!dealsMode) item { MapChip(stringResource(R.string.filter_discounts), state.discountsOnly) { viewModel.onDiscountsOnlyChange(!state.discountsOnly) } }
