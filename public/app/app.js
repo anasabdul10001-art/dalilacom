@@ -853,7 +853,7 @@ async function startQrLoop() {
   tick();
 }
 
-/** The code a cashier can type in one field: the member number's digits, then the 6-digit code that changes every 30 seconds ("5276 4426 0196 3873"). */
+/** The code a cashier can type in one field: the member number's digits, then the 6-digit code that changes every 45 seconds ("5276 4426 0196 3873"). */
 function fullCodeText(memberNumber, code) {
   const digits = String(memberNumber || "").replace(/\D/g, "") + String(code || "");
   return digits ? digits.replace(/(.{4})/g, "$1 ").trim() : "------";
@@ -5401,7 +5401,7 @@ async function openScanner() {
     const video = document.getElementById("scan-video");
     video.srcObject = stream;
     await video.play();
-    scanState = { stream, stop: false };
+    scanState = { stream, stop: false, since: Date.now() };
     let detector = null;
     if ("BarcodeDetector" in window) { try { detector = new BarcodeDetector({ formats: ["qr_code"] }); } catch (e) {} }
     if (!detector && !window.jsQR) await new Promise((res) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"; sc.onload = res; sc.onerror = res; document.head.appendChild(sc); });
@@ -5412,14 +5412,22 @@ async function openScanner() {
       try {
         if (detector) { const found = await detector.detect(video); if (found.length) text = found[0].rawValue; }
         else if (window.jsQR && video.videoWidth) {
-          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-          const g = canvas.getContext("2d"); g.drawImage(video, 0, 0);
-          const hit = jsQR(g.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: "attemptBoth" }); // a card shown in dark mode is light on dark
-          if (hit) text = hit.data;
+          // two tries each round: the whole picture, then a smaller copy (a phone screen shown to a laptop camera often reads better smaller)
+          const vw = video.videoWidth, vh = video.videoHeight;
+          for (const maxW of [vw, 640]) {
+            const k = Math.min(1, maxW / vw);
+            canvas.width = Math.round(vw * k); canvas.height = Math.round(vh * k);
+            const g = canvas.getContext("2d", { willReadFrequently: true });
+            g.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const hit = jsQR(g.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: "attemptBoth" }); // a card shown in dark mode is light on dark
+            if (hit) { text = hit.data; break; }
+            if (vw <= 640) break;
+          }
         }
       } catch (e) {}
       if (text && /^[^:]+:\d{6}$/.test(text.trim())) { closeScanner(); return onScanned(text.trim()); }
-      requestAnimationFrame(() => setTimeout(loop, 120));
+      if (Date.now() - scanState.since > 8000) { const m = document.getElementById("scan-msg"); if (m) m.textContent = t("scan.tip"); }
+      requestAnimationFrame(() => setTimeout(loop, 90));
     };
     loop();
   } catch (e) {

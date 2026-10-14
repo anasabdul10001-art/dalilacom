@@ -315,7 +315,7 @@ async function subscribe(planId) {
 async function showQr() {
   const { ok, data } = await api('GET', '/qr/mine', null, state.customerToken);
   document.getElementById('qr-display').innerHTML = ok
-    ? `<div>رقم العضوية: <b>${data.memberNumber}</b></div><code class="qr">${data.code}</code><div class="muted">صالح لـ ${data.expiresInSeconds} ثانية إضافية — يتغيّر كل 30 ثانية</div>`
+    ? `<div>رقم العضوية: <b>${data.memberNumber}</b></div><code class="qr">${data.code}</code><div class="muted">صالح لـ ${data.expiresInSeconds} ثانية إضافية — يتغيّر كل 45 ثانية</div>`
     : `<div class="muted">${errText(data, 'لا يوجد عضوية فعالة')}</div>`;
 }
 

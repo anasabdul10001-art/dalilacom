@@ -187,7 +187,8 @@ fun MerchantDetailScreen(
                     item {
                         Row(Modifier.fillMaxWidth().background(Color.Black).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
                             listOf("home" to R.string.shop_tab_home, "all" to R.string.shop_tab_all, "reviews" to R.string.rv_title, "about" to R.string.shop_tab_about).forEach { (id, label) ->
-                                Column(Modifier.clickable { viewModel.setTab(id) }.padding(top = 12.dp)) {
+                                // the underline is as wide as the word (IntrinsicSize.Max): without it the first tab took the whole row and squeezed the others into a tall black column of letters
+                                Column(Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Max).clickable { viewModel.setTab(id) }.padding(top = 12.dp)) {
                                     Text(stringResource(label), color = if (state.tab == id) Color.White else Color.White.copy(alpha = 0.75f), fontWeight = if (state.tab == id) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 14.sp)
                                     Spacer(Modifier.height(9.dp))
                                     Box(Modifier.height(2.dp).fillMaxWidth().background(if (state.tab == id) Color.White else Color.Transparent))

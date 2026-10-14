@@ -37,9 +37,8 @@ async function resolveVerifiedMembership(memberNumber: string, code: string) {
     where: { memberNumber },
     include: { user: true },
   });
-  if (!membership || !isMembershipActive(membership)) {
-    return { error: "Membership not found or inactive" as const };
-  }
+  if (!membership) return { error: "No membership has this number" as const };
+  if (!isMembershipActive(membership)) return { error: "This membership has ended or is switched off" as const };
   const matchedStep = findMatchingTimeStep(membership.qrSecret, code, membership.lastRedeemedTimeStep);
   if (matchedStep === null) {
     return { error: "Invalid or expired code" as const };

@@ -16,7 +16,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: QR_TOKEN_TTL_SECONDS
-        value: "30"
+        value: "45"
       - key: NODE_ENV
         value: "production"
       - key: CREDENTIALS_ENCRYPTION_KEY
@@ -122,7 +122,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: QR_TOKEN_TTL_SECONDS
-        value: "30"
+        value: "45"
       - key: NODE_ENV
         value: "production"
       # Paste the SAME value as the testing service: connected Pages/bots are stored encrypted with it in the shared database.

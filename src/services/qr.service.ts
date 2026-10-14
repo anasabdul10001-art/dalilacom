@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-const TTL_SECONDS = Number(process.env.QR_TOKEN_TTL_SECONDS ?? 30);
+const TTL_SECONDS = Number(process.env.QR_TOKEN_TTL_SECONDS ?? 45);
 
 export interface QrPayload {
   m: string; // memberNumber
