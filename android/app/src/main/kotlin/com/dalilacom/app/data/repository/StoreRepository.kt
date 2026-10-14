@@ -89,6 +89,10 @@ class StoreRepository(private val api: ApiService) {
         return if (response.isSuccessful && body != null) Result.success(body.id) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.pc_add_failed))))
     }
 
+    /** The calendar of the advertising spaces for an ad of [days] days. */
+    suspend fun adAvailability(days: Int): List<com.dalilacom.app.data.network.AdDayDto> =
+        safeApiCall { api.adAvailability(days) }?.takeIf { it.isSuccessful }?.body()?.days.orEmpty()
+
     suspend fun aiQuota(): com.dalilacom.app.data.network.AiQuotaDto? = safeApiCall { api.aiQuota() }?.takeIf { it.isSuccessful }?.body()
 
     suspend fun aiDraft(photoId: String): Result<AiDraftResponseDto> {

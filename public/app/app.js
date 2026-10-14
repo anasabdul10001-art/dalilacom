@@ -2206,6 +2206,42 @@ function openAdBooking(kind) {
   go("adBook");
 }
 
+/** The calendar of the store's advertising spaces: green = free, yellow = nearly full, red = full; grey = the chosen length does not fit. */
+function adCalendarHtml(a) {
+  if (!a.avail) return `<p class="muted">${esc(t("ads.cal.loading"))}</p>`;
+  const first = new Date(a.avail[0].date + "T00:00:00Z");
+  const weekStart = LANG === "ar" ? 6 : 0; // Saturday for Arabic, Sunday otherwise
+  const lead = (first.getUTCDay() - weekStart + 7) % 7;
+  const names = Array.from({ length: 7 }, (_, i) => new Date(Date.UTC(2024, 0, 7 + ((weekStart + i) % 7))).toLocaleDateString(LANG, { weekday: "narrow", timeZone: "UTC" }));
+  const sel = a.start ? String(a.start).slice(0, 10) : a.avail[0].date;
+  const cells = a.avail.map((d, i) => {
+    const day = new Date(d.date + "T00:00:00Z");
+    const cls = d.free === 0 ? "full" : d.free <= 2 ? "few" : "ok";
+    const month = day.getUTCDate() === 1 || i === 0 ? `<em>${esc(day.toLocaleDateString(LANG, { month: "short", timeZone: "UTC" }))}</em>` : "";
+    return `<button class="cal-day ${cls} ${d.canStart ? "" : "blocked"} ${sel === d.date ? "sel" : ""}" ${d.canStart ? "" : "disabled"} title="${esc(t("ads.cal.free", { n: d.free }))}" onclick="adPickDay('${d.date}')">${month}<b>${day.getUTCDate()}</b></button>`;
+  });
+  return `<div class="cal">
+    <div class="cal-head">${names.map((n) => `<span>${esc(n)}</span>`).join("")}</div>
+    <div class="cal-grid">${'<span></span>'.repeat(lead)}${cells.join("")}</div>
+    <div class="cal-legend"><span><i class="ok"></i>${esc(t("ads.cal.ok"))}</span><span><i class="few"></i>${esc(t("ads.cal.few"))}</span><span><i class="full"></i>${esc(t("ads.cal.full"))}</span><span><i class="blocked"></i>${esc(t("ads.cal.blocked"))}</span></div>
+  </div>`;
+}
+
+function adPickDay(date) {
+  const a = S._adBook;
+  a.start = date === a.avail[0].date ? "" : date; // today means "now"
+  a.error = null;
+  render();
+}
+
+async function loadAdAvail() {
+  const a = S._adBook;
+  if (!a || S.role !== "MERCHANT" || !a.days) return;
+  const days = a.days;
+  const { ok, data } = await api("GET", "/ads/availability?days=" + days);
+  if (S._adBook === a && a.days === days) { a.avail = ok ? data.days : null; render(); }
+}
+
 function screenAdBook() {
   if (!S._adBook) { S._adBook = { loading: true, productId: "", days: 0, start: "" }; loadAdBook(); }
   const a = S._adBook;
@@ -2233,12 +2269,6 @@ function screenAdBook() {
   const pk = a.packages || [];
   const chosen = pk.find((p) => p.days === a.days);
   const enough = chosen ? a.balance >= chosen.credits : true;
-  const starts = [["", t("ads.startNow")]];
-  for (let d = 1; d <= 7; d++) {
-    const dt = new Date(); dt.setDate(dt.getDate() + d); dt.setHours(0, 0, 0, 0);
-    starts.push([dt.toISOString(), d === 1 ? t("ads.tomorrow") : dt.toLocaleDateString(LANG, { weekday: "long", day: "numeric", month: "short" })]);
-  }
-  if (a.start && !starts.some(([v]) => v === a.start)) starts.push([a.start, new Date(a.start).toLocaleString(LANG, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })]);
   return `
     ${backRow()}
     <h1 class="screen-title">${esc(t("ads.bookTitle"))}</h1>
@@ -2252,11 +2282,10 @@ function screenAdBook() {
       </select></div>
     <div class="field"><label>${esc(t("ads.pickDays"))}</label>
       <div class="ad-packs">${pk.map((p) => `
-        <button class="ad-pack ${a.days === p.days ? "on" : ""}" onclick="S._adBook.days=${p.days};render()">
+        <button class="ad-pack ${a.days === p.days ? "on" : ""}" onclick="S._adBook.days=${p.days};S._adBook.avail=null;loadAdAvail();render()">
           <b>${esc(t("ads.daysN", { n: p.days }))}</b><span>${p.credits} ${esc(a.creditName)}</span>
         </button>`).join("")}</div></div>
-    <div class="field"><label>${esc(t("ads.pickStart"))}</label>
-      <select onchange="S._adBook.start=this.value;render()">${starts.map(([v, l]) => `<option value="${esc(v)}" ${a.start === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
+    <div class="field"><label>${esc(t("ads.pickStart"))}</label>${adCalendarHtml(a)}</div>
     <div class="card" style="margin-top:6px">
       <div class="list-row"><span>${esc(t("ads.yourBalance"))}</span><span class="price">${a.balance} ${esc(a.creditName)}</span></div>
       ${chosen ? `<div class="list-row"><span>${esc(t("ads.price"))}</span><span class="price" style="color:var(--primary)">${chosen.credits} ${esc(a.creditName)}</span></div>` : ""}
@@ -2339,6 +2368,7 @@ async function loadAdBook() {
   a.products = mine.ok ? mine.data.filter((p) => p.isActive && p.stock > 0) : [];
   if (a.packages.length) a.days = a.packages[0].days;
   render();
+  loadAdAvail();
 }
 
 async function submitAdBooking() {

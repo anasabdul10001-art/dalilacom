@@ -53,6 +53,45 @@ export async function ownMerchant(userId: string) {
   return merchant;
 }
 
+/** The country whose advertising spaces a shop books: the platform's only one, otherwise the shop owner's. */
+async function adCountry(merchant: { user: { countryCode: string | null } }): Promise<string> {
+  return (await onlyCountry()) ?? merchant.user.countryCode ?? "SY";
+}
+
+export interface AdDay {
+  date: string; // YYYY-MM-DD (UTC)
+  free: number; // spaces free on that day
+  canStart: boolean; // the chosen number of days fits there, starting that day (today = starting now)
+}
+
+/**
+ * The next 60 days of the store's advertising spaces, for a calendar: how many of the spaces are free each day, and whether
+ * an ad of `days` days could start that day (a space free for all of its length).
+ */
+export async function adAvailability(userId: string, days: number): Promise<{ slots: number; days: AdDay[] }> {
+  const merchant = await ownMerchant(userId);
+  const country = await adCountry(merchant);
+  const now = Date.now();
+  const today = new Date(now);
+  const startOfToday = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const booked = await prisma.adBooking.findMany({
+    where: { countryCode: country, ...holdsSlot, endsAt: { gt: new Date(now) }, startsAt: { lt: new Date(startOfToday + (MAX_ADVANCE_DAYS + days + 1) * DAY_MS) } },
+    select: { slot: true, startsAt: true, endsAt: true },
+  });
+  const busy = (from: number, to: number) => new Set(booked.filter((b) => b.startsAt.getTime() < to && b.endsAt.getTime() > from).map((b) => b.slot)).size;
+  const out: AdDay[] = [];
+  for (let i = 0; i < MAX_ADVANCE_DAYS; i++) {
+    const dayStart = startOfToday + i * DAY_MS;
+    const from = i === 0 ? now : dayStart; // an ad booked for today starts now
+    out.push({
+      date: new Date(dayStart).toISOString().slice(0, 10),
+      free: AD_SLOTS - busy(from, dayStart + DAY_MS),
+      canStart: busy(from, from + days * DAY_MS) < AD_SLOTS,
+    });
+  }
+  return { slots: AD_SLOTS, days: out };
+}
+
 export interface BookInput {
   userId: string;
   productId: string;
@@ -78,7 +117,7 @@ export async function bookAd(input: BookInput): Promise<AdBooking> {
   const startsAt = requested;
   const endsAt = new Date(startsAt.getTime() + pack.days * DAY_MS);
   // with a single country on the platform every shop advertises in it
-  const country = (await onlyCountry()) ?? merchant.user.countryCode ?? "SY";
+  const country = await adCountry(merchant);
 
   try {
     return await prisma.$transaction(async (tx) => {

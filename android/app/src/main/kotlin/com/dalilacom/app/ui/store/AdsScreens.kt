@@ -34,6 +34,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.background
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,6 +83,8 @@ data class AdBookUi(
     val products: List<ProductDto> = emptyList(),
     val productId: String = "",
     val days: Int = 0,
+    val avail: List<com.dalilacom.app.data.network.AdDayDto> = emptyList(),
+    val startDate: String? = null,
     val startDay: Int = 0, // 0 = now, 1 = tomorrow ...
     val busy: Boolean = false,
     val error: String? = null,
@@ -107,6 +114,7 @@ class AdBookViewModel(private val store: StoreRepository, private val products: 
                 products = mine,
                 days = pk?.packages?.minByOrNull { it.days }?.days ?: 0,
             )
+            loadAvail()
         }
     }
 
@@ -129,14 +137,25 @@ class AdBookViewModel(private val store: StoreRepository, private val products: 
     }
 
     fun pickProduct(id: String) = _ui.update { it.copy(productId = id) }
-    fun pickDays(days: Int) = _ui.update { it.copy(days = days) }
+    fun pickDays(days: Int) { _ui.update { it.copy(days = days, avail = emptyList()) }; loadAvail() }
     fun pickStart(day: Int) = _ui.update { it.copy(startDay = day) }
+    /** A day chosen on the calendar (today means "now"). */
+    fun pickStartDate(date: String?) = _ui.update { it.copy(startDate = date, error = null) }
+
+    fun loadAvail() {
+        val days = _ui.value.days
+        if (days == 0) return
+        viewModelScope.launch {
+            val list = store.adAvailability(days)
+            _ui.update { if (it.days == days) it.copy(avail = list) else it }
+        }
+    }
 
     fun book() {
         val s = _ui.value
         if (s.productId.isBlank() || s.days == 0 || s.busy) return
         _ui.update { it.copy(busy = true, error = null) }
-        val start = if (s.startDay == 0) null else LocalDate.now().plusDays(s.startDay.toLong()).atStartOfDay(ZoneId.systemDefault()).toInstant().toString()
+        val start = s.startDate // a date (YYYY-MM-DD) from the calendar, or null = now
         viewModelScope.launch {
             store.bookAd(s.productId, s.days, start)
                 .onSuccess { _ui.update { it.copy(busy = false, done = true) } }
@@ -203,13 +222,7 @@ fun AdBookScreen(container: AppContainer, kind: String = "space", onBack: () -> 
             }
 
             Text(stringResource(R.string.ads_pick_start), fontWeight = FontWeight.Bold)
-            var startOpen by remember { mutableStateOf(false) }
-            Box {
-                OutlinedButton(onClick = { startOpen = true }, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) { Text(startLabel(ui.startDay)) }
-                DropdownMenu(expanded = startOpen, onDismissRequest = { startOpen = false }) {
-                    (0..7).forEach { d -> DropdownMenuItem(text = { Text(startLabel(d)) }, onClick = { vm.pickStart(d); startOpen = false }) }
-                }
-            }
+            AdCalendar(ui.avail, ui.startDate, onPick = vm::pickStartDate)
 
             val chosen = ui.packages.firstOrNull { it.days == ui.days }
             val enough = chosen == null || ui.balance >= chosen.credits
@@ -386,3 +399,57 @@ private fun adStateLabel(state: String): String = stringResource(
         else -> R.string.ads_state_pending
     },
 )
+
+/** The store's advertising calendar: green = free, yellow = nearly full, red = full, grey = the chosen length does not fit. */
+@Composable
+private fun AdCalendar(days: List<com.dalilacom.app.data.network.AdDayDto>, selected: String?, onPick: (String?) -> Unit) {
+    if (days.isEmpty()) { Text(stringResource(R.string.ads_cal_loading), color = MaterialTheme.colorScheme.onSurfaceVariant); return }
+    val first = LocalDate.parse(days.first().date)
+    val weekStart = if (com.dalilacom.app.ui.i18n.AppStrings.language == "ar") java.time.DayOfWeek.SATURDAY else java.time.DayOfWeek.SUNDAY
+    val lead = (first.dayOfWeek.value - weekStart.value + 7) % 7
+    val sel = selected ?: days.first().date
+    val cells: List<com.dalilacom.app.data.network.AdDayDto?> = List(lead) { null } + days
+    val locale = java.util.Locale.forLanguageTag(com.dalilacom.app.ui.i18n.AppStrings.language)
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            (0 until 7).forEach { i ->
+                val d = weekStart.plus(i.toLong())
+                Text(d.getDisplayName(java.time.format.TextStyle.NARROW, locale), modifier = Modifier.weight(1f), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+        }
+        cells.chunked(7).forEach { week ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                week.forEach { d ->
+                    if (d == null) { Spacer(Modifier.weight(1f)) } else {
+                        val color = when { !d.canStart -> Color(0xFFC9C9C9); d.free == 0 -> Color(0xFFC8283A); d.free <= 2 -> Color(0xFFE0A21C); else -> Color(0xFF2E9B57) }
+                        val date = LocalDate.parse(d.date)
+                        Surface(
+                            onClick = { onPick(if (d.date == days.first().date) null else d.date) },
+                            enabled = d.canStart,
+                            shape = RoundedCornerShape(10.dp),
+                            color = color,
+                            contentColor = if (d.canStart) Color.White else Color(0xFF666666),
+                            border = if (sel == d.date) BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface) else null,
+                            modifier = Modifier.weight(1f).aspectRatio(1f),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                if (date.dayOfMonth == 1 || d.date == days.first().date) Text(date.month.getDisplayName(java.time.format.TextStyle.SHORT, locale), fontSize = 9.sp, modifier = Modifier.align(Alignment.TopStart).padding(start = 3.dp, top = 1.dp))
+                                Text(date.dayOfMonth.toString(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
+                repeat(7 - week.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf(Color(0xFF2E9B57) to R.string.ads_cal_ok, Color(0xFFE0A21C) to R.string.ads_cal_few, Color(0xFFC8283A) to R.string.ads_cal_full, Color(0xFFC9C9C9) to R.string.ads_cal_blocked).forEach { (c, label) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(c))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(label), fontSize = 11.sp)
+                }
+            }
+        }
+    }
+}

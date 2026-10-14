@@ -824,4 +824,9 @@
     <string name="sp_failed">The request could not be done</string>
     <string name="sp_closed_title">Your store is still closed</string>
     <string name="sp_closed_sub">Choose a plan (free or paid) to be able to add products and sell.</string>
+    <string name="ads_cal_loading">Loading the calendar...</string>
+    <string name="ads_cal_ok">Available</string>
+    <string name="ads_cal_few">Almost full</string>
+    <string name="ads_cal_full">Booked</string>
+    <string name="ads_cal_blocked">The length does not fit</string>
 </resources>

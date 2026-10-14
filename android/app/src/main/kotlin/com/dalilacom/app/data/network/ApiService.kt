@@ -204,6 +204,9 @@ interface ApiService {
     @GET("geo/reverse")
     suspend fun reverseGeocode(@Query("lat") lat: Double, @Query("lng") lng: Double): Response<PlaceInWordsDto>
 
+    @GET("ads/availability")
+    suspend fun adAvailability(@Query("days") days: Int): Response<AdAvailabilityDto>
+
     @GET("product-categories")
     suspend fun productCategories(): Response<List<ProductCategoryDto>>
 

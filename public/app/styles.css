@@ -1418,3 +1418,19 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .intent-card .ic { font-size: 26px; flex: none; }
 .intent-card b { display: block; font-size: 16px; margin-bottom: 2px; }
 .intent-card small { display: block; color: var(--muted, #888); line-height: 1.45; }
+
+/* the store's advertising calendar */
+.cal { margin-top: 6px; }
+.cal-head, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.cal-head span { text-align: center; font-size: 12px; color: var(--muted, #888); padding-bottom: 4px; }
+.cal-day { position: relative; aspect-ratio: 1; border: 2px solid transparent; border-radius: 10px; font: inherit; cursor: pointer; display: grid; place-items: center; padding: 0; color: #fff; }
+.cal-day b { font-size: 14px; }
+.cal-day em { position: absolute; top: 1px; inset-inline-start: 3px; font-style: normal; font-size: 9px; opacity: .85; }
+.cal-day.ok, .cal-legend i.ok { background: #2e9b57; }
+.cal-day.few, .cal-legend i.few { background: #e0a21c; }
+.cal-day.full, .cal-legend i.full { background: #c8283a; }
+.cal-day.blocked, .cal-legend i.blocked { background: repeating-linear-gradient(45deg, #b9b9b9, #b9b9b9 4px, #d6d6d6 4px, #d6d6d6 8px); color: #666; cursor: not-allowed; }
+.cal-day.sel { border-color: var(--text, #111); box-shadow: 0 0 0 2px var(--surface, #fff) inset; transform: scale(1.06); }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12.5px; }
+.cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.cal-legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }

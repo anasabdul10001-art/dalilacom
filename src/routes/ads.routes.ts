@@ -5,7 +5,7 @@ import { prisma } from "../prisma";
 import { sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { getSettings } from "../services/settings.service";
-import { AD_SLOTS, adState, bookAd, bookBanner, cancelAd, cancelBannerBooking, ownMerchant } from "../services/ads.service";
+import { AD_SLOTS, adAvailability, adState, bookAd, bookBanner, cancelAd, cancelBannerBooking, ownMerchant } from "../services/ads.service";
 import { optionalUserId } from "../services/viewerCountry.service";
 import { route } from "../lib/asyncRoute";
 
@@ -28,6 +28,13 @@ adsRouter.get("/packages", route(async (req, res) => {
     autoApprove: settings.ads.autoApprove,
     balance: wallet?.balance ?? (userId ? 0 : null),
   });
+}));
+
+// The calendar of the advertising spaces: which days are free for an ad of `days` days, for the shop picking when to start.
+adsRouter.get("/availability", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const parsed = z.object({ days: z.coerce.number().int().min(1).max(366).default(7) }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await adAvailability(req.user!.id, parsed.data.days));
 }));
 
 const bookSchema = z.object({

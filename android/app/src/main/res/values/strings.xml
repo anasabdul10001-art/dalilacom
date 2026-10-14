@@ -828,4 +828,9 @@
     <string name="sp_failed">ما قدرنا ننفّذ الطلب</string>
     <string name="sp_closed_title">متجرك لسا مسكّر</string>
     <string name="sp_closed_sub">اختر باقة (مجانية أو مدفوعة) لتقدر تضيف منتجات وتبيع.</string>
+    <string name="ads_cal_loading">جاري تحميل التقويم...</string>
+    <string name="ads_cal_ok">متاح</string>
+    <string name="ads_cal_few">قرب يمتلي</string>
+    <string name="ads_cal_full">محجوز</string>
+    <string name="ads_cal_blocked">المدة ما بتتسع</string>
 </resources>

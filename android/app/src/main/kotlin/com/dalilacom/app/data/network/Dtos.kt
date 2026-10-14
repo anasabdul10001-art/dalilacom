@@ -960,3 +960,10 @@ data class StorePlansDto(
     val current: CurrentStorePlanDto? = null,
     val plans: List<StorePlanDto> = emptyList(),
 )
+
+/** The store's advertising calendar: per day, how many spaces are free and whether the chosen length fits starting that day. */
+@Serializable
+data class AdDayDto(val date: String, val free: Int = 0, val canStart: Boolean = true)
+
+@Serializable
+data class AdAvailabilityDto(val slots: Int = 6, val days: List<AdDayDto> = emptyList())
