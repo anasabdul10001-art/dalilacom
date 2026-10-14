@@ -5,6 +5,10 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { currencyOf, viewerCountry } from "../services/viewerCountry.service";
+import { reverseGeocodeRateLimiter } from "../middleware/rateLimit";
+import { reverseGeocode } from "../services/reverseGeocode.service";
+import { resolveLanguage } from "../lib/languages";
+import { route } from "../lib/asyncRoute";
 
 export const geoRouter = Router();
 
@@ -57,6 +61,13 @@ const listUnitsSchema = z.object({
   parentId: z.string().uuid().optional(),
   q: z.string().optional(),
 });
+
+// A pinned place in words (street, area, city), in the reader's language: fills the address field of the sign-up and shop forms.
+geoRouter.get("/reverse", reverseGeocodeRateLimiter, route(async (req, res) => {
+  const parsed = z.object({ lat: z.coerce.number().min(-90).max(90), lng: z.coerce.number().min(-180).max(180) }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await reverseGeocode(parsed.data.lat, parsed.data.lng, resolveLanguage(req)));
+}));
 
 // Public browse — e.g. "cities in Syria" (countryId + level=CITY) or "children of this region"
 // (parentId). Powers city-selection onboarding and any future location picker.

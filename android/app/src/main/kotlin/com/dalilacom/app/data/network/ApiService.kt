@@ -201,6 +201,9 @@ interface ApiService {
     suspend fun getProduct(@Path("id") id: String): Response<ProductDto>
 
 
+    @GET("geo/reverse")
+    suspend fun reverseGeocode(@Query("lat") lat: Double, @Query("lng") lng: Double): Response<PlaceInWordsDto>
+
     @GET("product-categories")
     suspend fun productCategories(): Response<List<ProductCategoryDto>>
 

@@ -928,3 +928,7 @@ data class AddProductCategoryRequest(val name: String, val parentId: String)
 
 @Serializable
 data class AddProductCategoryResponse(val id: String, val created: Boolean = true, val name: String = "")
+
+/** A pinned place in words: the street, area and city, ready for the address field. */
+@Serializable
+data class PlaceInWordsDto(val address: String? = null, val city: String? = null)

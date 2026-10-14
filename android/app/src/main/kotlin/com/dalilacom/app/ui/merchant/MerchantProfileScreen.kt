@@ -114,7 +114,15 @@ class MerchantProfileViewModel(
     fun onAddress(value: String) = _uiState.update { it.copy(address = value, message = null) }
     fun onPhone(value: String) = _uiState.update { it.copy(phone = value, message = null) }
     fun onWhatsapp(value: String) = _uiState.update { it.copy(whatsapp = value, message = null) }
-    fun onLocation(value: Pair<Double, Double>) = _uiState.update { it.copy(location = value, message = null) }
+    private var autoAddress = ""
+    fun onLocation(value: Pair<Double, Double>) {
+        _uiState.update { it.copy(location = value, message = null) }
+        // the pinned place in words fills the address, unless the person typed their own
+        viewModelScope.launch {
+            val place = discover.addressFor(value.first, value.second)?.address ?: return@launch
+            _uiState.update { if (it.address.isBlank() || it.address == autoAddress) { autoAddress = place; it.copy(address = place) } else it }
+        }
+    }
 
     fun save() {
         val s = _uiState.value

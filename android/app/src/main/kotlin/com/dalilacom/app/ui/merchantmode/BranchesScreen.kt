@@ -55,6 +55,8 @@ fun BranchesScreen(container: AppContainer, onBack: () -> Unit) {
     var phone by remember { mutableStateOf("") }
     var location by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var autoAddress by remember { mutableStateOf("") }
+    var autoCity by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var toDelete by remember { mutableStateOf<BranchDto?>(null) }
     val needName = stringResource(R.string.br_need_name)
@@ -107,7 +109,15 @@ fun BranchesScreen(container: AppContainer, onBack: () -> Unit) {
             OutlinedTextField(value = phone, onValueChange = { phone = it.take(30) }, label = { Text(stringResource(R.string.br_phone)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.br_pick), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            LocationPicker(value = location, onChange = { location = it })
+            LocationPicker(value = location, onChange = { picked ->
+                location = picked
+                scope.launch {
+                    container.discoverRepository.addressFor(picked.first, picked.second)?.let { place ->
+                        if (address.isBlank() || address == autoAddress) { address = place.address.orEmpty(); autoAddress = address }
+                        if (place.city != null && (city.isBlank() || city == autoCity)) { city = place.city; autoCity = city }
+                    }
+                }
+            })
             error?.let { Spacer(Modifier.height(8.dp)); Text(it, color = MaterialTheme.colorScheme.error) }
             Spacer(Modifier.height(12.dp))
             Button(

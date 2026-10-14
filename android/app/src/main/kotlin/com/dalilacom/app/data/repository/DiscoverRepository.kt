@@ -12,6 +12,10 @@ class DiscoverRepository(private val api: ApiService) {
     suspend fun searchCategories(query: String): List<com.dalilacom.app.data.network.CategoryHitDto> =
         safeApiCall { api.searchCategories(query) }?.takeIf { it.isSuccessful }?.body().orEmpty()
 
+    /** A pinned place in words (street, area, city) for the address field; null when nothing could be read. */
+    suspend fun addressFor(lat: Double, lng: Double): com.dalilacom.app.data.network.PlaceInWordsDto? =
+        safeApiCall { api.reverseGeocode(lat, lng) }?.takeIf { it.isSuccessful }?.body()?.takeIf { !it.address.isNullOrBlank() }
+
     suspend fun getCategories(): List<CategoryDto> {
         val response = safeApiCall { api.getCategories() } ?: return emptyList()
         return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()

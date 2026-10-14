@@ -3150,7 +3150,7 @@ function pickSet(lat, lng, recenter) {
   if (S._pickMap) {
     if (!S._pickMarker) {
       S._pickMarker = L.marker([lat, lng], { draggable: true }).addTo(S._pickMap);
-      S._pickMarker.on("dragend", () => { const ll = S._pickMarker.getLatLng(); pickSet(ll.lat, ll.lng, false); });
+      S._pickMarker.on("dragend", () => { const ll = S._pickMarker.getLatLng(); pickSet(ll.lat, ll.lng, false); fillAddressFromPin(ll.lat, ll.lng); });
     } else {
       S._pickMarker.setLatLng([lat, lng]);
     }
@@ -3169,7 +3169,7 @@ function renderPicker() {
     S._pickEl = el;
     const map = L.map(el, { attributionControl: false }).setView([DAMASCUS.lat, DAMASCUS.lng], 12);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
-    map.on("click", (e) => pickSet(e.latlng.lat, e.latlng.lng, false));
+    map.on("click", (e) => { pickSet(e.latlng.lat, e.latlng.lng, false); fillAddressFromPin(e.latlng.lat, e.latlng.lng); });
     S._pickMap = map;
   }
   slot.appendChild(S._pickEl);
@@ -3190,10 +3190,38 @@ function pickReset(lat, lng) {
   if (S._pickMap && S._pickMarker) { S._pickMap.removeLayer(S._pickMarker); S._pickMarker = null; }
 }
 
+/**
+ * The place the person pinned, in words: the address field fills itself in. It never replaces what the person typed
+ * themselves — only an empty field or one this function filled before.
+ */
+let _revTimer = null;
+function fillAddressFromPin(lat, lng) {
+  clearTimeout(_revTimer);
+  _revTimer = setTimeout(async () => {
+    const { ok, data } = await api("GET", "/geo/reverse?lat=" + lat + "&lng=" + lng + "&lang=" + LANG);
+    if (!ok || !data || !data.address) return;
+    const free = (el) => !el.value.trim() || el.value === S._autoAddr;
+    const el = qs("mr-address") || qs("mp-address") || qs("br-address");
+    if (el && free(el)) {
+      el.value = data.address;
+      S._autoAddr = data.address;
+      if (S._merchReg && qs("mr-address")) S._merchReg.address = data.address;
+      if (S._mprof && qs("mp-address")) S._mprof.address = data.address;
+      if (S._br && S._br.form && qs("br-address")) S._br.form.address = data.address;
+    }
+    const city = qs("br-city");
+    if (city && data.city && (!city.value.trim() || city.value === S._autoCity)) {
+      city.value = data.city;
+      S._autoCity = data.city;
+      if (S._br && S._br.form) S._br.form.city = data.city;
+    }
+  }, 700);
+}
+
 function pickUseMyLocation() {
   if (!navigator.geolocation) return toast("المتصفح ما بيدعم تحديد الموقع");
   navigator.geolocation.getCurrentPosition(
-    (pos) => pickSet(pos.coords.latitude, pos.coords.longitude, true),
+    (pos) => { pickSet(pos.coords.latitude, pos.coords.longitude, true); fillAddressFromPin(pos.coords.latitude, pos.coords.longitude); },
     () => toast("ما قدرنا نحدد موقعك — اضغط على الخريطة لتحدده بإيدك"),
     { enableHighAccuracy: true, timeout: 10000 },
   );
@@ -4482,8 +4510,8 @@ function screenBranches() {
       ${backRow()}
       <h1 class="screen-title">${esc(x.id ? t("br.edit") : t("br.add"))}</h1>
       <div class="field"><label>${esc(t("br.name"))}</label><input value="${esc(x.name)}" maxlength="60" placeholder="${esc(t("br.namePh"))}" oninput="S._br.form.name=this.value"></div>
-      <div class="field"><label>${esc(t("br.city"))}</label><input value="${esc(x.city)}" maxlength="60" oninput="S._br.form.city=this.value"></div>
-      <div class="field"><label>${esc(t("br.address"))}</label><input value="${esc(x.address)}" maxlength="200" oninput="S._br.form.address=this.value"></div>
+      <div class="field"><label>${esc(t("br.city"))}</label><input id="br-city" value="${esc(x.city)}" maxlength="60" oninput="S._br.form.city=this.value"></div>
+      <div class="field"><label>${esc(t("br.address"))}</label><input id="br-address" value="${esc(x.address)}" maxlength="200" oninput="S._br.form.address=this.value"></div>
       <div class="field"><label>${esc(t("br.phone"))}</label><input type="tel" value="${esc(x.phone)}" maxlength="30" oninput="S._br.form.phone=this.value"></div>
       ${pickerHtml(t("br.pickLabel"))}
       ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}

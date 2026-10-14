@@ -36,6 +36,7 @@ class MerchantRegisterViewModel(
     }
 
     suspend fun searchCategories(query: String) = discoverRepository.searchCategories(query)
+    suspend fun addressFor(lat: Double, lng: Double) = discoverRepository.addressFor(lat, lng)
 
     fun register(businessName: String, categoryId: String?, address: String, phone: String, whatsapp: String, location: Pair<Double, Double>?, suggestedCategory: String? = null) {
         if (businessName.isBlank() || categoryId == null) {

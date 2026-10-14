@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.ui.ViewModelFactory
@@ -48,6 +49,8 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
     var location by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var suggestion by remember { mutableStateOf("") }
+    var autoAddress by remember { mutableStateOf("") } // what the map filled in, so it never replaces what the person typed
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val online = isOnlineCategory(state.categories, selectedCategoryId)
 
     LaunchedEffect(state.result) {
@@ -107,7 +110,14 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
         if (online) {
             Text(stringResource(R.string.cat_online_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
         } else {
-            LocationPicker(value = location, onChange = { location = it })
+            LocationPicker(value = location, onChange = { picked ->
+                location = picked
+                scope.launch {
+                    viewModel.addressFor(picked.first, picked.second)?.let { place ->
+                        if (address.isBlank() || address == autoAddress) { address = place.address.orEmpty(); autoAddress = address }
+                    }
+                }
+            })
         }
         Spacer(Modifier.height(20.dp))
 
