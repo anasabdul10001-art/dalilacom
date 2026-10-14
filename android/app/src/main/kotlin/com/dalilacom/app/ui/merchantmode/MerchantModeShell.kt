@@ -4,6 +4,7 @@ import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -169,30 +170,37 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
 /** What's left before the shop shows up for customers — each open item jumps to where it's done. */
 @Composable
 private fun SetupChecklist(steps: OnboardingDto, onLocation: () -> Unit, onHours: () -> Unit, onCatalog: () -> Unit) {
+    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(14.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Column(Modifier.clickable { open = !open }.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(AppStrings.get(R.string.s_0c6c1d53), style = MaterialTheme.typography.titleSmall)
-                Text("${steps.doneCount}/5", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text("${steps.doneCount}/5  " + (if (open) "▴" else "▾"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
-            if (!steps.approved) {
-                Text(
-                    AppStrings.get(R.string.s_79e32d1f),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { steps.doneCount / 5f },
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp).height(4.dp).clip(RoundedCornerShape(4.dp)),
+            )
+            if (open) {
+                if (!steps.approved) {
+                    Text(
+                        AppStrings.get(R.string.s_79e32d1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                ChecklistItem(steps.location, AppStrings.get(R.string.s_04c5e56f), onLocation)
+                ChecklistItem(steps.hours, AppStrings.get(R.string.s_004f489c), onHours)
+                ChecklistItem(steps.discount, AppStrings.get(R.string.s_9855a904), onCatalog)
+                ChecklistItem(steps.product, AppStrings.get(R.string.s_47352f90), onCatalog)
+                ChecklistItem(steps.approved, AppStrings.get(R.string.s_ab03953f), null)
             }
-            Spacer(Modifier.height(6.dp))
-            ChecklistItem(steps.location, AppStrings.get(R.string.s_04c5e56f), onLocation)
-            ChecklistItem(steps.hours, AppStrings.get(R.string.s_004f489c), onHours)
-            ChecklistItem(steps.discount, AppStrings.get(R.string.s_9855a904), onCatalog)
-            ChecklistItem(steps.product, AppStrings.get(R.string.s_47352f90), onCatalog)
-            ChecklistItem(steps.approved, AppStrings.get(R.string.s_ab03953f), null)
         }
     }
 }

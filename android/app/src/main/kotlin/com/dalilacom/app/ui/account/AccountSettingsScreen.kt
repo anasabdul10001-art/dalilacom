@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -229,7 +230,7 @@ private fun SectionCard(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit) {
+fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark: Boolean = false, onToggleTheme: () -> Unit = {}, onSetLanguage: (String) -> Unit = {}) {
     val viewModel: AccountSettingsViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
     val profile = state.profile
@@ -255,6 +256,24 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             item {
                 state.info?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
                 state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+            item {
+                SectionCard(stringResource(R.string.account_look)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.account_dark), modifier = Modifier.weight(1f))
+                        androidx.compose.material3.Switch(checked = isDark, onCheckedChange = { onToggleTheme() })
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.account_language), style = MaterialTheme.typography.labelLarge)
+                    com.dalilacom.app.ui.i18n.AppLanguages.all.forEach { language ->
+                        androidx.compose.material3.FilterChip(
+                            selected = com.dalilacom.app.ui.i18n.AppStrings.language == language.code,
+                            onClick = { onSetLanguage(language.code) },
+                            label = { Text(language.nativeName) },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    }
+                }
             }
             item {
                 SectionCard(AppStrings.get(R.string.account_email)) {

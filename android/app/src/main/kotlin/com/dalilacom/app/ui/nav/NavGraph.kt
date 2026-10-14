@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,10 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import com.dalilacom.app.ui.common.CardFab
-import com.dalilacom.app.ui.common.showCardFabOn
-import com.dalilacom.app.ui.common.showMerchantFabOn
-import com.dalilacom.app.ui.common.MerchantFab
+import com.dalilacom.app.ui.common.FloatingButtons
 import androidx.compose.runtime.collectAsState
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
@@ -244,7 +242,16 @@ fun DalilacomNavGraph(
             ReviewScreen(factory = factory, onBack = { navController.popBackStack() })
         }
         composable("accountSettings") {
-            AccountSettingsScreen(factory = factory, onBack = { navController.popBackStack() })
+            val savedTheme by container.sessionStore.themeFlow.collectAsState(initial = null)
+            val dark = when (savedTheme) { "dark" -> true; "light" -> false; else -> androidx.compose.foundation.isSystemInDarkTheme() }
+            val settingsScope = androidx.compose.runtime.rememberCoroutineScope()
+            AccountSettingsScreen(
+                factory = factory,
+                onBack = { navController.popBackStack() },
+                isDark = dark,
+                onToggleTheme = { settingsScope.launch { container.sessionStore.saveTheme(if (dark) "light" else "dark") } },
+                onSetLanguage = { code -> settingsScope.launch { container.sessionStore.saveLanguage(code) } },
+            )
         }
         composable("profileEdit") {
             ProfileEditScreen(factory = factory, onBack = { navController.popBackStack() })
@@ -300,13 +307,12 @@ fun DalilacomNavGraph(
             )
         }
     }
-    if (showCardFabOn(currentRoute, isMerchant)) CardFab(onClick = { navController.navigate("card") })
-    if (isMerchant && showMerchantFabOn(currentRoute)) {
-        MerchantFab(
-            raised = currentRoute?.startsWith("merchantMode") == true, // the shop's own screen already has the scan button at the bottom corner
-            onAddDiscount = { navController.navigate("discounts") },
-            onGiveDiscount = { navController.navigate("merchantMode") }, // opens on the tab where a member's code is scanned
-        )
-    }
+    FloatingButtons(
+        route = currentRoute,
+        merchant = isMerchant,
+        onCard = { navController.navigate("card") },
+        onAddDiscount = { navController.navigate("discounts") },
+        onGiveDiscount = { navController.navigate("merchantMode") }, // opens on the tab where a member's code is scanned
+    )
     }
 }

@@ -1379,39 +1379,28 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .cat-suggest { margin: 4px 0 10px; }
 .cat-suggest input { margin-top: 6px; }
 
-/* the floating card button: a little credit card in the brand red with a gold edge, on every page */
-.card-fab {
-  position: fixed; inset-inline-start: 14px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 40;
-  display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px 10px 14px; border: 0; border-radius: 999px; cursor: pointer;
-  color: #fff; font: inherit; font-size: 14px; letter-spacing: .2px;
-  background: linear-gradient(135deg, #8f101c 0%, #c8283a 55%, #e3566a 100%);
-  box-shadow: 0 0 0 2px #f3c969, 0 8px 22px rgba(143, 16, 28, .45);
-  overflow: hidden; -webkit-tap-highlight-color: transparent; transition: transform .15s ease, box-shadow .15s ease;
-}
-.card-fab:active { transform: scale(.95); }
-.card-fab b { font-weight: 800; }
-.card-fab svg { flex: none; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .25)); }
-.card-fab-chip { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .28) 50%, transparent 65%); transform: translateX(-120%); animation: card-fab-shine 4.5s ease-in-out infinite; pointer-events: none; }
-@keyframes card-fab-shine { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
-@media (min-width: 900px) { .card-fab { bottom: 28px; } }
 
-/* the shop's floating discount button: dark with a gold edge, opposite the card button */
-.mfab-wrap { position: fixed; inset-inline-end: 14px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 41; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.mfab {
-  display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px 10px 14px; border: 0; border-radius: 999px; cursor: pointer;
-  color: #ffe7a3; font: inherit; font-size: 14px; background: linear-gradient(135deg, #1d1d22 0%, #34343c 100%);
-  box-shadow: 0 0 0 2px #f3c969, 0 8px 22px rgba(0, 0, 0, .4); -webkit-tap-highlight-color: transparent; transition: transform .15s ease;
-}
-.mfab:active { transform: scale(.95); }
-.mfab b { font-weight: 800; }
-.mfab-menu { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
-.mfab-menu button { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 0; border-radius: 16px; background: var(--surface, #fff); color: inherit; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); white-space: nowrap; }
-.mfab-menu button span { font-size: 18px; }
-.mfab-shade { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .25); }
-@media (min-width: 900px) { .mfab-wrap { bottom: 28px; } }
 
 /* the hint over the shop's discount button */
-.mfab-tip { position: relative; max-width: min(280px, 72vw); padding: 12px 30px 12px 14px; border-radius: 16px 16px 4px 16px; background: #fff8e1; color: #3b2f0b; border: 1.5px solid #f3c969; box-shadow: 0 8px 20px rgba(0, 0, 0, .22); font-size: 13.5px; line-height: 1.45; animation: mfab-tip-in .35s ease; }
+.mfab-tip { position: relative; pointer-events: auto; max-width: min(280px, 72vw); padding: 12px 30px 12px 14px; border-radius: 16px 16px 4px 16px; background: #fff8e1; color: #3b2f0b; border: 1.5px solid #f3c969; box-shadow: 0 8px 20px rgba(0, 0, 0, .22); font-size: 13.5px; line-height: 1.45; animation: mfab-tip-in .35s ease; }
 .mfab-tip span { cursor: pointer; display: block; }
 .mfab-tip-x { position: absolute; top: 4px; inset-inline-end: 6px; border: 0; background: transparent; color: inherit; opacity: .55; cursor: pointer; font-size: 13px; }
 @keyframes mfab-tip-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* the shop's setup checklist: one slim line that opens on tap */
+.checklist.slim { padding: 10px 14px; }
+.check-line { height: 4px; border-radius: 4px; background: rgba(128, 128, 128, .25); margin-top: 8px; overflow: hidden; }
+.check-line i { display: block; height: 100%; background: var(--primary, #c8283a); border-radius: 4px; transition: width .3s ease; }
+
+/* the round floating buttons, like the map's own: the member card, and for shops the discount button */
+.rfab, .map-fab.card-fab, .map-fab.disc-fab { display: grid; place-items: center; color: var(--primary, #c8283a); }
+.rfab { width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--surface); box-shadow: 0 4px 14px rgba(0, 0, 0, .3); cursor: pointer; padding: 0; }
+.rfab:active, .map-fab.card-fab:active, .map-fab.disc-fab:active { transform: scale(.94); }
+.fab-stack { position: fixed; inset-inline-start: 12px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 500; display: flex; flex-direction: column; gap: 10px; }
+@media (min-width: 900px) { .fab-stack { bottom: 24px; } }
+.mfab-pop { position: fixed; z-index: 502; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; pointer-events: none; }
+.mfab-pop > * { pointer-events: auto; }
+.mfab-menu { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.mfab-menu button { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 0; border-radius: 16px; background: var(--surface, #fff); color: inherit; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); white-space: nowrap; }
+.mfab-menu button span { font-size: 18px; }
+.mfab-shade { position: fixed; inset: 0; z-index: 501; background: rgba(0, 0, 0, .2); }

@@ -805,4 +805,7 @@
         <item>لما الزبون يعرض كود بطاقته، بتشوف حسمه وبتأكده بثواني.</item>
         <item>حسم صغير اليوم، زباين دايمين بكرا.</item>
     </string-array>
+    <string name="account_look">المظهر واللغة</string>
+    <string name="account_dark">الوضع الداكن</string>
+    <string name="account_language">اللغة</string>
 </resources>

@@ -204,39 +204,57 @@ function root() {
   return document.getElementById("screen-body");
 }
 
-/* ---- the floating card button: on every page except where it would be in the way ---- */
+/* ---- the round floating buttons: the member card for everyone, the discount button for shops ---- */
 
-const CARD_FAB_HIDDEN = ["login", "register", "merchantMode", "merchantRegister", "merchantProfile", "merchantHours", "shippingMethods", "branches", "merchantBranches", "productEdit", "discounts", "aiPlans", "adBook", "pricing"];
+const FAB_HIDDEN = ["login", "register", "merchantRegister", "forgot", "socialEmail"];
+const FAB_STORE = ["store", "productDetail"]; // the shop's discount button is not shown on the store screens
+const FAB_CARD_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.6"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/></svg>`;
+const FAB_TAG_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>`;
 
-function cardFabHtml() {
-  // a shop keeps both floating buttons everywhere; only the sign-in pages are free of them
-  const hidden = S.role === "MERCHANT" ? ["login", "register"] : CARD_FAB_HIDDEN;
-  if (hidden.includes(S.screen)) return "";
-  if (S.screen === "home" && S.homeTab === "card") return "";
-  return `<button class="card-fab" onclick="openMyCard()" aria-label="${esc(t("deals.myCard"))}">
-    <span class="card-fab-chip"></span>
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.6"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/></svg>
-    <b>${esc(t("deals.myCard"))}</b>
-  </button>`;
+function isMapScreen() { return S.screen === "home" && (S.homeTab === "discover" || S.homeTab === "deals"); }
+function showCardFab() { return !FAB_HIDDEN.includes(S.screen) && !(S.screen === "home" && S.homeTab === "card"); }
+function showDiscFab() { return S.role === "MERCHANT" && !!S.token && !FAB_HIDDEN.includes(S.screen) && !FAB_STORE.includes(S.screen); }
+
+function cardFabButton(cls) {
+  return `<button class="${cls} card-fab" title="${esc(t("deals.myCard"))}" aria-label="${esc(t("deals.myCard"))}" onclick="openMyCard()">${FAB_CARD_SVG}</button>`;
+}
+function discFabButton(cls) {
+  return `<button id="fab-disc" class="${cls} disc-fab" title="${esc(t("fab.discount"))}" aria-label="${esc(t("fab.discount"))}" onclick="S._mfabOpen=!S._mfabOpen;render()">${FAB_TAG_SVG}</button>`;
 }
 
-/** The shop's own floating button: add a discount, or give a customer a discount (scan the card, or type the member number). */
-function merchantFabHtml() {
-  if (S.role !== "MERCHANT" || !S.token || ["login", "register", "merchantRegister"].includes(S.screen)) return "";
-  const open = !!S._mfabOpen;
+/** Inside the map the two sit where the language and theme buttons were. */
+function mapFabsHtml() {
+  return `${showCardFab() ? cardFabButton("map-fab theme-fab") : ""}${showDiscFab() ? discFabButton("map-fab lang-fab") : ""}`;
+}
+
+/** On every other page they stand in a column; the discount menu and the hints open beside the discount button. */
+function floatingButtonsHtml() {
+  const card = showCardFab();
+  const disc = showDiscFab();
+  if (!card && !disc) return "";
+  const stack = isMapScreen() ? "" : `<div class="fab-stack">${disc ? discFabButton("rfab") : ""}${card ? cardFabButton("rfab") : ""}</div>`;
+  if (!disc) return stack;
   mfabStartTips();
-  return `${open ? `<div class="mfab-shade" onclick="S._mfabOpen=false;render()"></div>` : ""}
-  <div class="mfab-wrap">
+  return `${stack}
+  ${S._mfabOpen ? `<div class="mfab-shade" onclick="S._mfabOpen=false;render()"></div>` : ""}
+  <div id="mfab-pop" class="mfab-pop">
     <div id="mfab-tip" class="mfab-tip" style="display:none"><button class="mfab-tip-x" onclick="mfabTipClose(event)" aria-label="x">✕</button><span id="mfab-tip-text" onclick="mfabGo('add')"></span></div>
-    ${open ? `<div class="mfab-menu">
+    ${S._mfabOpen ? `<div class="mfab-menu">
       <button onclick="mfabGo('add')"><span>➕</span>${esc(t("fab.addDiscount"))}</button>
       <button onclick="mfabGo('give')"><span>🎟️</span>${esc(t("fab.giveDiscount"))}</button>
     </div>` : ""}
-    <button class="mfab" onclick="S._mfabOpen=!S._mfabOpen;render()" aria-label="${esc(t("fab.discount"))}">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>
-      <b>${esc(t("fab.discount"))}</b>
-    </button>
   </div>`;
+}
+
+/** The menu and the hints open beside the discount button, wherever it is on the page. */
+function placeDiscPopup() {
+  const pop = document.getElementById("mfab-pop");
+  const btn = document.getElementById("fab-disc");
+  if (!pop || !btn) return;
+  const r = btn.getBoundingClientRect();
+  pop.style.bottom = Math.max(8, window.innerHeight - r.bottom) + "px";
+  if (document.documentElement.dir === "rtl") { pop.style.right = window.innerWidth - r.left + 10 + "px"; pop.style.left = "auto"; }
+  else { pop.style.left = r.right + 10 + "px"; pop.style.right = "auto"; }
 }
 
 /** Every so often a short hint says why a discount is good for the shop (the true reasons), until the shop closes it. */
@@ -251,6 +269,7 @@ function mfabStartTips() {
     if (!box || !text || S._mfabTipsOff || S._mfabOpen) return;
     text.textContent = tips[i++ % tips.length];
     box.style.display = "";
+    placeDiscPopup();
     setTimeout(() => { const b = document.getElementById("mfab-tip"); if (b) b.style.display = "none"; }, 9000);
   };
   setTimeout(show, 5000);
@@ -278,6 +297,17 @@ function openMyCard() {
   setHomeTab("card");
 }
 
+/** Language and light/dark live in the account settings now. */
+function lookAndLanguageHtml() {
+  return `<div class="card">
+    <div class="section-title" style="margin-top:0">${esc(t("acct.look"))}</div>
+    <div class="switch-row"><span>${esc(t("acct.dark"))}</span>
+      <label class="switch"><input type="checkbox" ${currentTheme() === "dark" ? "checked" : ""} onchange="toggleTheme()" /><span class="track"></span></label></div>
+    <div style="margin-top:10px"><strong>${esc(t("acct.language"))}</strong>
+      <div class="chip-row" style="margin-top:6px;flex-wrap:wrap">${Object.entries(LANGS).map(([code, l]) => `<button class="chip ${code === LANG ? "active" : ""}" onclick="setLang('${code}')">${esc(l.name)}</button>`).join("")}</div></div>
+  </div>`;
+}
+
 async function render() {
   const el = root();
   if (!el) return;
@@ -285,8 +315,9 @@ async function render() {
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
-  el.innerHTML = renderScreen() + photoMenuHtml() + cardFabHtml() + merchantFabHtml();
+  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml();
   wireUpAfterRender();
+  placeDiscPopup();
   trDom(el); // translate the rendered Arabic when another language is on
   if (keepFocus !== null) {
     const input = document.getElementById("disc-q");
@@ -944,9 +975,7 @@ function tabDiscover() {
 
       <button id="area-btn" class="area-btn" style="display:${d.areaDirty ? "block" : "none"}" onclick="searchThisArea()">${esc(t("area.search"))}</button>
       <button class="map-fab" title="${esc(t("fab.myLocation"))}" onclick="requestDiscoverLocation(true)">📍</button>
-      <button class="map-fab theme-fab" title="${esc(currentTheme() === "dark" ? t("fab.lightMode") : t("fab.darkMode"))}" onclick="toggleTheme()">${currentTheme() === "dark" ? "☀️" : "🌙"}</button>
-      <button class="map-fab lang-fab" title="${esc(t("fab.language"))}" onclick="toggleLangMenu()">🌐</button>
-      ${langMenuHtml()}
+      ${mapFabsHtml()}
 
       ${navBottomHtml()}
       <div class="sheet" id="sheet">
@@ -3247,14 +3276,15 @@ function merchantChecklistHtml() {
   if (done === 5 && o.steps.approved) return "";
   const item = (ok, label, action) => `<div class="check-item ${ok ? "ok" : ""}" ${ok ? "" : `onclick="${action}"`}><span>${ok ? "✅" : "⬜"}</span> ${label}</div>`;
   return `
-    <div class="card checklist">
-      <div class="title-line"><strong>جهّز محلك ليظهر للزبائن</strong><span class="badge ${o.steps.approved ? "success" : "warning"}">${done}/5</span></div>
-      ${o.steps.approved ? "" : `<p class="muted" style="margin:4px 0 8px">⏳ طلبك بانتظار موافقة الإدارة — ما رح يظهر محلك على الخريطة قبلها.</p>`}
+    <div class="card checklist slim">
+      <div class="title-line" onclick="S._checklistOpen=!S._checklistOpen;render()" style="cursor:pointer"><strong>جهّز محلك ليظهر للزبائن</strong><span class="badge ${o.steps.approved ? "success" : "warning"}">${done}/5 ${S._checklistOpen ? "▴" : "▾"}</span></div>
+      <div class="check-line"><i style="width:${done * 20}%"></i></div>
+      ${!S._checklistOpen ? "" : `${o.steps.approved ? "" : `<p class="muted" style="margin:4px 0 8px">⏳ طلبك بانتظار موافقة الإدارة — ما رح يظهر محلك على الخريطة قبلها.</p>`}
       ${item(o.steps.location, "حدّد مكان محلك على الخريطة", "S._mprof=null;go('merchantProfile')")}
       ${item(o.steps.hours, "حدّد ساعات العمل", "S._hours=null;go('merchantHours')")}
       ${item(o.steps.discount, "أضف حسم للأعضاء", "setMerchantTab('catalog')")}
       ${item(o.steps.product, "أضف أول منتج", "setMerchantTab('catalog')")}
-      ${item(o.steps.approved, "موافقة الإدارة", "")}
+      ${item(o.steps.approved, "موافقة الإدارة", "")}`}
     </div>`;
 }
 
@@ -3689,6 +3719,7 @@ function screenAccount() {
     ${backRow()}
     <h1 class="screen-title">إعدادات الحساب</h1>
     ${note}${err}
+    ${lookAndLanguageHtml()}
 
     <div class="card">
       <div class="section-title" style="margin-top:0">الإيميل</div>

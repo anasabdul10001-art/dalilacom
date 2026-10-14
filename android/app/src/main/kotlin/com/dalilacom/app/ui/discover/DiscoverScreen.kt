@@ -371,26 +371,6 @@ fun DiscoverScreen(
                 modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 16.dp),
             ) { Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.fab_my_location)) }
 
-            if (!navigating) SmallFloatingActionButton(
-                onClick = onToggleTheme,
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
-                contentColor = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 72.dp),
-            ) { Text(if (isDark) "☀️" else "🌙") }
-
-            if (!navigating) Box(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = innerPadding.calculateBottomPadding() + 128.dp)) {
-                SmallFloatingActionButton(
-                    onClick = { languageMenuOpen = true },
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
-                    contentColor = MaterialTheme.colorScheme.primary,
-                ) { Text("🌐") }
-                DropdownMenu(expanded = languageMenuOpen, onDismissRequest = { languageMenuOpen = false }) {
-                    AppLanguages.all.forEach { language ->
-                        DropdownMenuItem(text = { Text(language.nativeName) }, onClick = { languageMenuOpen = false; onSetLanguage(language.code) })
-                    }
-                }
-            }
-
             if (state.isLoading && state.allMerchants.isEmpty()) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
             }

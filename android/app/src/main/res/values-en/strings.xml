@@ -801,4 +801,7 @@
         <item>When a customer shows their card code, you see their discount and confirm it in seconds.</item>
         <item>A small discount today, regular customers tomorrow.</item>
     </string-array>
+    <string name="account_look">Appearance and language</string>
+    <string name="account_dark">Dark mode</string>
+    <string name="account_language">Language</string>
 </resources>
