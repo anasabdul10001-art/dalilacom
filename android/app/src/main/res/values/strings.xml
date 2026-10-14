@@ -817,4 +817,15 @@
     <string name="reg_user_title">أبحث وأستفيد من دليلكم</string>
     <string name="reg_user_sub">لمن يريد اكتشاف الأماكن والخدمات والمنتجات والاستفادة من العروض.</string>
     <string name="reg_biz_note">رح نطلب منك بيانات نشاطك بعد إنشاء الحساب</string>
+    <string name="sp_title">متجري</string>
+    <string name="sp_choose">اختر باقة متجرك لتفتح البيع وتضيف منتجاتك. فيه باقة مجانية وباقات ثانية.</string>
+    <string name="sp_change">غيّر باقتك أو جدّدها</string>
+    <string name="sp_no_plans_yet">متجرك مفتوح، ما في باقات لازم تختارها هلق.</string>
+    <string name="sp_open">افتح المتجر</string>
+    <string name="sp_current">باقتك الحالية: %1$s</string>
+    <string name="sp_choose_btn">اختر هالباقة</string>
+    <string name="sp_renew">جدّد</string>
+    <string name="sp_failed">ما قدرنا ننفّذ الطلب</string>
+    <string name="sp_closed_title">متجرك لسا مسكّر</string>
+    <string name="sp_closed_sub">اختر باقة (مجانية أو مدفوعة) لتقدر تضيف منتجات وتبيع.</string>
 </resources>

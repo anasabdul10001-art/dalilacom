@@ -352,6 +352,12 @@ interface ApiService {
     @POST("cart/checkout")
     suspend fun checkout(@Body body: CheckoutRequest): Response<List<OrderDto>>
 
+    @GET("merchant/store-plans")
+    suspend fun storePlans(): Response<StorePlansDto>
+
+    @POST("merchant/store-plans/subscribe")
+    suspend fun subscribeStorePlan(@Body body: SubscribeRequest): Response<StorePlansDto>
+
     @GET("merchant/branches")
     suspend fun branches(): Response<List<BranchDto>>
 

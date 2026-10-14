@@ -49,6 +49,7 @@ fun ProfileScreen(
     onOpenNotifications: () -> Unit,
     onRegisterMerchant: () -> Unit,
     onOpenMerchantMode: () -> Unit,
+    onOpenStore: () -> Unit = {},
     onOpenMyAds: () -> Unit = {},
     onOpenWallet: () -> Unit,
 ) {
@@ -104,6 +105,8 @@ fun ProfileScreen(
         }
         if (role == "MERCHANT") {
             Button(onClick = onOpenMerchantMode, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_merchant_mode)) }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.sp_title)) }
         } else {
             OutlinedButton(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_register_merchant)) }
         }

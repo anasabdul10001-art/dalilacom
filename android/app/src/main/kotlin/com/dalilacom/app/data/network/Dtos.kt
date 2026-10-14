@@ -578,6 +578,7 @@ data class MerchantMeDto(
     val onboarding: OnboardingDto? = null,
     val categorySuggestion: CategorySuggestionDto? = null,
     val categoryOnline: Boolean = false,
+    val storePlan: StorePlanStateDto? = null,
 )
 
 /** What still stands between a merchant and being found on the map. */
@@ -932,3 +933,30 @@ data class AddProductCategoryResponse(val id: String, val created: Boolean = tru
 /** A pinned place in words: the street, area and city, ready for the address field. */
 @Serializable
 data class PlaceInWordsDto(val address: String? = null, val city: String? = null)
+
+/** Whether the shop's store is open: it opens when a plan is chosen (while the owner has set store plans). */
+@Serializable
+data class StorePlanStateDto(val required: Boolean = false, val active: Boolean = true)
+
+@Serializable
+data class StorePlanDto(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val durationDays: Int = 30,
+    val priceCredits: Int? = null,
+    val free: Boolean = false,
+    val features: List<PlanFeatureDto> = emptyList(),
+)
+
+@Serializable
+data class CurrentStorePlanDto(val id: String, val name: String, val endsAt: String? = null)
+
+@Serializable
+data class StorePlansDto(
+    val creditName: String = "",
+    val required: Boolean = false,
+    val active: Boolean = true,
+    val current: CurrentStorePlanDto? = null,
+    val plans: List<StorePlanDto> = emptyList(),
+)

@@ -94,6 +94,17 @@ class MerchantRepository(
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
     }
 
+    suspend fun storePlans(): com.dalilacom.app.data.network.StorePlansDto? =
+        safeApiCall { api.storePlans() }?.takeIf { it.isSuccessful }?.body()
+
+    /** The shop chooses (or renews) a store plan; the price comes out of the wallet. */
+    suspend fun subscribeStorePlan(planId: String): Result<com.dalilacom.app.data.network.StorePlansDto> {
+        val response = safeApiCall { api.subscribeStorePlan(com.dalilacom.app.data.network.SubscribeRequest(planId)) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.sp_failed))))
+    }
+
     suspend fun branches(): List<com.dalilacom.app.data.network.BranchDto> =
         safeApiCall { api.branches() }?.takeIf { it.isSuccessful }?.body().orEmpty()
 

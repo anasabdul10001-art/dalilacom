@@ -403,6 +403,7 @@ function renderScreen() {
     case "merchantMode": return screenMerchantModeShell();
     case "shippingMethods": return screenShipping();
     case "merchantBranches": return screenBranches();
+    case "storePlans": return screenStorePlans();
     case "aiPlans": return screenAiPlans();
     case "productEdit": return screenProductEdit();
     case "affiliateMine": return screenAffiliateMine();
@@ -1493,7 +1494,9 @@ function tabProfile() {
       <div style="height:14px"></div>
       ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
       ${S.role === "MERCHANT"
-        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;go('merchantMode')">${esc(t("profile.merchantMode"))}</button>`
+        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
+           <div style="height:8px"></div>
+           <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button>`
         : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`}
       <div style="height:10px"></div>
       <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
@@ -4484,6 +4487,58 @@ async function loadMerchantStatus() {
   render();
 }
 
+/* ---- the shop's store: it opens when a plan is chosen ---- */
+
+async function openStorePlans() {
+  S._sp = { loading: true, data: null, busy: false, error: null };
+  go("storePlans");
+  const { ok, data } = await api("GET", "/merchant/store-plans");
+  S._sp.loading = false;
+  S._sp.data = ok ? data : null;
+  if (!ok) S._sp.error = errMsg(data, t("sp.failed"));
+  render();
+}
+
+function screenStorePlans() {
+  if (!S._sp) { openStorePlans(); return spinner(); }
+  const sp = S._sp;
+  const head = `${backRow()}<h1 class="screen-title">🛍️ ${esc(t("sp.title"))}</h1>`;
+  if (sp.loading) return head + spinner();
+  const d = sp.data;
+  if (!d) return head + `<div class="error-banner">${esc(sp.error || t("sp.failed"))}</div>`;
+  const credit = d.creditName || "";
+  const price = (p) => (p.priceCredits === null ? t("pricing.notPriced") : p.priceCredits === 0 ? t("pricing.free") : t("pricing.credits", { n: p.priceCredits, credit }));
+  const day = (iso) => new Date(iso).toLocaleDateString(LANG, { day: "numeric", month: "short", year: "numeric" });
+  const open = `<button class="btn" onclick="S.merchantTab='catalog';S._catalog=null;go('merchantMode')">${esc(t("sp.open"))}</button>`;
+  const current = d.current && d.active
+    ? `<div class="card"><strong>${esc(t("sp.current", { name: d.current.name }))}</strong>${d.current.endsAt ? `<p class="muted" style="margin:4px 0 0">${esc(t("sp.until", { date: day(d.current.endsAt) }))} · ${countdownHtml(d.current.endsAt)}</p>` : ""}<div style="height:10px"></div>${open}</div>`
+    : "";
+  const intro = !d.required ? `<div class="card"><p>${esc(t("sp.noPlansYet"))}</p>${open}</div>` : !d.active ? `<p class="screen-sub">${esc(t("sp.choose"))}</p>` : `<div class="section-title">${esc(t("sp.change"))}</div>`;
+  const plans = d.plans.map((p) => `
+    <div class="card plan-card">
+      <div class="title-line"><strong>${esc(p.name)}</strong><span class="price">${esc(price(p))}</span></div>
+      ${p.description ? `<p class="muted" style="margin:2px 0 6px">${esc(p.description)}</p>` : ""}
+      <span class="badge neutral">${esc(t("pricing.days", { n: p.durationDays }))}</span>
+      ${p.features.length ? `<ul class="plan-features">${p.features.map((f) => `<li class="${f.included ? "" : "off"}">${f.included ? "\u2714" : "\u2718"} ${esc(f.text)}</li>`).join("")}</ul>` : ""}
+      ${p.priceCredits === null ? "" : `<button class="btn small" ${sp.busy ? "disabled" : ""} onclick="chooseStorePlan('${p.id}')">${esc(t(d.active && d.current && d.current.id === p.id ? "sp.renew" : "sp.choose.btn"))}</button>`}
+    </div>`).join("");
+  return `${head}${current}${intro}${plans}${sp.error ? `<div class="error-banner">${esc(sp.error)}</div>` : ""}`;
+}
+
+async function chooseStorePlan(planId) {
+  const sp = S._sp;
+  const first = !sp.data.active;
+  sp.busy = true; sp.error = null; render();
+  const { ok, data } = await api("POST", "/merchant/store-plans/subscribe", { planId });
+  sp.busy = false;
+  if (!ok) { sp.error = errMsg(data, t("sp.failed")); return render(); }
+  sp.data = data;
+  S._onboarding = null;
+  toast(t("sp.chosen"));
+  if (first) { S.merchantTab = "catalog"; S._catalog = null; S._mstat = null; go("merchantMode"); }
+  else render();
+}
+
 /* ---- branches: other places of the same shop, maybe in another city ---- */
 
 async function openBranches() {
@@ -5233,11 +5288,11 @@ function tabCatalog() {
       <button class="btn small" onclick="addCatalogAffiliate()">إضافة مسوّق</button>
     </div>
 
-    <button class="btn wiz-start" onclick="openProductWizard()">📷 ${esc(t("wiz.start"))}</button>
-    <p class="muted" style="margin:6px 0 0;text-align:center">${esc(t("wiz.startSub"))}</p>
+    ${c.storeClosed ? `<div class="card" style="border-color:var(--primary)"><strong>${esc(t("sp.closedTitle"))}</strong><p class="muted" style="margin:4px 0 10px">${esc(t("sp.closedSub"))}</p><button class="btn" onclick="openStorePlans()">🛍️ ${esc(t("sp.choose.btn"))}</button></div>` : `<button class="btn wiz-start" onclick="openProductWizard()">📷 ${esc(t("wiz.start"))}</button>`}
+    ${c.storeClosed ? "" : `<p class="muted" style="margin:6px 0 0;text-align:center">${esc(t("wiz.startSub"))}</p>`}
     <div class="title-line" style="margin:16px 0 8px">
       <strong>المنتجات</strong>
-      <button class="btn small" style="width:auto" onclick="go('productEdit', {productId:null})">+ منتج جديد</button>
+      ${c.storeClosed ? "" : `<button class="btn small" style="width:auto" onclick="go('productEdit', {productId:null})">+ منتج جديد</button>`}
     </div>
     ${(c.products || []).length === 0 ? `<div class="empty-state">ما في منتجات بعد</div>` : c.products.map((p) => `
       <div class="card clickable" onclick="go('productEdit', {productId:'${p.id}'})">
@@ -5258,6 +5313,7 @@ async function loadCatalog() {
   ]);
   S._catalog = {
     loading: false,
+    storeClosed: !!(meRes.ok && meRes.data.storePlan && meRes.data.storePlan.required && !meRes.data.storePlan.active),
     discounts: meRes.ok ? meRes.data.discounts : [],
     products: prodRes.ok ? prodRes.data : [],
     affiliates: affRes.ok ? affRes.data : [],

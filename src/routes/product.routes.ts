@@ -14,6 +14,7 @@ import { route } from "../lib/asyncRoute";
 import { resolveLanguage } from "../lib/languages";
 import { sectionOfProductCategory } from "../services/productCategory.service";
 import { REVIEWED_FIELDS, moderateProduct } from "../services/productModeration.service";
+import { hasActiveStorePlan, storePlanRequired } from "../services/storePlan.service";
 import { optionalUserId } from "../services/viewerCountry.service";
 import { translateProducts } from "../services/contentTranslation.service";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
@@ -73,6 +74,9 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res
   if ("error" in result) {
     return sendError(res, 403, "FORBIDDEN", result.error ?? "Forbidden");
   }
+
+  // the store opens when the shop has chosen a plan (the free one or a paid one); until then no product can be added
+  if ((await storePlanRequired()) && !hasActiveStorePlan(result.merchant)) return sendError(res, 402, "PLAN_REQUIRED", "Choose a store plan first");
 
   if (parsed.data.categoryId) {
     const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });

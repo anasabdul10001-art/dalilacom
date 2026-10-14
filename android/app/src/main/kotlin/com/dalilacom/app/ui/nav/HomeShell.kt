@@ -215,6 +215,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onLoggedOut = { rootNavController.navigate("home") { popUpTo(0) } },
                         onRegisterMerchant = { rootNavController.navigate("merchantRegister") },
                         onOpenMerchantMode = { rootNavController.navigate("merchantMode") },
+                        onOpenStore = { rootNavController.navigate("storePlans") },
                         onEditProfile = { rootNavController.navigate("profileEdit") },
                         onOpenAccount = { rootNavController.navigate("accountSettings") },
                         onOpenReview = { rootNavController.navigate("adminReview") },

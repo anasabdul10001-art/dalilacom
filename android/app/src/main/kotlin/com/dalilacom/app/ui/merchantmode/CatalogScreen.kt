@@ -33,7 +33,7 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.formatCents
 
 @Composable
-fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}, onOpenDiscounts: () -> Unit = {}, onOpenShipping: () -> Unit = {}, onOpenAiPlans: () -> Unit = {}, onOpenBranches: () -> Unit = {}) {
+fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}, onOpenDiscounts: () -> Unit = {}, onOpenShipping: () -> Unit = {}, onOpenAiPlans: () -> Unit = {}, onOpenBranches: () -> Unit = {}, onOpenStore: () -> Unit = {}) {
     val viewModel: CatalogViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -54,10 +54,21 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
         androidx.compose.material3.OutlinedButton(onClick = onOpenAiPlans, modifier = Modifier.fillMaxWidth()) { Text("✨  " + stringResource(R.string.ai_plans_title)) }
         Spacer(Modifier.height(12.dp))
 
-        Button(onClick = onAddByPhoto, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(56.dp)) {
-            Text("📷  " + stringResource(R.string.wiz_start), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+        if (state.storeClosed) {
+            androidx.compose.material3.Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(stringResource(R.string.sp_closed_title), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.sp_closed_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.sp_choose_btn)) }
+                }
+            }
+        } else {
+            Button(onClick = onAddByPhoto, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                Text("📷  " + stringResource(R.string.wiz_start), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+            }
+            Text(stringResource(R.string.wiz_start_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
         }
-        Text(stringResource(R.string.wiz_start_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.height(12.dp))
 
         Button(onClick = onOpenDiscounts, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) {
@@ -79,7 +90,7 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(AppStrings.get(R.string.s_6793a69f), style = MaterialTheme.typography.titleMedium)
-            Button(onClick = onAddProduct) { Text(AppStrings.get(R.string.s_261429f0)) }
+            if (!state.storeClosed) Button(onClick = onAddProduct) { Text(AppStrings.get(R.string.s_261429f0)) }
         }
         Spacer(Modifier.height(8.dp))
 

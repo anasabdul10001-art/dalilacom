@@ -330,6 +330,7 @@ model MerchantProfile {
   // The merchant plan the super admin assigned to this shop: its monthlyBroadcastLimit is how many announcements the shop
   // may send per month. No plan = the platform default (settings.broadcasts.merchantDefaultMonthly).
   planId          String?
+  planEndsAt      DateTime? // when the store plan the shop chose ends (null = no end date, e.g. assigned by the admin)
   rejectionReason String?
   // {"sat":[{"open":"09:00","close":"22:00"}], ...} — validated in routes; evaluated in the platform timezone
   openingHours    Json?

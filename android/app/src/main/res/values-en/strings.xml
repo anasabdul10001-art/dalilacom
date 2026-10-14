@@ -813,4 +813,15 @@
     <string name="reg_user_title">I am looking and want to benefit from Dalilacom</string>
     <string name="reg_user_sub">For people who want to discover places, services and products and enjoy the offers.</string>
     <string name="reg_biz_note">We will ask for your business details after you create the account</string>
+    <string name="sp_title">My store</string>
+    <string name="sp_choose">Choose your store plan to open selling and add your products. There is a free plan and other plans.</string>
+    <string name="sp_change">Change or renew your plan</string>
+    <string name="sp_no_plans_yet">Your store is open, there are no plans to choose right now.</string>
+    <string name="sp_open">Open the store</string>
+    <string name="sp_current">Your current plan: %1$s</string>
+    <string name="sp_choose_btn">Choose this plan</string>
+    <string name="sp_renew">Renew</string>
+    <string name="sp_failed">The request could not be done</string>
+    <string name="sp_closed_title">Your store is still closed</string>
+    <string name="sp_closed_sub">Choose a plan (free or paid) to be able to add products and sell.</string>
 </resources>

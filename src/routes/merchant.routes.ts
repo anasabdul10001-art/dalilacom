@@ -5,7 +5,10 @@ import { optionalUserId } from "../services/viewerCountry.service";
 import { createSuggestion } from "../services/categorySuggestion.service";
 import { notify } from "../services/notification.service";
 import { translateRecords } from "../services/contentTranslation.service";
+import { hasActiveStorePlan, storePlanRequired, storePlansFor, subscribeStorePlan } from "../services/storePlan.service";
 import { z } from "zod";
+import { route } from "../lib/asyncRoute";
+import { ApiError } from "../lib/apiError";
 import { MerchantApprovalStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
@@ -107,6 +110,7 @@ merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, r
     ...profile,
     categorySuggestion: suggestion,
     categoryOnline: categoryRow?.isOnline ?? false,
+    storePlan: { required: await storePlanRequired(), active: !(await storePlanRequired()) || hasActiveStorePlan(merchant) },
     onboarding: {
       approved: merchant.approvalStatus === "APPROVED",
       location: (merchant.latitude !== null && merchant.longitude !== null) || (categoryRow?.isOnline ?? false), // a shop that works online needs no place
@@ -409,6 +413,30 @@ merchantRouter.put("/shipping-methods", requireAuth, requireRole(Role.MERCHANT),
   });
   res.json(rows.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })));
 });
+
+/* ---------------- the shop's store plan: the store opens when a plan is chosen ---------------- */
+
+merchantRouter.get("/store-plans", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const shop = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id }, include: { user: { select: { countryCode: true } } } });
+  if (!shop) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  res.json(await storePlansFor(shop, shop.user.countryCode));
+}));
+
+merchantRouter.post("/store-plans/subscribe", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const parsed = z.object({ planId: z.string().uuid() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const own = await ownApprovedShop(req.user!.id);
+  if (own.error || !own.merchant) return sendError(res, own.error?.[0] ?? 404, own.error?.[1] ?? "NOT_FOUND", own.error?.[2] ?? "Not found");
+  const owner = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { countryCode: true } });
+  try {
+    await subscribeStorePlan(req.user!.id, own.merchant.id, parsed.data.planId, owner?.countryCode ?? null);
+  } catch (err) {
+    if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
+    throw err;
+  }
+  const fresh = await prisma.merchantProfile.findUniqueOrThrow({ where: { id: own.merchant.id } });
+  res.json(await storePlansFor(fresh, owner?.countryCode ?? null));
+}));
 
 /* ---------------- the shop's other places (branches) ---------------- */
 

@@ -16,6 +16,7 @@ import com.dalilacom.app.ui.common.parseInt
 
 data class CatalogUiState(
     val isLoading: Boolean = true,
+    val storeClosed: Boolean = false,
     val discounts: List<DiscountDto> = emptyList(),
     val products: List<ProductDto> = emptyList(),
     val discountTitle: String = "",
@@ -42,6 +43,7 @@ class CatalogViewModel(
             val products = productRepository.getMyProducts()
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
+                storeClosed = me?.storePlan?.let { it.required && !it.active } == true,
                 discounts = me?.discounts.orEmpty(),
                 products = products,
             )
