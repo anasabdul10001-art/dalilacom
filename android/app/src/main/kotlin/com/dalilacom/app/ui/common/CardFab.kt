@@ -52,7 +52,17 @@ private fun hasBottomBar(route: String?) = route == "home" || route?.startsWith(
  * (add a discount, or give a customer a discount). On the map they take the place of the language and theme buttons.
  */
 @Composable
-fun BoxScope.FloatingButtons(route: String?, merchant: Boolean, onCard: () -> Unit, onAddDiscount: () -> Unit, onGiveDiscount: () -> Unit) {
+fun BoxScope.FloatingButtons(
+    route: String?,
+    merchant: Boolean,
+    onCard: () -> Unit,
+    onAddDiscount: () -> Unit,
+    onGiveDiscount: () -> Unit,
+    /** The home screen draws its own buttons (on the map, above the locate button, so they never sit on the results list). */
+    inHome: Boolean = false,
+    bottomPadding: androidx.compose.ui.unit.Dp? = null,
+) {
+    if (route == "home" && !inHome) return
     val showCard = showCardFabOn(route)
     val showDisc = merchant && showMerchantFabOn(route)
     if (!showCard && !showDisc) return
@@ -72,7 +82,8 @@ fun BoxScope.FloatingButtons(route: String?, merchant: Boolean, onCard: () -> Un
     }
     val container = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
     Column(
-        Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(start = 16.dp, bottom = if (hasBottomBar(route)) 152.dp else 24.dp),
+        (if (bottomPadding == null) Modifier.align(Alignment.BottomStart).navigationBarsPadding() else Modifier.align(Alignment.BottomStart))
+            .padding(start = 16.dp, bottom = bottomPadding ?: if (hasBottomBar(route)) 152.dp else 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (showDisc) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

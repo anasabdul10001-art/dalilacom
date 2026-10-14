@@ -39,6 +39,7 @@ import com.dalilacom.app.R
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.dalilacom.app.ui.common.FloatingButtons
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -84,6 +85,7 @@ private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) 
 @Composable
 fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Discover) }
+    val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
     val factory = remember { ViewModelFactory(container) }
     var isGuest by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isGuest = !container.authRepository.hasStoredSession() }
@@ -93,6 +95,14 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     var dealsIntroHidden by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { dealsIntroHidden = container.sessionStore.getDealsIntroHidden() }
     val dealsPendingRoute = remember { MutableStateFlow<RouteTarget?>(null) }
+    val homeButtons: @Composable androidx.compose.foundation.layout.BoxScope.(androidx.compose.ui.unit.Dp) -> Unit = { bottom ->
+        FloatingButtons(
+            route = "home", inHome = true, bottomPadding = bottom, merchant = isMerchant,
+            onCard = { rootNavController.navigate("card") },
+            onAddDiscount = { rootNavController.navigate("discounts") },
+            onGiveDiscount = { rootNavController.navigate("merchantMode") },
+        )
+    }
     // every price is shown in the money of the shopper's country
     LaunchedEffect(isGuest, selectedTab) { container.storeRepository.market()?.let { com.dalilacom.app.ui.common.Market.currency = it } }
 
@@ -159,7 +169,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
             }
         },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        Box(Modifier.padding(padding).fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
             when (selectedTab) {
                 HomeTab.Discover -> DiscoverScreen(
                     factory = factory,
@@ -170,6 +181,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     onToggleTheme = { scope.launch { container.sessionStore.saveTheme(if (isDark) "light" else "dark") } },
                     onLogin = { goLogin() },
                     onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
+                    floatingButtons = homeButtons,
                 )
                 HomeTab.Responder, HomeTab.Store -> Unit // never selected: their buttons open their own screens
                 HomeTab.Deals ->
@@ -183,6 +195,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onLogin = { goLogin() },
                         onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
                         dealsMode = true,
+                        floatingButtons = homeButtons,
                     )
                 HomeTab.Cart ->
                     if (isGuest) AccountPrompt(
@@ -225,6 +238,9 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onOpenMarketing = { rootNavController.navigate("marketing") },
                     )
             }
+        }
+        // the other tabs: the buttons stand in the corner (the map tabs draw theirs above the locate button)
+        if (selectedTab != HomeTab.Discover && selectedTab != HomeTab.Deals) homeButtons(this, 16.dp)
         }
     }
 }

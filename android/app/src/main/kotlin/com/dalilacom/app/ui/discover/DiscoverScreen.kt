@@ -114,6 +114,8 @@ fun DiscoverScreen(
     /** The deals tab: the same map, but only shops with a running discount, with its own filters (and a way to the card). */
     dealsMode: Boolean = false,
     onOpenCard: () -> Unit = {},
+    /** The round floating buttons (member card, a shop's discount button), drawn above the locate button; the argument is how far from the bottom. */
+    floatingButtons: @Composable androidx.compose.foundation.layout.BoxScope.(androidx.compose.ui.unit.Dp) -> Unit = {},
 ) {
     val viewModel: DiscoverViewModel = viewModel(key = if (dealsMode) "deals" else null, factory = factory)
     if (dealsMode) LaunchedEffect(Unit) { viewModel.onDiscountsOnlyChange(true) }
@@ -360,6 +362,8 @@ fun DiscoverScreen(
                     Text(stringResource(R.string.area_search), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp))
                 }
             }
+
+            if (!navigating) floatingButtons(innerPadding.calculateBottomPadding() + 16.dp + 40.dp + 12.dp)
 
             if (!navigating) SmallFloatingActionButton(
                 onClick = {
