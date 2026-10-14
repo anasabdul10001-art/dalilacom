@@ -28,7 +28,16 @@ class AppContainer(context: Context) {
 
     val tokenStore = TokenStore(context.applicationContext)
     val sessionStore = SessionStore(context.applicationContext)
-    private val api = ApiClient.create(tokenStore) { kotlinx.coroutines.runBlocking { sessionStore.getLanguage() } ?: "ar" }
+    /** Fires when the server no longer accepts the stored session; the screens go back to the start (see NavGraph). */
+    val sessionExpired = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val api = ApiClient.create(
+        tokenStore,
+        languageProvider = { kotlinx.coroutines.runBlocking { sessionStore.getLanguage() } ?: "ar" },
+        onSessionExpired = {
+            kotlinx.coroutines.runBlocking { tokenStore.clearToken(); sessionStore.clearRole() }
+            sessionExpired.tryEmit(Unit)
+        },
+    )
 
     val authRepository = AuthRepository(api, tokenStore, sessionStore)
     val membershipRepository = MembershipRepository(api)

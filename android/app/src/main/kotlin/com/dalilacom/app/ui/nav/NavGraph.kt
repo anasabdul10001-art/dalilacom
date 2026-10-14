@@ -86,6 +86,15 @@ fun DalilacomNavGraph(
         onSocialReturnConsumed()
     }
 
+    // The server stopped accepting this session (signed out elsewhere, password changed...): say so and go back to the start.
+    val expiredContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        container.sessionExpired.collect {
+            android.widget.Toast.makeText(expiredContext, com.dalilacom.app.ui.i18n.AppStrings.get(com.dalilacom.app.R.string.session_expired), android.widget.Toast.LENGTH_LONG).show()
+            navController.navigate("home") { popUpTo(0) }
+        }
+    }
+
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
     Box(Modifier.fillMaxSize()) {

@@ -874,4 +874,5 @@
     <string name="shop_none_title">لسا ما سجّلت نشاطك</string>
     <string name="shop_none_sub">حسابك مفعّل كحساب نشاط، بس لازم تعبّي بيانات المحل (الاسم، المهنة، العنوان) لتوصل للإدارة وتراجعه.</string>
     <string name="shop_none_button">سجّل نشاطك</string>
+    <string name="session_expired">انتهت جلستك. سجّل الدخول من جديد.</string>
 </resources>
