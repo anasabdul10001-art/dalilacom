@@ -50,7 +50,7 @@ async function approvedShop(lat: number | null, lng: number | null) {
   const reg = await request(app)
     .post("/merchant/register")
     .set(owner.auth)
-    .send({ businessName: `Bc Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: cat.id });
+    .send({ businessName: `Bc Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: cat.id, address: "Test address" });
   expect(reg.status).toBe(201);
   await prisma.merchantProfile.update({ where: { id: reg.body.id }, data: { approvalStatus: "APPROVED", latitude: lat, longitude: lng } });
   await prisma.user.update({ where: { id: owner.id }, data: { role: "MERCHANT" } });

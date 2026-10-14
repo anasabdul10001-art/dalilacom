@@ -20,7 +20,7 @@ async function shop() {
   const user = await prisma.user.update({ where: { email }, data: { role: "MERCHANT" } });
   const login = await request(app).post("/auth/login").send({ email, password });
   const auth = { Authorization: `Bearer ${login.body.token}` };
-  const reg = await request(app).post("/merchant/register").set(auth).send({ businessName: `Av Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: cat.id });
+  const reg = await request(app).post("/merchant/register").set(auth).send({ businessName: `Av Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: cat.id, address: "Test address" });
   expect(reg.status).toBe(201);
   await prisma.merchantProfile.update({ where: { id: reg.body.id }, data: { approvalStatus: "APPROVED" } });
   return { auth, id: reg.body.id as string, userId: user.id };

@@ -49,7 +49,9 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
     var location by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var suggestion by remember { mutableStateOf("") }
-    var autoAddress by remember { mutableStateOf("") } // what the map filled in, so it never replaces what the person typed
+    var autoAddress by remember { mutableStateOf("") } // what the map filled in
+    var localError by remember { mutableStateOf<String?>(null) }
+    val addressNeeded = stringResource(R.string.addr_need)
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val online = isOnlineCategory(state.categories, selectedCategoryId)
 
@@ -114,7 +116,8 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
                 location = picked
                 scope.launch {
                     viewModel.addressFor(picked.first, picked.second)?.let { place ->
-                        if (address.isBlank() || address == autoAddress) { address = place.address.orEmpty(); autoAddress = address }
+                        // placing the pin always replaces the address with the pinned place's
+                        address = place.address.orEmpty(); autoAddress = address
                     }
                 }
             })
@@ -125,12 +128,15 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.register(businessName.trim(), selectedCategoryId, address.trim(), phone.trim(), whatsapp, if (online) null else location, suggestion) },
+                onClick = {
+                    if (!online && location == null && address.isBlank()) { localError = addressNeeded }
+                    else { localError = null; viewModel.register(businessName.trim(), selectedCategoryId, address.trim(), phone.trim(), whatsapp, if (online) null else location, suggestion) }
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(AppStrings.get(R.string.s_41066d88)) }
         }
 
-        state.error?.let {
+        (localError ?: state.error)?.let {
             Spacer(Modifier.height(8.dp))
             Text(it, color = MaterialTheme.colorScheme.error)
         }

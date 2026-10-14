@@ -117,10 +117,10 @@ class MerchantProfileViewModel(
     private var autoAddress = ""
     fun onLocation(value: Pair<Double, Double>) {
         _uiState.update { it.copy(location = value, message = null) }
-        // the pinned place in words fills the address, unless the person typed their own
+        // the pinned place in words replaces the address, whatever was typed
         viewModelScope.launch {
             val place = discover.addressFor(value.first, value.second)?.address ?: return@launch
-            _uiState.update { if (it.address.isBlank() || it.address == autoAddress) { autoAddress = place; it.copy(address = place) } else it }
+            _uiState.update { autoAddress = place; it.copy(address = place) }
         }
     }
 
@@ -128,6 +128,10 @@ class MerchantProfileViewModel(
         val s = _uiState.value
         if (s.businessName.trim().length < 2) {
             _uiState.update { it.copy(message = AppStrings.get(R.string.s_f835f24d), isError = true) }
+            return
+        }
+        if (!isOnlineCategory(s.categories, s.categoryId) && s.location == null && s.address.isBlank()) {
+            _uiState.update { it.copy(message = AppStrings.get(R.string.addr_need), isError = true) }
             return
         }
         viewModelScope.launch {

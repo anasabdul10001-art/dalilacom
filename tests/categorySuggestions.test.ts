@@ -25,7 +25,7 @@ async function parent(name: string) {
 
 async function shopWithSuggestion(nearestId: string, name: string) {
   const owner = await account("sugshop");
-  const reg = await request(app).post("/merchant/register").set(owner.auth).send({ businessName: `Sug Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: nearestId, suggestedCategory: name });
+  const reg = await request(app).post("/merchant/register").set(owner.auth).send({ businessName: `Sug Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: nearestId, suggestedCategory: name, address: "Test address" });
   expect(reg.status).toBe(201);
   return { owner, id: reg.body.id as string };
 }
@@ -35,13 +35,13 @@ describe("a shop that works online", () => {
     const online = await prisma.category.create({ data: { name: "بيع أونلاين تجريبي", slug: `sug-${crypto.randomUUID().slice(0, 8)}`, isOnline: true } });
     const physical = await parent("محل عادي");
     const a = await account("onlineshop");
-    expect((await request(app).post("/merchant/register").set(a.auth).send({ businessName: `Online ${crypto.randomUUID().slice(0, 6)}`, categoryId: online.id })).status).toBe(201);
+    expect((await request(app).post("/merchant/register").set(a.auth).send({ businessName: `Online ${crypto.randomUUID().slice(0, 6)}`, categoryId: online.id, address: "Test address" })).status).toBe(201);
     const me = (await request(app).get("/merchant/me").set(a.auth)).body;
     expect(me.categoryOnline).toBe(true);
     expect(me.onboarding.location).toBe(true);
 
     const b = await account("physicalshop");
-    expect((await request(app).post("/merchant/register").set(b.auth).send({ businessName: `Physical ${crypto.randomUUID().slice(0, 6)}`, categoryId: physical.id })).status).toBe(201);
+    expect((await request(app).post("/merchant/register").set(b.auth).send({ businessName: `Physical ${crypto.randomUUID().slice(0, 6)}`, categoryId: physical.id, address: "Test address" })).status).toBe(201);
     const meB = (await request(app).get("/merchant/me").set(b.auth)).body;
     expect(meB.categoryOnline).toBe(false);
     expect(meB.onboarding.location).toBe(false);

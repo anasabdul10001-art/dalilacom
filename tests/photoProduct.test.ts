@@ -36,7 +36,7 @@ async function account(prefix: string, data: Record<string, unknown> = {}) {
 async function shop(country: string) {
   const cat = await prisma.category.upsert({ where: { slug: "photo-test-cat" }, update: {}, create: { name: "Photo Test", slug: "photo-test-cat" } });
   const owner = await account("photoshop", { countryCode: country });
-  const reg = await request(app).post("/merchant/register").set(owner.auth).send({ businessName: `Photo Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: cat.id });
+  const reg = await request(app).post("/merchant/register").set(owner.auth).send({ businessName: `Photo Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: cat.id, address: "Test address" });
   expect(reg.status).toBe(201);
   await prisma.merchantProfile.update({ where: { id: reg.body.id }, data: { approvalStatus: "APPROVED" } });
   await prisma.user.update({ where: { id: owner.id }, data: { role: "MERCHANT" } });

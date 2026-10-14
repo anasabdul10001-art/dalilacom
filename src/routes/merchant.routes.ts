@@ -29,6 +29,9 @@ const coordinates = {
 const bothOrNeitherCoordinate = (d: { latitude?: number | null; longitude?: number | null }) =>
   (d.latitude === undefined || d.latitude === null) === (d.longitude === undefined || d.longitude === null);
 
+/** A place that is not online needs to be found: pinned on the map, or at least written down. */
+const ADDRESS_NEEDED = "The address is required when the place is not pinned on the map";
+
 const registerMerchantSchema = z
   .object({
     businessName: z.string().min(2),
@@ -58,6 +61,7 @@ merchantRouter.post("/register", requireAuth, async (req, res) => {
   if (!category) {
     return sendError(res, 404, "NOT_FOUND", "Category not found");
   }
+  if (!category.isOnline && parsed.data.latitude === undefined && !parsed.data.address?.trim()) return sendError(res, 400, "BAD_REQUEST", ADDRESS_NEEDED);
 
   // Read outside the transaction (just a lookup) — the write itself, including the new
   // Business/Branch dual-write, stays atomic with the legacy MerchantProfile creation below
@@ -144,6 +148,12 @@ merchantRouter.patch("/me", requireAuth, requireRole(Role.MERCHANT), async (req,
     return sendError(res, 404, "NOT_FOUND", "Category not found");
   }
   const data = parsed.data;
+  if (data.address !== undefined || data.latitude !== undefined || data.categoryId) {
+    const category = await prisma.category.findUnique({ where: { id: data.categoryId ?? existing.categoryId }, select: { isOnline: true } });
+    const pinned = (data.latitude !== undefined ? data.latitude : existing.latitude) != null;
+    const written = (data.address !== undefined ? data.address : existing.address)?.trim();
+    if (!category?.isOnline && !pinned && !written) return sendError(res, 400, "BAD_REQUEST", ADDRESS_NEEDED);
+  }
   const updated = await prisma.$transaction(async (tx) => {
     const profile = await tx.merchantProfile.update({ where: { id: existing.id }, data });
     await tx.business.updateMany({

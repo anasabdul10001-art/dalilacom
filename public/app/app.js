@@ -3287,6 +3287,7 @@ async function submitMerchantRegister() {
   const whatsapp = (qs("mr-whatsapp").value || "").replace(/\D/g, "");
   const online = catIsOnline(S._merchReg.categories, categoryId);
   const pin = !online && S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
+  if (!online && !pin.latitude && !address) { S.error = t("addr.need"); return render(); } // a place that is not pinned must be written down
   const proposed = S._catSugOpen && (S._catSug || "").trim().length >= 2 ? { suggestedCategory: S._catSug.trim() } : {};
   S.busy = true; render();
   const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined, whatsapp: whatsapp || undefined, ...pin, ...proposed });
@@ -3366,8 +3367,7 @@ function pickReset(lat, lng) {
 }
 
 /**
- * The place the person pinned, in words: the address field fills itself in. It never replaces what the person typed
- * themselves — only an empty field or one this function filled before.
+ * The place the person pinned, in words: the address field fills itself in, replacing whatever was typed.
  */
 let _revTimer = null;
 function fillAddressFromPin(lat, lng) {
@@ -3375,9 +3375,9 @@ function fillAddressFromPin(lat, lng) {
   _revTimer = setTimeout(async () => {
     const { ok, data } = await api("GET", "/geo/reverse?lat=" + lat + "&lng=" + lng + "&lang=" + LANG);
     if (!ok || !data || !data.address) return;
-    const free = (el) => !el.value.trim() || el.value === S._autoAddr;
+    // placing the pin is an explicit choice: the address always becomes the pinned place's, whatever was typed before
     const el = qs("mr-address") || qs("mp-address") || qs("br-address");
-    if (el && free(el)) {
+    if (el) {
       el.value = data.address;
       S._autoAddr = data.address;
       if (S._merchReg && qs("mr-address")) S._merchReg.address = data.address;
@@ -3385,7 +3385,7 @@ function fillAddressFromPin(lat, lng) {
       if (S._br && S._br.form && qs("br-address")) S._br.form.address = data.address;
     }
     const city = qs("br-city");
-    if (city && data.city && (!city.value.trim() || city.value === S._autoCity)) {
+    if (city && data.city) {
       city.value = data.city;
       S._autoCity = data.city;
       if (S._br && S._br.form) S._br.form.city = data.city;
@@ -3460,6 +3460,7 @@ async function saveMerchantProfile() {
   const m = S._mprof;
   const body = { businessName: (m.name || "").trim(), ...(m.categoryId ? { categoryId: m.categoryId } : {}), address: (m.address || "").trim() || null, phone: (m.phone || "").trim() || null, whatsapp: (m.whatsapp || "").replace(/\D/g, "") || null };
   if (S._pick && S._pick.lat != null && !catIsOnline(m.categories || [], m.categoryId)) { body.latitude = S._pick.lat; body.longitude = S._pick.lng; }
+  if (!catIsOnline(m.categories || [], m.categoryId) && body.latitude == null && !body.address) { S.error = t("addr.need"); return render(); }
   S.error = null;
   const { ok, data } = await api("PATCH", "/merchant/me", body);
   m.msg = ok ? "✅ انحفظت بيانات المحل" : "";
@@ -4739,7 +4740,7 @@ function screenBranches() {
       <h1 class="screen-title">${esc(x.id ? t("br.edit") : t("br.add"))}</h1>
       <div class="field"><label>${esc(t("br.name"))}</label><input value="${esc(x.name)}" maxlength="60" placeholder="${esc(t("br.namePh"))}" oninput="S._br.form.name=this.value"></div>
       <div class="field"><label>${esc(t("br.city"))}</label><input id="br-city" value="${esc(x.city)}" maxlength="60" oninput="S._br.form.city=this.value"></div>
-      <div class="field"><label>${esc(t("br.address"))}</label><input id="br-address" value="${esc(x.address)}" maxlength="200" oninput="S._br.form.address=this.value"></div>
+      <div class="field"><label>${esc(t("br.address"))}</label><input id="br-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(x.address)}" maxlength="200" oninput="S._br.form.address=this.value"></div>
       <div class="field"><label>${esc(t("br.phone"))}</label><input type="tel" value="${esc(x.phone)}" maxlength="30" oninput="S._br.form.phone=this.value"></div>
       ${pickerHtml(t("br.pickLabel"))}
       ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}

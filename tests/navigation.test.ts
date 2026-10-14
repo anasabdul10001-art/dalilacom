@@ -88,7 +88,7 @@ async function merchantAccount() {
   await request(app).post("/auth/register").send({ email, password, fullName: "Nav Merchant" });
   const login = await request(app).post("/auth/login").send({ email, password });
   const token = login.body.token as string;
-  const reg = await request(app).post("/merchant/register").set("Authorization", `Bearer ${token}`).send({ businessName: `Nav Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: category.id });
+  const reg = await request(app).post("/merchant/register").set("Authorization", `Bearer ${token}`).send({ businessName: `Nav Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: category.id, address: "Test address" });
   expect(reg.status).toBe(201);
   return { token, profileId: reg.body.id as string, categoryId: category.id };
 }

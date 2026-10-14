@@ -23,7 +23,7 @@ const admin = () => account("discadmin", { role: "ADMIN" });
 async function shop() {
   const cat = await prisma.category.upsert({ where: { slug: "disc-test-cat" }, update: {}, create: { name: "Disc Test", slug: "disc-test-cat" } });
   const owner = await account("discshop");
-  const reg = await request(app).post("/merchant/register").set(owner.auth).send({ businessName: `Disc Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: cat.id });
+  const reg = await request(app).post("/merchant/register").set(owner.auth).send({ businessName: `Disc Shop ${crypto.randomUUID().slice(0, 6)}`, categoryId: cat.id, address: "Test address" });
   expect(reg.status).toBe(201);
   await prisma.merchantProfile.update({ where: { id: reg.body.id }, data: { approvalStatus: "APPROVED" } });
   await prisma.user.update({ where: { id: owner.id }, data: { role: "MERCHANT" } });

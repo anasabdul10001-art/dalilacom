@@ -18,7 +18,7 @@ export const securityHeaders = helmet({
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org"],
+      imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org", "https://cdnjs.cloudflare.com"], // cdnjs: the map library's own pin pictures
       connectSrc: ["'self'"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
