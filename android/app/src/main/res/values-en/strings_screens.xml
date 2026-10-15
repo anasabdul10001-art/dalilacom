@@ -244,7 +244,7 @@
     <string name="s_db4175ae" formatted="false">Password</string>
     <string name="s_dc09c826" formatted="false">About your business (the AI uses it when replying)</string>
     <string name="s_dc26b57d" formatted="false">Your cart is empty</string>
-    <string name="s_ddb9dbdc" formatted="false">Address (optional)</string>
+    <string name="s_ddb9dbdc" formatted="false">Address</string>
     <string name="s_de747706" formatted="false">Discount title</string>
     <string name="s_e0501ddf" formatted="false">Leave it empty to apply the rule to everything, or pick posts so it only replies to comments on them.</string>
     <string name="s_e172f208" formatted="false">✅ Opening hours saved</string>
