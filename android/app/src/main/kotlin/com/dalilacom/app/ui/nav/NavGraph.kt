@@ -78,10 +78,11 @@ fun DalilacomNavGraph(
         onNotificationRouteConsumed()
     }
 
-    // Back from a Google/Facebook sign-in: once home is up, trade the ticket for a session.
+    // Back from a Google/Facebook sign-in: trade the ticket for a session as soon as the start-up screen is gone, wherever the
+    // person was (the login page included): waiting for the map left him on the login page until he walked back to it by hand.
     LaunchedEffect(socialReturn) {
         val back = socialReturn ?: return@LaunchedEffect
-        navController.currentBackStackEntryFlow.first { it.destination.route == "home" }
+        navController.currentBackStackEntryFlow.first { it.destination.route != null && it.destination.route != "splash" }
         navController.navigate("socialReturn?ticket=${android.net.Uri.encode(back.ticket.orEmpty())}&error=${android.net.Uri.encode(back.error.orEmpty())}&pending=${android.net.Uri.encode(back.pending.orEmpty())}")
         onSocialReturnConsumed()
     }
