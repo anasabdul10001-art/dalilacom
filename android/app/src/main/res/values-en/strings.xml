@@ -873,4 +873,17 @@
     <string name="session_expired">Your session has ended. Please sign in again.</string>
     <string name="hours_always_open">Always open (24 hours)</string>
     <string name="account_fab_tips">Show hints from the discounts button</string>
+    <string name="dh_title_mine">My discount history</string>
+    <string name="dh_title_shop">Discounts you applied</string>
+    <string name="dh_count">Times</string>
+    <string name="dh_bills">Total of the bills</string>
+    <string name="dh_saved">You saved</string>
+    <string name="dh_given">Value of the discounts</string>
+    <string name="dh_bill">Bill</string>
+    <string name="dh_discount">Discount (%1$d%%)</string>
+    <string name="dh_final">Final amount</string>
+    <string name="dh_receipt">Receipt PDF</string>
+    <string name="dh_failed">The history could not be loaded</string>
+    <string name="dh_empty_mine">No discount has been applied yet. When a shop applies one on your card it shows here.</string>
+    <string name="dh_empty_shop">You have not applied any discount yet. Every discount you confirm shows here.</string>
 </resources>

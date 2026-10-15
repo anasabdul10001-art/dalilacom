@@ -422,6 +422,7 @@ function renderScreen() {
     case "productEdit": return screenProductEdit();
     case "affiliateMine": return screenAffiliateMine();
     case "marketing": return screenMarketing();
+    case "discountHistory": return screenDiscountHistory();
     case "adminReview": return screenAdminReview();
     case "wallet": return screenWallet();
     case "responder": return screenResponder();
@@ -1549,6 +1550,8 @@ function tabProfile() {
       ${(() => { if (S._refMe == null) { loadRefMe(); return ""; } return `<button class="btn outline" style="max-width:240px" onclick="go('marketing')">📣 ${esc(t(S._refMe.isMarketer ? "ref.title" : "ref.become"))}</button><div style="height:10px"></div>`; })()}
       <div style="height:10px"></div>
       ${S.role === "ADMIN" ? `<button class="btn" style="max-width:240px" onclick="S._adr=null;go('adminReview')">📣 ${esc(t("adr.title"))}</button><div style="height:10px"></div>` : ""}
+      <button class="btn outline" style="max-width:240px" onclick="openDiscountHistory('mine')">🧾 ${esc(t("dh.titleMine"))}</button>
+      <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
       <div style="height:14px"></div>
       <button class="btn secondary" style="max-width:240px" onclick="doLogout()">${esc(t("profile.logout"))}</button>
@@ -1755,6 +1758,51 @@ async function adrReject(id) {
   await loadAdminReview();
   S._adr.msg = msg; S._adr.err = ok ? null : errMsg(data, t("adr.failed"));
   render();
+}
+
+/* ================= THE DISCOUNTS THAT WERE APPLIED: a list for the customer and one for the shop ================= */
+
+function openDiscountHistory(mode) {
+  S._dh = { mode, loading: true, items: [], summary: null };
+  go("discountHistory");
+  loadDiscountHistory();
+}
+
+async function loadDiscountHistory() {
+  const mine = S._dh.mode === "mine";
+  const { ok, data } = await api("GET", mine ? "/qr/transactions/mine" : "/qr/transactions/shop");
+  if (!S._dh) return;
+  const items = ok ? (mine ? data : data.items) : [];
+  const summary = mine
+    ? { count: items.length, billCents: items.reduce((n, x) => n + x.billAmountCents, 0), discountCents: items.reduce((n, x) => n + x.discountAmountCents, 0) }
+    : ok ? data.summary : null;
+  S._dh = { ...S._dh, loading: false, items, summary, failed: !ok };
+  render();
+}
+
+function screenDiscountHistory() {
+  if (!S._dh) { S._dh = { mode: "mine", loading: true, items: [], summary: null }; loadDiscountHistory(); }
+  const d = S._dh;
+  const mine = d.mode === "mine";
+  const head = `${backRow()}<h1 class="screen-title">🧾 ${esc(t(mine ? "dh.titleMine" : "dh.titleShop"))}</h1>`;
+  if (d.loading) return head + spinner();
+  if (d.failed) return head + `<div class="error-banner">${esc(t("dh.failed"))}</div>`;
+  const when = (iso) => new Date(iso).toLocaleString(LANG, { dateStyle: "medium", timeStyle: "short" });
+  return `${head}
+    <div class="card dh-sum">
+      <div><b>${d.summary.count}</b><small>${esc(t("dh.count"))}</small></div>
+      <div><b>${fmt(d.summary.billCents)}</b><small>${esc(t("dh.bills"))}</small></div>
+      <div><b style="color:var(--primary)">${fmt(d.summary.discountCents)}</b><small>${esc(t(mine ? "dh.saved" : "dh.given"))}</small></div>
+    </div>
+    ${d.items.length ? d.items.map((x) => `
+      <div class="card dh-item">
+        <div class="title-line"><strong>${esc(mine ? (x.merchant && x.merchant.businessName) || "" : x.memberName || "")}</strong><small class="muted">${esc(when(x.createdAt))}</small></div>
+        <div class="list-row"><span>${esc(t("dh.bill"))}</span><span>${fmt(x.billAmountCents)}</span></div>
+        <div class="list-row"><span>${esc(t("dh.discount", { p: x.discountPercent }))}</span><span class="price" style="color:var(--primary)">− ${fmt(x.discountAmountCents)}</span></div>
+        <div class="list-row"><strong>${esc(t("dh.final"))}</strong><strong>${fmt(x.finalAmountCents)}</strong></div>
+        <button class="btn small outline" style="margin-top:8px" onclick="exportDocument('/invoices/discount/${esc(x.transactionRef)}')">📄 ${esc(t("dh.receipt"))}</button>
+      </div>`).join("") : `<div class="empty-state">${esc(t(mine ? "dh.emptyMine" : "dh.emptyShop"))}</div>`}
+  `;
 }
 
 /* ================= AFFILIATE — MY EARNINGS (customer side) ================= */
@@ -4368,10 +4416,24 @@ async function removeAvatar() {
 // The server builds the document (with the issuing account's name + photo). It is shown through the
 // browser's own print engine, which shapes Arabic correctly; choose "Save as PDF" to get the file.
 async function exportDocument(path) {
+  // The document opens in its own window (opened in the click's own turn, so it is not blocked): it carries a visible
+  // "print / save as PDF" button and tries the print dialog by itself. When no window can be opened, the page prints it.
+  const win = window.open("", "_blank");
+  if (win) win.document.write(`<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:32px;text-align:center">${esc(t("doc.loading"))}</body>`);
   let res;
-  try { res = await fetch(API_BASE + path, { headers: { Authorization: "Bearer " + S.token, "Accept-Language": LANG } }); } catch (e) { return toast("تعذّر الاتصال بالسيرفر"); }
-  if (!res.ok) return toast("تعذّر تجهيز المستند");
-  const parsed = new DOMParser().parseFromString(await res.text(), "text/html");
+  try { res = await fetch(API_BASE + path, { headers: { Authorization: "Bearer " + S.token, "Accept-Language": LANG } }); } catch (e) { if (win) win.close(); return toast("تعذّر الاتصال بالسيرفر"); }
+  if (!res.ok) { if (win) win.close(); return toast("تعذّر تجهيز المستند"); }
+  const html = await res.text();
+  if (win) {
+    const bar = `<div class="no-print" style="position:sticky;top:0;z-index:5;padding:10px;background:#222;text-align:center"><button onclick="window.print()" style="padding:10px 22px;border:0;border-radius:8px;background:#ba2a34;color:#fff;font:700 15px sans-serif;cursor:pointer">🖨️ ${esc(t("doc.print"))}</button></div><style>@media print{.no-print{display:none!important}}</style>`;
+    win.document.open();
+    win.document.write(html.replace(/<body([^>]*)>/i, (m) => m + bar));
+    win.document.close();
+    win.document.title = (html.match(/<title>([^<]*)<\/title>/i) || [])[1] || "DALILACOM";
+    setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 700);
+    return;
+  }
+  const parsed = new DOMParser().parseFromString(html, "text/html");
   const root = document.getElementById("print-root");
   root.innerHTML = "";
   const style = document.createElement("style");
@@ -5322,6 +5384,7 @@ function tabRedeem() {
       <div class="field"><label>${esc(t("rd.full"))}</label><input id="rd-full" dir="ltr" inputmode="numeric" autocomplete="off" placeholder="0000 0000 0000 0000" value="${esc(r.full || "")}" /><p class="muted" style="margin:4px 0 0">${esc(t("rd.fullHint"))}</p></div>
       ${errorBanner()}
       <button class="btn" ${S.busy ? "disabled" : ""} onclick="verifyRedeem()">تحقق</button>
+      <button class="btn outline" style="margin-top:10px" onclick="openDiscountHistory('shop')">🧾 ${esc(t("dh.titleShop"))}</button>
     `;
   }
   if (r.phase === "verified") {

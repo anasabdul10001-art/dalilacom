@@ -1460,3 +1460,9 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .adr-actions .btn { flex: 1; height: 48px; font-size: 15px; }
 .adr-ok { background: #2e9b57; }
 .adr-no { color: #b3261e; border-color: #b3261e; }
+
+/* the list of applied discounts */
+.dh-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; margin-bottom: 14px; }
+.dh-sum b { display: block; font-size: 17px; }
+.dh-sum small { color: var(--text-muted); font-size: 12px; }
+.dh-item { margin-bottom: 12px; }

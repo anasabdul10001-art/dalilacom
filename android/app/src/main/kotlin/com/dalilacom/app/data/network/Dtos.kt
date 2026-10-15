@@ -1001,3 +1001,25 @@ data class UseReferralRequest(val code: String)
 
 @Serializable
 data class UseReferralResponse(val ok: Boolean = false, val reason: String? = null)
+
+/** One discount that was confirmed at a shop: seen by the customer (with the shop's name) and by the shop (with the customer's). */
+@Serializable
+data class TxMerchantDto(val businessName: String = "")
+
+@Serializable
+data class DiscountTxDto(
+    val transactionRef: String,
+    val createdAt: String = "",
+    val billAmountCents: Int = 0,
+    val discountPercent: Int = 0,
+    val discountAmountCents: Int = 0,
+    val finalAmountCents: Int = 0,
+    val merchant: TxMerchantDto? = null,
+    val memberName: String? = null,
+)
+
+@Serializable
+data class TxSummaryDto(val count: Int = 0, val billCents: Int = 0, val discountCents: Int = 0)
+
+@Serializable
+data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val items: List<DiscountTxDto> = emptyList())

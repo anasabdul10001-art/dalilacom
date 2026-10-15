@@ -42,7 +42,7 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
 @Composable
-fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
+fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit, onOpenHistory: () -> Unit = {}) {
     val viewModel: RedeemViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -90,6 +90,8 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit) {
                 } else {
                     Button(onClick = viewModel::verify, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_fe79250b)) }
                 }
+                Spacer(Modifier.height(12.dp))
+                androidx.compose.material3.OutlinedButton(onClick = onOpenHistory, modifier = Modifier.fillMaxWidth()) { Text("🧾 " + androidx.compose.ui.res.stringResource(R.string.dh_title_shop)) }
             }
 
             RedeemPhase.VERIFIED -> {

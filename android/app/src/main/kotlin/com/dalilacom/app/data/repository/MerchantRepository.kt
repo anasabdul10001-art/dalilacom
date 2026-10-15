@@ -94,6 +94,14 @@ class MerchantRepository(
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
     }
 
+    /** The discounts confirmed on this account's card, newest first (null when it could not be loaded). */
+    suspend fun myDiscountHistory(): List<com.dalilacom.app.data.network.DiscountTxDto>? =
+        safeApiCall { api.myDiscountTransactions() }?.takeIf { it.isSuccessful }?.body()
+
+    /** The discounts this shop confirmed, with totals. */
+    suspend fun shopDiscountHistory(): com.dalilacom.app.data.network.ShopTransactionsDto? =
+        safeApiCall { api.shopDiscountTransactions() }?.takeIf { it.isSuccessful }?.body()
+
     suspend fun referralMe(): com.dalilacom.app.data.network.ReferralMeDto? =
         safeApiCall { api.referralMe() }?.takeIf { it.isSuccessful }?.body()
 

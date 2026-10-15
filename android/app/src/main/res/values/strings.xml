@@ -877,4 +877,17 @@
     <string name="session_expired">انتهت جلستك. سجّل الدخول من جديد.</string>
     <string name="hours_always_open">مفتوح دائمًا (24 ساعة)</string>
     <string name="account_fab_tips">عرض تلميحات زر التخفيضات</string>
+    <string name="dh_title_mine">سجل حسوماتي</string>
+    <string name="dh_title_shop">الحسومات اللي طبّقتها</string>
+    <string name="dh_count">عدد المرات</string>
+    <string name="dh_bills">مجموع الفواتير</string>
+    <string name="dh_saved">اللي وفّرته</string>
+    <string name="dh_given">قيمة الحسومات</string>
+    <string name="dh_bill">قيمة الفاتورة</string>
+    <string name="dh_discount">الحسم (%1$d%%)</string>
+    <string name="dh_final">المبلغ النهائي</string>
+    <string name="dh_receipt">الإيصال PDF</string>
+    <string name="dh_failed">تعذّر تحميل السجل</string>
+    <string name="dh_empty_mine">ما في حسومات مطبّقة بعد. لما حدا يطبّق حسم ببطاقتك بيظهر هون.</string>
+    <string name="dh_empty_shop">ما طبّقت أي حسم بعد. كل حسم بتأكده بيظهر هون.</string>
 </resources>

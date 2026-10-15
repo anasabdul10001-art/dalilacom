@@ -124,9 +124,10 @@ fun ProductCategoryPicker(
         }
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.pc_browse), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = { browsing = null }) { Text(stringResource(R.string.pc_all)) }
-            trail.forEach { n -> TextButton(onClick = { browsing = n.id }) { Text("\u203A " + n.name) } }
+        // a long path wraps to the next line as whole names; a name is never squeezed into a column of letters
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TextButton(onClick = { browsing = null }) { Text(stringResource(R.string.pc_all), maxLines = 1, softWrap = false) }
+            trail.forEach { n -> TextButton(onClick = { browsing = n.id }) { Text("\u203A " + n.name, maxLines = 1, softWrap = false) } }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             level.forEach { n ->

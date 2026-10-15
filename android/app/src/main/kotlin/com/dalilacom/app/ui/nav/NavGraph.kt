@@ -186,6 +186,9 @@ fun DalilacomNavGraph(
         composable("aiPlans") {
             com.dalilacom.app.ui.store.AiPlansScreen(container = container, onBack = { navController.popBackStack() }, onWallet = { navController.navigate("wallet") })
         }
+        composable("discountHistory/{mode}") { backStackEntry ->
+            com.dalilacom.app.ui.profile.DiscountHistoryScreen(container = container, shop = backStackEntry.arguments?.getString("mode") == "shop", onBack = { navController.popBackStack() })
+        }
         composable("marketing") {
             com.dalilacom.app.ui.profile.MarketingScreen(container = container, onBack = { navController.popBackStack() })
         }

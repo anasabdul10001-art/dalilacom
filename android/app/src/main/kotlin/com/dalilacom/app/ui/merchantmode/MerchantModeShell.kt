@@ -153,7 +153,7 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                 )
             }
             when (selectedTab) {
-                MerchantTab.Redeem -> RedeemScreen(factory, onExportReceipt = { ref ->
+                MerchantTab.Redeem -> RedeemScreen(factory, onOpenHistory = { rootNavController.navigate("discountHistory/shop") }, onExportReceipt = { ref ->
                     scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/discount/$ref", AppStrings.get(R.string.s_153612e1)) }
                 })
                 MerchantTab.Orders -> MerchantOrdersScreen(factory)

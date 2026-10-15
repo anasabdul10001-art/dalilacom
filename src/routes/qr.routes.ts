@@ -200,6 +200,28 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
   });
 });
 
+// Shop: the discounts it confirmed (newest first), with who they were for and the totals.
+qrRouter.get("/transactions/shop", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id }, select: { id: true } });
+  if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  const [rows, total] = await Promise.all([
+    prisma.discountTransaction.findMany({
+      where: { merchantId: merchant.id },
+      include: { membership: { select: { user: { select: { fullName: true } } } } },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    prisma.discountTransaction.aggregate({ where: { merchantId: merchant.id }, _count: { _all: true }, _sum: { billAmountCents: true, discountAmountCents: true } }),
+  ]);
+  res.json({
+    summary: { count: total._count._all, billCents: total._sum.billAmountCents ?? 0, discountCents: total._sum.discountAmountCents ?? 0 },
+    items: rows.map((r) => ({
+      transactionRef: r.transactionRef, createdAt: r.createdAt, memberName: r.membership.user.fullName,
+      billAmountCents: r.billAmountCents, discountPercent: r.discountPercent, discountAmountCents: r.discountAmountCents, finalAmountCents: r.finalAmountCents,
+    })),
+  });
+});
+
 // Customer: discount history (section 34 "عند الزبون: سجل حسوماته الخاص")
 qrRouter.get("/transactions/mine", requireAuth, async (req, res) => {
   const memberships = await prisma.membership.findMany({ where: { userId: req.user!.id }, select: { id: true } });
