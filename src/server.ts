@@ -24,7 +24,7 @@ import { storeRouter } from "./routes/store.routes";
 import { adsRouter } from "./routes/ads.routes";
 import { reviewsRouter } from "./routes/reviews.routes";
 import { favoritesRouter } from "./routes/favorites.routes";
-import { renderSharePage } from "./lib/shareMeta";
+import { renderSharePage, renderSitemap } from "./lib/shareMeta";
 import { routeRouter } from "./routes/route.routes";
 import { profileRouter } from "./routes/profile.routes";
 import { invoiceRouter } from "./routes/invoice.routes";
@@ -84,6 +84,14 @@ app.get("/admin.html", (_req, res) => res.redirect(301, "/admin"));
 app.get(["/", "/app/"], async (req, res, next) => {
   try {
     res.type("html").send(await renderSharePage(req.query.merchant));
+  } catch (err) {
+    next(err);
+  }
+});
+// The list of pages for Google and other search engines (the home page and every approved shop).
+app.get("/sitemap.xml", async (_req, res, next) => {
+  try {
+    res.type("application/xml").send(await renderSitemap());
   } catch (err) {
     next(err);
   }

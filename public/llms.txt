@@ -1,0 +1,22 @@
+# دليلكم — DALILACOM
+
+> دليلكم (DALILACOM) منصة عربية لدليل المحلات والخدمات القريبة: خريطة للمحلات والمطاعم والأنشطة التجارية، بطاقة عضوية رقمية للحسومات، ومتجر إلكتروني. تعمل على الويب وعلى أندرويد، بالعربية والإنكليزية.
+> DALILACOM is an Arabic local business directory with a map, a digital discount card and an online store. It works on the web and on Android, in Arabic and English.
+
+## الصفحات الرئيسية / Main pages
+
+- [الموقع والتطبيق على الويب / The web app](https://dalilacom.com/): البحث عن المحلات والمهن على الخريطة، العروض، المتجر.
+- [سياسة الخصوصية / Privacy policy](https://dalilacom.com/privacy.html)
+- [شروط الاستخدام / Terms of use](https://dalilacom.com/terms.html)
+- [خريطة الموقع / Sitemap](https://dalilacom.com/sitemap.xml): كل صفحة محل معتمد.
+
+## كيف يعمل / How it works
+
+- البحث: الاسم أو المهنة (مثل «دكتور أسنان»)، مع فلاتر: مفتوح الآن، فيه حسم، المسافة، الأقسام. Search by name or profession, with filters: open now, has a discount, distance, sections.
+- كل محل له صفحة: العنوان، الهاتف، الموقع على الخريطة، ساعات العمل، العروض، التقييمات. Every business has a page: address, phone, map location, opening hours, offers, reviews.
+- بطاقة العضوية: بطاقة رقمية برمز QR وكود متغيّر، يقرأها المحل ليطبّق الحسم. The membership card: a digital QR card with a changing code that the business reads to apply its discount.
+- أصحاب الأنشطة: يسجّلون نشاطهم من الحساب، وتراجعه الإدارة قبل ظهوره. Business owners register their business from their account; the administration reviews it before it appears.
+
+## تواصل / Contact
+
+- الموقع: https://dalilacom.com/

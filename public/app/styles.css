@@ -1466,3 +1466,6 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .dh-sum b { display: block; font-size: 17px; }
 .dh-sum small { color: var(--text-muted); font-size: 12px; }
 .dh-item { margin-bottom: 12px; }
+
+/* text for search engines, AI assistants and screen readers: it is in the page but not drawn (the app is the picture) */
+.seo-static { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }

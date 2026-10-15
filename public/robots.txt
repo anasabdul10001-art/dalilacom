@@ -1,0 +1,45 @@
+# DALILACOM: the public pages are open to search engines and to AI assistants' crawlers.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /auth/
+Disallow: /wallet
+Disallow: /profile
+Disallow: /invoices/
+Disallow: /hooks/
+Disallow: /qr/
+Disallow: /orders
+Disallow: /cart
+Disallow: /notifications
+Disallow: /membership
+Disallow: /responder
+Disallow: /referral
+Disallow: /addresses
+Disallow: /favorites
+Disallow: /merchant/
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://dalilacom.com/sitemap.xml
