@@ -890,7 +890,7 @@ function fmtClock(time) {
 
 function openBadge(st) {
   if (!st || !st.hasHours) return "";
-  if (st.isOpen) return `<span class="badge success">${esc(t("hours.openUntil", { time: fmtClock(st.closesAt) }))}</span>`;
+  if (st.isOpen) return `<span class="badge success">${esc(st.alwaysOpen ? t("hours.alwaysOpen") : t("hours.openUntil", { time: fmtClock(st.closesAt) }))}</span>`;
   const day = st.opensDay === "today" ? t("hours.today") : st.opensDay === "tomorrow" ? t("hours.tomorrow") : DAY_LABEL[st.opensDay] || "";
   return st.opensAt ? `<span class="badge danger">${esc(t("hours.opensAt", { day, time: fmtClock(st.opensAt) }))}</span>` : `<span class="badge danger">${esc(t("hours.closed"))}</span>`;
 }

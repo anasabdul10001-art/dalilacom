@@ -28,6 +28,7 @@ DICT.ar = {
   "place.shareText": "{name} على دليلكم",
 
   "hours.title": "ساعات العمل", "hours.closed": "مغلق", "hours.allDay": "24 ساعة", "hours.sep": "، ",
+  "hours.alwaysOpen": "مفتوح دائمًا (24 ساعة)",
   "hours.openUntil": "مفتوح · يسكّر {time}", "hours.opensAt": "مغلق · يفتح {day} {time}",
   "hours.today": "اليوم", "hours.tomorrow": "بكرا", "time.am": "ص", "time.pm": "م",
   "day.sat": "السبت", "day.sun": "الأحد", "day.mon": "الإثنين", "day.tue": "الثلاثاء", "day.wed": "الأربعاء", "day.thu": "الخميس", "day.fri": "الجمعة",

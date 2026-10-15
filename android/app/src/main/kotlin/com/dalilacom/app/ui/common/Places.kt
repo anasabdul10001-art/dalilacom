@@ -64,6 +64,7 @@ fun formatClock(hhmm: String): String {
 /** The one-line "open / closed" text, or null when the merchant hasn't set hours. */
 fun openStatusText(status: OpenStatusDto?): Pair<String, Boolean>? {
     if (status == null || !status.hasHours) return null
+    if (status.isOpen && status.alwaysOpen) return AppStrings.get(R.string.hours_always_open) to true
     if (status.isOpen) return AppStrings.get(R.string.hours_open_until, status.closesAt?.let(::formatClock).orEmpty()) to true
     val day = when (status.opensDay) {
         "today" -> AppStrings.get(R.string.hours_today)

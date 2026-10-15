@@ -38,7 +38,7 @@ import com.dalilacom.app.R
 import kotlinx.coroutines.delay
 
 /** Sign-in and the card itself have no floating buttons; a shop's discount button is not shown on the store screens either. */
-private val AUTH_AND_CARD = listOf("splash", "socialReturn", "login", "register", "card", "merchantRegister")
+private val AUTH_AND_CARD = listOf("splash", "socialReturn", "login", "register", "card", "merchantRegister", "accountSettings", "profileEdit")
 private val STORE_SCREENS = listOf("store", "product/")
 
 fun showCardFabOn(route: String?): Boolean = route != null && AUTH_AND_CARD.none { route.startsWith(it) }

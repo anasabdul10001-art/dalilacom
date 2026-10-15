@@ -29,6 +29,7 @@ DICT.en = {
   "place.shareText": "{name} on Dalilacom",
 
   "hours.title": "Opening hours", "hours.closed": "Closed", "hours.allDay": "24 hours", "hours.sep": ", ",
+  "hours.alwaysOpen": "Always open (24 hours)",
   "hours.openUntil": "Open · closes {time}", "hours.opensAt": "Closed · opens {day} {time}",
   "hours.today": "today", "hours.tomorrow": "tomorrow", "time.am": "AM", "time.pm": "PM",
   "day.sat": "Saturday", "day.sun": "Sunday", "day.mon": "Monday", "day.tue": "Tuesday", "day.wed": "Wednesday", "day.thu": "Thursday", "day.fri": "Friday",

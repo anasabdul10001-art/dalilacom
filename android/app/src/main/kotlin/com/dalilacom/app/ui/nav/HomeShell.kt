@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,6 +55,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.ViewModelFactory
@@ -149,7 +151,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                                     contentAlignment = Alignment.Center,
                                 ) { Icon(tab.icon, contentDescription = stringResource(tab.labelRes), tint = Color.White) }
                             },
-                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, color = PrimaryRed, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, color = PrimaryRed, fontSize = 10.sp, lineHeight = 12.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
                         )
                     } else {
                         NavigationBarItem(
@@ -162,7 +164,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                                 }
                             },
                             icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
-                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                            // one word per button on one line, even if it is wider than its slot (the middle button's two words may take two lines)
+                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, lineHeight = 12.sp, maxLines = 1, softWrap = false, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.wrapContentWidth(unbounded = true)) },
                         )
                     }
                 }

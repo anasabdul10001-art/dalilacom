@@ -352,6 +352,7 @@ data class OpenStatusDto(
     val hasHours: Boolean = false,
     val isOpen: Boolean = false,
     val closesAt: String? = null,
+    val alwaysOpen: Boolean = false,
     val opensAt: String? = null,
     val opensDay: String? = null,
 )

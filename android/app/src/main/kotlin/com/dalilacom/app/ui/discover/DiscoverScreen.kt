@@ -15,6 +15,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -363,7 +365,9 @@ fun DiscoverScreen(
                 }
             }
 
-            if (!navigating) floatingButtons(innerPadding.calculateBottomPadding() + 16.dp + 40.dp + 12.dp)
+            // hidden while the keyboard is up: the map shrinks and the buttons would float over the filters
+            val keyboardUp = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+            if (!navigating && !keyboardUp) floatingButtons(innerPadding.calculateBottomPadding() + 16.dp + 40.dp + 12.dp)
 
             if (!navigating) SmallFloatingActionButton(
                 onClick = {

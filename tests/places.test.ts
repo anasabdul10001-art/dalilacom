@@ -35,6 +35,22 @@ describe("Opening hours: computeOpenStatus", () => {
     expect(computeOpenStatus(everyDay, "UTC", at("2026-10-04T23:00:00Z"))).toMatchObject({ isOpen: false, opensAt: "09:00", opensDay: "tomorrow" });
   });
 
+  it("a shop open around the clock never says it closes", () => {
+    const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const allDay = Object.fromEntries(days.map((d) => [d, [{ open: "00:00", close: "00:00" }]]));
+    const st = computeOpenStatus(allDay, "UTC", at("2026-10-04T12:00:00Z"));
+    expect(st).toMatchObject({ isOpen: true, alwaysOpen: true });
+    expect(st.closesAt).toBeUndefined();
+    // the same when written as 00:00-23:59 days that meet at midnight is NOT around the clock (a minute gap), but 00:00-00:00 is
+    const midnight = Object.fromEntries(days.map((d) => [d, [{ open: "08:00", close: "00:00" }]]));
+    expect(computeOpenStatus(midnight, "UTC", at("2026-10-04T12:00:00Z"))).toMatchObject({ isOpen: true, closesAt: "00:00" });
+  });
+
+  it("ranges that meet at midnight are one stretch: the closing time is where the stretch really ends", () => {
+    const hours = { sun: [{ open: "10:00", close: "00:00" }], mon: [{ open: "00:00", close: "03:00" }] };
+    expect(computeOpenStatus(hours, "UTC", at("2026-10-04T12:00:00Z"))).toMatchObject({ isOpen: true, closesAt: "03:00" });
+  });
+
   it("handles a range that runs past midnight", () => {
     const saturdayNight = { sat: [{ open: "18:00", close: "02:00" }] };
     expect(computeOpenStatus(saturdayNight, "UTC", at("2026-10-04T01:00:00Z"))).toMatchObject({ isOpen: true, closesAt: "02:00" }); // Sunday 01:00

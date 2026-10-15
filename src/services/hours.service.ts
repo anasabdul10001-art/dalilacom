@@ -26,7 +26,8 @@ export type OpeningHours = z.infer<typeof openingHoursSchema>;
 export interface OpenStatus {
   hasHours: boolean;
   isOpen: boolean;
-  closesAt?: string; // HH:mm, when open now
+  closesAt?: string; // HH:mm, when open now (not set when it is open around the clock)
+  alwaysOpen?: boolean; // open now and still open a week later: the shop never closes
   opensAt?: string; // HH:mm of the next opening, when closed
   opensDay?: "today" | "tomorrow" | DayKey;
 }
@@ -56,6 +57,26 @@ function intervalsOf(hours: OpeningHours, day: number) {
     .sort((a, b) => a.start - b.start);
 }
 
+/**
+ * Where the open stretch that includes `end` (minutes from the start of `day`) really ends: a range that closes at midnight and
+ * is followed by one that opens at midnight is one stretch. A stretch that never ends is "open around the clock".
+ */
+function stretchEnd(hours: OpeningHours, day: number, end: number): { end: number; always: boolean } {
+  let e = end;
+  for (let k = 1; k <= 8; k++) {
+    const shift = k * 1440;
+    const next = intervalsOf(hours, (day + k) % 7).find((i) => i.start + shift <= e && i.end + shift > e);
+    if (!next) return { end: e, always: false };
+    e = next.end + shift;
+  }
+  return { end: e, always: true };
+}
+
+const openNow = (hours: OpeningHours, day: number, end: number): OpenStatus => {
+  const s = stretchEnd(hours, day, end);
+  return s.always ? { hasHours: true, isOpen: true, alwaysOpen: true } : { hasHours: true, isOpen: true, closesAt: toClock(s.end) };
+};
+
 export function computeOpenStatus(raw: unknown, timeZone: string, now: Date = new Date()): OpenStatus {
   const parsed = openingHoursSchema.safeParse(raw);
   const hours = parsed.success ? parsed.data : null;
@@ -64,11 +85,11 @@ export function computeOpenStatus(raw: unknown, timeZone: string, now: Date = ne
   const { day, minutes } = localClock(now, timeZone);
 
   for (const { start, end } of intervalsOf(hours, day)) {
-    if (minutes >= start && minutes < end) return { hasHours: true, isOpen: true, closesAt: toClock(end) };
+    if (minutes >= start && minutes < end) return openNow(hours, day, end);
   }
   // Still inside a range that started yesterday and crosses midnight.
   for (const { start, end } of intervalsOf(hours, (day + 6) % 7)) {
-    if (end > 1440 && minutes + 1440 >= start && minutes + 1440 < end) return { hasHours: true, isOpen: true, closesAt: toClock(end) };
+    if (end > 1440 && minutes + 1440 >= start && minutes + 1440 < end) return openNow(hours, (day + 6) % 7, end);
   }
 
   for (let offset = 0; offset <= 7; offset++) {
