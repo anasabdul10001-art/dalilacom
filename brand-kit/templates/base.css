@@ -14,6 +14,9 @@
   --muted: #6b5d5b;      /* secondary text (passes AA on warm white) */
 }
 * { box-sizing: border-box; margin: 0; }
-html, body { direction: rtl; font-family: "Cairo", "Tajawal", system-ui, sans-serif; color: var(--ink); }
+html { direction: ltr; } /* the page box sits at the left edge of the window; the text inside is right-to-left */
+body { direction: rtl; font-family: "Cairo", "Tajawal", system-ui, sans-serif; color: var(--ink); }
 .head { font-family: "Cairo", "Tajawal", sans-serif; font-weight: 800; line-height: 1.25; }
+/* html clips too: then each page's own overflow:hidden stays on its body and the decorative circles cannot widen the document (that shifted the picture sideways) */
+html { background: #fff; overflow: hidden; }
 .latin { direction: ltr; unicode-bidi: isolate; font-family: "Tajawal", system-ui, sans-serif; }
