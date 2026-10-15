@@ -791,7 +791,7 @@
     <string name="mp_sec_name">اسم المحل</string>
     <string name="mp_sec_profession">المهنة</string>
     <string name="mp_sec_contact">العنوان والتواصل</string>
-    <string name="mp_sec_map">مكان المحل على الخريطة</string>
+    <string name="mp_sec_map">موقع النشاط على الخريطة</string>
     <string name="mp_address_ph">اكتب العنوان، أو حدّد عنوانك من الخريطة اللي تحت</string>
     <string name="fab_discount">حسم</string>
     <string name="fab_add_discount">إضافة حسم</string>
@@ -870,7 +870,7 @@
     <string name="redeem_full">كود العضوية</string>
     <string name="redeem_full_hint">الأرقام الكبيرة تحت الـ QR على بطاقة الزبون (16 رقم)</string>
     <string name="redeem_full_bad">اكتب كود العضوية كامل كما هو على بطاقة الزبون</string>
-    <string name="addr_need">اكتب عنوان المحل، أو حدّد مكانه على الخريطة وبيتعبّى العنوان لحاله</string>
+    <string name="addr_need">اكتب عنوان النشاط، أو حدّد موقعه على الخريطة وبيتعبّى العنوان لحاله</string>
     <string name="shop_none_title">لسا ما سجّلت نشاطك</string>
     <string name="shop_none_sub">حسابك مفعّل كحساب نشاط، بس لازم تعبّي بيانات المحل (الاسم، المهنة، العنوان) لتوصل للإدارة وتراجعه.</string>
     <string name="shop_none_button">سجّل نشاطك</string>

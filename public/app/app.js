@@ -3340,12 +3340,11 @@ function screenMerchantRegister() {
     ${categoryPickerHtml(m.categories, m.selectedCat, "selectMerchCategory")}
     <div class="section-title">${esc(t("mp.secContact"))}</div>
     <div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" /></div>
+    ${catIsOnline(m.categories, m.selectedCat) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     <div class="row">
       <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="رقم الهاتف" value="${esc(m.phone || "")}" /></div>
       <div class="field"><label>واتساب (اختياري)</label><input id="mr-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
     </div>
-    <div class="section-title">${esc(t("mp.secMap"))}</div>
-    ${catIsOnline(m.categories, m.selectedCat) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     ${errorBanner()}
     <button class="btn" ${S.busy ? "disabled" : ""} onclick="submitMerchantRegister()">سجّل</button>
   `;
@@ -3400,7 +3399,7 @@ function pickerHtml(label) {
   const p = S._pick || {};
   return `
     <div class="field">
-      <label>${label ? esc(label) : "مكان محلك على الخريطة — بهالطريقة بيلاقيك الزبائن"}</label>
+      <label>${label ? esc(label) : "موقع نشاطك على الخريطة — بهالطريقة بيلاقيك الزبائن"}</label>
       <div id="pick-slot" class="pick-map"></div>
       <div class="row" style="margin-top:6px;gap:8px;align-items:center">
         <button class="btn small outline" style="width:auto;flex:none" onclick="pickUseMyLocation()">📍 استخدم موقعي الحالي</button>
@@ -3508,12 +3507,11 @@ function screenMerchantProfile() {
     ${categoryPickerHtml(m.categories || [], m.categoryId, "mprofCategory", "sendCategorySuggestion()")}
     <div class="section-title">${esc(t("mp.secContact"))}</div>
     <div class="field"><label>${esc(t("mp.address"))}</label><input id="mp-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" /></div>
+    ${catIsOnline(m.categories || [], m.categoryId) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     <div class="row">
       <div class="field"><label>الهاتف</label><input id="mp-phone" value="${esc(m.phone || "")}" /></div>
       <div class="field"><label>واتساب (مع رمز الدولة)</label><input id="mp-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
     </div>
-    <div class="section-title">${esc(t("mp.secMap"))}</div>
-    ${catIsOnline(m.categories || [], m.categoryId) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     ${errorBanner()}
     <button class="btn" onclick="saveMerchantProfile()">حفظ</button>
     ${m.msg ? `<p class="muted" style="text-align:center;margin-top:8px">${esc(m.msg)}</p>` : ""}
@@ -3572,7 +3570,7 @@ function merchantChecklistHtml() {
       <div class="title-line" onclick="S._checklistOpen=!S._checklistOpen;render()" style="cursor:pointer"><strong>جهّز محلك ليظهر للزبائن</strong><span class="badge ${o.steps.approved ? "success" : "warning"}">${done}/5 ${S._checklistOpen ? "▴" : "▾"}</span></div>
       <div class="check-line"><i style="width:${done * 20}%"></i></div>
       ${!S._checklistOpen ? "" : `${o.steps.approved ? "" : `<p class="muted" style="margin:4px 0 8px">⏳ طلبك بانتظار موافقة الإدارة — ما رح يظهر محلك على الخريطة قبلها.</p>`}
-      ${item(o.steps.location, "حدّد مكان محلك على الخريطة", "S._mprof=null;go('merchantProfile')")}
+      ${item(o.steps.location, "حدّد موقع نشاطك على الخريطة", "S._mprof=null;go('merchantProfile')")}
       ${item(o.steps.hours, "حدّد ساعات العمل", "S._hours=null;go('merchantHours')")}
       ${item(o.steps.discount, "أضف حسم للأعضاء", "setMerchantTab('catalog')")}
       ${item(o.steps.product, "أضف أول منتج", "setMerchantTab('catalog')")}
@@ -4840,8 +4838,8 @@ function screenBranches() {
       <div class="field"><label>${esc(t("br.name"))}</label><input value="${esc(x.name)}" maxlength="60" placeholder="${esc(t("br.namePh"))}" oninput="S._br.form.name=this.value"></div>
       <div class="field"><label>${esc(t("br.city"))}</label><input id="br-city" value="${esc(x.city)}" maxlength="60" oninput="S._br.form.city=this.value"></div>
       <div class="field"><label>${esc(t("br.address"))}</label><input id="br-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(x.address)}" maxlength="200" oninput="S._br.form.address=this.value"></div>
-      <div class="field"><label>${esc(t("br.phone"))}</label><input type="tel" value="${esc(x.phone)}" maxlength="30" oninput="S._br.form.phone=this.value"></div>
       ${pickerHtml(t("br.pickLabel"))}
+      <div class="field"><label>${esc(t("br.phone"))}</label><input type="tel" value="${esc(x.phone)}" maxlength="30" oninput="S._br.form.phone=this.value"></div>
       ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}
       <button class="btn" ${f.busy ? "disabled" : ""} onclick="saveBranch()">${esc(f.busy ? t("br.saving") : t("br.save"))}</button>
       <button class="link-btn" style="display:block;margin:8px auto" onclick="S._br.form=null;render()">${esc(t("br.cancel"))}</button>`;

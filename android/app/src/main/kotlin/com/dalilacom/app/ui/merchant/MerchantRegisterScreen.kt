@@ -92,20 +92,6 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             placeholder = { Text(stringResource(R.string.mp_address_ph)) },
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = phone,
-            onValueChange = { phone = it },
-            label = { Text(AppStrings.get(R.string.s_073f5f4b)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = whatsapp,
-            onValueChange = { whatsapp = it },
-            label = { Text(AppStrings.get(R.string.s_5059c36f)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.mp_sec_map), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(6.dp))
@@ -122,6 +108,20 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
                 }
             })
         }
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = { Text(AppStrings.get(R.string.s_073f5f4b)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = whatsapp,
+            onValueChange = { whatsapp = it },
+            label = { Text(AppStrings.get(R.string.s_5059c36f)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
         Spacer(Modifier.height(20.dp))
 
         if (state.isSubmitting) {

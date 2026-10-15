@@ -23,7 +23,7 @@ const MESSAGES: Record<string, string> = {
   "User not found": "المستخدم غير موجود",
   "No user with that email": "ما في مستخدم بهذا الإيميل",
   "This user is already a marketer": "هذا الشخص مسوّق أصلًا",
-  "The address is required when the place is not pinned on the map": "اكتب عنوان المحل، أو حدّد مكانه على الخريطة",
+  "The address is required when the place is not pinned on the map": "اكتب عنوان النشاط، أو حدّد موقعه على الخريطة",
   "Marketer not found": "المسوّق غير موجود",
   "You are already a marketer": "أنت مسوّق أصلًا",
   "You already have a request waiting": "عندك طلب بانتظار القرار",

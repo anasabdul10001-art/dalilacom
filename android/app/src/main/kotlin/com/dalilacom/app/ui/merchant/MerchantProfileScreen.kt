@@ -201,6 +201,15 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             Text(stringResource(R.string.mp_sec_contact), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(6.dp))
             OutlinedTextField(value = state.address, onValueChange = viewModel::onAddress, label = { Text(AppStrings.get(R.string.s_baffa49c)) }, placeholder = { Text(stringResource(R.string.mp_address_ph)) }, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(16.dp))
+            Text(stringResource(R.string.mp_sec_map), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(6.dp))
+            if (isOnlineCategory(state.categories, state.categoryId)) {
+                Text(stringResource(R.string.cat_online_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            } else {
+                LocationPicker(value = state.location, onChange = viewModel::onLocation)
+            }
+            Spacer(Modifier.height(4.dp))
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(value = state.phone, onValueChange = viewModel::onPhone, label = { Text(AppStrings.get(R.string.s_760c65a1)) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
@@ -210,14 +219,6 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 label = { Text(AppStrings.get(R.string.s_1bef7f7d)) },
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.mp_sec_map), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(6.dp))
-            if (isOnlineCategory(state.categories, state.categoryId)) {
-                Text(stringResource(R.string.cat_online_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-            } else {
-                LocationPicker(value = state.location, onChange = viewModel::onLocation)
-            }
             Spacer(Modifier.height(16.dp))
             Button(onClick = viewModel::save, enabled = !state.isSaving, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Text(AppStrings.get(R.string.s_56ee6e0d))

@@ -7,7 +7,7 @@
     <string name="s_0224de46" formatted="false">تم ربط القناة</string>
     <string name="s_02cdc94a" formatted="false">ربط إنستغرام</string>
     <string name="s_04230bfd" formatted="false">وصف النشاط</string>
-    <string name="s_04c5e56f" formatted="false">حدّد مكان محلك على الخريطة</string>
+    <string name="s_04c5e56f" formatted="false">حدّد موقع نشاطك على الخريطة</string>
     <string name="s_064be38d" formatted="false">📄 تصدير الإيصال PDF</string>
     <string name="s_06a4e0cc" formatted="false">تعذّر تحميل المحفظة</string>
     <string name="s_073f5f4b" formatted="false">الهاتف (اختياري)</string>
@@ -18,7 +18,7 @@
     <string name="s_0be90459" formatted="false">ساعات العمل</string>
     <string name="s_0c05c599" formatted="false">تعذّر إرسال الرد</string>
     <string name="s_0c6c1d53" formatted="false">جهّز محلك ليظهر للزبائن</string>
-    <string name="s_0ccab856" formatted="false">ما أعطيت إذن الموقع — اضغط على الخريطة لتحدد مكان المحل</string>
+    <string name="s_0ccab856" formatted="false">ما أعطيت إذن الموقع — اضغط على الخريطة لتحدد موقع النشاط</string>
     <string name="s_0e1bedb9" formatted="false">أماكني المحفوظة</string>
     <string name="s_10ceb09f" formatted="false">بدك تسجّل كـ:</string>
     <string name="s_14293463" formatted="false">غير متوفر حاليًا</string>
@@ -37,7 +37,7 @@
     <string name="s_21a1bc3f" formatted="false">الوصف (اختياري)</string>
     <string name="s_221bae78" formatted="false">تعذّر تحميل الحالة</string>
     <string name="s_222d012d" formatted="false">حفظ ساعات العمل</string>
-    <string name="s_23e47d75" formatted="false">مكان محلك على الخريطة</string>
+    <string name="s_23e47d75" formatted="false">موقع نشاطك على الخريطة</string>
     <string name="s_249b177e" formatted="false">الدليل الشامل لمدينتك</string>
     <string name="s_261429f0" formatted="false">+ منتج جديد</string>
     <string name="s_2a837234" formatted="false">ربط القناة</string>
@@ -84,7 +84,7 @@
     <string name="s_55cf1553" formatted="false">تعذّر بدء الربط بفيسبوك</string>
     <string name="s_56be3fdb" formatted="false">اكتب اسم القاعدة وكلمة مفتاحية وحدة على الأقل</string>
     <string name="s_56ee6e0d" formatted="false">حفظ</string>
-    <string name="s_571d102a" formatted="false">لسا ما حدّدت المكان</string>
+    <string name="s_571d102a" formatted="false">لسا ما حدّدت الموقع</string>
     <string name="s_57833160" formatted="false">ما في قنوات مربوطة بعد</string>
     <string name="s_58c8a282" formatted="false">زائر</string>
     <string name="s_59539fc9" formatted="false">اسم المحل</string>
@@ -149,7 +149,7 @@
     <string name="s_937c3091" formatted="false">تم تجديد الاشتراك</string>
     <string name="s_93a7f5f0" formatted="false">روح للسلة</string>
     <string name="s_96a2838a" formatted="false">دخّل عنوان الحسم ونسبة بين 1 و100</string>
-    <string name="s_97b1b92d" formatted="false">بهالطريقة بيلاقيك الزبائن — اضغط على الخريطة لتضع الدبّوس مكان محلك.</string>
+    <string name="s_97b1b92d" formatted="false">بهالطريقة بيلاقيك الزبائن — اضغط على الخريطة لتضع الدبّوس على موقع نشاطك.</string>
     <string name="s_9855a904" formatted="false">أضف حسم للأعضاء</string>
     <string name="s_98bd1e1e" formatted="false">تعذّر الحفظ</string>
     <string name="s_98df46fb" formatted="false">تراجع</string>

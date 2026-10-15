@@ -787,8 +787,8 @@
     <string name="mp_sec_name">Shop name</string>
     <string name="mp_sec_profession">Profession</string>
     <string name="mp_sec_contact">Address and contact</string>
-    <string name="mp_sec_map">Shop place on the map</string>
-    <string name="mp_address_ph">Write the address, or pick your place on the map below</string>
+    <string name="mp_sec_map">Business location on the map</string>
+    <string name="mp_address_ph">Write the address, or pick your location on the map below</string>
     <string name="fab_discount">Discount</string>
     <string name="fab_add_discount">Add a discount</string>
     <string name="fab_give_discount">Give a customer a discount</string>
@@ -866,7 +866,7 @@
     <string name="redeem_full">Membership code</string>
     <string name="redeem_full_hint">The big numbers under the QR on the customer\'s card (16 digits)</string>
     <string name="redeem_full_bad">Type the whole membership code as shown on the customer\'s card</string>
-    <string name="addr_need">Write the shop\'s address, or pin its place on the map and the address fills itself in</string>
+    <string name="addr_need">Write the business address, or pin its location on the map and the address fills itself in</string>
     <string name="shop_none_title">You have not registered your business yet</string>
     <string name="shop_none_sub">Your account is a business account, but you need to fill in the shop\'s details (name, profession, address) so the administration can review it.</string>
     <string name="shop_none_button">Register your business</string>

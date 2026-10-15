@@ -105,8 +105,6 @@ fun BranchesScreen(container: AppContainer, onBack: () -> Unit) {
             OutlinedTextField(value = city, onValueChange = { city = it.take(60) }, label = { Text(stringResource(R.string.br_city)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(value = address, onValueChange = { address = it.take(200) }, label = { Text(stringResource(R.string.br_address)) }, placeholder = { Text(stringResource(R.string.mp_address_ph)) }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = phone, onValueChange = { phone = it.take(30) }, label = { Text(stringResource(R.string.br_phone)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.br_pick), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LocationPicker(value = location, onChange = { picked ->
@@ -119,6 +117,8 @@ fun BranchesScreen(container: AppContainer, onBack: () -> Unit) {
                     }
                 }
             })
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = phone, onValueChange = { phone = it.take(30) }, label = { Text(stringResource(R.string.br_phone)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth())
             error?.let { Spacer(Modifier.height(8.dp)); Text(it, color = MaterialTheme.colorScheme.error) }
             Spacer(Modifier.height(12.dp))
             Button(
