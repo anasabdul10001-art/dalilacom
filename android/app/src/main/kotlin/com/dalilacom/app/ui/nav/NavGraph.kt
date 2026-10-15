@@ -68,11 +68,12 @@ fun DalilacomNavGraph(
         if (container.tokenStore.getToken() != null) navController.handleDeepLink(incoming)
     }
 
-    // A push tapped in the tray: wait until the app has reached its home screen, then open what the notification is
-    // about. Orders are private, so they need a signed-in account; products, shops and prices are open to everyone.
+    // A push tapped in the tray: wait only until the start-up screen is gone (the app may be resting on any other page, which used
+    // to leave the tap without effect), then open what the notification is about. Orders are private, so they need a signed-in
+    // account; products, shops and prices are open to everyone.
     LaunchedEffect(notificationRoute) {
         val route = notificationRoute ?: return@LaunchedEffect
-        navController.currentBackStackEntryFlow.first { it.destination.route == "home" }
+        navController.currentBackStackEntryFlow.first { it.destination.route != null && it.destination.route != "splash" }
         val needsAccount = route.startsWith("order/") || route == "merchantMode" || route == "responder" || route == "adminReview" || route == NotificationRoutes.INBOX
         if (route != "home" && (!needsAccount || container.tokenStore.getToken() != null)) navController.navigate(route)
         onNotificationRouteConsumed()
