@@ -11,6 +11,7 @@ const jobs = [
   ["post-1.html", 1080, 1080, "post-1-announcement.png"],
   ["post-2.html", 1080, 1080, "post-2-offer.png"],
   ["story.html", 1080, 1920, "story-1080x1920.png"],
+  ["og.html", 1200, 630, "og-share-v3.png"],
 ];
 
 (async () => {

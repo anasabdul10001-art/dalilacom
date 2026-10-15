@@ -512,7 +512,7 @@ async function bootSocialReturn() {
 
 function screenSocialEmail() {
   return `
-    <img class="auth-logo" src="/brand/logo.png" alt="DALILACOM" />
+    ${authLogoHtml()}
     <h1 class="screen-title">أكمل تسجيلك</h1>
     <p class="screen-sub">${S.params.name ? esc(S.params.name) + "، " : ""}فيسبوك ما شاركنا إيميلك. اكتب إيميلك ورح نبعتلك رابط لتأكيده.</p>
     <div class="field"><label>الإيميل</label><input id="se-email" type="email" dir="ltr" autocomplete="email" /></div>
@@ -538,7 +538,7 @@ function screenForgot() {
   const done = S.params.sent;
   return `
     ${backRow()}
-    <img class="auth-logo" src="/brand/logo.png" alt="DALILACOM" />
+    ${authLogoHtml()}
     <h1 class="screen-title">نسيت كلمة السر</h1>
     <p class="screen-sub">اكتب إيميل حسابك ورح نبعتلك رابط لتعيين كلمة سر جديدة.</p>
     ${done ? `<div class="card">${esc(done)}</div>` : `
@@ -564,7 +564,7 @@ function screenLogin() {
   const draft = S.params.draft || {};
   return `
     <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
-    <img class="auth-logo" src="/brand/logo.png" alt="DALILACOM" />
+    ${authLogoHtml()}
     <h1 class="screen-title">تسجيل الدخول</h1>
     <p class="screen-sub">أهلًا فيك بدليلكم — دخّل بياناتك</p>
     <div class="field"><label>الإيميل</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
@@ -592,6 +592,11 @@ async function doLogin() {
     S.error = "بيانات الدخول غير صحيحة";
     render();
   }
+}
+
+/** The full logo on the sign-in pages: the dark-lettered one on light themes, the white-lettered one on the dark theme (CSS picks). */
+function authLogoHtml() {
+  return `<img class="auth-logo on-light" src="/brand/logo-full-vertical-color.png" alt="DALILACOM" /><img class="auth-logo on-dark" src="/brand/logo-full-vertical-white.png" alt="" aria-hidden="true" />`;
 }
 
 function screenRegister() {

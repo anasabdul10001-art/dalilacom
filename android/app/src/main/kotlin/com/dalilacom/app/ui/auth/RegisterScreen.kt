@@ -70,6 +70,8 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        com.dalilacom.app.ui.common.BrandLogo(modifier = Modifier.width(210.dp), wide = true)
+        Spacer(Modifier.height(12.dp))
         Text(AppStrings.get(R.string.s_bb6cc0f4), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(16.dp))
 

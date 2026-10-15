@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,14 +74,8 @@ fun LoginScreen(
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier.size(92.dp).clip(CircleShape).background(Color.White),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(painterResource(R.drawable.brand_logo), contentDescription = AppStrings.get(R.string.s_7feb59f4), modifier = Modifier.size(76.dp))
-                }
+                com.dalilacom.app.ui.common.BrandLogo(modifier = Modifier.width(170.dp), onColor = true)
                 Spacer(Modifier.height(14.dp))
-                Text(AppStrings.get(R.string.s_7feb59f4), style = MaterialTheme.typography.headlineLarge, color = Color.White)
                 Text(AppStrings.get(R.string.s_249b177e), style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
             }
         }

@@ -104,11 +104,18 @@ body {
 
 .auth-logo {
   display: block;
-  width: 72px;
-  height: 72px;
-  margin: 4px auto 6px;
+  width: 150px;
+  height: auto;
+  margin: 8px auto 14px;
   object-fit: contain;
 }
+.auth-logo.on-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .auth-logo.on-light { display: none; }
+  :root:not([data-theme="light"]) .auth-logo.on-dark { display: block; }
+}
+:root[data-theme="dark"] .auth-logo.on-light { display: none; }
+:root[data-theme="dark"] .auth-logo.on-dark { display: block; }
 
 .page-head p {
   margin: 6px 0 0;

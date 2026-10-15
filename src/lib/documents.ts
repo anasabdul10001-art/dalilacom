@@ -62,7 +62,7 @@ function styleFor(dir: "rtl" | "ltr"): string {
 .doc-kind strong{display:block;font-size:22px;color:#ba2a34}
 .doc-kind span{font-size:12px;color:#6b5755}
 .doc-kind .brand{display:inline-flex;align-items:center;gap:6px}
-.doc-kind .brand img{width:22px;height:22px;object-fit:contain}
+.doc-kind .brand img{height:28px;width:auto;object-fit:contain}
 .doc-meta{display:flex;justify-content:space-between;gap:12px;margin:18px 0;font-size:14px}
 .doc-meta div{background:#faf4f3;border-radius:10px;padding:10px 14px;flex:1}
 .doc-meta small{display:block;color:#6b5755;font-size:11px}
@@ -110,7 +110,7 @@ export function renderDocumentHtml(doc: DocumentData, lang: string = DEFAULT_LAN
 <div class="doc-head">
   ${logo}
   <div class="doc-issuer"><h1>${escapeHtml(doc.issuer.name)}</h1>${doc.issuer.bio ? `<p>${escapeHtml(doc.issuer.bio)}</p>` : ""}${contact ? `<p>${contact}</p>` : ""}</div>
-  <div class="doc-kind"><strong>${escapeHtml(title)}</strong><span class="brand"><img src="/brand/logo-192.png" alt="">${escapeHtml(tl("دليلكم"))}</span></div>
+  <div class="doc-kind"><strong>${escapeHtml(title)}</strong><span class="brand"><img src="/brand/logo-full-horizontal-color.png" alt="${escapeHtml(tl("دليلكم"))}"></span></div>
 </div>
 <div class="doc-meta">
   <div><small>${escapeHtml(tl(kind.numberLabel))}</small>${escapeHtml(doc.number)}</div>

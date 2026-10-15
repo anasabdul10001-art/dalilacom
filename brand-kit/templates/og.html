@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="base.css">
+<style>
+  /* the card shown when the site's link is shared (WhatsApp, Facebook, Telegram...): 1200 x 630 */
+  body { width: 1200px; height: 630px; overflow: hidden; background: linear-gradient(100deg, var(--deep), var(--red) 80%); position: relative; }
+  .center { position: absolute; inset: 0; display: grid; place-items: center; }
+  .box { display: flex; align-items: center; gap: 84px; }
+  .lockup { height: 400px; display: block; }
+  .tag { color: #fff; font-size: 52px; font-weight: 800; line-height: 1.5; }
+  .url { color: #fff; font-size: 30px; margin-top: 18px; opacity: .9; }
+  .ring { position: absolute; border: 2px solid rgba(255,255,255,.12); border-radius: 50%; }
+</style></head>
+<body>
+  <div class="ring" style="width:520px;height:520px;left:-150px;top:-100px"></div>
+  <div class="ring" style="width:360px;height:360px;right:-80px;bottom:-160px"></div>
+  <div class="center"><div class="box">
+    <img class="lockup" src="../logo/logo-full-vertical-white.png" alt="دليلكم">
+    <div><div class="tag">محلات مدينتك<br>وعروضها بمكان واحد</div><div class="url latin">dalilacom.com</div></div>
+  </div></div>
+</body></html>

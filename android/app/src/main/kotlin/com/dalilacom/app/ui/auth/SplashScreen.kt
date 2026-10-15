@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.dalilacom.app.R
+import com.dalilacom.app.ui.common.BrandLogo
 import com.dalilacom.app.data.repository.AuthRepository
 
 @Composable
@@ -30,7 +32,7 @@ fun SplashScreen(
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(painterResource(R.drawable.brand_logo), contentDescription = null, modifier = Modifier.size(120.dp))
+            BrandLogo(modifier = Modifier.width(210.dp))
             Spacer(Modifier.height(24.dp))
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
