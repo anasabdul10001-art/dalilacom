@@ -1,0 +1,19 @@
+@font-face { font-family: "Tajawal"; font-weight: 400; src: url("../fonts/tajawal_regular.ttf"); }
+@font-face { font-family: "Tajawal"; font-weight: 500; src: url("../fonts/tajawal_medium.ttf"); }
+@font-face { font-family: "Tajawal"; font-weight: 700; src: url("../fonts/tajawal_bold.ttf"); }
+:root {
+  --red: #cb0c2e;        /* the logo's red */
+  --ui-red: #ba2a34;     /* buttons and links in the app and the site */
+  --deep: #5a0e12;       /* the dark end of the red gradient */
+  --black: #010101;      /* the logo's black */
+  --ink: #1c1413;        /* text */
+  --white: #ffffff;
+  --warm: #fdfbfa;       /* page background */
+  --sand: #f4efec;       /* soft background */
+  --line: #ece0dd;
+  --muted: #6b5d5b;      /* secondary text (passes AA on warm white) */
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { direction: rtl; font-family: "Cairo", "Tajawal", system-ui, sans-serif; color: var(--ink); }
+.head { font-family: "Cairo", "Tajawal", sans-serif; font-weight: 800; line-height: 1.25; }
+.latin { direction: ltr; unicode-bidi: isolate; font-family: "Tajawal", system-ui, sans-serif; }

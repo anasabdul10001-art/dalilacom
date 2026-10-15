@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="base.css">
+<style>
+  /* story / reel 1080 x 1920: keep the text inside the middle (the top 250px and the bottom 340px are covered by the app's own controls) */
+  body { width: 1080px; height: 1920px; overflow: hidden; background: linear-gradient(170deg, var(--deep), var(--red)); color: #fff; position: relative; }
+  .safe { position: absolute; top: 250px; bottom: 340px; left: 80px; right: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 34px; }
+  .mark { width: 260px; height: 260px; background: #fff; border-radius: 60px; display: grid; place-items: center; box-shadow: 0 30px 70px -20px rgba(0,0,0,.5); }
+  .mark img { width: 190px; }
+  h1 { font-size: 130px; }
+  p { font-size: 54px; line-height: 1.6; font-weight: 700; max-width: 820px; }
+  .url { font-size: 44px; background: #fff; color: var(--ui-red); border-radius: 999px; padding: 16px 50px; font-weight: 700; margin-top: 18px; }
+</style></head>
+<body><div class="safe">
+  <div class="mark"><img src="../logo/logo-color.png" alt=""></div>
+  <h1 class="head">دليلكم</h1>
+  <p>محلات مدينتك وعروضها<br>بمكان واحد</p>
+  <div class="url latin">dalilacom.com</div>
+</div></body></html>

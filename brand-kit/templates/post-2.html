@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="base.css">
+<style>
+  /* square post 1080 x 1080: an offer (change the shop name, the percent and the line under it) */
+  body { width: 1080px; height: 1080px; overflow: hidden; background: linear-gradient(160deg, var(--deep), var(--red) 70%); color: #fff; position: relative; padding: 84px; display: flex; flex-direction: column; justify-content: space-between; }
+  .top { display: flex; align-items: center; gap: 20px; }
+  .top .chip { background: #fff; border-radius: 26px; width: 104px; height: 104px; display: grid; place-items: center; }
+  .top .chip img { width: 76px; }
+  .top b { font-size: 44px; }
+  .tag { display: inline-block; background: #fff; color: var(--ui-red); font-size: 38px; font-weight: 800; padding: 10px 30px; border-radius: 999px; }
+  .pct { font-size: 380px; line-height: 1; font-weight: 900; margin-top: 12px; }
+  .pct small { font-size: 150px; }
+  h2 { font-size: 62px; margin-top: 8px; }
+  p { font-size: 38px; opacity: .92; margin-top: 14px; }
+  .foot { display: flex; justify-content: space-between; align-items: center; font-size: 34px; opacity: .95; }
+  .card { border: 3px solid rgba(255,255,255,.7); border-radius: 22px; padding: 14px 30px; font-weight: 700; }
+</style></head>
+<body>
+  <div class="top"><div class="chip"><img src="../logo/logo-color.png" alt=""></div><b class="head">دليلكم</b></div>
+  <div>
+    <span class="tag">عرض لأعضاء دليلكم</span>
+    <div class="pct head">20<small>%</small></div>
+    <h2 class="head">اسم المحل هنا</h2>
+    <p>على كل المنتجات حتى نهاية الأسبوع</p>
+  </div>
+  <div class="foot"><div class="card">بطاقة العضوية</div><div class="latin">dalilacom.com</div></div>
+</body></html>
