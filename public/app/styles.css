@@ -1147,6 +1147,31 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .store-slide.bg-purple { background-image: linear-gradient(115deg, #5b2bd6, #c04bd6); }
 .store-slide.bg-gold { background-image: linear-gradient(115deg, #d98a00, #f5c542); color: #1b1200; }
 .store-slide.has-img { background-image: inherit; }
+/* the Dalilacom brand slide: the logo drifts in, soft circles float, the line rises (restarts each time the slide is shown) */
+.store-slide.brand-slide { background-image: linear-gradient(120deg, #5a0e12, #ba2a34 62%, #cb0c2e); gap: clamp(18px, 4vw, 54px); justify-content: center; overflow: hidden; }
+.brand-slide .bs-orb { position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.05); pointer-events: none; }
+.brand-slide .bs-orb.o1 { width: 220px; height: 220px; inset-inline-start: -60px; top: -90px; }
+.brand-slide .bs-orb.o2 { width: 150px; height: 150px; inset-inline-end: 12%; bottom: -70px; }
+.brand-slide .bs-orb.o3 { width: 70px; height: 70px; inset-inline-end: 34%; top: 14%; }
+.brand-slide .bs-logo { position: relative; flex: none; }
+.brand-slide .bs-logo img { display: block; height: 128px; width: auto; filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.3)); }
+.brand-slide .bs-text { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.brand-slide h1 em { font-style: normal; opacity: 0.92; }
+.brand-slide .btn-pill { background: #fff; color: #ba2a34; }
+.store-slide.brand-slide.on .bs-logo img { animation: bsLogoIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both, bsFloat 4.2s ease-in-out 0.9s infinite; }
+.store-slide.brand-slide.on .bs-text h1 { animation: bsRise 0.8s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.store-slide.brand-slide.on .bs-text .btn-pill { animation: bsRise 0.8s 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.store-slide.brand-slide.on .bs-orb.o1 { animation: bsDrift 7s ease-in-out infinite alternate; }
+.store-slide.brand-slide.on .bs-orb.o2 { animation: bsDrift 5.5s ease-in-out -2s infinite alternate-reverse; }
+.store-slide.brand-slide.on .bs-orb.o3 { animation: bsDrift 4.5s ease-in-out -1s infinite alternate; }
+@keyframes bsLogoIn { from { opacity: 0; transform: translateY(18px) scale(0.86); } to { opacity: 1; transform: none; } }
+@keyframes bsFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes bsRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes bsDrift { from { transform: translate(0, 0); } to { transform: translate(14px, 18px); } }
+@media (prefers-reduced-motion: reduce) {
+  .store-slide.brand-slide.on .bs-logo img, .store-slide.brand-slide.on .bs-text h1, .store-slide.brand-slide.on .bs-text .btn-pill, .store-slide.brand-slide.on .bs-orb { animation: none; }
+}
+@media (max-width: 520px) { .brand-slide h1 { font-size: 23px; } .brand-slide .bs-logo img { height: 96px; } .store-slide.brand-slide { padding-inline: 22px; } }
 .store-slide-arrow { position: absolute; z-index: 5; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.85); color: #111; font-size: 22px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .store-slide-arrow.prev { inset-inline-start: 10px; }
 .store-slide-arrow.next { inset-inline-end: 10px; }
@@ -1476,3 +1501,9 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 
 /* text for search engines, AI assistants and screen readers: it is in the page but not drawn (the app is the picture) */
 .seo-static { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* the follow button to our official Facebook page */
+.follow-us { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 14px auto; text-align: center; }
+.follow-fb { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; border-radius: 999px; background: #1877f2; color: #fff; font-weight: 700; font-size: 14px; text-decoration: none; }
+.follow-fb:hover { filter: brightness(1.08); }
+.follow-us small { color: var(--muted, #6b5d5b); font-size: 12px; max-width: 280px; line-height: 1.5; }

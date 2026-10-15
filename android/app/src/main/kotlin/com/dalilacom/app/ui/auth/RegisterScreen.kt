@@ -152,6 +152,8 @@ fun RegisterScreen(
         TextButton(onClick = onNavigateToLogin) {
             Text(AppStrings.get(R.string.s_d97a32ee))
         }
+        Spacer(Modifier.height(8.dp))
+        com.dalilacom.app.ui.common.FollowUsButton(Modifier.fillMaxWidth())
     }
 }
 

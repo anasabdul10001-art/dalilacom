@@ -322,6 +322,16 @@ function lookAndLanguageHtml() {
   </div>`;
 }
 
+const FACEBOOK_URL = "https://www.facebook.com/Dalilacomsy";
+
+/** The follow button to our one official Facebook page, with the line that other pages with the name are not ours. */
+function followUsHtml(withNote) {
+  return `<div class="follow-us">
+    <a class="follow-fb" href="${FACEBOOK_URL}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.6-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3z"/></svg><span>${esc(t("follow.facebook"))}</span></a>
+    ${withNote ? `<small>${esc(t("follow.official"))}</small>` : ""}
+  </div>`;
+}
+
 async function render() {
   const el = root();
   if (!el) return;
@@ -574,6 +584,7 @@ function screenLogin() {
     ${socialButtonsHtml()}
     <button class="link-btn" onclick="go('forgot')">نسيت كلمة السر؟</button>
     <button class="link-btn" onclick="reset('register')">ما عندك حساب؟ سجل واحد جديد</button>
+    ${followUsHtml(true)}
   `;
 }
 
@@ -630,6 +641,7 @@ function screenRegister() {
     <button class="btn" onclick="doRegister()">إنشاء الحساب</button>
     ${socialButtonsHtml()}
     <button class="link-btn" onclick="reset('login')">عندك حساب أصلًا؟ سجل دخول</button>
+    ${followUsHtml(true)}
   `;
 }
 
@@ -1559,6 +1571,7 @@ function tabProfile() {
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
       <div style="height:14px"></div>
+      ${followUsHtml(true)}
       <button class="btn secondary" style="max-width:240px" onclick="doLogout()">${esc(t("profile.logout"))}</button>
       <div style="height:10px"></div>
       <button class="link-btn" style="color:var(--danger, #b71c1c)" onclick="deleteMyAccount()">${esc(t("profile.deleteAccount"))}</button>
@@ -2399,20 +2412,28 @@ function storeOff(p) {
 
 /* ---------------- the big rotating banners ---------------- */
 
-function storeSlider(st, home) {
+/** The slides: the Dalilacom brand slide first (moving), then the admin's banners (or the deals invitation while there are none). */
+function storeSlideList(st, home) {
   const list = st.banners && st.banners.list ? st.banners.list : [];
-  if (!list.length) {
-    return `<button class="store-banner" onclick="storeSeeAll('deals')">
-      <h1>${esc(t("store.heroBig"))}</h1>
-      <p>${esc(t("store.heroUpTo", { n: Math.max(0, ...home.deals.map(storeOff)) }))}</p>
-      <span class="btn-pill">${esc(t("store.shopNow"))}</span>
-      <i>🛍️</i>
-    </button>`;
-  }
-  const idx = Math.min(st.banners.idx || 0, list.length - 1);
+  const rest = list.length ? list : [{ fallback: true, bg: "coral", title: t("store.heroBig"), subtitle: t("store.heroUpTo", { n: Math.max(0, ...home.deals.map(storeOff)) }), buttonText: t("store.shopNow"), target: { type: "deals" } }];
+  return [{ brand: true }, ...rest];
+}
+
+function storeSlider(st, home) {
+  const list = storeSlideList(st, home);
+  st.slides = list;
+  const idx = Math.min(st.slideIdx || 0, list.length - 1);
   return `
     <div class="store-slider" id="store-slider">
-      ${list.map((b, i) => `
+      ${list.map((b, i) => b.brand ? `
+        <button class="store-slide brand-slide ${i === idx ? "on" : ""}" onclick="storeBannerGo(${i})" aria-label="DALILACOM">
+          <span class="bs-orb o1"></span><span class="bs-orb o2"></span><span class="bs-orb o3"></span>
+          <span class="bs-logo"><img src="/brand/logo-full-vertical-white.png" alt="DALILACOM" /></span>
+          <span class="bs-text">
+            <h1>${esc(t("store.brandTag1"))}<br><em>${esc(t("store.brandTag2"))}</em></h1>
+            <span class="btn-pill">${esc(t("store.shopNow"))}</span>
+          </span>
+        </button>` : `
         <button class="store-slide bg-${esc(b.bg)} ${b.imageUrl ? "has-img" : ""} ${i === idx ? "on" : ""}" ${b.imageUrl ? `style="background-image:url('${esc(b.imageUrl)}')"` : ""} onclick="storeBannerGo(${i})">
           <span class="store-slide-text">
             <h1>${esc(b.title)}</h1>
@@ -2427,37 +2448,38 @@ function storeSlider(st, home) {
     </div>`;
 }
 
-/** Moves to another banner without redrawing the page (so a tap in progress, or a scroll, is not disturbed). */
+/** Moves to another slide without redrawing the page (so a tap in progress, or a scroll, is not disturbed). */
 function storeBannerShow(i) {
   const st = S._store;
-  if (!st || !st.banners) return;
-  const n = st.banners.list.length;
-  st.banners.idx = ((i % n) + n) % n;
-  document.querySelectorAll("#store-slider .store-slide").forEach((el, k) => el.classList.toggle("on", k === st.banners.idx));
-  document.querySelectorAll("#store-slider .store-dots i").forEach((el, k) => el.classList.toggle("on", k === st.banners.idx));
+  if (!st || !st.slides) return;
+  const n = st.slides.length;
+  st.slideIdx = ((i % n) + n) % n;
+  document.querySelectorAll("#store-slider .store-slide").forEach((el, k) => el.classList.toggle("on", k === st.slideIdx));
+  document.querySelectorAll("#store-slider .store-dots i").forEach((el, k) => el.classList.toggle("on", k === st.slideIdx));
   storeSliderRestart();
 }
 
-function storeBannerStep(d) { storeBannerShow((S._store.banners.idx || 0) + d); }
+function storeBannerStep(d) { storeBannerShow(((S._store && S._store.slideIdx) || 0) + d); }
 
-/** The banners change by themselves, as often as the admin set; the timer lives only while the store is on screen. */
+/** The slides change by themselves, as often as the admin set; the timer lives only while the store is on screen. */
 function storeSliderRestart() {
   if (S._sliderTimer) { clearInterval(S._sliderTimer); S._sliderTimer = null; }
   const st = S._store;
-  if (S.screen !== "store" || !st || !st.banners || st.banners.list.length < 2) return;
+  if (S.screen !== "store" || !st || !st.slides || st.slides.length < 2) return;
   S._sliderTimer = setInterval(() => {
     if (S.screen !== "store" || !S._store || !document.getElementById("store-slider")) { clearInterval(S._sliderTimer); S._sliderTimer = null; return; }
-    const b = S._store.banners;
-    b.idx = ((b.idx || 0) + 1) % b.list.length;
-    document.querySelectorAll("#store-slider .store-slide").forEach((el, k) => el.classList.toggle("on", k === b.idx));
-    document.querySelectorAll("#store-slider .store-dots i").forEach((el, k) => el.classList.toggle("on", k === b.idx));
-  }, Math.max(2, Number(st.banners.seconds) || 5) * 1000);
+    const cur = S._store;
+    cur.slideIdx = ((cur.slideIdx || 0) + 1) % cur.slides.length;
+    document.querySelectorAll("#store-slider .store-slide").forEach((el, k) => el.classList.toggle("on", k === cur.slideIdx));
+    document.querySelectorAll("#store-slider .store-dots i").forEach((el, k) => el.classList.toggle("on", k === cur.slideIdx));
+  }, Math.max(2, Number(st.banners && st.banners.seconds) || 5) * 1000);
 }
 
 function storeBannerGo(i) {
-  const b = S._store.banners.list[i];
+  const b = S._store.slides && S._store.slides[i];
   if (!b) return;
-  api("POST", "/store/banners/" + b.id + "/click");
+  if (b.brand) { storeSeeAll("deals"); return; }
+  if (b.id) api("POST", "/store/banners/" + b.id + "/click");
   const { type, value } = b.target || {};
   if (type === "product" && value) go("productDetail", { productId: value });
   else if (type === "section" && value) storePickSection(value);
@@ -3221,7 +3243,8 @@ function screenStore() {
       ${storeSection(t("store.best"), home.bestSellers, "best")}
       ${storeSection(t("store.deals"), home.deals, "deals")}
       ${storeSection(t("store.newest"), home.newest, "new")}
-      ${!home.bestSellers.length && !home.newest.length ? `<div class="empty">${esc(t("store.noResults"))}</div>` : ""}`;
+      ${!home.bestSellers.length && !home.newest.length ? `<div class="empty">${esc(t("store.noResults"))}</div>` : ""}
+      ${followUsHtml(false)}`;
   }
   return `
     <div class="store">
@@ -6240,7 +6263,7 @@ function wireUpAfterRender() {
     renderDiscoverMap();
   }
   if (S.screen === "merchantRegister" || S.screen === "merchantProfile" || S.screen === "merchantBranches") renderPicker();
-  if (S.screen === "store" && S._store && S._store.banners && S._store.banners.list.length > 1) { if (!S._sliderTimer) storeSliderRestart(); }
+  if (S.screen === "store" && S._store && S._store.slides && S._store.slides.length > 1) { if (!S._sliderTimer) storeSliderRestart(); }
   else if (S._sliderTimer) { clearInterval(S._sliderTimer); S._sliderTimer = null; }
 }
 

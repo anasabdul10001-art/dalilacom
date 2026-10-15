@@ -46,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,9 +61,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -376,35 +379,18 @@ fun StoreScreen(
             } else {
                 // the big banners (the admin's, any number, changing by themselves) or the default one
                 item {
-                  if (ui.banners.isNotEmpty()) BannerPager(ui.banners, ui.bannerSeconds) { b ->
-                    vm.bannerClick(b.id)
-                    val value = b.target.value.orEmpty()
-                    when (b.target.type) {
-                        "product" -> if (value.isNotBlank()) onOpenProduct(value)
-                        "section" -> if (value.isNotBlank()) vm.pickSection(value)
-                        "shop" -> if (value.isNotBlank()) onOpenMerchant(value)
-                        "deals" -> vm.seeAll("deals")
-                        "url" -> if (value.startsWith("https://")) runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(value))) }
-                    }
-                  } else {
                     val up = ui.deals.maxOfOrNull { it.offPercent() } ?: 0
-                    Box(
-                        Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(8.dp))
-                            .background(Brush.linearGradient(listOf(Color(0xFFFF7A59), Color(0xFFFF4D6D), Color(0xFFE8336D))))
-                            .clickable { vm.seeAll("deals") }.padding(22.dp),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(stringResource(R.string.store_hero_big), color = Color.White, fontWeight = FontWeight.Black, fontSize = 28.sp, lineHeight = 32.sp)
-                                Spacer(Modifier.height(4.dp))
-                                Text(stringResource(R.string.store_hero_up_to, up), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Spacer(Modifier.height(12.dp))
-                                Text(stringResource(R.string.store_shop_now), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.background(Color.Black, RoundedCornerShape(3.dp)).padding(horizontal = 20.dp, vertical = 8.dp))
-                            }
-                            Text("🛍️", fontSize = 76.sp)
+                    BannerPager(ui.banners, ui.bannerSeconds, up, onDeals = { vm.seeAll("deals") }) { b ->
+                        vm.bannerClick(b.id)
+                        val value = b.target.value.orEmpty()
+                        when (b.target.type) {
+                            "product" -> if (value.isNotBlank()) onOpenProduct(value)
+                            "section" -> if (value.isNotBlank()) vm.pickSection(value)
+                            "shop" -> if (value.isNotBlank()) onOpenMerchant(value)
+                            "deals" -> vm.seeAll("deals")
+                            "url" -> if (value.startsWith("https://")) runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(value))) }
                         }
                     }
-                  }
                 }
                 // the advertising spaces: a shop's paid product, or a best seller with an invitation to advertise
                 if (ui.slots.isNotEmpty()) item {
@@ -450,6 +436,7 @@ fun StoreScreen(
                 item { HomeSection(stringResource(R.string.store_best), "best", ui.bestSellers, ui.justAdded, onOpenProduct, vm::addToCart, vm::seeAll) }
                 item { HomeSection(stringResource(R.string.store_deals), "deals", ui.deals, ui.justAdded, onOpenProduct, vm::addToCart, vm::seeAll) }
                 item { HomeSection(stringResource(R.string.store_newest), "new", ui.newest, ui.justAdded, onOpenProduct, vm::addToCart, vm::seeAll) }
+                item { com.dalilacom.app.ui.common.FollowUsButton(showNote = false, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) }
             }
         }
     }
@@ -492,45 +479,124 @@ private fun UnitPicker(allLabel: String, options: List<Pair<String, String>>, se
     }
 }
 
-/** The big banners: the picture (or the colour), the words, changing by themselves every few seconds; swipe to change by hand. */
+/**
+ * The big slides: the Dalilacom brand slide first (the logo drifts in and floats), then the admin's banners, or the deals
+ * invitation while there are none. They change by themselves every few seconds; swipe to change by hand.
+ */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun BannerPager(banners: List<com.dalilacom.app.data.network.StoreBannerDto>, seconds: Int, onClick: (com.dalilacom.app.data.network.StoreBannerDto) -> Unit) {
-    val pager = androidx.compose.foundation.pager.rememberPagerState { banners.size }
-    LaunchedEffect(banners.size, seconds) {
-        if (banners.size < 2) return@LaunchedEffect
+private fun BannerPager(banners: List<com.dalilacom.app.data.network.StoreBannerDto>, seconds: Int, dealsUp: Int, onDeals: () -> Unit, onClick: (com.dalilacom.app.data.network.StoreBannerDto) -> Unit) {
+    val count = 1 + maxOf(1, banners.size)
+    val pager = androidx.compose.foundation.pager.rememberPagerState { count }
+    LaunchedEffect(count, seconds) {
         while (true) {
             kotlinx.coroutines.delay(maxOf(2, seconds) * 1000L)
-            pager.animateScrollToPage((pager.currentPage + 1) % banners.size)
+            pager.animateScrollToPage((pager.currentPage + 1) % count)
         }
     }
     Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(8.dp))) {
         androidx.compose.foundation.pager.HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth()) { page ->
-            val b = banners[page]
-            val colors = when (b.bg) {
-                "black" -> listOf(Color(0xFF111111), Color(0xFF3A3A3A))
-                "blue" -> listOf(Color(0xFF1E6FE0), Color(0xFF12B3D6))
-                "green" -> listOf(Color(0xFF1E8A3A), Color(0xFF7BCF5A))
-                "purple" -> listOf(Color(0xFF5B2BD6), Color(0xFFC04BD6))
-                "gold" -> listOf(Color(0xFFD98A00), Color(0xFFF5C542))
-                else -> listOf(Color(0xFFFF7A59), Color(0xFFFF4D6D), Color(0xFFE8336D))
-            }
-            val ink = if (b.bg == "gold") Color(0xFF1B1200) else Color.White
-            Box(Modifier.fillMaxWidth().height(170.dp).clickable { onClick(b) }.background(Brush.linearGradient(colors))) {
-                b.imageUrl?.let { url ->
-                    AsyncImage(model = if (url.startsWith("/")) absoluteUrl(url) else url, contentDescription = b.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0x00000000), Color(0x8C000000)))))
-                }
-                Column(Modifier.align(Alignment.CenterStart).padding(horizontal = 20.dp).fillMaxWidth(0.72f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(b.title, color = if (b.imageUrl != null) Color.White else ink, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 28.sp)
-                    b.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, color = if (b.imageUrl != null) Color.White else ink, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
-                    b.buttonText?.takeIf { it.isNotBlank() }?.let { Text(it, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp).background(Color.Black, RoundedCornerShape(3.dp)).padding(horizontal = 18.dp, vertical = 8.dp)) }
-                }
+            if (page == 0) BrandSlide(active = pager.currentPage == 0, onClick = onDeals)
+            else if (banners.isEmpty()) DealsSlide(dealsUp, onDeals)
+            else BannerSlide(banners[page - 1], onClick)
+        }
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(count) { i ->
+                Box(Modifier.height(7.dp).width(if (i == pager.currentPage) 20.dp else 7.dp).background(Color.White.copy(alpha = if (i == pager.currentPage) 1f else 0.55f), RoundedCornerShape(4.dp)))
             }
         }
-        if (banners.size > 1) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            repeat(banners.size) { i ->
-                Box(Modifier.height(7.dp).width(if (i == pager.currentPage) 20.dp else 7.dp).background(Color.White.copy(alpha = if (i == pager.currentPage) 1f else 0.55f), RoundedCornerShape(4.dp)))
+    }
+}
+
+/** One of the admin's banners: the picture (or the colour) and the words. */
+@Composable
+private fun BannerSlide(b: com.dalilacom.app.data.network.StoreBannerDto, onClick: (com.dalilacom.app.data.network.StoreBannerDto) -> Unit) {
+    val colors = when (b.bg) {
+        "black" -> listOf(Color(0xFF111111), Color(0xFF3A3A3A))
+        "blue" -> listOf(Color(0xFF1E6FE0), Color(0xFF12B3D6))
+        "green" -> listOf(Color(0xFF1E8A3A), Color(0xFF7BCF5A))
+        "purple" -> listOf(Color(0xFF5B2BD6), Color(0xFFC04BD6))
+        "gold" -> listOf(Color(0xFFD98A00), Color(0xFFF5C542))
+        else -> listOf(Color(0xFFFF7A59), Color(0xFFFF4D6D), Color(0xFFE8336D))
+    }
+    val ink = if (b.bg == "gold") Color(0xFF1B1200) else Color.White
+    Box(Modifier.fillMaxWidth().height(170.dp).clickable { onClick(b) }.background(Brush.linearGradient(colors))) {
+        b.imageUrl?.let { url ->
+            AsyncImage(model = if (url.startsWith("/")) absoluteUrl(url) else url, contentDescription = b.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0x00000000), Color(0x8C000000)))))
+        }
+        Column(Modifier.align(Alignment.CenterStart).padding(horizontal = 20.dp).fillMaxWidth(0.72f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(b.title, color = if (b.imageUrl != null) Color.White else ink, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 28.sp)
+            b.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, color = if (b.imageUrl != null) Color.White else ink, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+            b.buttonText?.takeIf { it.isNotBlank() }?.let { Text(it, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp).background(Color.Black, RoundedCornerShape(3.dp)).padding(horizontal = 18.dp, vertical = 8.dp)) }
+        }
+    }
+}
+
+/** The invitation shown while the admin has no banners of their own. */
+@Composable
+private fun DealsSlide(up: Int, onClick: () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFFFF7A59), Color(0xFFFF4D6D), Color(0xFFE8336D)))).clickable(onClick = onClick).padding(22.dp),
+    ) {
+        Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.store_hero_big), color = Color.White, fontWeight = FontWeight.Black, fontSize = 28.sp, lineHeight = 32.sp)
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.store_hero_up_to, up), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.store_shop_now), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.background(Color.Black, RoundedCornerShape(3.dp)).padding(horizontal = 20.dp, vertical = 8.dp))
+            }
+            Text("🛍️", fontSize = 76.sp)
+        }
+    }
+}
+
+/** The Dalilacom slide: floating circles, the logo drifting in and floating, the line rising (replays every time it comes back). */
+@Composable
+private fun BrandSlide(active: Boolean, onClick: () -> Unit) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(active) { shown = active }
+    val ease = androidx.compose.animation.core.FastOutSlowInEasing
+    val logoIn by androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f, androidx.compose.animation.core.tween(900, easing = ease), label = "logoIn")
+    val textIn by androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f, androidx.compose.animation.core.tween(800, delayMillis = if (shown) 250 else 0, easing = ease), label = "textIn")
+    val btnIn by androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f, androidx.compose.animation.core.tween(800, delayMillis = if (shown) 550 else 0, easing = ease), label = "btnIn")
+    val loop = androidx.compose.animation.core.rememberInfiniteTransition(label = "brandLoop")
+    val float by loop.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(4200, easing = ease), androidx.compose.animation.core.RepeatMode.Reverse), label = "float")
+    val drift by loop.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(6500, easing = androidx.compose.animation.core.LinearEasing), androidx.compose.animation.core.RepeatMode.Reverse), label = "drift")
+    val ring = Color.White.copy(alpha = 0.14f)
+    val fill = Color.White.copy(alpha = 0.05f)
+    Box(
+        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFF5A0E12), Color(0xFFBA2A34), Color(0xFFCB0C2E)))).clickable(onClick = onClick),
+    ) {
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            val d = drift * 16.dp.toPx()
+            val big = androidx.compose.ui.geometry.Offset(size.width * 0.05f + d, -10.dp.toPx() + d)
+            val mid = androidx.compose.ui.geometry.Offset(size.width * 0.78f - d, size.height + 10.dp.toPx() - d)
+            val stroke = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx())
+            drawCircle(fill, radius = 110.dp.toPx(), center = big)
+            drawCircle(ring, radius = 110.dp.toPx(), center = big, style = stroke)
+            drawCircle(fill, radius = 75.dp.toPx(), center = mid)
+            drawCircle(ring, radius = 75.dp.toPx(), center = mid, style = stroke)
+            drawCircle(fill, radius = 34.dp.toPx(), center = androidx.compose.ui.geometry.Offset(size.width * 0.55f, size.height * 0.2f + d))
+        }
+        Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            androidx.compose.foundation.Image(
+                painterResource(R.drawable.brand_logo_full_white), contentDescription = "DALILACOM", contentScale = ContentScale.Fit,
+                modifier = Modifier.height(112.dp).graphicsLayer {
+                    alpha = logoIn
+                    val sc = 0.86f + 0.14f * logoIn
+                    scaleX = sc; scaleY = sc
+                    translationY = (1f - logoIn) * 18.dp.toPx() - float * 7.dp.toPx()
+                },
+            )
+            Column(Modifier.weight(1f).graphicsLayer { alpha = textIn; translationY = (1f - textIn) * 14.dp.toPx() }) {
+                Text(stringResource(R.string.store_brand_tag1), color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 28.sp)
+                Text(stringResource(R.string.store_brand_tag2), color = Color.White.copy(alpha = 0.92f), fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 28.sp)
+                Text(
+                    stringResource(R.string.store_shop_now), color = Color(0xFFBA2A34), fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 10.dp).graphicsLayer { alpha = btnIn; translationY = (1f - btnIn) * 14.dp.toPx() }.background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 8.dp),
+                )
             }
         }
     }

@@ -146,6 +146,8 @@ fun ProfileScreen(
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onOpenMarketing, modifier = Modifier.fillMaxWidth()) { Text("📣 " + stringResource(R.string.ref_title)) }
         Spacer(Modifier.height(16.dp))
+        com.dalilacom.app.ui.common.FollowUsButton(Modifier.fillMaxWidth())
+        Spacer(Modifier.height(16.dp))
 
         Button(onClick = {
             scope.launch {

@@ -891,4 +891,8 @@
     <string name="dh_empty_mine">ما في حسومات مطبّقة بعد. لما حدا يطبّق حسم ببطاقتك بيظهر هون.</string>
     <string name="dh_empty_shop">ما طبّقت أي حسم بعد. كل حسم بتأكده بيظهر هون.</string>
     <string name="wallet_auto">تحقق تلقائي</string>
+    <string name="store_brand_tag1">محلات مدينتك</string>
+    <string name="store_brand_tag2">وعروضها بمكان واحد</string>
+    <string name="follow_facebook">تابعنا على فيسبوك</string>
+    <string name="follow_official">هذي صفحتنا الرسمية الوحيدة. أي صفحة ثانية باسم دليلكم لا تمثلنا.</string>
 </resources>
