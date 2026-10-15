@@ -24,7 +24,7 @@ import { storeRouter } from "./routes/store.routes";
 import { adsRouter } from "./routes/ads.routes";
 import { reviewsRouter } from "./routes/reviews.routes";
 import { favoritesRouter } from "./routes/favorites.routes";
-import { renderSharePage, renderSitemap } from "./lib/shareMeta";
+import { renderSharePage, renderSitemap, searchIndexingOn } from "./lib/shareMeta";
 import { routeRouter } from "./routes/route.routes";
 import { profileRouter } from "./routes/profile.routes";
 import { invoiceRouter } from "./routes/invoice.routes";
@@ -79,6 +79,12 @@ app.get(/^\/admin\/?$/, (req, res) => {
 });
 app.get("/admin.html", (_req, res) => res.redirect(301, "/admin"));
 
+// Every answer carries the noindex header too, so even a page found through a link is not kept (images, scripts, API replies).
+app.use((_req, res, next) => {
+  if (!searchIndexingOn()) res.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  next();
+});
+
 // The main website: the app is served at the root of the domain (dalilacom.com/), and also at /app/.
 // It goes through renderSharePage so a shared link shows a proper preview card (a shop link: that shop's name and details).
 app.get(["/", "/app/"], async (req, res, next) => {
@@ -88,6 +94,17 @@ app.get(["/", "/app/"], async (req, res, next) => {
     next(err);
   }
 });
+// robots.txt and llms.txt come before the static files: while indexing is off (the default) every crawler is told to stay out.
+const CLOSED_ROBOTS = "# The site is not open to search engines yet.\nUser-agent: *\nDisallow: /\n";
+app.get("/robots.txt", (_req, res, next) => {
+  if (searchIndexingOn()) return next(); // the open version is the file in public/
+  res.type("text/plain").set("X-Robots-Tag", "noindex, nofollow").send(CLOSED_ROBOTS);
+});
+app.get("/llms.txt", (_req, res, next) => {
+  if (searchIndexingOn()) return next();
+  res.status(404).type("text/plain").send("Not available yet.\n");
+});
+
 // The list of pages for Google and other search engines (the home page and every approved shop).
 app.get("/sitemap.xml", async (_req, res, next) => {
   try {

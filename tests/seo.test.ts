@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, beforeAll } from "vitest";
 import crypto from "crypto";
 import request from "supertest";
 import { app } from "../src/server";
@@ -11,6 +11,13 @@ afterAll(async () => {
 });
 
 describe("being found: icons, home page text, shop pages, sitemap, robots and llms.txt", () => {
+  beforeAll(() => {
+    process.env.SEARCH_INDEXING = "on";
+  });
+  afterAll(() => {
+    delete process.env.SEARCH_INDEXING;
+  });
+
   it("serves the favicon where Google looks for it, in sizes that are multiples of 48", async () => {
     const ico = await request(app).get("/favicon.ico");
     expect(ico.status).toBe(200);
@@ -74,5 +81,34 @@ describe("being found: icons, home page text, shop pages, sitemap, robots and ll
     const llms = await request(app).get("/llms.txt");
     expect(llms.status).toBe(200);
     expect(llms.text).toContain("DALILACOM");
+  });
+});
+
+describe("while the site is closed to search (the default)", () => {
+  it("tells every crawler to stay out: robots.txt, noindex on the pages and in the headers, an empty sitemap, no llms.txt", async () => {
+    delete process.env.SEARCH_INDEXING;
+    const robots = await request(app).get("/robots.txt");
+    expect(robots.text).toContain("Disallow: /");
+    expect(robots.text).not.toContain("Allow: /\n\nUser-agent: GPTBot");
+    expect(robots.headers["x-robots-tag"]).toContain("noindex");
+    const home = await request(app).get("/");
+    expect(home.text).toContain('<meta name="robots" content="noindex, nofollow, noarchive"');
+    expect(home.headers["x-robots-tag"]).toContain("noindex");
+    const sitemap = await request(app).get("/sitemap.xml");
+    expect(sitemap.text).not.toContain("<loc>");
+    expect((await request(app).get("/llms.txt")).status).toBe(404);
+    expect((await request(app).get("/brand/favicon-48.png")).headers["x-robots-tag"]).toContain("noindex");
+  });
+
+  it("opens again with SEARCH_INDEXING=on", async () => {
+    process.env.SEARCH_INDEXING = "on";
+    try {
+      expect((await request(app).get("/robots.txt")).text).toContain("User-agent: GPTBot");
+      expect((await request(app).get("/")).text).not.toContain('content="noindex');
+      expect((await request(app).get("/")).headers["x-robots-tag"]).toBeUndefined();
+      expect((await request(app).get("/llms.txt")).status).toBe(200);
+    } finally {
+      delete process.env.SEARCH_INDEXING;
+    }
   });
 });

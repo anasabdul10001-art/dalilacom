@@ -119,7 +119,8 @@ interface StatePayload {
   lang?: string;
 }
 
-const signState = (payload: StatePayload) => jwt.sign(payload, process.env.JWT_SECRET as string, { expiresIn: "10m" });
+// 30 minutes: choosing an account, typing a password and a second step can take a while on a phone
+const signState = (payload: StatePayload) => jwt.sign(payload, process.env.JWT_SECRET as string, { expiresIn: "30m" });
 
 export function readState(state: string): StatePayload | null {
   try {

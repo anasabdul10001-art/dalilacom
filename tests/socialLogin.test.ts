@@ -191,7 +191,13 @@ describe("Signing in with Facebook", () => {
 describe("When the flow goes wrong", () => {
   it("rejects a forged state or a browser that did not start the flow, and reports a cancelled or refused sign-in", async () => {
     providerAnswers("google", googleProfile(uniqueEmail("googlewrong")));
-    expect((await request(app).get("/auth/social/google/callback").query({ state: "forged", code: "x" })).status).toBe(400);
+    // a forged, expired or reloaded link leads to a friendly page with the way back, never to a raw error
+    const forged = await request(app).get("/auth/social/google/callback").query({ state: "forged", code: "x" });
+    expect(forged.status).toBe(302);
+    expect(forged.headers.location).toBe("/social-retry.html");
+    const retry = await request(app).get("/social-retry.html");
+    expect(retry.status).toBe(200);
+    expect(retry.text).toContain("dalilacom://auth/social");
     expect(params((await browserFlow("google", { cookie: "dlk_social_nonce=someone-elses" })).location).get("social_error")).toBe("BAD_STATE");
     expect(params((await browserFlow("google", { code: null })).location).get("social_error")).toBe("CANCELLED");
 

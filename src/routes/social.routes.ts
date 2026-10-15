@@ -57,14 +57,15 @@ socialRouter.get("/:provider/start", socialLoginRateLimiter, (req, res) => {
   if (!isProviderConfigured(provider)) return sendError(res, 404, "SOCIAL_NOT_CONFIGURED", "This sign-in method is not enabled yet");
 
   const { url, nonce } = startLogin(provider, parsed.data.platform, parsed.data.lang);
-  res.cookie(NONCE_COOKIE, nonce, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 10 * 60 * 1000, path: "/auth/social" });
+  res.cookie(NONCE_COOKIE, nonce, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 30 * 60 * 1000, path: "/auth/social" });
   res.redirect(url);
 });
 
 socialRouter.get("/:provider/callback", socialLoginRateLimiter, async (req, res) => {
   const provider = parseProvider(req.params.provider);
   const state = typeof req.query.state === "string" ? readState(req.query.state) : null;
-  if (!provider || !state || state.p !== provider) return sendError(res, 400, "BAD_STATE", "The sign-in link is not valid or has expired");
+  // an unreadable or expired link (a reload, a very slow sign-in): a friendly page with the way back instead of a raw error
+  if (!provider || !state || state.p !== provider) return res.redirect("/social-retry.html");
   // the browser that comes back must be the one that left
   if (cookieValue(req.headers.cookie, NONCE_COOKIE) !== state.n) return finish(res, state.pl, { social_error: "BAD_STATE" });
 

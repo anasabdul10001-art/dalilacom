@@ -16,6 +16,12 @@ const DEFAULT_DESCRIPTION = "اكتشف المحلات والمطاعم والخ
 const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const baseUrl = () => (process.env.PUBLIC_BASE_URL ?? "https://dalilacom.com").replace(/\/+$/, "");
 
+/**
+ * Search engines and AI crawlers are kept out until the owner turns indexing on (SEARCH_INDEXING=on in the server settings):
+ * while the site is being tested nothing of it should be found. Off by default, so a forgotten setting never exposes the site.
+ */
+export const searchIndexingOn = () => (process.env.SEARCH_INDEXING ?? "").toLowerCase() === "on";
+
 interface Card {
   title: string;
   description: string;
@@ -48,6 +54,7 @@ export function shareTags(card: Card): string {
     `<meta name="twitter:description" content="${d}" />`,
     `<meta name="twitter:image" content="${i}" />`,
     `<meta name="theme-color" content="#ba2a34" />`,
+    ...(searchIndexingOn() ? [] : [`<meta name="robots" content="noindex, nofollow, noarchive" />`]),
     `<link rel="canonical" href="${u}" />`,
     ...(card.jsonLd ? [`<script type="application/ld+json">${JSON.stringify(card.jsonLd).replace(/</g, "\\u003c")}</script>`] : []),
   ].join("\n");
@@ -139,6 +146,7 @@ export async function renderSharePage(merchantId?: unknown): Promise<string> {
 /** The list of pages for search engines: the home page and every approved shop's page. */
 export async function renderSitemap(): Promise<string> {
   const base = baseUrl();
+  if (!searchIndexingOn()) return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>\n`; // nothing to list while the site is closed to search
   const shops = await prisma.merchantProfile.findMany({ where: { approvalStatus: "APPROVED" }, select: { id: true, updatedAt: true }, orderBy: { updatedAt: "desc" }, take: 5000 });
   const url = (loc: string, lastmod?: Date) => `<url><loc>${loc}</loc>${lastmod ? `<lastmod>${lastmod.toISOString().slice(0, 10)}</lastmod>` : ""}</url>`;
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[
