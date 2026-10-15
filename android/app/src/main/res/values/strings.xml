@@ -890,4 +890,5 @@
     <string name="dh_failed">تعذّر تحميل السجل</string>
     <string name="dh_empty_mine">ما في حسومات مطبّقة بعد. لما حدا يطبّق حسم ببطاقتك بيظهر هون.</string>
     <string name="dh_empty_shop">ما طبّقت أي حسم بعد. كل حسم بتأكده بيظهر هون.</string>
+    <string name="wallet_auto">تحقق تلقائي</string>
 </resources>

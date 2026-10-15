@@ -41,6 +41,8 @@ export interface PlatformSettings {
   payment: {
     usdtTrc20Address: string;
     localWallets: LocalWallet[];
+    /** How many Syrian pounds are one US dollar: used to turn a Sham Cash transfer in pounds into credits (0 = pounds are reviewed by hand). */
+    sypPerUsd: number;
   };
   /** Merchants' announcements (broadcast.service): what a shop may do when no plan says otherwise. */
   broadcasts: {
@@ -65,7 +67,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   creditName: "دليلكم كوين",
   creditsPerUsd: 100,
   responder: { priceCustomer: 500, priceMerchant: 1000, periodDays: 30, trialDays: 7, monthlyAiReplyLimit: 500 },
-  payment: { usdtTrc20Address: "", localWallets: [] },
+  payment: { usdtTrc20Address: "", localWallets: [], sypPerUsd: 0 },
   broadcasts: { merchantDefaultMonthly: 10, maxRadiusKm: 50, merchantMaxAudience: 2000, pricePerAnnouncement: 0 },
   ads: {
     packages: [

@@ -219,6 +219,9 @@
         <input id="rs-usdt" placeholder="T..." />
         <label>المحافظ المحلية — سطر لكل محفظة: KEY|الاسم|رقم الحساب|تعليمات</label>
         <textarea id="rs-wallets" rows="4" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:inherit" placeholder="SHAM_CASH|شام كاش|0999xxxxxx|حوّل وابعت رقم العملية"></textarea>
+        <p class="muted" style="margin:6px 0 0">المحفظة اللي مفتاحها <b>SHAM_CASH</b> بتصير تلقائية (بيتحقق السيرفر من الحوالة وبينزّل الرصيد فورًا) لما تحط عنوان ومفتاح الخدمة بإعدادات السيرفر. وبدونهم بتضل بانتظار موافقتك. رقم العملية بينقبل مرة وحدة فقط.</p>
+        <label>كم ليرة سورية = 1 دولار (لتحويل حوالات الليرة لرصيد؛ صفر = الليرة بتنراجع يدويًا)</label>
+        <input id="rs-syp" type="number" min="0" step="1" />
         <button style="margin-top:12px" onclick="saveResponderSettings()">حفظ الإعدادات</button>
         <span id="rs-msg" class="muted" style="margin-right:10px"></span>
       </div>
@@ -2092,6 +2095,7 @@ async function loadResponderAdmin() {
   document.getElementById('rs-trial').value = data.responder.trialDays;
   document.getElementById('rs-ai-limit').value = data.responder.monthlyAiReplyLimit;
   document.getElementById('rs-usdt').value = data.payment.usdtTrc20Address;
+  document.getElementById('rs-syp').value = data.payment.sypPerUsd || 0;
   document.getElementById('rs-wallets').value = data.payment.localWallets.map(w => [w.key, w.label, w.accountNumber, w.instructions || ''].join('|')).join('\n');
   loadChannels();
   loadSubs();
@@ -2106,7 +2110,7 @@ async function saveResponderSettings() {
     creditName: document.getElementById('rs-credit-name').value.trim(),
     creditsPerUsd: num('rs-credits-usd'),
     responder: { priceCustomer: num('rs-price-customer'), priceMerchant: num('rs-price-merchant'), periodDays: num('rs-period'), trialDays: num('rs-trial'), monthlyAiReplyLimit: num('rs-ai-limit') },
-    payment: { usdtTrc20Address: document.getElementById('rs-usdt').value.trim(), localWallets: wallets },
+    payment: { usdtTrc20Address: document.getElementById('rs-usdt').value.trim(), localWallets: wallets, sypPerUsd: num('rs-syp') || 0 },
   });
   const msg = document.getElementById('rs-msg');
   msg.textContent = ok ? '✅ انحفظت' : '❌ ' + errText(data, 'تحقق من القيم (مفاتيح المحافظ بأحرف كبيرة وأرقام و _)');

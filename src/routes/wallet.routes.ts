@@ -5,7 +5,10 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { getSettings } from "../services/settings.service";
-import { adjustBalance, verifyUsdtTransfer } from "../services/wallet.service";
+import { adjustBalance, creditsForShamCash, normalizeReference, SHAM_CASH, shamCashConfigured, verifyShamCashTransfer, verifyUsdtTransfer } from "../services/wallet.service";
+
+/** Said when a transaction number was already submitted (by anyone): a number is accepted once. */
+const DUPLICATE_TOPUP = "هذا الطلب موجود سابقًا — رقم العملية مستخدم من قبل";
 
 export const walletRouter = Router();
 
@@ -27,7 +30,8 @@ walletRouter.get("/methods", requireAuth, async (_req, res) => {
     creditName: s.creditName,
     creditsPerUsd: s.creditsPerUsd,
     usdtTrc20Address: s.payment.usdtTrc20Address || null,
-    localWallets: s.payment.localWallets,
+    localWallets: s.payment.localWallets.map((w) => ({ ...w, auto: w.key === SHAM_CASH && shamCashConfigured() })), // auto: the transfer is checked and credited at once
+    sypPerUsd: s.payment.sypPerUsd,
   });
 });
 
@@ -82,13 +86,44 @@ walletRouter.post("/topups", requireAuth, async (req, res) => {
       return sendError(res, 400, "BAD_REQUEST", "طريقة دفع غير معروفة");
     }
     if (!amountClaimed) return sendError(res, 400, "BAD_REQUEST", "دخّل المبلغ اللي دفعته");
+
+    // A transaction number is taken once, whatever the way it was written and whichever method it came with: asking again is refused.
+    const number = normalizeReference(reference);
+    if (await prisma.topUpRequest.findFirst({ where: { OR: [{ reference: number }, { reference }] }, select: { id: true } })) {
+      return sendError(res, 409, "CONFLICT", DUPLICATE_TOPUP);
+    }
+
+    if (method === SHAM_CASH && shamCashConfigured()) {
+      const check = await verifyShamCashTransfer(number);
+      if (!check.ok && check.reason === "NOT_FOUND") {
+        // not taken: the transfer may simply not be visible yet, so the same number can be tried again
+        return sendError(res, 404, "NOT_FOUND", "ما لقينا هالحوالة على حسابنا بشام كاش — تأكد من الرقم أو جرّب بعد دقيقة");
+      }
+      const credits = check.ok ? creditsForShamCash(check.amount, check.currency, settings.creditsPerUsd, settings.payment.sypPerUsd) : null;
+      const amountMatches = check.ok && check.amount !== undefined && Math.abs(check.amount - amountClaimed) <= Math.max(0.01, check.amount * 0.01);
+      if (check.ok && credits && credits > 0 && amountMatches) {
+        const approved = await prisma.$transaction(async (tx) => {
+          const created = await tx.topUpRequest.create({
+            data: { userId, method, reference: number, amountClaimed: check.amount, amountCredits: credits, status: "APPROVED", verifiedBy: "AUTO" },
+          });
+          await adjustBalance(tx, userId, credits, "TOPUP", `shamcash:${number}`);
+          return created;
+        });
+        return res.status(201).json(approved);
+      }
+      // the transfer exists but cannot be credited by itself (amount unknown or different from what was typed, unknown currency, provider down)
+      const note = !check.ok ? "تعذّر التحقق الآلي من شام كاش" : "الحوالة موجودة لكن المبلغ أو العملة تحتاج مراجعة";
+      const pending = await prisma.topUpRequest.create({ data: { userId, method, reference: number, amountClaimed, status: "PENDING", note } });
+      return res.status(201).json(pending);
+    }
+
     const request = await prisma.topUpRequest.create({
-      data: { userId, method, reference, amountClaimed, status: "PENDING" },
+      data: { userId, method, reference: method === SHAM_CASH ? number : reference, amountClaimed, status: "PENDING" },
     });
     return res.status(201).json(request);
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return sendError(res, 409, "CONFLICT", "رقم العملية هاد مستخدم من قبل");
+      return sendError(res, 409, "CONFLICT", DUPLICATE_TOPUP);
     }
     throw err;
   }

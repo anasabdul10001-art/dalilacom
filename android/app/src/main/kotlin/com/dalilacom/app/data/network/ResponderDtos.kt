@@ -110,6 +110,8 @@ data class LocalWalletDto(
     val label: String,
     val accountNumber: String,
     val instructions: String? = null,
+    /** The transfer is checked and credited at once (no waiting for the administration). */
+    val auto: Boolean = false,
 )
 
 @Serializable

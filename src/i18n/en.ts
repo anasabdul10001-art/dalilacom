@@ -144,6 +144,10 @@ export const en: LanguagePack = {
     "طريقة دفع غير معروفة": "Unknown payment method",
     "دخّل المبلغ اللي دفعته": "Enter the amount you paid",
     "رقم العملية هاد مستخدم من قبل": "This transaction number was already used",
+    "هذا الطلب موجود سابقًا — رقم العملية مستخدم من قبل": "This request already exists — that transaction number was used before",
+    "ما لقينا هالحوالة على حسابنا بشام كاش — تأكد من الرقم أو جرّب بعد دقيقة": "We could not find this transfer on our Sham Cash account — check the number or try again in a minute",
+    "تعذّر التحقق الآلي من شام كاش": "Automatic Sham Cash check failed",
+    "الحوالة موجودة لكن المبلغ أو العملة تحتاج مراجعة": "The transfer exists but its amount or currency needs a review",
     "دليلكم كوين": "Dalilacom Credits",
 
     // ---- orders, discounts, notifications ----

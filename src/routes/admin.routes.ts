@@ -103,6 +103,7 @@ const settingsSchema = z.object({
           }),
         )
         .optional(),
+      sypPerUsd: z.number().min(0).max(100000000).optional(),
     })
     .optional(),
 });

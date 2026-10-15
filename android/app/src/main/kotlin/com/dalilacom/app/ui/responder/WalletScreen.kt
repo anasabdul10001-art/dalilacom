@@ -79,7 +79,7 @@ fun WalletScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             Text(AppStrings.get(R.string.s_da1e9875), style = MaterialTheme.typography.titleMedium)
             val options = buildList {
                 if (!methods?.usdtTrc20Address.isNullOrBlank()) add("USDT_TRC20" to "USDT (TRC20)")
-                methods?.localWallets?.forEach { add(it.key to it.label) }
+                methods?.localWallets?.forEach { add(it.key to (it.label + if (it.auto) " — " + AppStrings.get(R.string.wallet_auto) else "")) }
             }
             if (options.isEmpty()) {
                 Text(AppStrings.get(R.string.s_8f2679b1), color = MaterialTheme.colorScheme.outline)

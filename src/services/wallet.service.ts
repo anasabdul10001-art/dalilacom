@@ -62,3 +62,49 @@ export async function verifyUsdtTransfer(txid: string, platformAddress: string):
     return { ok: false, reason: "NETWORK_ERROR" };
   }
 }
+
+/* ---------------- Sham Cash: the transfer is looked up at the provider the owner connected ---------------- */
+
+export const SHAM_CASH = "SHAM_CASH";
+
+/** Automatic checking is on only when the owner has put the provider's address and token in the server settings. */
+export const shamCashConfigured = () => !!(process.env.SHAMCASH_API_BASE && process.env.SHAMCASH_API_TOKEN);
+
+/** One spelling per transaction number, so "ab 12" and "AB12" are the same number. */
+export const normalizeReference = (reference: string) => reference.replace(/\s+/g, "").toUpperCase();
+
+export type ShamCashCheck =
+  | { ok: true; amount?: number; currency?: string }
+  | { ok: false; reason: "NOT_FOUND" | "NETWORK_ERROR" };
+
+/**
+ * Asks the provider for this transaction number among the incoming transfers of the connected account. Nothing the user types
+ * is trusted except the number they point us at; the amount and currency come from the provider (when it reports them).
+ */
+export async function verifyShamCashTransfer(reference: string): Promise<ShamCashCheck> {
+  try {
+    const base = (process.env.SHAMCASH_API_BASE ?? "").replace(/\/$/, "");
+    const params = new URLSearchParams({ transaction_ids: reference, limit: "5" });
+    if (process.env.SHAMCASH_ACCOUNT_ID) params.set("account_id", process.env.SHAMCASH_ACCOUNT_ID);
+    const res = await fetch(`${base}/transactions?${params}`, { headers: { Authorization: `Bearer ${process.env.SHAMCASH_API_TOKEN}`, Accept: "application/json" } });
+    if (!res.ok) return { ok: false, reason: "NETWORK_ERROR" };
+    const body = (await res.json()) as unknown;
+    const list = (Array.isArray(body) ? body : ((body as { data?: unknown[]; items?: unknown[]; transactions?: unknown[] }).data ?? (body as { items?: unknown[] }).items ?? (body as { transactions?: unknown[] }).transactions ?? [])) as Record<string, unknown>[];
+    const hit = list.find((t) => normalizeReference(String(t.id ?? t.transaction_id ?? t.reference ?? "")) === reference);
+    if (!hit) return { ok: false, reason: "NOT_FOUND" };
+    const amount = Number(hit.amount ?? hit.value ?? hit.total);
+    const currency = String(hit.currency ?? hit.coin ?? hit.coin_id ?? "").toUpperCase();
+    return { ok: true, amount: Number.isFinite(amount) && amount > 0 ? amount : undefined, currency: currency || undefined };
+  } catch {
+    return { ok: false, reason: "NETWORK_ERROR" };
+  }
+}
+
+/** Credits for what the provider says arrived; null when the amount or the currency cannot be turned into credits safely. */
+export function creditsForShamCash(amount: number | undefined, currency: string | undefined, creditsPerUsd: number, sypPerUsd: number): number | null {
+  if (!amount) return null;
+  const c = (currency ?? "").toUpperCase();
+  if (c === "USD" || c === "USDT") return Math.floor(amount * creditsPerUsd);
+  if ((c === "SYP" || c === "SYR" || c === "LS") && sypPerUsd > 0) return Math.floor((amount / sypPerUsd) * creditsPerUsd);
+  return null;
+}

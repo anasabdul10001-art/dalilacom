@@ -5884,7 +5884,7 @@ function screenWallet() {
       <div class="field"><label>طريقة الدفع</label>
         <select id="tp-method" onchange="onTopupMethod()">
           ${m.usdtTrc20Address ? `<option value="USDT_TRC20">USDT (شبكة TRC20) — تحقق تلقائي</option>` : ""}
-          ${locals.map((l) => `<option value="${esc(l.key)}">${esc(l.label)}</option>`).join("")}
+          ${locals.map((l) => `<option value="${esc(l.key)}">${esc(l.label)}${l.auto ? " — تحقق تلقائي" : ""}</option>`).join("")}
         </select>
       </div>
       <div id="tp-hint" class="muted" style="margin-bottom:10px;line-height:1.7"></div>

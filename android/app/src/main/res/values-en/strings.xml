@@ -886,4 +886,5 @@
     <string name="dh_failed">The history could not be loaded</string>
     <string name="dh_empty_mine">No discount has been applied yet. When a shop applies one on your card it shows here.</string>
     <string name="dh_empty_shop">You have not applied any discount yet. Every discount you confirm shows here.</string>
+    <string name="wallet_auto">automatic check</string>
 </resources>
