@@ -18,6 +18,7 @@ class SessionStore(private val context: Context) {
     private val recentKey = stringPreferencesKey("recent_searches")
     private val themeKey = stringPreferencesKey("theme_mode")
     private val languageKey = stringPreferencesKey("app_language")
+    private val fabTipsOffKey = androidx.datastore.preferences.core.booleanPreferencesKey("fab_tips_off")
     private val shareLocationKey = androidx.datastore.preferences.core.booleanPreferencesKey("share_location")
 
     /** The person's own opt-in to let nearby shops reach them: the app reports its position to the server only while this is on. */
@@ -48,6 +49,13 @@ class SessionStore(private val context: Context) {
     }
 
     /** "light" or "dark" once the user picked one with the button; null = follow the phone. */
+    /** The shop switched off the hints that come out of the discount button. */
+    val fabTipsOffFlow: Flow<Boolean> = context.dalilacomDataStore.data.map { it[fabTipsOffKey] ?: false }
+
+    suspend fun saveFabTipsOff(off: Boolean) {
+        runCatching { context.dalilacomDataStore.edit { it[fabTipsOffKey] = off } }
+    }
+
     val themeFlow: Flow<String?> = context.dalilacomDataStore.data.map { it[themeKey] }
 
     suspend fun saveTheme(mode: String) {

@@ -61,6 +61,9 @@ fun BoxScope.FloatingButtons(
     /** The home screen draws its own buttons (on the map, above the locate button, so they never sit on the results list). */
     inHome: Boolean = false,
     bottomPadding: androidx.compose.ui.unit.Dp? = null,
+    /** The hints are switched off (in the account settings, or by the shop closing them). */
+    tipsOff: Boolean = false,
+    onTipsOff: () -> Unit = {},
 ) {
     if (route == "home" && !inHome) return
     val showCard = showCardFabOn(route)
@@ -71,7 +74,6 @@ fun BoxScope.FloatingButtons(
     val tips = stringArrayResource(R.array.fab_tips)
     var tipIndex by remember { mutableStateOf(0) }
     var tipVisible by remember { mutableStateOf(false) }
-    var tipsOff by remember { mutableStateOf(false) }
     LaunchedEffect(tipsOff, showDisc) {
         if (tipsOff || !showDisc) return@LaunchedEffect
         delay(5_000)
@@ -96,7 +98,7 @@ fun BoxScope.FloatingButtons(
                     DropdownMenuItem(text = { Text("🎟️  " + stringResource(R.string.fab_give_discount)) }, onClick = { menuOpen = false; onGiveDiscount() })
                 }
             }
-            if (tipVisible && !menuOpen && tips.isNotEmpty()) {
+            if (tipVisible && !menuOpen && !tipsOff && tips.isNotEmpty()) {
                 Surface(
                     shape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
                     color = Color(0xFFFFF8E1), contentColor = Color(0xFF3B2F0B),
@@ -106,7 +108,7 @@ fun BoxScope.FloatingButtons(
                 ) {
                     Row(Modifier.padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 4.dp), verticalAlignment = Alignment.Top) {
                         Text(tips[tipIndex % tips.size], fontSize = 13.5.sp, lineHeight = 19.sp, modifier = Modifier.weight(1f, fill = false))
-                        IconButton(onClick = { tipVisible = false; tipsOff = true }, modifier = Modifier.size(28.dp)) { Text("✕", fontSize = 12.sp) }
+                        IconButton(onClick = { tipVisible = false; onTipsOff() }, modifier = Modifier.size(28.dp)) { Text("✕", fontSize = 12.sp) }
                     }
                 }
             }

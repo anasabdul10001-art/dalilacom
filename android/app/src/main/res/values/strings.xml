@@ -876,4 +876,5 @@
     <string name="shop_none_button">سجّل نشاطك</string>
     <string name="session_expired">انتهت جلستك. سجّل الدخول من جديد.</string>
     <string name="hours_always_open">مفتوح دائمًا (24 ساعة)</string>
+    <string name="account_fab_tips">عرض تلميحات زر التخفيضات</string>
 </resources>

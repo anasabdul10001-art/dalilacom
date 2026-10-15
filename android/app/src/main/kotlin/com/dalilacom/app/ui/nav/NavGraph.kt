@@ -270,6 +270,9 @@ fun DalilacomNavGraph(
                 isDark = dark,
                 onToggleTheme = { settingsScope.launch { container.sessionStore.saveTheme(if (dark) "light" else "dark") } },
                 onSetLanguage = { code -> settingsScope.launch { container.sessionStore.saveLanguage(code) } },
+                isShop = isMerchant,
+                tipsOn = !container.sessionStore.fabTipsOffFlow.collectAsState(initial = false).value,
+                onToggleTips = { on -> settingsScope.launch { container.sessionStore.saveFabTipsOff(!on) } },
             )
         }
         composable("profileEdit") {
@@ -326,9 +329,13 @@ fun DalilacomNavGraph(
             )
         }
     }
+    val tipsOff by container.sessionStore.fabTipsOffFlow.collectAsState(initial = false)
+    val tipsScope = androidx.compose.runtime.rememberCoroutineScope()
     FloatingButtons(
         route = currentRoute,
         merchant = isMerchant,
+        tipsOff = tipsOff,
+        onTipsOff = { tipsScope.launch { container.sessionStore.saveFabTipsOff(true) } },
         onCard = { navController.navigate("card") },
         onAddDiscount = { navController.navigate("discounts") },
         onGiveDiscount = { navController.navigate("merchantMode") }, // opens on the tab where a member's code is scanned

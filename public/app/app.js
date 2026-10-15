@@ -262,6 +262,7 @@ function placeDiscPopup() {
 /** Every so often a short hint says why a discount is good for the shop (the true reasons), until the shop closes it. */
 let _mfabTimer = null;
 function mfabStartTips() {
+  if (S._mfabTipsOff === undefined) S._mfabTipsOff = tipsOffNow();
   if (_mfabTimer || S._mfabTipsOff) return;
   const tips = t("fab.tips").split("||");
   let i = 0;
@@ -277,9 +278,18 @@ function mfabStartTips() {
   setTimeout(show, 5000);
   _mfabTimer = setInterval(show, 38000);
 }
+const tipsOffNow = () => { if (typeof S._mfabTipsOff === "boolean") return S._mfabTipsOff; try { return localStorage.getItem("dlk_fab_tips_off") === "1"; } catch (e) { return false; } };
+function setTipsOff(off) {
+  S._mfabTipsOff = off;
+  try { if (off) localStorage.setItem("dlk_fab_tips_off", "1"); else localStorage.removeItem("dlk_fab_tips_off"); } catch (e) {}
+  if (!off) _mfabTimer = null; // the hints start again
+  render();
+}
+
 function mfabTipClose(ev) {
   ev.stopPropagation();
   S._mfabTipsOff = true;
+  try { localStorage.setItem("dlk_fab_tips_off", "1"); } catch (e) {}
   const b = document.getElementById("mfab-tip");
   if (b) b.style.display = "none";
 }
@@ -307,6 +317,8 @@ function lookAndLanguageHtml() {
       <label class="switch"><input type="checkbox" ${currentTheme() === "dark" ? "checked" : ""} onchange="toggleTheme()" /><span class="track"></span></label></div>
     <div style="margin-top:10px"><strong>${esc(t("acct.language"))}</strong>
       <div class="chip-row" style="margin-top:6px;flex-wrap:wrap">${Object.entries(LANGS).map(([code, l]) => `<button class="chip ${code === LANG ? "active" : ""}" onclick="setLang('${code}')">${esc(l.name)}</button>`).join("")}</div></div>
+    ${S.role === "MERCHANT" ? `<div class="switch-row" style="margin-top:12px"><span>${esc(t("acct.fabTips"))}</span>
+      <label class="switch"><input type="checkbox" ${tipsOffNow() ? "" : "checked"} onchange="setTipsOff(!this.checked)" /><span class="track"></span></label></div>` : ""}
   </div>`;
 }
 

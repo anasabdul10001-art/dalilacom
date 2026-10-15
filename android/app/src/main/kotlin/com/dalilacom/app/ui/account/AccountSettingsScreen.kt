@@ -230,7 +230,7 @@ private fun SectionCard(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark: Boolean = false, onToggleTheme: () -> Unit = {}, onSetLanguage: (String) -> Unit = {}) {
+fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark: Boolean = false, onToggleTheme: () -> Unit = {}, onSetLanguage: (String) -> Unit = {}, isShop: Boolean = false, tipsOn: Boolean = true, onToggleTips: (Boolean) -> Unit = {}) {
     val viewModel: AccountSettingsViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
     val profile = state.profile
@@ -272,6 +272,13 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark:
                             label = { Text(language.nativeName) },
                             modifier = Modifier.padding(end = 8.dp),
                         )
+                    }
+                    if (isShop) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.account_fab_tips), modifier = Modifier.weight(1f))
+                            androidx.compose.material3.Switch(checked = tipsOn, onCheckedChange = { onToggleTips(it) })
+                        }
                     }
                 }
             }

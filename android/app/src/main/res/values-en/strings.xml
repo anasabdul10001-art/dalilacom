@@ -872,4 +872,5 @@
     <string name="shop_none_button">Register your business</string>
     <string name="session_expired">Your session has ended. Please sign in again.</string>
     <string name="hours_always_open">Always open (24 hours)</string>
+    <string name="account_fab_tips">Show hints from the discounts button</string>
 </resources>

@@ -97,12 +97,16 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     var dealsIntroHidden by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { dealsIntroHidden = container.sessionStore.getDealsIntroHidden() }
     val dealsPendingRoute = remember { MutableStateFlow<RouteTarget?>(null) }
+    val tipsOffHome by container.sessionStore.fabTipsOffFlow.collectAsState(initial = false)
+    val homeScope = androidx.compose.runtime.rememberCoroutineScope()
     val homeButtons: @Composable androidx.compose.foundation.layout.BoxScope.(androidx.compose.ui.unit.Dp) -> Unit = { bottom ->
         FloatingButtons(
             route = "home", inHome = true, bottomPadding = bottom, merchant = isMerchant,
             onCard = { rootNavController.navigate("card") },
             onAddDiscount = { rootNavController.navigate("discounts") },
             onGiveDiscount = { rootNavController.navigate("merchantMode") },
+            tipsOff = tipsOffHome,
+            onTipsOff = { homeScope.launch { container.sessionStore.saveFabTipsOff(true) } },
         )
     }
     // every price is shown in the money of the shopper's country
