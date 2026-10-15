@@ -12,8 +12,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
 
-// The live backend deployed on Render (see dalilacom/render.yaml in the repo root).
-const val BASE_URL = "https://dalilacom-api.onrender.com/"
+// The live site and server (dalilacom.com, the production service in render.yaml).
+const val BASE_URL = "https://dalilacom.com/"
 
 /** A server-relative path such as "/profile/avatar/..." as a full URL. */
 fun absoluteUrl(path: String): String = BASE_URL.trimEnd('/') + path

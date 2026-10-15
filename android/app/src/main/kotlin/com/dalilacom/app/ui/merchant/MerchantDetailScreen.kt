@@ -79,7 +79,7 @@ import java.time.DayOfWeek
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-private const val SHARE_BASE = "https://dalilacom-api.onrender.com/app/?merchant="
+private const val SHARE_BASE = "https://dalilacom.com/app/?merchant="
 
 @Composable
 fun MerchantDetailScreen(
