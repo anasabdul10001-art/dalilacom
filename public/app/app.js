@@ -328,6 +328,12 @@ function lookAndLanguageHtml() {
 
 const FACEBOOK_URL = "https://www.facebook.com/Dalilacomsy";
 
+/** The essential pages (about, privacy, terms, returns, shipping): small links at the bottom of the main screens. */
+function legalLinksHtml() {
+  const L = [["about", "legal.about"], ["privacy", "legal.privacy"], ["terms", "legal.terms"], ["refund", "legal.refund"], ["shipping", "legal.shipping"]];
+  return `<nav class="legal-links" aria-label="legal">${L.map(([p, k]) => `<a href="/${p}.html" target="_blank" rel="noopener">${esc(t(k))}</a>`).join("")}</nav>`;
+}
+
 /** The follow button to our one official Facebook page, with the line that other pages with the name are not ours. */
 function followUsHtml(withNote) {
   return `<div class="follow-us">
@@ -592,6 +598,7 @@ function screenLogin() {
     <button class="link-btn" onclick="go('forgot')">نسيت كلمة السر؟</button>
     <button class="link-btn" onclick="reset('register')">ما عندك حساب؟ سجل واحد جديد</button>
     ${followUsHtml(true)}
+    ${legalLinksHtml()}
   `;
 }
 
@@ -649,6 +656,7 @@ function screenRegister() {
     ${socialButtonsHtml()}
     <button class="link-btn" onclick="reset('login')">عندك حساب أصلًا؟ سجل دخول</button>
     ${followUsHtml(true)}
+    ${legalLinksHtml()}
   `;
 }
 
@@ -1582,6 +1590,7 @@ function tabProfile() {
       <button class="btn secondary" style="max-width:240px" onclick="doLogout()">${esc(t("profile.logout"))}</button>
       <div style="height:10px"></div>
       <button class="link-btn" style="color:var(--danger, #b71c1c)" onclick="deleteMyAccount()">${esc(t("profile.deleteAccount"))}</button>
+      ${legalLinksHtml()}
     </div>
   `;
 }
@@ -3281,7 +3290,8 @@ function screenStore() {
       ${storeSection(t("store.deals"), home.deals, "deals")}
       ${storeSection(t("store.newest"), home.newest, "new")}
       ${!home.bestSellers.length && !home.newest.length ? `<div class="empty">${esc(t("store.noResults"))}</div>` : ""}
-      ${followUsHtml(false)}`;
+      ${followUsHtml(false)}
+      ${legalLinksHtml()}`;
   }
   return `
     <div class="store">

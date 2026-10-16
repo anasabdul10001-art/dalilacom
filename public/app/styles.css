@@ -1532,3 +1532,8 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .invite-slide h1 em { font-style: normal; opacity: 0.92; font-size: 0.7em; font-weight: 700; }
 .invite-slide .btn-pill { background: #fff; color: #ba2a34; }
 @media (max-width: 520px) { .invite-slide h1 { font-size: 21px; } .invite-slide .bs-logo img { height: 84px; } .store-slide.invite-slide { padding-inline: 22px; } }
+
+/* the essential pages: small links at the bottom of the main screens */
+.legal-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin: 10px auto 22px; padding: 0 12px; }
+.legal-links a { color: var(--muted, #6b5d5b); font-size: 12.5px; text-decoration: none; }
+.legal-links a:hover { color: #ba2a34; text-decoration: underline; }

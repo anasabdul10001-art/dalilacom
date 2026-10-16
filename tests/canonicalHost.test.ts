@@ -70,6 +70,15 @@ describe("The main website is at the root, the owner's pages are not public", ()
     }
   });
 
+  it("serves the essential pages: about, privacy, terms, returns, shipping and data deletion", async () => {
+    for (const page of ["about", "privacy", "terms", "refund", "shipping", "data-deletion"]) {
+      const res = await request(app).get(`/${page}.html`);
+      expect(res.status).toBe(200);
+      expect(res.text).toContain("dalilacomsy@gmail.com");
+      expect(res.text).toContain("/shipping.html"); // each one links to the others
+    }
+  });
+
   it("keeps the developer console on the testing address only (HIDE_DEV_CONSOLE)", async () => {
     expect((await request(app).get("/console.html")).status).toBe(200);
     process.env.HIDE_DEV_CONSOLE = "true";

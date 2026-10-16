@@ -152,6 +152,7 @@ fun RegisterScreen(
         }
         Spacer(Modifier.height(8.dp))
         com.dalilacom.app.ui.common.FollowUsButton(Modifier.fillMaxWidth())
+        com.dalilacom.app.ui.common.LegalLinks()
     }
 }
 

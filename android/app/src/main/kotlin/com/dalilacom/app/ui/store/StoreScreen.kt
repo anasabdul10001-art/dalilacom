@@ -441,6 +441,7 @@ fun StoreScreen(
                 item { HomeSection(stringResource(R.string.store_deals), "deals", ui.deals, ui.justAdded, onOpenProduct, vm::addToCart, vm::seeAll) }
                 item { HomeSection(stringResource(R.string.store_newest), "new", ui.newest, ui.justAdded, onOpenProduct, vm::addToCart, vm::seeAll) }
                 item { com.dalilacom.app.ui.common.FollowUsButton(showNote = false, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) }
+                item { com.dalilacom.app.ui.common.LegalLinks() }
             }
         }
     }

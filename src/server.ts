@@ -53,7 +53,7 @@ app.use((req, res, next) => {
   let wanted = "";
   try { wanted = new URL(base).host.toLowerCase(); } catch { return next(); }
   if (!wanted || wanted === host) return next();
-  const isPage = /^\/(app(\/.*)?|privacy\.html|terms\.html|data-deletion\.html|reset-password\.html|index\.html)?$/.test(req.path) || req.path === adminPagePath();
+  const isPage = /^\/(app(\/.*)?|privacy\.html|terms\.html|refund\.html|shipping\.html|about\.html|data-deletion\.html|reset-password\.html|index\.html)?$/.test(req.path) || req.path === adminPagePath();
   const isSocialStart = /^\/auth\/social\/[a-z]+\/start$/.test(req.path);
   if (!isPage && !isSocialStart) return next();
   return res.redirect(302, base.replace(/\/+$/, "") + req.originalUrl);

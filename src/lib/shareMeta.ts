@@ -153,6 +153,9 @@ export async function renderSitemap(): Promise<string> {
     url(`${base}/`, new Date()),
     url(`${base}/privacy.html`),
     url(`${base}/terms.html`),
+    url(`${base}/refund.html`),
+    url(`${base}/shipping.html`),
+    url(`${base}/about.html`),
     ...shops.map((s) => url(`${base}/?merchant=${s.id}`, s.updatedAt)),
   ].join("\n")}\n</urlset>\n`;
 }

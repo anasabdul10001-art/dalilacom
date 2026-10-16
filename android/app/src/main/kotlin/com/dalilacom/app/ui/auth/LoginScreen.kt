@@ -144,6 +144,7 @@ fun LoginScreen(
             TextButton(onClick = onBrowseAsGuest) { Text(AppStrings.get(R.string.s_d2cbe1d2), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Spacer(Modifier.height(8.dp))
             com.dalilacom.app.ui.common.FollowUsButton(Modifier.fillMaxWidth())
+            com.dalilacom.app.ui.common.LegalLinks()
         }
     }
 }
