@@ -98,7 +98,7 @@ socialRouter.post("/complete", socialLoginRateLimiter, async (req, res) => {
   if (!pending) return sendError(res, 400, "BAD_STATE", "The sign-in link is not valid or has expired");
   try {
     const { user, created } = await completeWithEmail(pending, parsed.data.email);
-    if (created) await sendVerificationEmail(user.email, await issueVerificationToken(user.id), user.language ?? undefined);
+    if (created) void sendVerificationEmail(user.email, await issueVerificationToken(user.id), user.language ?? undefined);
     await logSecurityEvent({ userId: user.id, type: "LOGIN_SUCCESS", req, metadata: { via: pending.p, emailTyped: true } });
     const token = signAuthToken({ sub: user.id, role: user.role, tokenVersion: user.tokenVersion });
     res.json({ token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, emailVerified: user.isEmailVerified } });

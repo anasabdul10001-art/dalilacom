@@ -22,13 +22,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --primary: #ef5560;
     --bg: #120c0c;
     --phone-bg: #170f0f;
     --surface: #1e1414;
     --surface-alt: #261818;
     --text: #f4e9e7;
-    --text-muted: #ad9491;
-    --border: #34201f;
+    --text-muted: #cdb9b6;
+    --border: #4a3230;
     --on-primary: #ffffff;
     --success: #4caf6d;
     --success-bg: #16281c;
@@ -43,13 +44,14 @@
 }
 
 :root[data-theme="dark"] {
+  --primary: #ef5560;
   --bg: #120c0c;
   --phone-bg: #170f0f;
   --surface: #1e1414;
   --surface-alt: #261818;
   --text: #f4e9e7;
-  --text-muted: #ad9491;
-  --border: #34201f;
+  --text-muted: #cdb9b6;
+  --border: #4a3230;
   --on-primary: #ffffff;
   --success: #4caf6d;
   --success-bg: #16281c;
@@ -104,7 +106,8 @@ body {
 
 .auth-logo {
   display: block;
-  width: 150px;
+  width: 130px !important;
+  max-width: 130px !important;
   height: auto;
   margin: 8px auto 14px;
   object-fit: contain;
@@ -1537,3 +1540,7 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .legal-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin: 10px auto 22px; padding: 0 12px; }
 .legal-links a { color: var(--muted, #6b5d5b); font-size: 12.5px; text-decoration: none; }
 .legal-links a:hover { color: #ba2a34; text-decoration: underline; }
+
+/* dark theme: the logo on the side rail is the white one (the black part of the colour logo vanishes on a dark background) */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabbar::before { background-image: url("/brand/mark-white-192.png") !important; } }
+:root[data-theme="dark"] .tabbar::before { background-image: url("/brand/mark-white-192.png") !important; }

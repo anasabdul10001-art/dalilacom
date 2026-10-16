@@ -914,4 +914,11 @@
     <string name="legal_terms">الشروط</string>
     <string name="legal_refund">الاسترجاع</string>
     <string name="legal_shipping">الشحن والتوصيل</string>
+    <string name="err_enter_name">اكتب اسمك</string>
+    <string name="err_enter_email">اكتب الإيميل</string>
+    <string name="err_enter_password">اكتب كلمة السر</string>
+    <string name="err_password_short">كلمة السر لازم تكون 8 أحرف أو أكثر</string>
+    <string name="err_field_email">الإيميل غير صحيح، اكتبه بهالشكل: name@example.com</string>
+    <string name="err_field_phone">رقم الهاتف غير صحيح (6 أرقام على الأقل)</string>
+    <string name="err_login_wrong">الإيميل أو كلمة السر غير صحيحين، تأكد وجرّب من جديد</string>
 </resources>

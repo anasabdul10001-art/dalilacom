@@ -108,8 +108,15 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     }
 
     fun register(email: String, password: String, fullName: String, referralCode: String = "") {
-        if (email.isBlank() || password.isBlank() || fullName.isBlank()) {
-            _uiState.value = AuthUiState.Error(AppStrings.get(R.string.s_c5324447))
+        val problem = when {
+            fullName.isBlank() -> R.string.err_enter_name
+            email.isBlank() -> R.string.err_enter_email
+            password.isBlank() -> R.string.err_enter_password
+            password.length < 8 -> R.string.err_password_short
+            else -> null
+        }
+        if (problem != null) {
+            _uiState.value = AuthUiState.Error(AppStrings.get(problem))
             return
         }
         _uiState.value = AuthUiState.Loading
@@ -124,7 +131,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 
     fun login(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
-            _uiState.value = AuthUiState.Error(AppStrings.get(R.string.s_1dbf1d4a))
+            _uiState.value = AuthUiState.Error(AppStrings.get(if (email.isBlank()) R.string.err_enter_email else R.string.err_enter_password))
             return
         }
         _uiState.value = AuthUiState.Loading

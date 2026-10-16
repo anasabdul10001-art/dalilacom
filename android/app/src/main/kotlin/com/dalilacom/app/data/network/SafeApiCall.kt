@@ -32,9 +32,19 @@ fun errorText(response: Response<*>, fallback: String): String {
             is kotlinx.serialization.json.JsonObject -> {
                 if ((error["code"] as? kotlinx.serialization.json.JsonPrimitive)?.content == "AUTH_MISSING_TOKEN") return AppStrings.get(R.string.s_3bb9ad91)
                 val details = error["details"] as? kotlinx.serialization.json.JsonObject
-                val fieldError = (details?.get("fieldErrors") as? kotlinx.serialization.json.JsonObject)
-                    ?.values?.firstNotNullOfOrNull { (it as? kotlinx.serialization.json.JsonArray)?.firstOrNull() as? kotlinx.serialization.json.JsonPrimitive }
-                fieldError?.content ?: (error["message"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: fallback
+                val fields = details?.get("fieldErrors") as? kotlinx.serialization.json.JsonObject
+                // a refused field is named in plain words (the server's own wording for it is technical)
+                val named = fields?.keys?.firstNotNullOfOrNull {
+                    when (it) {
+                        "email", "newEmail" -> AppStrings.get(R.string.err_field_email)
+                        "password", "newPassword" -> AppStrings.get(R.string.err_password_short)
+                        "fullName" -> AppStrings.get(R.string.err_enter_name)
+                        "phone" -> AppStrings.get(R.string.err_field_phone)
+                        else -> null
+                    }
+                }
+                val fieldError = fields?.values?.firstNotNullOfOrNull { (it as? kotlinx.serialization.json.JsonArray)?.firstOrNull() as? kotlinx.serialization.json.JsonPrimitive }
+                named ?: fieldError?.content ?: (error["message"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: fallback
             }
             else -> fallback
         }

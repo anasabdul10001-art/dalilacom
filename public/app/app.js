@@ -82,7 +82,18 @@ function errMsg(data, fallback) {
   if (!data || !data.error) return fallback;
   if (typeof data.error === "string") return data.error;
   if (data.error.code === "AUTH_MISSING_TOKEN") return "سجّل دخولك أول لتكمل";
-  const fieldError = Object.values((data.error.details && data.error.details.fieldErrors) || {}).flat()[0];
+  // a refused field is named in plain words (the server's own wording for it is technical)
+  const fields = (data.error.details && data.error.details.fieldErrors) || {};
+  const FIELD_TEXT = {
+    email: "الإيميل غير صحيح، اكتبه بهالشكل: name@example.com",
+    newEmail: "الإيميل الجديد غير صحيح، اكتبه بهالشكل: name@example.com",
+    password: "كلمة السر لازم تكون 8 أحرف أو أكثر",
+    newPassword: "كلمة السر الجديدة لازم تكون 8 أحرف أو أكثر",
+    fullName: "اكتب اسمك (حرفين أو أكثر)",
+    phone: "رقم الهاتف غير صحيح (6 أرقام على الأقل)",
+  };
+  for (const key of Object.keys(fields)) if (FIELD_TEXT[key]) return FIELD_TEXT[key];
+  const fieldError = Object.values(fields).flat()[0];
   return fieldError || data.error.message || fallback;
 }
 
@@ -606,7 +617,8 @@ async function doLogin() {
   const email = qs("f-email").value.trim();
   const password = qs("f-password").value;
   S.params.draft = { email, password };
-  if (!email || !password) { S.error = "دخّل الإيميل وكلمة السر"; return render(); }
+  if (!email) { S.error = "اكتب الإيميل"; return render(); }
+  if (!password) { S.error = "اكتب كلمة السر"; return render(); }
   S.busy = true; S.error = null; render();
   const { ok, data } = await api("POST", "/auth/login", { email, password });
   S.busy = false;
@@ -614,7 +626,7 @@ async function doLogin() {
     setToken(data.token, data.user.role);
     reset("home");
   } else {
-    S.error = "بيانات الدخول غير صحيحة";
+    S.error = "الإيميل أو كلمة السر غير صحيحين، تأكد وجرّب من جديد";
     render();
   }
 }
@@ -681,6 +693,7 @@ async function loadRegGeo() {
   const draft = S.params.draft || (S.params.draft = {});
   if (!draft.country) { const sy = g.countries.find((c) => c.isoCode2 === "SY"); if (sy) draft.country = "SY"; }
   await loadRegRegions(draft.country);
+  if (S.screen === "register") snapshotRegisterDraft(); // keep what the person already typed while the lists were loading
   render();
 }
 
@@ -731,7 +744,9 @@ async function doRegister() {
   const fullName = qs("f-name").value.trim();
   const email = qs("f-email").value.trim();
   const password = qs("f-password").value;
-  if (!fullName || !email || password.length < 8) { S.error = "عبّي كل الحقول (كلمة السر 8 أحرف ع الأقل)"; return render(); }
+  if (!fullName) { S.error = "اكتب اسمك"; return render(); }
+  if (!email) { S.error = "اكتب الإيميل"; return render(); }
+  if (password.length < 8) { S.error = "كلمة السر لازم تكون 8 أحرف أو أكثر"; return render(); }
   S.busy = true; S.error = null; render();
   const body = { email, password, fullName };
   const d = S.params.draft || {};

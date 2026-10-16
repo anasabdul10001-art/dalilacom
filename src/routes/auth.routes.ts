@@ -106,7 +106,8 @@ authRouter.post("/register", registerRateLimiter, async (req, res) => {
 
   await attachReferral(user.id, referralCode).catch(() => false); // a wrong or old code never stops a sign-up
   const rawToken = await issueVerificationToken(user.id);
-  await sendVerificationEmail(user.email, rawToken, resolveLanguage(req));
+  // the mail goes out in the background: a slow or broken mail provider must never keep a person waiting on the sign-up screen
+  void sendVerificationEmail(user.email, rawToken, resolveLanguage(req));
   await logSecurityEvent({ userId: user.id, type: "REGISTER", req });
 
   // Registration signs the user in immediately (email verification is tracked but does not yet
@@ -234,7 +235,7 @@ authRouter.post("/resend-verification", resendVerificationRateLimiter, async (re
   if (user && !user.isEmailVerified && !user.isDisabled) {
     await prisma.emailVerificationToken.updateMany({ where: { userId: user.id, consumedAt: null }, data: { consumedAt: new Date() } });
     const rawToken = await issueVerificationToken(user.id);
-    await sendVerificationEmail(user.email, rawToken, resolveLanguage(req));
+    void sendVerificationEmail(user.email, rawToken, resolveLanguage(req));
     await logSecurityEvent({ userId: user.id, type: "EMAIL_VERIFICATION_REQUESTED", req });
   }
   // Same response whether or not the account exists/needs it — no account enumeration.
@@ -256,7 +257,7 @@ authRouter.post("/forgot-password", forgotPasswordRateLimiter, async (req, res) 
     await prisma.passwordResetToken.create({
       data: { userId: user.id, tokenHash: hash, expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS) },
     });
-    await sendResetEmail(user.email, raw, resolveLanguage(req));
+    void sendResetEmail(user.email, raw, resolveLanguage(req));
     await logSecurityEvent({ userId: user.id, type: "PASSWORD_RESET_REQUESTED", req });
   }
   // Deliberately identical response regardless of whether the email exists (section: Password Reset).

@@ -910,4 +910,11 @@
     <string name="legal_terms">Terms</string>
     <string name="legal_refund">Returns</string>
     <string name="legal_shipping">Shipping</string>
+    <string name="err_enter_name">Write your name</string>
+    <string name="err_enter_email">Write your email</string>
+    <string name="err_enter_password">Write your password</string>
+    <string name="err_password_short">The password must be 8 characters or more</string>
+    <string name="err_field_email">The email is not valid, write it like this: name@example.com</string>
+    <string name="err_field_phone">The phone number is not valid (6 digits at least)</string>
+    <string name="err_login_wrong">The email or the password is wrong, check and try again</string>
 </resources>
