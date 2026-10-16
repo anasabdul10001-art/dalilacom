@@ -49,7 +49,7 @@ import com.dalilacom.app.ui.i18n.AppStrings
 @Composable
 fun SocialButtons(viewModel: AuthViewModel) {
     val providers by viewModel.socialProviders.collectAsState()
-    if (!providers.google && !providers.facebook) return
+    if (!providers.google && !providers.facebook && !com.dalilacom.app.ui.common.ComingSoon.FACEBOOK_LOGIN) return
     val context = LocalContext.current
     fun open(provider: String) {
         val url = absoluteUrl("/auth/social/$provider/start?platform=app&lang=${AppStrings.language}")
@@ -64,8 +64,8 @@ fun SocialButtons(viewModel: AuthViewModel) {
                 Text(AppStrings.get(R.string.social_google))
             }
         }
-        if (providers.facebook) {
-            OutlinedButton(onClick = { open("facebook") }, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) {
+        if (providers.facebook || com.dalilacom.app.ui.common.ComingSoon.FACEBOOK_LOGIN) {
+            OutlinedButton(onClick = { if (com.dalilacom.app.ui.common.ComingSoon.FACEBOOK_LOGIN) com.dalilacom.app.ui.common.ComingSoon.say(context, AppStrings.get(R.string.soon_facebook)) else open("facebook") }, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) {
                 Image(painterResource(R.drawable.ic_facebook), contentDescription = null, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(AppStrings.get(R.string.social_facebook))

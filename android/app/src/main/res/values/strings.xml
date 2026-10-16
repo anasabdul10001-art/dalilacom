@@ -895,4 +895,6 @@
     <string name="store_brand_tag2">وعروضها بمكان واحد</string>
     <string name="follow_facebook">تابعنا على فيسبوك</string>
     <string name="follow_official">هذي صفحتنا الرسمية الوحيدة. أي صفحة ثانية باسم دليلكم لا تمثلنا.</string>
+    <string name="soon_facebook">تسجيل الدخول بفيسبوك رح يكون متاح قريبًا</string>
+    <string name="soon_responder">المجيب الآلي رح يكون متاح قريبًا</string>
 </resources>

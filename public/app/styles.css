@@ -1507,3 +1507,6 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .follow-fb { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; border-radius: 999px; background: #1877f2; color: #fff; font-weight: 700; font-size: 14px; text-decoration: none; }
 .follow-fb:hover { filter: brightness(1.08); }
 .follow-us small { color: var(--muted, #6b5d5b); font-size: 12px; max-width: 280px; line-height: 1.5; }
+
+/* a sign-in button that is not open yet looks a little quieter */
+.social-btn.soon { opacity: 0.7; }

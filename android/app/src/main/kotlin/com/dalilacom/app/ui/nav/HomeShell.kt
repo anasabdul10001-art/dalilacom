@@ -140,6 +140,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
         )
     }
 
+    val soonResponder = stringResource(R.string.soon_responder)
     Scaffold(
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
@@ -148,7 +149,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         // The one button that stands out: a red disc, opening the auto-responder (guests sign in first).
                         NavigationBarItem(
                             selected = false,
-                            onClick = { if (isGuest) goLogin() else rootNavController.navigate("responder") },
+                            onClick = { if (com.dalilacom.app.ui.common.ComingSoon.RESPONDER) com.dalilacom.app.ui.common.ComingSoon.say(context, soonResponder) else if (isGuest) goLogin() else rootNavController.navigate("responder") },
                             icon = {
                                 Box(
                                     modifier = Modifier.size(44.dp).clip(CircleShape).background(Brush.linearGradient(listOf(DeepRed, PrimaryRed))),

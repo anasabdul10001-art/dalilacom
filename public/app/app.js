@@ -168,6 +168,9 @@ function back() {
   render();
 }
 
+/** Not open yet: the buttons stay, a tap only says it is coming (flip these when the Meta app and the auto-responder are ready). */
+const SOON = { facebookLogin: true, responder: true };
+
 function reset(screen) {
   stopQrLoop();
   S.stack = [];
@@ -180,6 +183,7 @@ function reset(screen) {
 function setHomeTab(tab) {
   // The auto-responder is a whole screen of its own: the middle button opens it (guests are taken to sign in first).
   if (tab === "responder") {
+    if (SOON.responder) return toast(t("soon.responder"));
     if (!S.token) return go("login");
     S._resp = null;
     return go("responder");
@@ -481,10 +485,13 @@ function socialButtonsHtml() {
     });
   }
   const p = S._social;
-  if (!p.google && !p.facebook) return "";
+  const showFb = p.facebook || SOON.facebookLogin;
+  if (!p.google && !showFb) return "";
   const ICONS = { google: `<svg class="social-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45.12 24.5c0 -1.56 -0.14 -3.06 -0.4 -4.5H24v8.51h11.84c-0.51 2.75 -2.06 5.08 -4.39 6.64v5.52h7.11c4.16 -3.83 6.56 -9.47 6.56 -16.17z"/><path fill="#34A853" d="M24 46c5.94 0 10.92 -1.97 14.56 -5.33l-7.11 -5.52c-1.97 1.32 -4.49 2.1 -7.45 2.1 -5.73 0 -10.58 -3.87 -12.31 -9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s0.25 -2.86 0.69 -4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24c0 3.55 0.85 6.91 2.34 9.88l7.35 -5.7z"/><path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31 -6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73 -5.2 6.58 -9.07 12.31 -9.07z"/></svg>`, facebook: `<svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#fff"/><path fill="#1877F2" d="M24 12.073c0 -6.627 -5.373 -12 -12 -12s-12 5.373 -12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0 -3.007 1.792 -4.669 4.533 -4.669 1.312 0 2.686 0.235 2.686 0.235v2.953H15.83c-1.491 0 -1.956 0.925 -1.956 1.874v2.25h3.328l-0.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>` };
   const link = (provider, key) => `<a class="btn outline social-btn" href="/auth/social/${provider}/start?platform=web&lang=${encodeURIComponent(LANG)}">${ICONS[provider]}<span>${esc(t(key))}</span></a>`;
-  return `<div class="social-or">${esc(t("social.or"))}</div>${p.google ? link("google", "social.google") : ""}${p.facebook ? link("facebook", "social.facebook") : ""}`;
+  const fbSoon = `<button type="button" class="btn outline social-btn soon" onclick="toast(t('soon.facebook'))">${ICONS.facebook}<span>${esc(t("social.facebook"))}</span></button>`;
+  const fb = SOON.facebookLogin ? fbSoon : p.facebook ? link("facebook", "social.facebook") : "";
+  return `<div class="social-or">${esc(t("social.or"))}</div>${p.google ? link("google", "social.google") : ""}${fb}`;
 }
 
 /** Back from the provider: a one-time ticket becomes a session, or the reason it did not work is shown on the login screen. */
@@ -5992,6 +5999,7 @@ async function submitTopup() {
 /* ================= AUTO-RESPONDER ================= */
 
 function screenResponder() {
+  if (SOON.responder) return `${backRow()}<div class="center-pad"><h1 class="screen-title">🤖 ${esc(t("tab.responder"))}</h1><p class="muted" style="text-align:center">${esc(t("soon.responder"))}</p></div>`;
   if (!S._resp) { S._resp = { loading: true, tab: "overview" }; loadResponder(); }
   const r = S._resp;
   if (r.loading) return backRow() + spinner();

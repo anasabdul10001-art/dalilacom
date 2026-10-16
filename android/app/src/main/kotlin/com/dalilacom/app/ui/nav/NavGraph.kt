@@ -14,7 +14,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.dalilacom.app.ui.common.FloatingButtons
 import androidx.compose.runtime.collectAsState
 import androidx.navigation.navArgument
@@ -305,6 +307,12 @@ fun DalilacomNavGraph(
                 navArgument("session") { type = NavType.StringType; nullable = true; defaultValue = null },
             ),
         ) { entry ->
+            if (com.dalilacom.app.ui.common.ComingSoon.RESPONDER) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().padding(24.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.soon_responder), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+                return@composable
+            }
             ResponderScreen(
                 factory = factory,
                 onBack = { navController.popBackStack() },
