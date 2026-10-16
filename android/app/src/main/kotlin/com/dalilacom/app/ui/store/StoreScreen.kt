@@ -380,7 +380,7 @@ fun StoreScreen(
                 // the big banners (the admin's, any number, changing by themselves) or the default one
                 item {
                     val up = ui.deals.maxOfOrNull { it.offPercent() } ?: 0
-                    BannerPager(ui.banners, ui.bannerSeconds, up, onDeals = { vm.seeAll("deals") }) { b ->
+                    BannerPager(ui.banners, ui.bannerSeconds, up, onDeals = { vm.seeAll("deals") }, onInvite = { onBookAd("banner") }) { b ->
                         vm.bannerClick(b.id)
                         val value = b.target.value.orEmpty()
                         when (b.target.type) {
@@ -393,25 +393,29 @@ fun StoreScreen(
                     }
                 }
                 // the advertising spaces: a shop's paid product, or a best seller with an invitation to advertise
-                if (ui.slots.isNotEmpty()) item {
+                item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(ui.slots, key = { it.slot }) { sl ->
-                            AdSlot(sl, onOpen = { if (sl.adId != null) vm.adClick(sl.adId); onOpenProduct(sl.product.id) }, onAdvertise = { onBookAd("space") }, onAdd = { vm.addToCart(sl.product.id) })
+                        items(6, key = { it }) { i ->
+                            val sl = ui.slots.getOrNull(i)
+                            if (sl != null) AdSlot(sl, onOpen = { if (sl.adId != null) vm.adClick(sl.adId); onOpenProduct(sl.product.id) }, onAdvertise = { onBookAd("space") }, onAdd = { vm.addToCart(sl.product.id) })
+                            else AdSlotPlaceholder(i, onClick = { onBookAd("space") })
                         }
                     }
                 }
-                ui.adOffer?.let { offer ->
-                    item {
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(8.dp)).background(Color.Black).padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text("📢 " + stringResource(R.string.ads_pitch, offer.fromCredits, offer.creditName, offer.days), color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                            Spacer(Modifier.width(10.dp))
-                            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(stringResource(R.string.ads_book_cta), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable { onBookAd("space") }.padding(horizontal = 12.dp, vertical = 7.dp))
-                                Text(stringResource(R.string.ads_book_banner), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable { onBookAd("banner") }.padding(horizontal = 12.dp, vertical = 7.dp))
-                            }
+                item {
+                    val offer = ui.adOffer
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(8.dp)).background(Color.Black).padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "📢 " + if (offer != null) stringResource(R.string.ads_pitch, offer.fromCredits, offer.creditName, offer.days) else stringResource(R.string.ads_pitch_generic),
+                            color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(stringResource(R.string.ads_book_cta), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable { onBookAd("space") }.padding(horizontal = 12.dp, vertical = 7.dp))
+                            Text(stringResource(R.string.ads_book_banner), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable { onBookAd("banner") }.padding(horizontal = 12.dp, vertical = 7.dp))
                         }
                     }
                 }
@@ -485,8 +489,10 @@ private fun UnitPicker(allLabel: String, options: List<Pair<String, String>>, se
  */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun BannerPager(banners: List<com.dalilacom.app.data.network.StoreBannerDto>, seconds: Int, dealsUp: Int, onDeals: () -> Unit, onClick: (com.dalilacom.app.data.network.StoreBannerDto) -> Unit) {
-    val count = 1 + maxOf(1, banners.size)
+private fun BannerPager(banners: List<com.dalilacom.app.data.network.StoreBannerDto>, seconds: Int, dealsUp: Int, onDeals: () -> Unit, onInvite: () -> Unit, onClick: (com.dalilacom.app.data.network.StoreBannerDto) -> Unit) {
+    val middle = maxOf(1, banners.size)
+    val invite = banners.size < 3 // the last slide invites people to the big banner space
+    val count = 1 + middle + (if (invite) 1 else 0)
     val pager = androidx.compose.foundation.pager.rememberPagerState { count }
     LaunchedEffect(count, seconds) {
         while (true) {
@@ -497,6 +503,7 @@ private fun BannerPager(banners: List<com.dalilacom.app.data.network.StoreBanner
     Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(8.dp))) {
         androidx.compose.foundation.pager.HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth()) { page ->
             if (page == 0) BrandSlide(active = pager.currentPage == 0, onClick = onDeals)
+            else if (invite && page == count - 1) InviteSlide(onInvite)
             else if (banners.isEmpty()) DealsSlide(dealsUp, onDeals)
             else BannerSlide(banners[page - 1], onClick)
         }
@@ -599,6 +606,48 @@ private fun BrandSlide(active: Boolean, onClick: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+/** The last hero slide: an invitation to the big banner space. */
+@Composable
+private fun InviteSlide(onClick: () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFF1C1413), Color(0xFF5A0E12), Color(0xFFBA2A34)))).clickable(onClick = onClick),
+    ) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            androidx.compose.foundation.Image(painterResource(R.drawable.brand_logo_full_white), contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.height(96.dp), alpha = 0.95f)
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.ads_invite_t), color = Color.White, fontWeight = FontWeight.Black, fontSize = 21.sp, lineHeight = 26.sp)
+                Text(stringResource(R.string.ads_invite_s), color = Color.White.copy(alpha = 0.92f), fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 18.sp)
+                Text(stringResource(R.string.ads_book_banner), color = Color(0xFFBA2A34), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp).background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 8.dp))
+            }
+        }
+    }
+}
+
+/** A space nobody holds yet: a Dalilacom tile that invites people to advertise there, so no space is ever empty. */
+@Composable
+private fun AdSlotPlaceholder(i: Int, onClick: () -> Unit) {
+    val colors = when (i % 3) {
+        0 -> listOf(Color(0xFF5A0E12), Color(0xFFBA2A34))
+        1 -> listOf(Color(0xFF1C1413), Color(0xFF5A0E12))
+        else -> listOf(Color(0xFFBA2A34), Color(0xFFCB0C2E))
+    }
+    val (title, sub) = when (i % 3) {
+        0 -> stringResource(R.string.ads_ph0t) to stringResource(R.string.ads_ph0s)
+        1 -> stringResource(R.string.ads_ph1t) to stringResource(R.string.ads_ph1s)
+        else -> stringResource(R.string.ads_ph2t) to stringResource(R.string.ads_ph2s)
+    }
+    Box(Modifier.width(168.dp).aspectRatio(1.4f).clip(RoundedCornerShape(6.dp)).background(Brush.linearGradient(colors)).clickable(onClick = onClick)) {
+        Row(Modifier.fillMaxSize().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.foundation.Image(painterResource(R.drawable.brand_logo_full_white), contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.height(52.dp).width(40.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, lineHeight = 17.sp)
+                Text(sub, color = Color.White.copy(alpha = 0.9f), fontSize = 10.5.sp, lineHeight = 14.sp)
+            }
+        }
+        Text(stringResource(R.string.ads_ph_cta), color = Color(0xFFBA2A34), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.White, RoundedCornerShape(50)).padding(horizontal = 9.dp, vertical = 3.dp))
     }
 }
 

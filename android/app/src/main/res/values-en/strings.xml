@@ -895,4 +895,14 @@
     <string name="soon_responder">The auto-responder will be available soon</string>
     <string name="pw_show">Show password</string>
     <string name="pw_hide">Hide password</string>
+    <string name="ads_ph0t">Your ad space is here</string>
+    <string name="ads_ph0s">Put your product in front of every visitor</string>
+    <string name="ads_ph1t">Advertise on Dalilacom</string>
+    <string name="ads_ph1s">All the shops and offers of your city in one place</string>
+    <string name="ads_ph2t">Your product here</string>
+    <string name="ads_ph2s">Start your ad in a few simple steps</string>
+    <string name="ads_ph_cta">📢 Advertise now</string>
+    <string name="ads_invite_t">The big banner space</string>
+    <string name="ads_invite_s">Advertise with your picture and words at the top of the store</string>
+    <string name="ads_pitch_generic">Advertise a product or a big banner on the store page and let people see it first</string>
 </resources>

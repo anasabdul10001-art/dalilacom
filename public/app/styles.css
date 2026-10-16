@@ -1510,3 +1510,25 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 
 /* a sign-in button that is not open yet looks a little quieter */
 .social-btn.soon { opacity: 0.7; }
+
+/* the invitation tiles in the advertising spaces: a Dalilacom tile where nobody advertises yet */
+.store-slot.is-ph { background: linear-gradient(135deg, #5a0e12, #ba2a34 70%); color: #fff; aspect-ratio: 16 / 10; }
+.store-slot.is-ph.ph-1 { background: linear-gradient(135deg, #1c1413, #5a0e12 80%); }
+.store-slot.is-ph.ph-2 { background: linear-gradient(135deg, #ba2a34, #cb0c2e 75%); }
+.store-picks .store-slot.is-ph { aspect-ratio: 16 / 9.4; }
+.ph-body { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.ph-logo { flex: none; height: 56%; width: auto; max-height: 64px; }
+.ph-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ph-text b { font-family: "Cairo", "Tajawal", sans-serif; font-size: 14px; line-height: 1.3; }
+.ph-text small { font-size: 11.5px; opacity: 0.9; line-height: 1.4; }
+.ph-cta { position: absolute; inset-inline-end: 8px; bottom: 8px; padding: 3px 10px; border-radius: 999px; background: #fff; color: #ba2a34; font-size: 11px; font-weight: 800; }
+.store-slide.invite-slide { background-image: linear-gradient(120deg, #1c1413, #5a0e12 55%, #ba2a34); gap: clamp(18px, 4vw, 54px); justify-content: center; overflow: hidden; }
+.invite-slide .bs-orb { position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.05); pointer-events: none; }
+.invite-slide .bs-orb.o1 { width: 200px; height: 200px; inset-inline-end: -50px; top: -80px; }
+.invite-slide .bs-orb.o2 { width: 120px; height: 120px; inset-inline-start: 10%; bottom: -60px; }
+.invite-slide .bs-logo { position: relative; flex: none; }
+.invite-slide .bs-logo img { display: block; height: 110px; width: auto; opacity: 0.95; }
+.invite-slide .bs-text { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.invite-slide h1 em { font-style: normal; opacity: 0.92; font-size: 0.7em; font-weight: 700; }
+.invite-slide .btn-pill { background: #fff; color: #ba2a34; }
+@media (max-width: 520px) { .invite-slide h1 { font-size: 21px; } .invite-slide .bs-logo img { height: 84px; } .store-slide.invite-slide { padding-inline: 22px; } }

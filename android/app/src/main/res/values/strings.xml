@@ -899,4 +899,14 @@
     <string name="soon_responder">المجيب الآلي رح يكون متاح قريبًا</string>
     <string name="pw_show">إظهار كلمة السر</string>
     <string name="pw_hide">إخفاء كلمة السر</string>
+    <string name="ads_ph0t">مساحتك الإعلانية هنا</string>
+    <string name="ads_ph0s">وصّل منتجك لكل زوّار المتجر</string>
+    <string name="ads_ph1t">أعلن في دليلكم</string>
+    <string name="ads_ph1s">محلات مدينتك وعروضها بمكان واحد</string>
+    <string name="ads_ph2t">منتجك هنا</string>
+    <string name="ads_ph2s">ابدأ إعلانك بخطوات بسيطة</string>
+    <string name="ads_ph_cta">📢 أعلن الآن</string>
+    <string name="ads_invite_t">مساحة البانر الكبير</string>
+    <string name="ads_invite_s">أعلن بصورتك وكلماتك على أول المتجر</string>
+    <string name="ads_pitch_generic">أعلن بمنتجك أو ببانر كبير على صفحة المتجر وخلّي الناس تشوفه أول ما تفتح</string>
 </resources>

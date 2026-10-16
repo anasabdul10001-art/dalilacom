@@ -2423,7 +2423,7 @@ function storeOff(p) {
 function storeSlideList(st, home) {
   const list = st.banners && st.banners.list ? st.banners.list : [];
   const rest = list.length ? list : [{ fallback: true, bg: "coral", title: t("store.heroBig"), subtitle: t("store.heroUpTo", { n: Math.max(0, ...home.deals.map(storeOff)) }), buttonText: t("store.shopNow"), target: { type: "deals" } }];
-  return [{ brand: true }, ...rest];
+  return [{ brand: true }, ...rest, ...(list.length < 3 ? [{ invite: true }] : [])];
 }
 
 function storeSlider(st, home) {
@@ -2432,7 +2432,15 @@ function storeSlider(st, home) {
   const idx = Math.min(st.slideIdx || 0, list.length - 1);
   return `
     <div class="store-slider" id="store-slider">
-      ${list.map((b, i) => b.brand ? `
+      ${list.map((b, i) => b.invite ? `
+        <button class="store-slide invite-slide ${i === idx ? "on" : ""}" onclick="storeBannerGo(${i})">
+          <span class="bs-orb o1"></span><span class="bs-orb o2"></span>
+          <span class="bs-logo"><img src="/brand/logo-full-vertical-white.png" alt="" aria-hidden="true" /></span>
+          <span class="bs-text">
+            <h1>${esc(t("ads.inviteT"))}<br><em>${esc(t("ads.inviteS"))}</em></h1>
+            <span class="btn-pill">${esc(t("ads.bookBanner"))}</span>
+          </span>
+        </button>` : b.brand ? `
         <button class="store-slide brand-slide ${i === idx ? "on" : ""}" onclick="storeBannerGo(${i})" aria-label="DALILACOM">
           <span class="bs-orb o1"></span><span class="bs-orb o2"></span><span class="bs-orb o3"></span>
           <span class="bs-logo"><img src="/brand/logo-full-vertical-white.png" alt="DALILACOM" /></span>
@@ -2486,6 +2494,7 @@ function storeBannerGo(i) {
   const b = S._store.slides && S._store.slides[i];
   if (!b) return;
   if (b.brand) { storeSeeAll("deals"); return; }
+  if (b.invite) { openAdBooking("banner"); return; }
   if (b.id) api("POST", "/store/banners/" + b.id + "/click");
   const { type, value } = b.target || {};
   if (type === "product" && value) go("productDetail", { productId: value });
@@ -2496,6 +2505,27 @@ function storeBannerGo(i) {
 }
 
 /* ---------------- the advertising spaces beside the banner ---------------- */
+
+/** A space nobody holds yet: a Dalilacom tile that invites people to advertise there, so no space is ever empty. */
+function storeSlotPh(i) {
+  const v = i % 3;
+  return `
+    <div class="store-slot is-ph ph-${v}" role="button" tabindex="0" onclick="openAdBooking('space')">
+      <div class="ph-body">
+        <img class="ph-logo" src="/brand/logo-full-vertical-white.png" alt="" aria-hidden="true" />
+        <span class="ph-text"><b>${esc(t("ads.ph" + v + "t"))}</b><small>${esc(t("ads.ph" + v + "s"))}</small></span>
+        <span class="ph-cta">${esc(t("ads.phCta"))}</span>
+      </div>
+    </div>`;
+}
+
+/** Always six spaces: the held ones first, the rest are the invitation tiles. */
+function storeSlotsHtml(home, from, to) {
+  const list = home.slots || [];
+  const out = [];
+  for (let i = from; i < to; i++) out.push(list[i] ? storeSlot(list[i]) : storeSlotPh(i));
+  return out.join("");
+}
 
 /** One space: a shop's paid product (marked as an ad) or, while nobody rented it, a best seller with an invitation to advertise. */
 function storeSlot(sl) {
@@ -3239,12 +3269,12 @@ function screenStore() {
   } else {
     body = `
       <div class="store-hero">
-        <div class="store-picks">${(home.slots || []).slice(0, 3).map(storeSlot).join("")}</div>
+        <div class="store-picks">${storeSlotsHtml(home, 0, 3)}</div>
         ${storeSlider(st, home)}
-        <div class="store-picks">${(home.slots || []).slice(3, 6).map(storeSlot).join("")}</div>
+        <div class="store-picks">${storeSlotsHtml(home, 3, 6)}</div>
       </div>
-      ${home.slots && home.slots.length ? `<div class="store-slotstrip">${home.slots.map(storeSlot).join("")}</div>` : ""}
-      ${home.adOffer ? `<div class="store-adstrip"><span>📢 ${esc(t("ads.pitch", { price: home.adOffer.fromCredits, name: home.adOffer.creditName, days: home.adOffer.days }))}</span><span class="store-adstrip-btns"><button onclick="openAdBooking('space')">${esc(t("ads.bookCta"))}</button><button onclick="openAdBooking('banner')">${esc(t("ads.bookBanner"))}</button></span></div>` : ""}
+      <div class="store-slotstrip">${storeSlotsHtml(home, 0, 6)}</div>
+      <div class="store-adstrip"><span>📢 ${esc(home.adOffer ? t("ads.pitch", { price: home.adOffer.fromCredits, name: home.adOffer.creditName, days: home.adOffer.days }) : t("ads.pitchGeneric"))}</span><span class="store-adstrip-btns"><button onclick="openAdBooking('space')">${esc(t("ads.bookCta"))}</button><button onclick="openAdBooking('banner')">${esc(t("ads.bookBanner"))}</button></span></div>
       <div class="store-circles">${sections.map((x) => `
         <button onclick="storePickSection('${x.id}')"><span><img src="${esc(x.image)}" alt="" loading="lazy"></span><em>${esc(storeSecName(x))}</em></button>`).join("")}</div>
       ${storeSection(t("store.best"), home.bestSellers, "best")}
