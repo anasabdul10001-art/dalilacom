@@ -19,3 +19,8 @@ android/.cxx/
 
 # scratch copy made by tests/i18nTooling.test.ts
 tmp-i18n-sandbox/
+
+# Google Play upload key: never in git
+android/keystore.properties
+*.jks
+*.keystore
