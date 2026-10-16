@@ -388,7 +388,7 @@ fun StoreScreen(
                             "section" -> if (value.isNotBlank()) vm.pickSection(value)
                             "shop" -> if (value.isNotBlank()) onOpenMerchant(value)
                             "deals" -> vm.seeAll("deals")
-                            "url" -> if (value.startsWith("https://")) runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(value))) }
+                            "url" -> if (value.startsWith("https://")) com.dalilacom.app.ui.common.ExternalBrowser.open(context, value)
                         }
                     }
                 }

@@ -35,7 +35,7 @@ fun FollowUsButton(modifier: Modifier = Modifier, showNote: Boolean = true) {
         Row(
             Modifier
                 .background(Color(0xFF1877F2), RoundedCornerShape(50))
-                .clickable { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(FACEBOOK_URL))) } }
+                .clickable { ExternalBrowser.open(context, FACEBOOK_URL) }
                 .padding(horizontal = 20.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),

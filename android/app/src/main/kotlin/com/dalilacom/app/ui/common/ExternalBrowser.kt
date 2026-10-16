@@ -19,7 +19,10 @@ object ExternalBrowser {
         // "android" is the system chooser (no default browser set): leave the intent open then
         if (browser != null && browser != "android") intent.setPackage(browser)
         runCatching { context.startActivity(intent) }.onFailure {
-            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.onFailure {
+                // nothing on the phone could open it: show the address instead of doing nothing
+                android.widget.Toast.makeText(context, url, android.widget.Toast.LENGTH_LONG).show()
+            }
         }
     }
 }

@@ -20,8 +20,8 @@ android {
         applicationId = "com.dalilacom.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.1.2"
     }
 
     // The upload key for Google Play: android/keystore.properties (not in git) names the keystore that lives outside the repository.
@@ -44,6 +44,14 @@ android {
         release {
             isMinifyEnabled = false
             signingConfigs.findByName("upload")?.let { signingConfig = it }
+        }
+    }
+
+    // The app has its own language switch (Arabic / English), so every language must ship in every install:
+    // without this Google Play only sends the languages of the phone's settings and the in-app English falls back to Arabic.
+    bundle {
+        language {
+            enableSplit = false
         }
     }
 

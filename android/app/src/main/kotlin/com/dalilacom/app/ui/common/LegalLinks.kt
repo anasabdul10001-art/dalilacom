@@ -40,7 +40,7 @@ fun LegalLinks(modifier: Modifier = Modifier) {
         items.forEach { (label, path) ->
             Text(
                 stringResource(label), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.clickable { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(absoluteUrl(path)))) } }.padding(vertical = 6.dp),
+                modifier = Modifier.clickable { ExternalBrowser.open(context, absoluteUrl(path)) }.padding(vertical = 6.dp),
             )
         }
     }

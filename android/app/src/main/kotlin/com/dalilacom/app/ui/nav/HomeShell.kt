@@ -317,14 +317,15 @@ private fun DealsIntro(onDismiss: () -> Unit, onNever: () -> Unit) {
                 Column(Modifier.padding(horizontal = 22.dp, vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("🎁", style = MaterialTheme.typography.displaySmall)
                     Spacer(Modifier.height(6.dp))
-                    Text(stringResource(R.string.deals_intro_title), style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    // the texts come from the language chosen in the app (a dialog is a window of its own and may not carry it)
+                    Text(com.dalilacom.app.ui.i18n.AppStrings.get(R.string.deals_intro_title), style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     Spacer(Modifier.height(8.dp))
-                    Text(stringResource(R.string.deals_intro_text), style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(com.dalilacom.app.ui.i18n.AppStrings.get(R.string.deals_intro_text), style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(18.dp))
                     androidx.compose.material3.Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)) {
-                        Text(stringResource(R.string.deals_ok), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                        Text(com.dalilacom.app.ui.i18n.AppStrings.get(R.string.deals_ok), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
                     }
-                    androidx.compose.material3.TextButton(onClick = onNever) { Text(stringResource(R.string.deals_never), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    androidx.compose.material3.TextButton(onClick = onNever) { Text(com.dalilacom.app.ui.i18n.AppStrings.get(R.string.deals_never), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             }
         }
