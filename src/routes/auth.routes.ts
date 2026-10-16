@@ -361,7 +361,7 @@ authRouter.get("/confirm-email-change", verifyEmailRateLimiter, async (req, res)
         await emailService.send({
           to: record.user.email,
           subject: translateText("تم تغيير بريد حسابك", resolveLanguage(req)),
-          text: translateText(`تم تغيير بريد حسابك على دليلكم إلى ${record.newEmail}. إذا لم تكن أنت، تواصل معنا فورًا على dalilacomsy@gmail.com.`, resolveLanguage(req)),
+          text: translateText(`تم تغيير بريد حسابك على دليلكم إلى ${record.newEmail}. إذا لم تكن أنت، تواصل معنا فورًا على info@dalilacom.com.`, resolveLanguage(req)),
         });
       } catch {
         /* best-effort */

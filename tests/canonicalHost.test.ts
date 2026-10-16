@@ -74,7 +74,7 @@ describe("The main website is at the root, the owner's pages are not public", ()
     for (const page of ["about", "privacy", "terms", "refund", "shipping", "data-deletion"]) {
       const res = await request(app).get(`/${page}.html`);
       expect(res.status).toBe(200);
-      expect(res.text).toContain("dalilacomsy@gmail.com");
+      expect(res.text).toContain("info@dalilacom.com");
       expect(res.text).toContain("/shipping.html"); // each one links to the others
     }
   });

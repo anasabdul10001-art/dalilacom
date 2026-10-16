@@ -114,7 +114,7 @@ describe("Facebook's callbacks when someone removes the app or asks for deletion
     for (const page of ["/privacy.html", "/terms.html", "/data-deletion.html"]) {
       const res = await request(app).get(page);
       expect(res.status).toBe(200);
-      expect(res.text).toContain("dalilacomsy@gmail.com");
+      expect(res.text).toContain("info@dalilacom.com");
     }
     expect((await request(app).get("/privacy.html")).text).toContain("Privacy Policy");
   });
