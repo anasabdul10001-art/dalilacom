@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="base.css">
+<style>
+  /* Google Play feature graphic: 1024 x 500 (keep the words in the middle; Play may crop the edges) */
+  body { width: 1024px; height: 500px; overflow: hidden; background: linear-gradient(100deg, var(--deep), var(--red) 80%); position: relative; }
+  .center { position: absolute; inset: 0; display: grid; place-items: center; }
+  .box { display: flex; align-items: center; gap: 70px; }
+  .lockup { height: 330px; display: block; }
+  .tag { color: #fff; font-size: 52px; font-weight: 800; line-height: 1.5; }
+  .url { color: #fff; opacity: .9; font-size: 28px; margin-top: 14px; }
+  .ring { position: absolute; border: 2px solid rgba(255,255,255,.12); border-radius: 50%; }
+</style></head>
+<body>
+  <div class="ring" style="width:520px;height:520px;left:-150px;top:-100px"></div>
+  <div class="ring" style="width:340px;height:340px;right:-80px;bottom:-150px"></div>
+  <div class="center"><div class="box">
+    <img class="lockup" src="../logo/logo-full-vertical-white.png" alt="دليلكم">
+    <div>
+      <div class="tag">محلات مدينتك<br>وعروضها بمكان واحد</div>
+      <div class="url latin">dalilacom.com</div>
+    </div>
+  </div></div>
+</body></html>

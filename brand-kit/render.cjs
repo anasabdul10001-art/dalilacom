@@ -12,10 +12,13 @@ const jobs = [
   ["post-2.html", 1080, 1080, "post-2-offer.png"],
   ["story.html", 1080, 1920, "story-1080x1920.png"],
   ["og.html", 1200, 630, "og-share-v3.png"],
+  ["feature.html", 1024, 500, "play-feature-1024x500.png"],
 ];
 
 (async () => {
+  const only = process.argv[2]; // node brand-kit/render.cjs play-feature-1024x500.png renders just that one
   for (const [file, w, h, out] of jobs) {
+    if (only && only !== out) continue;
     const tmp = path.join(__dirname, "social", "_raw-" + out);
     const url = "file:///" + path.join(__dirname, "templates", file).split(path.sep).join("/");
     // a bigger window than the picture: the page sits in its top-left corner and is cut out below at its exact size
