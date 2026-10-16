@@ -224,6 +224,7 @@
   </div>
 </div>
 
+<script src="/app/pw-eye.js"></script>
 <script>
 function errText(d, f) { const e = d && d.error; if (!e) return f; if (typeof e === 'string') return e; const fe = Object.values((e.details && e.details.fieldErrors) || {}).flat()[0]; return fe || e.message || f; }
 const state = { customerToken: null, merchantToken: null, adminToken: null, categories: [] };

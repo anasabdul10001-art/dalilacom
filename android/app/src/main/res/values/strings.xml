@@ -897,4 +897,6 @@
     <string name="follow_official">هذي صفحتنا الرسمية الوحيدة. أي صفحة ثانية باسم دليلكم لا تمثلنا.</string>
     <string name="soon_facebook">تسجيل الدخول بفيسبوك رح يكون متاح قريبًا</string>
     <string name="soon_responder">المجيب الآلي رح يكون متاح قريبًا</string>
+    <string name="pw_show">إظهار كلمة السر</string>
+    <string name="pw_hide">إخفاء كلمة السر</string>
 </resources>

@@ -1,6 +1,7 @@
 import request from "supertest";
 import { describe, it, expect, afterEach, afterAll } from "vitest";
 import { app } from "../src/server";
+import { adminPagePath } from "../src/lib/adminPath";
 import { prisma } from "../src/prisma";
 
 const saved = process.env.PUBLIC_BASE_URL;
@@ -46,17 +47,27 @@ describe("The main website is at the root, the owner's pages are not public", ()
     expect((await request(app).get("/app/app.js")).status).toBe(200);
   });
 
-  it("serves the admin panel at /admin (the old /admin.html moves there) and keeps the /admin API behind sign-in", async () => {
-    const panel = await request(app).get("/admin");
+  it("serves the admin panel at a path that is not /admin, hides /admin and the old /admin.html, and keeps the /admin API behind sign-in", async () => {
+    const where = adminPagePath();
+    expect(where).not.toBe("/admin");
+    const panel = await request(app).get(where);
     expect(panel.status).toBe(200);
     expect(panel.text).toContain("لوحة التحكم");
-    const slash = await request(app).get("/admin/");
+    const slash = await request(app).get(where + "/");
     expect(slash.status).toBe(301);
-    expect(slash.headers.location).toBe("/admin");
-    const old = await request(app).get("/admin.html");
-    expect(old.status).toBe(301);
-    expect(old.headers.location).toBe("/admin");
+    expect(slash.headers.location).toBe(where);
+    expect((await request(app).get("/admin")).status).toBe(404);
+    expect((await request(app).get("/admin/")).status).toBe(404);
+    expect((await request(app).get("/admin.html")).status).toBe(404);
     expect((await request(app).get("/admin/users")).status).toBe(401);
+    // the owner can choose his own path on the server
+    process.env.ADMIN_PAGE_PATH = "/my-own-door-2026";
+    try {
+      expect((await request(app).get("/my-own-door-2026")).status).toBe(200);
+      expect((await request(app).get(where)).status).toBe(404);
+    } finally {
+      delete process.env.ADMIN_PAGE_PATH;
+    }
   });
 
   it("keeps the developer console on the testing address only (HIDE_DEV_CONSOLE)", async () => {
@@ -64,7 +75,7 @@ describe("The main website is at the root, the owner's pages are not public", ()
     process.env.HIDE_DEV_CONSOLE = "true";
     try {
       expect((await request(app).get("/console.html")).status).toBe(404);
-      expect((await request(app).get("/admin")).status).toBe(200);
+      expect((await request(app).get(adminPagePath())).status).toBe(200);
       expect((await request(app).get("/")).status).toBe(200);
       expect((await request(app).get("/health")).status).toBe(200);
     } finally {

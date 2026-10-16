@@ -173,12 +173,10 @@ fun ProfileScreen(
                 text = {
                     Column {
                         Text(stringResource(R.string.profile_delete_message))
-                        androidx.compose.material3.OutlinedTextField(
+                        com.dalilacom.app.ui.common.PasswordField(
                             value = deletePassword,
                             onValueChange = { deletePassword = it; deleteError = null },
                             label = { Text(stringResource(R.string.profile_delete_password)) },
-                            singleLine = true,
-                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth(),
                         )
                         deleteError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }

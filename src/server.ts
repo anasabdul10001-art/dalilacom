@@ -16,6 +16,7 @@ import { walletRouter } from "./routes/wallet.routes";
 import { responderRouter } from "./routes/responder.routes";
 import { webhookRouter } from "./routes/webhook.routes";
 import { adminRouter } from "./routes/admin.routes";
+import { adminPagePath } from "./lib/adminPath";
 import { geoRouter } from "./routes/geo.routes";
 import { addressRouter } from "./routes/address.routes";
 import { businessRouter, branchRouter } from "./routes/business.routes";
@@ -52,7 +53,7 @@ app.use((req, res, next) => {
   let wanted = "";
   try { wanted = new URL(base).host.toLowerCase(); } catch { return next(); }
   if (!wanted || wanted === host) return next();
-  const isPage = /^\/(app(\/.*)?|admin\.html|privacy\.html|terms\.html|data-deletion\.html|reset-password\.html|index\.html)?$/.test(req.path);
+  const isPage = /^\/(app(\/.*)?|privacy\.html|terms\.html|data-deletion\.html|reset-password\.html|index\.html)?$/.test(req.path) || req.path === adminPagePath();
   const isSocialStart = /^\/auth\/social\/[a-z]+\/start$/.test(req.path);
   if (!isPage && !isSocialStart) return next();
   return res.redirect(302, base.replace(/\/+$/, "") + req.originalUrl);
@@ -72,12 +73,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// The admin panel is at /admin (its sign-in protects it; the /admin/... API paths below are unchanged). The old /admin.html moves there.
-app.get(/^\/admin\/?$/, (req, res) => {
-  if (req.path.endsWith("/")) return res.redirect(301, "/admin");
+// The admin panel page is not at /admin (the first place anyone tries) but at adminPagePath(); its sign-in still protects it, and the
+// /admin/... API paths below are unchanged. /admin and the old /admin.html answer "not found".
+app.get(/^\/admin\/?$/, (_req, res) => res.status(404).send("Not found"));
+app.get("/admin.html", (_req, res) => res.status(404).send("Not found"));
+app.get(/^\/[^/]+\/?$/, (req, res, next) => {
+  const panel = adminPagePath();
+  if (req.path !== panel && req.path !== panel + "/") return next();
+  if (req.path.endsWith("/")) return res.redirect(301, panel);
   res.sendFile(path.join(__dirname, "..", "public", "admin.html"));
 });
-app.get("/admin.html", (_req, res) => res.redirect(301, "/admin"));
 
 // Every answer carries the noindex header too, so even a page found through a link is not kept (images, scripts, API replies).
 app.use((_req, res, next) => {

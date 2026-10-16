@@ -292,7 +292,7 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark:
                     )
                     if (state.emailDelivery) {
                         OutlinedTextField(newEmail, { newEmail = it }, label = { Text(AppStrings.get(R.string.account_new_email)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(emailPw, { emailPw = it }, label = { Text(AppStrings.get(R.string.account_email_pw)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                        com.dalilacom.app.ui.common.PasswordField(emailPw, { emailPw = it }, label = { Text(AppStrings.get(R.string.account_email_pw)) }, modifier = Modifier.fillMaxWidth())
                         Text(AppStrings.get(R.string.account_email_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Button(onClick = { viewModel.changeEmail(newEmail, emailPw); emailPw = "" }) { Text(AppStrings.get(R.string.account_email_change)) }
                     } else {
@@ -302,9 +302,9 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark:
             }
             item {
                 SectionCard(AppStrings.get(R.string.account_password)) {
-                    OutlinedTextField(pwOld, { pwOld = it }, label = { Text(AppStrings.get(R.string.account_pw_current)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(pwNew, { pwNew = it }, label = { Text(AppStrings.get(R.string.account_pw_new)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(pwAgain, { pwAgain = it }, label = { Text(AppStrings.get(R.string.account_pw_again)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                    com.dalilacom.app.ui.common.PasswordField(pwOld, { pwOld = it }, label = { Text(AppStrings.get(R.string.account_pw_current)) }, modifier = Modifier.fillMaxWidth())
+                    com.dalilacom.app.ui.common.PasswordField(pwNew, { pwNew = it }, label = { Text(AppStrings.get(R.string.account_pw_new)) }, modifier = Modifier.fillMaxWidth())
+                    com.dalilacom.app.ui.common.PasswordField(pwAgain, { pwAgain = it }, label = { Text(AppStrings.get(R.string.account_pw_again)) }, modifier = Modifier.fillMaxWidth())
                     Button(onClick = { viewModel.changePassword(pwOld, pwNew, pwAgain); pwOld = ""; pwNew = ""; pwAgain = "" }) { Text(AppStrings.get(R.string.account_pw_change)) }
                 }
             }

@@ -101,12 +101,10 @@ fun RegisterScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
+        com.dalilacom.app.ui.common.PasswordField(
             value = password,
             onValueChange = { password = it },
             label = { Text(AppStrings.get(R.string.s_4b860f78)) },
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))

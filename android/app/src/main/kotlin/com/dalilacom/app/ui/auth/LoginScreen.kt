@@ -97,14 +97,11 @@ fun LoginScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
+                com.dalilacom.app.ui.common.PasswordField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text(AppStrings.get(R.string.s_db4175ae)) },
-                    singleLine = true,
                     shape = RoundedCornerShape(14.dp),
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (uiState is AuthUiState.Error) {
