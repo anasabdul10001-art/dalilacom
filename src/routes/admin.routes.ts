@@ -19,6 +19,7 @@ import { adjustBalance, InsufficientBalanceError } from "../services/wallet.serv
 import { aiProviderStatus, aiTotals, aiUsage, testProvider } from "../services/ai.service";
 import bcrypt from "bcryptjs";
 import { eraseAccount } from "../services/accountDeletion.service";
+import { previewLaunchReset, resetEnabled, RESET_PHRASE, runLaunchReset } from "../services/launchReset.service";
 import { isSupportedLanguage } from "../lib/languages";
 import { editPhotoWithAi, imageEditAvailable, lastImageEditError } from "../services/aiImage.service";
 import sharp from "sharp";
@@ -179,6 +180,23 @@ const marketerBase = { kind: z.enum(["MANAGER", "MARKETER"]), channel: z.enum(["
 
 adminRouter.get("/marketers", route(async (_req, res) => {
   res.json({ marketers: await listMarketers() });
+}));
+
+/* ---- Starting from zero for the launch: closed unless ALLOW_DATA_RESET=yes is set on the server; needs the admin's password and a typed phrase ---- */
+adminRouter.get("/launch-reset", route(async (_req, res) => {
+  res.json({ ...(await previewLaunchReset()), phrase: RESET_PHRASE });
+}));
+
+adminRouter.post("/launch-reset", route(async (req, res) => {
+  if (!resetEnabled()) return sendError(res, 403, "FORBIDDEN", "The reset is closed: set ALLOW_DATA_RESET=yes on the server and try again");
+  const parsed = z.object({ phrase: z.string(), password: z.string().min(1) }).safeParse(req.body ?? {});
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  if (parsed.data.phrase.trim() !== RESET_PHRASE) return sendError(res, 400, "BAD_REQUEST", "The confirmation phrase is wrong");
+  const me = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { id: true, email: true, passwordHash: true } });
+  if (!me || !(await bcrypt.compare(parsed.data.password, me.passwordHash))) return sendError(res, 403, "FORBIDDEN", "The password is wrong");
+  const superEmail = (process.env.SUPER_ADMIN_EMAIL || "").trim().toLowerCase();
+  if (superEmail && me.email.toLowerCase() !== superEmail) return sendError(res, 403, "FORBIDDEN", "Only the super admin account can reset the data");
+  res.json({ ok: true, ...(await runLaunchReset()) });
 }));
 
 adminRouter.get("/marketer-requests", route(async (req, res) => {

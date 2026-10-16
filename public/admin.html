@@ -105,6 +105,7 @@
     <div class="nav-item" data-section="pcats" onclick="showSection('pcats'); loadProductCats()">🏷️ تصنيفات المنتجات</div>
     <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()">🛡️ مراجعة المنتجات <span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="marketers" onclick="showSection('marketers'); loadMarketers()">📣 المسوّقون</div>
+    <div class="nav-item" data-section="launch" onclick="showSection('launch'); loadLaunchReset()">🚀 تهيئة الإطلاق</div>
     <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()">💡 اقتراحات المهن <span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()">🏷️ الحسومات <span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()">📢 إعلانات المتجر <span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
@@ -494,6 +495,12 @@
     </div>
 
     <!-- MARKETERS -->
+    <div class="section" id="section-launch" style="display:none">
+      <h2>تهيئة الإطلاق (البدء من الصفر)</h2>
+      <p class="subtitle">بيمسح كل الحسابات ما عدا السوبر أدمن، ومعهم كل المحلات والمنتجات والعروض والطلبات والمحافظ والإعلانات والمراجعات والإشعارات. بيبقى: الدول والمدن، التصنيفات، الباقات والأسعار، الضرائب، وإعدادات المنصة. <b>ما في رجعة.</b></p>
+      <div class="card" id="launch-card">جارٍ التحميل…</div>
+    </div>
+
     <div class="section" id="section-marketers" style="display:none">
       <h2>المسوّقون</h2>
       <p class="subtitle">مسوّق بيجيب ناس لدليلكم برابطه. مدير التسويق تحته مسوّقين وبيربح من كل اللي بيجيبهم فريقه. الربح بيدخل لمحفظة الشخص: مبلغ ثابت عن كل تسجيل مؤكَّد، ونسبة من اللي بيدفعه الشخص من محفظته (باقات، إعلانات، ذكاء اصطناعي). صفر يعني بلا ربح.</p>
@@ -740,6 +747,34 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- Launch reset ----
+let launchInfo = null;
+async function loadLaunchReset() {
+  const box = document.getElementById('launch-card');
+  const r = await api('GET', '/admin/launch-reset');
+  if (!r.ok) { box.textContent = errText(r.data, 'تعذّر التحميل'); return; }
+  launchInfo = r.data;
+  const d = r.data;
+  box.innerHTML = `
+    <p><b>الحسابات اللي رح تبقى:</b> ${d.keptAdmins.map((a) => esc(a.email)).join('، ') || '—'}</p>
+    <p><b>عدد المستخدمين الحاليين:</b> ${d.users}</p>
+    <p><b>اللي رح يُمسح:</b></p>
+    <table><thead><tr><th>الجدول</th><th>الصفوف</th></tr></thead><tbody>${d.willBeRemoved.map((x) => `<tr><td>${esc(x.table)}</td><td>${x.rows}</td></tr>`).join('') || '<tr><td colspan="2">لا شي</td></tr>'}</tbody></table>
+    <p class="subtitle">تأكد من أخذ نسخة احتياطية من قاعدة البيانات (Neon) قبل ما تكمل.</p>
+    ${d.enabled ? `
+      <div class="field"><label>اكتب الجملة: <b>${esc(d.phrase)}</b></label><input id="launch-phrase" autocomplete="off"></div>
+      <div class="field"><label>كلمة سر السوبر أدمن</label><input id="launch-pass" type="password" autocomplete="current-password"></div>
+      <button class="danger" onclick="runLaunchReset()">مسح كل شي والبدء من الصفر</button>
+      <div id="launch-msg" class="subtitle"></div>` : `<div class="card" style="background:#fff8e1">التصفير مقفول. لتفتحه: بـ Render ضيف المتغير <b>ALLOW_DATA_RESET</b> بقيمة <b>yes</b> للخدمة، وانتظر الإعادة. وبعد ما تخلص احذفه.</div>`}`;
+}
+async function runLaunchReset() {
+  const msg = document.getElementById('launch-msg');
+  if (!confirm('متأكد؟ هاد المسح نهائي وما في رجعة.')) return;
+  const r = await api('POST', '/admin/launch-reset', { phrase: document.getElementById('launch-phrase').value, password: document.getElementById('launch-pass').value });
+  msg.textContent = r.ok ? `تم. بقي ${r.data.usersLeft} حساب (السوبر أدمن). حدّث الصفحة.` : errText(r.data, 'فشل');
+  if (r.ok) loadLaunchReset();
 }
 
 // ---- Marketers ----
