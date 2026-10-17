@@ -1557,7 +1557,7 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 /* the places sheet can be pulled down to a thin strip that only says "Places directory", so the whole map shows */
 .sheet-head { gap: 8px; }
 .sheet-head .t-min { display: none; }
-.sheet-collapse { margin-inline-start: auto; background: transparent; border: 0; padding: 4px 6px; cursor: pointer; color: var(--muted, #6b5d5b); display: inline-flex; align-items: center; border-radius: 8px; }
+.sheet-collapse { margin-inline-start: auto; background: transparent; border: 0; padding: 4px 6px; cursor: pointer; color: #ba2a34; display: inline-flex; align-items: center; border-radius: 8px; }
 .sheet-collapse svg { transition: transform 0.2s; }
 .sheet.is-min .sheet-collapse svg { transform: rotate(180deg); }
 .sheet.is-min .t-full, .sheet.is-min .sheet-count, .sheet.is-min .sheet-chips, .sheet.is-min .sheet-list { display: none; }
@@ -1577,3 +1577,12 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
   html[dir="rtl"] .mapfull.sheet-min .area-btn { left: 50%; }
   html[dir="ltr"] .mapfull.sheet-min .area-btn { left: 50%; }
 }
+
+/* the floating bar of our pages: on the edge opposite the side rail, in the middle of the height, always visible */
+.social-dock { position: fixed; inset-inline-end: 0; top: 42%; transform: translateY(-50%); z-index: 480; display: flex; flex-direction: column; gap: 8px; padding: 9px 6px; background: var(--surface, #fff); border-start-start-radius: 16px; border-end-start-radius: 16px; box-shadow: 0 4px 16px rgba(0, 0, 0, .28); }
+.dock-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #ba2a34; text-decoration: none; }
+.dock-icon:hover { filter: brightness(1.12); }
+.dock-icon:active { transform: scale(.94); }
+
+/* on a phone the sheet is pulled by the line and the title bar: no arrow (the wide screens, which have no line, keep it) */
+@media (max-width: 899px) { .sheet-head { touch-action: none; } .sheet-collapse { display: none; } }

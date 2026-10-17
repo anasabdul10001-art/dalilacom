@@ -58,15 +58,18 @@ fun ProfileScreen(
     val scope = rememberCoroutineScope()
     var role by remember { mutableStateOf<String?>(null) }
     var account by remember { mutableStateOf<MeResponse?>(null) }
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(container.profileRepository.cached) }
     var unread by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        role = container.sessionStore.getRole()
-        account = container.authRepository.me()
-        profile = container.profileRepository.me()
-        unread = container.notificationRepository.unreadCount()
+        // all four at once, the name and photo first on screen: they used to arrive one request after the other
+        kotlinx.coroutines.coroutineScope {
+            launch { container.profileRepository.me()?.let { profile = it } }
+            launch { role = container.sessionStore.getRole() }
+            launch { account = container.authRepository.me() }
+            launch { unread = container.notificationRepository.unreadCount() }
+        }
     }
 
     Column(
@@ -153,6 +156,7 @@ fun ProfileScreen(
         Button(onClick = {
             scope.launch {
                 container.notificationRepository.unregisterCurrentDevice() // before the session is gone
+                container.profileRepository.clearCache()
                 container.authRepository.logout()
                 onLoggedOut()
             }
@@ -189,6 +193,7 @@ fun ProfileScreen(
                             container.profileRepository.deleteAccount(deletePassword)
                                 .onSuccess {
                                     container.notificationRepository.unregisterCurrentDevice()
+                                    container.profileRepository.clearCache()
                                     container.authRepository.logout()
                                     askDelete = false
                                     onLoggedOut()

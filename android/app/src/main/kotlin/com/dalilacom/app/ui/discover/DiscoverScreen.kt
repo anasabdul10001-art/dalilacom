@@ -37,6 +37,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -49,8 +53,6 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -216,6 +218,30 @@ fun DiscoverScreen(
         label = "sheetPeek",
     )
 
+    // The little line at the top of the sheet (and the title bar) is pulled by hand: down shrinks the directory to a thin strip, up opens it again and then to full height.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val onPull by androidx.compose.runtime.rememberUpdatedState<(Float) -> Unit>({ total ->
+        val threshold = with(density) { 28.dp.toPx() }
+        if (!navigating) {
+            if (total <= -threshold) {
+                if (sheetCollapsed) { sheetCollapsed = false; scope.launch { sheetState.partialExpand() } }
+                else if (sheetState.currentValue != SheetValue.Expanded) scope.launch { sheetState.expand() }
+            } else if (total >= threshold) {
+                if (sheetState.currentValue == SheetValue.Expanded) scope.launch { sheetState.partialExpand() }
+                else if (!sheetCollapsed) sheetCollapsed = true
+            }
+        }
+    })
+    val pullModifier = Modifier.pointerInput(Unit) {
+        var total = 0f
+        detectVerticalDragGestures(
+            onDragStart = { total = 0f },
+            onDragCancel = { total = 0f },
+            onDragEnd = { onPull(total) },
+            onVerticalDrag = { change, amount -> change.consume(); total += amount },
+        )
+    }
+
     Box(Modifier.fillMaxSize()) {
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
@@ -224,6 +250,11 @@ fun DiscoverScreen(
         sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         sheetContainerColor = MaterialTheme.colorScheme.surface,
         sheetShadowElevation = 16.dp,
+        sheetDragHandle = {
+            Box(Modifier.fillMaxWidth().then(pullModifier).padding(top = 10.dp, bottom = 6.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(width = 44.dp, height = 5.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)))
+            }
+        },
         sheetContent = {
             DirectorySheet(
                 state = state,
@@ -236,10 +267,8 @@ fun DiscoverScreen(
                 },
                 onToggleSaved = { id -> if (isGuest) onLogin() else viewModel.toggleFavorite(id) },
                 collapsed = sheetCollapsed,
-                onToggleCollapsed = {
-                    if (!sheetCollapsed) scope.launch { sheetState.partialExpand() }
-                    sheetCollapsed = !sheetCollapsed
-                },
+                onOpen = { sheetCollapsed = false },
+                pullModifier = pullModifier,
             )
         },
     ) { innerPadding ->
@@ -532,12 +561,13 @@ private fun DirectorySheet(
     onDirections: (MerchantDto) -> Unit,
     onToggleSaved: (String) -> Unit,
     collapsed: Boolean,
-    onToggleCollapsed: () -> Unit,
+    onOpen: () -> Unit,
+    pullModifier: Modifier,
 ) {
     Column(Modifier.fillMaxWidth()) {
         Row(
             // pulled down, only this strip shows: tapping it opens the list again
-            modifier = Modifier.fillMaxWidth().then(if (collapsed) Modifier.clickable { onToggleCollapsed() } else Modifier).padding(start = 20.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
+            modifier = Modifier.fillMaxWidth().then(pullModifier).then(if (collapsed) Modifier.clickable { onOpen() } else Modifier).padding(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -555,12 +585,6 @@ private fun DirectorySheet(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     )
                 }
-            }
-            IconButton(onClick = onToggleCollapsed) {
-                androidx.compose.material3.Icon(
-                    if (collapsed) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = stringResource(R.string.sheet_collapse),
-                )
             }
         }
         if (collapsed) return@Column

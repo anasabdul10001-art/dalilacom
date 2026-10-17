@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -17,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -68,5 +71,28 @@ fun FollowUsButton(modifier: Modifier = Modifier, showNote: Boolean = true) {
             stringResource(R.string.follow_official), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, lineHeight = 17.sp,
             textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 24.dp),
         )
+    }
+}
+
+/** A slim floating bar on the edge of the screen, always in sight: our pages and the Play page (the owner switches each on in the admin panel). */
+@Composable
+fun BoxScope.SocialDock() {
+    val context = LocalContext.current
+    val links by SocialLinks.links.collectAsState()
+    val shown = links.filter { iconOf(it.platform) != null }
+    if (shown.isEmpty()) return
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+    Column(
+        Modifier.align(Alignment.CenterEnd).offset(y = (-48).dp).shadow(6.dp, shape).background(MaterialTheme.colorScheme.surface, shape).padding(horizontal = 6.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        shown.forEach { link ->
+            Box(
+                Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFBA2A34)).clickable { ExternalBrowser.open(context, link.url) },
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.foundation.Image(painterResource(iconOf(link.platform)!!), contentDescription = link.platform, modifier = Modifier.size(20.dp))
+            }
+        }
     }
 }

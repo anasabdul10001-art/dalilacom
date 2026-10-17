@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1097595707403",
+    "project_id": "dalilcom-489e6",
+    "storage_bucket": "dalilcom-489e6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097595707403:android:1fbe6d159b6988e167a70e",
+        "android_client_info": {
+          "package_name": "com.company.appname"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAi-FllPZvQ2sFklAqrGypCD054uYSjtXM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097595707403:android:da19a9283f20f1e667a70e",
+        "android_client_info": {
+          "package_name": "com.dalilacom.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAi-FllPZvQ2sFklAqrGypCD054uYSjtXM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

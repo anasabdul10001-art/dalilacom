@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
+import com.dalilacom.app.ui.common.SocialDock
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,7 +91,10 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
     val factory = remember { ViewModelFactory(container) }
     var isGuest by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { isGuest = !container.authRepository.hasStoredSession() }
+    LaunchedEffect(Unit) {
+        isGuest = !container.authRepository.hasStoredSession()
+        if (!isGuest) container.profileRepository.me() // fetched ahead, so the profile tab already has the name and photo
+    }
     // the deals tab opens with an encouraging message, until the person asks never to see it again
     var showCard by rememberSaveable { mutableStateOf(false) }
     var dealsIntro by remember { mutableStateOf(false) }
@@ -250,6 +254,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
         }
         // the other tabs: the buttons stand in the corner (the map tabs draw theirs above the locate button)
         if (selectedTab != HomeTab.Discover && selectedTab != HomeTab.Deals) homeButtons(this, 16.dp)
+        SocialDock()
         }
     }
 }

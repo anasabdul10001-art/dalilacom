@@ -15,10 +15,17 @@ import okhttp3.RequestBody.Companion.toRequestBody
 /** The signed-in account's own profile: name, description and photo. */
 class ProfileRepository(private val api: ApiService) {
 
+    /** The profile as last seen: the profile screen draws it at once while the fresh one is on its way (no empty name and photo for a moment). */
+    @Volatile
+    var cached: ProfileDto? = null
+        private set
+
+    fun clearCache() { cached = null }
+
     /** Null when offline or signed out. */
     suspend fun me(): ProfileDto? {
         val response = safeApiCall { api.getProfile() } ?: return null
-        return if (response.isSuccessful) response.body() else null
+        return (if (response.isSuccessful) response.body() else null)?.also { cached = it }
     }
 
     suspend fun update(fullName: String, bio: String): Result<ProfileDto> =
@@ -55,6 +62,6 @@ class ProfileRepository(private val api: ApiService) {
     private suspend fun result(fallback: String, call: suspend () -> retrofit2.Response<ProfileDto>): Result<ProfileDto> {
         val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
-        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, fallback)))
+        return if (response.isSuccessful && body != null) { cached = body; Result.success(body) } else Result.failure(Exception(errorText(response, fallback)))
     }
 }

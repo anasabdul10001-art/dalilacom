@@ -383,6 +383,14 @@ function followUsHtml(withNote) {
   </div>`;
 }
 
+/** A slim floating bar on the edge of the screen, always in sight: our pages, the Play page, and the direct download of the Android app. */
+function socialDockHtml() {
+  if (FAB_HIDDEN.includes(S.screen) || (!SOCIAL_LINKS.length && !APP_DOWNLOAD)) return "";
+  const icon = (href, name, glyph) => `<a class="dock-icon" href="${esc(href)}" target="_blank" rel="noopener" aria-label="${esc(name)}" title="${esc(name)}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">${glyph}</svg></a>`;
+  const apk = APP_DOWNLOAD ? icon("/download.html", t("follow.download"), '<path d="M12 4v10m0 0-4-4m4 4 4-4M5 19h14" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>') : "";
+  return `<nav class="social-dock" aria-label="${esc(t("follow.us"))}">${SOCIAL_LINKS.map((l) => icon(l.url, SOCIAL_NAME[l.platform] || l.platform, SOCIAL_GLYPH[l.platform] || "")).join("")}${apk}</nav>`;
+}
+
 async function render() {
   const el = root();
   if (!el) return;
@@ -390,7 +398,7 @@ async function render() {
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
-  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml();
+  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml();
   wireUpAfterRender();
   placeDiscPopup();
   trDom(el); // translate the rendered Arabic when another language is on
@@ -1117,7 +1125,7 @@ function tabDiscover() {
       ${navBottomHtml()}
       <div class="sheet ${S._sheet === "min" ? "is-min" : ""}" id="sheet">
         <div class="sheet-handle" onpointerdown="sheetDragStart(event)" onclick="sheetToggle()"><span></span></div>
-        <div class="sheet-head">
+        <div class="sheet-head" onpointerdown="sheetDragStart(event)" onclick="sheetHeadTap(event)">
           <strong class="t-full">${esc(deals ? t("deals.sheetTitle") : d.userLoc ? t("sheet.nearby") : t("sheet.directory"))}</strong>
           <strong class="t-min">${esc(t("sheet.directory"))}</strong>
           <span class="badge info sheet-count">${esc(t("sheet.count", { n: list.length }))}</span>
@@ -1139,6 +1147,7 @@ function tabDiscover() {
 
 // The sheet follows the finger and snaps to peek / half / full.
 function sheetDragStart(e) {
+  if (window.innerWidth >= 900) return; // the wide screens have a side panel, no line to pull
   const box = document.getElementById("mapfull");
   const sheet = document.getElementById("sheet");
   if (!box || !sheet) return;
@@ -1166,6 +1175,12 @@ function sheetDragStart(e) {
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
+}
+
+/** A tap on the title bar opens the list again when it is pulled down to the strip (a pull on it moves the sheet like the line above it). */
+function sheetHeadTap(e) {
+  if (S._sheetMoved || e.target.closest(".sheet-collapse")) return;
+  if (S._sheet === "min") { S._sheet = "peek"; applySheetHeight(); }
 }
 
 function sheetToggle() {
