@@ -1,10 +1,10 @@
 import { prisma } from "../prisma";
 
 /**
- * The links of Dalilacom's own social media pages. The owner sets them in the admin panel, each with a switch to show or hide it;
+ * The links of Dalilacom's own social media pages (and of the app's page on Google Play, shown with them). The owner sets them in the admin panel, each with a switch to show or hide it;
  * the website, the Android app and the e-mails show only the ones that are switched on and have an address.
  */
-export const SOCIAL_PLATFORMS = ["facebook", "instagram", "youtube", "tiktok"] as const;
+export const SOCIAL_PLATFORMS = ["facebook", "instagram", "youtube", "tiktok", "googleplay"] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
 
 export interface SocialLink {
@@ -21,6 +21,7 @@ const HOSTS: Record<SocialPlatform, string[]> = {
   instagram: ["instagram.com", "instagr.am"],
   youtube: ["youtube.com", "youtu.be"],
   tiktok: ["tiktok.com"],
+  googleplay: ["play.google.com"],
 };
 
 const DEFAULTS: SocialLink[] = [
@@ -28,6 +29,7 @@ const DEFAULTS: SocialLink[] = [
   { platform: "instagram", url: "", visible: false },
   { platform: "youtube", url: "", visible: false },
   { platform: "tiktok", url: "", visible: false },
+  { platform: "googleplay", url: "", visible: false },
 ];
 
 export class SocialLinkError extends Error {}

@@ -28,6 +28,8 @@ describe("our social media links (admin panel)", () => {
     expect(() => normalizeSocialUrl("instagram", "https://evil.example/instagram.com")).toThrow();
     expect(() => normalizeSocialUrl("facebook", "javascript:alert(1)")).toThrow();
     expect(() => normalizeSocialUrl("tiktok", "https://nottiktok.com/x")).toThrow();
+    expect(normalizeSocialUrl("googleplay", "play.google.com/store/apps/details?id=com.dalilacom.app")).toBe("https://play.google.com/store/apps/details?id=com.dalilacom.app");
+    expect(() => normalizeSocialUrl("googleplay", "https://evil.example/play.google.com")).toThrow();
   });
 
   it("only the admin can change them, and the public list shows only the ones switched on", async () => {

@@ -834,8 +834,8 @@ async function setAppVisible(visible) {
 }
 
 // ---- Social media links ----
-const SOCIAL_NAMES = { facebook: 'فيسبوك', instagram: 'إنستغرام', youtube: 'يوتيوب', tiktok: 'تيك توك' };
-const SOCIAL_HINTS = { facebook: 'https://www.facebook.com/اسم_الصفحة', instagram: 'https://www.instagram.com/اسم_الحساب', youtube: 'https://www.youtube.com/@اسم_القناة', tiktok: 'https://www.tiktok.com/@اسم_الحساب' };
+const SOCIAL_NAMES = { facebook: 'فيسبوك', instagram: 'إنستغرام', youtube: 'يوتيوب', tiktok: 'تيك توك', googleplay: 'جوجل بلاي (تحميل التطبيق)' };
+const SOCIAL_HINTS = { facebook: 'https://www.facebook.com/اسم_الصفحة', instagram: 'https://www.instagram.com/اسم_الحساب', youtube: 'https://www.youtube.com/@اسم_القناة', tiktok: 'https://www.tiktok.com/@اسم_الحساب', googleplay: 'https://play.google.com/store/apps/details?id=...' };
 async function loadSocialLinks() {
   const box = document.getElementById('social-card');
   const r = await api('GET', '/admin/social-links');

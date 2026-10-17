@@ -339,11 +339,12 @@ function lookAndLanguageHtml() {
 
 // Our own social media pages: the owner sets them (and switches each on or off) in the admin panel; until they load, Facebook shows.
 let SOCIAL_LINKS = [{ platform: "facebook", url: "https://www.facebook.com/Dalilacomsy" }];
-const SOCIAL_NAME = { facebook: "Facebook", instagram: "Instagram", youtube: "YouTube", tiktok: "TikTok" };
+const SOCIAL_NAME = { facebook: "Facebook", instagram: "Instagram", youtube: "YouTube", tiktok: "TikTok", googleplay: "Google Play" };
 const SOCIAL_GLYPH = {
   facebook: '<path fill="#fff" d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.6-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3z"/>',
   instagram: '<rect x="5.2" y="5.2" width="13.6" height="13.6" rx="4.1" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="16.3" cy="7.7" r="1.05" fill="#fff"/>',
   youtube: '<rect x="3.4" y="6.4" width="17.2" height="11.2" rx="3.2" fill="#fff"/><path d="M10.2 9.5v5l4.4-2.5z" fill="#ba2a34"/>',
+  googleplay: '<path fill="#fff" d="M7 4.6v14.8a.7.7 0 0 0 1 .6l11.2-7.1a.7.7 0 0 0 0-1.2L8 4a.7.7 0 0 0-1 .6z"/>',
   tiktok: '<path d="M13.3 4.6v10.1a2.9 2.9 0 1 1-2.9-2.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.3 4.6c.3 2.1 1.7 3.6 4 3.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
 };
 let APP_DOWNLOAD = false; // the owner switched the direct download of the Android app on (admin panel)

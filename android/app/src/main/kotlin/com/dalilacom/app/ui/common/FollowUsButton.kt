@@ -41,6 +41,7 @@ private fun iconOf(platform: String): Int? = when (platform) {
     "instagram" -> R.drawable.ic_social_instagram
     "youtube" -> R.drawable.ic_social_youtube
     "tiktok" -> R.drawable.ic_social_tiktok
+    "googleplay" -> R.drawable.ic_social_googleplay
     else -> null
 }
 
