@@ -1564,3 +1564,5 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .sheet.is-min .t-min { display: inline; }
 .sheet.is-min .sheet-handle { padding: 8px 0 4px; }
 .sheet.is-min .sheet-head { padding-bottom: 4px; }
+
+.chip-links { font-weight: 700; color: #ba2a34; }

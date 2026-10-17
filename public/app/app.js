@@ -1098,11 +1098,11 @@ function tabDiscover() {
           ${suggestHtml(d)}
         </div>
         <div class="float-chips">
+          <button class="chip chip-links" onclick="openLinks()">🔗 ${esc(t("follow.us"))}</button>
           <button class="chip ${!d.categoryId && !d.openNow && (deals || !d.discountsOnly) ? "active" : ""}" onclick="onDiscoverReset()">${esc(t("filter.all"))}</button>
           <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">${esc(t("filter.openNow"))}</button>
           ${deals ? "" : `<button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">${esc(t("filter.discounts"))}</button>`}
           ${categoryChipsHtml(d)}
-          <button class="chip" onclick="openLinks()">🔗 ${esc(t("follow.us"))}</button>
         </div>
         ${d.locError ? `<div class="float-note">📍 ${esc(d.locError)} <button class="chip" style="margin-top:6px" onclick="requestDiscoverLocation(true)">${esc(t("loc.retry"))}</button></div>` : ""}
       </div>
