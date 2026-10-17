@@ -1566,3 +1566,14 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .sheet.is-min .sheet-head { padding-bottom: 4px; }
 
 .chip-links { font-weight: 700; color: #ba2a34; }
+
+/* wide screens: the results are a panel on the side. Pulled down it becomes a thin strip at the bottom corner that only says
+   "Places directory", and the map spreads under it so the whole map shows. */
+@media (min-width: 900px) {
+  .mapfull .sheet.is-min { top: auto; bottom: 14px; inset-inline-start: 14px; width: 392px; height: 52px !important; padding-top: 0; border-radius: 16px; box-shadow: 0 6px 22px -6px rgba(0, 0, 0, 0.45); overflow: hidden; }
+  .mapfull .sheet.is-min .sheet-head { padding: 0 8px 0 18px; height: 52px; }
+  .mapfull.sheet-min #discover-map-slot { inset-inline-start: 0; }
+  .mapfull.sheet-min .map-fab { inset-inline-start: 428px; }
+  html[dir="rtl"] .mapfull.sheet-min .area-btn { left: 50%; }
+  html[dir="ltr"] .mapfull.sheet-min .area-btn { left: 50%; }
+}

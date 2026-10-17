@@ -1024,7 +1024,9 @@ function sheetHeights() {
   // the thin strip sits just above the bottom tab bar (which covers the lowest part of the sheet)
   const map = document.getElementById("mapfull");
   const bar = document.querySelector(".tabbar");
-  const covered = map && bar ? Math.max(0, map.getBoundingClientRect().bottom - bar.getBoundingClientRect().top) : 77;
+  // (on a wide screen the tab bar is a rail at the side and covers nothing of the sheet)
+  const barTop = bar ? bar.getBoundingClientRect().top : 0;
+  const covered = map && bar && barTop > window.innerHeight / 2 ? Math.max(0, map.getBoundingClientRect().bottom - barTop) : bar ? 0 : 77;
   return { min: Math.round(covered) + 58, peek: 232, half: Math.round(H * 0.55), full: Math.max(320, H - 150) };
 }
 
@@ -1082,7 +1084,7 @@ function tabDiscover() {
   const sheetPx = sheetHeights()[S._sheet || "peek"];
   return `
     ${linksModalHtml()}
-    <div class="mapfull ${S._route ? "routing" : ""} ${S._route && S._route.phase === "navigating" ? "navigating" : ""}" id="mapfull" style="--sheet-h:${sheetPx}px">
+    <div class="mapfull ${S._sheet === "min" ? "sheet-min" : ""} ${S._route ? "routing" : ""} ${S._route && S._route.phase === "navigating" ? "navigating" : ""}" id="mapfull" style="--sheet-h:${sheetPx}px">
       <div id="discover-map-slot"></div>
 
       <div class="map-top">
@@ -1177,6 +1179,8 @@ function applySheetHeight() {
   if (box) box.style.setProperty("--sheet-h", sheetHeights()[S._sheet || "peek"] + "px");
   const sheet = document.getElementById("sheet");
   if (sheet) sheet.classList.toggle("is-min", S._sheet === "min");
+  if (box) box.classList.toggle("sheet-min", S._sheet === "min");
+  setTimeout(() => { if (S._map) S._map.invalidateSize(); }, 320);
 }
 
 /** The arrow in the title row: down to the thin strip (only "Places directory" stays), and up again from there. */
