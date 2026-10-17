@@ -1035,6 +1035,20 @@ function hideDealsIntroForever() {
   dismissDealsIntro();
 }
 
+/** The card with our pages (social icons), the app download and the essential pages: opened by the "Follow us" chip on the map, so a visitor with no account sees them. */
+function openLinks() { S._linksOpen = true; render(); }
+function closeLinks() { S._linksOpen = false; render(); }
+function linksModalHtml() {
+  if (!S._linksOpen) return "";
+  return `<div class="deals-intro" onclick="closeLinks()">
+    <div class="deals-box" onclick="event.stopPropagation()">
+      ${followUsHtml(true)}
+      ${legalLinksHtml()}
+      <button class="btn" onclick="closeLinks()">${esc(t("follow.close"))}</button>
+    </div>
+  </div>`;
+}
+
 function dealsIntroHtml() {
   if (!S._dealsIntro) return "";
   return `
@@ -1063,6 +1077,7 @@ function tabDiscover() {
   S._visible = list;
   const sheetPx = sheetHeights()[S._sheet || "peek"];
   return `
+    ${linksModalHtml()}
     <div class="mapfull ${S._route ? "routing" : ""} ${S._route && S._route.phase === "navigating" ? "navigating" : ""}" id="mapfull" style="--sheet-h:${sheetPx}px">
       <div id="discover-map-slot"></div>
 
@@ -1083,6 +1098,7 @@ function tabDiscover() {
           <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">${esc(t("filter.openNow"))}</button>
           ${deals ? "" : `<button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">${esc(t("filter.discounts"))}</button>`}
           ${categoryChipsHtml(d)}
+          <button class="chip" onclick="openLinks()">🔗 ${esc(t("follow.us"))}</button>
         </div>
         ${d.locError ? `<div class="float-note">📍 ${esc(d.locError)} <button class="chip" style="margin-top:6px" onclick="requestDiscoverLocation(true)">${esc(t("loc.retry"))}</button></div>` : ""}
       </div>
