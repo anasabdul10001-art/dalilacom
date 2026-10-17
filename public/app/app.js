@@ -346,6 +346,15 @@ const SOCIAL_GLYPH = {
   youtube: '<rect x="3.4" y="6.4" width="17.2" height="11.2" rx="3.2" fill="#fff"/><path d="M10.2 9.5v5l4.4-2.5z" fill="#ba2a34"/>',
   tiktok: '<path d="M13.3 4.6v10.1a2.9 2.9 0 1 1-2.9-2.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.3 4.6c.3 2.1 1.7 3.6 4 3.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
 };
+let APP_DOWNLOAD = false; // the owner switched the direct download of the Android app on (admin panel)
+async function loadAppDownloadLink() {
+  try {
+    const res = await fetch(API_BASE + "/app-download");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!!data.available !== APP_DOWNLOAD) { APP_DOWNLOAD = !!data.available; render(); }
+  } catch (e) { /* the link simply stays hidden */ }
+}
 async function loadSocialLinks() {
   try {
     const res = await fetch(API_BASE + "/social-links");
@@ -363,11 +372,12 @@ function legalLinksHtml() {
 
 /** Small round icons to our pages (the ones switched on in the admin panel), with the line that other pages with the name are not ours. */
 function followUsHtml(withNote) {
-  if (!SOCIAL_LINKS.length) return "";
+  if (!SOCIAL_LINKS.length && !APP_DOWNLOAD) return "";
   const icons = SOCIAL_LINKS.map((l) => `<a class="follow-icon" href="${esc(l.url)}" target="_blank" rel="noopener" aria-label="${esc(SOCIAL_NAME[l.platform] || l.platform)}" title="${esc(SOCIAL_NAME[l.platform] || l.platform)}"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">${SOCIAL_GLYPH[l.platform] || ""}</svg></a>`).join("");
   return `<div class="follow-us">
     <span class="follow-label">${esc(t("follow.us"))}</span>
     <div class="follow-icons">${icons}</div>
+    ${APP_DOWNLOAD ? `<a class="follow-apk" href="/download.html" target="_blank" rel="noopener">${esc(t("follow.download"))}</a>` : ""}
     ${withNote ? `<small>${esc(t("follow.official"))}</small>` : ""}
   </div>`;
 }
@@ -6396,6 +6406,7 @@ function bootMetaReturn() {
 loadMarket();
 captureJoin();
 loadSocialLinks();
+loadAppDownloadLink();
 
 bootSocialReturn().then((social) => {
   if (social) return;

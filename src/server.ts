@@ -36,6 +36,7 @@ import { socialRouter } from "./routes/social.routes";
 import { referralRouter } from "./routes/referral.routes";
 import { legalRouter } from "./routes/legal.routes";
 import { getVisibleSocialLinks } from "./services/socialLinks.service";
+import { getAppDownloadInfo, getDownloadableApk } from "./services/appRelease.service";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { localizeResponses } from "./lib/localize";
@@ -54,7 +55,7 @@ app.use((req, res, next) => {
   let wanted = "";
   try { wanted = new URL(base).host.toLowerCase(); } catch { return next(); }
   if (!wanted || wanted === host) return next();
-  const isPage = /^\/(app(\/.*)?|privacy\.html|terms\.html|refund\.html|shipping\.html|about\.html|data-deletion\.html|reset-password\.html|index\.html)?$/.test(req.path) || req.path === adminPagePath();
+  const isPage = /^\/(app(\/.*)?|privacy\.html|terms\.html|refund\.html|shipping\.html|about\.html|download\.html|data-deletion\.html|reset-password\.html|index\.html)?$/.test(req.path) || req.path === adminPagePath();
   const isSocialStart = /^\/auth\/social\/[a-z]+\/start$/.test(req.path);
   if (!isPage && !isSocialStart) return next();
   return res.redirect(302, base.replace(/\/+$/, "") + req.originalUrl);
@@ -120,6 +121,24 @@ app.get("/sitemap.xml", async (_req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+// The Android app as a file, for people whose phones cannot use Google Play (Syria). The owner uploads each version in the admin panel
+// (it lives in the database); these answer only while the link is switched on there.
+app.get("/app-download", async (_req, res) => {
+  const info = await getAppDownloadInfo();
+  res.json({ available: info.hasFile && info.visible, version: info.version ?? null, sizeBytes: info.sizeBytes ?? null, sha256: info.sha256 ?? null, uploadedAt: info.uploadedAt ?? null });
+});
+app.get("/download/dalilacom.apk", async (_req, res) => {
+  const file = await getDownloadableApk();
+  if (!file) return res.status(404).type("text/plain").send("Not available");
+  res.set({
+    "Content-Type": "application/vnd.android.package-archive",
+    "Content-Disposition": `attachment; filename="${file.fileName}"`,
+    "Content-Length": String(file.data.length),
+    "Cache-Control": "no-store",
+    "X-Robots-Tag": "noindex",
+  });
+  res.end(Buffer.from(file.data));
 });
 app.use(express.static(path.join(__dirname, "..", "public")));
 

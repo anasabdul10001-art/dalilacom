@@ -15,6 +15,7 @@ import { discountScopeInfo, discountState } from "../lib/discounts";
 import { sniffImageMime } from "../lib/image";
 import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
+import { AppReleaseError, getAppDownloadInfo, MAX_APK_BYTES, saveAppRelease, setAppDownloadVisible } from "../services/appRelease.service";
 import { getSocialLinks, saveSocialLinks, SOCIAL_PLATFORMS, SocialLinkError } from "../services/socialLinks.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
 import { aiProviderStatus, aiTotals, aiUsage, testProvider } from "../services/ai.service";
@@ -194,6 +195,44 @@ adminRouter.put("/social-links", route(async (req, res) => {
     }
     throw err;
   }
+}));
+
+/* ---------------- the Android app as a file on the website: upload each new version here, switch the link on or off ---------------- */
+
+adminRouter.get("/app-download", route(async (_req, res) => {
+  res.json(await getAppDownloadInfo());
+}));
+
+// The file is sent as it is (not JSON): PUT /admin/app-download/file?version=0.1.3 with the .apk as the body.
+adminRouter.put("/app-download/file", express.raw({ type: () => true, limit: MAX_APK_BYTES }), route(async (req, res) => {
+  const version = typeof req.query.version === "string" ? req.query.version : "";
+  const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+  try {
+    await saveAppRelease(body, version);
+  } catch (err) {
+    if (err instanceof AppReleaseError) {
+      const text: Record<string, string> = {
+        BAD_SIZE: "The file is empty or too big",
+        NOT_APK: "This file is not an Android app (.apk)",
+        BAD_VERSION: "Write the version like 0.1.3",
+      };
+      return sendError(res, 400, "BAD_REQUEST", text[err.message] ?? "The file was refused");
+    }
+    throw err;
+  }
+  res.json(await getAppDownloadInfo());
+}));
+
+adminRouter.put("/app-download/visible", route(async (req, res) => {
+  const parsed = z.object({ visible: z.boolean() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    await setAppDownloadVisible(parsed.data.visible);
+  } catch (err) {
+    if (err instanceof AppReleaseError) return sendError(res, 400, "BAD_REQUEST", "Upload the app file first");
+    throw err;
+  }
+  res.json(await getAppDownloadInfo());
 }));
 
 /* ---------------- marketers: people who bring others to Dalilacom through a referral link ---------------- */

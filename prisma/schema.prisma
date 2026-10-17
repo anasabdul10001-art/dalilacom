@@ -1679,3 +1679,15 @@ model MarketerRequest {
   @@index([userId])
   @@index([status])
 }
+
+/// The Android app offered for download from the website (people without Google Play). The owner uploads each new version in the
+/// admin panel; the newest row is the one people get. The file lives in the database because the server disk is wiped on every deploy.
+model AppRelease {
+  id        String   @id @default(uuid())
+  version   String
+  fileName  String
+  sizeBytes Int
+  sha256    String
+  data      Bytes
+  createdAt DateTime @default(now())
+}

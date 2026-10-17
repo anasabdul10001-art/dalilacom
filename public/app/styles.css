@@ -1550,3 +1550,6 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .follow-icons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .follow-icon { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: #ba2a34; text-decoration: none; }
 .follow-icon:hover { filter: brightness(1.12); }
+
+.follow-apk { color: #ba2a34; font-size: 13px; font-weight: 700; text-decoration: none; }
+.follow-apk:hover { text-decoration: underline; }

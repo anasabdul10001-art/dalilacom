@@ -105,6 +105,7 @@
     <div class="nav-item" data-section="pcats" onclick="showSection('pcats'); loadProductCats()">🏷️ تصنيفات المنتجات</div>
     <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()">🛡️ مراجعة المنتجات <span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="marketers" onclick="showSection('marketers'); loadMarketers()">📣 المسوّقون</div>
+    <div class="nav-item" data-section="appfile" onclick="showSection('appfile'); loadAppDownload()">📱 تحميل التطبيق (APK)</div>
     <div class="nav-item" data-section="social" onclick="showSection('social'); loadSocialLinks()">🔗 روابط التواصل الاجتماعي</div>
     <div class="nav-item" data-section="launch" onclick="showSection('launch'); loadLaunchReset()">🚀 تهيئة الإطلاق</div>
     <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()">💡 اقتراحات المهن <span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
@@ -496,6 +497,12 @@
     </div>
 
     <!-- MARKETERS -->
+    <div class="section" id="section-appfile" style="display:none">
+      <h2>تحميل التطبيق من الموقع (APK)</h2>
+      <p class="subtitle">ارفع هون ملف التطبيق (.apk) كل ما تطلع نسخة جديدة. الناس اللي ما بيفتح عندهم جوجل بلاي بينزّلوه من صفحة <b>dalilacom.com/download.html</b>. الملف بيضل محفوظ حتى لو أعاد السيرفر التشغيل. زر «إظهار» بيشغّل أو بيطفّي الرابط بكل الأماكن.</p>
+      <div class="card" id="appfile-card">جارٍ التحميل…</div>
+    </div>
+
     <div class="section" id="section-social" style="display:none">
       <h2>روابط التواصل الاجتماعي</h2>
       <p class="subtitle">حط رابط صفحتك على كل منصة، وشغّل زر «إظهار» للمنصات اللي بدك تظهر. اللي بيكون مشغّل وعليه رابط بيظهر كأيقونة صغيرة بالموقع وبتطبيق الأندرويد وبأسفل الإيميلات. وإذا طفّيته بيختفي من كل الأماكن فورًا.</p>
@@ -755,6 +762,55 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- The Android app as a file on the website ----
+async function loadAppDownload() {
+  const box = document.getElementById('appfile-card');
+  const r = await api('GET', '/admin/app-download');
+  if (!r.ok) { box.textContent = errText(r.data, 'تعذّر التحميل'); return; }
+  const d = r.data;
+  const when = d.uploadedAt ? new Date(d.uploadedAt).toLocaleString('ar') : '';
+  box.innerHTML = `
+    <p><b>الملف الحالي:</b> ${d.hasFile ? `النسخة <b>${esc(d.version)}</b> · ${(d.sizeBytes / 1048576).toFixed(1)} MB · انرفع ${esc(when)}<br><span class="muted" dir="ltr" style="word-break:break-all">SHA-256: ${esc(d.sha256)}</span>` : 'ما في ملف مرفوع بعد'}</p>
+    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="app-visible" ${d.visible ? 'checked' : ''} ${d.hasFile ? '' : 'disabled'} onchange="setAppVisible(this.checked)" style="width:20px;height:20px"> <span>إظهار رابط التحميل على الموقع</span></label>
+    <hr style="margin:16px 0;border:0;border-top:1px solid #ead9d6">
+    <h3>رفع نسخة جديدة</h3>
+    <div class="grid2">
+      <div class="field"><label>رقم النسخة (مثلًا 0.1.3)</label><input id="app-version" dir="ltr" placeholder="0.1.3"></div>
+      <div class="field"><label>ملف التطبيق (.apk)</label><input id="app-file" type="file" accept=".apk,application/vnd.android.package-archive"></div>
+    </div>
+    <button onclick="uploadAppFile()" id="app-upload-btn">رفع الملف</button> <span id="app-msg" class="muted"></span>
+    <p class="subtitle">الملف الجديد بيحل مكان القديم فورًا. الحجم الأقصى 80 ميغا.</p>`;
+}
+async function uploadAppFile() {
+  const msg = document.getElementById('app-msg');
+  const btn = document.getElementById('app-upload-btn');
+  const file = document.getElementById('app-file').files[0];
+  const version = document.getElementById('app-version').value.trim();
+  if (!version) { msg.textContent = 'اكتب رقم النسخة أول'; return; }
+  if (!file) { msg.textContent = 'اختر ملف التطبيق أول'; return; }
+  btn.disabled = true;
+  msg.textContent = 'عم يرفع… ما تسكّر الصفحة';
+  try {
+    const res = await fetch('/admin/app-download/file?version=' + encodeURIComponent(version), {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + state.token, 'Content-Type': 'application/octet-stream' },
+      body: file,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { msg.textContent = errText(data, 'فشل الرفع'); btn.disabled = false; return; }
+    await loadAppDownload();
+    document.getElementById('app-msg').textContent = 'انرفع ✅ — فعّل «إظهار» ليبين الرابط للناس';
+  } catch (e) {
+    msg.textContent = 'انقطع الاتصال أثناء الرفع، جرّب من جديد';
+    btn.disabled = false;
+  }
+}
+async function setAppVisible(visible) {
+  const r = await api('PUT', '/admin/app-download/visible', { visible });
+  if (!r.ok) { alert(errText(r.data, 'فشل')); }
+  loadAppDownload();
 }
 
 // ---- Social media links ----
