@@ -10,6 +10,7 @@ import { DEFAULT_LANGUAGE, resolveLanguage } from "../lib/languages";
 import { translateText } from "../i18n";
 import { generateRawToken, hashToken } from "../services/token.service";
 import { emailService } from "../services/email.service";
+import { verificationEmailHtml, resetEmailHtml, emailChangeConfirmHtml, emailChangeAlertHtml, emailChangedHtml } from "../services/emailTemplates";
 import { logSecurityEvent } from "../services/securityEvent.service";
 import {
   forgotPasswordRateLimiter,
@@ -45,6 +46,7 @@ export async function sendVerificationEmail(to: string, rawToken: string, lang: 
       to,
       subject: translateText("تأكيد بريدك الإلكتروني — دليلكم", lang),
       text: translateText(`مرحبًا،\n\nلتفعيل حسابك على دليلكم اضغط الرابط التالي (صالح لمدة ${EMAIL_VERIFICATION_TTL_MS / 3_600_000} ساعة):\n${link}\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة.`, lang),
+      html: verificationEmailHtml(lang, link, EMAIL_VERIFICATION_TTL_MS / 3_600_000),
     });
   } catch (err) {
     // Verification email failing to send must never fail registration itself — the user can
@@ -61,6 +63,7 @@ async function sendResetEmail(to: string, rawToken: string, lang: string = DEFAU
       to,
       subject: translateText("إعادة تعيين كلمة السر — دليلكم", lang),
       text: translateText(`مرحبًا،\n\nطلب أحدهم إعادة تعيين كلمة سر حسابك على دليلكم. إذا كنت أنت، اضغط الرابط التالي (صالح لمدة ${PASSWORD_RESET_TTL_MS / 60_000} دقيقة):\n${link}\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة — كلمة سرك لن تتغيّر.`, lang),
+      html: resetEmailHtml(lang, link, PASSWORD_RESET_TTL_MS / 60_000),
     });
   } catch (err) {
     console.error("Failed to send password reset email:", err instanceof Error ? err.message : err);
@@ -305,12 +308,14 @@ async function sendEmailChangeMails(oldEmail: string, newEmail: string, rawToken
       to: newEmail,
       subject: translateText("تأكيد بريدك الإلكتروني الجديد — دليلكم", lang),
       text: translateText(`مرحبًا،\n\nطلبت تغيير بريد حسابك على دليلكم إلى هذا العنوان. لتأكيد التغيير اضغط الرابط التالي (صالح لمدة ساعة):\n${link}\n\nإذا لم تطلب هذا، تجاهل هذه الرسالة.`, lang),
+      html: emailChangeConfirmHtml(lang, link),
     });
     // The old address is told too: if it was not the owner who asked, they still have time to react.
     await emailService.send({
       to: oldEmail,
       subject: translateText("تنبيه أمني — طلب تغيير بريد حسابك", lang),
       text: translateText(`مرحبًا،\n\nوصلنا طلب لتغيير بريد حسابك على دليلكم إلى ${newEmail}. إذا كنت أنت فلا تحتاج لأي إجراء. إذا لم تكن أنت، غيّر كلمة سرك فورًا.`, lang),
+      html: emailChangeAlertHtml(lang, newEmail),
     });
   } catch (err) {
     console.error("Failed to send email-change mails:", err instanceof Error ? err.message : err);
@@ -363,6 +368,7 @@ authRouter.get("/confirm-email-change", verifyEmailRateLimiter, async (req, res)
           to: record.user.email,
           subject: translateText("تم تغيير بريد حسابك", resolveLanguage(req)),
           text: translateText(`تم تغيير بريد حسابك على دليلكم إلى ${record.newEmail}. إذا لم تكن أنت، تواصل معنا فورًا على info@dalilacom.com.`, resolveLanguage(req)),
+          html: emailChangedHtml(resolveLanguage(req), record.newEmail),
         });
       } catch {
         /* best-effort */

@@ -1,6 +1,7 @@
 import { NotificationMode, NotificationType, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { emailService } from "./email.service";
+import { notificationEmailHtml } from "./emailTemplates";
 import { sendPushToUser } from "./push.service";
 import { DEFAULT_LANGUAGE } from "../lib/languages";
 import { translateText } from "../i18n";
@@ -78,7 +79,7 @@ export async function notify(input: NotifyInput): Promise<NotifyResult> {
   let emailed = false;
   try {
     if (recipient?.email && input.email !== false) {
-      await emailService.send({ to: recipient.email, subject: title, text: body ?? title });
+      await emailService.send({ to: recipient.email, subject: title, text: body ?? title, html: notificationEmailHtml(lang, title, body ?? undefined) });
       emailed = true;
     }
   } catch {
