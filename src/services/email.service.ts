@@ -45,6 +45,39 @@ class SmtpEmailService implements EmailService {
   }
 }
 
-// Pluggable by design (section: EmailService abstraction) — swapping to Resend/SendGrid/SES later
-// only means implementing EmailService and changing this one line, never touching auth logic.
-export const emailService: EmailService = process.env.SMTP_HOST ? new SmtpEmailService() : new ConsoleEmailService();
+/**
+ * Resend through its web API (HTTPS). The free Render plan blocks the SMTP ports (25, 465, 587), so sending through
+ * smtp.resend.com times out there; the same account and the same key work over HTTPS.
+ */
+class ResendEmailService implements EmailService {
+  constructor(private apiKey: string, private from: string) {}
+
+  async send(msg: EmailMessage): Promise<void> {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: this.from, to: [msg.to], subject: msg.subject, text: msg.text, html: msg.html }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) throw new Error(`Resend answered ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  }
+}
+
+/** The key for Resend's web API: RESEND_API_KEY, or the SMTP password when the SMTP host is Resend's (same key). */
+function resendKey(): string | undefined {
+  if (process.env.RESEND_API_KEY) return process.env.RESEND_API_KEY;
+  if ((process.env.SMTP_HOST ?? "").toLowerCase() === "smtp.resend.com" && process.env.SMTP_PASS) return process.env.SMTP_PASS;
+  return undefined;
+}
+
+function createEmailService(): EmailService {
+  const key = resendKey();
+  if (key) return new ResendEmailService(key, process.env.SMTP_FROM || process.env.RESEND_FROM || "no-reply@dalilacom.com");
+  if (process.env.SMTP_HOST) return new SmtpEmailService();
+  return new ConsoleEmailService();
+}
+
+// Pluggable by design (section: EmailService abstraction) — swapping to SendGrid/SES later
+// only means implementing EmailService and changing createEmailService, never touching auth logic.
+export const emailService: EmailService = createEmailService();
+export { ResendEmailService };
