@@ -89,20 +89,24 @@ describe("a shop that cannot find its profession", () => {
 
   it("the admin accepts it as a new profession (renamed, translated, placed) and the shop moves into it", async () => {
     const section = await parent("قسم رئيسي");
-    const s = await shopWithSuggestion(section.id, "كوتش ملاكمة");
+    // words that are new on every run: earlier runs leave their professions in the test database, and the search shows only the best few
+    const unique = Math.random().toString(36).slice(2, 8).replace(/[0-9]/g, "x");
+    const written = `كوتش ملاكمة${unique}`;
+    const captain = `كابتن ملاكمة${unique}`;
+    const s = await shopWithSuggestion(section.id, written);
     const row = (await prisma.categorySuggestion.findFirst({ where: { merchantId: s.id } }))!;
     const a = await admin();
-    const res = await request(app).post(`/admin/category-suggestions/${row.id}/approve`).set(a.auth).send({ nameAr: "مدرب ملاكمة", nameEn: "Boxing coach", parentId: section.id, icon: "🥊", synonyms: ["كابتن ملاكمة"] });
+    const res = await request(app).post(`/admin/category-suggestions/${row.id}/approve`).set(a.auth).send({ nameAr: "مدرب ملاكمة", nameEn: "Boxing coach", parentId: section.id, icon: "🥊", synonyms: [captain] });
     expect(res.status).toBe(200);
     const created = await prisma.category.findUnique({ where: { id: res.body.id }, include: { translations: true } });
     expect(created).toMatchObject({ name: "مدرب ملاكمة", parentId: section.id });
     expect(created!.translations.find((t) => t.lang === "en")!.name).toBe("Boxing coach");
-    expect(created!.translations.find((t) => t.lang === "ar")!.synonyms).toEqual(expect.arrayContaining(["كوتش ملاكمة", "كابتن ملاكمة"]));
+    expect(created!.translations.find((t) => t.lang === "ar")!.synonyms).toEqual(expect.arrayContaining([written, captain]));
     expect((await prisma.merchantProfile.findUnique({ where: { id: s.id } }))!.categoryId).toBe(created!.id);
     expect(await prisma.categorySuggestion.findUnique({ where: { id: row.id } })).toMatchObject({ status: "APPROVED", categoryId: created!.id });
     expect(await prisma.notification.count({ where: { userId: s.owner.id, title: "انضافت مهنتك ✅" } })).toBe(1);
     // it can be found by what the shop wrote and by the new name
-    const found = (await request(app).get("/categories/search").query({ q: "كابتن ملاكمة" })).body;
+    const found = (await request(app).get("/categories/search").query({ q: captain })).body;
     expect(JSON.stringify(found)).toContain(created!.id);
     // handled once
     expect((await request(app).post(`/admin/category-suggestions/${row.id}/approve`).set(a.auth).send({ nameAr: "مرة تانية" })).status).toBe(409);

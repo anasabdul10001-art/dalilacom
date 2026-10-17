@@ -76,7 +76,7 @@ ${preheader}
 <tr><td align="center" style="padding:24px 12px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;font-family:Tahoma,'Segoe UI',Arial,sans-serif;">
     <tr><td align="center" bgcolor="${RED}" style="background:${RED};padding:26px 20px;">
-      <img src="${base}/brand/logo-full-horizontal-white.png" alt="DALILACOM" height="46" style="height:46px;width:auto;display:block;border:0;">
+      <img src="${base}/brand/${mail.lang === "ar" ? "logo-full-horizontal-white" : "logo-en-horizontal-white"}.png" alt="DALILACOM" height="46" style="height:46px;width:auto;display:block;border:0;">
     </td></tr>
     <tr><td dir="${dir}" style="padding:30px 28px 10px;text-align:${align};">
       <h1 style="margin:0 0 16px;font-size:24px;line-height:1.4;color:${RED};">${esc(t(mail.heading))}</h1>

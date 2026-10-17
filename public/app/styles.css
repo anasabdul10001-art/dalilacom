@@ -1586,3 +1586,9 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 
 /* on a phone the sheet is pulled by the line and the title bar: no arrow (the wide screens, which have no line, keep it) */
 @media (max-width: 899px) { .sheet-head { touch-action: none; } .sheet-collapse { display: none; } }
+
+/* the English logo is wide: give it width, not height, where the Arabic one is tall */
+html[lang="en"] .auth-logo { width: 240px !important; max-width: 82% !important; height: auto !important; }
+html[lang="en"] .brand-slide .bs-logo img { height: auto; width: min(300px, 70vw); }
+html[lang="en"] .invite-slide .bs-logo img { height: auto; width: min(260px, 64vw); }
+html[lang="en"] .ph-logo { height: auto; width: auto; max-height: 44px; max-width: 60%; }

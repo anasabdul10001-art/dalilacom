@@ -365,6 +365,11 @@ async function loadSocialLinks() {
   } catch (e) { /* the icons simply stay as they are */ }
 }
 
+/** The logo in the language of the screen: the Arabic lettering, or the English logo (wide) for every other language. kind: vertical | horizontal; tone: color | white | black. */
+function logoSrc(kind, tone) {
+  return LANG === "ar" ? `/brand/logo-full-${kind}-${tone}.png` : `/brand/logo-en-horizontal-${tone}.png`;
+}
+
 /** The essential pages (about, privacy, terms, returns, shipping): small links at the bottom of the main screens. */
 function legalLinksHtml() {
   const L = [["about", "legal.about"], ["privacy", "legal.privacy"], ["terms", "legal.terms"], ["refund", "legal.refund"], ["shipping", "legal.shipping"]];
@@ -671,7 +676,7 @@ async function doLogin() {
 
 /** The full logo on the sign-in pages: the dark-lettered one on light themes, the white-lettered one on the dark theme (CSS picks). */
 function authLogoHtml() {
-  return `<img class="auth-logo on-light" src="/brand/logo-full-vertical-color.png" alt="DALILACOM" /><img class="auth-logo on-dark" src="/brand/logo-full-vertical-white.png" alt="" aria-hidden="true" />`;
+  return `<img class="auth-logo on-light" src="${logoSrc("vertical", "color")}" alt="DALILACOM" /><img class="auth-logo on-dark" src="${logoSrc("vertical", "white")}" alt="" aria-hidden="true" />`;
 }
 
 function screenRegister() {
@@ -2544,7 +2549,7 @@ function storeSlider(st, home) {
       ${list.map((b, i) => b.invite ? `
         <button class="store-slide invite-slide ${i === idx ? "on" : ""}" onclick="storeBannerGo(${i})">
           <span class="bs-orb o1"></span><span class="bs-orb o2"></span>
-          <span class="bs-logo"><img src="/brand/logo-full-vertical-white.png" alt="" aria-hidden="true" /></span>
+          <span class="bs-logo"><img src="${logoSrc("vertical", "white")}" alt="" aria-hidden="true" /></span>
           <span class="bs-text">
             <h1>${esc(t("ads.inviteT"))}<br><em>${esc(t("ads.inviteS"))}</em></h1>
             <span class="btn-pill">${esc(t("ads.bookBanner"))}</span>
@@ -2552,7 +2557,7 @@ function storeSlider(st, home) {
         </button>` : b.brand ? `
         <button class="store-slide brand-slide ${i === idx ? "on" : ""}" onclick="storeBannerGo(${i})" aria-label="DALILACOM">
           <span class="bs-orb o1"></span><span class="bs-orb o2"></span><span class="bs-orb o3"></span>
-          <span class="bs-logo"><img src="/brand/logo-full-vertical-white.png" alt="DALILACOM" /></span>
+          <span class="bs-logo"><img src="${logoSrc("vertical", "white")}" alt="DALILACOM" /></span>
           <span class="bs-text">
             <h1>${esc(t("store.brandTag1"))}<br><em>${esc(t("store.brandTag2"))}</em></h1>
             <span class="btn-pill">${esc(t("store.shopNow"))}</span>
@@ -2621,7 +2626,7 @@ function storeSlotPh(i) {
   return `
     <div class="store-slot is-ph ph-${v}" role="button" tabindex="0" onclick="openAdBooking('space')">
       <div class="ph-body">
-        <img class="ph-logo" src="/brand/logo-full-vertical-white.png" alt="" aria-hidden="true" />
+        <img class="ph-logo" src="${logoSrc("vertical", "white")}" alt="" aria-hidden="true" />
         <span class="ph-text"><b>${esc(t("ads.ph" + v + "t"))}</b><small>${esc(t("ads.ph" + v + "s"))}</small></span>
         <span class="ph-cta">${esc(t("ads.phCta"))}</span>
       </div>
