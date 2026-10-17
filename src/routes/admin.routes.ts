@@ -16,6 +16,7 @@ import { sniffImageMime } from "../lib/image";
 import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { AppReleaseError, getAppDownloadInfo, MAX_APK_BYTES, saveAppRelease, setAppDownloadVisible } from "../services/appRelease.service";
+import { adminOverview } from "../services/adminStats.service";
 import { getSocialLinks, saveSocialLinks, SOCIAL_PLATFORMS, SocialLinkError } from "../services/socialLinks.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
 import { aiProviderStatus, aiTotals, aiUsage, testProvider } from "../services/ai.service";
@@ -32,6 +33,12 @@ import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion }
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole(Role.ADMIN));
+
+/* ---------------- the home page: numbers and what is waiting ---------------- */
+
+adminRouter.get("/overview", route(async (_req, res) => {
+  res.json(await adminOverview());
+}));
 
 /* ---------------- platform settings (pricing, trial, credit, payment accounts) ---------------- */
 

@@ -2,72 +2,207 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="icon" href="/brand/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/brand/favicon-64.png"><link rel="apple-touch-icon" href="/brand/logo-192.png">
 <title>DALILACOM — لوحة التحكم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap">
 <style>
-  :root { color-scheme: light; }
+  :root {
+    color-scheme: light;
+    --red: #ba2a34; --red-dark: #8f1d26; --wine: #4a0b10; --wine-2: #6d1219;
+    --bg: #f6f2f0; --surface: #ffffff; --surface-2: #faf6f4; --line: #ece3df; --line-2: #f3ecea;
+    --text: #1f1718; --muted: #8a7b78; --muted-2: #a89a97;
+    --ok: #1e7e34; --ok-bg: #e6f4ea; --warn: #8a6300; --warn-bg: #fff3cd; --bad: #b71c1c; --bad-bg: #fdecea; --info: #1b5fa6; --info-bg: #e7f0fb;
+    --radius: 16px; --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(60, 20, 20, .05), 0 6px 20px -8px rgba(60, 20, 20, .12);
+    --sidebar-w: 268px;
+  }
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; margin: 0; background: #f7f4f2; color: #1a1a1a; }
-  a, button { font-family: inherit; }
+  html { scroll-behavior: smooth; }
+  body { font-family: "Tajawal", "Segoe UI", Tahoma, Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a, button, input, select, textarea { font-family: inherit; }
+  h1, h2, h3 { font-family: "Cairo", "Tajawal", sans-serif; }
 
   /* ---- login screen ---- */
-  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #5A0E12, #BA2A34); }
-  .login-card { background: #fff; border-radius: 16px; padding: 32px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
-  .login-card h1 { margin: 0 0 4px; font-size: 22px; color: #BA2A34; }
+  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: radial-gradient(1200px 600px at 80% -10%, #c93a44 0%, transparent 60%), linear-gradient(135deg, #3d080c, #ba2a34); }
+  .login-card { background: #fff; border-radius: 22px; padding: 34px 30px; width: 360px; max-width: 100%; box-shadow: 0 24px 60px -12px rgba(0,0,0,.45); }
+  .login-card h1 { margin: 0 0 4px; font-size: 22px; color: var(--red); text-align: center; }
   .login-card .logo { display: block; width: 150px; height: auto; margin: 0 auto 14px; object-fit: contain; }
-  .login-card p { margin: 0 0 20px; color: #777; font-size: 13px; }
+  .login-card p { margin: 0 0 20px; color: var(--muted); font-size: 13px; text-align: center; }
 
   /* ---- shell ---- */
   #app { display: none; min-height: 100vh; }
-  #app.active { display: flex; }
-  .sidebar { width: 220px; background: linear-gradient(180deg, #5A0E12, #BA2A34); color: #fff; padding: 20px 0; flex-shrink: 0; }
-  .sidebar h2 { font-size: 16px; margin: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
-  .sidebar h2 .badge-logo { height: 40px; width: auto; object-fit: contain; }
-  .sidebar .nav-item { padding: 12px 20px; cursor: pointer; font-weight: 600; font-size: 14px; opacity: .85; border-right: 3px solid transparent; }
-  .sidebar .nav-item:hover { opacity: 1; background: rgba(255,255,255,.08); }
-  .sidebar .nav-item.active { opacity: 1; background: rgba(255,255,255,.15); border-color: #fff; }
-  .sidebar .logout { margin-top: 30px; padding: 12px 20px; cursor: pointer; font-size: 13px; opacity: .7; }
-  .sidebar .logout:hover { opacity: 1; }
+  #app.active { display: block; }
+  .sidebar { position: fixed; inset-block: 0; inset-inline-start: 0; width: var(--sidebar-w); background: linear-gradient(190deg, var(--wine) 0%, var(--wine-2) 45%, var(--red) 140%); color: #fff; display: flex; flex-direction: column; z-index: 60; transition: transform .25s ease; }
+  .sidebar .brand { padding: 22px 22px 14px; display: flex; align-items: center; gap: 10px; }
+  .sidebar .brand .badge-logo { height: 42px; width: auto; object-fit: contain; }
+  .sidebar .brand small { display: block; font-size: 11px; opacity: .65; letter-spacing: .02em; }
+  .nav-scroll { flex: 1; overflow-y: auto; padding: 4px 12px 12px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
+  .nav-group { margin-top: 14px; }
+  .nav-group > .nav-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; opacity: .5; padding: 0 12px 6px; text-transform: uppercase; }
+  .sidebar .nav-item { display: flex; align-items: center; gap: 11px; padding: 9px 12px; margin: 2px 0; border-radius: 12px; cursor: pointer; font-weight: 500; font-size: 14px; color: rgba(255,255,255,.82); transition: background .15s, color .15s; border: 0; user-select: none; }
+  .sidebar .nav-item .ni { width: 30px; height: 30px; display: grid; place-items: center; font-size: 15px; background: rgba(255,255,255,.08); border-radius: 9px; flex-shrink: 0; }
+  .sidebar .nav-item .nt { flex: 1; min-width: 0; }
+  .sidebar .nav-item:hover { background: rgba(255,255,255,.09); color: #fff; }
+  .sidebar .nav-item.active { background: #fff; color: var(--red-dark); font-weight: 700; box-shadow: 0 6px 16px -6px rgba(0,0,0,.35); }
+  .sidebar .nav-item.active .ni { background: var(--bad-bg); }
+  .sidebar .nav-item .badge { padding: 1px 8px; font-size: 11px; }
+  .sidebar-foot { padding: 10px 12px 16px; border-top: 1px solid rgba(255,255,255,.1); }
+  .sidebar .logout { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; font-size: 13px; color: rgba(255,255,255,.75); border-radius: 10px; }
+  .sidebar .logout:hover { background: rgba(255,255,255,.09); color: #fff; }
 
-  .main { flex: 1; padding: 28px 32px; max-width: 1000px; }
-  .main h2 { margin: 0 0 4px; color: #BA2A34; }
-  .main .subtitle { color: #888; font-size: 13px; margin: 0 0 20px; }
+  .content { margin-inline-start: var(--sidebar-w); min-height: 100vh; }
+  .topbar { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 14px; padding: 14px 32px; background: rgba(246, 242, 240, .86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .topbar .menu-btn { display: none; width: 40px; height: 40px; padding: 0; border-radius: 12px; background: var(--surface); color: var(--text); border: 1px solid var(--line); font-size: 18px; }
+  .topbar .crumb { font-family: "Cairo", "Tajawal", sans-serif; font-weight: 800; font-size: 18px; color: var(--text); }
+  .topbar .spacer { flex: 1; }
+  .topbar .today { color: var(--muted); font-size: 13px; }
+  .topbar .me { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); padding: 5px 12px 5px 6px; border-radius: 999px; font-weight: 600; font-size: 13px; }
+  .topbar .me i { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--red), var(--wine-2)); color: #fff; display: grid; place-items: center; font-style: normal; font-size: 13px; }
+  .scrim { display: none; }
 
-  .card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
-  .card h3 { margin: 0 0 14px; font-size: 15px; }
+  .main { padding: 26px 32px 60px; max-width: 1360px; }
+  .main h2 { margin: 0 0 4px; color: var(--text); font-size: 24px; font-weight: 800; }
+  .main .subtitle { color: var(--muted); font-size: 13.5px; margin: 0 0 22px; max-width: 760px; }
+  .section { animation: sec-in .22s ease; }
+  @keyframes sec-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-  label { display: block; font-size: 12px; color: #666; margin: 8px 0 3px; }
-  input, select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
-  .row { display: flex; gap: 10px; }
-  .row > * { flex: 1; }
+  .card { background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--radius); padding: 22px; margin-bottom: 20px; box-shadow: var(--shadow); overflow-x: auto; }
+  .card h3 { margin: 0 0 14px; font-size: 16px; font-weight: 800; }
+  .card h3:not(:first-child) { margin-top: 22px; }
+  hr { border: 0; border-top: 1px solid var(--line) !important; }
 
-  button { background: #BA2A34; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; font-size: 13px; }
-  button.secondary { background: #f0f0f0; color: #333; }
-  button.danger { background: #fdecea; color: #b71c1c; }
-  button.small { padding: 5px 10px; font-size: 12px; margin: 0 3px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; padding: 9px 12px; border: 1px solid #e4d9d5; border-radius: var(--radius-sm); font-size: 14px; background: #fff; color: var(--text); transition: border-color .15s, box-shadow .15s; }
+  input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--red); box-shadow: 0 0 0 3px rgba(186, 42, 52, .14); }
+  input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--red); }
+  textarea { font-size: 13px; resize: vertical; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 140px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .field { margin-bottom: 4px; }
+
+  button { background: var(--red); color: #fff; border: 0; border-radius: var(--radius-sm); padding: 9px 18px; font-weight: 700; cursor: pointer; font-size: 13px; transition: background .15s, transform .05s, box-shadow .15s; }
+  button:hover { background: var(--red-dark); }
+  button:active { transform: scale(.98); }
+  button.secondary { background: #f1e9e6; color: #4b3b38; }
+  button.secondary:hover { background: #e9ddd9; }
+  button.danger { background: var(--bad-bg); color: var(--bad); }
+  button.danger:hover { background: #f9d6d2; }
+  button.small { padding: 5px 11px; font-size: 12px; margin: 2px 3px; border-radius: 8px; }
   button:disabled { opacity: .5; cursor: not-allowed; }
 
-  .filters { display: flex; gap: 8px; margin-bottom: 16px; }
-  .filters button { background: #fff; color: #666; border: 1px solid #ddd; }
-  .filters button.active { background: #BA2A34; color: #fff; border-color: #BA2A34; }
+  .filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filters button { background: var(--surface); color: #6e5f5c; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; font-weight: 600; }
+  .filters button:hover { border-color: var(--red); color: var(--red); background: var(--surface); }
+  .filters button.active { background: var(--red); color: #fff; border-color: var(--red); }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: right; color: #888; font-weight: 600; padding: 8px; border-bottom: 2px solid #eee; font-size: 11px; text-transform: uppercase; }
-  td { padding: 10px 8px; border-bottom: 1px solid #f2f2f2; vertical-align: middle; }
-  tr.child-row td:first-child { padding-right: 28px; color: #666; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: start; color: var(--muted); font-weight: 700; padding: 10px 10px; border-bottom: 1px solid var(--line); font-size: 12px; white-space: nowrap; background: var(--surface-2); }
+  th:first-child { border-start-start-radius: 10px; } th:last-child { border-start-end-radius: 10px; }
+  td { padding: 12px 10px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+  tbody tr:hover td { background: #fcf9f8; }
+  tr.child-row td:first-child { padding-inline-start: 30px; color: #6b5d5a; }
 
-  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-  .badge.PENDING { background: #fff3cd; color: #8a6300; }
-  .badge.APPROVED { background: #e6f4ea; color: #1e7e34; }
-  .badge.REJECTED { background: #fdecea; color: #b71c1c; }
-  .badge.active { background: #e6f4ea; color: #1e7e34; }
-  .badge.inactive { background: #eee; color: #888; }
+  .badge { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+  .badge.PENDING { background: var(--warn-bg); color: var(--warn); }
+  .badge.APPROVED { background: var(--ok-bg); color: var(--ok); }
+  .badge.REJECTED { background: var(--bad-bg); color: var(--bad); }
+  .badge.active { background: var(--ok-bg); color: var(--ok); }
+  .badge.inactive { background: #efe9e7; color: var(--muted); }
 
-  .inline-input { width: 90px; padding: 4px 6px; font-size: 12px; }
-  .error-banner { background: #fdecea; color: #b71c1c; padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
-  .muted { color: #999; font-size: 13px; }
+  .inline-input { width: 96px; padding: 5px 8px; font-size: 12.5px; }
+  .error-banner { background: var(--bad-bg); color: var(--bad); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 14px; }
+  .muted { color: var(--muted); font-size: 13px; }
   .plan-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; }
+
+  /* ---- the home page ---- */
+  .hello { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .hello h2 { font-size: 26px; }
+  .hello .subtitle { margin: 2px 0 0; }
+  .hello .refresh { background: var(--surface); color: var(--text); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
+  .hello .refresh:hover { background: var(--surface-2); border-color: var(--red); color: var(--red); }
+  .hello .refresh.spin svg { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .waiting { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-bottom: 22px; }
+  .wait-tile { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 14px; box-shadow: var(--shadow); cursor: pointer; transition: transform .12s, border-color .15s; text-align: start; width: 100%; color: var(--text); font-weight: 600; }
+  .wait-tile:hover { transform: translateY(-2px); border-color: var(--red); background: var(--surface); }
+  .wait-tile .n { min-width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-family: "Cairo", sans-serif; font-weight: 800; font-size: 18px; background: #efe9e7; color: var(--muted); }
+  .wait-tile.has .n { background: var(--warn-bg); color: var(--warn); }
+  .wait-tile .l { font-size: 13.5px; line-height: 1.3; }
+  .wait-tile .l small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
+  .all-clear { grid-column: 1 / -1; background: var(--ok-bg); color: var(--ok); border-radius: 14px; padding: 14px 18px; font-weight: 700; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .kpi { position: relative; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--radius); padding: 18px 20px 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .kpi .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .kpi .lbl { color: var(--muted); font-weight: 600; font-size: 13px; }
+  .kpi .ico { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; font-size: 17px; background: var(--bad-bg); }
+  .kpi.c2 .ico { background: var(--info-bg); } .kpi.c3 .ico { background: var(--ok-bg); } .kpi.c4 .ico { background: var(--warn-bg); } .kpi.c5 .ico { background: #f1e8fb; } .kpi.c6 .ico { background: #e3f6f5; }
+  .kpi .val { font-family: "Cairo", sans-serif; font-weight: 800; font-size: 32px; line-height: 1.2; margin: 6px 0 2px; letter-spacing: -.01em; }
+  .kpi .sub { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+  .trend { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+  .trend.up { background: var(--ok-bg); color: var(--ok); } .trend.down { background: var(--bad-bg); color: var(--bad); } .trend.flat { background: #efe9e7; color: var(--muted); }
+  .kpi svg.spark { display: block; width: 100%; height: 38px; margin-top: 8px; }
+
+  .grid-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; margin-bottom: 4px; }
+  .chart-card { padding: 20px 22px 14px; overflow: hidden; }
+  .chart-card .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+  .chart-card .head h3 { margin: 0; }
+  .chart-card .big { font-family: "Cairo", sans-serif; font-weight: 800; font-size: 22px; }
+  .chart-card .cap { color: var(--muted); font-size: 12.5px; margin-bottom: 6px; }
+  .chart-card svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart-card .x-axis { display: flex; justify-content: space-between; color: var(--muted-2); font-size: 11.5px; margin-top: 4px; direction: ltr; }
+  .chart-card .hov { position: relative; }
+
+  .grid-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+  .bar-row { display: grid; grid-template-columns: minmax(90px, 38%) 1fr auto; gap: 10px; align-items: center; padding: 7px 0; font-size: 13.5px; }
+  .bar-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .bar-row .track { height: 10px; background: #f1e9e6; border-radius: 999px; overflow: hidden; }
+  .bar-row .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--red), #e0606a); }
+  .bar-row .num { font-weight: 800; font-family: "Cairo", sans-serif; min-width: 28px; text-align: end; }
+  .empty-note { color: var(--muted); padding: 14px 0; font-size: 13.5px; }
+  .split { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: #f1e9e6; margin: 8px 0 12px; }
+  .split i { display: block; height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend b { font-family: "Cairo", sans-serif; }
+  .legend em { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .quick button { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); padding: 12px; border-radius: 12px; font-weight: 600; text-align: start; display: flex; align-items: center; gap: 8px; }
+  .quick button:hover { border-color: var(--red); color: var(--red); background: #fff; }
+
+  .skeleton { background: linear-gradient(90deg, #f1e9e6 25%, #f8f2f0 50%, #f1e9e6 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 10px; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  /* ---- phone and tablet ---- */
+  @media (max-width: 960px) {
+    .sidebar { transform: translateX(100%); }
+    html[dir="ltr"] .sidebar { transform: translateX(-100%); }
+    #app.menu-open .sidebar { transform: none; box-shadow: 0 0 40px rgba(0,0,0,.4); }
+    .scrim { position: fixed; inset: 0; background: rgba(20, 8, 8, .45); z-index: 55; }
+    #app.menu-open .scrim { display: block; }
+    .content { margin-inline-start: 0; }
+    .topbar { padding: 10px 16px; }
+    .topbar .menu-btn { display: inline-grid; place-items: center; }
+    .topbar .today { display: none; }
+    .main { padding: 18px 14px 50px; }
+    .grid-charts { grid-template-columns: 1fr; }
+    .kpi .val { font-size: 28px; }
+    .waiting { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .wait-tile { padding: 11px 12px; gap: 9px; }
+    .wait-tile .n { min-width: 34px; height: 34px; font-size: 16px; }
+    .wait-tile .l { font-size: 12.5px; }
+    .kpis { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .kpi { padding: 14px 14px 10px; }
+    .kpi .val { font-size: 24px; }
+    .kpi .ico { display: none; }
+    .hello h2 { font-size: 22px; }
+    .card { padding: 16px; }
+  }
+
+  .home-h { font-size: 15px; font-weight: 800; margin: 4px 0 12px; color: var(--text); }
 </style>
 </head>
 <body>
@@ -90,35 +225,90 @@
 
 <!-- APP -->
 <div id="app">
-  <div class="sidebar">
-    <h2><img class="badge-logo" src="/brand/logo-full-horizontal-white.png" alt="DALILACOM"></h2>
-    <div class="nav-item active" data-section="merchants" onclick="showSection('merchants')">🏪 أصحاب الأنشطة</div>
-    <div class="nav-item" data-section="categories" onclick="showSection('categories')">🗂️ التصنيفات</div>
-    <div class="nav-item" data-section="plans" onclick="showSection('plans')">💳 الباقات والأسعار</div>
-    <div class="nav-item" data-section="responder" onclick="showSection('responder')">🤖 المجيب الآلي</div>
-    <div class="nav-item" data-section="users" onclick="showSection('users'); loadUsers()">👥 المستخدمون</div>
-    <div class="nav-item" data-section="geo" onclick="showSection('geo')">🗺️ المدن والأحياء</div>
-    <div class="nav-item" data-section="broadcasts" onclick="showSection('broadcasts')">📣 الإعلانات <span id="bc-pending-count" class="badge PENDING" style="display:none"></span></div>
-    <div class="nav-item" data-section="push" onclick="showSection('push')">🔔 الإشعارات</div>
-    <div class="nav-item" data-section="ai" onclick="showSection('ai')">🧠 حالة الذكاء الاصطناعي</div>
-    <div class="nav-item" data-section="store" onclick="showSection('store')">🛍️ المتجر</div>
-    <div class="nav-item" data-section="pcats" onclick="showSection('pcats'); loadProductCats()">🏷️ تصنيفات المنتجات</div>
-    <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()">🛡️ مراجعة المنتجات <span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
-    <div class="nav-item" data-section="marketers" onclick="showSection('marketers'); loadMarketers()">📣 المسوّقون</div>
-    <div class="nav-item" data-section="appfile" onclick="showSection('appfile'); loadAppDownload()">📱 تحميل التطبيق (APK)</div>
-    <div class="nav-item" data-section="social" onclick="showSection('social'); loadSocialLinks()">🔗 روابط التواصل الاجتماعي</div>
-    <div class="nav-item" data-section="launch" onclick="showSection('launch'); loadLaunchReset()">🚀 تهيئة الإطلاق</div>
-    <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()">💡 اقتراحات المهن <span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
-    <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()">🏷️ الحسومات <span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
-    <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()">📢 إعلانات المتجر <span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
-    <div class="nav-item" data-section="topups" onclick="showSection('topups')">💰 طلبات الشحن</div>
-    <div class="logout" onclick="changePassword()">🔑 تغيير كلمة السر</div>
-    <div class="logout" onclick="logout()">⏻ تسجيل خروج</div>
+  <aside class="sidebar">
+    <div class="brand"><img class="badge-logo" src="/brand/logo-full-horizontal-white.png" alt="DALILACOM"><small>لوحة التحكم</small></div>
+    <nav class="nav-scroll">
+      <div class="nav-item active" data-section="home" onclick="showSection('home'); loadHome()"><span class="ni">🏠</span><span class="nt">الرئيسية</span></div>
+      <div class="nav-group"><div class="nav-title">العمل اليومي</div>
+        <div class="nav-item" data-section="merchants" onclick="showSection('merchants')"><span class="ni">🏪</span><span class="nt">أصحاب الأنشطة</span></div>
+        <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()"><span class="ni">🏷️</span><span class="nt">الحسومات</span><span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
+        <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()"><span class="ni">🛡️</span><span class="nt">مراجعة المنتجات</span><span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
+        <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()"><span class="ni">📢</span><span class="nt">إعلانات المتجر</span><span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
+        <div class="nav-item" data-section="topups" onclick="showSection('topups')"><span class="ni">💰</span><span class="nt">طلبات الشحن</span></div>
+        <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()"><span class="ni">💡</span><span class="nt">اقتراحات المهن</span><span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
+        <div class="nav-item" data-section="broadcasts" onclick="showSection('broadcasts')"><span class="ni">📣</span><span class="nt">الإعلانات</span><span id="bc-pending-count" class="badge PENDING" style="display:none"></span></div>
+      </div>
+      <div class="nav-group"><div class="nav-title">المحتوى والكتالوج</div>
+        <div class="nav-item" data-section="categories" onclick="showSection('categories')"><span class="ni">🗂️</span><span class="nt">التصنيفات</span></div>
+        <div class="nav-item" data-section="pcats" onclick="showSection('pcats'); loadProductCats()"><span class="ni">🏷️</span><span class="nt">تصنيفات المنتجات</span></div>
+        <div class="nav-item" data-section="store" onclick="showSection('store')"><span class="ni">🛍️</span><span class="nt">المتجر</span></div>
+        <div class="nav-item" data-section="plans" onclick="showSection('plans')"><span class="ni">💳</span><span class="nt">الباقات والأسعار</span></div>
+        <div class="nav-item" data-section="geo" onclick="showSection('geo')"><span class="ni">🗺️</span><span class="nt">المدن والأحياء</span></div>
+      </div>
+      <div class="nav-group"><div class="nav-title">المستخدمون والتسويق</div>
+        <div class="nav-item" data-section="users" onclick="showSection('users'); loadUsers()"><span class="ni">👥</span><span class="nt">المستخدمون</span></div>
+        <div class="nav-item" data-section="marketers" onclick="showSection('marketers'); loadMarketers()"><span class="ni">📣</span><span class="nt">المسوّقون</span></div>
+        <div class="nav-item" data-section="responder" onclick="showSection('responder')"><span class="ni">🤖</span><span class="nt">المجيب الآلي</span></div>
+        <div class="nav-item" data-section="push" onclick="showSection('push')"><span class="ni">🔔</span><span class="nt">الإشعارات</span></div>
+      </div>
+      <div class="nav-group"><div class="nav-title">النظام</div>
+        <div class="nav-item" data-section="ai" onclick="showSection('ai')"><span class="ni">🧠</span><span class="nt">حالة الذكاء الاصطناعي</span></div>
+        <div class="nav-item" data-section="appfile" onclick="showSection('appfile'); loadAppDownload()"><span class="ni">📱</span><span class="nt">تحميل التطبيق (APK)</span></div>
+        <div class="nav-item" data-section="social" onclick="showSection('social'); loadSocialLinks()"><span class="ni">🔗</span><span class="nt">روابط التواصل الاجتماعي</span></div>
+        <div class="nav-item" data-section="launch" onclick="showSection('launch'); loadLaunchReset()"><span class="ni">🚀</span><span class="nt">تهيئة الإطلاق</span></div>
+      </div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="logout" onclick="changePassword()">🔑 تغيير كلمة السر</div>
+      <div class="logout" onclick="logout()">⏻ تسجيل خروج</div>
+    </div>
+  </aside>
+  <div class="scrim" onclick="toggleMenu(false)"></div>
+
+  <div class="content">
+  <div class="topbar">
+    <button class="menu-btn" onclick="toggleMenu(true)" aria-label="القائمة">☰</button>
+    <span class="crumb" id="crumb">الرئيسية</span>
+    <span class="spacer"></span>
+    <span class="today" id="today"></span>
+    <span class="me"><i>A</i> الأدمن</span>
   </div>
 
   <div class="main">
+    <!-- HOME -->
+    <div class="section" id="section-home">
+      <div class="hello">
+        <div>
+          <h2 id="home-greet">أهلًا بك 👋</h2>
+          <p class="subtitle" id="home-sub">نظرة سريعة على دليلكم: الأرقام، وكل شي ينتظر قرارك.</p>
+        </div>
+        <button class="refresh" id="home-refresh" onclick="loadHome(true)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> <span id="home-updated">تحديث</span></button>
+      </div>
+
+      <h3 class="home-h">⏳ ينتظر قرارك</h3>
+      <div class="waiting" id="home-waiting"><div class="skeleton" style="height:68px"></div><div class="skeleton" style="height:68px"></div><div class="skeleton" style="height:68px"></div></div>
+
+      <h3 class="home-h">📊 الأرقام الرئيسية</h3>
+      <div class="kpis" id="home-kpis"><div class="skeleton" style="height:140px"></div><div class="skeleton" style="height:140px"></div><div class="skeleton" style="height:140px"></div><div class="skeleton" style="height:140px"></div></div>
+
+      <h3 class="home-h">📈 آخر 30 يوم</h3>
+      <div class="grid-charts" id="home-charts"></div>
+
+      <div class="grid-lists">
+        <div class="card"><h3>👥 مين عنا</h3><div id="home-people"></div></div>
+        <div class="card"><h3>🧾 الطلبات حسب الحالة</h3><div id="home-orders"></div></div>
+        <div class="card"><h3>🗂️ أكثر الأقسام نشاطًا</h3><div id="home-cats"></div></div>
+        <div class="card"><h3>🏆 أنشط المحلات بالحسومات (آخر 30 يوم)</h3><div id="home-shops"></div></div>
+      </div>
+
+      <div class="card">
+        <h3>⚡ اختصارات</h3>
+        <div class="quick" id="home-quick"></div>
+      </div>
+    </div>
+
     <!-- MERCHANTS -->
-    <div class="section" id="section-merchants">
+    <div class="section" id="section-merchants" style="display:none">
       <h2>أصحاب الأنشطة</h2>
       <p class="subtitle">مراجعة طلبات التسجيل والموافقة/الرفض</p>
       <div class="filters">
@@ -679,6 +869,7 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
 
 <script src="/app/pw-eye.js"></script>
@@ -745,6 +936,10 @@ function logout() {
 function enterApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('active');
+  document.getElementById('today').textContent = new Date().toLocaleDateString('ar', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  showSection('home');
+  loadHome();
+  startHomeTimer();
   loadMerchants('');
   loadCategories();
   loadPlans();
@@ -762,7 +957,147 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+  const nav = document.querySelector('.nav-item[data-section="' + name + '"] .nt');
+  document.getElementById('crumb').textContent = nav ? nav.textContent.trim() : '';
+  toggleMenu(false);
+  window.scrollTo({ top: 0 });
 }
+
+// ---- Home page: numbers and what is waiting ----
+const HOME_WAIT = [
+  ['merchants', '🏪', 'طلبات أصحاب الأنشطة', 'merchants', "loadMerchants('PENDING')"],
+  ['discounts', '🏷️', 'حسومات بانتظار الموافقة', 'discounts', 'loadDiscounts()'],
+  ['products', '🛡️', 'منتجات بانتظار المراجعة', 'prodreview', 'loadProductReview()'],
+  ['ads', '📢', 'طلبات إعلانات المتجر', 'ads', 'loadAds()'],
+  ['topups', '💰', 'طلبات شحن الرصيد', 'topups', "loadTopups('PENDING')"],
+  ['suggestions', '💡', 'اقتراحات مهن', 'suggestions', 'loadSuggestions()'],
+  ['marketers', '📣', 'طلبات مسوّقين', 'marketers', 'loadMarketers()'],
+  ['broadcasts', '🔔', 'إعلانات بانتظار المراجعة', 'broadcasts', 'loadBroadcasts()'],
+];
+const HOME_QUICK = [
+  ['👥', 'المستخدمون', 'users'], ['🗂️', 'التصنيفات', 'categories'], ['💳', 'الباقات والأسعار', 'plans'], ['🛍️', 'المتجر', 'store'],
+  ['📱', 'تحميل التطبيق', 'appfile'], ['🔗', 'روابط التواصل', 'social'], ['🔔', 'الإشعارات', 'push'], ['🧠', 'الذكاء الاصطناعي', 'ai'],
+];
+const ORDER_STATUS = {
+  PENDING: ['جديد', '#e0a100'], CONFIRMED: ['مؤكّد', '#1b5fa6'], PREPARING: ['قيد التجهيز', '#8e44ad'],
+  SHIPPED: ['تم الشحن', '#0e8f87'], DELIVERED: ['مُسلَّم', '#1e7e34'], CANCELLED: ['ملغي', '#b71c1c'],
+};
+let homeTimer = null;
+
+function gotoSection(name) { const el = document.querySelector('.nav-item[data-section="' + name + '"]'); if (el) el.click(); }
+const fmt = (n) => Number(n || 0).toLocaleString('en');
+const fmtMoney = (cents) => Number((cents || 0) / 100).toLocaleString('en', { maximumFractionDigits: 2 });
+
+function trendHtml(t) {
+  if (t === null || t === undefined) return '<span class="trend up">جديد</span>';
+  if (t > 0) return `<span class="trend up">▲ ${t}%</span>`;
+  if (t < 0) return `<span class="trend down">▼ ${Math.abs(t)}%</span>`;
+  return '<span class="trend flat">ثابت</span>';
+}
+
+function sparkSvg(points, color) {
+  const max = Math.max(1, ...points.map(p => p.count)), W = 120, H = 38, n = points.length;
+  const xy = points.map((p, i) => [(i / (n - 1)) * W, H - 3 - (p.count / max) * (H - 8)]);
+  const line = xy.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${line} L${W} ${H} L0 ${H} Z" fill="${color}" opacity=".12"/><path d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+function kpiHtml(cls, icon, label, value, sub, points, color) {
+  return `<div class="kpi ${cls}"><div class="top"><span class="lbl">${label}</span><span class="ico">${icon}</span></div><div class="val">${value}</div><div class="sub">${sub}</div>${points ? sparkSvg(points, color) : ''}</div>`;
+}
+
+function areaChart(points, color, gid) {
+  const W = 620, H = 190, L = 34, B = 8, T = 10, R = 6;
+  const rawMax = Math.max(...points.map(p => p.count));
+  const step = rawMax <= 4 ? 1 : Math.pow(10, Math.floor(Math.log10(rawMax / 3)));
+  const niceMax = Math.max(4, Math.ceil(rawMax / (step * 4)) * step * 4);
+  const n = points.length, iw = W - L - R, ih = H - T - B;
+  const x = (i) => L + (i / (n - 1)) * iw, y = (v) => T + ih - (v / niceMax) * ih;
+  let grid = '';
+  for (let g = 0; g <= 4; g++) {
+    const v = (niceMax / 4) * g, yy = y(v);
+    grid += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#efe6e3" stroke-width="1"/><text x="${L - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#a89a97">${fmt(Math.round(v))}</text>`;
+  }
+  const line = points.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.count).toFixed(1)).join(' ');
+  const area = `${line} L${x(n - 1)} ${y(0)} L${x(0)} ${y(0)} Z`;
+  const dots = points.map((p, i) => `<g><rect x="${x(i) - iw / n / 2}" y="${T}" width="${iw / n}" height="${ih}" fill="transparent"><title>${p.day.slice(5).replace('-', '/')} — ${fmt(p.count)}</title></rect>${p.count ? `<circle cx="${x(i)}" cy="${y(p.count)}" r="2.6" fill="${color}"/>` : ''}</g>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img"><defs><linearGradient id="g${gid}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>${grid}<path d="${area}" fill="url(#g${gid})"/><path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
+}
+
+function chartCard(title, points, color, gid) {
+  const sum = points.reduce((a, p) => a + p.count, 0);
+  const d = (i) => { const [, m, dd] = points[i].day.split('-'); return dd + '/' + m; };
+  return `<div class="card chart-card"><div class="head"><h3>${title}</h3><span class="big">${fmt(sum)}</span></div><div class="cap">المجموع خلال 30 يوم</div>${areaChart(points, color, gid)}<div class="x-axis"><span>${d(0)}</span><span>${d(10)}</span><span>${d(20)}</span><span>${d(29)}</span></div></div>`;
+}
+
+function barList(rows, valueKey, empty) {
+  if (!rows.length) return `<div class="empty-note">${empty}</div>`;
+  const max = Math.max(1, ...rows.map(r => r[valueKey]));
+  return rows.map(r => `<div class="bar-row"><span class="name" title="${esc(r.name)}">${esc(r.name)}</span><span class="track"><span class="fill" style="display:block;width:${Math.max(4, (r[valueKey] / max) * 100)}%"></span></span><span class="num">${fmt(r[valueKey])}</span></div>`).join('');
+}
+
+function splitHtml(parts, empty) {
+  const total = parts.reduce((a, p) => a + p.v, 0);
+  if (!total) return `<div class="empty-note">${empty}</div>`;
+  return `<div class="split">${parts.filter(p => p.v).map(p => `<i style="width:${(p.v / total) * 100}%;background:${p.c}" title="${p.l}: ${fmt(p.v)}"></i>`).join('')}</div><div class="legend">${parts.map(p => `<span><em style="background:${p.c}"></em>${p.l} <b>${fmt(p.v)}</b></span>`).join('')}</div>`;
+}
+
+function renderHome(d) {
+  const hour = new Date().getHours();
+  document.getElementById('home-greet').textContent = (hour < 12 ? 'صباح الخير' : hour < 18 ? 'مرحبًا' : 'مساء الخير') + ' 👋';
+  document.getElementById('home-updated').textContent = 'تحديث · ' + new Date(d.generatedAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+
+  const totalWaiting = HOME_WAIT.reduce((a, w) => a + (d.waiting[w[0]] || 0), 0);
+  document.getElementById('home-waiting').innerHTML = HOME_WAIT.map(([key, icon, label, section, loader]) => {
+    const n = d.waiting[key] || 0;
+    return `<button class="wait-tile ${n ? 'has' : ''}" onclick="gotoSection('${section}')"><span class="n">${fmt(n)}</span><span class="l">${icon} ${label}<small>${n ? 'اضغط للمراجعة' : 'ما في شي'}</small></span></button>`;
+  }).join('') + (totalWaiting === 0 ? '<div class="all-clear">✅ كل شي منجز، ما في شي ينتظرك الآن.</div>' : '');
+
+  const u = d.users, m = d.merchants, ds = d.discounts, o = d.orders;
+  document.getElementById('home-kpis').innerHTML = [
+    kpiHtml('c1', '👥', 'المستخدمون', fmt(u.total), `${trendHtml(u.trend)} <span>+${fmt(u.last30)} آخر 30 يوم</span>`, d.series.users, '#ba2a34'),
+    kpiHtml('c2', '🏪', 'الأنشطة المعتمدة', fmt(m.approved), `${trendHtml(m.trend)} <span>${fmt(m.pending)} بانتظار الموافقة</span>`, d.series.merchants, '#1b5fa6'),
+    kpiHtml('c3', '🏷️', 'عمليات الحسم', fmt(ds.redemptions), `${trendHtml(ds.trend)} <span>${fmt(ds.last30)} آخر 30 يوم</span>`, d.series.discounts, '#1e7e34'),
+    kpiHtml('c4', '🧾', 'طلبات المتجر', fmt(o.total), `${trendHtml(o.trend)} <span>${fmt(o.last30)} آخر 30 يوم</span>`, d.series.orders, '#c58a00'),
+    kpiHtml('c5', '💳', 'عضويات فعّالة', fmt(d.memberships.active), `<span>+${fmt(d.memberships.last30)} آخر 30 يوم</span>`, null),
+    kpiHtml('c6', '💸', 'المبلغ الموفَّر للأعضاء', fmtMoney(ds.savedCents30), `<span>آخر 30 يوم · الإجمالي ${fmtMoney(ds.savedCentsAll)}</span>`, null),
+    kpiHtml('c4', '🛒', 'مبيعات المتجر', fmtMoney(o.salesCents30), `<span>آخر 30 يوم (بدون الملغي)</span>`, null),
+    kpiHtml('c2', '📦', 'منتجات معروضة', fmt(d.products.approved), `<span>${fmt(d.products.pending)} بانتظار المراجعة</span>`, null),
+  ].join('');
+
+  document.getElementById('home-charts').innerHTML =
+    chartCard('مستخدمون جدد', d.series.users, '#ba2a34', 'u') + chartCard('عمليات الحسم', d.series.discounts, '#1e7e34', 'd') +
+    chartCard('أنشطة جديدة', d.series.merchants, '#1b5fa6', 'm') + chartCard('طلبات المتجر', d.series.orders, '#c58a00', 'o');
+
+  document.getElementById('home-people').innerHTML = splitHtml([
+    { l: 'زبائن', v: u.customers, c: '#ba2a34' }, { l: 'أصحاب أنشطة', v: u.merchants, c: '#1b5fa6' }, { l: 'أدمن', v: u.admins, c: '#8a7b78' },
+  ], 'ما في مستخدمين بعد') + `<div class="legend" style="margin-top:12px"><span>📧 إيميل موثّق <b>${fmt(u.verified)}</b></span><span>📱 أجهزة بإشعارات <b>${fmt(u.devices)}</b></span><span>🆕 آخر 7 أيام <b>${fmt(u.last7)}</b></span></div>`;
+  document.getElementById('home-orders').innerHTML = splitHtml(Object.entries(ORDER_STATUS).map(([k, [l, c]]) => ({ l, v: o.byStatus[k] || 0, c })), 'ما في طلبات بعد');
+  document.getElementById('home-cats').innerHTML = barList(d.topCategories, 'count', 'ما في أنشطة معتمدة بعد');
+  document.getElementById('home-shops').innerHTML = barList(d.topShops, 'count', 'ما في عمليات حسم بآخر 30 يوم');
+  document.getElementById('home-quick').innerHTML = HOME_QUICK.map(([i, l, s]) => `<button onclick="gotoSection('${s}')"><span>${i}</span>${l}</button>`).join('');
+}
+
+async function loadHome(manual) {
+  const btn = document.getElementById('home-refresh');
+  if (manual && btn) btn.classList.add('spin');
+  const r = await api('GET', '/admin/overview');
+  if (btn) btn.classList.remove('spin');
+  if (!r.ok) {
+    document.getElementById('home-waiting').innerHTML = `<div class="error-banner" style="grid-column:1/-1">${esc(errText(r.data, 'تعذّر تحميل الأرقام'))}</div>`;
+    return;
+  }
+  renderHome(r.data);
+}
+
+// the home page refreshes itself every minute while it is the page on screen
+function startHomeTimer() {
+  clearInterval(homeTimer);
+  homeTimer = setInterval(() => { const el = document.getElementById('section-home'); if (el && el.style.display !== 'none' && !document.hidden) loadHome(false); }, 60000);
+}
+
+function toggleMenu(open) { document.getElementById('app').classList.toggle('menu-open', open); }
+
 
 // ---- The Android app as a file on the website ----
 async function loadAppDownload() {
