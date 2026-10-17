@@ -23,6 +23,18 @@ export const en: LanguagePack = {
     "خدمة المسارات غير متاحة حاليًا": "The routing service isn't available right now",
     "الوقت لازم يكون بصيغة HH:mm": "Time must be in HH:mm format",
 
+    // ---- the membership plan's list of what it includes (written by the admin, shown on the plans screen) ----
+    "بطاقة عضوية رقمية بالتطبيق والموقع (رمز QR وكود يتغيّر كل 45 ثانية)": "Digital membership card in the app and on the website (QR code and a code that changes every 45 seconds)",
+    "حسم عند المحلات والأنشطة المشاركة على الخريطة": "Discounts at the participating shops and businesses on the map",
+    "نسبة الحسم يحددها كل محل بعروضه": "Each shop sets its own discount with its offers",
+    "عروض خاصة بالأعضاء بالمتجر الإلكتروني": "Member-only offers in the online store",
+    "إشعارات بالعروض القريبة منك (بتقدر توقفها)": "Notifications about offers near you (you can turn them off)",
+    "سجل بكل حسوماتك وكم وفّرت": "A history of all your discounts and how much you saved",
+    "إيصال PDF لكل عملية حسم": "A PDF receipt for every discount",
+    "فتح حساب نشاط وإضافة منتجات (باقة منفصلة لأصحاب الأنشطة)": "Opening a business account and adding products (a separate plan for business owners)",
+    "المجيب الآلي": "Auto-responder",
+    "إعلانات المتجر والرسائل الجماعية للزبائن": "Store ads and bulk messages to customers",
+
     // ---- the store: advertising space and banners ----
     "البانر غير موجود": "Banner not found",
     "ما عندك متجر": "You don't have a shop",

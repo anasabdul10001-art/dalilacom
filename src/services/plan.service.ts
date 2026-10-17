@@ -100,13 +100,19 @@ export async function getCatalog(countryCode: string | null, lang: string = DEFA
     },
   });
 
+  // What the admin wrote is Arabic; "Arabic | English" on a line gives the English words directly, anything else goes through the phrase list.
+  const say = (text: string): string => {
+    const parts = text.split(" | ");
+    if (parts.length === 2) return lang === DEFAULT_LANGUAGE ? parts[0].trim() : (lang === "en" ? parts[1].trim() : translateText(parts[0].trim(), lang));
+    return translateText(text, lang);
+  };
   const fromCatalog: CatalogPlan[] = plans.map((plan) => {
     const price = priceFor(plan, country?.id ?? null);
     return {
       id: plan.id,
       service: plan.service,
-      name: plan.name,
-      description: plan.description,
+      name: say(plan.name),
+      description: plan.description ? say(plan.description) : plan.description,
       durationDays: plan.durationDays,
       trialDays: plan.trialDays,
       priceCredits: price.priceCredits,
@@ -115,7 +121,7 @@ export async function getCatalog(countryCode: string | null, lang: string = DEFA
       cashAmountCents: price.cashAmountCents,
       currency: price.currency,
       monthlyBroadcastLimit: plan.monthlyBroadcastLimit,
-      features: plan.features.map((f) => ({ text: f.text, included: f.included })),
+      features: plan.features.map((f) => ({ text: say(f.text), included: f.included })),
       source: "catalog",
       editable: true,
     };

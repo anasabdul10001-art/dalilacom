@@ -40,7 +40,7 @@ export async function issueVerificationToken(userId: string) {
 
 export async function sendVerificationEmail(to: string, rawToken: string, lang: string = DEFAULT_LANGUAGE) {
   const base = process.env.PUBLIC_BASE_URL ?? "";
-  const link = `${base}/auth/verify-email?token=${rawToken}`;
+  const link = `${base}/auth/verify-email?token=${rawToken}&lang=${lang}`;
   try {
     await emailService.send({
       to,
@@ -57,7 +57,7 @@ export async function sendVerificationEmail(to: string, rawToken: string, lang: 
 
 async function sendResetEmail(to: string, rawToken: string, lang: string = DEFAULT_LANGUAGE) {
   const base = process.env.PUBLIC_BASE_URL ?? "";
-  const link = `${base}/reset-password.html?token=${rawToken}`;
+  const link = `${base}/reset-password.html?token=${rawToken}&lang=${lang}`;
   try {
     await emailService.send({
       to,
@@ -302,7 +302,7 @@ const changeEmailSchema = z.object({ newEmail: z.string().trim().toLowerCase().e
 
 async function sendEmailChangeMails(oldEmail: string, newEmail: string, rawToken: string, lang: string) {
   const base = process.env.PUBLIC_BASE_URL ?? "";
-  const link = `${base}/auth/confirm-email-change?token=${rawToken}`;
+  const link = `${base}/auth/confirm-email-change?token=${rawToken}&lang=${lang}`;
   try {
     await emailService.send({
       to: newEmail,
