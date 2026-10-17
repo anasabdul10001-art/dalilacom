@@ -49,6 +49,8 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -207,11 +209,17 @@ fun DiscoverScreen(
 
     val sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.PartiallyExpanded, skipHiddenState = true)
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
+    // The directory can be pulled down to a thin strip that only says "Places directory", so the whole map shows.
+    var sheetCollapsed by remember { mutableStateOf(false) }
+    val peekHeight by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (navigating) 0.dp else if (sheetCollapsed) 64.dp else 210.dp,
+        label = "sheetPeek",
+    )
 
     Box(Modifier.fillMaxSize()) {
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = if (navigating) 0.dp else 210.dp,
+        sheetPeekHeight = peekHeight,
         sheetSwipeEnabled = !navigating,
         sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         sheetContainerColor = MaterialTheme.colorScheme.surface,
@@ -227,6 +235,11 @@ fun DiscoverScreen(
                     if (lat != null && lng != null) beginRoute(RouteTarget(merchant.id, merchant.businessName, lat, lng), "driving")
                 },
                 onToggleSaved = { id -> if (isGuest) onLogin() else viewModel.toggleFavorite(id) },
+                collapsed = sheetCollapsed,
+                onToggleCollapsed = {
+                    if (!sheetCollapsed) scope.launch { sheetState.partialExpand() }
+                    sheetCollapsed = !sheetCollapsed
+                },
             )
         },
     ) { innerPadding ->
@@ -237,6 +250,7 @@ fun DiscoverScreen(
                 selectedId = state.selectedMerchantId,
                 onSelect = { id ->
                     viewModel.selectMerchant(id)
+                    sheetCollapsed = false
                     scope.launch { sheetState.partialExpand() }
                 },
                 onUserMoved = viewModel::onViewportMoved,
@@ -517,26 +531,39 @@ private fun DirectorySheet(
     onMerchantClick: (String) -> Unit,
     onDirections: (MerchantDto) -> Unit,
     onToggleSaved: (String) -> Unit,
+    collapsed: Boolean,
+    onToggleCollapsed: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+            // pulled down, only this strip shows: tapping it opens the list again
+            modifier = Modifier.fillMaxWidth().then(if (collapsed) Modifier.clickable { onToggleCollapsed() } else Modifier).padding(start = 20.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                stringResource(if (dealsMode) R.string.deals_sheet_title else if (state.userLocation != null) R.string.sheet_nearby else R.string.sheet_directory),
+                stringResource(if (collapsed) R.string.sheet_directory else if (dealsMode) R.string.deals_sheet_title else if (state.userLocation != null) R.string.sheet_nearby else R.string.sheet_directory),
                 style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
             )
-            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                Text(
-                    stringResource(R.string.sheet_count, state.merchants.size),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            if (!collapsed) {
+                Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text(
+                        stringResource(R.string.sheet_count, state.merchants.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
+            }
+            IconButton(onClick = onToggleCollapsed) {
+                androidx.compose.material3.Icon(
+                    if (collapsed) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = stringResource(R.string.sheet_collapse),
                 )
             }
         }
+        if (collapsed) return@Column
         if (state.merchants.isEmpty()) {
             Text(
                 if (state.isLoading) stringResource(R.string.sheet_loading) else if (state.radiusKm != null) stringResource(R.string.sheet_empty_radius, state.radiusKm.toInt()) else stringResource(if (dealsMode) R.string.deals_empty else R.string.sheet_empty),

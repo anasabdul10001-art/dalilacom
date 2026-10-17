@@ -31,6 +31,7 @@
     <string name="loc_route_failed">We couldn\'t get your location to draw the route — opened in Google Maps instead</string>
 
     <string name="sheet_nearby">Places near you</string>
+    <string name="sheet_collapse">Shrink or expand the list</string>
     <string name="sheet_directory">Places directory</string>
     <string name="sheet_count">%1$d places</string>
     <string name="sheet_loading">Loading places...</string>

@@ -1553,3 +1553,14 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 
 .follow-apk { color: #ba2a34; font-size: 13px; font-weight: 700; text-decoration: none; }
 .follow-apk:hover { text-decoration: underline; }
+
+/* the places sheet can be pulled down to a thin strip that only says "Places directory", so the whole map shows */
+.sheet-head { gap: 8px; }
+.sheet-head .t-min { display: none; }
+.sheet-collapse { margin-inline-start: auto; background: transparent; border: 0; padding: 4px 6px; cursor: pointer; color: var(--muted, #6b5d5b); display: inline-flex; align-items: center; border-radius: 8px; }
+.sheet-collapse svg { transition: transform 0.2s; }
+.sheet.is-min .sheet-collapse svg { transform: rotate(180deg); }
+.sheet.is-min .t-full, .sheet.is-min .sheet-count, .sheet.is-min .sheet-chips, .sheet.is-min .sheet-list { display: none; }
+.sheet.is-min .t-min { display: inline; }
+.sheet.is-min .sheet-handle { padding: 8px 0 4px; }
+.sheet.is-min .sheet-head { padding-bottom: 4px; }

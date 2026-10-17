@@ -1021,7 +1021,11 @@ function visibleMerchants(d) {
 
 function sheetHeights() {
   const H = (root() && root().clientHeight) || 640;
-  return { peek: 232, half: Math.round(H * 0.55), full: Math.max(320, H - 150) };
+  // the thin strip sits just above the bottom tab bar (which covers the lowest part of the sheet)
+  const map = document.getElementById("mapfull");
+  const bar = document.querySelector(".tabbar");
+  const covered = map && bar ? Math.max(0, map.getBoundingClientRect().bottom - bar.getBoundingClientRect().top) : 77;
+  return { min: Math.round(covered) + 58, peek: 232, half: Math.round(H * 0.55), full: Math.max(320, H - 150) };
 }
 
 /* ---- Deals tab: the discount map ---- */
@@ -1108,11 +1112,13 @@ function tabDiscover() {
       ${mapFabsHtml()}
 
       ${navBottomHtml()}
-      <div class="sheet" id="sheet">
+      <div class="sheet ${S._sheet === "min" ? "is-min" : ""}" id="sheet">
         <div class="sheet-handle" onpointerdown="sheetDragStart(event)" onclick="sheetToggle()"><span></span></div>
         <div class="sheet-head">
-          <strong>${esc(deals ? t("deals.sheetTitle") : d.userLoc ? t("sheet.nearby") : t("sheet.directory"))}</strong>
-          <span class="badge info">${esc(t("sheet.count", { n: list.length }))}</span>
+          <strong class="t-full">${esc(deals ? t("deals.sheetTitle") : d.userLoc ? t("sheet.nearby") : t("sheet.directory"))}</strong>
+          <strong class="t-min">${esc(t("sheet.directory"))}</strong>
+          <span class="badge info sheet-count">${esc(t("sheet.count", { n: list.length }))}</span>
+          <button class="sheet-collapse" onclick="sheetCollapse(event)" aria-label="${esc(t("sheet.collapse"))}" title="${esc(t("sheet.collapse"))}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
         ${(d.userLoc || d.bounds || deals) ? `<div class="sheet-chips">
           ${d.bounds ? `<button class="chip active" onclick="clearSearchArea()">${esc(t("area.clear"))}</button>` : ""}
@@ -1141,7 +1147,7 @@ function sheetDragStart(e) {
   const move = (ev) => {
     const dy = ev.clientY - startY;
     if (Math.abs(dy) > 6) moved = true;
-    box.style.setProperty("--sheet-h", Math.min(heights.full, Math.max(120, startH - dy)) + "px");
+    box.style.setProperty("--sheet-h", Math.min(heights.full, Math.max(heights.min, startH - dy)) + "px");
   };
   const up = () => {
     window.removeEventListener("pointermove", move);
@@ -1151,6 +1157,7 @@ function sheetDragStart(e) {
     const h = parseFloat(box.style.getPropertyValue("--sheet-h"));
     S._sheet = Object.entries(heights).sort((a, b) => Math.abs(a[1] - h) - Math.abs(b[1] - h))[0][0];
     box.style.setProperty("--sheet-h", heights[S._sheet] + "px");
+    sheet.classList.toggle("is-min", S._sheet === "min");
     S._sheetMoved = true;
     setTimeout(() => { S._sheetMoved = false; }, 60);
   };
@@ -1160,10 +1167,23 @@ function sheetDragStart(e) {
 
 function sheetToggle() {
   if (S._sheetMoved) return;
-  const order = ["peek", "half", "full"];
-  S._sheet = order[(order.indexOf(S._sheet || "peek") + 1) % 3];
+  const order = ["min", "peek", "half", "full"];
+  S._sheet = order[(order.indexOf(S._sheet || "peek") + 1) % 4];
+  applySheetHeight();
+}
+
+function applySheetHeight() {
   const box = document.getElementById("mapfull");
-  if (box) box.style.setProperty("--sheet-h", sheetHeights()[S._sheet] + "px");
+  if (box) box.style.setProperty("--sheet-h", sheetHeights()[S._sheet || "peek"] + "px");
+  const sheet = document.getElementById("sheet");
+  if (sheet) sheet.classList.toggle("is-min", S._sheet === "min");
+}
+
+/** The arrow in the title row: down to the thin strip (only "Places directory" stays), and up again from there. */
+function sheetCollapse(e) {
+  if (e) e.stopPropagation();
+  S._sheet = S._sheet === "min" ? "peek" : "min";
+  applySheetHeight();
 }
 
 // Tapping a pin brings that place to the top of the sheet.

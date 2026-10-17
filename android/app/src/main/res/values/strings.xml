@@ -35,6 +35,7 @@
     <string name="loc_route_failed">ما قدرنا نحدد موقعك لنرسم الطريق — فتحناه بخرائط جوجل</string>
 
     <string name="sheet_nearby">المحلات القريبة منك</string>
+    <string name="sheet_collapse">تصغير أو تكبير الدليل</string>
     <string name="sheet_directory">دليل المحلات</string>
     <string name="sheet_count">%1$d محل</string>
     <string name="sheet_loading">عم نحمّل المحلات...</string>
