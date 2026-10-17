@@ -781,31 +781,51 @@ async function loadAppDownload() {
       <div class="field"><label>ملف التطبيق (.apk)</label><input id="app-file" type="file" accept=".apk,application/vnd.android.package-archive"></div>
     </div>
     <button onclick="uploadAppFile()" id="app-upload-btn">رفع الملف</button> <span id="app-msg" class="muted"></span>
+    <div id="app-progress" style="display:none;margin-top:12px">
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px"><b id="app-pct">0%</b><span id="app-sizes" class="muted" dir="ltr"></span></div>
+      <div style="height:16px;background:#efe3e1;border-radius:999px;overflow:hidden"><div id="app-bar" style="height:100%;width:0;background:#ba2a34;border-radius:999px;transition:width .2s"></div></div>
+    </div>
     <p class="subtitle">الملف الجديد بيحل مكان القديم فورًا. الحجم الأقصى 80 ميغا.</p>`;
 }
-async function uploadAppFile() {
+function uploadAppFile() {
   const msg = document.getElementById('app-msg');
   const btn = document.getElementById('app-upload-btn');
   const file = document.getElementById('app-file').files[0];
   const version = document.getElementById('app-version').value.trim();
   if (!version) { msg.textContent = 'اكتب رقم النسخة أول'; return; }
   if (!file) { msg.textContent = 'اختر ملف التطبيق أول'; return; }
+  const box = document.getElementById('app-progress');
+  const bar = document.getElementById('app-bar');
+  const pct = document.getElementById('app-pct');
+  const sizes = document.getElementById('app-sizes');
+  const mb = (n) => (n / 1048576).toFixed(1);
+  const show = (p, loaded) => { bar.style.width = p + '%'; pct.textContent = p + '%'; sizes.textContent = mb(loaded) + ' / ' + mb(file.size) + ' MB'; };
   btn.disabled = true;
+  box.style.display = 'block';
+  show(0, 0);
   msg.textContent = 'عم يرفع… ما تسكّر الصفحة';
-  try {
-    const res = await fetch('/admin/app-download/file?version=' + encodeURIComponent(version), {
-      method: 'PUT',
-      headers: { 'Authorization': 'Bearer ' + state.token, 'Content-Type': 'application/octet-stream' },
-      body: file,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) { msg.textContent = errText(data, 'فشل الرفع'); btn.disabled = false; return; }
+  const fail = (text) => { msg.textContent = text; btn.disabled = false; box.style.display = 'none'; };
+  const xhr = new XMLHttpRequest();
+  xhr.open('PUT', '/admin/app-download/file?version=' + encodeURIComponent(version));
+  xhr.setRequestHeader('Authorization', 'Bearer ' + state.token);
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.upload.onprogress = (e) => {
+    if (!e.lengthComputable) return;
+    const p = Math.min(100, Math.round((e.loaded / e.total) * 100));
+    show(p, e.loaded);
+    if (p >= 100) msg.textContent = 'وصل الملف، عم يتحقق منه ويحفظه…';
+  };
+  xhr.onerror = () => fail('انقطع الاتصال أثناء الرفع، جرّب من جديد');
+  xhr.ontimeout = () => fail('أخذ وقت طويل، جرّب من جديد');
+  xhr.onload = async () => {
+    let data = {};
+    try { data = JSON.parse(xhr.responseText); } catch (e) {}
+    if (xhr.status < 200 || xhr.status >= 300) return fail(errText(data, 'فشل الرفع'));
     await loadAppDownload();
-    document.getElementById('app-msg').textContent = 'انرفع ✅ — فعّل «إظهار» ليبين الرابط للناس';
-  } catch (e) {
-    msg.textContent = 'انقطع الاتصال أثناء الرفع، جرّب من جديد';
-    btn.disabled = false;
-  }
+    const done = document.getElementById('app-msg');
+    if (done) done.textContent = 'انرفع ✅ — فعّل «إظهار» ليبين الرابط للناس';
+  };
+  xhr.send(file);
 }
 async function setAppVisible(visible) {
   const r = await api('PUT', '/admin/app-download/visible', { visible });
