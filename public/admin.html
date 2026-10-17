@@ -105,6 +105,7 @@
     <div class="nav-item" data-section="pcats" onclick="showSection('pcats'); loadProductCats()">🏷️ تصنيفات المنتجات</div>
     <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()">🛡️ مراجعة المنتجات <span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="marketers" onclick="showSection('marketers'); loadMarketers()">📣 المسوّقون</div>
+    <div class="nav-item" data-section="social" onclick="showSection('social'); loadSocialLinks()">🔗 روابط التواصل الاجتماعي</div>
     <div class="nav-item" data-section="launch" onclick="showSection('launch'); loadLaunchReset()">🚀 تهيئة الإطلاق</div>
     <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()">💡 اقتراحات المهن <span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
     <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()">🏷️ الحسومات <span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
@@ -495,6 +496,12 @@
     </div>
 
     <!-- MARKETERS -->
+    <div class="section" id="section-social" style="display:none">
+      <h2>روابط التواصل الاجتماعي</h2>
+      <p class="subtitle">حط رابط صفحتك على كل منصة، وشغّل زر «إظهار» للمنصات اللي بدك تظهر. اللي بيكون مشغّل وعليه رابط بيظهر كأيقونة صغيرة بالموقع وبتطبيق الأندرويد وبأسفل الإيميلات. وإذا طفّيته بيختفي من كل الأماكن فورًا.</p>
+      <div class="card" id="social-card">جارٍ التحميل…</div>
+    </div>
+
     <div class="section" id="section-launch" style="display:none">
       <h2>تهيئة الإطلاق (البدء من الصفر)</h2>
       <p class="subtitle">بيمسح كل الحسابات ما عدا السوبر أدمن، ومعهم كل المحلات والمنتجات والعروض والطلبات والمحافظ والإعلانات والمراجعات والإشعارات. بيبقى: الدول والمدن، التصنيفات، الباقات والأسعار، الضرائب، وإعدادات المنصة. <b>ما في رجعة.</b></p>
@@ -748,6 +755,31 @@ function showSection(name) {
   document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
   document.getElementById('section-' + name).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === name));
+}
+
+// ---- Social media links ----
+const SOCIAL_NAMES = { facebook: 'فيسبوك', instagram: 'إنستغرام', youtube: 'يوتيوب', tiktok: 'تيك توك' };
+const SOCIAL_HINTS = { facebook: 'https://www.facebook.com/اسم_الصفحة', instagram: 'https://www.instagram.com/اسم_الحساب', youtube: 'https://www.youtube.com/@اسم_القناة', tiktok: 'https://www.tiktok.com/@اسم_الحساب' };
+async function loadSocialLinks() {
+  const box = document.getElementById('social-card');
+  const r = await api('GET', '/admin/social-links');
+  if (!r.ok) { box.textContent = errText(r.data, 'تعذّر التحميل'); return; }
+  box.innerHTML = `
+    <table><thead><tr><th>المنصة</th><th>رابط الصفحة</th><th>إظهار</th></tr></thead><tbody>
+    ${r.data.links.map((l) => `<tr>
+      <td><img src="/brand/social/${l.platform}.png" alt="" width="26" height="26" style="vertical-align:middle"> <b>${SOCIAL_NAMES[l.platform]}</b></td>
+      <td><input id="soc-url-${l.platform}" dir="ltr" style="width:100%;min-width:260px" placeholder="${SOCIAL_HINTS[l.platform]}" value="${esc(l.url)}"></td>
+      <td><label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="soc-vis-${l.platform}" ${l.visible ? 'checked' : ''} style="width:20px;height:20px"> <span>إظهار</span></label></td>
+    </tr>`).join('')}
+    </tbody></table>
+    <button onclick="saveSocialLinks()">حفظ</button> <span id="social-msg" class="muted"></span>`;
+}
+async function saveSocialLinks() {
+  const msg = document.getElementById('social-msg');
+  const links = Object.keys(SOCIAL_NAMES).map((p) => ({ platform: p, url: document.getElementById('soc-url-' + p).value.trim(), visible: document.getElementById('soc-vis-' + p).checked }));
+  const r = await api('PUT', '/admin/social-links', { links });
+  msg.textContent = r.ok ? 'انحفظ ✅' : errText(r.data, 'فشل الحفظ');
+  if (r.ok) loadSocialLinks();
 }
 
 // ---- Launch reset ----

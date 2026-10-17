@@ -1544,3 +1544,9 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 /* dark theme: the logo on the side rail is the white one (the black part of the colour logo vanishes on a dark background) */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabbar::before { background-image: url("/brand/mark-white-192.png") !important; } }
 :root[data-theme="dark"] .tabbar::before { background-image: url("/brand/mark-white-192.png") !important; }
+
+/* our social media pages: small round icons (the ones switched on in the admin panel) */
+.follow-label { color: var(--muted, #6b5d5b); font-size: 13px; font-weight: 700; }
+.follow-icons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.follow-icon { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: #ba2a34; text-decoration: none; }
+.follow-icon:hover { filter: brightness(1.12); }

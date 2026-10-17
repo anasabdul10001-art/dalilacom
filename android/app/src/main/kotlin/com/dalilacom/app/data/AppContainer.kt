@@ -18,6 +18,7 @@ import com.dalilacom.app.data.repository.ProfileRepository
 import com.dalilacom.app.data.repository.ResponderRepository
 import com.dalilacom.app.data.store.SessionStore
 import com.dalilacom.app.data.store.TokenStore
+import kotlinx.coroutines.launch
 
 /** A place the user asked directions to; handed from the place page to the map screen. */
 data class RouteTarget(val id: String, val name: String, val latitude: Double, val longitude: Double)
@@ -54,4 +55,9 @@ class AppContainer(context: Context) {
     val notificationRepository = NotificationRepository(api, context.applicationContext)
     val broadcastRepository = BroadcastRepository(api)
     val accountRepository = AccountRepository(api, tokenStore)
+
+    init {
+        // our social media pages the owner switched on: read once at start; until they load the Facebook page shows
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { storeRepository.socialLinks()?.let { com.dalilacom.app.ui.common.SocialLinks.links.value = it } }
+    }
 }

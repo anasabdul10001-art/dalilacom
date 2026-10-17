@@ -337,7 +337,23 @@ function lookAndLanguageHtml() {
   </div>`;
 }
 
-const FACEBOOK_URL = "https://www.facebook.com/Dalilacomsy";
+// Our own social media pages: the owner sets them (and switches each on or off) in the admin panel; until they load, Facebook shows.
+let SOCIAL_LINKS = [{ platform: "facebook", url: "https://www.facebook.com/Dalilacomsy" }];
+const SOCIAL_NAME = { facebook: "Facebook", instagram: "Instagram", youtube: "YouTube", tiktok: "TikTok" };
+const SOCIAL_GLYPH = {
+  facebook: '<path fill="#fff" d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.6-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3z"/>',
+  instagram: '<rect x="5.2" y="5.2" width="13.6" height="13.6" rx="4.1" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="16.3" cy="7.7" r="1.05" fill="#fff"/>',
+  youtube: '<rect x="3.4" y="6.4" width="17.2" height="11.2" rx="3.2" fill="#fff"/><path d="M10.2 9.5v5l4.4-2.5z" fill="#ba2a34"/>',
+  tiktok: '<path d="M13.3 4.6v10.1a2.9 2.9 0 1 1-2.9-2.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.3 4.6c.3 2.1 1.7 3.6 4 3.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
+};
+async function loadSocialLinks() {
+  try {
+    const res = await fetch(API_BASE + "/social-links");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.links) && JSON.stringify(data.links) !== JSON.stringify(SOCIAL_LINKS)) { SOCIAL_LINKS = data.links; render(); }
+  } catch (e) { /* the icons simply stay as they are */ }
+}
 
 /** The essential pages (about, privacy, terms, returns, shipping): small links at the bottom of the main screens. */
 function legalLinksHtml() {
@@ -345,10 +361,13 @@ function legalLinksHtml() {
   return `<nav class="legal-links" aria-label="legal">${L.map(([p, k]) => `<a href="/${p}.html" target="_blank" rel="noopener">${esc(t(k))}</a>`).join("")}</nav>`;
 }
 
-/** The follow button to our one official Facebook page, with the line that other pages with the name are not ours. */
+/** Small round icons to our pages (the ones switched on in the admin panel), with the line that other pages with the name are not ours. */
 function followUsHtml(withNote) {
+  if (!SOCIAL_LINKS.length) return "";
+  const icons = SOCIAL_LINKS.map((l) => `<a class="follow-icon" href="${esc(l.url)}" target="_blank" rel="noopener" aria-label="${esc(SOCIAL_NAME[l.platform] || l.platform)}" title="${esc(SOCIAL_NAME[l.platform] || l.platform)}"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">${SOCIAL_GLYPH[l.platform] || ""}</svg></a>`).join("");
   return `<div class="follow-us">
-    <a class="follow-fb" href="${FACEBOOK_URL}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.6-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3z"/></svg><span>${esc(t("follow.facebook"))}</span></a>
+    <span class="follow-label">${esc(t("follow.us"))}</span>
+    <div class="follow-icons">${icons}</div>
     ${withNote ? `<small>${esc(t("follow.official"))}</small>` : ""}
   </div>`;
 }
@@ -6376,6 +6395,7 @@ function bootMetaReturn() {
 
 loadMarket();
 captureJoin();
+loadSocialLinks();
 
 bootSocialReturn().then((social) => {
   if (social) return;

@@ -270,6 +270,10 @@ interface ApiService {
     @PUT("reviews/customers/{id}")
     suspend fun reviewCustomer(@Path("id") id: String, @Body body: ReviewRequest): Response<Unit>
 
+    /** Our social media pages the owner switched on (admin panel). */
+    @GET("social-links")
+    suspend fun socialLinks(): Response<SocialLinksDto>
+
     @GET("geo/market")
     suspend fun market(): Response<MarketDto>
 

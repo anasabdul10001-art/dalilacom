@@ -35,6 +35,7 @@ import { broadcastRouter } from "./routes/broadcast.routes";
 import { socialRouter } from "./routes/social.routes";
 import { referralRouter } from "./routes/referral.routes";
 import { legalRouter } from "./routes/legal.routes";
+import { getVisibleSocialLinks } from "./services/socialLinks.service";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { localizeResponses } from "./lib/localize";
@@ -65,6 +66,8 @@ app.use(localizeResponses);
 app.use(express.json({ verify: (req, _res, buf) => { (req as any).rawBody = buf; } }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+// Our social media links that the owner switched on (the website, the Android app and the e-mails show them).
+app.get("/social-links", async (_req, res) => res.json({ links: await getVisibleSocialLinks() }));
 
 // The developer test console (public/console.html) is for the owner only: the live service sets HIDE_DEV_CONSOLE=true so it exists
 // only on the testing address.

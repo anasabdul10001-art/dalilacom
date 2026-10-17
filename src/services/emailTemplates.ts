@@ -1,4 +1,5 @@
 import { directionOf, translateText } from "../i18n";
+import { socialLinksSnapshot } from "./socialLinks.service";
 
 /**
  * The look of every mail Dalilacom sends: the logo on a red band, a clear title, short paragraphs, one big button, and a
@@ -28,6 +29,8 @@ export interface BrandedEmail {
   note?: string;
   /** A short line at the top shown by the inbox list next to the subject. */
   preheader?: string;
+  /** Our social media pages that are switched on (admin panel): shown as small round icons in the footer. */
+  social?: { platform: string; url: string }[];
 }
 
 /** The HTML of a branded mail. All texts are Arabic and are translated here; [paragraphs] values that are already in the reader's language pass through unchanged. */
@@ -49,6 +52,12 @@ export function renderBrandedEmail(mail: BrandedEmail): string {
         <a href="${esc(mail.button.url)}" style="color:${RED};word-break:break-all;direction:ltr;unicode-bidi:embed;">${esc(mail.button.url)}</a></p>`
     : "";
   const note = mail.note ? `<p style="margin:16px 0 0;font-size:13px;line-height:1.7;color:#8a7774;">${esc(t(mail.note))}</p>` : "";
+  const icons = (mail.social ?? [])
+    .map(
+      (l) =>
+        `<a href="${esc(l.url)}" style="display:inline-block;margin:0 4px;"><img src="${base}/brand/social/${esc(l.platform)}.png" alt="${esc(l.platform)}" width="28" height="28" style="width:28px;height:28px;border:0;display:inline-block;"></a>`,
+    )
+    .join("");
   const preheader = mail.preheader
     ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f4eeed;">${esc(t(mail.preheader))}</div>`
     : "";
@@ -80,9 +89,9 @@ ${preheader}
       <p style="margin:0 0 6px;font-size:13px;line-height:1.7;color:#8a7774;">${esc(t("دليلكم: كل محلات مدينتك وعروضها بمكان واحد"))}</p>
       <p style="margin:0;font-size:12.5px;line-height:1.7;color:#8a7774;">
         <a href="${base}" style="color:${RED};text-decoration:none;">dalilacom.com</a> ·
-        <a href="mailto:info@dalilacom.com" style="color:${RED};text-decoration:none;">info@dalilacom.com</a> ·
-        <a href="https://www.facebook.com/Dalilacomsy" style="color:${RED};text-decoration:none;">Facebook</a>
+        <a href="mailto:info@dalilacom.com" style="color:${RED};text-decoration:none;">info@dalilacom.com</a>
       </p>
+      ${icons ? `<p style="margin:12px 0 0;text-align:${align};">${icons}</p>` : ""}
       <p style="margin:10px 0 0;font-size:11.5px;line-height:1.7;color:#b3a3a0;">${esc(t("هذه رسالة تلقائية، لا ترد عليها. للمساعدة اكتب لنا على info@dalilacom.com"))}</p>
     </td></tr>
   </table>
@@ -95,7 +104,7 @@ ${preheader}
 /* ---------------- the account mails ---------------- */
 
 export function verificationEmailHtml(lang: string, link: string, ttlHours: number): string {
-  return renderBrandedEmail({
+  return renderBrandedEmail({ social: socialLinksSnapshot(),
     lang,
     heading: "أهلًا بك في دليلكم",
     paragraphs: ["اضغط الزر لتأكيد بريدك الإلكتروني وتفعيل حسابك."],
@@ -106,7 +115,7 @@ export function verificationEmailHtml(lang: string, link: string, ttlHours: numb
 }
 
 export function resetEmailHtml(lang: string, link: string, ttlMinutes: number): string {
-  return renderBrandedEmail({
+  return renderBrandedEmail({ social: socialLinksSnapshot(),
     lang,
     heading: "إعادة تعيين كلمة السر",
     paragraphs: ["وصلنا طلب لإعادة تعيين كلمة سر حسابك. اضغط الزر لتختار كلمة سر جديدة."],
@@ -117,7 +126,7 @@ export function resetEmailHtml(lang: string, link: string, ttlMinutes: number): 
 }
 
 export function emailChangeConfirmHtml(lang: string, link: string): string {
-  return renderBrandedEmail({
+  return renderBrandedEmail({ social: socialLinksSnapshot(),
     lang,
     heading: "تأكيد بريدك الجديد",
     paragraphs: ["طلبت تغيير بريد حسابك على دليلكم إلى هذا العنوان. اضغط الزر لتأكيد التغيير."],
@@ -128,7 +137,7 @@ export function emailChangeConfirmHtml(lang: string, link: string): string {
 }
 
 export function emailChangeAlertHtml(lang: string, newEmail: string): string {
-  return renderBrandedEmail({
+  return renderBrandedEmail({ social: socialLinksSnapshot(),
     lang,
     heading: "تنبيه أمني",
     paragraphs: [
@@ -140,7 +149,7 @@ export function emailChangeAlertHtml(lang: string, newEmail: string): string {
 }
 
 export function emailChangedHtml(lang: string, newEmail: string): string {
-  return renderBrandedEmail({
+  return renderBrandedEmail({ social: socialLinksSnapshot(),
     lang,
     heading: "تم تغيير بريد حسابك",
     paragraphs: [
@@ -152,5 +161,5 @@ export function emailChangedHtml(lang: string, newEmail: string): string {
 
 /** A notification the app wrote for the person: the title and text are already in their language. */
 export function notificationEmailHtml(lang: string, title: string, body: string | undefined): string {
-  return renderBrandedEmail({ lang, heading: title, paragraphs: body ? [body] : [] });
+  return renderBrandedEmail({ social: socialLinksSnapshot(), lang, heading: title, paragraphs: body ? [body] : [] });
 }

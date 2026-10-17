@@ -3,6 +3,8 @@
 // Arabic reader is never left with a raw English sentence.
 
 const MESSAGES: Record<string, string> = {
+  "The link is not on this platform's own website": "الرابط مو على موقع المنصة نفسها (مثلًا رابط إنستغرام لازم يكون على instagram.com)",
+  "The link is not a valid web address": "الرابط مو عنوان ويب صحيح",
   "Merchant is not approved yet": "محلك لسا ما انوافق عليه من الإدارة",
   "Merchant not approved": "محلك لسا ما انوافق عليه من الإدارة",
   "Merchant profile not found": "ما عندك محل مسجّل",

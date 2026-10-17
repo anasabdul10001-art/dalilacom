@@ -689,6 +689,12 @@ data class CatalogDto(val creditName: String = "", val countryCode: String? = nu
 /* ---------------- the online store ---------------- */
 
 @Serializable
+data class SocialLinkDto(val platform: String, val url: String)
+
+@Serializable
+data class SocialLinksDto(val links: List<SocialLinkDto> = emptyList())
+
+@Serializable
 data class MarketDto(val country: String = "", val currencyCode: String = "")
 
 @Serializable

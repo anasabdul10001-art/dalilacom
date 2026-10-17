@@ -15,6 +15,7 @@ import { discountScopeInfo, discountState } from "../lib/discounts";
 import { sniffImageMime } from "../lib/image";
 import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
+import { getSocialLinks, saveSocialLinks, SOCIAL_PLATFORMS, SocialLinkError } from "../services/socialLinks.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
 import { aiProviderStatus, aiTotals, aiUsage, testProvider } from "../services/ai.service";
 import bcrypt from "bcryptjs";
@@ -171,6 +172,29 @@ adminRouter.put("/settings", async (req, res) => {
   }
   res.json(await saveSettings(parsed.data as any));
 });
+
+/* ---------------- our own social media links: address + show/hide for each ---------------- */
+
+adminRouter.get("/social-links", route(async (_req, res) => {
+  res.json({ links: await getSocialLinks() });
+}));
+
+const socialLinksSchema = z.object({
+  links: z.array(z.object({ platform: z.enum(SOCIAL_PLATFORMS), url: z.string().max(300), visible: z.boolean() })).max(SOCIAL_PLATFORMS.length),
+});
+
+adminRouter.put("/social-links", route(async (req, res) => {
+  const parsed = socialLinksSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    res.json({ links: await saveSocialLinks(parsed.data.links) });
+  } catch (err) {
+    if (err instanceof SocialLinkError) {
+      return sendError(res, 400, "BAD_REQUEST", err.message === "WRONG_DOMAIN" ? "The link is not on this platform's own website" : "The link is not a valid web address");
+    }
+    throw err;
+  }
+}));
 
 /* ---------------- marketers: people who bring others to Dalilacom through a referral link ---------------- */
 
