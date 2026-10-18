@@ -39,6 +39,10 @@ object SocialLinks {
     val links = MutableStateFlow(listOf(SocialLinkDto("facebook", FACEBOOK_URL)))
 }
 
+/** Red discs with a white sign; the Google Play sign keeps its own four colours, so it sits on white (people know the store by it). */
+private fun iconBackground(platform: String): androidx.compose.ui.graphics.Brush =
+    androidx.compose.ui.graphics.SolidColor(if (platform == "googleplay") Color.White else Color(0xFFBA2A34))
+
 private fun iconOf(platform: String): Int? = when (platform) {
     "facebook" -> R.drawable.ic_facebook_f
     "instagram" -> R.drawable.ic_social_instagram
@@ -60,7 +64,7 @@ fun FollowUsButton(modifier: Modifier = Modifier, showNote: Boolean = true) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             shown.forEach { link ->
                 Box(
-                    Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFBA2A34)).clickable { ExternalBrowser.open(context, link.url) },
+                    Modifier.size(40.dp).clip(CircleShape).background(iconBackground(link.platform)).clickable { ExternalBrowser.open(context, link.url) },
                     contentAlignment = Alignment.Center,
                 ) {
                     androidx.compose.foundation.Image(painterResource(iconOf(link.platform)!!), contentDescription = link.platform, modifier = Modifier.size(22.dp))
@@ -88,7 +92,7 @@ fun BoxScope.SocialDock() {
     ) {
         shown.forEach { link ->
             Box(
-                Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFBA2A34)).clickable { ExternalBrowser.open(context, link.url) },
+                Modifier.size(36.dp).clip(CircleShape).background(iconBackground(link.platform)).clickable { ExternalBrowser.open(context, link.url) },
                 contentAlignment = Alignment.Center,
             ) {
                 androidx.compose.foundation.Image(painterResource(iconOf(link.platform)!!), contentDescription = link.platform, modifier = Modifier.size(20.dp))

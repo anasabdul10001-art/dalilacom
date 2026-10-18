@@ -1592,3 +1592,6 @@ html[lang="en"] .auth-logo { width: 240px !important; max-width: 82% !important;
 html[lang="en"] .brand-slide .bs-logo img { height: auto; width: min(300px, 70vw); }
 html[lang="en"] .invite-slide .bs-logo img { height: auto; width: min(260px, 64vw); }
 html[lang="en"] .ph-logo { height: auto; width: auto; max-height: 44px; max-width: 60%; }
+
+/* the Google Play icon: its own four colours on white, so people recognise the store */
+.follow-icon.is-play, .dock-icon.is-play { background: #fff; box-shadow: inset 0 0 0 2px #ba2a34; }

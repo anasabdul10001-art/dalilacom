@@ -344,7 +344,7 @@ const SOCIAL_GLYPH = {
   facebook: '<path fill="#fff" d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.6-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3z"/>',
   instagram: '<rect x="5.2" y="5.2" width="13.6" height="13.6" rx="4.1" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="16.3" cy="7.7" r="1.05" fill="#fff"/>',
   youtube: '<rect x="3.4" y="6.4" width="17.2" height="11.2" rx="3.2" fill="#fff"/><path d="M10.2 9.5v5l4.4-2.5z" fill="#ba2a34"/>',
-  googleplay: '<path fill="#fff" d="M7 4.6v14.8a.7.7 0 0 0 1 .6l11.2-7.1a.7.7 0 0 0 0-1.2L8 4a.7.7 0 0 0-1 .6z"/>',
+  googleplay: '<polygon fill="#00A0FF" points="5,2.5 5,21.5 13,12"/><polygon fill="#00E676" points="5,2.5 13,12 16.8,9.97"/><polygon fill="#FFC800" points="13,12 16.8,9.97 20,12 16.8,14.03"/><polygon fill="#FF3A44" points="5,21.5 13,12 16.8,14.03"/>',
   tiktok: '<path d="M13.3 4.6v10.1a2.9 2.9 0 1 1-2.9-2.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.3 4.6c.3 2.1 1.7 3.6 4 3.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
 };
 let APP_DOWNLOAD = false; // the owner switched the direct download of the Android app on (admin panel)
@@ -379,7 +379,7 @@ function legalLinksHtml() {
 /** Small round icons to our pages (the ones switched on in the admin panel), with the line that other pages with the name are not ours. */
 function followUsHtml(withNote) {
   if (!SOCIAL_LINKS.length && !APP_DOWNLOAD) return "";
-  const icons = SOCIAL_LINKS.map((l) => `<a class="follow-icon" href="${esc(l.url)}" target="_blank" rel="noopener" aria-label="${esc(SOCIAL_NAME[l.platform] || l.platform)}" title="${esc(SOCIAL_NAME[l.platform] || l.platform)}"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">${SOCIAL_GLYPH[l.platform] || ""}</svg></a>`).join("");
+  const icons = SOCIAL_LINKS.map((l) => `<a class="follow-icon${l.platform === "googleplay" ? " is-play" : ""}" href="${esc(l.url)}" target="_blank" rel="noopener" aria-label="${esc(SOCIAL_NAME[l.platform] || l.platform)}" title="${esc(SOCIAL_NAME[l.platform] || l.platform)}"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">${SOCIAL_GLYPH[l.platform] || ""}</svg></a>`).join("");
   return `<div class="follow-us">
     <span class="follow-label">${esc(t("follow.us"))}</span>
     <div class="follow-icons">${icons}</div>
@@ -391,7 +391,7 @@ function followUsHtml(withNote) {
 /** A slim floating bar on the edge of the screen, always in sight: our pages, the Play page, and the direct download of the Android app. */
 function socialDockHtml() {
   if (FAB_HIDDEN.includes(S.screen) || (!SOCIAL_LINKS.length && !APP_DOWNLOAD)) return "";
-  const icon = (href, name, glyph) => `<a class="dock-icon" href="${esc(href)}" target="_blank" rel="noopener" aria-label="${esc(name)}" title="${esc(name)}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">${glyph}</svg></a>`;
+  const icon = (href, name, glyph) => `<a class="dock-icon${name === "Google Play" ? " is-play" : ""}" href="${esc(href)}" target="_blank" rel="noopener" aria-label="${esc(name)}" title="${esc(name)}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">${glyph}</svg></a>`;
   const apk = APP_DOWNLOAD ? icon("/download.html", t("follow.download"), '<path d="M12 4v10m0 0-4-4m4 4 4-4M5 19h14" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>') : "";
   return `<nav class="social-dock" aria-label="${esc(t("follow.us"))}">${SOCIAL_LINKS.map((l) => icon(l.url, SOCIAL_NAME[l.platform] || l.platform, SOCIAL_GLYPH[l.platform] || "")).join("")}${apk}</nav>`;
 }
