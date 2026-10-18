@@ -14,6 +14,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -101,7 +102,8 @@ fun DalilacomNavGraph(
 
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
-    Box(Modifier.fillMaxSize()) {
+    // Android 15+ draws edge to edge and ignores "adjustResize": the whole app lifts above the keyboard here, so the field being typed in is always in sight
+    Box(Modifier.fillMaxSize().imePadding()) {
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(

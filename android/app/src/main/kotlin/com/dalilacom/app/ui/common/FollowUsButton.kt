@@ -1,6 +1,19 @@
 package com.dalilacom.app.ui.common
 
 import androidx.compose.foundation.background
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.Icons
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,25 +91,54 @@ fun FollowUsButton(modifier: Modifier = Modifier, showNote: Boolean = true) {
     }
 }
 
-/** A slim floating bar on the edge of the screen, always in sight: our pages and the Play page (the owner switches each on in the admin panel). */
+/** Open the first time the bar is drawn after the app starts; it is folded to its arrow afterwards (kept here so a new screen does not open it again). */
+private object SocialDockState { var shown = false }
+
+/**
+ * A slim floating bar in the top corner: our pages and the Play page (the owner switches each on in the admin panel). It stays open for 5
+ * seconds, then folds to a small arrow on the edge; the arrow opens it again (again for 5 seconds).
+ */
 @Composable
 fun BoxScope.SocialDock() {
     val context = LocalContext.current
     val links by SocialLinks.links.collectAsState()
     val shown = links.filter { iconOf(it.platform) != null }
     if (shown.isEmpty()) return
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
-    Column(
-        Modifier.align(Alignment.CenterEnd).offset(y = (-48).dp).shadow(6.dp, shape).background(MaterialTheme.colorScheme.surface, shape).padding(horizontal = 6.dp, vertical = 9.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        shown.forEach { link ->
-            Box(
-                Modifier.size(36.dp).clip(CircleShape).background(iconBackground(link.platform)).clickable { ExternalBrowser.open(context, link.url) },
-                contentAlignment = Alignment.Center,
+    var open by remember { mutableStateOf(!SocialDockState.shown) }
+    SocialDockState.shown = true
+    LaunchedEffect(open) {
+        if (open) {
+            delay(5000)
+            open = false
+        }
+    }
+    val startShape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+    Row(Modifier.align(Alignment.TopEnd).padding(top = 150.dp), verticalAlignment = Alignment.Top) {
+        AnimatedVisibility(visible = open, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
+            Column(
+                Modifier.shadow(6.dp, startShape).background(MaterialTheme.colorScheme.surface, startShape).padding(horizontal = 6.dp, vertical = 9.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                androidx.compose.foundation.Image(painterResource(iconOf(link.platform)!!), contentDescription = link.platform, modifier = Modifier.size(20.dp))
+                shown.forEach { link ->
+                    Box(
+                        Modifier.size(36.dp).clip(CircleShape).background(iconBackground(link.platform)).clickable { ExternalBrowser.open(context, link.url) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        androidx.compose.foundation.Image(painterResource(iconOf(link.platform)!!), contentDescription = link.platform, modifier = Modifier.size(20.dp))
+                    }
+                }
             }
+        }
+        // the small arrow that stays: it points into the screen when folded (pull out) and to the edge when open (push away)
+        val tabShape = if (open) androidx.compose.ui.graphics.RectangleShape else startShape
+        Box(
+            Modifier.size(width = 24.dp, height = 46.dp).shadow(4.dp, tabShape).clip(tabShape).background(Color(0xFFBA2A34)).clickable { open = !open },
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.material3.Icon(
+                if (open) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.follow_us), tint = Color.White, modifier = Modifier.size(22.dp),
+            )
         }
     }
 }

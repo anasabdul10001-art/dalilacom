@@ -1579,7 +1579,6 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 }
 
 /* the floating bar of our pages: on the edge opposite the side rail, in the middle of the height, always visible */
-.social-dock { position: fixed; inset-inline-end: 0; top: 42%; transform: translateY(-50%); z-index: 480; display: flex; flex-direction: column; gap: 8px; padding: 9px 6px; background: var(--surface, #fff); border-start-start-radius: 16px; border-end-start-radius: 16px; box-shadow: 0 4px 16px rgba(0, 0, 0, .28); }
 .dock-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #ba2a34; text-decoration: none; }
 .dock-icon:hover { filter: brightness(1.12); }
 .dock-icon:active { transform: scale(.94); }
@@ -1595,3 +1594,14 @@ html[lang="en"] .ph-logo { height: auto; width: auto; max-height: 44px; max-widt
 
 /* the Google Play icon: its own four colours on white, so people recognise the store */
 .follow-icon.is-play, .dock-icon.is-play { background: #fff; box-shadow: inset 0 0 0 2px #ba2a34; }
+
+/* the bar of our pages: top corner, open for 5 seconds, then only a small arrow stays (it opens the bar again) */
+.social-dock { position: fixed; inset-inline-end: 0; top: 150px; z-index: 480; display: flex; align-items: flex-start; gap: 0; }
+.dock-icons { display: flex; flex-direction: column; gap: 8px; padding: 9px 6px; background: var(--surface, #fff); border-start-start-radius: 16px; border-end-start-radius: 16px; box-shadow: 0 4px 16px rgba(0, 0, 0, .28); max-width: 0; padding-inline: 0; opacity: 0; overflow: hidden; pointer-events: none; transition: max-width .28s ease, padding .28s ease, opacity .2s ease; }
+.social-dock.open .dock-icons { max-width: 60px; padding-inline: 6px; opacity: 1; pointer-events: auto; }
+.dock-tab { width: 22px; height: 46px; padding: 0; border: 0; background: #ba2a34; color: #fff; display: grid; place-items: center; border-start-start-radius: 12px; border-end-start-radius: 12px; box-shadow: 0 3px 10px rgba(0, 0, 0, .3); cursor: pointer; }
+.dock-tab svg { transition: transform .25s; }
+.social-dock.open .dock-tab { border-radius: 0; }
+html[dir="rtl"] .dock-tab svg { transform: scaleX(-1); }
+html[dir="rtl"] .social-dock.open .dock-tab svg { transform: none; }
+html[dir="ltr"] .social-dock.open .dock-tab svg { transform: scaleX(-1); }

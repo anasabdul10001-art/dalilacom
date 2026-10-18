@@ -393,7 +393,29 @@ function socialDockHtml() {
   if (FAB_HIDDEN.includes(S.screen) || (!SOCIAL_LINKS.length && !APP_DOWNLOAD)) return "";
   const icon = (href, name, glyph) => `<a class="dock-icon${name === "Google Play" ? " is-play" : ""}" href="${esc(href)}" target="_blank" rel="noopener" aria-label="${esc(name)}" title="${esc(name)}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">${glyph}</svg></a>`;
   const apk = APP_DOWNLOAD ? icon("/download.html", t("follow.download"), '<path d="M12 4v10m0 0-4-4m4 4 4-4M5 19h14" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>') : "";
-  return `<nav class="social-dock" aria-label="${esc(t("follow.us"))}">${SOCIAL_LINKS.map((l) => icon(l.url, SOCIAL_NAME[l.platform] || l.platform, SOCIAL_GLYPH[l.platform] || "")).join("")}${apk}</nav>`;
+  dockStartTimer(); // shown open for a few seconds when it first appears, then it folds to a small arrow
+  const arrow = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return `<nav class="social-dock${S._dockOpen !== false ? " open" : ""}" id="social-dock" aria-label="${esc(t("follow.us"))}">
+    <div class="dock-icons">${SOCIAL_LINKS.map((l) => icon(l.url, SOCIAL_NAME[l.platform] || l.platform, SOCIAL_GLYPH[l.platform] || "")).join("")}${apk}</div>
+    <button class="dock-tab" onclick="dockToggle()" aria-label="${esc(t("follow.us"))}" title="${esc(t("follow.us"))}">${arrow}</button>
+  </nav>`;
+}
+
+/** The bar of our pages stays open for 5 seconds, then folds to a small arrow; the arrow opens it again (again for 5 seconds). */
+let _dockTimer = null;
+function dockSet(open) {
+  S._dockOpen = open;
+  const el = document.getElementById("social-dock");
+  if (el) el.classList.toggle("open", open);
+  clearTimeout(_dockTimer);
+  if (open) _dockTimer = setTimeout(() => dockSet(false), 5000);
+}
+function dockToggle() { dockSet(!(S._dockOpen !== false)); }
+function dockStartTimer() {
+  if (S._dockStarted) return;
+  S._dockStarted = true;
+  S._dockOpen = true;
+  _dockTimer = setTimeout(() => dockSet(false), 5000);
 }
 
 async function render() {
