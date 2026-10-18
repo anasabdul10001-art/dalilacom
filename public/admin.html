@@ -112,6 +112,7 @@
   .badge.active { background: var(--ok-bg); color: var(--ok); }
   .badge.inactive { background: #efe9e7; color: var(--muted); }
 
+  .rownum { width: 44px; color: var(--muted); font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
   .inline-input { width: 96px; padding: 5px 8px; font-size: 12.5px; }
   .error-banner { background: var(--bad-bg); color: var(--bad); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 14px; }
   .muted { color: var(--muted); font-size: 13px; }
@@ -320,7 +321,7 @@
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>اسم المحل</th><th>المالك</th><th>الإيميل</th><th>التصنيف</th><th>الحالة</th><th>الموقع على الخريطة</th><th>الباقة</th><th>إجراءات</th></tr></thead>
+          <thead><tr><th class="rownum">#</th><th>اسم المحل</th><th>المالك</th><th>الإيميل</th><th>التصنيف</th><th>الحالة</th><th>الموقع على الخريطة</th><th>الباقة</th><th>إجراءات</th></tr></thead>
           <tbody id="merchants-body"></tbody>
         </table>
       </div>
@@ -451,7 +452,7 @@
           <button onclick="loadUsers()">🔍 بحث</button>
         </div>
         <table style="margin-top:14px">
-          <thead><tr><th>الاسم</th><th>الإيميل</th><th>الهاتف</th><th>الدور</th><th>الحالة</th><th></th></tr></thead>
+          <thead><tr><th class="rownum">#</th><th>الاسم</th><th>الإيميل</th><th>الهاتف</th><th>الدور</th><th>الحالة</th><th></th></tr></thead>
           <tbody id="users-body"></tbody>
         </table>
         <p id="users-msg" class="muted" style="margin-top:8px"></p>
@@ -1383,16 +1384,17 @@ async function loadUsers() {
   if (!state.myId) { const me = await api('GET', '/profile/me'); if (me.ok) state.myId = me.data.id; }
   const { ok, data } = await api('GET', '/admin/users?' + params.toString());
   if (!ok) { body.innerHTML = ''; msg.textContent = errText(data, 'تعذّر التحميل'); return; }
-  msg.textContent = data.length >= 100 ? 'أول 100 نتيجة — ضيّق البحث لتشوف غيرها' : '';
-  body.innerHTML = data.length ? data.map(u => `
+  msg.textContent = data.length >= 100 ? 'أول 100 نتيجة — ضيّق البحث لتشوف غيرها' : 'العدد: ' + data.length;
+  body.innerHTML = data.length ? data.map((u, i) => `
     <tr>
+      <td class="rownum">${i + 1}</td>
       <td>${esc(u.fullName)}</td>
       <td class="muted" style="direction:ltr;text-align:right">${esc(u.email)}${u.isEmailVerified ? '' : ' <small title="الإيميل غير مؤكَّد">⚠️</small>'}</td>
       <td class="muted" style="direction:ltr;text-align:right">${esc(u.phone || '—')}</td>
       <td><span class="badge ${u.role === 'ADMIN' ? 'APPROVED' : 'inactive'}">${esc(ROLE_LABEL[u.role] || u.role)}</span></td>
       <td><span class="badge ${u.isDisabled ? 'REJECTED' : 'active'}">${u.isDisabled ? 'معطّل' : 'فعّال'}</span></td>
       <td style="white-space:nowrap">${u.role === 'ADMIN' && u.id !== state.myId ? '<span class="muted" title="حساب أدمن محمي: بس صاحبه بيعدّل عليه">🔒 محمي</span>' : `<button class="small" onclick="openUserEdit('${esc(u.id)}')">✏️ تعديل</button> <button class="small" style="${u.isDisabled ? '' : 'background:#777'}" onclick="toggleUser('${esc(u.id)}', ${!u.isDisabled})">${u.isDisabled ? 'تفعيل' : 'تعطيل'}</button>`}</td>
-    </tr>`).join('') : '<tr><td colspan="6" class="muted">ما في نتائج</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="7" class="muted">ما في نتائج</td></tr>';
 }
 
 let editingUserId = null;
@@ -2276,8 +2278,9 @@ async function loadMerchants(status) {
   if (!state.plans) await loadPlans(); // the plan selector below needs the merchant plans
   const { ok, data } = await api('GET', '/merchant/list' + (status ? '?status=' + status : ''));
   if (!ok) { logout(); return; }
-  document.getElementById('merchants-body').innerHTML = data.map(m => `
+  document.getElementById('merchants-body').innerHTML = data.map((m, i) => `
     <tr>
+      <td class="rownum">${i + 1}</td>
       <td>${m.businessName}</td>
       <td>${m.user.fullName}</td>
       <td class="muted">${m.user.email}</td>
@@ -2294,7 +2297,7 @@ async function loadMerchants(status) {
         <button class="small" onclick="approveMerchant('${m.id}')">✅ موافقة</button>
         <button class="small danger" onclick="rejectMerchant('${m.id}')">❌ رفض</button>
       ` : ''}</td>
-    </tr>`).join('') || `<tr><td colspan="8" class="muted">لا يوجد أصحاب أنشطة بهذه الحالة</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="9" class="muted">لا يوجد أصحاب أنشطة بهذه الحالة</td></tr>`;
 }
 async function assignMerchantPlan(id, planId) {
   const { ok, data } = await api('PUT', '/admin/merchants/' + id + '/plan', { planId: planId || null });
