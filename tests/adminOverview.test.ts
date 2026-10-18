@@ -49,3 +49,21 @@ describe("the admin home page numbers", () => {
     expect(Array.isArray(d.topShops)).toBe(true);
   });
 });
+
+describe("the users list pages", () => {
+  it("shows 50 accounts a page and tells the total in a header", async () => {
+    const auth = await admin();
+    const first = await request(app).get("/admin/users").set(auth);
+    expect(first.status).toBe(200);
+    expect(first.body.length).toBeLessThanOrEqual(50);
+    const total = Number(first.headers["x-total-count"]);
+    expect(total).toBeGreaterThanOrEqual(first.body.length);
+    expect(first.headers["x-page-size"]).toBe("50");
+    if (total > 50) {
+      const second = await request(app).get("/admin/users").set(auth).query({ page: 2 });
+      expect(second.body.length).toBeGreaterThan(0);
+      const ids = new Set(first.body.map((u: { id: string }) => u.id));
+      expect(second.body.some((u: { id: string }) => ids.has(u.id))).toBe(false);
+    }
+  });
+});

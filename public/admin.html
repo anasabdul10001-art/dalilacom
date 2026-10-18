@@ -112,6 +112,7 @@
   .badge.active { background: var(--ok-bg); color: var(--ok); }
   .badge.inactive { background: #efe9e7; color: var(--muted); }
 
+  .pager { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
   .rownum { width: 44px; color: var(--muted); font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
   .inline-input { width: 96px; padding: 5px 8px; font-size: 12.5px; }
   .error-banner { background: var(--bad-bg); color: var(--bad); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 14px; }
@@ -324,6 +325,7 @@
           <thead><tr><th class="rownum">#</th><th>اسم المحل</th><th>المالك</th><th>الإيميل</th><th>التصنيف</th><th>الحالة</th><th>الموقع على الخريطة</th><th>الباقة</th><th>إجراءات</th></tr></thead>
           <tbody id="merchants-body"></tbody>
         </table>
+        <div id="merchants-pager" style="margin-top:10px"></div>
       </div>
     </div>
 
@@ -1373,7 +1375,20 @@ function copyMarketerLink(id) {
 // ---- Users ----
 const ROLE_LABEL = { ADMIN: 'أدمن', MERCHANT: 'صاحب نشاط', CUSTOMER: 'زبون' };
 
-async function loadUsers() {
+const PAGE_SIZE = 50;
+/** "‹ previous · page 2 of 6 · next ›" under a list; [go] is the name of the function that shows a page. */
+function pagerHtml(go, page, total) {
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (total <= PAGE_SIZE) return `<span class="muted">العدد: ${total}</span>`;
+  const from = (page - 1) * PAGE_SIZE + 1, to = Math.min(total, page * PAGE_SIZE);
+  return `<div class="pager"><button class="secondary small" ${page <= 1 ? 'disabled' : ''} onclick="${go}(${page - 1})">السابق ›</button><span>صفحة <b>${page}</b> من <b>${pages}</b> <span class="muted">· ${from}–${to} من ${total}</span></span><button class="secondary small" ${page >= pages ? 'disabled' : ''} onclick="${go}(${page + 1})">‹ التالي</button></div>`;
+}
+
+let usersPage = 1;
+function usersGo(p) { usersPage = p; loadUsers(true); }
+
+async function loadUsers(keepPage) {
+  if (!keepPage) usersPage = 1; // a new search starts at the first page
   const body = document.getElementById('users-body');
   const msg = document.getElementById('users-msg');
   const params = new URLSearchParams();
@@ -1381,13 +1396,16 @@ async function loadUsers() {
   const role = document.getElementById('users-role').value;
   if (q) params.set('q', q);
   if (role) params.set('role', role);
+  params.set('page', usersPage);
   if (!state.myId) { const me = await api('GET', '/profile/me'); if (me.ok) state.myId = me.data.id; }
-  const { ok, data } = await api('GET', '/admin/users?' + params.toString());
-  if (!ok) { body.innerHTML = ''; msg.textContent = errText(data, 'تعذّر التحميل'); return; }
-  msg.textContent = data.length >= 100 ? 'أول 100 نتيجة — ضيّق البحث لتشوف غيرها' : 'العدد: ' + data.length;
+  const res = await fetch('/admin/users?' + params.toString(), { headers: { Authorization: 'Bearer ' + state.token } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { body.innerHTML = ''; msg.textContent = errText(data, 'تعذّر التحميل'); return; }
+  const total = Number(res.headers.get('X-Total-Count')) || data.length;
+  msg.innerHTML = pagerHtml('usersGo', usersPage, total);
   body.innerHTML = data.length ? data.map((u, i) => `
     <tr>
-      <td class="rownum">${i + 1}</td>
+      <td class="rownum">${(usersPage - 1) * PAGE_SIZE + i + 1}</td>
       <td>${esc(u.fullName)}</td>
       <td class="muted" style="direction:ltr;text-align:right">${esc(u.email)}${u.isEmailVerified ? '' : ' <small title="الإيميل غير مؤكَّد">⚠️</small>'}</td>
       <td class="muted" style="direction:ltr;text-align:right">${esc(u.phone || '—')}</td>
@@ -1441,7 +1459,7 @@ async function saveUserEdit() {
   const { ok, data } = await api('PATCH', '/admin/users/' + editingUserId, body);
   if (!ok) { msg.textContent = errText(data, 'تعذّر الحفظ'); return; }
   msg.textContent = 'انحفظ ✓';
-  loadUsers();
+  loadUsers(true);
 }
 
 async function deleteUserForGood() {
@@ -1451,7 +1469,7 @@ async function deleteUserForGood() {
   const msg = document.getElementById('users-msg');
   if (!ok) { document.getElementById('ue-msg').textContent = errText(data, 'تعذّر الحذف'); return; }
   closeUserEdit();
-  loadUsers();
+  loadUsers(true);
   msg.textContent = data.result === 'deleted'
     ? 'انحذف الحساب نهائيًا.'
     : 'عند الحساب طلبات أو حركات مالية مسجّلة، فانمسحت كل بياناته الشخصية وبقي سجل مجهول وغير فعّال للحسابات المالية.';
@@ -1461,7 +1479,7 @@ async function toggleUser(id, disable) {
   if (disable && !confirm('تعطيل هذا الحساب؟ بيطلع من كل أجهزته ولا يقدر يدخل.')) return;
   const { ok, data } = await api('PATCH', '/admin/users/' + id, { isDisabled: disable });
   if (!ok) { document.getElementById('users-msg').textContent = errText(data, 'تعذّر التنفيذ'); return; }
-  loadUsers();
+  loadUsers(true);
 }
 
 // ---- Geography: governorates > cities > neighbourhoods ----
@@ -2273,14 +2291,23 @@ async function loadAiStatus() {
 }
 
 // ---- merchants ----
+let merchantsPage = 1, merchantsRows = [];
+function merchantsGo(p) { merchantsPage = p; renderMerchants(); }
 async function loadMerchants(status) {
+  merchantsPage = 1;
   document.querySelectorAll('.filters button').forEach(b => b.classList.toggle('active', b.dataset.status === status));
   if (!state.plans) await loadPlans(); // the plan selector below needs the merchant plans
   const { ok, data } = await api('GET', '/merchant/list' + (status ? '?status=' + status : ''));
   if (!ok) { logout(); return; }
+  merchantsRows = data;
+  renderMerchants();
+}
+function renderMerchants() {
+  const data = merchantsRows.slice((merchantsPage - 1) * PAGE_SIZE, merchantsPage * PAGE_SIZE);
+  document.getElementById('merchants-pager').innerHTML = pagerHtml('merchantsGo', merchantsPage, merchantsRows.length);
   document.getElementById('merchants-body').innerHTML = data.map((m, i) => `
     <tr>
-      <td class="rownum">${i + 1}</td>
+      <td class="rownum">${(merchantsPage - 1) * PAGE_SIZE + i + 1}</td>
       <td>${m.businessName}</td>
       <td>${m.user.fullName}</td>
       <td class="muted">${m.user.email}</td>

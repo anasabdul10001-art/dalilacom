@@ -317,23 +317,31 @@ adminRouter.patch("/marketers/:id", route(async (req, res) => {
 
 /* ---------------- accounts: who is who, and switching one off ---------------- */
 
-const usersQuerySchema = z.object({ q: z.string().trim().max(80).optional(), role: z.nativeEnum(Role).optional() });
+const USERS_PAGE = 50; // the list shows 50 accounts a page
+const usersQuerySchema = z.object({ q: z.string().trim().max(80).optional(), role: z.nativeEnum(Role).optional(), page: z.coerce.number().int().min(1).max(100000).default(1) });
 
 adminRouter.get("/users", async (req, res) => {
   const parsed = usersQuerySchema.safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const { q, role } = parsed.data;
-  const users = await prisma.user.findMany({
-    where: {
-      ...(role ? { role } : {}),
-      ...(q
-        ? { OR: [{ email: { contains: q, mode: "insensitive" } }, { fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q } }] }
-        : {}),
-    },
-    select: { id: true, email: true, fullName: true, phone: true, role: true, isDisabled: true, isEmailVerified: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const { q, role, page } = parsed.data;
+  const where = {
+    ...(role ? { role } : {}),
+    ...(q
+      ? { OR: [{ email: { contains: q, mode: "insensitive" as const } }, { fullName: { contains: q, mode: "insensitive" as const } }, { phone: { contains: q } }] }
+      : {}),
+  };
+  const [total, users] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      select: { id: true, email: true, fullName: true, phone: true, role: true, isDisabled: true, isEmailVerified: true, createdAt: true },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      skip: (page - 1) * USERS_PAGE,
+      take: USERS_PAGE,
+    }),
+  ]);
+  // the list itself stays a plain array; the total and the page size ride in headers
+  res.set({ "X-Total-Count": String(total), "X-Page-Size": String(USERS_PAGE) });
   res.json(users);
 });
 
