@@ -692,6 +692,9 @@ data class CatalogDto(val creditName: String = "", val countryCode: String? = nu
 data class SocialLinkDto(val platform: String, val url: String)
 
 @Serializable
+data class AppUpdateDto(val version: String? = null, val notify: Boolean = false, val playUrl: String? = null)
+
+@Serializable
 data class SocialLinksDto(val links: List<SocialLinkDto> = emptyList())
 
 @Serializable

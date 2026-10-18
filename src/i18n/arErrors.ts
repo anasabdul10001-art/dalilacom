@@ -6,6 +6,7 @@ const MESSAGES: Record<string, string> = {
   "The file is empty or too big": "الملف فاضي أو كبير كتير",
   "This file is not an Android app (.apk)": "هاد الملف مو تطبيق أندرويد (.apk)",
   "Write the version like 0.1.3": "اكتب رقم النسخة بهالشكل: 0.1.3",
+  "Write the version like 0.1.6": "اكتب رقم النسخة بهالشكل: 0.1.6",
   "Upload the app file first": "ارفع ملف التطبيق أول",
   "The link is not on this platform's own website": "الرابط مو على موقع المنصة نفسها (مثلًا رابط إنستغرام لازم يكون على instagram.com)",
   "The link is not a valid web address": "الرابط مو عنوان ويب صحيح",

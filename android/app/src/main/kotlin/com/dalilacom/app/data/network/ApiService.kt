@@ -274,6 +274,10 @@ interface ApiService {
     @GET("social-links")
     suspend fun socialLinks(): Response<SocialLinksDto>
 
+    /** Is a newer version out, and has the owner switched the "new version" message on. */
+    @GET("app-update")
+    suspend fun appUpdate(): Response<AppUpdateDto>
+
     @GET("geo/market")
     suspend fun market(): Response<MarketDto>
 

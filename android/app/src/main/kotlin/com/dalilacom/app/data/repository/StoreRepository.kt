@@ -34,6 +34,8 @@ data class StoreScope(
 
 class StoreRepository(private val api: ApiService) {
     /** The shopper's country and its currency (the account's country, else where they connect from). */
+    suspend fun appUpdate(): com.dalilacom.app.data.network.AppUpdateDto? = safeApiCall { api.appUpdate() }?.takeIf { it.isSuccessful }?.body()
+
     suspend fun socialLinks(): List<com.dalilacom.app.data.network.SocialLinkDto>? = safeApiCall { api.socialLinks() }?.takeIf { it.isSuccessful }?.body()?.links
 
     suspend fun market(): String? = safeApiCall { api.market() }?.takeIf { it.isSuccessful }?.body()?.currencyCode?.ifBlank { null }

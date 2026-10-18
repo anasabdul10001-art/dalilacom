@@ -90,6 +90,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Discover) }
     val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
     val factory = remember { ViewModelFactory(container) }
+    com.dalilacom.app.ui.common.UpdatePrompt(container.storeRepository)
     var isGuest by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         isGuest = !container.authRepository.hasStoredSession()

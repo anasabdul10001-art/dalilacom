@@ -36,7 +36,7 @@ import { socialRouter } from "./routes/social.routes";
 import { referralRouter } from "./routes/referral.routes";
 import { legalRouter } from "./routes/legal.routes";
 import { getVisibleSocialLinks } from "./services/socialLinks.service";
-import { getAppDownloadInfo, getDownloadableApk } from "./services/appRelease.service";
+import { getAppDownloadInfo, getDownloadableApk, getAppUpdate } from "./services/appRelease.service";
 import { securityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { localizeResponses } from "./lib/localize";
@@ -127,6 +127,11 @@ app.get("/sitemap.xml", async (_req, res, next) => {
 app.get("/app-download", async (_req, res) => {
   const info = await getAppDownloadInfo();
   res.json({ available: info.hasFile && info.visible, version: info.version ?? null, sizeBytes: info.sizeBytes ?? null, sha256: info.sha256 ?? null, uploadedAt: info.uploadedAt ?? null });
+});
+// What the app asks at start: is there a newer version, and has the owner switched the message on. Also where Google Play's page is, when the owner added it.
+app.get("/app-update", async (_req, res) => {
+  const [update, links] = await Promise.all([getAppUpdate(), getVisibleSocialLinks()]);
+  res.json({ version: update.version, notify: update.notify, playUrl: links.find((l) => l.platform === "googleplay")?.url ?? null });
 });
 app.get("/download/dalilacom.apk", async (_req, res) => {
   const file = await getDownloadableApk();

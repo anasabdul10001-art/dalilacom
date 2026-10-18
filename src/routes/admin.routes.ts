@@ -15,7 +15,7 @@ import { discountScopeInfo, discountState } from "../lib/discounts";
 import { sniffImageMime } from "../lib/image";
 import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
-import { AppReleaseError, getAppDownloadInfo, MAX_APK_BYTES, saveAppRelease, setAppDownloadVisible } from "../services/appRelease.service";
+import { AppReleaseError, getAppDownloadInfo, getAppUpdate, setAppUpdate, MAX_APK_BYTES, saveAppRelease, setAppDownloadVisible } from "../services/appRelease.service";
 import { adminOverview } from "../services/adminStats.service";
 import { getSocialLinks, saveSocialLinks, SOCIAL_PLATFORMS, SocialLinkError } from "../services/socialLinks.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
@@ -228,6 +228,21 @@ adminRouter.put("/app-download/file", express.raw({ type: () => true, limit: MAX
     throw err;
   }
   res.json(await getAppDownloadInfo());
+}));
+
+adminRouter.get("/app-update", route(async (_req, res) => {
+  res.json(await getAppUpdate());
+}));
+
+adminRouter.put("/app-update", route(async (req, res) => {
+  const parsed = z.object({ version: z.string().max(20), notify: z.boolean() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    res.json(await setAppUpdate(parsed.data));
+  } catch (err) {
+    if (err instanceof AppReleaseError) return sendError(res, 400, "BAD_REQUEST", "Write the version like 0.1.6");
+    throw err;
+  }
 }));
 
 adminRouter.put("/app-download/visible", route(async (req, res) => {

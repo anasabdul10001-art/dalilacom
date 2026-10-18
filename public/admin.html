@@ -691,6 +691,7 @@
       <h2>تحميل التطبيق من الموقع (APK)</h2>
       <p class="subtitle">ارفع هون ملف التطبيق (.apk) كل ما تطلع نسخة جديدة. الناس اللي ما بيفتح عندهم جوجل بلاي بينزّلوه من صفحة <b>dalilacom.com/download.html</b>. الملف بيضل محفوظ حتى لو أعاد السيرفر التشغيل. زر «إظهار» بيشغّل أو بيطفّي الرابط بكل الأماكن.</p>
       <div class="card" id="appfile-card">جارٍ التحميل…</div>
+      <div class="card" id="appupdate-card">جارٍ التحميل…</div>
     </div>
 
     <div class="section" id="section-social" style="display:none">
@@ -1100,7 +1101,29 @@ function toggleMenu(open) { document.getElementById('app').classList.toggle('men
 
 
 // ---- The Android app as a file on the website ----
+// "A new version is out" message inside the app
+async function loadAppUpdate() {
+  const box = document.getElementById('appupdate-card');
+  const r = await api('GET', '/admin/app-update');
+  if (!r.ok) { box.textContent = errText(r.data, 'تعذّر التحميل'); return; }
+  box.innerHTML = `
+    <h3>🔔 رسالة «نسخة جديدة» داخل التطبيق</h3>
+    <p class="muted">بتظهر لكل شخص نسخته أقدم من الرقم اللي بتكتبه، وفيها زر «حدّث الآن». اللي نزّل من جوجل بلاي بيروح لصفحة التطبيق هناك، واللي نزّل الملف مباشرة بيروح لصفحة التحميل. <b>شغّلها بعد ما جوجل توافق على النسخة</b> عشان ما نرسل الناس لتحديث مو موجود.</p>
+    <div class="grid2">
+      <div class="field"><label>آخر نسخة متاحة (مثلًا 0.1.6)</label><input id="upd-version" dir="ltr" placeholder="0.1.6" value="${esc(r.data.version || '')}"></div>
+    </div>
+    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="upd-notify" ${r.data.notify ? 'checked' : ''} style="width:20px;height:20px"> <span>أظهر الرسالة للمستخدمين</span></label>
+    <div style="margin-top:12px"><button onclick="saveAppUpdate()">حفظ</button> <span id="upd-msg" class="muted"></span></div>`;
+}
+async function saveAppUpdate() {
+  const msg = document.getElementById('upd-msg');
+  const r = await api('PUT', '/admin/app-update', { version: document.getElementById('upd-version').value.trim(), notify: document.getElementById('upd-notify').checked });
+  msg.textContent = r.ok ? 'انحفظ ✅' : errText(r.data, 'فشل الحفظ');
+  if (r.ok) loadAppUpdate();
+}
+
 async function loadAppDownload() {
+  loadAppUpdate();
   const box = document.getElementById('appfile-card');
   const r = await api('GET', '/admin/app-download');
   if (!r.ok) { box.textContent = errText(r.data, 'تعذّر التحميل'); return; }

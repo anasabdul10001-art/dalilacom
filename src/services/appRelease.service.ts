@@ -66,3 +66,29 @@ export async function getDownloadableApk() {
   if (!(await isVisible())) return null;
   return prisma.appRelease.findFirst({ orderBy: { createdAt: "desc" }, select: { data: true, fileName: true, sizeBytes: true, sha256: true } });
 }
+
+/**
+ * "A new version is out": the message inside the app. The owner writes the newest version and switches the message on in the admin panel
+ * (after Google has approved it, so nobody is sent to Play before the update is there). The app shows it to everyone who has an older one.
+ */
+const UPDATE_KEY = "appUpdate";
+
+export interface AppUpdateInfo {
+  version: string | null;
+  notify: boolean;
+}
+
+export async function getAppUpdate(): Promise<AppUpdateInfo> {
+  const row = await prisma.platformSetting.findUnique({ where: { key: UPDATE_KEY } }).catch(() => null);
+  const v = (row?.value ?? {}) as { version?: unknown; notify?: unknown };
+  const version = typeof v.version === "string" && v.version.trim() ? v.version.trim() : null;
+  return { version, notify: !!v.notify && version !== null };
+}
+
+export async function setAppUpdate(input: { version: string; notify: boolean }): Promise<AppUpdateInfo> {
+  const version = input.version.trim();
+  if (version && !/^\d+(\.\d+){0,3}$/.test(version)) throw new AppReleaseError("BAD_VERSION");
+  const value = { version: version || null, notify: input.notify && version !== "" };
+  await prisma.platformSetting.upsert({ where: { key: UPDATE_KEY }, update: { value }, create: { key: UPDATE_KEY, value } });
+  return getAppUpdate();
+}

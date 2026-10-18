@@ -891,6 +891,10 @@
     <string name="store_brand_tag1">Your city\'s shops</string>
     <string name="store_brand_tag2">and their offers, in one place</string>
     <string name="follow_facebook">Follow us on Facebook</string>
+    <string name="update_title">A new version of Dalilacom</string>
+    <string name="update_text">Version %1$s is available, with improvements and fixes. Update the app to get them.</string>
+    <string name="update_now">Update now</string>
+    <string name="update_later">Later</string>
     <string name="follow_us">Follow us</string>
     <string name="follow_official">This is our only official page. Any other page using the Dalilacom name does not represent us.</string>
     <string name="soon_facebook">Sign-in with Facebook will be available soon</string>
