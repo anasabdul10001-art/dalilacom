@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import android.Manifest
@@ -83,7 +85,8 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit, o
                     supportingText = { Text(stringResource(R.string.redeem_full_hint)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                )
+                placeholder = { Hint(stringResource(R.string.ph_member_code)) },
+            )
                 Spacer(Modifier.height(16.dp))
                 if (state.isLoading) {
                     CircularProgressIndicator()
@@ -124,7 +127,8 @@ fun RedeemScreen(factory: ViewModelFactory, onExportReceipt: (String) -> Unit, o
                     label = { Text(AppStrings.get(R.string.s_c89ae688)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
-                )
+                placeholder = { Hint(stringResource(R.string.ph_bill)) },
+            )
                 Spacer(Modifier.height(16.dp))
                 if (state.isLoading) {
                     CircularProgressIndicator()

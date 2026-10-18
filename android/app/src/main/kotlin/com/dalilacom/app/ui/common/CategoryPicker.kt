@@ -109,7 +109,7 @@ fun ProfessionPicker(
             value = q,
             onValueChange = { q = it },
             label = { Text(stringResource(R.string.cat_search)) },
-            placeholder = { Text(stringResource(R.string.cat_search_ph)) },
+            placeholder = { Hint(stringResource(R.string.cat_search_ph)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -144,7 +144,8 @@ fun ProfessionPicker(
                 label = { Text(stringResource(R.string.cat_sug_ph)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-            )
+            placeholder = { Hint(stringResource(R.string.ph_profession)) },
+        )
             Spacer(Modifier.height(4.dp))
             Text(stringResource(R.string.cat_sug_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (onSendSuggestion != null) {

@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
@@ -80,14 +82,16 @@ fun ProductEditScreen(
                 onValueChange = viewModel::onNameChange,
                 label = { Text(AppStrings.get(R.string.s_864c0780)) },
                 modifier = Modifier.fillMaxWidth(),
-            )
+            placeholder = { Hint(stringResource(R.string.ph_product)) },
+        )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = state.description,
                 onValueChange = viewModel::onDescriptionChange,
                 label = { Text(AppStrings.get(R.string.s_21a1bc3f)) },
                 modifier = Modifier.fillMaxWidth(),
-            )
+            placeholder = { Hint(stringResource(R.string.ph_product_desc)) },
+        )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -95,12 +99,13 @@ fun ProductEditScreen(
                     onValueChange = viewModel::onPriceChange,
                     label = { Text(AppStrings.get(R.string.s_b6aa0c7d)) },
                     modifier = Modifier.weight(1f),
-                )
+                placeholder = { Hint(stringResource(R.string.ph_price)) },
+            )
                 OutlinedTextField(
                     value = state.stockText,
                     onValueChange = viewModel::onStockChange,
                     label = { Text(AppStrings.get(R.string.s_d697a2b1)) },
-                    placeholder = { Text(androidx.compose.ui.res.stringResource(R.string.stock_ph)) },
+                    placeholder = { Hint(androidx.compose.ui.res.stringResource(R.string.stock_ph)) },
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                 )
@@ -139,7 +144,8 @@ fun ProductEditScreen(
                 onValueChange = viewModel::onSkuChange,
                 label = { Text(AppStrings.get(R.string.s_615e65ba)) },
                 modifier = Modifier.fillMaxWidth(),
-            )
+            placeholder = { Hint(stringResource(R.string.ph_sku)) },
+        )
             Spacer(Modifier.height(16.dp))
 
             Text(stringResource(R.string.pc_title), style = MaterialTheme.typography.bodyMedium)
@@ -164,7 +170,8 @@ fun ProductEditScreen(
                     onValueChange = viewModel::onMemberPriceChange,
                     label = { Text(AppStrings.get(R.string.s_1aa879ba)) },
                     modifier = Modifier.fillMaxWidth(),
-                )
+                placeholder = { Hint(stringResource(R.string.ph_member_price)) },
+            )
             }
 
             if (!state.isNew) {

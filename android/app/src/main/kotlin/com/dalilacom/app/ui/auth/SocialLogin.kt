@@ -1,5 +1,9 @@
 package com.dalilacom.app.ui.auth
 
+import androidx.compose.ui.res.stringResource
+
+import com.dalilacom.app.ui.common.Hint
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -91,7 +95,7 @@ fun SocialReturnScreen(factory: ViewModelFactory, ticket: String?, error: String
             Spacer(Modifier.height(8.dp))
             Text(AppStrings.get(R.string.social_pending_hint), textAlign = TextAlign.Center)
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(typedEmail, { typedEmail = it }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(typedEmail, { typedEmail = it }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_email)) })
             failure?.let { Spacer(Modifier.height(8.dp)); Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
             Spacer(Modifier.height(16.dp))
             if (state is AuthUiState.Loading) CircularProgressIndicator() else Button(onClick = { viewModel.completeSocial(pending, typedEmail) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(AppStrings.get(R.string.social_pending_button)) }

@@ -1,5 +1,9 @@
 package com.dalilacom.app.ui.responder
 
+import androidx.compose.ui.res.stringResource
+
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
@@ -180,8 +184,8 @@ private fun OverviewTab(
     var description by remember(status.businessDescription) { mutableStateOf(status.businessDescription.orEmpty()) }
     var tone by remember(status.tone) { mutableStateOf(status.tone.orEmpty()) }
     Text(AppStrings.get(R.string.s_dc09c826), style = MaterialTheme.typography.titleSmall)
-    OutlinedTextField(description, { description = it }, label = { Text(AppStrings.get(R.string.s_04230bfd)) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-    OutlinedTextField(tone, { tone = it }, label = { Text(AppStrings.get(R.string.s_6d05e053)) }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(description, { description = it }, label = { Text(AppStrings.get(R.string.s_04230bfd)) }, modifier = Modifier.fillMaxWidth(), minLines = 3, placeholder = { Hint(stringResource(R.string.ph_biz_desc)) })
+    OutlinedTextField(tone, { tone = it }, label = { Text(AppStrings.get(R.string.s_6d05e053)) }, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_tone)) })
     // What to do with a message no rule matches.
     var fallbackMode by remember(status.fallbackMode) { mutableStateOf(status.fallbackMode) }
     var fallbackReply by remember(status.fallbackReply) { mutableStateOf(status.fallbackReply.orEmpty()) }
@@ -193,7 +197,7 @@ private fun OverviewTab(
         androidx.compose.material3.FilterChip(selected = fallbackMode == "TEMPLATE", onClick = { fallbackMode = "TEMPLATE" }, label = { Text(AppStrings.get(R.string.responder_fallback_text)) })
     }
     if (fallbackMode == "TEMPLATE") {
-        OutlinedTextField(fallbackReply, { fallbackReply = it }, label = { Text(AppStrings.get(R.string.responder_fallback_reply)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OutlinedTextField(fallbackReply, { fallbackReply = it }, label = { Text(AppStrings.get(R.string.responder_fallback_reply)) }, modifier = Modifier.fillMaxWidth(), minLines = 2, placeholder = { Hint(stringResource(R.string.ph_fallback)) })
     }
     Spacer(Modifier.height(8.dp))
     OutlinedButton(onClick = { onSaveProfile(description, tone, fallbackMode, fallbackReply) }, enabled = !busy) { Text(AppStrings.get(R.string.s_56ee6e0d)) }
@@ -354,17 +358,17 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
     var instructions by remember { mutableStateOf("") }
 
     Text(AppStrings.get(R.string.s_c9fbbd3c), style = MaterialTheme.typography.titleMedium)
-    OutlinedTextField(name, { name = it }, label = { Text(AppStrings.get(R.string.s_5ffc2bb8)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-    OutlinedTextField(keywords, { keywords = it }, label = { Text(AppStrings.get(R.string.s_d82b4deb)) }, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(name, { name = it }, label = { Text(AppStrings.get(R.string.s_5ffc2bb8)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Hint(stringResource(R.string.ph_rule_name)) })
+    OutlinedTextField(keywords, { keywords = it }, label = { Text(AppStrings.get(R.string.s_d82b4deb)) }, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_rule_keys)) })
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
         FilterChip(selected = mode == "FIXED", onClick = { mode = "FIXED" }, label = { Text(AppStrings.get(R.string.s_38ceca24)) })
         FilterChip(selected = mode == "AI", onClick = { mode = "AI" }, label = { Text(AppStrings.get(R.string.s_ec6d9289)) })
     }
     if (mode == "FIXED") {
-        OutlinedTextField(template, { template = it }, label = { Text(AppStrings.get(R.string.s_a5e584ae)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OutlinedTextField(template, { template = it }, label = { Text(AppStrings.get(R.string.s_a5e584ae)) }, modifier = Modifier.fillMaxWidth(), minLines = 2, placeholder = { Hint(stringResource(R.string.ph_rule_reply)) })
     } else {
-        OutlinedTextField(instructions, { instructions = it }, label = { Text(AppStrings.get(R.string.s_54b49c02)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
-        OutlinedTextField(template, { template = it }, label = { Text(AppStrings.get(R.string.s_faa866bc)) }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(instructions, { instructions = it }, label = { Text(AppStrings.get(R.string.s_54b49c02)) }, modifier = Modifier.fillMaxWidth(), minLines = 2, placeholder = { Hint(stringResource(R.string.ph_rule_ai)) })
+        OutlinedTextField(template, { template = it }, label = { Text(AppStrings.get(R.string.s_faa866bc)) }, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_rule_fallback)) })
     }
     val socialConnections = state.connections.filter { it.supportsPosts }
     if (socialConnections.isNotEmpty()) {
@@ -443,7 +447,7 @@ private fun InboxTab(inbox: List<InboxItemDto>, busy: Boolean, onSend: (String, 
                 Text(item.message)
                 item.reply?.let { Text(AppStrings.get(R.string.fmt_reply, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
                 if (item.status == "NEEDS_REVIEW" || item.status == "FAILED") {
-                    OutlinedTextField(reply, { reply = it }, label = { Text(AppStrings.get(R.string.s_47428e01)) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions.Default)
+                    OutlinedTextField(reply, { reply = it }, label = { Text(AppStrings.get(R.string.s_47428e01)) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions.Default, placeholder = { Hint(stringResource(R.string.ph_inbox_reply)) })
                     Button(onClick = { onSend(item.id, reply) }, enabled = !busy && reply.isNotBlank()) { Text(AppStrings.get(R.string.s_90cf87a4)) }
                 }
             }

@@ -1,5 +1,9 @@
 package com.dalilacom.app.ui.merchantmode
 
+import androidx.compose.ui.res.stringResource
+
+import com.dalilacom.app.ui.common.Hint
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -236,10 +240,11 @@ fun PromoScreen(factory: ViewModelFactory) {
             OutlinedTextField(
                 state.radius, viewModel::onRadius, label = { Text(AppStrings.get(R.string.promo_radius)) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),
-            )
+            placeholder = { Hint(stringResource(R.string.ph_radius)) },
+        )
         }
-        item { OutlinedTextField(state.title, viewModel::onTitle, label = { Text(AppStrings.get(R.string.promo_title_label)) }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
-        item { OutlinedTextField(state.body, viewModel::onBody, label = { Text(AppStrings.get(R.string.promo_body_label)) }, minLines = 3, modifier = Modifier.fillMaxWidth()) }
+        item { OutlinedTextField(state.title, viewModel::onTitle, label = { Text(AppStrings.get(R.string.promo_title_label)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_promo_title)) }) }
+        item { OutlinedTextField(state.body, viewModel::onBody, label = { Text(AppStrings.get(R.string.promo_body_label)) }, minLines = 3, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_promo_body)) }) }
         if (state.products.isNotEmpty()) item {
             Text(AppStrings.get(R.string.promo_attach_product), style = MaterialTheme.typography.labelLarge)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

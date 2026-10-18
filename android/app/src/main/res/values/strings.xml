@@ -927,4 +927,43 @@
     <string name="err_field_email">الإيميل غير صحيح، اكتبه بهالشكل: name@example.com</string>
     <string name="err_field_phone">رقم الهاتف غير صحيح (6 أرقام على الأقل)</string>
     <string name="err_login_wrong">الإيميل أو كلمة السر غير صحيحين، تأكد وجرّب من جديد</string>
+    <string name="ph_amount" formatted="false">مثال: 50</string>
+    <string name="ph_bill" formatted="false">مثال: 100.00</string>
+    <string name="ph_bio" formatted="false">نبذة قصيرة، مثال: صاحب محل ملابس</string>
+    <string name="ph_biz_desc" formatted="false">مثال: مطعم مأكولات شرقية، دوام من 10 صباحًا حتى 11 مساءً</string>
+    <string name="ph_building" formatted="false">مثال: 12</string>
+    <string name="ph_cancel_reason" formatted="false">مثال: المنتج غير متوفر حاليًا</string>
+    <string name="ph_city" formatted="false">مثال: دمشق</string>
+    <string name="ph_email" formatted="false">name@example.com</string>
+    <string name="ph_fallback" formatted="false">مثال: شكرًا لتواصلك! بنرد عليك بأقرب وقت.</string>
+    <string name="ph_inbox_reply" formatted="false">مثال: أهلًا بك، كيف أقدر أساعدك؟</string>
+    <string name="ph_member_code" formatted="false">مثال: 1234 5678 9012 3456</string>
+    <string name="ph_member_price" formatted="false">مثال: 20.00</string>
+    <string name="ph_note" formatted="false">مثال: صاحب محل بحي المزة</string>
+    <string name="ph_pcat" formatted="false">مثال: ملابس رياضية</string>
+    <string name="ph_percent" formatted="false">مثال: 15</string>
+    <string name="ph_person" formatted="false">مثال: أحمد محمد</string>
+    <string name="ph_phone" formatted="false">+963 9xx xxx xxx</string>
+    <string name="ph_postal" formatted="false">مثال: 10115</string>
+    <string name="ph_price" formatted="false">مثال: 25.00</string>
+    <string name="ph_product" formatted="false">مثال: قميص قطن أبيض</string>
+    <string name="ph_product_desc" formatted="false">وصف قصير، مثال: قميص قطن 100% مريح</string>
+    <string name="ph_profession" formatted="false">مثال: مدرب ملاكمة</string>
+    <string name="ph_promo_body" formatted="false">مثال: العرض لمدة 3 أيام فقط، زورونا!</string>
+    <string name="ph_promo_title" formatted="false">مثال: خصم 20% على كل المنتجات</string>
+    <string name="ph_radius" formatted="false">مثال: 5</string>
+    <string name="ph_ref_code" formatted="false">مثال: AB12CD</string>
+    <string name="ph_reject_reason" formatted="false">مثال: الصور غير واضحة، أرسل صورًا أوضح</string>
+    <string name="ph_rule_ai" formatted="false">مثال: جاوب عن المواعيد والأسعار باختصار</string>
+    <string name="ph_rule_fallback" formatted="false">مثال: بنرد عليك بأقرب وقت</string>
+    <string name="ph_rule_keys" formatted="false">مثال: سعر، كم، price</string>
+    <string name="ph_rule_name" formatted="false">مثال: سؤال عن السعر</string>
+    <string name="ph_rule_reply" formatted="false">مثال: أهلًا {name}، سعر المنتج 25</string>
+    <string name="ph_shop" formatted="false">مثال: مطعم الياسمين</string>
+    <string name="ph_sku" formatted="false">مثال: SH-001</string>
+    <string name="ph_street" formatted="false">مثال: شارع الثورة</string>
+    <string name="ph_tone" formatted="false">مثال: ودّي ومحترم</string>
+    <string name="ph_txn" formatted="false">مثال: رقم العملية من تطبيق الدفع</string>
+    <string name="ph_vat" formatted="false">مثال: DE123456789</string>
+    <string name="ph_whatsapp" formatted="false">مثال: 963912345678</string>
 </resources>

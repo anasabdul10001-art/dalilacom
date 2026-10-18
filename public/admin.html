@@ -77,6 +77,7 @@
   input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--red); box-shadow: 0 0 0 3px rgba(186, 42, 52, .14); }
   input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--red); }
   textarea { font-size: 13px; resize: vertical; }
+  ::placeholder { color: #b3a8a5; opacity: 1; }
   .row { display: flex; gap: 12px; flex-wrap: wrap; }
   .row > * { flex: 1; min-width: 140px; }
   .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
@@ -215,9 +216,9 @@
     <p>دخول مخصّص للأدمن فقط</p>
     <div id="login-error" class="error-banner" style="display:none"></div>
     <label>الإيميل</label>
-    <input id="login-email" autocomplete="username" />
+    <input placeholder="name@example.com" id="login-email" autocomplete="username" />
     <label>كلمة السر</label>
-    <input id="login-password" type="password" autocomplete="current-password" />
+    <input placeholder="••••••••" id="login-password" type="password" autocomplete="current-password" />
     <p style="margin:10px 0 0"><a href="/reset-password.html" style="color:#BA2A34;font-size:12px">نسيت كلمة السر؟</a></p>
     <button style="width:100%; margin-top:16px" onclick="login()">دخول</button>
   </div>
@@ -361,10 +362,10 @@
           <div><label>الاسم</label><input id="np-name" placeholder="Monthly" /></div>
         </div>
         <div class="row">
-          <div><label>المدة (يوم)</label><input id="np-duration" value="30" /></div>
-          <div><label>أيام التجربة المجانية</label><input id="np-trial" value="0" /></div>
-          <div><label>السعر (بالعملة)</label><input id="np-price" value="9.99" /></div>
-          <div><label>العملة</label><input id="np-currency" value="EUR" /></div>
+          <div><label>المدة (يوم)</label><input placeholder="مثال: 30" id="np-duration" value="30" /></div>
+          <div><label>أيام التجربة المجانية</label><input placeholder="مثال: 7" id="np-trial" value="0" /></div>
+          <div><label>السعر (بالعملة)</label><input placeholder="مثال: 9.99" id="np-price" value="9.99" /></div>
+          <div><label>العملة</label><input placeholder="مثال: EUR" id="np-currency" value="EUR" /></div>
           <div><label>السعر بالكوينز</label><input id="np-credits" placeholder="مثال: 1000" /></div>
         </div>
         <button style="margin-top:12px" onclick="addServicePlan()">إضافة</button>
@@ -395,17 +396,17 @@
       <div class="card">
         <h3>الأسعار والتجربة (بعملة دليلكم)</h3>
         <div class="row">
-          <div><label>اسم العملة</label><input id="rs-credit-name" /></div>
-          <div><label>كم وحدة = 1 USD</label><input id="rs-credits-usd" /></div>
+          <div><label>اسم العملة</label><input placeholder="مثال: دليلكم كوين" id="rs-credit-name" /></div>
+          <div><label>كم وحدة = 1 USD</label><input placeholder="مثال: 100" id="rs-credits-usd" /></div>
         </div>
         <div class="row">
-          <div><label>سعر الزبون / فترة</label><input id="rs-price-customer" /></div>
-          <div><label>سعر صاحب النشاط / فترة</label><input id="rs-price-merchant" /></div>
+          <div><label>سعر الزبون / فترة</label><input placeholder="مثال: 500" id="rs-price-customer" /></div>
+          <div><label>سعر صاحب النشاط / فترة</label><input placeholder="مثال: 1000" id="rs-price-merchant" /></div>
         </div>
         <div class="row">
-          <div><label>مدة الاشتراك (يوم)</label><input id="rs-period" /></div>
-          <div><label>مدة التجربة (يوم، 0 = بدون)</label><input id="rs-trial" /></div>
-          <div><label>حد ردود AI شهريًا</label><input id="rs-ai-limit" /></div>
+          <div><label>مدة الاشتراك (يوم)</label><input placeholder="مثال: 30" id="rs-period" /></div>
+          <div><label>مدة التجربة (يوم، 0 = بدون)</label><input placeholder="مثال: 7" id="rs-trial" /></div>
+          <div><label>حد ردود AI شهريًا</label><input placeholder="مثال: 500" id="rs-ai-limit" /></div>
         </div>
         <h3 style="margin-top:18px">حسابات الدفع</h3>
         <label>عنوان محفظة USDT (شبكة TRC20 — التحقق تلقائي من البلوكتشين)</label>
@@ -414,7 +415,7 @@
         <textarea id="rs-wallets" rows="4" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:inherit" placeholder="SHAM_CASH|شام كاش|0999xxxxxx|حوّل وابعت رقم العملية"></textarea>
         <p class="muted" style="margin:6px 0 0">المحفظة اللي مفتاحها <b>SHAM_CASH</b> بتصير تلقائية (بيتحقق السيرفر من الحوالة وبينزّل الرصيد فورًا) لما تحط عنوان ومفتاح الخدمة بإعدادات السيرفر. وبدونهم بتضل بانتظار موافقتك. رقم العملية بينقبل مرة وحدة فقط.</p>
         <label>كم ليرة سورية = 1 دولار (لتحويل حوالات الليرة لرصيد؛ صفر = الليرة بتنراجع يدويًا)</label>
-        <input id="rs-syp" type="number" min="0" step="1" />
+        <input placeholder="مثال: 15000" id="rs-syp" type="number" min="0" step="1" />
         <button style="margin-top:12px" onclick="saveResponderSettings()">حفظ الإعدادات</button>
         <span id="rs-msg" class="muted" style="margin-right:10px"></span>
       </div>
@@ -459,8 +460,8 @@
         <h3 id="ue-title">تعديل الحساب</h3>
         <p id="ue-info" class="muted"></p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
-          <label>الاسم الكامل<input id="ue-name" /></label>
-          <label>الإيميل<input id="ue-email" dir="ltr" /></label>
+          <label>الاسم الكامل<input placeholder="مثال: أحمد محمد" id="ue-name" /></label>
+          <label>الإيميل<input placeholder="name@example.com" id="ue-email" dir="ltr" /></label>
           <label>الهاتف<input id="ue-phone" dir="ltr" placeholder="+963..." /></label>
           <label>الدور
             <select id="ue-role"><option value="CUSTOMER">زبون</option><option value="MERCHANT">صاحب نشاط</option><option value="ADMIN" disabled>أدمن</option></select>
@@ -469,10 +470,10 @@
             <select id="ue-lang"><option value="ar">العربية</option><option value="en">English</option></select>
           </label>
           <label>رمز الدولة (حرفين)<input id="ue-country" dir="ltr" maxlength="2" placeholder="SY" /></label>
-          <label>الرقم الضريبي<input id="ue-vat" dir="ltr" /></label>
+          <label>الرقم الضريبي<input placeholder="مثال: DE123456789" id="ue-vat" dir="ltr" /></label>
           <label>كلمة سر جديدة (اتركها فاضية إذا ما بدك تغيّرها)<input id="ue-pass" type="text" dir="ltr" autocomplete="off" placeholder="8 خانات على الأقل" /></label>
         </div>
-        <label style="display:block;margin-top:10px">نبذة<textarea id="ue-bio" rows="2" style="width:100%"></textarea></label>
+        <label style="display:block;margin-top:10px">نبذة<textarea placeholder="نبذة قصيرة، مثال: صاحب محل ملابس" id="ue-bio" rows="2" style="width:100%"></textarea></label>
         <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px">
           <label><input type="checkbox" id="ue-verified" /> الإيميل مؤكَّد</label>
           <label><input type="checkbox" id="ue-disabled" /> الحساب معطّل</label>
@@ -523,13 +524,13 @@
         <h3>حدود إعلانات أصحاب الأنشطة</h3>
         <p class="muted">الإعلانات المُضمَّنة بباقة المتجر مجانية، وكل إعلان بعدها بيُخصم سعره من محفظة المتجر (وبيرجع له إذا انرفض). عدد الإعلانات بالشهر يحدّده نوع اشتراك المتجر (حقل «حد الرسائل الجماعية بالشهر» بباقات أصحاب الأنشطة، وتعيّن الباقة لكل متجر من قسم أصحاب الأنشطة). المتجر بلا باقة يأخذ الرقم الافتراضي هون. الصفر يعني ممنوع.</p>
         <label>الرقم الافتراضي لإعلانات المتجر بالشهر</label>
-        <input id="bc-limit-default" inputmode="numeric" />
+        <input placeholder="مثال: 5" id="bc-limit-default" inputmode="numeric" />
         <label>سعر الإعلان الواحد بعد المُضمَّن بالباقة (بوحدات دليلكم كوين، الصفر = غير معروض للبيع)</label>
-        <input id="bc-limit-price" inputmode="numeric" />
+        <input placeholder="مثال: 20" id="bc-limit-price" inputmode="numeric" />
         <label>أبعد مسافة يقدر المتجر يوصلها (كم)</label>
-        <input id="bc-limit-radius" inputmode="decimal" />
+        <input placeholder="مثال: 10" id="bc-limit-radius" inputmode="decimal" />
         <label>أكبر جمهور لإعلان واحد من متجر</label>
-        <input id="bc-limit-audience" inputmode="numeric" />
+        <input placeholder="مثال: 1000" id="bc-limit-audience" inputmode="numeric" />
         <button style="margin-top:12px" onclick="saveBroadcastLimits()">حفظ الحدود</button>
         <span id="bc-limit-msg" class="muted" style="margin-right:10px"></span>
       </div>
@@ -561,9 +562,9 @@
         </select>
         <p id="bc-count" class="muted" style="margin:10px 0"></p>
         <label>العنوان</label>
-        <input id="bc-title" maxlength="100" />
+        <input placeholder="مثال: خصم 20% هذا الأسبوع" id="bc-title" maxlength="100" />
         <label>النص</label>
-        <textarea id="bc-body" maxlength="500" rows="3"></textarea>
+        <textarea placeholder="مثال: زورونا هذا الأسبوع واستفيدوا من العرض" id="bc-body" maxlength="500" rows="3"></textarea>
         <button style="margin-top:12px" onclick="bcSend()">📣 أرسل الآن</button>
         <span id="bc-msg" class="muted" style="margin-right:10px"></span>
       </div>
@@ -618,8 +619,8 @@
         <h3>الذكاء الاصطناعي لأصحاب الأنشطة</h3>
         <p class="muted">صاحب النشاط بس هو اللي بيستخدمه (وصف المنتج من صورته، وتعديل الصور: إزالة الخلفية والألوان والإضاءة). كل صاحب نشاط عنده عدد استخدامات مجانية كل شهر، وبعدها كل استخدام بينخصم من رصيد محفظته. «التنظيف السريع» للصورة مجاني دايمًا.</p>
         <div class="row">
-          <div><label>الاستخدامات المجانية لكل صاحب نشاط بالشهر</label><input id="ai-free" type="number" min="0" /></div>
-          <div><label>سعر كل استخدام بعدها (<span class="credit-name">الرصيد</span>) — 0 = ما في بيع</label><input id="ai-price" type="number" min="0" /></div>
+          <div><label>الاستخدامات المجانية لكل صاحب نشاط بالشهر</label><input placeholder="مثال: 3" id="ai-free" type="number" min="0" /></div>
+          <div><label>سعر كل استخدام بعدها (<span class="credit-name">الرصيد</span>) — 0 = ما في بيع</label><input placeholder="مثال: 5" id="ai-price" type="number" min="0" /></div>
         </div>
         <h4 style="margin:16px 0 6px">الباقات الشهرية (سعر ثابت)</h4>
         <p class="muted">صاحب النشاط بيشتري باقة من محفظته: عدد استخدامات مضمون لعدد أيام. استخدامات الباقة بتنصرف أول، وبعدها المجاني، وبعدها الدفع لكل استخدام. شراء باقة ثانية والباقة شغّالة بيضيف الأيام والاستخدامات عليها.</p>
@@ -716,24 +717,24 @@
       <div class="card">
         <h3>الأرقام العامة (لمن ما يكون له أرقام خاصة)</h3>
         <div class="grid2">
-          <div class="field"><label>نسبة المسوّق %</label><input id="ref-mpct" type="number" min="0" max="100" step="0.1"></div>
-          <div class="field"><label>مبلغ المسوّق عن كل تسجيل</label><input id="ref-mfix" type="number" min="0" step="1"></div>
-          <div class="field"><label>نسبة مدير التسويق على فريقه %</label><input id="ref-gpct" type="number" min="0" max="100" step="0.1"></div>
-          <div class="field"><label>مبلغ مدير التسويق عن كل تسجيل لفريقه</label><input id="ref-gfix" type="number" min="0" step="1"></div>
+          <div class="field"><label>نسبة المسوّق %</label><input placeholder="مثال: 10" id="ref-mpct" type="number" min="0" max="100" step="0.1"></div>
+          <div class="field"><label>مبلغ المسوّق عن كل تسجيل</label><input placeholder="مثال: 50" id="ref-mfix" type="number" min="0" step="1"></div>
+          <div class="field"><label>نسبة مدير التسويق على فريقه %</label><input placeholder="مثال: 5" id="ref-gpct" type="number" min="0" max="100" step="0.1"></div>
+          <div class="field"><label>مبلغ مدير التسويق عن كل تسجيل لفريقه</label><input placeholder="مثال: 25" id="ref-gfix" type="number" min="0" step="1"></div>
         </div>
         <button onclick="saveReferralDefaults()">حفظ</button> <span id="ref-defaults-msg" class="muted"></span>
       </div>
       <div class="card">
         <h3 id="mk-form-title">إضافة مسوّق أو مدير تسويق</h3>
         <div class="grid2">
-          <div class="field"><label>إيميل الحساب (لازم يكون مسجّل)</label><input id="mk-email" type="email" dir="ltr"></div>
+          <div class="field"><label>إيميل الحساب (لازم يكون مسجّل)</label><input placeholder="name@example.com" id="mk-email" type="email" dir="ltr"></div>
           <div class="field"><label>النوع</label><select id="mk-kind" onchange="mkKindChanged()"><option value="MARKETER">مسوّق</option><option value="MANAGER">مدير تسويق</option></select></div>
           <div class="field"><label>طريقة التسويق</label><select id="mk-channel"><option value="ELECTRONIC">إلكتروني</option><option value="FIELD">ميداني</option></select></div>
           <div class="field" id="mk-parent-wrap"><label>مدير التسويق فوقه</label><select id="mk-parent"></select></div>
-          <div class="field"><label>نسبته % (فارغ = العامة)</label><input id="mk-pct" type="number" min="0" max="100" step="0.1"></div>
-          <div class="field"><label>مبلغه عن كل تسجيل (فارغ = العام)</label><input id="mk-fix" type="number" min="0" step="1"></div>
-          <div class="field" id="mk-tpct-wrap"><label>نسبته على فريقه % (فارغ = العامة)</label><input id="mk-tpct" type="number" min="0" max="100" step="0.1"></div>
-          <div class="field" id="mk-tfix-wrap"><label>مبلغه عن تسجيل فريقه (فارغ = العام)</label><input id="mk-tfix" type="number" min="0" step="1"></div>
+          <div class="field"><label>نسبته % (فارغ = العامة)</label><input placeholder="مثال: 10" id="mk-pct" type="number" min="0" max="100" step="0.1"></div>
+          <div class="field"><label>مبلغه عن كل تسجيل (فارغ = العام)</label><input placeholder="مثال: 50" id="mk-fix" type="number" min="0" step="1"></div>
+          <div class="field" id="mk-tpct-wrap"><label>نسبته على فريقه % (فارغ = العامة)</label><input placeholder="مثال: 5" id="mk-tpct" type="number" min="0" max="100" step="0.1"></div>
+          <div class="field" id="mk-tfix-wrap"><label>مبلغه عن تسجيل فريقه (فارغ = العام)</label><input placeholder="مثال: 25" id="mk-tfix" type="number" min="0" step="1"></div>
         </div>
         <button onclick="saveMarketer()">حفظ</button> <button class="small" style="background:#777" onclick="resetMarketerForm()">جديد</button> <span id="mk-msg" class="muted"></span>
       </div>
@@ -784,7 +785,7 @@
         <table><thead><tr><th style="width:30%">عدد الأيام</th><th style="width:40%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ads-banner-packages"></tbody></table>
         <button class="secondary" style="margin-top:10px" onclick="addAdPackage(null, null, 'ads-banner-packages')">➕ أضف مدة</button>
         <div class="row" style="margin-top:14px">
-          <div><label>مدة ظهور كل بانر كبير (بالثواني)</label><input id="ads-banner-seconds" type="number" min="2" max="60" /></div>
+          <div><label>مدة ظهور كل بانر كبير (بالثواني)</label><input placeholder="مثال: 5" id="ads-banner-seconds" type="number" min="2" max="60" /></div>
           <div><label>اعتماد الحجوزات</label>
             <select id="ads-auto"><option value="false">يدوي — أنا بوافق على كل حجز</option><option value="true">تلقائي — تظهر فور الدفع</option></select></div>
         </div>
@@ -822,16 +823,16 @@
         <div id="banners-list"></div>
         <h3 style="margin-top:18px" id="banner-form-title">بانر جديد</h3>
         <div class="row">
-          <div><label>العنوان</label><input id="bn-title" maxlength="80" /></div>
-          <div><label>جملة صغيرة</label><input id="bn-subtitle" maxlength="160" /></div>
-          <div><label>نص الزر</label><input id="bn-button" maxlength="30" /></div>
+          <div><label>العنوان</label><input placeholder="مثال: تخفيضات الصيف" id="bn-title" maxlength="80" /></div>
+          <div><label>جملة صغيرة</label><input placeholder="مثال: خصومات حتى 50% على منتجات مختارة" id="bn-subtitle" maxlength="160" /></div>
+          <div><label>نص الزر</label><input placeholder="مثال: تسوّق الآن" id="bn-button" maxlength="30" /></div>
         </div>
         <div class="row" style="margin-top:10px">
           <div><label>اللون (لما ما في صورة)</label>
             <select id="bn-bg"><option value="coral">مرجاني</option><option value="black">أسود</option><option value="blue">أزرق</option><option value="green">أخضر</option><option value="purple">بنفسجي</option><option value="gold">ذهبي</option></select></div>
           <div><label>الزر بياخد لـ</label>
             <select id="bn-target" onchange="bannerTargetHint()"><option value="none">لا شيء</option><option value="deals">قائمة عروض الأعضاء</option><option value="section">قسم</option><option value="product">منتج</option><option value="shop">متجر</option><option value="url">رابط خارجي</option></select></div>
-          <div><label id="bn-target-label">القيمة</label><input id="bn-value" /></div>
+          <div><label id="bn-target-label">القيمة</label><input placeholder="مثال: https://dalilacom.com" id="bn-value" /></div>
         </div>
         <div class="row" style="margin-top:10px">
           <div><label>الدولة (كل الدول لو تركتها فاضية)</label><select id="bn-country"><option value="">كل الدول</option></select></div>
@@ -862,9 +863,9 @@
       <div class="card">
         <h3>تعديل رصيد يدويًا</h3>
         <div class="row">
-          <div><label>بريد المستخدم</label><input id="adj-email" /></div>
-          <div><label>المبلغ (سالب للخصم)</label><input id="adj-amount" /></div>
-          <div><label>ملاحظة</label><input id="adj-note" /></div>
+          <div><label>بريد المستخدم</label><input placeholder="name@example.com" id="adj-email" /></div>
+          <div><label>المبلغ (سالب للخصم)</label><input placeholder="مثال: 100" id="adj-amount" /></div>
+          <div><label>ملاحظة</label><input placeholder="مثال: شحن رصيد يدوي" id="adj-note" /></div>
         </div>
         <button style="margin-top:12px" onclick="adjustWallet()">تنفيذ</button>
       </div>
@@ -1231,8 +1232,8 @@ async function loadLaunchReset() {
     <table><thead><tr><th>الجدول</th><th>الصفوف</th></tr></thead><tbody>${d.willBeRemoved.map((x) => `<tr><td>${esc(x.table)}</td><td>${x.rows}</td></tr>`).join('') || '<tr><td colspan="2">لا شي</td></tr>'}</tbody></table>
     <p class="subtitle">تأكد من أخذ نسخة احتياطية من قاعدة البيانات (Neon) قبل ما تكمل.</p>
     ${d.enabled ? `
-      <div class="field"><label>اكتب الجملة: <b>${esc(d.phrase)}</b></label><input id="launch-phrase" autocomplete="off"></div>
-      <div class="field"><label>كلمة سر السوبر أدمن</label><input id="launch-pass" type="password" autocomplete="current-password"></div>
+      <div class="field"><label>اكتب الجملة: <b>${esc(d.phrase)}</b></label><input placeholder="اكتب العبارة المطلوبة حرفيًا" id="launch-phrase" autocomplete="off"></div>
+      <div class="field"><label>كلمة سر السوبر أدمن</label><input placeholder="كلمة سر الأدمن" id="launch-pass" type="password" autocomplete="current-password"></div>
       <button class="danger" onclick="runLaunchReset()">مسح كل شي والبدء من الصفر</button>
       <div id="launch-msg" class="subtitle"></div>` : `<div class="card" style="background:#fff8e1">التصفير مقفول. لتفتحه: بـ Render ضيف المتغير <b>ALLOW_DATA_RESET</b> بقيمة <b>yes</b> للخدمة، وانتظر الإعادة. وبعد ما تخلص احذفه.</div>`}`;
 }
@@ -1516,8 +1517,8 @@ async function geoList() {
   if (!ok) { body.innerHTML = '<tr><td colspan="3" class="muted">تعذّر التحميل</td></tr>'; return; }
   body.innerHTML = data.length ? data.map(u => `
     <tr>
-      <td><input id="geo-ar-${u.id}" value="${esc(u.nameArabic || '')}" /></td>
-      <td><input id="geo-en-${u.id}" value="${esc(u.nameEnglish || u.name)}" style="direction:ltr" /></td>
+      <td><input placeholder="مثال: دمشق" id="geo-ar-${u.id}" value="${esc(u.nameArabic || '')}" /></td>
+      <td><input placeholder="e.g. Damascus" id="geo-en-${u.id}" value="${esc(u.nameEnglish || u.name)}" style="direction:ltr" /></td>
       <td style="white-space:nowrap">
         <button class="small" onclick="geoSave('${u.id}')">حفظ</button>
         <button class="small" style="background:#777" onclick="geoHide('${u.id}')">إخفاء</button>
@@ -1799,7 +1800,7 @@ async function loadProductCats() {
   const { ok, data } = await api('GET', '/admin/product-categories');
   if (!ok) { body.innerHTML = '<tr><td colspan="6">تعذّر التحميل</td></tr>'; return; }
   body.innerHTML = data.length ? data.map(c => `<tr>
-    <td><input id="pc-ar-${c.id}" value="${esc(c.name)}" style="width:150px" /></td>
+    <td><input placeholder="مثال: ملابس" id="pc-ar-${c.id}" value="${esc(c.name)}" style="width:150px" /></td>
     <td><input id="pc-en-${c.id}" value="${esc(c.nameEn || '')}" dir="ltr" style="width:150px" placeholder="English" /></td>
     <td class="muted">${esc(c.parentName || '—')}</td>
     <td class="muted">${esc(c.shop || '—')}</td>
@@ -1884,9 +1885,9 @@ async function loadSuggestions(status) {
       <div><b style="font-size:17px">${esc(s.name)}</b> <span class="muted">— ${shop} — ${day(s.createdAt)}</span></div>
       <div class="muted" style="margin:4px 0 10px">أقرب مهنة اختارها: ${esc(s.nearestPath || '—')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
-        <label>اسمها بالعربي<br><input id="sug-ar-${s.id}" value="${esc(s.name)}" style="width:190px" /></label>
+        <label>اسمها بالعربي<br><input placeholder="الاسم بالعربي" id="sug-ar-${s.id}" value="${esc(s.name)}" style="width:190px" /></label>
         <label>اسمها بالإنكليزي<br><input id="sug-en-${s.id}" placeholder="Name in English" style="width:190px" dir="ltr" /></label>
-        <label>أيقونة<br><input id="sug-ic-${s.id}" maxlength="4" style="width:60px" /></label>
+        <label>أيقونة<br><input placeholder="مثال: 🥊" id="sug-ic-${s.id}" maxlength="4" style="width:60px" /></label>
         <label>مكانها<br><select id="sug-par-${s.id}" style="width:230px"><option value="">— قسم رئيسي —</option>${sugOptions}</select></label>
         <label>كلمات بحث إضافية<br><input id="sug-sy-${s.id}" placeholder="كلمة|كلمة|كلمة" style="width:190px" /></label>
         <button class="small" onclick="approveSuggestion('${s.id}')">✅ قبول كمهنة جديدة</button>
@@ -1966,7 +1967,7 @@ async function loadAds() {
 
 function addAdPackage(days, credits, into) {
   const tr = document.createElement('tr');
-  tr.innerHTML = '<td><input type="number" min="1" max="365" class="pk-days" value="' + (days ?? '') + '"></td><td><input type="number" min="0" class="pk-credits" value="' + (credits ?? '') + '"></td><td><button class="small danger" onclick="this.closest(\'tr\').remove()">حذف</button></td>';
+  tr.innerHTML = '<td><input placeholder="مثال: 30" type="number" min="1" max="365" class="pk-days" value="' + (days ?? '') + '"></td><td><input placeholder="مثال: 500" type="number" min="0" class="pk-credits" value="' + (credits ?? '') + '"></td><td><button class="small danger" onclick="this.closest(\'tr\').remove()">حذف</button></td>';
   document.getElementById(into || 'ads-packages').appendChild(tr);
 }
 
@@ -2183,10 +2184,10 @@ let aiPacks = [];
 function renderAiPacks() {
   document.getElementById('ai-packs').innerHTML = aiPacks.map((p, i) => `
     <tr>
-      <td><input value="${esc(p.name)}" oninput="aiPacks[${i}].name=this.value"></td>
-      <td><input type="number" min="1" max="365" value="${p.days}" oninput="aiPacks[${i}].days=Number(this.value)"></td>
-      <td><input type="number" min="1" value="${p.uses}" oninput="aiPacks[${i}].uses=Number(this.value)"></td>
-      <td><input type="number" min="0" value="${p.credits}" oninput="aiPacks[${i}].credits=Number(this.value)"></td>
+      <td><input placeholder="مثال: باقة شهرية" value="${esc(p.name)}" oninput="aiPacks[${i}].name=this.value"></td>
+      <td><input placeholder="مثال: 30" type="number" min="1" max="365" value="${p.days}" oninput="aiPacks[${i}].days=Number(this.value)"></td>
+      <td><input placeholder="مثال: 100" type="number" min="1" value="${p.uses}" oninput="aiPacks[${i}].uses=Number(this.value)"></td>
+      <td><input placeholder="مثال: 500" type="number" min="0" value="${p.credits}" oninput="aiPacks[${i}].credits=Number(this.value)"></td>
       <td><button class="small danger" onclick="aiPacks.splice(${i},1);renderAiPacks()">✕</button></td>
     </tr>`).join('');
 }
@@ -2332,7 +2333,7 @@ async function loadCategories() {
 }
 function categoryRow(c, depth) {
   return `<tr class="${depth ? 'child-row' : ''}">
-    <td style="padding-inline-start:${12 + depth * 22}px"><input class="inline-input" style="width:200px" id="cat-name-${c.id}" value="${c.name}" /> <span class="muted">${c.merchantCount || 0}</span></td>
+    <td style="padding-inline-start:${12 + depth * 22}px"><input placeholder="مثال: ملابس" class="inline-input" style="width:200px" id="cat-name-${c.id}" value="${c.name}" /> <span class="muted">${c.merchantCount || 0}</span></td>
     <td>
       <button class="small" onclick="saveCategory('${c.id}')">💾 حفظ</button>
       <button class="small danger" onclick="deleteCategory('${c.id}')">🗑️ حذف</button>
@@ -2399,9 +2400,9 @@ function priceRowHtml(p) {
   p = p || {};
   return `<div class="pp-row row" style="align-items:flex-end;margin-bottom:6px">
     <div><label>البلد</label><select class="pp-country">${countryOptions(p.countryId, false)}</select></div>
-    <div><label>بالكوينز</label><input class="pp-credits" value="${p.priceCredits ?? ''}" /></div>
-    <div><label>بالعملة (اختياري)</label><input class="pp-cash" value="${p.cashAmountCents != null ? money(p.cashAmountCents) : ''}" /></div>
-    <div><label>رمز العملة</label><input class="pp-cur" maxlength="3" value="${escHtml(p.currencyCode || '')}" /></div>
+    <div><label>بالكوينز</label><input placeholder="مثال: 500" class="pp-credits" value="${p.priceCredits ?? ''}" /></div>
+    <div><label>بالعملة (اختياري)</label><input placeholder="مثال: 9.99" class="pp-cash" value="${p.cashAmountCents != null ? money(p.cashAmountCents) : ''}" /></div>
+    <div><label>رمز العملة</label><input placeholder="مثال: EUR" class="pp-cur" maxlength="3" value="${escHtml(p.currencyCode || '')}" /></div>
     <div style="flex:0 0 auto"><label>فعّال</label><input type="checkbox" class="pp-active" style="width:auto" ${p.isActive === false ? '' : 'checked'} /></div>
     <div style="flex:0 0 auto"><button class="small danger" onclick="this.closest('.pp-row').remove()">✕</button></div>
   </div>`;
@@ -2424,18 +2425,18 @@ function planCardHtml(p) {
       ${needsCredits ? '<span class="badge REJECTED" title="ما حدا بيقدر يشترك بهي الباقة">ما في سعر بالكوينز</span>' : ''}
     </div>
     <div class="row">
-      <div><label>الاسم</label><input id="pl-name-${p.id}" value="${escHtml(p.name)}" /></div>
-      <div><label>وصف قصير</label><input id="pl-desc-${p.id}" value="${escHtml(p.description || '')}" /></div>
+      <div><label>الاسم</label><input placeholder="مثال: شهري" id="pl-name-${p.id}" value="${escHtml(p.name)}" /></div>
+      <div><label>وصف قصير</label><input placeholder="وصف قصير للباقة" id="pl-desc-${p.id}" value="${escHtml(p.description || '')}" /></div>
     </div>
     <div class="row">
-      <div><label>المدة (يوم)</label><input id="pl-duration-${p.id}" value="${p.durationDays}" /></div>
-      <div><label>أيام التجربة</label><input id="pl-trial-${p.id}" value="${p.trialDays}" /></div>
-      <div><label>ترتيب العرض</label><input id="pl-sort-${p.id}" value="${p.sortOrder}" /></div>
-      ${isMerchant ? `<div><label>حد الرسائل الجماعية بالشهر</label><input id="pl-broadcast-${p.id}" value="${p.monthlyBroadcastLimit ?? ''}" /></div>` : ''}
+      <div><label>المدة (يوم)</label><input placeholder="مثال: 30" id="pl-duration-${p.id}" value="${p.durationDays}" /></div>
+      <div><label>أيام التجربة</label><input placeholder="مثال: 7" id="pl-trial-${p.id}" value="${p.trialDays}" /></div>
+      <div><label>ترتيب العرض</label><input placeholder="مثال: 1" id="pl-sort-${p.id}" value="${p.sortOrder}" /></div>
+      ${isMerchant ? `<div><label>حد الرسائل الجماعية بالشهر</label><input placeholder="مثال: 10" id="pl-broadcast-${p.id}" value="${p.monthlyBroadcastLimit ?? ''}" /></div>` : ''}
     </div>
     <div class="row">
-      <div><label>السعر (بالعملة)</label><input id="pl-price-${p.id}" value="${money(p.priceCents)}" /></div>
-      <div><label>العملة</label><input id="pl-currency-${p.id}" maxlength="3" value="${escHtml(p.currency)}" /></div>
+      <div><label>السعر (بالعملة)</label><input placeholder="مثال: 9.99" id="pl-price-${p.id}" value="${money(p.priceCents)}" /></div>
+      <div><label>العملة</label><input placeholder="مثال: EUR" id="pl-currency-${p.id}" maxlength="3" value="${escHtml(p.currency)}" /></div>
       <div><label>السعر بالكوينز (المخصوم من المحفظة)</label><input id="pl-credits-${p.id}" value="${p.priceCredits ?? ''}" placeholder="غير مضبوط" /></div>
     </div>
     <label>المواصفات — بند بكل سطر، وابدأ السطر بـ ✘ إذا البند غير مشمول</label>

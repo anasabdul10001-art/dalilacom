@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.profile
 
+import com.dalilacom.app.ui.common.Hint
+
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -81,8 +83,8 @@ fun MarketingScreen(container: AppContainer, onBack: () -> Unit) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(stringResource(R.string.ref_become), fontWeight = FontWeight.Bold)
                         Text(stringResource(R.string.ref_become_sub), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(stringResource(R.string.ref_phone)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text(stringResource(R.string.ref_note)) }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(stringResource(R.string.ref_phone)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_phone)) })
+                        OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text(stringResource(R.string.ref_note)) }, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_note)) })
                         listOf("ELECTRONIC" to ("💻 " to R.string.ref_electronic), "FIELD" to ("🚶 " to R.string.ref_field)).forEach { (channel, label) ->
                             val sub = if (channel == "FIELD") R.string.ref_field_sub else R.string.ref_electronic_sub
                             Button(onClick = {
@@ -106,7 +108,7 @@ fun MarketingScreen(container: AppContainer, onBack: () -> Unit) {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(stringResource(R.string.ref_enter), fontWeight = FontWeight.Bold)
-                        OutlinedTextField(value = code, onValueChange = { code = it.uppercase() }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = code, onValueChange = { code = it.uppercase() }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_ref_code)) })
                         Button(onClick = {
                             if (code.isBlank()) return@Button
                             scope.launch {

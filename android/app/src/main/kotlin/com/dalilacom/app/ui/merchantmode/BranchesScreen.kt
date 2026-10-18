@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.ui.common.Hint
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -100,11 +102,11 @@ fun BranchesScreen(container: AppContainer, onBack: () -> Unit) {
             Spacer(Modifier.height(10.dp))
             Button(onClick = { open(null) }, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("+ " + stringResource(R.string.br_add)) }
         } else {
-            OutlinedTextField(value = name, onValueChange = { name = it.take(60) }, label = { Text(stringResource(R.string.br_name)) }, placeholder = { Text(stringResource(R.string.br_name_ph)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = name, onValueChange = { name = it.take(60) }, label = { Text(stringResource(R.string.br_name)) }, placeholder = { Hint(stringResource(R.string.br_name_ph)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = city, onValueChange = { city = it.take(60) }, label = { Text(stringResource(R.string.br_city)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = city, onValueChange = { city = it.take(60) }, label = { Text(stringResource(R.string.br_city)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_city)) })
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = address, onValueChange = { address = it.take(200) }, label = { Text(stringResource(R.string.br_address)) }, placeholder = { Text(stringResource(R.string.mp_address_ph)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = address, onValueChange = { address = it.take(200) }, label = { Text(stringResource(R.string.br_address)) }, placeholder = { Hint(stringResource(R.string.mp_address_ph)) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.br_pick), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LocationPicker(value = location, onChange = { picked ->
@@ -118,7 +120,7 @@ fun BranchesScreen(container: AppContainer, onBack: () -> Unit) {
                 }
             })
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = phone, onValueChange = { phone = it.take(30) }, label = { Text(stringResource(R.string.br_phone)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = phone, onValueChange = { phone = it.take(30) }, label = { Text(stringResource(R.string.br_phone)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_phone)) })
             error?.let { Spacer(Modifier.height(8.dp)); Text(it, color = MaterialTheme.colorScheme.error) }
             Spacer(Modifier.height(12.dp))
             Button(

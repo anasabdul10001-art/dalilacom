@@ -923,4 +923,43 @@
     <string name="err_field_email">The email is not valid, write it like this: name@example.com</string>
     <string name="err_field_phone">The phone number is not valid (6 digits at least)</string>
     <string name="err_login_wrong">The email or the password is wrong, check and try again</string>
+    <string name="ph_amount" formatted="false">e.g. 50</string>
+    <string name="ph_bill" formatted="false">e.g. 100.00</string>
+    <string name="ph_bio" formatted="false">A short line, e.g. Owner of a clothing shop</string>
+    <string name="ph_biz_desc" formatted="false">e.g. An Eastern food restaurant, open 10 am to 11 pm</string>
+    <string name="ph_building" formatted="false">e.g. 12</string>
+    <string name="ph_cancel_reason" formatted="false">e.g. The product is out of stock right now</string>
+    <string name="ph_city" formatted="false">e.g. Damascus</string>
+    <string name="ph_email" formatted="false">name@example.com</string>
+    <string name="ph_fallback" formatted="false">e.g. Thanks for contacting us! We will reply as soon as we can.</string>
+    <string name="ph_inbox_reply" formatted="false">e.g. Welcome, how can I help you?</string>
+    <string name="ph_member_code" formatted="false">e.g. 1234 5678 9012 3456</string>
+    <string name="ph_member_price" formatted="false">e.g. 20.00</string>
+    <string name="ph_note" formatted="false">e.g. A shop owner in Mezzeh</string>
+    <string name="ph_pcat" formatted="false">e.g. Sportswear</string>
+    <string name="ph_percent" formatted="false">e.g. 15</string>
+    <string name="ph_person" formatted="false">e.g. Ahmed Mohamed</string>
+    <string name="ph_phone" formatted="false">+963 9xx xxx xxx</string>
+    <string name="ph_postal" formatted="false">e.g. 10115</string>
+    <string name="ph_price" formatted="false">e.g. 25.00</string>
+    <string name="ph_product" formatted="false">e.g. White cotton shirt</string>
+    <string name="ph_product_desc" formatted="false">A short description, e.g. A comfortable 100% cotton shirt</string>
+    <string name="ph_profession" formatted="false">e.g. Boxing coach</string>
+    <string name="ph_promo_body" formatted="false">e.g. The offer lasts 3 days only, visit us!</string>
+    <string name="ph_promo_title" formatted="false">e.g. 20% off everything</string>
+    <string name="ph_radius" formatted="false">e.g. 5</string>
+    <string name="ph_ref_code" formatted="false">e.g. AB12CD</string>
+    <string name="ph_reject_reason" formatted="false">e.g. The photos are unclear, please send clearer ones</string>
+    <string name="ph_rule_ai" formatted="false">e.g. Answer about hours and prices briefly</string>
+    <string name="ph_rule_fallback" formatted="false">e.g. We will reply as soon as we can</string>
+    <string name="ph_rule_keys" formatted="false">e.g. price, how much, cost</string>
+    <string name="ph_rule_name" formatted="false">e.g. Price question</string>
+    <string name="ph_rule_reply" formatted="false">e.g. Hello {name}, the price is 25</string>
+    <string name="ph_shop" formatted="false">e.g. Jasmine Restaurant</string>
+    <string name="ph_sku" formatted="false">e.g. SH-001</string>
+    <string name="ph_street" formatted="false">e.g. Revolution Street</string>
+    <string name="ph_tone" formatted="false">e.g. Friendly and respectful</string>
+    <string name="ph_txn" formatted="false">e.g. The transaction number from the payment app</string>
+    <string name="ph_vat" formatted="false">e.g. DE123456789</string>
+    <string name="ph_whatsapp" formatted="false">e.g. 963912345678</string>
 </resources>

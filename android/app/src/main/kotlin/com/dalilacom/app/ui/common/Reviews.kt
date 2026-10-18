@@ -115,7 +115,7 @@ fun ReviewDialog(target: ReviewTarget, busy: Boolean, error: String?, onSend: (I
                     for (n in 1..5) Text("★", fontSize = 42.sp, color = if (n <= stars) Gold else MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.clickable { stars = n }.padding(horizontal = 3.dp))
                 }
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(value = comment, onValueChange = { comment = it.take(1000) }, placeholder = { Text(stringResource(R.string.rv_placeholder)) }, minLines = 3, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = comment, onValueChange = { comment = it.take(1000) }, placeholder = { Hint(stringResource(R.string.rv_placeholder)) }, minLines = 3, modifier = Modifier.fillMaxWidth())
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
             }
         },

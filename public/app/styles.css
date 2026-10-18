@@ -1609,3 +1609,7 @@ html[dir="ltr"] .social-dock.open .dock-tab svg { transform: scaleX(-1); }
 
 /* the floating bar is not a page column: it keeps its own size on every screen */
 .screen-body:not(.map-mode) > .social-dock:not(.tabbar):not(.scan-fab) { width: auto; max-width: none; }
+
+/* the example inside an empty field: faint, so it reads as a hint and not as something already typed */
+input::placeholder, textarea::placeholder { color: #b3a8a5; opacity: 1; }
+:root[data-theme="dark"] input::placeholder, :root[data-theme="dark"] textarea::placeholder { color: #6f6461; }

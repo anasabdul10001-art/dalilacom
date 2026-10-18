@@ -94,7 +94,7 @@ fun ProductCategoryPicker(
             value = q,
             onValueChange = { q = it },
             label = { Text(stringResource(R.string.pc_search)) },
-            placeholder = { Text(stringResource(R.string.pc_search_ph)) },
+            placeholder = { Hint(stringResource(R.string.pc_search_ph)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -141,7 +141,7 @@ fun ProductCategoryPicker(
                 Text(stringResource(R.string.pc_add_need), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 Text(stringResource(R.string.pc_add_under, here.name), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedTextField(value = addName, onValueChange = { addName = it.take(40) }, label = { Text(stringResource(R.string.pc_add_ph)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = addName, onValueChange = { addName = it.take(40) }, label = { Text(stringResource(R.string.pc_add_ph)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_pcat)) })
                 addError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 OutlinedButton(onClick = {
                     if (addName.trim().length < 2) { addError = short; return@OutlinedButton }

@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.auth
 
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
@@ -91,7 +93,8 @@ fun RegisterScreen(
             onValueChange = { fullName = it },
             label = { Text(AppStrings.get(R.string.s_e19b16bd)) },
             modifier = Modifier.fillMaxWidth(),
-        )
+        placeholder = { Hint(stringResource(R.string.ph_person)) },
+    )
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = email,
@@ -99,7 +102,8 @@ fun RegisterScreen(
             label = { Text(AppStrings.get(R.string.s_cc6b3855)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth(),
-        )
+        placeholder = { Hint(stringResource(R.string.ph_email)) },
+    )
         Spacer(Modifier.height(12.dp))
         com.dalilacom.app.ui.common.PasswordField(
             value = password,
@@ -127,7 +131,8 @@ fun RegisterScreen(
             label = { Text(stringResource(R.string.ref_code_optional)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-        )
+        placeholder = { Hint(stringResource(R.string.ph_ref_code)) },
+    )
         Spacer(Modifier.height(20.dp))
 
         if (uiState is AuthUiState.Error) {

@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.store
 
+import com.dalilacom.app.ui.common.Hint
+
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -347,7 +349,7 @@ private fun FormStep(ui: WizardUi, vm: ProductWizardViewModel, listen: (String) 
 
         FieldLabel(stringResource(R.string.wiz_name))
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(value = ui.name, onValueChange = vm::setName, placeholder = { Text(stringResource(R.string.wiz_name_ph)) }, singleLine = true, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f))
+            OutlinedTextField(value = ui.name, onValueChange = vm::setName, placeholder = { Hint(stringResource(R.string.wiz_name_ph)) }, singleLine = true, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f))
             MicButton { listen("name") }
         }
         if (ui.alternatives.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -375,7 +377,7 @@ private fun FormStep(ui: WizardUi, vm: ProductWizardViewModel, listen: (String) 
 
         FieldLabel(stringResource(R.string.wiz_description))
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(value = ui.description, onValueChange = vm::setDescription, placeholder = { Text(stringResource(R.string.wiz_desc_ph)) }, minLines = 3, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f))
+            OutlinedTextField(value = ui.description, onValueChange = vm::setDescription, placeholder = { Hint(stringResource(R.string.wiz_desc_ph)) }, minLines = 3, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f))
             MicButton { listen("description") }
         }
         TextButton(onClick = vm::autoDescription) { Text("✨  " + stringResource(R.string.wiz_auto_desc)) }
@@ -383,19 +385,19 @@ private fun FormStep(ui: WizardUi, vm: ProductWizardViewModel, listen: (String) 
         FieldLabel(stringResource(R.string.wiz_specs))
         ui.specs.forEachIndexed { i, x ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(value = x.label, onValueChange = { vm.setSpec(i, it, null) }, placeholder = { Text(stringResource(R.string.wiz_spec_label)) }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
-                OutlinedTextField(value = x.value, onValueChange = { vm.setSpec(i, null, it) }, placeholder = { Text(stringResource(R.string.wiz_spec_value)) }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
+                OutlinedTextField(value = x.label, onValueChange = { vm.setSpec(i, it, null) }, placeholder = { Hint(stringResource(R.string.wiz_spec_label)) }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
+                OutlinedTextField(value = x.value, onValueChange = { vm.setSpec(i, null, it) }, placeholder = { Hint(stringResource(R.string.wiz_spec_value)) }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
                 TextButton(onClick = { vm.removeSpec(i) }) { Text("✕") }
             }
         }
         TextButton(onClick = vm::addSpec) { Text("+  " + stringResource(R.string.wiz_add_spec)) }
 
         FieldLabel(stringResource(R.string.wiz_price))
-        OutlinedTextField(value = ui.price, onValueChange = vm::setPrice, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), textStyle = androidx.compose.ui.text.TextStyle(fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center), placeholder = { Text("0.00", modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = ui.price, onValueChange = vm::setPrice, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), textStyle = androidx.compose.ui.text.TextStyle(fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center), placeholder = { Hint("0.00", modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
         if (ui.hintMin != null && ui.hintMax != null) Text("💡 " + stringResource(R.string.wiz_price_hint, formatCents(ui.hintMin), formatCents(ui.hintMax)), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
 
         FieldLabel(stringResource(R.string.wiz_stock))
-        OutlinedTextField(value = ui.stock, onValueChange = vm::setStock, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Text(stringResource(R.string.stock_ph)) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = ui.stock, onValueChange = vm::setStock, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Hint(stringResource(R.string.stock_ph)) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
 
         ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (ui.needShipping) OutlinedButton(onClick = onOpenShipping, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("🚚  " + stringResource(R.string.ship_add_methods)) }

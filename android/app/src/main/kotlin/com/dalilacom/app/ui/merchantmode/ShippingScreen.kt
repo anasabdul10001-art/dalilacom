@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.ui.common.Hint
+
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -82,10 +84,10 @@ fun ShippingScreen(container: AppContainer, onBack: () -> Unit) {
         }
         rows.forEachIndexed { i, row ->
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(value = row.name, onValueChange = { row.name = it.take(40) }, singleLine = true, placeholder = { Text(stringResource(R.string.ship_name_ph)) }, modifier = Modifier.weight(2f))
+                OutlinedTextField(value = row.name, onValueChange = { row.name = it.take(40) }, singleLine = true, placeholder = { Hint(stringResource(R.string.ship_name_ph)) }, modifier = Modifier.weight(2f))
                 OutlinedTextField(
                     value = row.cost, onValueChange = { row.cost = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(9) }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), placeholder = { Text(stringResource(R.string.ship_cost_ph)) }, modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), placeholder = { Hint(stringResource(R.string.ship_cost_ph)) }, modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = { rows.removeAt(i) }) { Text("✕") }
             }

@@ -1,5 +1,9 @@
 package com.dalilacom.app.ui.responder
 
+import androidx.compose.ui.res.stringResource
+
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
@@ -100,9 +104,9 @@ fun WalletScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                     }
                 }
                 if (method.isNotEmpty()) {
-                    OutlinedTextField(reference, { reference = it }, label = { Text(if (method == "USDT_TRC20") AppStrings.get(R.string.s_4d977cf7) else AppStrings.get(R.string.s_b6066a1e)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(reference, { reference = it }, label = { Text(if (method == "USDT_TRC20") AppStrings.get(R.string.s_4d977cf7) else AppStrings.get(R.string.s_b6066a1e)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Hint(stringResource(R.string.ph_txn)) })
                     if (method != "USDT_TRC20") {
-                        OutlinedTextField(amount, { amount = it }, label = { Text(AppStrings.get(R.string.s_e50b0785)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(amount, { amount = it }, label = { Text(AppStrings.get(R.string.s_e50b0785)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Hint(stringResource(R.string.ph_amount)) })
                     }
                     Spacer(Modifier.height(8.dp))
                     Button(

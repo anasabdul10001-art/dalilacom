@@ -1,5 +1,9 @@
 package com.dalilacom.app.ui.admin
 
+import androidx.compose.ui.res.stringResource
+
+import com.dalilacom.app.ui.common.Hint
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -189,7 +193,7 @@ fun ReviewScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             onDismissRequest = { rejecting = null },
             title = { Text(AppStrings.get(R.string.review_refuse)) },
             text = {
-                OutlinedTextField(reason, { reason = it }, label = { Text(AppStrings.get(R.string.review_reason)) }, minLines = 3, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(reason, { reason = it }, label = { Text(AppStrings.get(R.string.review_reason)) }, minLines = 3, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_reject_reason)) })
             },
             confirmButton = {
                 TextButton(enabled = reason.trim().length >= 3, onClick = { viewModel.reject(target.id, reason); rejecting = null }) { Text(AppStrings.get(R.string.review_refuse)) }

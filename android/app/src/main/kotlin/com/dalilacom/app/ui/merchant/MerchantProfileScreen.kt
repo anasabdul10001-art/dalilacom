@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchant
 
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
@@ -181,7 +183,8 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 onValueChange = viewModel::onName,
                 label = { Text(AppStrings.get(R.string.s_59539fc9)) },
                 modifier = Modifier.fillMaxWidth(),
-            )
+            placeholder = { Hint(stringResource(R.string.ph_shop)) },
+        )
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.mp_sec_profession), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(6.dp))
@@ -200,7 +203,7 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.mp_sec_contact), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(6.dp))
-            OutlinedTextField(value = state.address, onValueChange = viewModel::onAddress, label = { Text(AppStrings.get(R.string.s_baffa49c)) }, placeholder = { Text(stringResource(R.string.mp_address_ph)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = state.address, onValueChange = viewModel::onAddress, label = { Text(AppStrings.get(R.string.s_baffa49c)) }, placeholder = { Hint(stringResource(R.string.mp_address_ph)) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(16.dp))
             Text(stringResource(R.string.mp_sec_map), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(6.dp))
@@ -211,14 +214,15 @@ fun MerchantProfileScreen(factory: ViewModelFactory, onBack: () -> Unit) {
             }
             Spacer(Modifier.height(4.dp))
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(value = state.phone, onValueChange = viewModel::onPhone, label = { Text(AppStrings.get(R.string.s_760c65a1)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = state.phone, onValueChange = viewModel::onPhone, label = { Text(AppStrings.get(R.string.s_760c65a1)) }, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_phone)) })
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = state.whatsapp,
                 onValueChange = viewModel::onWhatsapp,
                 label = { Text(AppStrings.get(R.string.s_1bef7f7d)) },
                 modifier = Modifier.fillMaxWidth(),
-            )
+            placeholder = { Hint(stringResource(R.string.ph_whatsapp)) },
+        )
             Spacer(Modifier.height(16.dp))
             Button(onClick = viewModel::save, enabled = !state.isSaving, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Text(AppStrings.get(R.string.s_56ee6e0d))

@@ -614,7 +614,7 @@ function screenSocialEmail() {
     ${authLogoHtml()}
     <h1 class="screen-title">أكمل تسجيلك</h1>
     <p class="screen-sub">${S.params.name ? esc(S.params.name) + "، " : ""}فيسبوك ما شاركنا إيميلك. اكتب إيميلك ورح نبعتلك رابط لتأكيده.</p>
-    <div class="field"><label>الإيميل</label><input id="se-email" type="email" dir="ltr" autocomplete="email" /></div>
+    <div class="field"><label>الإيميل</label><input id="se-email" placeholder="name@example.com" type="email" dir="ltr" autocomplete="email" /></div>
     ${errorBanner()}
     <button class="btn" onclick="doSocialEmail()">إنشاء الحساب</button>
     <button class="link-btn" onclick="reset('login')">رجوع</button>
@@ -641,7 +641,7 @@ function screenForgot() {
     <h1 class="screen-title">نسيت كلمة السر</h1>
     <p class="screen-sub">اكتب إيميل حسابك ورح نبعتلك رابط لتعيين كلمة سر جديدة.</p>
     ${done ? `<div class="card">${esc(done)}</div>` : `
-      <div class="field"><label>الإيميل</label><input id="f-email" type="email" dir="ltr" autocomplete="email" value="${esc(S.params.email || "")}" /></div>
+      <div class="field"><label>الإيميل</label><input id="f-email" placeholder="name@example.com" type="email" dir="ltr" autocomplete="email" value="${esc(S.params.email || "")}" /></div>
       ${errorBanner()}
       <button class="btn" onclick="doForgot()">أرسل الرابط</button>`}
   `;
@@ -721,13 +721,13 @@ function screenRegister() {
         <span class="ic">👤</span><div><b>${esc(t("reg.userTitle"))}</b><small>${esc(t("reg.userSub"))}</small></div></button>
     </div>
     ${intent === "MERCHANT" ? `<p class="muted" style="color:var(--primary);margin-bottom:12px">${esc(t("reg.bizNote"))}</p>` : ""}
-    <div class="field"><label>الاسم الكامل</label><input id="f-name" placeholder="اسمك" value="${esc(draft.name || "")}" /></div>
+    <div class="field"><label>الاسم الكامل</label><input id="f-name" placeholder="مثال: أحمد محمد" value="${esc(draft.name || "")}" /></div>
     <div class="field"><label>الإيميل</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
     <div class="field"><label>كلمة السر (8 أحرف على الأقل)</label><input id="f-password" type="password" placeholder="••••••••" value="${esc(draft.password || "")}" /></div>
     <div class="field"><label>الدولة</label><select id="f-country" onchange="regPickCountry()"><option value="">— اختر الدولة —</option>${countryOpts}</select></div>
     ${g.regions.length ? `<div class="field"><label>المحافظة</label><select id="f-region" onchange="regPickRegion()"><option value="">— اختر المحافظة —</option>${regionOpts}</select></div>` : ""}
     <div class="field"><label>المدينة</label><select id="f-city" ${g.cities.length ? "" : "disabled"}><option value="">${cityHint}</option>${cityOpts}</select></div>
-    <div class="field"><label>${esc(t("ref.codeOptional"))}</label><input id="f-ref" dir="ltr" autocapitalize="characters" value="${esc(draft.ref !== undefined ? draft.ref : storedJoin())}" /></div>
+    <div class="field"><label>${esc(t("ref.codeOptional"))}</label><input id="f-ref" placeholder="مثال: AB12CD" dir="ltr" autocapitalize="characters" value="${esc(draft.ref !== undefined ? draft.ref : storedJoin())}" /></div>
     ${errorBanner()}
     <button class="btn" onclick="doRegister()">إنشاء الحساب</button>
     ${socialButtonsHtml()}
@@ -1775,7 +1775,7 @@ function refEnterCardHtml() {
   if (me.isMarketer || me.referred) return "";
   return `<div class="card">
     <div class="section-title" style="margin-top:0">${esc(t("ref.enter"))}</div>
-    <div class="field"><input id="ref-code" dir="ltr" autocapitalize="characters" /></div>
+    <div class="field"><input id="ref-code" placeholder="مثال: AB12CD" dir="ltr" autocapitalize="characters" /></div>
     <button class="btn small" onclick="refUseCode()">${esc(t("ref.apply"))}</button>
   </div>`;
 }
@@ -1788,8 +1788,8 @@ function becomeMarketerHtml(me) {
   const form = req && req.status === "PENDING" ? "" : `
     <div class="card">
       <p class="muted">${esc(t("ref.becomeSub"))}</p>
-      <div class="field"><label>${esc(t("ref.phone"))}</label><input id="ref-phone" dir="ltr" inputmode="tel" /></div>
-      <div class="field"><label>${esc(t("ref.note"))}</label><input id="ref-note" /></div>
+      <div class="field"><label>${esc(t("ref.phone"))}</label><input id="ref-phone" placeholder="+963 9xx xxx xxx" dir="ltr" inputmode="tel" /></div>
+      <div class="field"><label>${esc(t("ref.note"))}</label><input id="ref-note" placeholder="مثال: صاحب محل بحي المزة" /></div>
       <div class="intent-cards">
         <button class="intent-card" onclick="refRequest('ELECTRONIC')"><span class="ic">💻</span><div><b>${esc(t("ref.electronic"))}</b><small>${esc(t("ref.electronicSub"))}</small></div></button>
         <button class="intent-card" onclick="refRequest('FIELD')"><span class="ic">🚶</span><div><b>${esc(t("ref.field"))}</b><small>${esc(t("ref.fieldSub"))}</small></div></button>
@@ -3597,15 +3597,15 @@ function screenMerchantRegister() {
     <h1 class="screen-title">سجّل كصاحب نشاط</h1>
     <p class="screen-sub">بيصير حسابك صاحب نشاط بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</p>
     <div class="section-title">${esc(t("mp.secName"))}</div>
-    <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="اسم محلك" value="${esc(m.name || "")}" /></div>
+    <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="مثال: مطعم الياسمين" value="${esc(m.name || "")}" /></div>
     <div class="section-title">${esc(t("mp.secProfession"))}</div>
     ${categoryPickerHtml(m.categories, m.selectedCat, "selectMerchCategory")}
     <div class="section-title">${esc(t("mp.secContact"))}</div>
     <div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" /></div>
     ${catIsOnline(m.categories, m.selectedCat) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     <div class="row">
-      <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="رقم الهاتف" value="${esc(m.phone || "")}" /></div>
-      <div class="field"><label>واتساب (اختياري)</label><input id="mr-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
+      <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="+963 9xx xxx xxx" value="${esc(m.phone || "")}" /></div>
+      <div class="field"><label>واتساب (اختياري)</label><input id="mr-whatsapp" placeholder="مثال: 963912345678" value="${esc(m.whatsapp || "")}" /></div>
     </div>
     ${errorBanner()}
     <button class="btn" ${S.busy ? "disabled" : ""} onclick="submitMerchantRegister()">سجّل</button>
@@ -3762,7 +3762,7 @@ function screenMerchantProfile() {
     <h1 class="screen-title">بيانات المحل ومكانه</h1>
     <p class="screen-sub">هي اللي بتظهر للزبائن على الخريطة وبصفحة محلك</p>
     <div class="section-title">${esc(t("mp.secName"))}</div>
-    <div class="field"><label>اسم المحل</label><input id="mp-name" value="${esc(m.name || "")}" /></div>
+    <div class="field"><label>اسم المحل</label><input id="mp-name" placeholder="مثال: مطعم الياسمين" value="${esc(m.name || "")}" /></div>
     <div class="section-title">${esc(t("mp.secProfession"))}</div>
     ${m.suggestion && m.suggestion.status === "PENDING" ? `<div class="info-banner">${esc(t("cat.sugPending", { name: m.suggestion.name }))}</div>` : ""}
     ${m.suggestion && m.suggestion.status === "REJECTED" ? `<div class="error-banner">${esc(t("cat.sugRejected", { name: m.suggestion.name }))}${m.suggestion.note ? " — " + esc(m.suggestion.note) : ""}</div>` : ""}
@@ -3771,8 +3771,8 @@ function screenMerchantProfile() {
     <div class="field"><label>${esc(t("mp.address"))}</label><input id="mp-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" /></div>
     ${catIsOnline(m.categories || [], m.categoryId) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     <div class="row">
-      <div class="field"><label>الهاتف</label><input id="mp-phone" value="${esc(m.phone || "")}" /></div>
-      <div class="field"><label>واتساب (مع رمز الدولة)</label><input id="mp-whatsapp" placeholder="9639xxxxxxxx" value="${esc(m.whatsapp || "")}" /></div>
+      <div class="field"><label>الهاتف</label><input id="mp-phone" placeholder="+963 9xx xxx xxx" value="${esc(m.phone || "")}" /></div>
+      <div class="field"><label>واتساب (مع رمز الدولة)</label><input id="mp-whatsapp" placeholder="مثال: 963912345678" value="${esc(m.whatsapp || "")}" /></div>
     </div>
     ${errorBanner()}
     <button class="btn" onclick="saveMerchantProfile()">حفظ</button>
@@ -4280,23 +4280,23 @@ function screenAccount() {
       <p class="muted">${p.emailVerified ? "✅ مؤكَّد" : "⚠️ غير مؤكَّد"}</p>
       ${a.emailDelivery ? `
         <div class="divider"></div>
-        <div class="field"><label>الإيميل الجديد</label><input id="ac-newemail" type="email" dir="ltr" autocomplete="email" /></div>
-        <div class="field"><label>كلمة السر للتأكيد</label><input id="ac-email-pw" type="password" autocomplete="current-password" /></div>
+        <div class="field"><label>الإيميل الجديد</label><input id="ac-newemail" placeholder="name@example.com" type="email" dir="ltr" autocomplete="email" /></div>
+        <div class="field"><label>كلمة السر للتأكيد</label><input id="ac-email-pw" placeholder="••••••••" type="password" autocomplete="current-password" /></div>
         <p class="muted">رح نبعت رابط تأكيد للإيميل الجديد، وتنبيه للقديم. بعد التأكيد بتسجّل دخول من جديد بالإيميل الجديد.</p>
         <button class="btn small" onclick="acctChangeEmail()">تغيير الإيميل</button>` : `<p class="muted">تغيير الإيميل مش متوفر حاليًا (خدمة البريد غير مفعّلة بعد).</p>`}
     </div>
 
     <div class="card">
       <div class="section-title" style="margin-top:0">كلمة السر</div>
-      <div class="field"><label>كلمة السر الحالية</label><input id="ac-pw-old" type="password" autocomplete="current-password" /></div>
-      <div class="field"><label>كلمة السر الجديدة (8 أحرف على الأقل)</label><input id="ac-pw-new" type="password" autocomplete="new-password" /></div>
-      <div class="field"><label>أعد كتابة الجديدة</label><input id="ac-pw-new2" type="password" autocomplete="new-password" /></div>
+      <div class="field"><label>كلمة السر الحالية</label><input id="ac-pw-old" placeholder="••••••••" type="password" autocomplete="current-password" /></div>
+      <div class="field"><label>كلمة السر الجديدة (8 أحرف على الأقل)</label><input id="ac-pw-new" placeholder="8 أحرف على الأقل" type="password" autocomplete="new-password" /></div>
+      <div class="field"><label>أعد كتابة الجديدة</label><input id="ac-pw-new2" placeholder="••••••••" type="password" autocomplete="new-password" /></div>
       <button class="btn small" onclick="acctChangePassword()">تغيير كلمة السر</button>
     </div>
 
     <div class="card">
       <div class="section-title" style="margin-top:0">رقم الهاتف</div>
-      <div class="field"><input id="ac-phone" inputmode="tel" dir="ltr" placeholder="+49..." value="${esc(p.phone || "")}" /></div>
+      <div class="field"><input id="ac-phone" inputmode="tel" dir="ltr" placeholder="+963 9xx xxx xxx" value="${esc(p.phone || "")}" /></div>
       <button class="btn small" onclick="acctSavePhone()">حفظ</button>
     </div>
 
@@ -4309,7 +4309,7 @@ function screenAccount() {
         <select id="ac-region" onchange="acctPickProfileRegion(this.value)">${opt("", "— اختر —", a.regionId)}${a.regions.map((c) => opt(c.id, unitName(c), a.regionId)).join("")}</select></div>` : ""}
       <div class="field"><label>المدينة</label>
         <select id="ac-city">${opt("", "— اختر —", p.cityId)}${a.cities.map((c) => opt(c.id, unitName(c), p.cityId)).join("")}</select></div>
-      <div class="field"><label>الرقم الضريبي (اختياري)</label><input id="ac-vat" dir="ltr" value="${esc(p.vatNumber || "")}" /></div>
+      <div class="field"><label>الرقم الضريبي (اختياري)</label><input id="ac-vat" placeholder="مثال: DE123456789" dir="ltr" value="${esc(p.vatNumber || "")}" /></div>
       <button class="btn small" onclick="acctSaveLocation()">حفظ</button>
     </div>
 
@@ -4336,10 +4336,10 @@ function screenAccount() {
           <select id="ad-city" onchange="acctAddrPick('city', this.value)">${opt("", "— اختر —", f.cityId)}${f.cities.map((u) => opt(u.id, unitName(u), f.cityId)).join("")}</select></div>` : ""}
         ${f.areas.length ? `<div class="field"><label>الحي</label>
           <select id="ad-area" onchange="acctAddrPick('area', this.value)">${opt("", "— اختر —", f.areaId)}${f.areas.map((u) => opt(u.id, unitName(u), f.areaId)).join("")}</select></div>` : ""}
-        <div class="field"><label>الشارع</label><input id="ad-street" value="${esc(f.street)}" /></div>
+        <div class="field"><label>الشارع</label><input id="ad-street" placeholder="مثال: شارع الثورة" value="${esc(f.street)}" /></div>
         <div class="row">
-          <div class="field"><label>رقم البناء</label><input id="ad-building" value="${esc(f.buildingNumber)}" /></div>
-          <div class="field"><label>الرمز البريدي</label><input id="ad-postal" dir="ltr" value="${esc(f.postalCode)}" /></div>
+          <div class="field"><label>رقم البناء</label><input id="ad-building" placeholder="مثال: 12" value="${esc(f.buildingNumber)}" /></div>
+          <div class="field"><label>الرمز البريدي</label><input id="ad-postal" placeholder="مثال: 10115" dir="ltr" value="${esc(f.postalCode)}" /></div>
         </div>
         <label class="switch-row"><input id="ad-default" type="checkbox" ${f.isDefault ? "checked" : ""} /><span>اجعله عنواني الأساسي</span></label>
         <div class="row">
@@ -4540,8 +4540,8 @@ function screenProfileEdit() {
         ${p.avatarUrl ? `<button class="btn small outline" style="width:auto" onclick="removeAvatar()">حذف الصورة</button>` : ""}
       </div>
     </div>
-    <div class="field"><label>الاسم</label><input id="pf-name" value="${esc(p.fullName || "")}" /></div>
-    <div class="field"><label>نبذة عنك أو عن محلك (بتظهر للزبائن وعلى الفواتير)</label><textarea id="pf-bio" rows="4" maxlength="500">${esc(p.bio || "")}</textarea></div>
+    <div class="field"><label>الاسم</label><input id="pf-name" placeholder="مثال: أحمد محمد" value="${esc(p.fullName || "")}" /></div>
+    <div class="field"><label>نبذة عنك أو عن محلك (بتظهر للزبائن وعلى الفواتير)</label><textarea id="pf-bio" placeholder="نبذة قصيرة عنك، مثال: أحب اكتشاف المحلات الجديدة" rows="4" maxlength="500">${esc(p.bio || "")}</textarea></div>
     ${errorBanner()}
     <button class="btn" onclick="saveProfile()">حفظ</button>
     ${p.msg ? `<p class="muted" style="text-align:center;margin-top:8px">${esc(p.msg)}</p>` : ""}
@@ -5112,10 +5112,10 @@ function screenBranches() {
       ${backRow()}
       <h1 class="screen-title">${esc(x.id ? t("br.edit") : t("br.add"))}</h1>
       <div class="field"><label>${esc(t("br.name"))}</label><input value="${esc(x.name)}" maxlength="60" placeholder="${esc(t("br.namePh"))}" oninput="S._br.form.name=this.value"></div>
-      <div class="field"><label>${esc(t("br.city"))}</label><input id="br-city" value="${esc(x.city)}" maxlength="60" oninput="S._br.form.city=this.value"></div>
+      <div class="field"><label>${esc(t("br.city"))}</label><input id="br-city" placeholder="مثال: دمشق" value="${esc(x.city)}" maxlength="60" oninput="S._br.form.city=this.value"></div>
       <div class="field"><label>${esc(t("br.address"))}</label><input id="br-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(x.address)}" maxlength="200" oninput="S._br.form.address=this.value"></div>
       ${pickerHtml(t("br.pickLabel"))}
-      <div class="field"><label>${esc(t("br.phone"))}</label><input type="tel" value="${esc(x.phone)}" maxlength="30" oninput="S._br.form.phone=this.value"></div>
+      <div class="field"><label>${esc(t("br.phone"))}</label><input type="tel" value="${esc(x.phone)}" maxlength="30" placeholder="+963 9xx xxx xxx" oninput="S._br.form.phone=this.value"></div>
       ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}
       <button class="btn" ${f.busy ? "disabled" : ""} onclick="saveBranch()">${esc(f.busy ? t("br.saving") : t("br.save"))}</button>
       <button class="link-btn" style="display:block;margin:8px auto" onclick="S._br.form=null;render()">${esc(t("br.cancel"))}</button>`;
@@ -5254,9 +5254,9 @@ function tabPromo() {
       ${p.audience === "city"
         ? `<div class="field"><label>${esc(t("promo.region"))}</label><select id="pr-region" onchange="promoRegion(this.value)">${option("", "— " + t("promo.pickRegion") + " —", p.regionId)}${(p.regions || []).map((c) => option(c.id, geoName(c), p.regionId)).join("")}</select></div>
           ${p.regionId ? `<div class="field"><label>${esc(t("promo.city"))}</label><select id="pr-city">${option("", "— " + t("promo.pickCity") + " —", p.cityId)}${(p.cities || []).map((c) => option(c.id, geoName(c), p.cityId)).join("")}</select></div>` : ""}`
-        : p.audience === "followers" ? "" : `<div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" inputmode="decimal" value="${esc(p.radius)}" /></div>`}
-      <div class="field"><label>العنوان</label><input id="pr-title" maxlength="100" value="${esc(p.title)}" /></div>
-      <div class="field"><label>النص</label><textarea id="pr-body" maxlength="500" rows="3">${esc(p.body)}</textarea></div>
+        : p.audience === "followers" ? "" : `<div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" placeholder="مثال: 5" inputmode="decimal" value="${esc(p.radius)}" /></div>`}
+      <div class="field"><label>العنوان</label><input id="pr-title" placeholder="مثال: خصم 20% على كل المنتجات" maxlength="100" value="${esc(p.title)}" /></div>
+      <div class="field"><label>النص</label><textarea id="pr-body" placeholder="مثال: العرض لمدة 3 أيام فقط، زورونا!" maxlength="500" rows="3">${esc(p.body)}</textarea></div>
       <div class="field"><label>إرفاق منتج (اختياري)</label>
         <select id="pr-product">${option("", "— بدون —", p.productId)}${(p.products || []).map((x) => option(x.id, x.name, p.productId)).join("")}</select></div>
       <div class="field"><label>إرفاق عرض (اختياري)</label>
@@ -5494,7 +5494,7 @@ function screenDiscountForm() {
 
     <div class="field"><label>${esc(t("disc.percent"))}</label>
       <div class="chips-row">${DISC_PERCENTS.map((p) => chip(p + "%", f.percent === p, `S._df.percent=${p};render()`)).join("")}</div>
-      <input type="number" inputmode="numeric" min="1" max="100" value="${esc(f.percent)}" oninput="S._df.percent=Number(this.value)||0" style="margin-top:8px"></div>
+      <input type="number" inputmode="numeric" min="1" max="100" value="${esc(f.percent)}" placeholder="مثال: 15" oninput="S._df.percent=Number(this.value)||0" style="margin-top:8px"></div>
 
     <div class="field"><label>${esc(t("disc.scope"))}</label>
       <div class="chips-row">
@@ -5930,13 +5930,13 @@ function screenProductEdit() {
   return `
     ${backRow()}
     <h1 class="screen-title">${p.isNew ? "منتج جديد" : "تعديل المنتج"}</h1>
-    <div class="field"><label>اسم المنتج</label><input id="pe-name" value="${esc(p.name)}" /></div>
-    <div class="field"><label>الوصف (اختياري)</label><input id="pe-desc" value="${esc(p.description)}" /></div>
+    <div class="field"><label>اسم المنتج</label><input id="pe-name" placeholder="مثال: قميص قطن أبيض" value="${esc(p.name)}" /></div>
+    <div class="field"><label>الوصف (اختياري)</label><input id="pe-desc" placeholder="وصف قصير للمنتج، مثال: قميص قطن 100% مريح" value="${esc(p.description)}" /></div>
     <div class="row">
-      <div class="field"><label>السعر</label><input id="pe-price" value="${esc(p.price)}" /></div>
+      <div class="field"><label>السعر</label><input id="pe-price" placeholder="مثال: 25.00" value="${esc(p.price)}" /></div>
       <div class="field"><label>المخزون</label><input id="pe-stock" inputmode="numeric" value="${esc(p.stock)}" placeholder="${esc(t("pe.stockPh"))}" /></div>
     </div>
-    <div class="field"><label>SKU (اختياري)</label><input id="pe-sku" value="${esc(p.sku)}" /></div>
+    <div class="field"><label>SKU (اختياري)</label><input id="pe-sku" placeholder="مثال: SH-001" value="${esc(p.sku)}" /></div>
     <div class="section-title">${esc(t("pe.photos"))}</div>
     <div class="pe-photos">
       ${(p.images || []).map((u, i) => `
@@ -5954,7 +5954,7 @@ function screenProductEdit() {
       <span>حسم أعضاء دليلكم</span>
       <label class="switch"><input type="checkbox" id="pe-member-toggle" ${p.memberDiscountEnabled ? "checked" : ""} onchange="toggleMemberDiscount(this.checked)" /><span class="track"></span></label>
     </div>
-    ${p.memberDiscountEnabled ? `<div class="field"><label>سعر العضو</label><input id="pe-member-price" value="${esc(p.memberPrice)}" /></div>` : ""}
+    ${p.memberDiscountEnabled ? `<div class="field"><label>سعر العضو</label><input id="pe-member-price" placeholder="مثال: 20.00" value="${esc(p.memberPrice)}" /></div>` : ""}
     ${!p.isNew ? `
       <div class="switch-row">
         <span>المنتج نشط</span>
@@ -6090,8 +6090,8 @@ function screenWallet() {
         </select>
       </div>
       <div id="tp-hint" class="muted" style="margin-bottom:10px;line-height:1.7"></div>
-      <div class="field"><label id="tp-ref-label">رقم العملية</label><input id="tp-ref" /></div>
-      <div class="field" id="tp-amount-row"><label>المبلغ اللي دفعته</label><input id="tp-amount" type="number" /></div>
+      <div class="field"><label id="tp-ref-label">رقم العملية</label><input id="tp-ref" placeholder="مثال: رقم العملية من تطبيق الدفع" /></div>
+      <div class="field" id="tp-amount-row"><label>المبلغ اللي دفعته</label><input id="tp-amount" placeholder="مثال: 50" type="number" /></div>
       ${errorBanner()}
       ${S._walletMsg ? `<div class="success-banner">${esc(S._walletMsg)}</div>` : ""}
       <button class="btn" ${w.submitting ? "disabled" : ""} onclick="submitTopup()">تأكيد الشحن</button>
@@ -6234,15 +6234,15 @@ function respOverview() {
     </div>
     <div class="card">
       <div class="section-title" style="margin-top:0">عن نشاطك (بيساعد الذكاء الاصطناعي يرد صح)</div>
-      <div class="field"><label>وصف النشاط</label><input id="rp-desc" value="${esc(st.businessDescription || "")}" /></div>
-      <div class="field"><label>نبرة الرد (رسمي، ودود...)</label><input id="rp-tone" value="${esc(st.tone || "")}" /></div>
+      <div class="field"><label>وصف النشاط</label><input id="rp-desc" placeholder="مثال: مطعم مأكولات شرقية، دوام من 10 صباحًا حتى 11 مساءً" value="${esc(st.businessDescription || "")}" /></div>
+      <div class="field"><label>نبرة الرد (رسمي، ودود...)</label><input id="rp-tone" placeholder="مثال: ودّي ومحترم" value="${esc(st.tone || "")}" /></div>
       <div class="field"><label>إذا ما انطبقت أي قاعدة</label>
         <select id="rp-fb" onchange="S._resp.status.fallbackMode = this.value; render()">
           <option value="OFF" ${st.fallbackMode === "OFF" ? "selected" : ""}>ما أرد (أتجاهل الرسالة)</option>
           <option value="AI" ${st.fallbackMode === "AI" ? "selected" : ""}>الذكاء الاصطناعي يجاوب من معلومات نشاطي</option>
           <option value="TEMPLATE" ${st.fallbackMode === "TEMPLATE" ? "selected" : ""}>نص ثابت</option>
         </select></div>
-      ${st.fallbackMode === "TEMPLATE" ? `<div class="field"><label>نص الرد الاحتياطي ({name} = اسم الزبون)</label><textarea id="rp-fbtext" rows="3">${esc(st.fallbackReply || "")}</textarea></div>` : ""}
+      ${st.fallbackMode === "TEMPLATE" ? `<div class="field"><label>نص الرد الاحتياطي ({name} = اسم الزبون)</label><textarea id="rp-fbtext" placeholder="مثال: شكرًا لتواصلك! بنرد عليك بأقرب وقت." rows="3">${esc(st.fallbackReply || "")}</textarea></div>` : ""}
       <button class="btn small" onclick="respSaveProfile()">حفظ</button>
     </div>`;
 }
@@ -6337,12 +6337,12 @@ function respRules() {
       </div>`).join("")}
     <div class="card">
       <div class="section-title" style="margin-top:0">قاعدة جديدة</div>
-      <div class="field"><label>اسم القاعدة</label><input id="ru-name" value="${esc(d.name || "")}" /></div>
+      <div class="field"><label>اسم القاعدة</label><input id="ru-name" placeholder="مثال: سؤال عن السعر" value="${esc(d.name || "")}" /></div>
       <div class="field"><label>كلمات مفتاحية (مفصولة بفاصلة)</label><input id="ru-keys" placeholder="سعر، كم، price" value="${esc(d.keys || "")}" /></div>
       <div class="field"><label>نوع الرد</label>
         <select id="ru-mode"><option value="FIXED" ${d.mode !== "AI" ? "selected" : ""}>رد ثابت</option><option value="AI" ${d.mode === "AI" ? "selected" : ""}>ذكاء اصطناعي</option></select></div>
-      <div class="field"><label>نص الرد (استخدم {name} لاسم الزبون)</label><input id="ru-reply" value="${esc(d.reply || "")}" /></div>
-      <div class="field"><label>تعليمات للذكاء الاصطناعي (اختياري)</label><input id="ru-ai" value="${esc(d.ai || "")}" /></div>
+      <div class="field"><label>نص الرد (استخدم {name} لاسم الزبون)</label><input id="ru-reply" placeholder="مثال: أهلًا {name}، سعر المنتج 25" value="${esc(d.reply || "")}" /></div>
+      <div class="field"><label>تعليمات للذكاء الاصطناعي (اختياري)</label><input id="ru-ai" placeholder="مثال: جاوب عن المواعيد والأسعار باختصار" value="${esc(d.ai || "")}" /></div>
       <div class="field"><label>القناة</label>
         <select id="ru-channel"><option value="">كل القنوات</option>${r.channels.filter((c) => c.connectable).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
       ${socialConns.length ? `

@@ -1,5 +1,9 @@
 package com.dalilacom.app.ui.merchantmode
 
+import androidx.compose.ui.res.stringResource
+
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
@@ -88,7 +92,8 @@ fun MerchantOrdersScreen(factory: ViewModelFactory) {
                     value = cancelReason,
                     onValueChange = { cancelReason = it },
                     label = { Text(AppStrings.get(R.string.s_a2e93da9)) },
-                )
+                placeholder = { Hint(stringResource(R.string.ph_cancel_reason)) },
+            )
             },
             confirmButton = {
                 TextButton(onClick = {

@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.account
 
+import com.dalilacom.app.ui.common.Hint
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -291,7 +293,7 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark:
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (state.emailDelivery) {
-                        OutlinedTextField(newEmail, { newEmail = it }, label = { Text(AppStrings.get(R.string.account_new_email)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(newEmail, { newEmail = it }, label = { Text(AppStrings.get(R.string.account_new_email)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_email)) })
                         com.dalilacom.app.ui.common.PasswordField(emailPw, { emailPw = it }, label = { Text(AppStrings.get(R.string.account_email_pw)) }, modifier = Modifier.fillMaxWidth())
                         Text(AppStrings.get(R.string.account_email_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Button(onClick = { viewModel.changeEmail(newEmail, emailPw); emailPw = "" }) { Text(AppStrings.get(R.string.account_email_change)) }
@@ -310,7 +312,7 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark:
             }
             item {
                 SectionCard(AppStrings.get(R.string.account_phone)) {
-                    OutlinedTextField(phone, { phone = it }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(phone, { phone = it }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_phone)) })
                     Button(onClick = { viewModel.savePhone(phone) }) { Text(AppStrings.get(R.string.account_save)) }
                 }
             }
@@ -321,7 +323,7 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark:
                     PlaceDropdown(AppStrings.get(R.string.account_country), state.countries, countryId) { viewModel.pickProfileCountry(it.isoCode2) }
                     if (state.profileRegions.isNotEmpty()) PlaceDropdown(AppStrings.get(R.string.account_region), state.profileRegions, state.profileRegionId) { viewModel.pickProfileRegion(it.id) }
                     PlaceDropdown(AppStrings.get(R.string.account_city), state.profileCities, profile.cityId) { viewModel.pickProfileCity(it.id) }
-                    OutlinedTextField(vat, { vat = it }, label = { Text(AppStrings.get(R.string.account_vat)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(vat, { vat = it }, label = { Text(AppStrings.get(R.string.account_vat)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_vat)) })
                     Button(onClick = { viewModel.saveLocation(vat) }) { Text(AppStrings.get(R.string.account_save)) }
                 }
             }
@@ -358,10 +360,10 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark:
                         if (form.regions.isNotEmpty()) PlaceDropdown(AppStrings.get(R.string.account_region), form.regions, form.regionId) { viewModel.pickAddressRegion(it.id) }
                         if (form.cities.isNotEmpty()) PlaceDropdown(AppStrings.get(R.string.account_city), form.cities, form.cityId) { viewModel.pickAddressCity(it.id) }
                         if (form.areas.isNotEmpty()) PlaceDropdown(AppStrings.get(R.string.account_area), form.areas, form.areaId) { unit -> viewModel.editForm { it.copy(areaId = unit.id) } }
-                        OutlinedTextField(form.street, { v -> viewModel.editForm { it.copy(street = v) } }, label = { Text(AppStrings.get(R.string.account_street)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(form.street, { v -> viewModel.editForm { it.copy(street = v) } }, label = { Text(AppStrings.get(R.string.account_street)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_street)) })
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(form.building, { v -> viewModel.editForm { it.copy(building = v) } }, label = { Text(AppStrings.get(R.string.account_building)) }, singleLine = true, modifier = Modifier.weight(1f))
-                            OutlinedTextField(form.postal, { v -> viewModel.editForm { it.copy(postal = v) } }, label = { Text(AppStrings.get(R.string.account_postal)) }, singleLine = true, modifier = Modifier.weight(1f))
+                            OutlinedTextField(form.building, { v -> viewModel.editForm { it.copy(building = v) } }, label = { Text(AppStrings.get(R.string.account_building)) }, singleLine = true, modifier = Modifier.weight(1f), placeholder = { Hint(stringResource(R.string.ph_building)) })
+                            OutlinedTextField(form.postal, { v -> viewModel.editForm { it.copy(postal = v) } }, label = { Text(AppStrings.get(R.string.account_postal)) }, singleLine = true, modifier = Modifier.weight(1f), placeholder = { Hint(stringResource(R.string.ph_postal)) })
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = form.isDefault, onCheckedChange = { c -> viewModel.editForm { it.copy(isDefault = c) } })

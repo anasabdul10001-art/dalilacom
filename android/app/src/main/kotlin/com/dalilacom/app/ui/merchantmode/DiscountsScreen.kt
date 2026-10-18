@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.ui.common.Hint
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -230,7 +232,7 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
         if (existing != null) Text(stringResource(R.string.disc_edit_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(10.dp))
 
-        OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.disc_name)) }, placeholder = { Text(stringResource(R.string.disc_name_ph)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.disc_name)) }, placeholder = { Hint(stringResource(R.string.disc_name_ph)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(10.dp))
         Label(R.string.disc_percent)
         ChipRow {
@@ -241,7 +243,8 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
         OutlinedTextField(
             value = percent, onValueChange = { percent = it.filter(Char::isDigit).take(3) }, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), suffix = { Text("%") }, modifier = Modifier.fillMaxWidth(),
-        )
+        placeholder = { Hint(stringResource(R.string.ph_percent)) },
+    )
 
         Spacer(Modifier.height(12.dp))
         Label(R.string.disc_scope)
@@ -253,7 +256,7 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
         if (scope == "SECTION") {
             OutlinedTextField(
                 value = section, onValueChange = { section = it.take(60) }, singleLine = true,
-                placeholder = { Text(stringResource(R.string.disc_section_ph)) }, modifier = Modifier.fillMaxWidth(),
+                placeholder = { Hint(stringResource(R.string.disc_section_ph)) }, modifier = Modifier.fillMaxWidth(),
             )
         }
         if (scope == "PRODUCTS") {
@@ -295,7 +298,7 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
         }
         OutlinedTextField(
             value = perText, onValueChange = { perText = it.filter(Char::isDigit).take(4) }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Text(stringResource(R.string.disc_or_type)) }, modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Hint(stringResource(R.string.disc_or_type)) }, modifier = Modifier.fillMaxWidth(),
         )
         Text(stringResource(R.string.disc_max_people_label), style = MaterialTheme.typography.bodySmall)
         ChipRow {
@@ -305,13 +308,13 @@ private fun DiscountForm(existing: MyDiscountDto?, state: DiscountsUiState, onCa
         }
         OutlinedTextField(
             value = maxText, onValueChange = { maxText = it.filter(Char::isDigit).take(7) }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Text(stringResource(R.string.disc_or_type)) }, modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Hint(stringResource(R.string.disc_or_type)) }, modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = notes, onValueChange = { notes = it.take(500) }, label = { Text(stringResource(R.string.disc_notes)) },
-            placeholder = { Text(stringResource(R.string.disc_notes_ph)) }, minLines = 3, modifier = Modifier.fillMaxWidth(),
+            placeholder = { Hint(stringResource(R.string.disc_notes_ph)) }, minLines = 3, modifier = Modifier.fillMaxWidth(),
         )
         Text(stringResource(R.string.disc_review_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
 

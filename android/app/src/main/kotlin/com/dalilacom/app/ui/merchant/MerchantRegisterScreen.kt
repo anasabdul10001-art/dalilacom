@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.merchant
 
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
@@ -72,7 +74,8 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             onValueChange = { businessName = it },
             label = { Text(AppStrings.get(R.string.s_59539fc9)) },
             modifier = Modifier.fillMaxWidth(),
-        )
+        placeholder = { Hint(stringResource(R.string.ph_shop)) },
+    )
         Spacer(Modifier.height(12.dp))
 
         Text(stringResource(R.string.mp_sec_profession), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
@@ -89,7 +92,7 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             value = address,
             onValueChange = { address = it },
             label = { Text(AppStrings.get(R.string.s_ddb9dbdc)) },
-            placeholder = { Text(stringResource(R.string.mp_address_ph)) },
+            placeholder = { Hint(stringResource(R.string.mp_address_ph)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(16.dp))
@@ -114,14 +117,16 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             onValueChange = { phone = it },
             label = { Text(AppStrings.get(R.string.s_073f5f4b)) },
             modifier = Modifier.fillMaxWidth(),
-        )
+        placeholder = { Hint(stringResource(R.string.ph_phone)) },
+    )
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = whatsapp,
             onValueChange = { whatsapp = it },
             label = { Text(AppStrings.get(R.string.s_5059c36f)) },
             modifier = Modifier.fillMaxWidth(),
-        )
+        placeholder = { Hint(stringResource(R.string.ph_whatsapp)) },
+    )
         Spacer(Modifier.height(20.dp))
 
         if (state.isSubmitting) {

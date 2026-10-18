@@ -1,5 +1,9 @@
 package com.dalilacom.app.ui.profile
 
+import androidx.compose.ui.res.stringResource
+
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -142,7 +146,7 @@ fun ProfileEditScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(value = state.fullName, onValueChange = viewModel::onName, label = { Text(AppStrings.get(R.string.s_0a92494e)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = state.fullName, onValueChange = viewModel::onName, label = { Text(AppStrings.get(R.string.s_0a92494e)) }, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_person)) })
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = state.bio,
@@ -150,7 +154,8 @@ fun ProfileEditScreen(factory: ViewModelFactory, onBack: () -> Unit) {
                 label = { Text(AppStrings.get(R.string.s_77eb6cfd)) },
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
-            )
+            placeholder = { Hint(stringResource(R.string.ph_bio)) },
+        )
             Spacer(Modifier.height(16.dp))
             Button(onClick = viewModel::save, enabled = !state.isBusy, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(AppStrings.get(R.string.s_56ee6e0d)) }
             state.message?.let {

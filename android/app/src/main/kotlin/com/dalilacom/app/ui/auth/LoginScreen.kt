@@ -1,5 +1,9 @@
 package com.dalilacom.app.ui.auth
 
+import androidx.compose.ui.res.stringResource
+
+import com.dalilacom.app.ui.common.Hint
+
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -96,7 +100,8 @@ fun LoginScreen(
                     shape = RoundedCornerShape(14.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth(),
-                )
+                placeholder = { Hint(stringResource(R.string.ph_email)) },
+            )
                 com.dalilacom.app.ui.common.PasswordField(
                     value = password,
                     onValueChange = { password = it },
@@ -132,7 +137,7 @@ fun LoginScreen(
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(AppStrings.get(R.string.forgot_hint))
-                            OutlinedTextField(forgotEmail, { forgotEmail = it }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(forgotEmail, { forgotEmail = it }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_email)) })
                             forgotMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall) }
                         }
                     },

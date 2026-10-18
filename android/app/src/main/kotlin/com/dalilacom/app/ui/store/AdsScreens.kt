@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.store
 
+import com.dalilacom.app.ui.common.Hint
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -283,11 +285,11 @@ private fun BannerBookingForm(ui: AdBookUi, vm: AdBookViewModel, onWallet: () ->
         }
     }
     Text(stringResource(R.string.ads_phone) + " *", fontWeight = FontWeight.Bold)
-    androidx.compose.material3.OutlinedTextField(value = ui.phone, onValueChange = vm::setPhone, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth())
+    androidx.compose.material3.OutlinedTextField(value = ui.phone, onValueChange = vm::setPhone, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_phone)) })
     Text(stringResource(R.string.ads_whatsapp), fontWeight = FontWeight.Bold)
-    androidx.compose.material3.OutlinedTextField(value = ui.whatsapp, onValueChange = vm::setWhatsapp, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth())
+    androidx.compose.material3.OutlinedTextField(value = ui.whatsapp, onValueChange = vm::setWhatsapp, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_phone)) })
     Text(stringResource(R.string.ads_note), fontWeight = FontWeight.Bold)
-    androidx.compose.material3.OutlinedTextField(value = ui.note, onValueChange = { vm.setNote(it.take(600)) }, placeholder = { Text(stringResource(R.string.ads_note_ph)) }, minLines = 3, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth())
+    androidx.compose.material3.OutlinedTextField(value = ui.note, onValueChange = { vm.setNote(it.take(600)) }, placeholder = { Hint(stringResource(R.string.ads_note_ph)) }, minLines = 3, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth())
 
     val chosen = ui.bannerPackages.firstOrNull { it.days == ui.bannerDays }
     val enough = chosen == null || ui.balance >= chosen.credits
