@@ -1105,8 +1105,9 @@ body.navigating .tabbar { display: none; }
 }
 
 @media (min-width: 900px) {
-  .screen-body:not(.map-mode) > .store { max-width: 1280px; }
-  .store-grid { grid-template-columns: repeat(5, 1fr); }
+  /* the shop and the store use the width of the screen (the narrow 700px column is for the other pages); more products fit in a row as it gets wider */
+  .screen-body:not(.map-mode) > .store:not(.tabbar):not(.scan-fab) { max-width: 1640px; }
+  .store-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
   .store-hero { grid-template-columns: 1fr 3.2fr 1fr; padding: 0; }
   .store-picks { display: flex; flex-direction: column; gap: 10px; }
   .store-picks .store-pic { aspect-ratio: 16 / 9.4; }
@@ -1605,3 +1606,6 @@ html[lang="en"] .ph-logo { height: auto; width: auto; max-height: 44px; max-widt
 html[dir="rtl"] .dock-tab svg { transform: scaleX(-1); }
 html[dir="rtl"] .social-dock.open .dock-tab svg { transform: none; }
 html[dir="ltr"] .social-dock.open .dock-tab svg { transform: scaleX(-1); }
+
+/* the floating bar is not a page column: it keeps its own size on every screen */
+.screen-body:not(.map-mode) > .social-dock:not(.tabbar):not(.scan-fab) { width: auto; max-width: none; }
