@@ -1013,4 +1013,5 @@
     <string name="ads_img_read_fail">ما قدرنا نقرأ هالصورة، جرّب صورة ثانية</string>
     <string name="ads_img_upload_fail">تعذّر رفع الصورة</string>
     <string name="ads_img_later">تم الحجز، لكن الصورة ما انرفعت. بتقدر ترفعها من «إعلاناتي».</string>
+    <string name="sheet_show_all">عرض كل المحلات (%1$d)</string>
 </resources>

@@ -1116,7 +1116,11 @@ function tabDiscover() {
   if (!d.locAsked) { d.locAsked = true; requestDiscoverLocation(); } // ask for the position as soon as the map opens
   const list = visibleMerchants(d);
   if (d.selectedId) list.sort((x, y) => (y.id === d.selectedId) - (x.id === d.selectedId));
-  S._visible = list;
+  S._visible = list; // the pins on the map: all of them
+  // the list below shows only the shop whose pin was touched (the pins stay), until the person asks for all of them again
+  const picked = d.selectedId ? list.filter((m) => m.id === d.selectedId) : [];
+  const sheetList = picked.length ? picked : list;
+  if (d.selectedId && !picked.length) d.selectedId = null; // the touched shop is not among the results anymore
   const sheetPx = sheetHeights()[S._sheet || "peek"];
   return `
     ${linksModalHtml()}
@@ -1157,7 +1161,7 @@ function tabDiscover() {
         <div class="sheet-head" onpointerdown="sheetDragStart(event)" onclick="sheetHeadTap(event)">
           <strong class="t-full">${esc(deals ? t("deals.sheetTitle") : d.userLoc ? t("sheet.nearby") : t("sheet.directory"))}</strong>
           <strong class="t-min">${esc(t("sheet.directory"))}</strong>
-          <span class="badge info sheet-count">${esc(t("sheet.count", { n: list.length }))}</span>
+          <span class="badge info sheet-count">${esc(t("sheet.count", { n: sheetList.length }))}</span>
           <button class="sheet-collapse" onclick="sheetCollapse(event)" aria-label="${esc(t("sheet.collapse"))}" title="${esc(t("sheet.collapse"))}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
         ${(d.userLoc || d.bounds || deals) ? `<div class="sheet-chips">
@@ -1166,7 +1170,8 @@ function tabDiscover() {
           ${d.userLoc ? (deals ? [null, 1, 3, 5, 10, 25] : [null, 2, 5, 10, 25]).map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${esc(r ? t("radius.km", { n: r }) : t("radius.any"))}</button>`).join("") : ""}
         </div>` : ""}
         <div class="sheet-list">
-          ${d.loading ? spinner() : (list.length ? list.map(merchantRowHtml).join("") : `<div class="empty-state">${esc(d.radiusKm ? t("sheet.emptyRadius", { n: d.radiusKm }) : deals ? t("deals.empty") : t("sheet.empty"))}</div>`)}
+          ${picked.length ? `<button class="show-all" onclick="clearSelectedMerchant()">↩ ${esc(t("sheet.showAll", { n: list.length }))}</button>` : ""}
+          ${d.loading ? spinner() : (sheetList.length ? sheetList.map(merchantRowHtml).join("") : `<div class="empty-state">${esc(d.radiusKm ? t("sheet.emptyRadius", { n: d.radiusKm }) : deals ? t("deals.empty") : t("sheet.empty"))}</div>`)}
         </div>
       </div>
       ${browseHtml(d)}
@@ -1236,7 +1241,17 @@ function sheetCollapse(e) {
 }
 
 // Tapping a pin brings that place to the top of the sheet.
+function clearSelectedMerchant() {
+  if (!S._discover || !S._discover.selectedId) return;
+  S._discover.selectedId = null;
+  S._mapKey = "";
+  render();
+  const list = document.querySelector(".sheet-list");
+  if (list) list.scrollTop = 0;
+}
+
 function selectMerchant(id) {
+  if (S._discover.selectedId === id) return clearSelectedMerchant(); // touching the same pin again brings the whole list back
   S._discover.selectedId = id;
   if (S._sheet === "full") S._sheet = "half";
   render();
@@ -1594,6 +1609,7 @@ function renderDiscoverMap() {
     S._cluster = typeof L.markerClusterGroup === "function" ? L.markerClusterGroup({ maxClusterRadius: 50 }) : L.layerGroup();
     map.addLayer(S._cluster);
     S._lmLayer = L.layerGroup().addTo(map); // under the shops' pins
+    map.on("click", () => clearSelectedMerchant()); // a touch on the empty map (a pin does not pass its touch on)
     S._userLayer = L.layerGroup().addTo(map);
     map.on("moveend", () => {
       lmSchedule();

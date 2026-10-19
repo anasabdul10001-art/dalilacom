@@ -1009,4 +1009,5 @@
     <string name="ads_img_read_fail">We could not read this photo, try another</string>
     <string name="ads_img_upload_fail">The picture could not be uploaded</string>
     <string name="ads_img_later">The booking is made, but the picture was not uploaded. You can add it from My ads.</string>
+    <string name="sheet_show_all">Show all places (%1$d)</string>
 </resources>

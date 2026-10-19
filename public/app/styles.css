@@ -1633,3 +1633,6 @@ input::placeholder, textarea::placeholder { color: #b3a8a5; opacity: 1; }
 /* the preview of an ad picture, in the shape the store shows it */
 .ad-preview { margin-top: 8px; width: 100%; max-width: 520px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border, #e5dcda); background: #eee; }
 .ad-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* the list shows one shop (its pin was touched): the way back to all of them */
+.sheet-list .show-all { display: block; width: 100%; margin: 0 0 10px; padding: 10px 14px; border: 1.5px solid var(--primary, #ba2a34); border-radius: 12px; background: transparent; color: var(--primary, #ba2a34); font: inherit; font-weight: 700; cursor: pointer; }

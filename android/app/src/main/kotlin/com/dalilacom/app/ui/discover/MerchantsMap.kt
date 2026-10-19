@@ -230,6 +230,8 @@ fun MerchantsMap(
     landmarks: List<com.dalilacom.app.data.network.LandmarkDto> = emptyList(),
     onLandmark: (com.dalilacom.app.data.network.LandmarkDto) -> Unit = {},
     onView: (MapBounds, Double) -> Unit = { _, _ -> },
+    /** A touch on the empty map (not on a pin). */
+    onMapTap: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -271,9 +273,17 @@ fun MerchantsMap(
     val latestLandmarks by rememberUpdatedState(landmarks)
     val latestOnLandmark by rememberUpdatedState(onLandmark)
     val latestOnView by rememberUpdatedState(onView)
+    val latestOnMapTap by rememberUpdatedState(onMapTap)
 
     fun redraw(map: MapView) {
         map.overlays.clear()
+        // first, so every pin above it is tapped before it: it only hears the touches that hit nothing
+        map.overlays.add(
+            org.osmdroid.views.overlay.MapEventsOverlay(object : org.osmdroid.events.MapEventsReceiver {
+                override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean { latestOnMapTap(); return false }
+                override fun longPressHelper(p: GeoPoint?): Boolean = false
+            }),
+        )
         // The chosen distance, as a circle around the user.
         val radius = latestRadius
         val here = latestUser

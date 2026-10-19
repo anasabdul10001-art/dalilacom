@@ -269,6 +269,7 @@ fun DiscoverScreen(
                 },
                 onToggleSaved = { id -> if (isGuest) onLogin() else viewModel.toggleFavorite(id) },
                 collapsed = sheetCollapsed,
+                onShowAll = { viewModel.selectMerchant(null) },
                 onOpen = { sheetCollapsed = false },
                 pullModifier = pullModifier,
             )
@@ -279,8 +280,9 @@ fun DiscoverScreen(
                 merchants = state.merchants,
                 userLocation = state.route?.nav?.position ?: state.userLocation,
                 selectedId = state.selectedMerchantId,
+                onMapTap = { viewModel.selectMerchant(null) }, // a touch on the empty map brings the whole list back
                 onSelect = { id ->
-                    viewModel.selectMerchant(id)
+                    viewModel.selectMerchant(if (state.selectedMerchantId == id) null else id) // the same pin again brings the whole list back
                     sheetCollapsed = false
                     scope.launch { sheetState.partialExpand() }
                 },
@@ -579,9 +581,12 @@ private fun DirectorySheet(
     onDirections: (MerchantDto) -> Unit,
     onToggleSaved: (String) -> Unit,
     collapsed: Boolean,
+    onShowAll: () -> Unit,
     onOpen: () -> Unit,
     pullModifier: Modifier,
 ) {
+    // a pin was touched: only that shop is listed (the pins stay) until the person asks for all of them again
+    val pickedOnly = state.selectedMerchantId != null && state.merchants.any { it.id == state.selectedMerchantId }
     Column(Modifier.fillMaxWidth()) {
         Row(
             // pulled down, only this strip shows: tapping it opens the list again
@@ -597,7 +602,7 @@ private fun DirectorySheet(
             if (!collapsed) {
                 Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                     Text(
-                        stringResource(R.string.sheet_count, state.merchants.size),
+                        stringResource(R.string.sheet_count, if (pickedOnly) 1 else state.merchants.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -614,7 +619,8 @@ private fun DirectorySheet(
                 modifier = Modifier.padding(20.dp),
             )
         } else {
-            val ordered = state.merchants.sortedBy { if (it.id == state.selectedMerchantId) 0 else 1 }
+            val ordered = if (pickedOnly) state.merchants.filter { it.id == state.selectedMerchantId } else state.merchants
+            if (pickedOnly) TextButton(onClick = onShowAll, modifier = Modifier.padding(horizontal = 12.dp)) { Text("↩  " + stringResource(R.string.sheet_show_all, state.merchants.size), fontWeight = FontWeight.Bold) }
             val categoryNames = remember(state.categories) { indexCategories(state.categories).mapValues { it.value.name } }
             LazyColumn(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
