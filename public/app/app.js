@@ -425,7 +425,7 @@ async function render() {
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
-  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml();
+  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml();
   wireUpAfterRender();
   placeDiscPopup();
   trDom(el); // translate the rendered Arabic when another language is on
@@ -1412,6 +1412,154 @@ function lmOpen(id) { S._lmOpen = LM.items.find((x) => x.id === id) || null; ren
 function lmClose() { S._lmOpen = null; render(); }
 function lmDirections(id) { const p = LM.items.find((x) => x.id === id); S._lmOpen = null; if (p) startRoute(p.id, "driving"); }
 
+/* ---- claiming a public place: "this place is mine" ---- */
+
+function shrinkJpeg(file, maxSide) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode"));
+      img.onload = () => {
+        const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * k); canvas.height = Math.round(img.height * k);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("encode"))), "image/jpeg", 0.85);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function lmClaimOpen(id) {
+  const place = (LM.items.find((x) => x.id === id)) || (S._lmOpen && S._lmOpen.id === id ? S._lmOpen : null) || (S._lmSimilarPlace && S._lmSimilarPlace.id === id ? S._lmSimilarPlace : null);
+  if (!place) return;
+  if (!S.token) { S._lmOpen = null; S._lmSimilar = null; toast(t("lm.signIn")); go("login"); return; }
+  S._lmOpen = null; S._lmSimilar = null;
+  S._lmClaim = { place, claim: null, busy: false, error: "", loading: true };
+  render();
+  const { ok, data } = await api("GET", "/landmarks/" + id + "/my-claim");
+  S._lmClaim.loading = false;
+  S._lmClaim.claim = ok ? data.claim : null;
+  render();
+}
+function lmClaimClose() { S._lmClaim = null; render(); }
+
+async function lmClaimSubmit() {
+  const c = S._lmClaim;
+  if (!c || c.busy) return;
+  const phone = qs("lmc-phone").value.trim();
+  const files = [...(qs("lmc-files").files || [])].slice(0, 5);
+  if (phone.length < 6) { c.error = t("lm.needPhone"); return render(); }
+  if (!files.length) { c.error = t("lm.needPhoto"); return render(); }
+  c.busy = true; c.error = ""; render();
+  const made = await api("POST", "/landmarks/" + c.place.id + "/claims", { role: qs("lmc-role").value, phone, note: qs("lmc-note").value.trim() || null });
+  if (!made.ok) { c.busy = false; c.error = errMsg(made.data, t("lm.failed")); return render(); }
+  c.error = await lmUploadProof(made.data.id, files);
+  c.busy = false;
+  c.claim = { id: made.data.id, status: "PENDING" };
+  render();
+}
+
+/** The photos go one by one (shrunk first); returns an error text, or "" when all went. */
+async function lmUploadProof(claimId, files) {
+  for (const f of files) {
+    try {
+      const blob = await shrinkJpeg(f, 1800);
+      const res = await fetch(API_BASE + "/landmarks/claims/" + claimId + "/files?name=" + encodeURIComponent(f.name || "proof.jpg"), { method: "PUT", headers: { "Content-Type": "image/jpeg", Authorization: "Bearer " + S.token }, body: blob });
+      if (!res.ok) return errMsg(await res.json().catch(() => ({})), t("lm.photoFailed"));
+    } catch (e) { return t("lm.photoFailed"); }
+  }
+  return "";
+}
+
+async function lmClaimWithdraw() {
+  const c = S._lmClaim;
+  if (!c || !c.claim) return;
+  const { ok, data } = await api("POST", "/landmarks/claims/" + c.claim.id + "/withdraw");
+  if (!ok) { c.error = errMsg(data, t("lm.failed")); return render(); }
+  c.claim = null; render();
+}
+
+async function lmClaimResend() {
+  const c = S._lmClaim;
+  if (!c || !c.claim || c.busy) return;
+  const files = [...(qs("lmc-files").files || [])].slice(0, 5);
+  c.busy = true; c.error = ""; render();
+  if (files.length) c.error = await lmUploadProof(c.claim.id, files);
+  if (!c.error) {
+    const { ok, data } = await api("POST", "/landmarks/claims/" + c.claim.id + "/resubmit", { note: (qs("lmc-note") && qs("lmc-note").value.trim()) || null });
+    if (ok) c.claim = { ...c.claim, status: "PENDING" }; else c.error = errMsg(data, t("lm.failed"));
+  }
+  c.busy = false; render();
+}
+
+function landmarkClaimHtml() {
+  const c = S._lmClaim;
+  if (!c) return "";
+  const p = c.place, cl = c.claim;
+  let body;
+  if (c.loading) body = spinner();
+  else if (cl && cl.status === "PENDING") body = `<p>⏳ ${esc(t("lm.pending"))}</p><button class="btn ghost" onclick="lmClaimWithdraw()">${esc(t("lm.withdraw"))}</button>`;
+  else if (cl && cl.status === "APPROVED") body = `<p>✅ ${esc(t("lm.approved"))}</p>`;
+  else if (cl && cl.status === "NEEDS_INFO") body = `<p>❓ ${esc(t("lm.needsInfo"))}</p><p><b>${esc(cl.message || "")}</b></p>
+      <div class="field"><label>${esc(t("lm.addPhotos"))}</label><input id="lmc-files" type="file" accept="image/*" multiple></div>
+      <div class="field"><label>${esc(t("lm.note"))}</label><textarea id="lmc-note" rows="2" maxlength="600"></textarea></div>
+      <button class="btn" ${c.busy ? "disabled" : ""} onclick="lmClaimResend()">${esc(t("lm.resend"))}</button>`;
+  else body = `${cl && cl.status === "REJECTED" ? `<p class="error-banner">${esc(t("lm.rejected"))} ${esc(cl.message || "")}</p>` : ""}
+      <p class="muted">${esc(t("lm.claimIntro"))}</p>
+      <div class="field"><label>${esc(t("lm.role"))}</label><select id="lmc-role"><option value="MANAGER">${esc(t("lm.roleManager"))}</option><option value="OWNER">${esc(t("lm.roleOwner"))}</option><option value="AUTHORIZED">${esc(t("lm.roleAuthorized"))}</option></select></div>
+      <div class="field"><label>${esc(t("lm.phone"))}</label><input id="lmc-phone" dir="ltr" inputmode="tel" placeholder="+963 9xx xxx xxx"></div>
+      <div class="field"><label>${esc(t("lm.note"))}</label><textarea id="lmc-note" rows="2" maxlength="600" placeholder="مثال: أنا مدير المشفى منذ 2020"></textarea></div>
+      <div class="field"><label>${esc(t("lm.photos"))}</label><input id="lmc-files" type="file" accept="image/*" multiple></div>
+      <button class="btn" ${c.busy ? "disabled" : ""} onclick="lmClaimSubmit()">${esc(t("lm.send"))}</button>`;
+  return `<div class="deals-intro" onclick="lmClaimClose()">
+    <div class="deals-box lm-card" onclick="event.stopPropagation()" style="max-height:88vh;overflow:auto">
+      <div class="lm-head"><span class="lm-ico" style="background:${esc(p.kind.color)}">${esc(p.kind.icon)}</span><div><h3>${esc(t("lm.claimTitle"))}</h3><small>${esc(p.name)}</small></div></div>
+      ${c.error ? `<p class="error-banner">${esc(c.error)}</p>` : ""}
+      ${body}
+      <div class="lm-actions"><button class="btn ghost" onclick="lmClaimClose()">${esc(t("follow.close"))}</button></div>
+    </div>
+  </div>`;
+}
+
+/** Before a shop is registered: is there a public place of the same name close by? Then offer to claim it instead of a duplicate. */
+async function lmCheckSimilar(name, lat, lng) {
+  const params = new URLSearchParams({ name, lat, lng });
+  const { ok, data } = await api("GET", "/landmarks/similar?" + params.toString());
+  return ok && data.items ? data.items : [];
+}
+
+function landmarkSimilarHtml() {
+  const m = S._lmSimilar;
+  if (!m) return "";
+  const first = m.items[0];
+  return `<div class="deals-intro" onclick="S._lmSimilar=null;render()">
+    <div class="deals-box lm-card" onclick="event.stopPropagation()">
+      <div class="lm-head"><span class="lm-ico" style="background:#1b5fa6">${esc(first.kind.icon)}</span><div><h3>${esc(t("lm.similarTitle"))}</h3></div></div>
+      <p>${esc(t("lm.similarText"))}</p>
+      ${m.items.slice(0, 3).map((x) => `<p><b>${esc(x.kind.icon)} ${esc(x.name)}</b>${x.address ? `<br><small class="muted">${esc(x.address)}</small>` : ""}</p>`).join("")}
+      <div class="lm-actions" style="flex-direction:column">
+        <button class="btn" onclick="lmClaimFromSimilar(0)">${esc(t("lm.claimIt"))}</button>
+        <button class="btn ghost" onclick="lmSimilarContinue()">${esc(t("lm.notSame"))}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function lmClaimFromSimilar(i) {
+  const x = S._lmSimilar && S._lmSimilar.items[i];
+  if (!x) return;
+  const { ok, data } = await api("GET", "/landmarks/" + x.id);
+  if (!ok) return toast(t("lm.failed"));
+  S._lmSimilarPlace = data;
+  lmClaimOpen(x.id);
+}
+function lmSimilarContinue() { S._lmSimilarOk = true; S._lmSimilar = null; submitMerchantRegister(); }
+
 function landmarkModalHtml() {
   const p = S._lmOpen;
   if (!p) return "";
@@ -1422,7 +1570,9 @@ function landmarkModalHtml() {
       ${p.description ? `<p>${esc(p.description)}</p>` : ""}
       ${p.address ? `<p>📍 ${esc(p.address)}</p>` : ""}
       ${phone}
+      ${p.claimable ? `<p class="lm-claim-note">🏥 ${esc(t("lm.claimable"))}</p>` : ""}
       <div class="lm-actions">
+        ${p.claimable ? `<button class="btn outline" onclick="lmClaimOpen('${esc(p.id)}')">${esc(t("lm.claimBtn"))}</button>` : ""}
         <button class="btn" onclick="lmDirections('${esc(p.id)}')">🧭 ${esc(t("lm.directions"))}</button>
         <button class="btn ghost" onclick="lmClose()">${esc(t("follow.close"))}</button>
       </div>
@@ -3715,6 +3865,11 @@ async function submitMerchantRegister() {
   const pin = !online && S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
   if (!online && !pin.latitude && !address) { S.error = t("addr.need"); return render(); } // a place that is not pinned must be written down
   const proposed = S._catSugOpen && (S._catSug || "").trim().length >= 2 ? { suggestedCategory: S._catSug.trim() } : {};
+  if (pin.latitude && !S._lmSimilarOk) {
+    const similar = await lmCheckSimilar(businessName, pin.latitude, pin.longitude);
+    if (similar.length) { S._lmSimilar = { items: similar }; return render(); }
+  }
+  S._lmSimilarOk = false;
   S.busy = true; render();
   const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined, whatsapp: whatsapp || undefined, ...pin, ...proposed });
   S.busy = false;

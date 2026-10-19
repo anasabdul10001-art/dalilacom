@@ -242,11 +242,19 @@ fun DalilacomNavGraph(
                 onBack = { navController.popBackStack() },
             )
         }
+        composable("landmarkClaim/{id}") { backStackEntry ->
+            com.dalilacom.app.ui.landmark.LandmarkClaimScreen(
+                container = container,
+                landmarkId = backStackEntry.arguments?.getString("id").orEmpty(),
+                onBack = { navController.popBackStack() },
+            )
+        }
         composable("merchantRegister") {
             MerchantRegisterScreen(
                 factory = factory,
                 onRegistered = { navController.popBackStack() },
                 onBack = { navController.popBackStack() },
+                onClaimLandmark = { id -> navController.navigate("landmarkClaim/$id") },
             )
         }
         composable("favorites") {

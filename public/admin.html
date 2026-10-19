@@ -289,6 +289,7 @@
         <button class="active" data-tab="list" onclick="lmTab('list')">📋 القائمة</button>
         <button data-tab="form" onclick="lmTab('form')">➕ إضافة مكان</button>
         <button data-tab="import" onclick="lmTab('import')">⬇️ استيراد من OpenStreetMap</button>
+        <button data-tab="claims" onclick="lmTab('claims')">📨 طلبات المطالبة<span id="lm-claims-badge"></span></button>
         <button data-tab="kinds" onclick="lmTab('kinds')">🏷️ الأنواع</button>
       </div>
 
@@ -363,6 +364,21 @@
           <div id="lm-i-kinds" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px"></div>
           <button onclick="lmImport()" id="lm-i-btn">جلب الأماكن</button> <span id="lm-i-msg" class="muted"></span>
           <p class="muted" style="margin-top:14px">البيانات من © OpenStreetMap contributors (رخصة ODbL).</p>
+        </div>
+      </div>
+
+      <div id="lm-pane-claims" style="display:none">
+        <div class="card">
+          <h3>📨 طلبات المطالبة بالملكية</h3>
+          <p class="muted">صاحب أو مدير مكان خاص (مشفى مثلًا) بيقدّم طلب مع إثبات. بتشوف الإثبات وبتوافق (المكان بيصير محله، أو فرعًا لمحله إذا عنده محل)، أو بتطلب معلومات إضافية، أو بترفض بسبب. أول ما توافق، بيختفي المكان من المعالم وبيحل محله محله على الخريطة.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="lc-status" style="max-width:240px" onchange="lmLoadClaims(1)">
+              <option value="PENDING">بانتظار قرارك</option><option value="NEEDS_INFO">طلبت معلومات</option><option value="APPROVED">موافق عليها</option><option value="REJECTED">مرفوضة</option><option value="WITHDRAWN">سحبها صاحبها</option><option value="">الكل</option>
+            </select>
+            <span class="lm-counts" id="lc-counts" style="margin:0"></span>
+          </div>
+          <div id="lc-list"></div>
+          <div id="lc-pager" style="margin-top:10px"></div>
         </div>
       </div>
 
@@ -1090,6 +1106,7 @@ const HOME_WAIT = [
   ['marketers', '📣', 'طلبات مسوّقين', 'marketers', 'loadMarketers()'],
   ['broadcasts', '🔔', 'إعلانات بانتظار المراجعة', 'broadcasts', 'loadBroadcasts()'],
   ['landmarks', '📍', 'معالم بانتظار المراجعة', 'landmarks', 'lmOpen()'],
+  ['landmarkClaims', '📨', 'طلبات مطالبة بأماكن', 'landmarks', 'lmOpen()'],
 ];
 const HOME_QUICK = [
   ['👥', 'المستخدمون', 'users'], ['🗂️', 'التصنيفات', 'categories'], ['💳', 'الباقات والأسعار', 'plans'], ['🛍️', 'المتجر', 'store'],
@@ -2830,6 +2847,7 @@ async function lmOpen() {
     document.getElementById('lm-cities').innerHTML = LM_CITIES.map(([n, la, ln]) => `<button class="secondary small" onclick="lmPickCity(${la},${ln})">${n}</button>`).join('');
   }
   lmTab('list');
+  api('GET', '/admin/landmark-claims?status=PENDING').then(r => { if (r.ok) document.getElementById('lm-claims-badge').textContent = r.data.total ? ' ' + r.data.total : ''; });
 }
 
 async function lmLoadKinds() {
@@ -2845,8 +2863,9 @@ async function lmLoadKinds() {
 
 function lmTab(name) {
   document.querySelectorAll('#lm-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-  ['list', 'form', 'import', 'kinds'].forEach(p => { document.getElementById('lm-pane-' + p).style.display = p === name ? 'block' : 'none'; });
+  ['list', 'form', 'import', 'claims', 'kinds'].forEach(p => { document.getElementById('lm-pane-' + p).style.display = p === name ? 'block' : 'none'; });
   if (name === 'list') lmLoad(lm.page || 1);
+  if (name === 'claims') lmLoadClaims(1);
   if (name === 'form') { if (!lm.editingId) lmResetForm(); setTimeout(lmInitMap, 50); }
 }
 
@@ -3057,6 +3076,88 @@ async function lmImport() {
   if (!r.ok) { msg.textContent = errText(r.data, 'تعذّر الاستيراد'); return; }
   const d = r.data, names = { mosque: 'جامع', hospital: 'مشفى', park: 'حديقة', main_street: 'شارع' };
   msg.innerHTML = `انجلب <b>${fmt(d.total)}</b> مكان جديد (${Object.entries(d.created).map(([k, n]) => fmt(n) + ' ' + names[k]).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(d.skipped)} · بدون اسم ${fmt(d.unnamed)} · بدون اسم عربي ${fmt(d.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
+}
+
+
+/* ---- claims: the proof, and the admin's decision ---- */
+
+const LC_STATUS = { PENDING: ['بانتظار قرارك', 'PENDING'], NEEDS_INFO: ['طلبت معلومات', 'PENDING'], APPROVED: ['موافق عليها', 'APPROVED'], REJECTED: ['مرفوضة', 'REJECTED'], WITHDRAWN: ['سحبها صاحبها', 'inactive'] };
+const LC_ROLE = { OWNER: 'مالك', MANAGER: 'مدير', AUTHORIZED: 'مفوّض' };
+
+async function lmLoadClaims(page) {
+  const status = document.getElementById('lc-status').value;
+  const params = new URLSearchParams({ page: page || 1 });
+  if (status) params.set('status', status);
+  const r = await api('GET', '/admin/landmark-claims?' + params.toString());
+  const list = document.getElementById('lc-list');
+  if (!r.ok) { list.textContent = errText(r.data, 'تعذّر التحميل'); return; }
+  if (!state.categoriesFlat || !state.categoriesFlat.length) await loadCategories();
+  const d = r.data;
+  const pending = (d.counts.PENDING || 0) + (d.counts.NEEDS_INFO || 0);
+  document.getElementById('lc-counts').innerHTML = Object.entries(LC_STATUS).map(([k, [label]]) => `<span class="badge ${LC_STATUS[k][1]}">${label} ${fmt(d.counts[k] || 0)}</span>`).join(' ');
+  document.getElementById('lm-claims-badge').textContent = (d.counts.PENDING || 0) ? ' ' + (d.counts.PENDING) : '';
+  const day = (x) => new Date(x).toLocaleDateString('ar', { day: 'numeric', month: 'short', year: 'numeric' });
+  const catOptions = (state.categoriesFlat || []).map(c => `<option value="${c.id}">${'— '.repeat(c.depth)}${esc(c.name)}</option>`).join('');
+  list.innerHTML = d.items.length ? d.items.map(c => `
+    <div class="card" style="border:1px solid var(--line);box-shadow:none;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+        <div><b style="font-size:16px">${esc(c.landmark.kind.icon)} ${esc(c.landmark.name)}</b> <span class="muted">· ${esc(c.landmark.kind.nameAr)}${c.landmark.sector ? ' · ' + (c.landmark.sector === 'PUBLIC' ? 'عام' : 'خاص') : ''}</span>
+          <div class="muted">${esc(c.landmark.address || '')} <a href="https://www.google.com/maps?q=${c.landmark.latitude},${c.landmark.longitude}" target="_blank" rel="noopener">📍 عرض</a></div></div>
+        <span class="badge ${LC_STATUS[c.status][1]}">${LC_STATUS[c.status][0]}</span>
+      </div>
+      <table style="margin-top:10px"><tbody>
+        <tr><td class="muted" style="width:120px">مقدّم الطلب</td><td><b>${esc(c.user.fullName)}</b> · <span dir="ltr">${esc(c.user.email)}</span>${c.user.merchantProfile ? ` · <span class="badge APPROVED">عنده محل: ${esc(c.user.merchantProfile.businessName)}</span>` : ''}</td></tr>
+        <tr><td class="muted">صفته</td><td>${esc(LC_ROLE[c.claimantRole] || c.claimantRole)}</td></tr>
+        <tr><td class="muted">هاتف للتواصل</td><td dir="ltr" style="text-align:right"><a href="tel:${esc(c.contactPhone)}">${esc(c.contactPhone)}</a></td></tr>
+        ${c.note ? `<tr><td class="muted">ملاحظته</td><td>${esc(c.note)}</td></tr>` : ''}
+        ${c.adminMessage ? `<tr><td class="muted">ردّك</td><td>${esc(c.adminMessage)}</td></tr>` : ''}
+        <tr><td class="muted">تاريخ الطلب</td><td>${day(c.createdAt)}</td></tr>
+      </tbody></table>
+      <div style="margin:10px 0"><b>الإثباتات (${c.files.length})</b></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap" id="lc-files-${c.id}">${c.files.length ? c.files.map(f => `<img data-file="${f.id}" alt="${esc(f.name)}" style="width:150px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;background:var(--surface-2)" onclick="lcOpenFile(this)">`).join('') : '<span class="muted">ما أرسل صور</span>'}</div>
+      ${c.status === 'PENDING' || c.status === 'NEEDS_INFO' ? `
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        ${c.user.merchantProfile ? '<span class="muted">بيتضاف فرعًا لمحله</span>' : `<select id="lc-cat-${c.id}" style="max-width:260px"><option value="">اختار مهنة المحل الجديد…</option>${catOptions}</select>`}
+        <button onclick="lcApprove('${c.id}', ${c.user.merchantProfile ? 'true' : 'false'})">✅ موافقة</button>
+        <button class="secondary" onclick="lcAsk('${c.id}')">❓ طلب معلومات</button>
+        <button class="danger" onclick="lcReject('${c.id}')">❌ رفض</button>
+      </div>` : ''}
+    </div>`).join('') : '<p class="muted">ما في طلبات بهالحالة</p>';
+  document.getElementById('lc-pager').innerHTML = pagerHtml('lmLoadClaims', page || 1, d.total);
+  // the proof pictures need the admin's key, so they are fetched and shown from memory
+  document.querySelectorAll('#lc-list img[data-file]').forEach(async (img) => {
+    const res = await fetch('/admin/landmark-claims/files/' + img.dataset.file, { headers: { Authorization: 'Bearer ' + state.token } });
+    if (res.ok) img.src = URL.createObjectURL(await res.blob());
+  });
+}
+
+function lcOpenFile(img) { if (img.src) window.open(img.src, '_blank'); }
+
+async function lcApprove(id, hasShop) {
+  const body = {};
+  if (!hasShop) {
+    const cat = document.getElementById('lc-cat-' + id).value;
+    if (!cat) { alert('اختار مهنة المحل الجديد أول'); return; }
+    body.categoryId = cat;
+  }
+  if (!confirm('توافق؟ المكان بيصير محل صاحب الطلب وبيختفي من المعالم.')) return;
+  const r = await api('POST', '/admin/landmark-claims/' + id + '/approve', body);
+  if (!r.ok) { alert(errText(r.data, 'تعذّرت الموافقة')); return; }
+  lmLoadClaims(1);
+}
+async function lcAsk(id) {
+  const message = prompt('شو المعلومات أو الإثبات اللي بدك ياها؟ (بيوصله إشعار)');
+  if (!message) return;
+  const r = await api('POST', '/admin/landmark-claims/' + id + '/needs-info', { message });
+  if (!r.ok) { alert(errText(r.data, 'تعذّر الإرسال')); return; }
+  lmLoadClaims(1);
+}
+async function lcReject(id) {
+  const reason = prompt('سبب الرفض؟ (بيوصل لصاحب الطلب)');
+  if (!reason) return;
+  const r = await api('POST', '/admin/landmark-claims/' + id + '/reject', { reason });
+  if (!r.ok) { alert(errText(r.data, 'تعذّر الرفض')); return; }
+  lmLoadClaims(1);
 }
 
 /* ---- kinds ---- */

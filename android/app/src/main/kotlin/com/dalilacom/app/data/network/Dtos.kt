@@ -717,6 +717,27 @@ data class LandmarkDto(
 )
 
 @Serializable
+data class ClaimStateDto(val id: String, val status: String, val message: String? = null)
+
+@Serializable
+data class MyClaimDto(val claim: ClaimStateDto? = null)
+
+@Serializable
+data class ClaimRequest(val role: String, val phone: String, val note: String? = null)
+
+@Serializable
+data class ClaimCreatedDto(val id: String, val status: String)
+
+@Serializable
+data class SimilarKindDto(val slug: String = "", val name: String = "", val nameEn: String = "", val icon: String = "")
+
+@Serializable
+data class SimilarLandmarkDto(val id: String, val name: String, val kind: SimilarKindDto = SimilarKindDto(), val address: String? = null)
+
+@Serializable
+data class SimilarLandmarksDto(val items: List<SimilarLandmarkDto> = emptyList())
+
+@Serializable
 data class LandmarksDto(val items: List<LandmarkDto> = emptyList())
 
 @Serializable

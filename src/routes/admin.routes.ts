@@ -17,6 +17,7 @@ import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { AppReleaseError, getAppDownloadInfo, getAppUpdate, setAppUpdate, MAX_APK_BYTES, saveAppRelease, setAppDownloadVisible } from "../services/appRelease.service";
 import { adminOverview } from "../services/adminStats.service";
+import { adminClaims, approveClaim, askForInfo, claimFile, rejectClaim } from "../services/landmarkClaim.service";
 import { adminList, createKind, createLandmark, deleteLandmark, importFromOsm, LandmarkError, listKinds, reviewLandmarks, updateKind, updateLandmark } from "../services/landmark.service";
 import { getSocialLinks, saveSocialLinks, SOCIAL_PLATFORMS, SocialLinkError } from "../services/socialLinks.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
@@ -152,6 +153,40 @@ adminRouter.delete("/landmarks/:id", route(async (req, res) => {
     await deleteLandmark(req.params.id);
     res.status(204).end();
   } catch (err) { landmarkFail(res, err); }
+}));
+
+/* ---------------- claims: a private place's owner asking to take it over ---------------- */
+
+adminRouter.get("/landmark-claims", route(async (req, res) => {
+  const parsed = z.object({ status: z.enum(["PENDING", "NEEDS_INFO", "APPROVED", "REJECTED", "WITHDRAWN"]).optional(), page: z.coerce.number().int().min(1).max(100000).default(1) }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await adminClaims(parsed.data));
+}));
+
+// a proof photo, for the admin's eyes
+adminRouter.get("/landmark-claims/files/:fileId", route(async (req, res) => {
+  const f = await claimFile(req.params.fileId);
+  if (!f) return sendError(res, 404, "NOT_FOUND", "Place not found");
+  res.set({ "Content-Type": f.mime, "Cache-Control": "private, no-store" });
+  res.end(Buffer.from(f.data));
+}));
+
+adminRouter.post("/landmark-claims/:id/approve", route(async (req, res) => {
+  const parsed = z.object({ categoryId: z.string().uuid().nullable().optional() }).safeParse(req.body ?? {});
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try { res.json(await approveClaim(req.params.id, req.user!.id, parsed.data)); } catch (err) { landmarkFail(res, err); }
+}));
+
+adminRouter.post("/landmark-claims/:id/reject", route(async (req, res) => {
+  const parsed = z.object({ reason: z.string().trim().min(3).max(400) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try { await rejectClaim(req.params.id, req.user!.id, parsed.data.reason); res.json({ ok: true }); } catch (err) { landmarkFail(res, err); }
+}));
+
+adminRouter.post("/landmark-claims/:id/needs-info", route(async (req, res) => {
+  const parsed = z.object({ message: z.string().trim().min(3).max(400) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try { await askForInfo(req.params.id, req.user!.id, parsed.data.message); res.json({ ok: true }); } catch (err) { landmarkFail(res, err); }
 }));
 
 /* ---------------- platform settings (pricing, trial, credit, payment accounts) ---------------- */

@@ -288,6 +288,27 @@ interface ApiService {
         @Query("limit") limit: Int = 300,
     ): Response<LandmarksDto>
 
+    @GET("landmarks/similar")
+    suspend fun similarLandmarks(@Query("name") name: String, @Query("lat") lat: Double, @Query("lng") lng: Double): Response<SimilarLandmarksDto>
+
+    @GET("landmarks/{id}")
+    suspend fun landmark(@Path("id") id: String): Response<LandmarkDto>
+
+    @GET("landmarks/{id}/my-claim")
+    suspend fun myLandmarkClaim(@Path("id") id: String): Response<MyClaimDto>
+
+    @POST("landmarks/{id}/claims")
+    suspend fun submitLandmarkClaim(@Path("id") id: String, @Body body: ClaimRequest): Response<ClaimCreatedDto>
+
+    @PUT("landmarks/claims/{id}/files")
+    suspend fun uploadClaimFile(@Path("id") id: String, @Query("name") name: String, @Body body: RequestBody): Response<Unit>
+
+    @POST("landmarks/claims/{id}/withdraw")
+    suspend fun withdrawLandmarkClaim(@Path("id") id: String): Response<Unit>
+
+    @POST("landmarks/claims/{id}/resubmit")
+    suspend fun resubmitLandmarkClaim(@Path("id") id: String, @Body body: Map<String, String?>): Response<Unit>
+
     @GET("geo/market")
     suspend fun market(): Response<MarketDto>
 

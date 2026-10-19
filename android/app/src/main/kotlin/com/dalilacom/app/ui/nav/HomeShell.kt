@@ -194,6 +194,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     onToggleTheme = { scope.launch { container.sessionStore.saveTheme(if (isDark) "light" else "dark") } },
                     onLogin = { goLogin() },
                     onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
+                    onClaimLandmark = { id -> rootNavController.navigate("landmarkClaim/$id") },
                     floatingButtons = homeButtons,
                 )
                 HomeTab.Responder, HomeTab.Store -> Unit // never selected: their buttons open their own screens
@@ -207,6 +208,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onToggleTheme = { scope.launch { container.sessionStore.saveTheme(if (isDark) "light" else "dark") } },
                         onLogin = { goLogin() },
                         onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
+                    onClaimLandmark = { id -> rootNavController.navigate("landmarkClaim/$id") },
                         dealsMode = true,
                         floatingButtons = homeButtons,
                     )

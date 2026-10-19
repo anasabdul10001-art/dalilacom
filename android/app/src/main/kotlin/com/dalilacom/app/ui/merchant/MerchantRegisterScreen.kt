@@ -40,7 +40,7 @@ import androidx.compose.ui.res.stringResource
 import com.dalilacom.app.ui.common.LocationPicker
 
 @Composable
-fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, onBack: () -> Unit) {
+fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, onBack: () -> Unit, onClaimLandmark: (String) -> Unit = {}) {
     val viewModel: MerchantRegisterViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -59,6 +59,26 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
 
     LaunchedEffect(state.result) {
         if (state.result != null) onRegistered()
+    }
+
+    if (state.similar.isNotEmpty()) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = viewModel::dismissSimilar,
+            title = { Text(state.similar.first().kind.icon + "  " + stringResource(R.string.lm_similar_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.lm_similar_text))
+                    state.similar.take(3).forEach { Text("• " + it.name + (it.address?.let { a -> " — $a" } ?: ""), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+                }
+            },
+            confirmButton = { TextButton(onClick = { val id = state.similar.first().id; viewModel.dismissSimilar(); onClaimLandmark(id) }) { Text(stringResource(R.string.lm_claim_it)) } },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.dismissSimilar()
+                    viewModel.register(businessName.trim(), selectedCategoryId, address.trim(), phone.trim(), whatsapp, if (online) null else location, suggestion, skipSimilar = true)
+                }) { Text(stringResource(R.string.lm_not_same)) }
+            },
+        )
     }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {

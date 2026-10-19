@@ -20,6 +20,8 @@ data class MerchantRegisterUiState(
     val isSubmitting: Boolean = false,
     val error: String? = null,
     val result: RegisterMerchantResponse? = null,
+    /** Public places of the same name close to the pin: the person is offered to claim one instead of registering a duplicate. */
+    val similar: List<com.dalilacom.app.data.network.SimilarLandmarkDto> = emptyList(),
 )
 
 class MerchantRegisterViewModel(
@@ -38,13 +40,22 @@ class MerchantRegisterViewModel(
     suspend fun searchCategories(query: String) = discoverRepository.searchCategories(query)
     suspend fun addressFor(lat: Double, lng: Double) = discoverRepository.addressFor(lat, lng)
 
-    fun register(businessName: String, categoryId: String?, address: String, phone: String, whatsapp: String, location: Pair<Double, Double>?, suggestedCategory: String? = null) {
+    fun dismissSimilar() { _uiState.value = _uiState.value.copy(similar = emptyList()) }
+
+    fun register(businessName: String, categoryId: String?, address: String, phone: String, whatsapp: String, location: Pair<Double, Double>?, suggestedCategory: String? = null, skipSimilar: Boolean = false) {
         if (businessName.isBlank() || categoryId == null) {
             _uiState.value = _uiState.value.copy(error = AppStrings.get(R.string.s_d5a3c41f))
             return
         }
         _uiState.value = _uiState.value.copy(isSubmitting = true, error = null)
         viewModelScope.launch {
+            if (!skipSimilar && location != null) {
+                val similar = discoverRepository.similarLandmarks(businessName.trim(), location.first, location.second)
+                if (similar.isNotEmpty()) {
+                    _uiState.value = _uiState.value.copy(isSubmitting = false, similar = similar)
+                    return@launch
+                }
+            }
             merchantRepository.registerMerchant(
                 businessName, categoryId, address.ifBlank { null }, phone.ifBlank { null },
                 whatsapp.filter { it.isDigit() }.ifBlank { null }, location, suggestedCategory?.trim()?.takeIf { it.length >= 2 },

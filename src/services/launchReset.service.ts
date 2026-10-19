@@ -70,6 +70,8 @@ export async function runLaunchReset() {
     await tx.$executeRawUnsafe(`update _keep_admins set "referredById" = null`);
     await tx.$executeRawUnsafe(`truncate table ${wipe.map((t) => `"${t}"`).join(", ")} restart identity`);
     await tx.$executeRawUnsafe(`insert into "User" select * from _keep_admins`);
+    // the places that owners had taken over go back on the map as landmarks (their shops are gone)
+    await tx.$executeRawUnsafe(`update "Landmark" set "status" = 'ACTIVE', "claimedMerchantId" = null where "status" = 'CLAIMED'`);
   }, { timeout: 120000 });
 
   const left = await prisma.user.count();

@@ -75,6 +75,7 @@ export async function eraseAccount(userId: string): Promise<"deleted" | "anonymi
       await tx.responderSubscription.deleteMany({ where: { userId } });
       await tx.address.deleteMany({ where: { userId } });
       await tx.userAvatar.deleteMany({ where: { userId } });
+      await tx.landmarkClaim.deleteMany({ where: { userId } });
       await tx.deviceToken.deleteMany({ where: { userId } });
       await tx.socialIdentity.deleteMany({ where: { userId } });
       await tx.loginTicket.deleteMany({ where: { userId } });

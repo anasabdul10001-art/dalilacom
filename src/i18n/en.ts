@@ -35,6 +35,12 @@ export const en: LanguagePack = {
     "المجيب الآلي": "Auto-responder",
     "إعلانات المتجر والرسائل الجماعية للزبائن": "Store ads and bulk messages to customers",
 
+    // ---- a place's owner asking to take it over ----
+    "نحتاج معلومات إضافية لطلبك": "We need more information for your request",
+    "ما قدرنا نقبل طلبك": "We could not accept your request",
+    "تمت الموافقة على طلبك ✅": "Your request was approved ✅",
+    "تم قبول طلب ثاني لنفس المكان": "Another request for the same place was accepted",
+
     // ---- the store: advertising space and banners ----
     "البانر غير موجود": "Banner not found",
     "ما عندك متجر": "You don't have a shop",
@@ -332,6 +338,10 @@ export const en: LanguagePack = {
     "صدر هذا الإيصال عبر منصة دليلكم": "This receipt was issued through the Dalilacom platform",
   },
   patterns: [
+    [/^بخصوص طلبك للمطالبة بـ «(.+)»: (.+)$/s, 'About your request to claim "$1": $2'],
+    [/^طلبك للمطالبة بـ «(.+)» انرفض\. السبب: (.+)$/s, 'Your request to claim "$1" was refused. Reason: $2'],
+    [/^طلبك للمطالبة بـ «(.+)» انرفض: تم قبول طلب ثاني لنفس المكان\.$/, 'Your request to claim "$1" was refused: another request for the same place was accepted.'],
+    [/^صار «(.+)» محلّك على دليلكم\. تقدر تعدّل معلوماته من وضع النشاط\.$/, '"$1" is now your shop on Dalilacom. You can edit its details from business mode.'],
     [/^الرابط صالح لمدة (\d+(?:\.\d+)?) ساعة\. إذا لم تنشئ حسابًا عندنا، تجاهل هذه الرسالة\.$/, "The link is valid for $1 hours. If you didn't create an account with us, ignore this message."],
     [/^الرابط صالح لمدة (\d+(?:\.\d+)?) دقيقة\. إذا لم تطلب هذا، تجاهل الرسالة وكلمة سرك لن تتغيّر\.$/, "The link is valid for $1 minutes. If you didn't ask for this, ignore this message and your password won't change."],
     [/^وصلنا طلب لتغيير بريد حسابك على دليلكم إلى (\S+)\.$/, "We received a request to change your Dalilacom account email to $1."],

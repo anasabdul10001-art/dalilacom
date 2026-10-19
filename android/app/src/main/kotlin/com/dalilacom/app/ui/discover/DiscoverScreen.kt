@@ -117,6 +117,8 @@ fun DiscoverScreen(
     onSetLanguage: (String) -> Unit,
     onLogin: () -> Unit,
     onMerchantClick: (String) -> Unit,
+    /** "This place is mine": opens the claim form of a private public-place (a private hospital). */
+    onClaimLandmark: (String) -> Unit = {},
     /** The deals tab: the same map, but only shops with a running discount, with its own filters (and a way to the card). */
     dealsMode: Boolean = false,
     onOpenCard: () -> Unit = {},
@@ -301,6 +303,7 @@ fun DiscoverScreen(
             state.openedLandmark?.let { place ->
                 LandmarkDialog(
                     place = place,
+                    onClaim = { viewModel.closeLandmark(); if (isGuest) onLogin() else onClaimLandmark(place.id) },
                     onDirections = {
                         viewModel.closeLandmark()
                         beginRoute(RouteTarget(place.id, place.name, place.latitude, place.longitude), "driving")
@@ -921,7 +924,7 @@ private fun BrowseOverlay(
 
 /** What a tapped public place says: its name and kind, address, phone, and the way there. */
 @Composable
-private fun LandmarkDialog(place: com.dalilacom.app.data.network.LandmarkDto, onDirections: () -> Unit, onClose: () -> Unit) {
+private fun LandmarkDialog(place: com.dalilacom.app.data.network.LandmarkDto, onClaim: () -> Unit, onDirections: () -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onClose,
@@ -932,6 +935,7 @@ private fun LandmarkDialog(place: com.dalilacom.app.data.network.LandmarkDto, on
                 Text(place.kind.name + sector, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 place.description?.takeIf { it.isNotBlank() }?.let { Text(it) }
                 place.address?.takeIf { it.isNotBlank() }?.let { Text("📍 $it") }
+                if (place.claimable) TextButton(onClick = onClaim) { Text("🏥 " + stringResource(R.string.lm_claim_btn)) }
                 place.phone?.takeIf { it.isNotBlank() }?.let { phone ->
                     Text("📞 $phone", color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable {
                         runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:" + phone.filter { it.isDigit() || it == '+' }))) }

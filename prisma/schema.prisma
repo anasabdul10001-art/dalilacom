@@ -111,6 +111,8 @@ model User {
   notificationPreferences NotificationPreference[]
   metaOAuthSessions       MetaOAuthSession[]
 
+  landmarkClaims LandmarkClaim[]
+
   marketer         Marketer?         @relation("MarketerUser")
   marketerRequests MarketerRequest[]
   referredBy       Marketer?         @relation("ReferredBy", fields: [referredById], references: [id])
@@ -1747,9 +1749,58 @@ model Landmark {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  kind LandmarkKind @relation(fields: [kindId], references: [id])
+  kind   LandmarkKind    @relation(fields: [kindId], references: [id])
+  claims LandmarkClaim[]
 
   @@index([status, latitude, longitude])
   @@index([kindId])
   @@index([cityId])
+}
+
+enum LandmarkClaimStatus {
+  PENDING // waiting for the admin
+  NEEDS_INFO // the admin asked for more proof
+  APPROVED // the place became the claimant's shop
+  REJECTED
+  WITHDRAWN // the claimant took it back
+}
+
+/// Somebody saying "this place is mine" (a private hospital's manager): the admin looks at the proof and decides.
+model LandmarkClaim {
+  id               String              @id @default(uuid())
+  landmarkId       String
+  userId           String
+  status           LandmarkClaimStatus @default(PENDING)
+  claimantRole     String // OWNER | MANAGER | AUTHORIZED
+  contactPhone     String
+  note             String?
+  adminMessage     String? // what the admin asked for, or why it was refused
+  decidedById      String?
+  decidedAt        DateTime?
+  resultMerchantId String? // the shop it became, or the shop it was added to as a branch
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  landmark Landmark            @relation(fields: [landmarkId], references: [id])
+  user     User                @relation(fields: [userId], references: [id])
+  files    LandmarkClaimFile[]
+
+  @@index([landmarkId, status])
+  @@index([userId])
+  @@index([status, createdAt])
+}
+
+/// A photo of the proof (licence, professional card, letter of authority), kept in the database like the other pictures.
+model LandmarkClaimFile {
+  id        String   @id @default(uuid())
+  claimId   String
+  name      String
+  mime      String
+  sizeBytes Int
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  claim LandmarkClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@index([claimId])
 }
