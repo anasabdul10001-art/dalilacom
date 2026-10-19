@@ -424,14 +424,22 @@ async function render() {
   el.classList.toggle("map-mode", S.screen === "home" && (S.homeTab === "discover" || S.homeTab === "deals"));
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
-  const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
+  // the map search box keeps its own element through every redraw: a new one lost the caret (Arabic letters came out reversed), the undo history and the typing in progress
+  const keepQ = active && active.id === "disc-q" ? active : null;
+  const caret = keepQ ? [keepQ.selectionStart, keepQ.selectionEnd] : null;
   el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml();
   wireUpAfterRender();
   placeDiscPopup();
   trDom(el); // translate the rendered Arabic when another language is on
-  if (keepFocus !== null) {
-    const input = document.getElementById("disc-q");
-    if (input) { input.focus(); try { input.setSelectionRange(keepFocus, keepFocus); } catch (e) {} }
+  if (keepQ) {
+    const fresh = document.getElementById("disc-q");
+    if (fresh && fresh !== keepQ) {
+      if (keepQ.value !== fresh.value) keepQ.value = fresh.value; // a change made by the app (clear, a pick) wins over what is there
+      keepQ.placeholder = fresh.placeholder;
+      fresh.replaceWith(keepQ);
+      keepQ.focus({ preventScroll: true });
+      try { const n = keepQ.value.length; keepQ.setSelectionRange(Math.min(caret[0], n), Math.min(caret[1], n)); } catch (e) {}
+    }
   }
 }
 
@@ -1287,8 +1295,8 @@ function onDiscoverQuery(v) {
     searchMerchants();
   }, 280);
 }
-function onDiscoverFocus() { S._discover.showSuggest = true; render(); }
-function onDiscoverBlur() { setTimeout(() => { if (S._discover && S._discover.showSuggest) { S._discover.showSuggest = false; render(); } }, 200); }
+function onDiscoverFocus() { const d = S._discover; if (d.showSuggest) return; d.showSuggest = true; render(); } // already open: nothing to redraw (a redraw puts the focus back, which would call this again)
+function onDiscoverBlur() { setTimeout(() => { const a = document.activeElement; if (a && a.id === "disc-q") return; if (S._discover && S._discover.showSuggest) { S._discover.showSuggest = false; render(); } }, 200); }
 function onDiscoverSubmit() { pushRecent(S._discover.query); S._discover.showSuggest = false; render(); }
 function onDiscoverClear() { S._discover.query = ""; S._discover.suggest = null; searchMerchants(); }
 function pickRecent(q) { S._discover.query = q; S._discover.showSuggest = false; pushRecent(q); searchMerchants(); }
