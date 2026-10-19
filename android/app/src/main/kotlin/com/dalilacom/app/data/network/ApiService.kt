@@ -278,6 +278,16 @@ interface ApiService {
     @GET("app-update")
     suspend fun appUpdate(): Response<AppUpdateDto>
 
+    /** The public places (mosques, hospitals, parks, main streets) inside the visible map. */
+    @GET("landmarks")
+    suspend fun landmarks(
+        @Query("minLat") minLat: Double,
+        @Query("maxLat") maxLat: Double,
+        @Query("minLng") minLng: Double,
+        @Query("maxLng") maxLng: Double,
+        @Query("limit") limit: Int = 300,
+    ): Response<LandmarksDto>
+
     @GET("geo/market")
     suspend fun market(): Response<MarketDto>
 

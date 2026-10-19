@@ -1120,6 +1120,7 @@ function tabDiscover() {
   const sheetPx = sheetHeights()[S._sheet || "peek"];
   return `
     ${linksModalHtml()}
+    ${landmarkModalHtml()}
     <div class="mapfull ${S._sheet === "min" ? "sheet-min" : ""} ${S._route ? "routing" : ""} ${S._route && S._route.phase === "navigating" ? "navigating" : ""}" id="mapfull" style="--sheet-h:${sheetPx}px">
       <div id="discover-map-slot"></div>
 
@@ -1137,6 +1138,7 @@ function tabDiscover() {
         </div>
         <div class="float-chips">
           <button class="chip chip-links" onclick="openLinks()">🔗 ${esc(t("follow.us"))}</button>
+          <button class="chip ${LM.on ? "active" : ""}" onclick="lmToggle()">🕌 ${esc(t("lm.chip"))}</button>
           <button class="chip ${!d.categoryId && !d.openNow && (deals || !d.discountsOnly) ? "active" : ""}" onclick="onDiscoverReset()">${esc(t("filter.all"))}</button>
           <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">${esc(t("filter.openNow"))}</button>
           ${deals ? "" : `<button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">${esc(t("filter.discounts"))}</button>`}
@@ -1356,6 +1358,78 @@ function moveMap(fn) {
   fn();
 }
 
+/* ---- public places on the map: mosques, hospitals, parks, main streets (they belong to nobody's account) ---- */
+
+const LM = { on: true, items: [], timer: null, drawn: "" };
+try { if (localStorage.getItem("dlk_landmarks") === "off") LM.on = false; } catch (e) {}
+// how close the map must be before a kind is drawn (mosques are many, so they wait for a closer view)
+function lmMinZoom(slug) { return slug === "mosque" ? 14 : slug === "main_street" || slug === "hospital" || slug === "park" ? 12 : 13; }
+
+function lmSchedule() {
+  clearTimeout(LM.timer);
+  LM.timer = setTimeout(lmFetch, 350);
+}
+
+async function lmFetch() {
+  const map = S._map;
+  if (!map || !S._lmLayer) return;
+  if (!LM.on || map.getZoom() < 12) { LM.items = []; lmDraw(); return; }
+  const b = map.getBounds();
+  const params = new URLSearchParams({ minLat: b.getSouth(), maxLat: b.getNorth(), minLng: b.getWest(), maxLng: b.getEast(), limit: 300 });
+  const { ok, data } = await api("GET", "/landmarks?" + params.toString());
+  LM.items = ok && data.items ? data.items : [];
+  lmDraw();
+}
+
+function lmDraw() {
+  const map = S._map;
+  if (!map || !S._lmLayer) return;
+  S._lmLayer.clearLayers();
+  if (!LM.on) return;
+  const z = map.getZoom();
+  LM.items.forEach((p) => {
+    if (z < lmMinZoom(p.kind.slug)) return;
+    if (p.kind.geometry === "LINE" && Array.isArray(p.path)) {
+      p.path.forEach((seg) => L.polyline(seg, { color: p.kind.color, weight: 5, opacity: 0.8 }).on("click", () => lmOpen(p.id)).addTo(S._lmLayer));
+      if (z >= 14) {
+        L.marker([p.latitude, p.longitude], { icon: L.divIcon({ className: "", html: `<span class="lm-street-label" style="border-color:${esc(p.kind.color)};color:${esc(p.kind.color)}">${esc(p.name)}</span>`, iconSize: [0, 0] }), zIndexOffset: -500 }).on("click", () => lmOpen(p.id)).addTo(S._lmLayer);
+      }
+      return;
+    }
+    const icon = L.divIcon({ className: "", html: `<div class="lm-pin" style="background:${esc(p.kind.color)}" title="${esc(p.name)}">${esc(p.kind.icon)}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+    L.marker([p.latitude, p.longitude], { icon, zIndexOffset: -500 }).on("click", () => lmOpen(p.id)).addTo(S._lmLayer);
+  });
+}
+
+function lmToggle() {
+  LM.on = !LM.on;
+  try { localStorage.setItem("dlk_landmarks", LM.on ? "on" : "off"); } catch (e) {}
+  render();
+  if (LM.on) lmFetch(); else lmDraw();
+}
+
+function lmOpen(id) { S._lmOpen = LM.items.find((x) => x.id === id) || null; render(); }
+function lmClose() { S._lmOpen = null; render(); }
+function lmDirections(id) { const p = LM.items.find((x) => x.id === id); S._lmOpen = null; if (p) startRoute(p.id, "driving"); }
+
+function landmarkModalHtml() {
+  const p = S._lmOpen;
+  if (!p) return "";
+  const phone = p.phone ? `<p>📞 <a href="tel:${esc(p.phone)}" dir="ltr">${esc(p.phone)}</a></p>` : "";
+  return `<div class="deals-intro" onclick="lmClose()">
+    <div class="deals-box lm-card" onclick="event.stopPropagation()">
+      <div class="lm-head"><span class="lm-ico" style="background:${esc(p.kind.color)}">${esc(p.kind.icon)}</span><div><h3>${esc(p.name)}</h3><small>${esc(p.kind.name)}${p.sector ? " · " + esc(t(p.sector === "PUBLIC" ? "lm.public" : "lm.private")) : ""}</small></div></div>
+      ${p.description ? `<p>${esc(p.description)}</p>` : ""}
+      ${p.address ? `<p>📍 ${esc(p.address)}</p>` : ""}
+      ${phone}
+      <div class="lm-actions">
+        <button class="btn" onclick="lmDirections('${esc(p.id)}')">🧭 ${esc(t("lm.directions"))}</button>
+        <button class="btn ghost" onclick="lmClose()">${esc(t("follow.close"))}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderDiscoverMap() {
   const slot = document.getElementById("discover-map-slot");
   if (!slot || typeof L === "undefined") return;
@@ -1369,8 +1443,10 @@ function renderDiscoverMap() {
     L.control.zoom({ position: "topright" }).addTo(map);
     S._cluster = typeof L.markerClusterGroup === "function" ? L.markerClusterGroup({ maxClusterRadius: 50 }) : L.layerGroup();
     map.addLayer(S._cluster);
+    S._lmLayer = L.layerGroup().addTo(map); // under the shops' pins
     S._userLayer = L.layerGroup().addTo(map);
     map.on("moveend", () => {
+      lmSchedule();
       if (Date.now() < (S._ignoreMoveUntil || 0)) return;
       if (S._discover) S._discover.areaDirty = true;
       const btn = document.getElementById("area-btn");
@@ -1378,6 +1454,7 @@ function renderDiscoverMap() {
     });
     S._map = map;
     S._mapKey = "";
+    lmSchedule();
   }
   slot.appendChild(S._mapEl); // re-parenting keeps the view, zoom and markers
   S._map.invalidateSize();
@@ -3880,7 +3957,8 @@ async function fetchRouteOption(from, dest, mode) {
 
 async function startRoute(merchantId, mode) {
   const d = discoverState();
-  const m = d.merchants.find((x) => x.id === merchantId) || (S._merchantDetail && S._merchantDetail.merchant);
+  const lmPlace = (typeof LM !== "undefined" ? LM.items : []).find((x) => x.id === merchantId);
+  const m = d.merchants.find((x) => x.id === merchantId) || (S._merchantDetail && S._merchantDetail.merchant) || (lmPlace && { businessName: lmPlace.name, latitude: lmPlace.latitude, longitude: lmPlace.longitude });
   if (!m || m.latitude == null) return;
   if (!d.userLoc) {
     try { d.userLoc = await locateUser(); S._centeredUser = true; }

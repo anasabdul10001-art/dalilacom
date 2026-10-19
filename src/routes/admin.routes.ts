@@ -17,6 +17,7 @@ import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { AppReleaseError, getAppDownloadInfo, getAppUpdate, setAppUpdate, MAX_APK_BYTES, saveAppRelease, setAppDownloadVisible } from "../services/appRelease.service";
 import { adminOverview } from "../services/adminStats.service";
+import { adminList, createKind, createLandmark, deleteLandmark, importFromOsm, LandmarkError, listKinds, reviewLandmarks, updateKind, updateLandmark } from "../services/landmark.service";
 import { getSocialLinks, saveSocialLinks, SOCIAL_PLATFORMS, SocialLinkError } from "../services/socialLinks.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
 import { aiProviderStatus, aiTotals, aiUsage, testProvider } from "../services/ai.service";
@@ -38,6 +39,119 @@ adminRouter.use(requireAuth, requireRole(Role.ADMIN));
 
 adminRouter.get("/overview", route(async (_req, res) => {
   res.json(await adminOverview());
+}));
+
+/* ---------------- public places on the map (mosques, hospitals, parks, main streets) ---------------- */
+
+const landmarkBody = z.object({
+  kindId: z.string().uuid(),
+  name: z.string().trim().min(2).max(120),
+  nameEn: z.string().trim().max(120).nullable().optional(),
+  description: z.string().trim().max(600).nullable().optional(),
+  sector: z.enum(["PUBLIC", "PRIVATE"]).nullable().optional(),
+  status: z.enum(["PENDING_REVIEW", "ACTIVE", "HIDDEN"]).optional(),
+  cityId: z.string().uuid().nullable().optional(),
+  address: z.string().trim().max(250).nullable().optional(),
+  phone: z.string().trim().max(40).nullable().optional(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  path: z.array(z.array(z.tuple([z.number(), z.number()])).max(400)).max(40).nullable().optional(),
+});
+const kindBody = z.object({
+  slug: z.string().trim().toLowerCase().regex(/^[a-z][a-z0-9_]{1,30}$/).optional(),
+  nameAr: z.string().trim().min(1).max(40),
+  nameEn: z.string().trim().min(1).max(40),
+  icon: z.string().trim().min(1).max(8),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  geometry: z.enum(["POINT", "LINE"]),
+  claimable: z.boolean(),
+  isActive: z.boolean(),
+  sortOrder: z.number().int().min(0).max(1000).optional(),
+});
+
+function landmarkFail(res: import("express").Response, err: unknown) {
+  if (err instanceof LandmarkError) {
+    const code = err.status === 409 ? "CONFLICT" : err.status === 404 ? "NOT_FOUND" : err.status === 502 ? "UPSTREAM" : "BAD_REQUEST";
+    return res.status(err.status).json({ error: { code, message: err.message, details: err.extra } });
+  }
+  throw err;
+}
+
+adminRouter.get("/landmark-kinds", route(async (_req, res) => {
+  res.json({ kinds: await listKinds(false) });
+}));
+
+adminRouter.post("/landmark-kinds", route(async (req, res) => {
+  const parsed = kindBody.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  if (!parsed.data.slug) return sendError(res, 400, "BAD_REQUEST", "Write a short English name for the kind");
+  try {
+    res.status(201).json(await createKind({ ...parsed.data, slug: parsed.data.slug }));
+  } catch (err) { landmarkFail(res, err); }
+}));
+
+adminRouter.patch("/landmark-kinds/:id", route(async (req, res) => {
+  const parsed = kindBody.partial().safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    res.json(await updateKind(req.params.id, parsed.data));
+  } catch (err) { landmarkFail(res, err); }
+}));
+
+adminRouter.get("/landmarks", route(async (req, res) => {
+  const parsed = z.object({ status: z.enum(["PENDING_REVIEW", "ACTIVE", "HIDDEN", "CLAIMED"]).optional(), kind: z.string().max(40).optional(), q: z.string().trim().max(80).optional(), page: z.coerce.number().int().min(1).max(100000).default(1) }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await adminList(parsed.data));
+}));
+
+adminRouter.post("/landmarks", route(async (req, res) => {
+  const parsed = landmarkBody.extend({ force: z.boolean().optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const { force, ...data } = parsed.data;
+  try {
+    res.status(201).json(await createLandmark(data, !!force));
+  } catch (err) { landmarkFail(res, err); }
+}));
+
+adminRouter.patch("/landmarks/:id", route(async (req, res) => {
+  const parsed = landmarkBody.partial().safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    res.json(await updateLandmark(req.params.id, parsed.data));
+  } catch (err) { landmarkFail(res, err); }
+}));
+
+// approve / hide / delete many places at once: by ids, or "everything of this kind in this state"
+adminRouter.post("/landmarks/review", route(async (req, res) => {
+  const parsed = z.object({
+    action: z.enum(["approve", "hide", "delete"]),
+    ids: z.array(z.string().uuid()).max(500).optional(),
+    filter: z.object({ status: z.enum(["PENDING_REVIEW", "ACTIVE", "HIDDEN"]).optional(), kind: z.string().max(40).optional() }).optional(),
+  }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    res.json(await reviewLandmarks(parsed.data));
+  } catch (err) { landmarkFail(res, err); }
+}));
+
+// fetch the places around a point from OpenStreetMap into the review list
+adminRouter.post("/landmarks/import", route(async (req, res) => {
+  const parsed = z.object({
+    latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180),
+    radiusKm: z.number().min(0.5).max(25), kinds: z.array(z.string().max(30)).min(1).max(10),
+    cityId: z.string().uuid().nullable().optional(),
+  }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  try {
+    res.json(await importFromOsm(parsed.data));
+  } catch (err) { landmarkFail(res, err); }
+}));
+
+adminRouter.delete("/landmarks/:id", route(async (req, res) => {
+  try {
+    await deleteLandmark(req.params.id);
+    res.status(204).end();
+  } catch (err) { landmarkFail(res, err); }
 }));
 
 /* ---------------- platform settings (pricing, trial, credit, payment accounts) ---------------- */

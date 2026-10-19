@@ -962,4 +962,8 @@
     <string name="ph_txn" formatted="false">e.g. The transaction number from the payment app</string>
     <string name="ph_vat" formatted="false">e.g. DE123456789</string>
     <string name="ph_whatsapp" formatted="false">e.g. 963912345678</string>
+    <string name="lm_chip">Landmarks</string>
+    <string name="lm_directions">Directions</string>
+    <string name="lm_public">Public</string>
+    <string name="lm_private">Private</string>
 </resources>

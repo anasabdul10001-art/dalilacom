@@ -698,6 +698,28 @@ data class AppUpdateDto(val version: String? = null, val notify: Boolean = false
 data class SocialLinksDto(val links: List<SocialLinkDto> = emptyList())
 
 @Serializable
+data class LandmarkKindDto(val slug: String, val name: String, val icon: String, val color: String, val geometry: String = "POINT")
+
+@Serializable
+data class LandmarkDto(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val kind: LandmarkKindDto,
+    val sector: String? = null,
+    val address: String? = null,
+    val phone: String? = null,
+    val latitude: Double,
+    val longitude: Double,
+    /** A street: a list of pieces, each a list of [lat, lng]. */
+    val path: List<List<List<Double>>>? = null,
+    val claimable: Boolean = false,
+)
+
+@Serializable
+data class LandmarksDto(val items: List<LandmarkDto> = emptyList())
+
+@Serializable
 data class MarketDto(val country: String = "", val currencyCode: String = "")
 
 @Serializable

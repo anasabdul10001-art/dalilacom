@@ -1691,3 +1691,65 @@ model AppRelease {
   data      Bytes
   createdAt DateTime @default(now())
 }
+
+/// What a landmark looks like and how it behaves: the owner can add kinds (school, market, ...) in the admin panel without code.
+enum LandmarkGeometry {
+  POINT // a pin (mosque, hospital, park)
+  LINE // a drawn line with its name (a main street)
+}
+
+enum LandmarkSector {
+  PUBLIC // government / belongs to everybody
+  PRIVATE // a private owner exists (a private hospital): it can be claimed
+}
+
+enum LandmarkStatus {
+  PENDING_REVIEW // imported or proposed, not on the map until the admin approves
+  ACTIVE // on the map
+  HIDDEN // taken off the map by the admin
+  CLAIMED // its real owner took it over: it became an ordinary shop (see claimedMerchantId)
+}
+
+model LandmarkKind {
+  id        String           @id @default(uuid())
+  slug      String           @unique
+  nameAr    String
+  nameEn    String
+  icon      String // emoji on the map
+  color     String // hex, e.g. #1e7e34
+  geometry  LandmarkGeometry @default(POINT)
+  claimable Boolean          @default(false) // may its (private) places be claimed by their owner
+  isActive  Boolean          @default(true)
+  sortOrder Int              @default(0)
+  createdAt DateTime         @default(now())
+
+  landmarks Landmark[]
+}
+
+/// A public place on the map that belongs to nobody's account: a mosque, a hospital, a park, a main street.
+model Landmark {
+  id          String          @id @default(uuid())
+  kindId      String
+  name        String // Arabic (the source language)
+  nameEn      String?
+  description String?
+  sector      LandmarkSector?
+  status      LandmarkStatus  @default(ACTIVE)
+  cityId      String? // a GeoUnit id, kept plain so the geo tables stay untouched
+  address     String?
+  phone       String?
+  latitude    Float // the pin; for a line, the point where its name is written
+  longitude   Float
+  path        Json? // a line: a list of segments, each a list of [lat, lng]
+  source      String          @default("ADMIN") // ADMIN | OSM
+  sourceRef   String?         @unique // "osm:node/123": importing again never duplicates
+  claimedMerchantId String? // set when the real owner took it over
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  kind LandmarkKind @relation(fields: [kindId], references: [id])
+
+  @@index([status, latitude, longitude])
+  @@index([kindId])
+  @@index([cityId])
+}

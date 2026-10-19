@@ -13,6 +13,7 @@ export const KEEP_TABLES = [
   "Category", "CategoryTranslation", "ProductCategory",
   "ServicePlan", "PlanFeature", "PlanPrice", "TaxRate",
   "PlatformSetting", "SocialChannel",
+  "LandmarkKind", "Landmark", // the places on the map belong to the platform, not to any account
   "_prisma_migrations",
 ];
 

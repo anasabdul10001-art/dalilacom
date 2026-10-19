@@ -1613,3 +1613,15 @@ html[dir="ltr"] .social-dock.open .dock-tab svg { transform: scaleX(-1); }
 /* the example inside an empty field: faint, so it reads as a hint and not as something already typed */
 input::placeholder, textarea::placeholder { color: #b3a8a5; opacity: 1; }
 :root[data-theme="dark"] input::placeholder, :root[data-theme="dark"] textarea::placeholder { color: #6f6461; }
+
+/* the public places on the map (mosques, hospitals, parks, main streets) */
+.lm-pin { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); display: grid; place-items: center; font-size: 15px; line-height: 1; }
+.lm-street-label { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; background: rgba(255, 255, 255, .92); border: 1.5px solid; border-radius: 6px; padding: 1px 7px; font-weight: 800; font-size: 12px; pointer-events: auto; }
+.lm-card { text-align: start; }
+.lm-card p { margin: 6px 0; font-size: 14px; }
+.lm-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.lm-head h3 { margin: 0; font-size: 18px; }
+.lm-head small { color: var(--muted, #6b5d5b); }
+.lm-ico { width: 46px; height: 46px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); display: grid; place-items: center; font-size: 22px; flex: none; }
+.lm-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.lm-actions .btn { flex: 1; }

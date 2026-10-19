@@ -292,8 +292,22 @@ fun DiscoverScreen(
                 followUser = state.route?.nav?.follow == true,
                 userBearing = state.route?.nav?.heading,
                 onUserPanned = viewModel::onNavPanned,
+                landmarks = if (state.landmarksOn) state.landmarks else emptyList(),
+                onLandmark = viewModel::openLandmark,
+                onView = viewModel::onMapView,
                 modifier = Modifier.fillMaxSize(),
             )
+
+            state.openedLandmark?.let { place ->
+                LandmarkDialog(
+                    place = place,
+                    onDirections = {
+                        viewModel.closeLandmark()
+                        beginRoute(RouteTarget(place.id, place.name, place.latitude, place.longitude), "driving")
+                    },
+                    onClose = viewModel::closeLandmark,
+                )
+            }
 
             val route = state.route
             if (route != null && !route.navigating) {
@@ -357,6 +371,7 @@ fun DiscoverScreen(
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    item { MapChip("🕌 " + stringResource(R.string.lm_chip), state.landmarksOn) { viewModel.toggleLandmarks() } }
                     item { MapChip(stringResource(R.string.filter_all), state.selectedCategoryId == null && (dealsMode || !state.discountsOnly) && !state.openNow) { viewModel.resetFilters(keepDiscounts = dealsMode) } }
                     item { MapChip(stringResource(R.string.filter_open_now), state.openNow) { viewModel.onOpenNowChange(!state.openNow) } }
                     if (!dealsMode) item { MapChip(stringResource(R.string.filter_discounts), state.discountsOnly) { viewModel.onDiscountsOnlyChange(!state.discountsOnly) } }
@@ -902,4 +917,29 @@ private fun BrowseOverlay(
             }
         }
     }
+}
+
+/** What a tapped public place says: its name and kind, address, phone, and the way there. */
+@Composable
+private fun LandmarkDialog(place: com.dalilacom.app.data.network.LandmarkDto, onDirections: () -> Unit, onClose: () -> Unit) {
+    val context = LocalContext.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(place.kind.icon + "  " + place.name) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                val sector = when (place.sector) { "PUBLIC" -> " · " + stringResource(R.string.lm_public); "PRIVATE" -> " · " + stringResource(R.string.lm_private); else -> "" }
+                Text(place.kind.name + sector, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                place.description?.takeIf { it.isNotBlank() }?.let { Text(it) }
+                place.address?.takeIf { it.isNotBlank() }?.let { Text("📍 $it") }
+                place.phone?.takeIf { it.isNotBlank() }?.let { phone ->
+                    Text("📞 $phone", color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable {
+                        runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:" + phone.filter { it.isDigit() || it == '+' }))) }
+                    })
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDirections) { Text("🧭 " + stringResource(R.string.lm_directions)) } },
+        dismissButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.browse_close)) } },
+    )
 }

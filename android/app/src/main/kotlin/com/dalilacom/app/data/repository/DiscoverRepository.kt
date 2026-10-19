@@ -35,6 +35,12 @@ class DiscoverRepository(private val api: ApiService) {
         return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()
     }
 
+    /** The public places inside the rectangle the map shows. */
+    suspend fun landmarks(bounds: MapBounds): List<com.dalilacom.app.data.network.LandmarkDto> {
+        val response = safeApiCall { api.landmarks(bounds.south, bounds.north, bounds.west, bounds.east) } ?: return emptyList()
+        return response.body()?.items.orEmpty().takeIf { response.isSuccessful } ?: emptyList()
+    }
+
     suspend fun getProducts(merchantId: String): List<ProductDto> {
         val response = safeApiCall { api.getProducts(merchantId) } ?: return emptyList()
         return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()

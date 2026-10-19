@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="icon" href="/brand/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/brand/favicon-64.png"><link rel="apple-touch-icon" href="/brand/logo-192.png">
 <title>DALILACOM — لوحة التحكم</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap">
 <style>
   :root {
@@ -112,6 +113,7 @@
   .badge.active { background: var(--ok-bg); color: var(--ok); }
   .badge.inactive { background: #efe9e7; color: var(--muted); }
 
+  .lm-counts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .pager { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
   .rownum { width: 44px; color: var(--muted); font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
   .inline-input { width: 96px; padding: 5px 8px; font-size: 12.5px; }
@@ -247,6 +249,7 @@
         <div class="nav-item" data-section="store" onclick="showSection('store')"><span class="ni">🛍️</span><span class="nt">المتجر</span></div>
         <div class="nav-item" data-section="plans" onclick="showSection('plans')"><span class="ni">💳</span><span class="nt">الباقات والأسعار</span></div>
         <div class="nav-item" data-section="geo" onclick="showSection('geo')"><span class="ni">🗺️</span><span class="nt">المدن والأحياء</span></div>
+        <div class="nav-item" data-section="landmarks" onclick="showSection('landmarks'); lmOpen()"><span class="ni">📍</span><span class="nt">المعالم العامة</span></div>
       </div>
       <div class="nav-group"><div class="nav-title">المستخدمون والتسويق</div>
         <div class="nav-item" data-section="users" onclick="showSection('users'); loadUsers()"><span class="ni">👥</span><span class="nt">المستخدمون</span></div>
@@ -278,6 +281,113 @@
   </div>
 
   <div class="main">
+    <!-- LANDMARKS -->
+    <div class="section" id="section-landmarks" style="display:none">
+      <h2>المعالم العامة</h2>
+      <p class="subtitle">جوامع ومشافي وحدائق وشوارع رئيسية: أماكن بدون صاحب حساب بتظهر على الخريطة للجميع. أضفها بإيدك أو استوردها من OpenStreetMap لقائمة مراجعة، وما بيظهر منها شي قبل ما تعتمده. صاحب المشفى الخاص بيقدر يطالب بمكانه لاحقًا.</p>
+      <div class="filters" id="lm-tabs">
+        <button class="active" data-tab="list" onclick="lmTab('list')">📋 القائمة</button>
+        <button data-tab="form" onclick="lmTab('form')">➕ إضافة مكان</button>
+        <button data-tab="import" onclick="lmTab('import')">⬇️ استيراد من OpenStreetMap</button>
+        <button data-tab="kinds" onclick="lmTab('kinds')">🏷️ الأنواع</button>
+      </div>
+
+      <div id="lm-pane-list">
+        <div class="lm-counts" id="lm-counts"></div>
+        <div class="card">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="lm-f-status" style="flex:1;min-width:150px" onchange="lmLoad(1)">
+              <option value="">كل الحالات</option>
+              <option value="ACTIVE">ظاهر على الخريطة</option>
+              <option value="PENDING_REVIEW">بانتظار المراجعة</option>
+              <option value="HIDDEN">مخفي</option>
+              <option value="CLAIMED">استلمه صاحبه</option>
+            </select>
+            <select id="lm-f-kind" style="flex:1;min-width:150px" onchange="lmLoad(1)"><option value="">كل الأنواع</option></select>
+            <input id="lm-f-q" placeholder="اسم أو عنوان" style="flex:2;min-width:180px" onkeydown="if(event.key==='Enter') lmLoad(1)">
+            <button onclick="lmLoad(1)">🔍 بحث</button>
+          </div>
+          <div id="lm-bulk" style="margin-top:12px;display:none"></div>
+          <table style="margin-top:14px">
+            <thead><tr><th class="rownum">#</th><th>الاسم</th><th>النوع</th><th>العنوان</th><th>الحالة</th><th></th></tr></thead>
+            <tbody id="lm-body"></tbody>
+          </table>
+          <div id="lm-pager" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <div id="lm-pane-form" style="display:none">
+        <div class="card">
+          <h3 id="lm-form-title">مكان جديد</h3>
+          <div class="grid2">
+            <div class="field"><label>النوع</label><select id="lm-kind" onchange="lmKindChanged()"></select></div>
+            <div class="field"><label>الحالة</label>
+              <select id="lm-status"><option value="ACTIVE">ظاهر على الخريطة</option><option value="PENDING_REVIEW">بانتظار المراجعة</option><option value="HIDDEN">مخفي</option></select></div>
+            <div class="field"><label>الاسم بالعربي</label><input id="lm-name" placeholder="مثال: جامع الأموي"></div>
+            <div class="field"><label>الاسم بالإنكليزي (اختياري)</label><input id="lm-name-en" dir="ltr" placeholder="e.g. Umayyad Mosque"></div>
+            <div class="field" id="lm-sector-box"><label>القطاع (للمشافي)</label>
+              <select id="lm-sector"><option value="">غير محدد</option><option value="PUBLIC">عام / حكومي (ما بينطلب ملكيته)</option><option value="PRIVATE">خاص (صاحبه يقدر يطالب فيه)</option></select></div>
+            <div class="field"><label>الهاتف (اختياري)</label><input id="lm-phone" dir="ltr" placeholder="+963 9xx xxx xxx"></div>
+          </div>
+          <div class="field"><label>العنوان (اختياري)</label><input id="lm-address" placeholder="مثال: دمشق القديمة، شارع مدحت باشا"></div>
+          <div class="field"><label>وصف قصير (اختياري)</label><input id="lm-desc" placeholder="مثال: من أقدم الجوامع بالعالم الإسلامي"></div>
+          <label id="lm-map-hint" style="margin-top:14px">اضغط على الخريطة لتحديد المكان</label>
+          <div id="lm-map" style="height:360px;border-radius:12px;border:1px solid var(--line);margin-bottom:8px"></div>
+          <div id="lm-line-tools" style="display:none;margin-bottom:8px">
+            <button class="secondary small" onclick="lmNewSegment()">➕ قطعة جديدة</button>
+            <button class="secondary small" onclick="lmUndoPoint()">↩️ تراجع عن آخر نقطة</button>
+            <button class="danger small" onclick="lmClearPath()">🗑️ مسح الخط</button>
+            <span class="muted" id="lm-line-info"></span>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>خط العرض</label><input id="lm-lat" dir="ltr" placeholder="مثال: 33.5138"></div>
+            <div class="field"><label>خط الطول</label><input id="lm-lng" dir="ltr" placeholder="مثال: 36.2765"></div>
+          </div>
+          <div style="margin-top:12px"><button onclick="lmSave(false)">حفظ</button> <button class="secondary" onclick="lmTab('list')">إلغاء</button> <span id="lm-msg" class="muted"></span></div>
+          <div id="lm-dup" style="display:none" class="error-banner"></div>
+        </div>
+      </div>
+
+      <div id="lm-pane-import" style="display:none">
+        <div class="card">
+          <h3>⬇️ استيراد من OpenStreetMap</h3>
+          <p class="muted">بيجيب الأماكن الموجودة حول نقطة محددة وبيحطها بقائمة <b>«بانتظار المراجعة»</b>. ما بيظهر منها شي على الخريطة قبل ما تعتمده. الأسماء بالعربي من OSM ممكن تكون ناقصة، فبتعدّلها قبل الاعتماد. الأماكن اللي موجودة عندنا مسبقًا ما بتنكرر.</p>
+          <label>اختار مدينة (أو اكتب الإحداثيات تحت)</label>
+          <div id="lm-cities" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
+          <div class="grid2">
+            <div class="field"><label>خط العرض</label><input id="lm-i-lat" dir="ltr" placeholder="مثال: 33.5138"></div>
+            <div class="field"><label>خط الطول</label><input id="lm-i-lng" dir="ltr" placeholder="مثال: 36.2765"></div>
+            <div class="field"><label>نصف القطر (كم، حتى 25)</label><input id="lm-i-r" dir="ltr" value="8" placeholder="مثال: 8"></div>
+          </div>
+          <label>الأنواع</label>
+          <div id="lm-i-kinds" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px"></div>
+          <button onclick="lmImport()" id="lm-i-btn">جلب الأماكن</button> <span id="lm-i-msg" class="muted"></span>
+          <p class="muted" style="margin-top:14px">البيانات من © OpenStreetMap contributors (رخصة ODbL).</p>
+        </div>
+      </div>
+
+      <div id="lm-pane-kinds" style="display:none">
+        <div class="card">
+          <h3>الأنواع</h3>
+          <p class="muted">أي نوع جديد (مدرسة، سوق، موقف...) بتضيفه هون بيظهر مباشرة على الخريطة، بدون برمجة. «خط» للشوارع، و«نقطة» لأي شي ثاني. «قابل للمطالبة» معناه إن صاحب مكان خاص من هالنوع يقدر يطالب فيه.</p>
+          <table>
+            <thead><tr><th>الرمز</th><th>الاسم بالعربي</th><th>بالإنكليزي</th><th>اللون</th><th>الشكل</th><th>قابل للمطالبة</th><th>مفعّل</th><th></th></tr></thead>
+            <tbody id="lm-kinds-body"></tbody>
+          </table>
+          <h3 style="margin-top:22px">➕ نوع جديد</h3>
+          <div class="grid2">
+            <div class="field"><label>اسم قصير بالإنكليزي (للنظام)</label><input id="nk-slug" dir="ltr" placeholder="مثال: school"></div>
+            <div class="field"><label>الاسم بالعربي</label><input id="nk-ar" placeholder="مثال: مدرسة"></div>
+            <div class="field"><label>الاسم بالإنكليزي</label><input id="nk-en" dir="ltr" placeholder="مثال: School"></div>
+            <div class="field"><label>رمز (إيموجي)</label><input id="nk-icon" placeholder="مثال: 🏫"></div>
+            <div class="field"><label>اللون</label><input id="nk-color" type="color" value="#c58a00" style="height:40px;padding:2px"></div>
+            <div class="field"><label>الشكل</label><select id="nk-geo"><option value="POINT">نقطة</option><option value="LINE">خط</option></select></div>
+          </div>
+          <button style="margin-top:10px" onclick="lmAddKind()">إضافة النوع</button> <span id="nk-msg" class="muted"></span>
+        </div>
+      </div>
+    </div>
+
     <!-- HOME -->
     <div class="section" id="section-home">
       <div class="hello">
@@ -877,6 +987,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="/app/pw-eye.js"></script>
 <script>
 const state = {
@@ -978,6 +1089,7 @@ const HOME_WAIT = [
   ['suggestions', '💡', 'اقتراحات مهن', 'suggestions', 'loadSuggestions()'],
   ['marketers', '📣', 'طلبات مسوّقين', 'marketers', 'loadMarketers()'],
   ['broadcasts', '🔔', 'إعلانات بانتظار المراجعة', 'broadcasts', 'loadBroadcasts()'],
+  ['landmarks', '📍', 'معالم بانتظار المراجعة', 'landmarks', 'lmOpen()'],
 ];
 const HOME_QUICK = [
   ['👥', 'المستخدمون', 'users'], ['🗂️', 'التصنيفات', 'categories'], ['💳', 'الباقات والأسعار', 'plans'], ['🛍️', 'المتجر', 'store'],
@@ -2703,6 +2815,285 @@ async function adjustWallet() {
   alert(ok ? 'الرصيد الجديد: ' + data.balance : errText(data, 'تحقق من البيانات'));
 }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+// ---- Landmarks: mosques, hospitals, parks, main streets (places without an owner's account) ----
+const lm = { kinds: [], items: {}, page: 1, editingId: null, map: null, layer: null, path: [], inited: false };
+const LM_STATUS = { ACTIVE: ['ظاهر', 'APPROVED'], PENDING_REVIEW: ['بانتظار المراجعة', 'PENDING'], HIDDEN: ['مخفي', 'inactive'], CLAIMED: ['استلمه صاحبه', 'APPROVED'] };
+const LM_CITIES = [['دمشق', 33.5138, 36.2765], ['حلب', 36.2021, 37.1343], ['حمص', 34.7324, 36.7137], ['حماة', 35.1318, 36.7578], ['اللاذقية', 35.5317, 35.7901], ['طرطوس', 34.8890, 35.8866], ['درعا', 32.6189, 36.1021], ['إدلب', 35.9306, 36.6339], ['دير الزور', 35.3359, 40.1408], ['الحسكة', 36.5024, 40.7477], ['السويداء', 32.7090, 36.5663]];
+const LM_IMPORTABLE = ['mosque', 'hospital', 'park', 'main_street'];
+const hasArabicText = (s) => /[؀-ۿ]/.test(s || '');
+
+async function lmOpen() {
+  if (!lm.inited) {
+    lm.inited = true;
+    await lmLoadKinds();
+    document.getElementById('lm-cities').innerHTML = LM_CITIES.map(([n, la, ln]) => `<button class="secondary small" onclick="lmPickCity(${la},${ln})">${n}</button>`).join('');
+  }
+  lmTab('list');
+}
+
+async function lmLoadKinds() {
+  const r = await api('GET', '/admin/landmark-kinds');
+  if (!r.ok) return;
+  lm.kinds = r.data.kinds;
+  const opts = lm.kinds.map(k => `<option value="${k.id}" data-slug="${esc(k.slug)}" data-geo="${k.geometry}">${esc(k.icon)} ${esc(k.nameAr)}</option>`).join('');
+  document.getElementById('lm-kind').innerHTML = opts;
+  document.getElementById('lm-f-kind').innerHTML = '<option value="">كل الأنواع</option>' + lm.kinds.map(k => `<option value="${esc(k.slug)}">${esc(k.icon)} ${esc(k.nameAr)}</option>`).join('');
+  document.getElementById('lm-i-kinds').innerHTML = lm.kinds.filter(k => LM_IMPORTABLE.includes(k.slug)).map(k => `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;font-size:14px;color:var(--text)"><input type="checkbox" class="lm-i-kind" value="${esc(k.slug)}" checked> ${esc(k.icon)} ${esc(k.nameAr)}</label>`).join('');
+  lmRenderKinds();
+}
+
+function lmTab(name) {
+  document.querySelectorAll('#lm-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  ['list', 'form', 'import', 'kinds'].forEach(p => { document.getElementById('lm-pane-' + p).style.display = p === name ? 'block' : 'none'; });
+  if (name === 'list') lmLoad(lm.page || 1);
+  if (name === 'form') { if (!lm.editingId) lmResetForm(); setTimeout(lmInitMap, 50); }
+}
+
+async function lmLoad(page) {
+  lm.page = page || 1;
+  const params = new URLSearchParams({ page: lm.page });
+  const status = document.getElementById('lm-f-status').value, kind = document.getElementById('lm-f-kind').value, q = document.getElementById('lm-f-q').value.trim();
+  if (status) params.set('status', status);
+  if (kind) params.set('kind', kind);
+  if (q) params.set('q', q);
+  const r = await api('GET', '/admin/landmarks?' + params.toString());
+  if (!r.ok) { document.getElementById('lm-body').innerHTML = `<tr><td colspan="6" class="muted">${esc(errText(r.data, 'تعذّر التحميل'))}</td></tr>`; return; }
+  const d = r.data;
+  lm.items = {};
+  d.items.forEach(l => { lm.items[l.id] = l; });
+  const total = Object.values(d.counts).reduce((a, b) => a + b, 0);
+  document.getElementById('lm-counts').innerHTML = `<button class="secondary small" onclick="lmFilterStatus('')">الكل ${fmt(total)}</button> ` + Object.entries(LM_STATUS).map(([k, [label]]) => `<button class="secondary small" onclick="lmFilterStatus('${k}')">${label} <b>${fmt(d.counts[k] || 0)}</b></button>`).join(' ');
+  const bulk = document.getElementById('lm-bulk');
+  if (status === 'PENDING_REVIEW' && d.total > 0) {
+    bulk.style.display = 'block';
+    bulk.innerHTML = `<button onclick="lmBulk('approve')">✅ اعتماد الكل (${fmt(d.total)}) حسب الفلتر</button> <button class="danger" onclick="lmBulk('delete')">🗑️ حذف الكل (${fmt(d.total)})</button> <span class="muted">الأماكن اللي بدون اسم عربي معلّمة ⚠️، عدّلها قبل الاعتماد.</span>`;
+  } else { bulk.style.display = 'none'; }
+  document.getElementById('lm-body').innerHTML = d.items.length ? d.items.map((l, i) => `
+    <tr>
+      <td class="rownum">${(lm.page - 1) * d.pageSize + i + 1}</td>
+      <td><b>${esc(l.name)}</b>${hasArabicText(l.name) ? '' : ' <span class="badge PENDING" title="الاسم مو بالعربي، عدّله">⚠️ بدون اسم عربي</span>'}${l.nameEn ? `<br><small class="muted" dir="ltr">${esc(l.nameEn)}</small>` : ''}</td>
+      <td>${esc(l.kind.icon)} ${esc(l.kind.nameAr)}${l.sector ? ` <small class="muted">· ${l.sector === 'PUBLIC' ? 'عام' : 'خاص'}</small>` : ''}</td>
+      <td class="muted">${esc(l.address || '—')}</td>
+      <td><span class="badge ${LM_STATUS[l.status][1]}">${LM_STATUS[l.status][0]}</span>${l.source === 'OSM' ? ' <small class="muted">OSM</small>' : ''}</td>
+      <td style="white-space:nowrap">
+        <button class="small secondary" onclick="lmEdit('${l.id}')">✏️ تعديل</button>
+        ${l.status === 'PENDING_REVIEW' || l.status === 'HIDDEN' ? `<button class="small" onclick="lmSetStatus('${l.id}','ACTIVE')">✅ اعتماد</button>` : ''}
+        ${l.status === 'ACTIVE' ? `<button class="small secondary" onclick="lmSetStatus('${l.id}','HIDDEN')">🙈 إخفاء</button>` : ''}
+        ${l.status !== 'CLAIMED' ? `<button class="small danger" onclick="lmDelete('${l.id}')">🗑️</button>` : ''}
+      </td>
+    </tr>`).join('') : '<tr><td colspan="6" class="muted">ما في أماكن بهالفلتر</td></tr>';
+  document.getElementById('lm-pager').innerHTML = pagerHtml('lmLoad', lm.page, d.total);
+}
+
+function lmFilterStatus(s) { document.getElementById('lm-f-status').value = s; lmLoad(1); }
+
+async function lmSetStatus(id, status) {
+  const r = await api('PATCH', '/admin/landmarks/' + id, { status });
+  if (!r.ok) { alert(errText(r.data, 'تعذّر التعديل')); return; }
+  lmLoad(lm.page);
+}
+
+async function lmDelete(id) {
+  if (!confirm('تحذف هالمكان؟')) return;
+  const r = await fetch('/admin/landmarks/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + state.token } });
+  if (!r.ok) { alert(errText(await r.json().catch(() => ({})), 'تعذّر الحذف')); return; }
+  lmLoad(lm.page);
+}
+
+async function lmBulk(action) {
+  const filter = { status: document.getElementById('lm-f-status').value || undefined, kind: document.getElementById('lm-f-kind').value || undefined };
+  if (!confirm(action === 'approve' ? 'تعتمد كل الأماكن بهالفلتر وتظهر على الخريطة؟' : 'تحذف كل الأماكن بهالفلتر؟ ما بيرجعوا.')) return;
+  const r = await api('POST', '/admin/landmarks/review', { action, filter });
+  if (!r.ok) { alert(errText(r.data, 'تعذّر التنفيذ')); return; }
+  alert('تم: ' + fmt(r.data.changed) + ' مكان');
+  lmLoad(1);
+}
+
+/* ---- the form with the map ---- */
+
+function lmKind() { const o = document.getElementById('lm-kind').selectedOptions[0]; return o ? { id: o.value, slug: o.dataset.slug, geo: o.dataset.geo } : { geo: 'POINT' }; }
+
+function lmResetForm() {
+  lm.editingId = null; lm.path = [];
+  document.getElementById('lm-form-title').textContent = 'مكان جديد';
+  ['name', 'name-en', 'phone', 'address', 'desc', 'lat', 'lng'].forEach(f => { document.getElementById('lm-' + f).value = ''; });
+  document.getElementById('lm-status').value = 'ACTIVE';
+  document.getElementById('lm-sector').value = '';
+  document.getElementById('lm-msg').textContent = '';
+  document.getElementById('lm-dup').style.display = 'none';
+  lmKindChanged();
+  lmDraw();
+}
+
+function lmKindChanged() {
+  const k = lmKind();
+  document.getElementById('lm-sector-box').style.display = k.slug === 'hospital' ? '' : 'none';
+  document.getElementById('lm-line-tools').style.display = k.geo === 'LINE' ? 'block' : 'none';
+  document.getElementById('lm-map-hint').textContent = k.geo === 'LINE' ? 'اضغط على الخريطة نقطة نقطة لرسم الشارع (القطعة الجديدة للأجزاء المنفصلة)' : 'اضغط على الخريطة لتحديد المكان (أو اسحب الدبوس)';
+  lmDraw();
+}
+
+function lmInitMap() {
+  if (!window.L) { document.getElementById('lm-map').textContent = 'تعذّر تحميل الخريطة'; return; }
+  if (!lm.map) {
+    lm.map = L.map('lm-map').setView([33.5138, 36.2765], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(lm.map);
+    lm.layer = L.layerGroup().addTo(lm.map);
+    lm.map.on('click', (e) => lmMapClick(e.latlng.lat, e.latlng.lng));
+  }
+  lm.map.invalidateSize();
+  lmDraw(true);
+}
+
+function lmMapClick(lat, lng) {
+  if (lmKind().geo === 'LINE') {
+    if (!lm.path.length) lm.path.push([]);
+    lm.path[lm.path.length - 1].push([lat, lng]);
+    lmDraw();
+  } else {
+    document.getElementById('lm-lat').value = lat.toFixed(6);
+    document.getElementById('lm-lng').value = lng.toFixed(6);
+    lmDraw();
+  }
+}
+function lmNewSegment() { if (!lm.path.length || lm.path[lm.path.length - 1].length) lm.path.push([]); }
+function lmUndoPoint() { const last = lm.path[lm.path.length - 1]; if (last) { last.pop(); if (!last.length) lm.path.pop(); } lmDraw(); }
+function lmClearPath() { lm.path = []; lmDraw(); }
+
+function lmDraw(fit) {
+  if (!lm.map || !lm.layer) return;
+  lm.layer.clearLayers();
+  const k = lmKind();
+  if (k.geo === 'LINE') {
+    lm.path.forEach(seg => { if (seg.length) L.polyline(seg, { color: '#8e44ad', weight: 5 }).addTo(lm.layer); seg.forEach(p => L.circleMarker(p, { radius: 4, color: '#8e44ad', fillOpacity: 1 }).addTo(lm.layer)); });
+    document.getElementById('lm-line-info').textContent = lm.path.length ? lm.path.length + ' قطعة · ' + lm.path.reduce((a, s) => a + s.length, 0) + ' نقطة' : '';
+    if (fit && lm.path.length) lm.map.fitBounds(L.latLngBounds(lm.path.flat()), { padding: [30, 30] });
+  } else {
+    const lat = parseFloat(document.getElementById('lm-lat').value), lng = parseFloat(document.getElementById('lm-lng').value);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      const m = L.marker([lat, lng], { draggable: true }).addTo(lm.layer);
+      m.on('dragend', () => { const p = m.getLatLng(); document.getElementById('lm-lat').value = p.lat.toFixed(6); document.getElementById('lm-lng').value = p.lng.toFixed(6); });
+      if (fit) lm.map.setView([lat, lng], 16);
+    }
+  }
+}
+
+function lmEdit(id) {
+  const l = lm.items[id];
+  if (!l) return;
+  lm.editingId = id;
+  lmTab('form');
+  document.getElementById('lm-form-title').textContent = 'تعديل: ' + l.name;
+  document.getElementById('lm-kind').value = l.kindId;
+  document.getElementById('lm-status').value = l.status === 'CLAIMED' ? 'HIDDEN' : l.status;
+  document.getElementById('lm-name').value = l.name;
+  document.getElementById('lm-name-en').value = l.nameEn || '';
+  document.getElementById('lm-sector').value = l.sector || '';
+  document.getElementById('lm-phone').value = l.phone || '';
+  document.getElementById('lm-address').value = l.address || '';
+  document.getElementById('lm-desc').value = l.description || '';
+  document.getElementById('lm-lat').value = l.latitude;
+  document.getElementById('lm-lng').value = l.longitude;
+  lm.path = Array.isArray(l.path) ? l.path.map(seg => seg.map(p => [p[0], p[1]])) : [];
+  document.getElementById('lm-dup').style.display = 'none';
+  lmKindChanged();
+  setTimeout(() => { lmInitMap(); lmDraw(true); if (lm.map && !(lm.path.length)) lm.map.setView([l.latitude, l.longitude], 16); }, 80);
+}
+
+function lmLabelPoint() {
+  const segs = lm.path.filter(s => s.length >= 2);
+  if (!segs.length) return null;
+  const longest = [...segs].sort((a, b) => b.length - a.length)[0];
+  return longest[Math.floor(longest.length / 2)];
+}
+
+async function lmSave(force) {
+  const msg = document.getElementById('lm-msg');
+  const k = lmKind();
+  const body = {
+    kindId: k.id, name: document.getElementById('lm-name').value.trim(), nameEn: document.getElementById('lm-name-en').value.trim() || null,
+    description: document.getElementById('lm-desc').value.trim() || null, address: document.getElementById('lm-address').value.trim() || null,
+    phone: document.getElementById('lm-phone').value.trim() || null, status: document.getElementById('lm-status').value,
+    sector: k.slug === 'hospital' ? (document.getElementById('lm-sector').value || null) : null,
+  };
+  if (k.geo === 'LINE') {
+    const mid = lmLabelPoint();
+    if (!mid) { msg.textContent = 'ارسم الشارع على الخريطة أول (نقطتين على الأقل)'; return; }
+    body.latitude = mid[0]; body.longitude = mid[1]; body.path = lm.path.filter(s => s.length >= 2);
+  } else {
+    body.latitude = parseFloat(document.getElementById('lm-lat').value); body.longitude = parseFloat(document.getElementById('lm-lng').value);
+    if (!Number.isFinite(body.latitude) || !Number.isFinite(body.longitude)) { msg.textContent = 'حدّد المكان على الخريطة'; return; }
+  }
+  if (!body.name) { msg.textContent = 'اكتب الاسم'; return; }
+  if (force) body.force = true;
+  const r = lm.editingId ? await api('PATCH', '/admin/landmarks/' + lm.editingId, body) : await api('POST', '/admin/landmarks', body);
+  const dup = document.getElementById('lm-dup');
+  if (r.status === 409 && r.data.error && Array.isArray(r.data.error.details)) {
+    dup.style.display = 'block';
+    dup.innerHTML = 'في مكان مشابه موجود على الخريطة: ' + r.data.error.details.map(s => `<b>${esc(s.name)}</b>`).join('، ') + ' <button class="small" onclick="lmSave(true)">أضيف رغم ذلك</button>';
+    return;
+  }
+  dup.style.display = 'none';
+  if (!r.ok) { msg.textContent = errText(r.data, 'فشل الحفظ'); return; }
+  msg.textContent = 'انحفظ ✅';
+  lm.editingId = null;
+  lmTab('list');
+}
+
+/* ---- import ---- */
+
+function lmPickCity(lat, lng) { document.getElementById('lm-i-lat').value = lat; document.getElementById('lm-i-lng').value = lng; }
+
+async function lmImport() {
+  const msg = document.getElementById('lm-i-msg'), btn = document.getElementById('lm-i-btn');
+  const kinds = [...document.querySelectorAll('.lm-i-kind:checked')].map(c => c.value);
+  const latitude = parseFloat(document.getElementById('lm-i-lat').value), longitude = parseFloat(document.getElementById('lm-i-lng').value), radiusKm = parseFloat(document.getElementById('lm-i-r').value);
+  if (!kinds.length) { msg.textContent = 'اختار نوع واحد على الأقل'; return; }
+  if (![latitude, longitude, radiusKm].every(Number.isFinite)) { msg.textContent = 'اختار مدينة أو اكتب الإحداثيات'; return; }
+  btn.disabled = true; msg.textContent = 'جاري الجلب… ممكن ياخد حتى دقيقتين';
+  const r = await api('POST', '/admin/landmarks/import', { latitude, longitude, radiusKm, kinds });
+  btn.disabled = false;
+  if (!r.ok) { msg.textContent = errText(r.data, 'تعذّر الاستيراد'); return; }
+  const d = r.data, names = { mosque: 'جامع', hospital: 'مشفى', park: 'حديقة', main_street: 'شارع' };
+  msg.innerHTML = `انجلب <b>${fmt(d.total)}</b> مكان جديد (${Object.entries(d.created).map(([k, n]) => fmt(n) + ' ' + names[k]).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(d.skipped)} · بدون اسم ${fmt(d.unnamed)} · بدون اسم عربي ${fmt(d.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
+}
+
+/* ---- kinds ---- */
+
+function lmRenderKinds() {
+  document.getElementById('lm-kinds-body').innerHTML = lm.kinds.map(k => `
+    <tr>
+      <td><input id="kd-icon-${k.id}" value="${esc(k.icon)}" style="width:60px"></td>
+      <td><input id="kd-ar-${k.id}" value="${esc(k.nameAr)}"></td>
+      <td><input id="kd-en-${k.id}" value="${esc(k.nameEn)}" dir="ltr"></td>
+      <td><input id="kd-color-${k.id}" type="color" value="${esc(k.color)}" style="width:60px;height:36px;padding:2px"></td>
+      <td>${k.geometry === 'LINE' ? 'خط' : 'نقطة'}</td>
+      <td><input type="checkbox" id="kd-claim-${k.id}" ${k.claimable ? 'checked' : ''} style="width:20px;height:20px"></td>
+      <td><input type="checkbox" id="kd-on-${k.id}" ${k.isActive ? 'checked' : ''} style="width:20px;height:20px"></td>
+      <td><button class="small" onclick="lmSaveKind('${k.id}')">حفظ</button></td>
+    </tr>`).join('');
+}
+
+async function lmSaveKind(id) {
+  const g = (p) => document.getElementById('kd-' + p + '-' + id);
+  const r = await api('PATCH', '/admin/landmark-kinds/' + id, { icon: g('icon').value.trim(), nameAr: g('ar').value.trim(), nameEn: g('en').value.trim(), color: g('color').value, claimable: g('claim').checked, isActive: g('on').checked });
+  if (!r.ok) { alert(errText(r.data, 'فشل الحفظ')); return; }
+  await lmLoadKinds();
+  alert('انحفظ ✅');
+}
+
+async function lmAddKind() {
+  const msg = document.getElementById('nk-msg');
+  const r = await api('POST', '/admin/landmark-kinds', {
+    slug: document.getElementById('nk-slug').value.trim(), nameAr: document.getElementById('nk-ar').value.trim(), nameEn: document.getElementById('nk-en').value.trim(),
+    icon: document.getElementById('nk-icon').value.trim(), color: document.getElementById('nk-color').value, geometry: document.getElementById('nk-geo').value, claimable: false, isActive: true,
+  });
+  if (!r.ok) { msg.textContent = errText(r.data, 'فشلت الإضافة'); return; }
+  msg.textContent = 'انضاف ✅';
+  ['slug', 'ar', 'en', 'icon'].forEach(f => { document.getElementById('nk-' + f).value = ''; });
+  await lmLoadKinds();
+}
 
 // ---- boot ----
 if (state.token) enterApp();

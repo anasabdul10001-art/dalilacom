@@ -85,6 +85,10 @@ data class DiscoverUiState(
     /** Open sections browser: the ids of the nodes drilled into so far (empty = the top level). */
     val browseTrail: List<String>? = null,
     val message: String? = null,
+    /** The public places on the map, and whether they are switched on. */
+    val landmarks: List<com.dalilacom.app.data.network.LandmarkDto> = emptyList(),
+    val landmarksOn: Boolean = true,
+    val openedLandmark: com.dalilacom.app.data.network.LandmarkDto? = null,
 )
 
 class DiscoverViewModel(
@@ -182,6 +186,36 @@ class DiscoverViewModel(
         lastViewport = bounds
         _uiState.update { if (it.areaDirty) it else it.copy(areaDirty = true) }
     }
+
+    private var landmarksJob: Job? = null
+    private var lastView: Pair<MapBounds, Double>? = null
+
+    /** The map settled somewhere (the person or the app moved it): the public places of that view, when it is close enough to read. */
+    fun onMapView(bounds: MapBounds, zoom: Double) {
+        lastView = bounds to zoom
+        loadLandmarks()
+    }
+
+    private fun loadLandmarks() {
+        val (bounds, zoom) = lastView ?: return
+        landmarksJob?.cancel()
+        if (!_uiState.value.landmarksOn || zoom < 12.0) {
+            _uiState.update { if (it.landmarks.isEmpty()) it else it.copy(landmarks = emptyList()) }
+            return
+        }
+        landmarksJob = viewModelScope.launch {
+            val found = repository.landmarks(bounds)
+            _uiState.update { it.copy(landmarks = found) }
+        }
+    }
+
+    fun toggleLandmarks() {
+        _uiState.update { it.copy(landmarksOn = !it.landmarksOn, landmarks = emptyList()) }
+        loadLandmarks()
+    }
+
+    fun openLandmark(landmark: com.dalilacom.app.data.network.LandmarkDto) = _uiState.update { it.copy(openedLandmark = landmark) }
+    fun closeLandmark() = _uiState.update { it.copy(openedLandmark = null) }
 
     fun searchThisArea() {
         val bounds = lastViewport ?: return

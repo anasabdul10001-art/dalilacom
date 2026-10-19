@@ -157,6 +157,53 @@ private fun arrowIcon(context: Context): BitmapDrawable {
     return BitmapDrawable(context.resources, bitmap)
 }
 
+private val landmarkIcons = HashMap<String, BitmapDrawable>()
+
+/** A public place: a round badge in its kind's colour, white ring, its emoji in the middle (smaller and calmer than a shop's pin). */
+private fun landmarkIcon(context: Context, emoji: String, colorHex: String): BitmapDrawable = landmarkIcons.getOrPut("$emoji|$colorHex") {
+    val d = context.resources.displayMetrics.density
+    val size = (32 * d).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    paint.color = Color.WHITE
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+    paint.color = runCatching { Color.parseColor(colorHex) }.getOrDefault(Color.DKGRAY)
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 2.5f * d, paint)
+    paint.color = Color.WHITE
+    paint.textAlign = Paint.Align.CENTER
+    paint.textSize = 15 * d
+    canvas.drawText(emoji, size / 2f, size / 2f - (paint.descent() + paint.ascent()) / 2, paint)
+    BitmapDrawable(context.resources, bitmap)
+}
+
+/** The name of a street, written on a small white label in its colour. */
+private fun streetLabel(context: Context, text: String, colorHex: String): BitmapDrawable {
+    val d = context.resources.displayMetrics.density
+    val color = runCatching { Color.parseColor(colorHex) }.getOrDefault(Color.DKGRAY)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    paint.textSize = 12 * d
+    paint.isFakeBoldText = true
+    val w = (paint.measureText(text) + 14 * d).toInt()
+    val h = (22 * d).toInt()
+    val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val box = android.graphics.RectF(1 * d, 1 * d, w - 1 * d, h - 1 * d)
+    paint.color = Color.argb(235, 255, 255, 255)
+    canvas.drawRoundRect(box, 6 * d, 6 * d, paint)
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = 1.5f * d
+    paint.color = color
+    canvas.drawRoundRect(box, 6 * d, 6 * d, paint)
+    paint.style = Paint.Style.FILL
+    paint.textAlign = Paint.Align.CENTER
+    canvas.drawText(text, w / 2f, h / 2f - (paint.descent() + paint.ascent()) / 2, paint)
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/** How close the map must be before a kind is drawn (mosques are many, so they wait for a closer view). */
+private fun landmarkMinZoom(slug: String): Double = when (slug) { "mosque" -> 14.0; "main_street", "hospital", "park" -> 12.0; else -> 13.0 }
+
 /**
  * OpenStreetMap view (no API key needed): the user's position, one pin per merchant, pins that
  * are close together folded into numbered clusters (tap to zoom in), and a callback when the
@@ -179,6 +226,10 @@ fun MerchantsMap(
     followUser: Boolean = false,
     userBearing: Float? = null,
     onUserPanned: () -> Unit = {},
+    /** The public places in view (mosques, hospitals, parks, main streets), a tap on one, and the view each time the map settles. */
+    landmarks: List<com.dalilacom.app.data.network.LandmarkDto> = emptyList(),
+    onLandmark: (com.dalilacom.app.data.network.LandmarkDto) -> Unit = {},
+    onView: (MapBounds, Double) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -217,6 +268,9 @@ fun MerchantsMap(
     val latestNavigating by rememberUpdatedState(navigating)
     val latestBearing by rememberUpdatedState(userBearing)
     val latestOnPanned by rememberUpdatedState(onUserPanned)
+    val latestLandmarks by rememberUpdatedState(landmarks)
+    val latestOnLandmark by rememberUpdatedState(onLandmark)
+    val latestOnView by rememberUpdatedState(onView)
 
     fun redraw(map: MapView) {
         map.overlays.clear()
@@ -247,6 +301,48 @@ fun MerchantsMap(
                     if (latestWalking) outlinePaint.pathEffect = DashPathEffect(floatArrayOf(1f, 12f * density), 0f)
                 },
             )
+        }
+        // the public places go under the shops' pins
+        val zoom = map.zoomLevelDouble
+        for (place in latestLandmarks) {
+            if (zoom < landmarkMinZoom(place.kind.slug)) continue
+            val color = runCatching { Color.parseColor(place.kind.color) }.getOrDefault(Color.DKGRAY)
+            val path = place.path
+            if (place.kind.geometry == "LINE" && path != null) {
+                for (segment in path) {
+                    if (segment.size < 2) continue
+                    map.overlays.add(
+                        Polyline(map).apply {
+                            setPoints(segment.map { GeoPoint(it[0], it[1]) })
+                            outlinePaint.color = color
+                            outlinePaint.alpha = 210
+                            outlinePaint.strokeWidth = 5 * context.resources.displayMetrics.density
+                            outlinePaint.strokeCap = Paint.Cap.ROUND
+                            setOnClickListener { _, _, _ -> latestOnLandmark(place); true }
+                        },
+                    )
+                }
+                if (zoom >= 14.0) {
+                    Marker(map).apply {
+                        position = GeoPoint(place.latitude, place.longitude)
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        icon = streetLabel(context, place.name, place.kind.color)
+                        setInfoWindow(null)
+                        setOnMarkerClickListener { _, _ -> latestOnLandmark(place); true }
+                        map.overlays.add(this)
+                    }
+                }
+                continue
+            }
+            Marker(map).apply {
+                position = GeoPoint(place.latitude, place.longitude)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = landmarkIcon(context, place.kind.icon, place.kind.color)
+                title = place.name
+                setInfoWindow(null)
+                setOnMarkerClickListener { _, _ -> latestOnLandmark(place); true }
+                map.overlays.add(this)
+            }
         }
         val measured = map.width > 0
         if (!measured) map.post { if (map.width > 0) redraw(map) }
@@ -340,6 +436,10 @@ fun MerchantsMap(
                 latestOnMoved(MapBounds(box.latNorth, box.latSouth, box.lonEast, box.lonWest))
             }
         }
+        val reportView = Runnable {
+            val box = mapView.boundingBox
+            latestOnView(MapBounds(box.latNorth, box.latSouth, box.lonEast, box.lonWest), mapView.zoomLevelDouble)
+        }
         val redrawLater = Runnable { redraw(mapView) }
         val listener = object : MapListener {
             override fun onScroll(event: ScrollEvent?): Boolean {
@@ -347,6 +447,8 @@ fun MerchantsMap(
                 if (latestNavigating && SystemClock.uptimeMillis() > ignoreMovesUntil[0]) latestOnPanned()
                 handler.removeCallbacks(reportMove)
                 handler.postDelayed(reportMove, 500)
+                handler.removeCallbacks(reportView)
+                handler.postDelayed(reportView, 600)
                 return false
             }
 
@@ -355,10 +457,13 @@ fun MerchantsMap(
                 handler.postDelayed(redrawLater, 150)
                 handler.removeCallbacks(reportMove)
                 handler.postDelayed(reportMove, 500)
+                handler.removeCallbacks(reportView)
+                handler.postDelayed(reportView, 600)
                 return false
             }
         }
         mapView.addMapListener(listener)
+        handler.postDelayed(reportView, 1200) // the first view, once the map has its size
         lifecycleOwner.lifecycle.addObserver(observer)
         mapView.onResume()
         onDispose {

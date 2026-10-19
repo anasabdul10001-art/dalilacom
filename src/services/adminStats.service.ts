@@ -46,7 +46,7 @@ export async function adminOverview() {
     ordersTotal, orders30, ordersPrev30, ordersByStatus, ordersSum30,
     productsApproved, productsPending,
     devices,
-    pendMerchants, pendDiscounts, pendSuggestions, pendAds, pendBanners, pendTopups, pendMarketers, pendBroadcasts,
+    pendMerchants, pendDiscounts, pendSuggestions, pendAds, pendBanners, pendTopups, pendMarketers, pendBroadcasts, pendLandmarks,
     topCategoriesRaw, topShopsRaw,
     sUsers, sMerchants, sTx, sOrders,
   ] = await Promise.all([
@@ -82,6 +82,7 @@ export async function adminOverview() {
     prisma.topUpRequest.count({ where: { status: "PENDING" } }),
     prisma.marketerRequest.count({ where: { status: "PENDING" } }),
     prisma.broadcast.count({ where: { status: "PENDING_REVIEW" } }),
+    prisma.landmark.count({ where: { status: "PENDING_REVIEW" } }),
     prisma.merchantProfile.groupBy({ by: ["categoryId"], where: { approvalStatus: "APPROVED" }, _count: { _all: true }, orderBy: { _count: { categoryId: "desc" } }, take: 6 }),
     prisma.discountTransaction.groupBy({ by: ["merchantId"], where: { status: "CONFIRMED", createdAt: { gte: d30 } }, _count: { _all: true }, _sum: { discountAmountCents: true }, orderBy: { _count: { merchantId: "desc" } }, take: 5 }),
     series("User"),
@@ -113,7 +114,7 @@ export async function adminOverview() {
     products: { approved: productsApproved, pending: productsPending },
     waiting: {
       merchants: pendMerchants, discounts: pendDiscounts, products: productsPending, suggestions: pendSuggestions,
-      ads: pendAds + pendBanners, topups: pendTopups, marketers: pendMarketers, broadcasts: pendBroadcasts,
+      ads: pendAds + pendBanners, topups: pendTopups, marketers: pendMarketers, broadcasts: pendBroadcasts, landmarks: pendLandmarks,
     },
     series: { users: fill(sUsers, 30), merchants: fill(sMerchants, 30), discounts: fill(sTx, 30), orders: fill(sOrders, 30) },
     topCategories: topCategoriesRaw.map((c) => ({ name: catName.get(c.categoryId) ?? "—", count: c._count._all })),

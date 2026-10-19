@@ -966,4 +966,8 @@
     <string name="ph_txn" formatted="false">مثال: رقم العملية من تطبيق الدفع</string>
     <string name="ph_vat" formatted="false">مثال: DE123456789</string>
     <string name="ph_whatsapp" formatted="false">مثال: 963912345678</string>
+    <string name="lm_chip">المعالم</string>
+    <string name="lm_directions">الاتجاهات</string>
+    <string name="lm_public">عام</string>
+    <string name="lm_private">خاص</string>
 </resources>
