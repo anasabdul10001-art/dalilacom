@@ -35,6 +35,16 @@ export const en: LanguagePack = {
     "المجيب الآلي": "Auto-responder",
     "إعلانات المتجر والرسائل الجماعية للزبائن": "Store ads and bulk messages to customers",
 
+    // ---- the automatic review of a shop that registers ----
+    "الاسم أو العنوان فيه ألفاظ غير لائقة": "The name or address has inappropriate words",
+    "اسم النشاط لازم يكون بحروف واضحة": "The business name must use clear letters",
+    "اسم النشاط فيه حروف متكررة بشكل غريب": "The business name has oddly repeated letters",
+    "اسم النشاط فيه رابط أو رقم هاتف": "The business name contains a link or a phone number",
+    "نشاط بانتظار المراجعة": "A business is waiting for review",
+    "غير مناسب للنشر": "Not suitable to publish",
+    "انقبل نشاطك ✅": "Your business was approved ✅",
+    "ما انقبل نشاطك": "Your business was not accepted",
+
     // ---- a place's owner asking to take it over ----
     "نحتاج معلومات إضافية لطلبك": "We need more information for your request",
     "ما قدرنا نقبل طلبك": "We could not accept your request",
@@ -338,6 +348,8 @@ export const en: LanguagePack = {
     "صدر هذا الإيصال عبر منصة دليلكم": "This receipt was issued through the Dalilacom platform",
   },
   patterns: [
+    [/^«(.+)» صار على دليلكم وبيظهر للزبائن\.$/, '"$1" is now on Dalilacom and visible to customers.'],
+    [/^«(.+)»: (.+)\. بتقدر تعدّل معلوماتك وتجرّب من جديد\.$/s, '"$1": $2. You can edit your details and try again.'],
     [/^بخصوص طلبك للمطالبة بـ «(.+)»: (.+)$/s, 'About your request to claim "$1": $2'],
     [/^طلبك للمطالبة بـ «(.+)» انرفض\. السبب: (.+)$/s, 'Your request to claim "$1" was refused. Reason: $2'],
     [/^طلبك للمطالبة بـ «(.+)» انرفض: تم قبول طلب ثاني لنفس المكان\.$/, 'Your request to claim "$1" was refused: another request for the same place was accepted.'],

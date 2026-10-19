@@ -759,19 +759,59 @@ adminRouter.delete("/product-categories/:id", route(async (req, res) => {
 
 /* ---------------- products waiting to be looked at ---------------- */
 
+const PRODUCTS_PAGE = 50;
+const adminProduct = (p: Prisma.ProductGetPayload<{ include: { merchant: { select: { businessName: true; phone: true } } } }>) => ({
+  id: p.id, name: p.name, description: p.description, priceCents: p.priceCents, stock: p.stock, isActive: p.isActive, condition: p.condition,
+  specs: Array.isArray(p.specs) ? p.specs : [], images: p.images.length ? p.images : p.imageUrl ? [p.imageUrl] : [],
+  moderation: p.moderation, note: p.moderationNote, createdAt: p.createdAt, updatedAt: p.updatedAt, shop: p.merchant.businessName, phone: p.merchant.phone,
+});
+
+// Every product, whatever its state: waiting, accepted or refused (or all), searchable, 50 to a page
 adminRouter.get("/products", route(async (req, res) => {
-  const status = z.enum(["PENDING", "REJECTED", "APPROVED"]).catch("PENDING").parse(req.query.status);
-  const rows = await prisma.product.findMany({
-    where: { moderation: status },
-    orderBy: { updatedAt: status === "PENDING" ? "asc" : "desc" },
-    take: 100,
+  const parsed = z.object({
+    status: z.enum(["PENDING", "REJECTED", "APPROVED", "ALL"]).catch("PENDING"),
+    q: z.string().trim().max(80).optional(),
+    page: z.coerce.number().int().min(1).max(100000).catch(1),
+  }).parse(req.query);
+  const where: Prisma.ProductWhereInput = {
+    ...(parsed.status === "ALL" ? {} : { moderation: parsed.status }),
+    ...(parsed.q ? { OR: [{ name: { contains: parsed.q, mode: "insensitive" } }, { description: { contains: parsed.q, mode: "insensitive" } }, { merchant: { businessName: { contains: parsed.q, mode: "insensitive" } } }] } : {}),
+  };
+  const [total, rows] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      orderBy: [{ updatedAt: parsed.status === "PENDING" ? "asc" : "desc" }, { id: "asc" }],
+      skip: (parsed.page - 1) * PRODUCTS_PAGE,
+      take: PRODUCTS_PAGE,
+      include: { merchant: { select: { businessName: true, phone: true } } },
+    }),
+  ]);
+  res.set({ "X-Total-Count": String(total), "X-Page-Size": String(PRODUCTS_PAGE) });
+  res.json(rows.map(adminProduct));
+}));
+
+// The admin fixes what a product says (a wrong word, a price, the stock) or hides it, without sending it back through the review
+adminRouter.patch("/products/:id", route(async (req, res) => {
+  const parsed = z.object({
+    name: z.string().trim().min(2).max(120).optional(),
+    description: z.string().trim().max(2000).nullable().optional(),
+    priceCents: z.number().int().min(0).max(100_000_000).optional(),
+    stock: z.number().int().min(0).max(1_000_000).optional(),
+    isActive: z.boolean().optional(),
+    condition: z.enum(["NEW", "USED"]).nullable().optional(),
+    specs: z.array(z.object({ label: z.string().trim().min(1).max(60), value: z.string().trim().min(1).max(160) })).max(20).optional(),
+  }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const exists = await prisma.product.findUnique({ where: { id: req.params.id }, select: { id: true } });
+  if (!exists) return sendError(res, 404, "NOT_FOUND", "Product not found");
+  const { specs, description, ...rest } = parsed.data;
+  const updated = await prisma.product.update({
+    where: { id: req.params.id },
+    data: { ...rest, ...(description !== undefined ? { description: description || null } : {}), ...(specs !== undefined ? { specs } : {}) },
     include: { merchant: { select: { businessName: true, phone: true } } },
   });
-  res.json(rows.map((p) => ({
-    id: p.id, name: p.name, description: p.description, priceCents: p.priceCents, specs: Array.isArray(p.specs) ? p.specs : [],
-    images: p.images.length ? p.images : p.imageUrl ? [p.imageUrl] : [], moderation: p.moderation, note: p.moderationNote, createdAt: p.createdAt,
-    shop: p.merchant.businessName, phone: p.merchant.phone,
-  })));
+  res.json(adminProduct(updated));
 }));
 
 adminRouter.post("/products/:id/approve", route(async (req, res) => {

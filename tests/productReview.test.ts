@@ -123,3 +123,33 @@ describe("a product is looked at before anyone sees it", () => {
     expect(screened).toEqual([]);
   });
 });
+
+describe("the admin opens any product, accepted or refused, and fixes it", () => {
+  it("lists every state with a search and a total, and edits a product without sending it back through the review", async () => {
+    const s = await shop();
+    const boss = await account("rvboss2", { role: "ADMIN" });
+    const good = await add(s, "قميص قطن أبيض");
+    const bad = await add(s, "منتج BLOCK للتعديل");
+    expect(good.body.moderation).toBe("APPROVED");
+    expect(bad.body.moderation).toBe("REJECTED");
+
+    const all = await request(app).get("/admin/products").set(boss.auth).query({ status: "ALL", q: "للتعديل" });
+    expect(all.status).toBe(200);
+    expect(all.body.map((p: { id: string }) => p.id)).toEqual([bad.body.id]);
+    expect(Number(all.headers["x-total-count"])).toBe(1);
+    const accepted = await request(app).get("/admin/products").set(boss.auth).query({ status: "APPROVED", q: "قميص قطن" });
+    expect(accepted.body[0]).toMatchObject({ id: good.body.id, moderation: "APPROVED", priceCents: 1000, stock: 5, isActive: true });
+    const byShop = await request(app).get("/admin/products").set(boss.auth).query({ status: "ALL", q: accepted.body[0].shop });
+    expect(byShop.body.length).toBeGreaterThanOrEqual(2);
+
+    screened.length = 0;
+    const edited = await request(app).patch(`/admin/products/${good.body.id}`).set(boss.auth).send({ name: "قميص قطن أزرق", priceCents: 2500, stock: 9, description: "قطن 100%", specs: [{ label: "اللون", value: "أزرق" }], isActive: false });
+    expect(edited.status).toBe(200);
+    expect(edited.body).toMatchObject({ name: "قميص قطن أزرق", priceCents: 2500, stock: 9, isActive: false, moderation: "APPROVED", specs: [{ label: "اللون", value: "أزرق" }] });
+    expect(screened).toEqual([]); // the admin's own edit is not read again by the AI
+    expect(await inStore(s.id)).not.toContain("قميص قطن أزرق"); // hidden by the admin
+    expect((await request(app).patch(`/admin/products/${good.body.id}`).set(boss.auth).send({ priceCents: -5 })).status).toBe(400);
+    expect((await request(app).patch(`/admin/products/${good.body.id}`).set((await account("rvcust2")).auth).send({ stock: 1 })).status).toBe(403);
+    expect((await request(app).patch(`/admin/products/00000000-0000-4000-8000-000000000000`).set(boss.auth).send({ stock: 1 })).status).toBe(404);
+  });
+});

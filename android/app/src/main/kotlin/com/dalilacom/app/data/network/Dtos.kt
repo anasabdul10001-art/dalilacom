@@ -501,7 +501,7 @@ data class RegisterMerchantRequest(
 )
 
 @Serializable
-data class RegisterMerchantResponse(val id: String, val businessName: String, val approvalStatus: String)
+data class RegisterMerchantResponse(val id: String, val businessName: String, val approvalStatus: String, val reason: String? = null)
 
 @Serializable
 data class VerifyRedeemRequest(val memberNumber: String, val code: String)

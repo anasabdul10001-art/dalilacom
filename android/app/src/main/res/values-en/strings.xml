@@ -992,4 +992,7 @@
     <string name="lm_similar_text">There is a public place nearby with the same name. If it is your place, claim it instead of registering a new one:</string>
     <string name="lm_claim_it">It is my place, claim it</string>
     <string name="lm_not_same">No, it is a different place — continue registering</string>
+    <string name="shop_approved">✅ Your business was approved and is on the map</string>
+    <string name="shop_rejected">Your business was not accepted:</string>
+    <string name="shop_pending">We got your request and it is being reviewed, we will tell you the result</string>
 </resources>

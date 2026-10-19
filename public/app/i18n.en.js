@@ -484,6 +484,11 @@ PHRASES.en = {
   "✅ انحفظت بيانات المحل": "✅ Shop details saved",
   "✅ انحفظت ساعات العمل": "✅ Opening hours saved",
   "💰 اشحن رصيدك": "💰 Top up your balance",
+  // ---- the result of registering a shop ----
+  "✅ انقبل نشاطك وصار على الخريطة": "✅ Your business was approved and is on the map",
+  "ما انقبل نشاطك:": "Your business was not accepted:",
+  "غير مناسب للنشر": "Not suitable to publish",
+  "وصلنا طلبك وهو قيد المراجعة، بنخبرك بالنتيجة": "We got your request and it is being reviewed, we will tell you the result",
   // ---- example texts shown faintly inside the fields ----
   "مثال: أنا مدير المشفى منذ 2020": "e.g. I have managed the hospital since 2020",
   "مثال: أحمد محمد": "e.g. Ahmed Mohamed",

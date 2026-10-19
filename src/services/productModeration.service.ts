@@ -14,11 +14,16 @@ export const REVIEWED_FIELDS = ["name", "description", "images", "specs", "condi
 
 type Outcome = { moderation: "APPROVED" | "PENDING" | "REJECTED"; note: string | null };
 
-async function firstPicture(images: string[]) {
-  const id = images[0]?.startsWith("/store/photos/") ? images[0].slice("/store/photos/".length) : null;
-  if (!id || !visionAvailable()) return null;
-  const photo = await prisma.productPhoto.findUnique({ where: { id } });
-  return photo ? { mime: photo.mime as "image/jpeg" | "image/png" | "image/webp", data: Buffer.from(photo.data) } : null;
+/** Up to three of the product's own pictures, when a provider can see (every picture counts: an improper one must not hide behind a good first one). */
+async function pictures(images: string[], max = 3) {
+  if (!visionAvailable()) return [];
+  const ids = images.filter((i) => i.startsWith("/store/photos/")).slice(0, max).map((i) => i.slice("/store/photos/".length));
+  const out: { mime: "image/jpeg" | "image/png" | "image/webp"; data: Buffer }[] = [];
+  for (const id of ids) {
+    const photo = await prisma.productPhoto.findUnique({ where: { id } });
+    if (photo) out.push({ mime: photo.mime as "image/jpeg" | "image/png" | "image/webp", data: Buffer.from(photo.data) });
+  }
+  return out;
 }
 
 async function tellAdmins(shopName: string, productName: string) {
@@ -33,7 +38,18 @@ export async function moderateProduct(productId: string): Promise<Outcome> {
   let outcome: Outcome = { moderation: "APPROVED", note: null };
   if (reviewEnabled()) {
     const specs = Array.isArray(product.specs) ? (product.specs as { label: string; value: string }[]) : [];
-    const screening = await screenListing({ name: product.name, description: product.description, specs }, await firstPicture(product.images.length ? product.images : product.imageUrl ? [product.imageUrl] : []));
+    const listing = { name: product.name, description: product.description, specs };
+    const photos = await pictures(product.images.length ? product.images : product.imageUrl ? [product.imageUrl] : []);
+    // the words with the first picture, then each other picture on its own: the worst answer decides, and a picture nobody could read means an admin looks
+    let screening = await screenListing(listing, photos[0] ?? null);
+    const rank = { OK: 0, REVIEW: 1, BLOCK: 2 } as const;
+    for (const extra of photos.slice(1)) {
+      if (!screening) break;
+      if (screening.verdict === "BLOCK") continue;
+      const more = await screenListing(listing, extra);
+      if (!more) { screening = null; break; }
+      if (rank[more.verdict] > rank[screening.verdict]) screening = { verdict: more.verdict, reasons: [...screening.reasons, ...more.reasons] };
+    }
     if (!screening) outcome = { moderation: "PENDING", note: null };
     else if (screening.verdict === "OK") outcome = { moderation: "APPROVED", note: null };
     else if (screening.verdict === "BLOCK") outcome = { moderation: "REJECTED", note: screening.reasons.join("، ") || null };

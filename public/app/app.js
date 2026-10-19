@@ -3880,6 +3880,7 @@ async function submitMerchantRegister() {
     S._catSug = ""; S._catSugOpen = false;
     S._onboarding = null;
     back();
+    toast(data.approvalStatus === "APPROVED" ? "✅ انقبل نشاطك وصار على الخريطة" : data.approvalStatus === "REJECTED" ? tr("ما انقبل نشاطك:") + " " + (data.reason || tr("غير مناسب للنشر")) : "وصلنا طلبك وهو قيد المراجعة، بنخبرك بالنتيجة");
   } else {
     S.error = errMsg(data, "تعذّر تسجيل حساب النشاط");
     render();

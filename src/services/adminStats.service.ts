@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
+import { aiAvailable, visionAvailable } from "./ai.service";
 
 /**
  * The numbers on the admin panel's home page: how big the platform is, how it moved in the last 30 days, and what is
@@ -104,6 +105,7 @@ export async function adminOverview() {
 
   return {
     generatedAt: now.toISOString(),
+    ai: { available: aiAvailable(), vision: visionAvailable() },
     users: { total: usersTotal, customers: roleCount("CUSTOMER"), merchants: roleCount("MERCHANT"), admins: roleCount("ADMIN"), last7: users7, last30: users30, trend: trend(users30, usersPrev30), verified, devices },
     merchants: { approved: merchantCount("APPROVED"), pending: merchantCount("PENDING"), rejected: merchantCount("REJECTED"), last30: merchants30, trend: trend(merchants30, merchantsPrev30) },
     memberships: { active: membersActive, last30: members30 },

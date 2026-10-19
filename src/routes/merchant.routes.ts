@@ -18,6 +18,7 @@ import { categoryAndDescendantIds, categoryNameLocalizer, searchCategories } fro
 import { requireAuth, requireRole } from "../middleware/auth";
 import { createBusinessFromMerchantProfile } from "../services/business.service";
 import { getDefaultCountry } from "../services/geo.service";
+import { adminDecidedShop, reviewShopQuick } from "../services/shopReview.service";
 import { computeOpenStatus, openingHoursSchema } from "../services/hours.service";
 
 export const merchantRouter = Router();
@@ -81,10 +82,14 @@ merchantRouter.post("/register", requireAuth, async (req, res) => {
 
   if (parsed.data.suggestedCategory) await createSuggestion(merchant.id, req.user!.id, parsed.data.suggestedCategory, parsed.data.categoryId);
 
+  // read at once: an ordinary shop goes live by itself, a clear violation is refused with the reason, a doubtful one waits for an admin
+  const review = await reviewShopQuick(merchant.id, { suggestedCategory: parsed.data.suggestedCategory });
+
   res.status(201).json({
     id: merchant.id,
     businessName: merchant.businessName,
-    approvalStatus: merchant.approvalStatus,
+    approvalStatus: review.status,
+    reason: review.status === "APPROVED" ? null : review.note,
   });
 });
 
@@ -179,6 +184,12 @@ merchantRouter.patch("/me", requireAuth, requireRole(Role.MERCHANT), async (req,
     }
     return profile;
   });
+  // a changed name, address or profession is read again (a refused shop that fixes it goes back to waiting first)
+  if (data.businessName !== undefined || data.address !== undefined || data.categoryId) {
+    if (existing.approvalStatus === "REJECTED") await prisma.merchantProfile.update({ where: { id: existing.id }, data: { approvalStatus: "PENDING", rejectionReason: null } });
+    await reviewShopQuick(existing.id, { wasApproved: existing.approvalStatus === "APPROVED" });
+    return res.json(await prisma.merchantProfile.findUnique({ where: { id: existing.id } }));
+  }
   res.json(updated);
 });
 
@@ -588,6 +599,7 @@ merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async 
     where: { id: req.params.id },
     data: { approvalStatus: "APPROVED", rejectionReason: null },
   });
+  await adminDecidedShop(merchant.id, true, null);
   res.json({ id: merchant.id, approvalStatus: merchant.approvalStatus });
 });
 
@@ -602,6 +614,7 @@ merchantRouter.post("/:id/reject", requireAuth, requireRole(Role.ADMIN), async (
     where: { id: req.params.id },
     data: { approvalStatus: "REJECTED", rejectionReason: parsed.data.reason },
   });
+  await adminDecidedShop(merchant.id, false, parsed.data.reason);
   res.json({ id: merchant.id, approvalStatus: merchant.approvalStatus, rejectionReason: merchant.rejectionReason });
 });
 

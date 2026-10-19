@@ -414,6 +414,7 @@
         <button class="refresh" id="home-refresh" onclick="loadHome(true)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> <span id="home-updated">تحديث</span></button>
       </div>
 
+      <div id="home-ai"></div>
       <h3 class="home-h">⏳ ينتظر قرارك</h3>
       <div class="waiting" id="home-waiting"><div class="skeleton" style="height:68px"></div><div class="skeleton" style="height:68px"></div><div class="skeleton" style="height:68px"></div></div>
 
@@ -812,8 +813,14 @@
         <button class="active" data-pstatus="PENDING" onclick="loadProductReview('PENDING')">بانتظار القرار</button>
         <button data-pstatus="REJECTED" onclick="loadProductReview('REJECTED')">مرفوضة</button>
         <button data-pstatus="APPROVED" onclick="loadProductReview('APPROVED')">مقبولة</button>
+        <button data-pstatus="ALL" onclick="loadProductReview('ALL')">الكل</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <input id="prev-q" placeholder="اسم المنتج أو المحل" style="flex:1;min-width:220px;max-width:380px" onkeydown="if(event.key==='Enter') loadProductReview(prevStatus, 1)">
+        <button onclick="loadProductReview(prevStatus, 1)">🔍 بحث</button>
       </div>
       <div id="prev-list"></div>
+      <div id="prev-pager" style="margin:10px 0"></div>
     </div>
 
     <!-- MARKETERS -->
@@ -1182,6 +1189,9 @@ function renderHome(d) {
   document.getElementById('home-updated').textContent = 'تحديث · ' + new Date(d.generatedAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
 
   const totalWaiting = HOME_WAIT.reduce((a, w) => a + (d.waiting[w[0]] || 0), 0);
+  document.getElementById('home-ai').innerHTML = !d.ai.available
+    ? '<div class="error-banner">⚠️ الذكاء الاصطناعي غير مفعّل على السيرفر، فكل نشاط جديد وكل منتج بينتظر موافقتك يدويًا. فعّل مفتاح مزوّد (مثل Groq أو Gemini) من إعدادات السيرفر ليقرأهم لحاله.</div>'
+    : (!d.ai.vision ? '<div class="error-banner" style="background:#fff3cd;color:#8a6300">ℹ️ الذكاء الاصطناعي شغّال لكنه بيقرأ الكلام بس، ما بيشوف الصور. للتأكد من صور المنتجات فعّل مزوّد بيشوف الصور (مثل Gemini).</div>' : '');
   document.getElementById('home-waiting').innerHTML = HOME_WAIT.map(([key, icon, label, section, loader]) => {
     const n = d.waiting[key] || 0;
     return `<button class="wait-tile ${n ? 'has' : ''}" onclick="gotoSection('${section}')"><span class="n">${fmt(n)}</span><span class="l">${icon} ${label}<small>${n ? 'اضغط للمراجعة' : 'ما في شي'}</small></span></button>`;
@@ -1975,30 +1985,82 @@ async function deletePcat(id) {
 // ---- Products waiting for review ----
 let prevStatus = 'PENDING';
 
-async function loadProductReview(status) {
+let prevPage = 1;
+const PROD_STATE = { PENDING: ['بانتظار القرار', 'PENDING'], APPROVED: ['مقبول', 'APPROVED'], REJECTED: ['مرفوض', 'REJECTED'] };
+let prevItems = {};
+
+async function loadProductReview(status, page) {
   prevStatus = status || prevStatus;
+  prevPage = page || 1;
   document.querySelectorAll('[data-pstatus]').forEach(b => b.classList.toggle('active', b.dataset.pstatus === prevStatus));
   const box = document.getElementById('prev-list');
-  const { ok, data } = await api('GET', '/admin/products?status=' + prevStatus);
-  if (!ok) { box.innerHTML = '<div class="card muted">تعذّر التحميل</div>'; return; }
-  box.innerHTML = data.length ? data.map(p => `<div class="card">
+  const q = (document.getElementById('prev-q').value || '').trim();
+  const params = new URLSearchParams({ status: prevStatus, page: prevPage });
+  if (q) params.set('q', q);
+  const res = await fetch('/admin/products?' + params.toString(), { headers: { Authorization: 'Bearer ' + state.token } });
+  const data = await res.json().catch(() => []);
+  if (!res.ok) { box.innerHTML = '<div class="card muted">تعذّر التحميل</div>'; return; }
+  const total = Number(res.headers.get('X-Total-Count')) || data.length;
+  prevItems = {};
+  data.forEach(p => { prevItems[p.id] = p; });
+  box.innerHTML = data.length ? data.map(p => `<div class="card" id="pcard-${p.id}">
     <div style="display:flex;gap:12px;flex-wrap:wrap">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${p.images.slice(0, 4).map(u => `<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid #ddd" /></a>`).join('') || '<span class="muted">بدون صورة</span>'}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${p.images.slice(0, 4).map(u => `<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>`).join('') || '<span class="muted">بدون صورة</span>'}</div>
       <div style="flex:1;min-width:220px">
-        <b style="font-size:16px">${esc(p.name)}</b> <span class="muted">— ${esc(p.shop)}${p.phone ? ' · ' + esc(p.phone) : ''}</span>
+        <b style="font-size:16px">${esc(p.name)}</b> <span class="badge ${PROD_STATE[p.moderation][1]}">${PROD_STATE[p.moderation][0]}</span>${p.isActive ? '' : ' <span class="badge inactive">مخفي</span>'}
+        <div class="muted">${esc(p.shop)}${p.phone ? ' · ' + esc(p.phone) : ''} · السعر ${money(p.priceCents)} · المخزون ${p.stock}</div>
         <p style="margin:6px 0">${esc(p.description || '')}</p>
         ${p.specs.length ? `<p class="muted">${p.specs.map(s => esc(s.label) + ': ' + esc(s.value)).join(' · ')}</p>` : ''}
         ${p.note ? `<p class="muted">ملاحظة الذكاء الاصطناعي / الإدارة: ${esc(p.note)}</p>` : ''}
-        <div style="margin-top:8px">${p.moderation !== 'APPROVED' ? `<button class="small" onclick="decideProduct('${p.id}','approve')">✅ قبول</button> ` : ''}${p.moderation !== 'REJECTED' ? `<button class="small danger" onclick="decideProduct('${p.id}','reject')">رفض</button>` : ''}</div>
+        <div style="margin-top:8px">
+          ${p.moderation !== 'APPROVED' ? `<button class="small" onclick="decideProduct('${p.id}','approve')">✅ قبول</button> ` : ''}${p.moderation !== 'REJECTED' ? `<button class="small danger" onclick="decideProduct('${p.id}','reject')">❌ رفض</button> ` : ''}
+          <button class="small secondary" onclick="editProduct('${p.id}')">✏️ تعديل</button>
+        </div>
+        <div id="pedit-${p.id}"></div>
       </div>
     </div></div>`).join('') : '<div class="card muted">ما في منتجات</div>';
+  document.getElementById('prev-pager').innerHTML = pagerHtml('prevGo', prevPage, total);
   refreshProductReviewBadge();
+}
+function prevGo(p) { loadProductReview(prevStatus, p); }
+
+/** The edit window opens under the product: its words, price, stock, details, visibility. */
+function editProduct(id) {
+  const p = prevItems[id];
+  const box = document.getElementById('pedit-' + id);
+  if (!p || !box) return;
+  if (box.innerHTML) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="card" style="margin:10px 0 0;border:1px solid var(--line);box-shadow:none;background:var(--surface-2)">
+    <div class="grid2">
+      <div class="field"><label>اسم المنتج</label><input id="pe-n-${id}" value="${esc(p.name)}"></div>
+      <div class="field"><label>السعر</label><input id="pe-p-${id}" dir="ltr" value="${money(p.priceCents)}" placeholder="مثال: 25.00"></div>
+      <div class="field"><label>المخزون</label><input id="pe-s-${id}" dir="ltr" value="${p.stock}" placeholder="مثال: 10"></div>
+      <div class="field"><label>الحالة</label><select id="pe-c-${id}"><option value="">غير محددة</option><option value="NEW" ${p.condition === 'NEW' ? 'selected' : ''}>جديد</option><option value="USED" ${p.condition === 'USED' ? 'selected' : ''}>مستعمل</option></select></div>
+    </div>
+    <div class="field"><label>الوصف</label><textarea id="pe-d-${id}" rows="3" placeholder="وصف قصير للمنتج">${esc(p.description || '')}</textarea></div>
+    <div class="field"><label>التفاصيل (سطر لكل تفصيل، بهالشكل: الاسم: القيمة)</label><textarea id="pe-sp-${id}" rows="3" placeholder="مثال: اللون: أبيض">${esc(p.specs.map(s => s.label + ': ' + s.value).join('\n'))}</textarea></div>
+    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pe-a-${id}" ${p.isActive ? 'checked' : ''} style="width:20px;height:20px"> <span>ظاهر للزبائن (إذا مقبول)</span></label>
+    <div style="margin-top:10px"><button onclick="saveProductEdit('${id}')">حفظ</button> <button class="secondary" onclick="editProduct('${id}')">إغلاق</button> <span id="pe-m-${id}" class="muted"></span></div>
+  </div>`;
+}
+
+async function saveProductEdit(id) {
+  const g = (k) => document.getElementById('pe-' + k + '-' + id);
+  const price = parseFloat(String(g('p').value).replace(',', '.'));
+  const stock = parseInt(g('s').value, 10);
+  if (!Number.isFinite(price) || price < 0 || !Number.isFinite(stock) || stock < 0) { g('m').textContent = 'اكتب سعر ومخزون صحيحين'; return; }
+  const specs = g('sp').value.split('\n').map(l => l.trim()).filter(Boolean).map(l => { const i = l.indexOf(':'); return i > 0 ? { label: l.slice(0, i).trim(), value: l.slice(i + 1).trim() } : null; }).filter(x => x && x.label && x.value);
+  const body = { name: g('n').value.trim(), description: g('d').value.trim() || null, priceCents: Math.round(price * 100), stock, condition: g('c').value || null, isActive: g('a').checked, specs };
+  const r = await api('PATCH', '/admin/products/' + id, body);
+  if (!r.ok) { g('m').textContent = errText(r.data, 'فشل الحفظ'); return; }
+  loadProductReview(prevStatus, prevPage);
 }
 
 async function refreshProductReviewBadge() {
-  const { ok, data } = await api('GET', '/admin/products?status=PENDING');
+  const res = await fetch('/admin/products?status=PENDING', { headers: { Authorization: 'Bearer ' + state.token } });
   const badge = document.getElementById('prev-pending-count');
-  if (ok && data.length) { badge.textContent = data.length; badge.style.display = ''; } else badge.style.display = 'none';
+  const total = res.ok ? Number(res.headers.get('X-Total-Count')) || 0 : 0;
+  if (total) { badge.textContent = total; badge.style.display = ''; } else badge.style.display = 'none';
 }
 
 async function decideProduct(id, action) {
@@ -2441,7 +2503,7 @@ function renderMerchants() {
       <td>${m.user.fullName}</td>
       <td class="muted">${m.user.email}</td>
       <td>${m.category ? m.category.name : '—'}</td>
-      <td><span class="badge ${m.approvalStatus}">${statusLabel(m.approvalStatus)}</span></td>
+      <td><span class="badge ${m.approvalStatus}">${statusLabel(m.approvalStatus)}</span>${m.approvalStatus === 'PENDING' && m.reviewNote ? `<br><small class="muted">🤖 ${esc(m.reviewNote)}</small>` : ''}${m.approvalStatus === 'REJECTED' && m.rejectionReason ? `<br><small class="muted">${m.reviewSource === 'ADMIN' ? '' : '🤖 '}${esc(m.rejectionReason)}</small>` : ''}${m.approvalStatus === 'APPROVED' && m.reviewSource === 'AI' ? '<br><small class="muted">🤖 وافق عليه الذكاء الاصطناعي</small>' : ''}</td>
       <td>${m.latitude != null && m.longitude != null
         ? `<a href="https://www.google.com/maps?q=${Number(m.latitude)},${Number(m.longitude)}" target="_blank" rel="noopener">📍 عرض</a>`
         : `<span class="muted" title="بدون موقع لا يظهر المحل على الخريطة">⚠️ غير محدد</span>`}</td>

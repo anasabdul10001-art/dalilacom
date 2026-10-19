@@ -57,8 +57,20 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val online = isOnlineCategory(state.categories, selectedCategoryId)
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val shopApproved = stringResource(R.string.shop_approved)
+    val shopRejected = stringResource(R.string.shop_rejected)
+    val shopPending = stringResource(R.string.shop_pending)
     LaunchedEffect(state.result) {
-        if (state.result != null) onRegistered()
+        val result = state.result ?: return@LaunchedEffect
+        // what the automatic review decided: live, refused (with the reason), or waiting for an admin
+        val text = when (result.approvalStatus) {
+            "APPROVED" -> shopApproved
+            "REJECTED" -> shopRejected + " " + (result.reason ?: "")
+            else -> shopPending
+        }
+        android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_LONG).show()
+        onRegistered()
     }
 
     if (state.similar.isNotEmpty()) {

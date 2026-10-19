@@ -340,6 +340,8 @@ model MerchantProfile {
   planId          String?
   planEndsAt      DateTime? // when the store plan the shop chose ends (null = no end date, e.g. assigned by the admin)
   rejectionReason String?
+  reviewNote      String? // why the AI sent it to the admin instead of approving it
+  reviewSource    String? // RULES | AI | ADMIN: who decided last
   // {"sat":[{"open":"09:00","close":"22:00"}], ...} — validated in routes; evaluated in the platform timezone
   openingHours    Json?
   createdAt       DateTime               @default(now())

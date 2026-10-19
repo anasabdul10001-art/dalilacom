@@ -996,4 +996,7 @@
     <string name="lm_similar_text">في مكان عام قريب بنفس الاسم. إذا هو نفس مكانك، طالب بملكيته بدل ما تسجّل مكان جديد:</string>
     <string name="lm_claim_it">هو مكاني، طالب بالملكية</string>
     <string name="lm_not_same">لا، هذا مكان مختلف — تابع التسجيل</string>
+    <string name="shop_approved">✅ انقبل نشاطك وصار على الخريطة</string>
+    <string name="shop_rejected">ما انقبل نشاطك:</string>
+    <string name="shop_pending">وصلنا طلبك وهو قيد المراجعة، بنخبرك بالنتيجة</string>
 </resources>
