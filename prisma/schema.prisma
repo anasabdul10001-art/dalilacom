@@ -1806,3 +1806,18 @@ model LandmarkClaimFile {
 
   @@index([claimId])
 }
+
+/// The picture a shop sends with its booking of a big banner (BANNER) or of a small space (SPACE), already cut to the exact size.
+model AdCreative {
+  id        String   @id @default(uuid())
+  kind      String // BANNER | SPACE
+  bookingId String // a BannerBooking or an AdBooking
+  mime      String
+  data      Bytes
+  width     Int
+  height    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kind, bookingId])
+}

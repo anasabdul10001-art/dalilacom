@@ -2208,7 +2208,7 @@ async function loadBannerBookings(status) {
   const day = d => new Date(d).toLocaleDateString('ar', { day: 'numeric', month: 'short' });
   const wa = n => (n || '').replace(/\D/g, '');
   body.innerHTML = data.length ? data.map(b => `<tr>
-    <td>${esc(b.merchant.businessName)}</td>
+    <td>${esc(b.merchant.businessName)}${b.hasImage ? `<br><a href="#" onclick="viewCreative('banner','${b.id}');return false">🖼️ صورة الزبون</a>` : ''}</td>
     <td style="white-space:nowrap"><a href="tel:${esc(b.phone)}">📞 ${esc(b.phone)}</a>${b.whatsapp ? `<br><a href="https://wa.me/${wa(b.whatsapp)}" target="_blank" rel="noopener">💬 ${esc(b.whatsapp)}</a>` : ''}</td>
     <td>${b.days} يوم</td><td>${b.credits}</td><td>${day(b.requestedStart)}</td><td style="max-width:220px">${esc(b.note || '')}</td>
     <td style="white-space:nowrap">
@@ -2236,6 +2236,13 @@ async function bannerBookingReject(id) {
 }
 
 /** Fills the banner form for a booking: the shop's name, its dates, and a button that opens its shop page. */
+/** The picture a shop sent with its booking, opened in a new tab (it needs the admin's key, so it is fetched first). */
+async function viewCreative(kind, id) {
+  const res = await fetch('/admin/ad-creatives/' + kind + '/' + id, { headers: { Authorization: 'Bearer ' + state.token } });
+  if (!res.ok) { alert('ما في صورة'); return; }
+  window.open(URL.createObjectURL(await res.blob()), '_blank');
+}
+
 function makeBannerFor(id) {
   const b = bbCache.find(x => x.id === id);
   if (!b) return;
@@ -2250,6 +2257,7 @@ function makeBannerFor(id) {
   document.getElementById('bn-start').value = localInput(start.toISOString());
   document.getElementById('bn-end').value = localInput(end.toISOString());
   bannerTargetHint();
+  document.getElementById('banner-msg').textContent = b.hasImage ? '🖼️ الزبون أرسل صورة: بتنحط للبانر تلقائيًا عند الحفظ (ارفع صورة ثانية لتبدّلها).' : '';
   document.getElementById('banner-form-title').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -2263,7 +2271,7 @@ async function loadAdBookings(status) {
   if (!ok) { body.innerHTML = '<tr><td colspan="10">تعذّر التحميل</td></tr>'; return; }
   const day = d => new Date(d).toLocaleDateString('ar', { day: 'numeric', month: 'short' });
   body.innerHTML = data.length ? data.map(a => `<tr>
-    <td>${esc(a.merchant.businessName)}</td><td>${esc(a.product.icon || '')} ${esc(a.product.name)}</td><td>${esc(a.country)}</td><td>${a.slot}</td><td>${a.days} يوم</td><td>${a.credits}</td>
+    <td>${esc(a.merchant.businessName)}${a.hasImage ? `<br><a href="#" onclick="viewCreative('space','${a.id}');return false">🖼️ صورة الزبون</a>` : ''}</td><td>${esc(a.product.icon || '')} ${esc(a.product.name)}</td><td>${esc(a.country)}</td><td>${a.slot}</td><td>${a.days} يوم</td><td>${a.credits}</td>
     <td><span class="badge ${a.status === 'ACTIVE' ? 'APPROVED' : a.status === 'PENDING' ? 'PENDING' : 'REJECTED'}">${esc(AD_STATE[a.state] || a.state)}</span></td>
     <td>${day(a.startsAt)} → ${day(a.endsAt)}</td><td>${a.impressions} / ${a.clicks}</td>
     <td>${a.status === 'PENDING' ? `<button class="small" onclick="reviewAd('${a.id}','approve')">موافقة</button><button class="small danger" onclick="reviewAd('${a.id}','reject')">رفض</button>` : ''}</td></tr>`).join('')

@@ -35,6 +35,10 @@ export const en: LanguagePack = {
     "المجيب الآلي": "Auto-responder",
     "إعلانات المتجر والرسائل الجماعية للزبائن": "Store ads and bulk messages to customers",
 
+    // ---- the picture of an advertising booking ----
+    "ما في صورة": "There is no picture",
+    "هذا الحجز انتهى، ما بتقدر تغيّر صورته": "This booking is over, its picture cannot be changed",
+
     // ---- the automatic review of a shop that registers ----
     "الاسم أو العنوان فيه ألفاظ غير لائقة": "The name or address has inappropriate words",
     "اسم النشاط لازم يكون بحروف واضحة": "The business name must use clear letters",

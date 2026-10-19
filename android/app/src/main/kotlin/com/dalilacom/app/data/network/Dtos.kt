@@ -792,7 +792,7 @@ data class StoreListDto(val total: Int = 0, val currency: String = "", val items
 /* ---------------- advertising space and the store's banners ---------------- */
 
 @Serializable
-data class StoreSlotDto(val slot: Int, val ad: Boolean = false, val adId: String? = null, val product: StoreProductDto)
+data class StoreSlotDto(val slot: Int, val ad: Boolean = false, val adId: String? = null, val creativeUrl: String? = null, val product: StoreProductDto)
 
 @Serializable
 data class AdOfferDto(val fromCredits: Int = 0, val days: Int = 1, val creditName: String = "")
@@ -818,7 +818,13 @@ data class StoreBannersDto(val intervalSeconds: Int = 5, val banners: List<Store
 data class AdPackageDto(val days: Int, val credits: Int)
 
 @Serializable
-data class AdPackagesDto(val packages: List<AdPackageDto> = emptyList(), val bannerPackages: List<AdPackageDto> = emptyList(), val creditName: String = "", val balance: Int? = null, val autoApprove: Boolean = false)
+data class AdSizeDto(val width: Int = 0, val height: Int = 0)
+
+@Serializable
+data class AdSizesDto(val banner: AdSizeDto = AdSizeDto(1600, 600), val space: AdSizeDto = AdSizeDto(800, 500))
+
+@Serializable
+data class AdPackagesDto(val packages: List<AdPackageDto> = emptyList(), val bannerPackages: List<AdPackageDto> = emptyList(), val creditName: String = "", val balance: Int? = null, val autoApprove: Boolean = false, val sizes: AdSizesDto = AdSizesDto())
 
 @Serializable
 data class BookAdRequest(val productId: String, val days: Int, val start: String? = null)
@@ -841,6 +847,7 @@ data class MyAdDto(
     val impressions: Int = 0,
     val clicks: Int = 0,
     val rejectionReason: String? = null,
+    val hasImage: Boolean = false,
 )
 
 /* ---------------- photos: searching the store with one, and a product from one ---------------- */
@@ -960,6 +967,7 @@ data class BannerBookingDto(
     val status: String = "PENDING",
     val phone: String = "",
     val rejectionReason: String? = null,
+    val hasImage: Boolean = false,
 )
 
 /** A category a product is filed under (department > category > kind), named in the app's language. */

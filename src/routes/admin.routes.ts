@@ -9,6 +9,7 @@ import { ApiError, sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { addDemoStore, removeDemoStore } from "../services/demoStore.service";
 import { adState, approveAd, linkBannerToBooking, markBannerContacted, rejectAd, rejectBannerBooking } from "../services/ads.service";
+import { copyCreativeToBanner, creativeIds, getCreative } from "../services/adCreative.service";
 import { visionAvailable } from "../services/ai.service";
 import { notify } from "../services/notification.service";
 import { discountScopeInfo, discountState } from "../lib/discounts";
@@ -871,7 +872,9 @@ adminRouter.get("/ads", async (req, res) => {
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     take: 200,
   });
+  const withPicture = await creativeIds("SPACE", rows.map((a) => a.id));
   res.json(rows.map((a) => ({
+    hasImage: withPicture.has(a.id),
     id: a.id,
     merchant: a.merchant,
     product: a.product,
@@ -946,8 +949,18 @@ adminRouter.get("/banner-bookings", async (req, res) => {
     orderBy: { createdAt: "desc" },
     take: 200,
   });
-  res.json(rows);
+  const withPicture = await creativeIds("BANNER", rows.map((b) => b.id));
+  res.json(rows.map((b) => ({ ...b, hasImage: withPicture.has(b.id) })));
 });
+
+// the picture a shop sent with its booking, for the admin's eyes (kind: banner | space)
+adminRouter.get("/ad-creatives/:kind/:bookingId", route(async (req, res) => {
+  const kind = req.params.kind === "banner" ? "BANNER" : req.params.kind === "space" ? "SPACE" : null;
+  const c = kind ? await getCreative(kind, req.params.bookingId) : null;
+  if (!c) return sendError(res, 404, "NOT_FOUND", "ما في صورة");
+  res.set({ "Content-Type": c.mime, "Cache-Control": "private, no-store" });
+  res.end(Buffer.from(c.data));
+}));
 
 adminRouter.post("/banner-bookings/:id/contacted", route(async (req, res) => {
   await markBannerContacted(req.params.id);
@@ -1012,6 +1025,8 @@ adminRouter.post("/banners", async (req, res) => {
     select: bannerSelect,
   });
   if (banner.bookingId) await linkBannerToBooking(banner.bookingId, banner.id);
+  // the shop's own picture becomes the banner's picture (the admin can still upload another over it)
+  if (banner.bookingId && (await copyCreativeToBanner(banner.bookingId, banner.id))) return res.status(201).json({ ...banner, imageUrl: `/store/banners/${banner.id}/image?v=${Date.now()}` });
   res.status(201).json(banner);
 });
 

@@ -243,6 +243,13 @@ interface ApiService {
     @GET("ads/banners/mine")
     suspend fun myBannerBookings(): Response<List<BannerBookingDto>>
 
+    /** The picture of a booking, already cut to the exact size (raw JPEG bytes). */
+    @PUT("ads/banners/{id}/image")
+    suspend fun uploadBannerImage(@Path("id") id: String, @Body body: RequestBody): Response<Unit>
+
+    @PUT("ads/{id}/image")
+    suspend fun uploadAdImage(@Path("id") id: String, @Body body: RequestBody): Response<Unit>
+
     @POST("ads/banners/{id}/cancel")
     suspend fun cancelBannerBooking(@Path("id") id: String): Response<Unit>
 

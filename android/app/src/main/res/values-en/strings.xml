@@ -995,4 +995,18 @@
     <string name="shop_approved">✅ Your business was approved and is on the map</string>
     <string name="shop_rejected">Your business was not accepted:</string>
     <string name="shop_pending">We got your request and it is being reviewed, we will tell you the result</string>
+    <string name="ads_img_label">Picture of the ad (optional)</string>
+    <string name="ads_img_size">The size needed: %1$d × %2$d pixels.</string>
+    <string name="ads_img_auto">You do not need to edit your photo: we cut it to the size for you and you see the preview. The team approves it before it goes live.</string>
+    <string name="ads_img_pick">Choose a picture</string>
+    <string name="ads_img_change">Change the picture</string>
+    <string name="ads_img_add">Add a picture</string>
+    <string name="ads_img_send">Send the picture</string>
+    <string name="ads_img_sent">Picture sent</string>
+    <string name="ads_img_fill">Fill the frame (cut the edges)</string>
+    <string name="ads_img_whole">The whole photo</string>
+    <string name="ads_img_remove">Remove the picture</string>
+    <string name="ads_img_read_fail">We could not read this photo, try another</string>
+    <string name="ads_img_upload_fail">The picture could not be uploaded</string>
+    <string name="ads_img_later">The booking is made, but the picture was not uploaded. You can add it from My ads.</string>
 </resources>

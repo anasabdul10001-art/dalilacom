@@ -91,6 +91,9 @@ data class AdBookUi(
     val busy: Boolean = false,
     val error: String? = null,
     val done: Boolean = false,
+    val sizes: com.dalilacom.app.data.network.AdSizesDto = com.dalilacom.app.data.network.AdSizesDto(),
+    /** The booking was made but its picture did not go up (it can be sent from "my ads"). */
+    val pictureProblem: Boolean = false,
 )
 
 class AdBookViewModel(private val store: StoreRepository, private val products: ProductRepository, private val merchants: com.dalilacom.app.data.repository.MerchantRepository, initialKind: String) : ViewModel() {
@@ -115,6 +118,7 @@ class AdBookViewModel(private val store: StoreRepository, private val products: 
                 autoApprove = pk?.autoApprove ?: false,
                 products = mine,
                 days = pk?.packages?.minByOrNull { it.days }?.days ?: 0,
+                sizes = pk?.sizes ?: com.dalilacom.app.data.network.AdSizesDto(),
             )
             loadAvail()
         }
@@ -126,14 +130,17 @@ class AdBookViewModel(private val store: StoreRepository, private val products: 
     fun setWhatsapp(v: String) = _ui.update { it.copy(whatsapp = v) }
     fun setNote(v: String) = _ui.update { it.copy(note = v) }
 
-    fun bookBanner() {
+    fun bookBanner(picture: ByteArray? = null) {
         val s = _ui.value
         if (s.bannerDays == 0 || s.phone.isBlank() || s.busy) return
         _ui.update { it.copy(busy = true, error = null) }
         val start = if (s.startDay == 0) null else LocalDate.now().plusDays(s.startDay.toLong()).atStartOfDay(ZoneId.systemDefault()).toInstant().toString()
         viewModelScope.launch {
             store.bookBanner(s.bannerDays, s.phone.trim(), start, s.whatsapp.trim(), s.note.trim())
-                .onSuccess { _ui.update { it.copy(busy = false, bannerDone = true) } }
+                .onSuccess { booking ->
+                    val problem = picture != null && store.uploadAdPicture("banner", booking.id, picture).isFailure
+                    _ui.update { it.copy(busy = false, bannerDone = true, pictureProblem = problem) }
+                }
                 .onFailure { e -> _ui.update { it.copy(busy = false, error = e.message) } }
         }
     }
@@ -153,14 +160,18 @@ class AdBookViewModel(private val store: StoreRepository, private val products: 
         }
     }
 
-    fun book() {
+    fun book(picture: ByteArray? = null) {
         val s = _ui.value
         if (s.productId.isBlank() || s.days == 0 || s.busy) return
         _ui.update { it.copy(busy = true, error = null) }
         val start = s.startDate // a date (YYYY-MM-DD) from the calendar, or null = now
         viewModelScope.launch {
             store.bookAd(s.productId, s.days, start)
-                .onSuccess { _ui.update { it.copy(busy = false, done = true) } }
+                .onSuccess { booking ->
+                    val problem = picture != null && store.uploadAdPicture("space", booking.id, picture).isFailure
+                    // a picture sent with it waits to be looked at, even when the booking was approved by itself
+                    _ui.update { it.copy(busy = false, done = true, pictureProblem = problem, autoApprove = it.autoApprove && picture == null) }
+                }
                 .onFailure { e -> _ui.update { it.copy(busy = false, error = e.message) } }
         }
     }
@@ -170,6 +181,8 @@ class AdBookViewModel(private val store: StoreRepository, private val products: 
 fun AdBookScreen(container: AppContainer, kind: String = "space", onBack: () -> Unit, onWallet: () -> Unit, onMyAds: () -> Unit) {
     val vm: AdBookViewModel = viewModel(factory = viewModelFactory { initializer { AdBookViewModel(container.storeRepository, container.productRepository, container.merchantRepository, kind) } })
     val ui by vm.ui.collectAsState()
+    var spacePicture by remember { mutableStateOf<AdPicture?>(null) }
+    var bannerPicture by remember { mutableStateOf<AdPicture?>(null) }
     Column(Modifier.fillMaxSize()) {
         TextButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) { Text("‹  " + stringResource(R.string.store_back)) }
         if (ui.loading) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }; return@Column }
@@ -183,11 +196,12 @@ fun AdBookScreen(container: AppContainer, kind: String = "space", onBack: () -> 
                     }
                 }
             }
-            if (ui.kind == "banner") { BannerBookingForm(ui, vm, onWallet, onMyAds); return@Column }
+            if (ui.kind == "banner") { BannerBookingForm(ui, vm, bannerPicture, { bannerPicture = it }, onWallet, onMyAds); return@Column }
             if (ui.done) {
                 Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                     Text(stringResource(if (ui.autoApprove) R.string.ads_done_live else R.string.ads_done_waiting), modifier = Modifier.padding(14.dp), color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
+                if (ui.pictureProblem) Text(stringResource(R.string.ads_img_later), color = MaterialTheme.colorScheme.error)
                 Button(onClick = onMyAds, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(stringResource(R.string.profile_my_ads)) }
                 return@Column
             }
@@ -225,6 +239,7 @@ fun AdBookScreen(container: AppContainer, kind: String = "space", onBack: () -> 
 
             Text(stringResource(R.string.ads_pick_start), fontWeight = FontWeight.Bold)
             AdCalendar(ui.avail, ui.startDate, onPick = vm::pickStartDate)
+            AdPicturePicker(ui.sizes.space.width, ui.sizes.space.height, spacePicture) { spacePicture = it }
 
             val chosen = ui.packages.firstOrNull { it.days == ui.days }
             val enough = chosen == null || ui.balance >= chosen.credits
@@ -238,7 +253,7 @@ fun AdBookScreen(container: AppContainer, kind: String = "space", onBack: () -> 
             ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (!enough) OutlinedButton(onClick = onWallet, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.ads_top_up)) }
             Button(
-                onClick = vm::book,
+                onClick = { vm.book(spacePicture?.bytes) },
                 enabled = ui.productId.isNotBlank() && ui.days != 0 && !ui.busy && enough,
                 shape = RoundedCornerShape(4.dp),
                 modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -249,11 +264,12 @@ fun AdBookScreen(container: AppContainer, kind: String = "space", onBack: () -> 
 
 /** A big banner: choose the length, leave a number, pay; the team calls to agree what the banner says. */
 @Composable
-private fun BannerBookingForm(ui: AdBookUi, vm: AdBookViewModel, onWallet: () -> Unit, onMyAds: () -> Unit) {
+private fun BannerBookingForm(ui: AdBookUi, vm: AdBookViewModel, picture: AdPicture?, onPicture: (AdPicture?) -> Unit, onWallet: () -> Unit, onMyAds: () -> Unit) {
     if (ui.bannerDone) {
         Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer) {
             Text(stringResource(R.string.ads_banner_done), modifier = Modifier.padding(14.dp), color = MaterialTheme.colorScheme.onPrimaryContainer)
         }
+        if (ui.pictureProblem) Text(stringResource(R.string.ads_img_later), color = MaterialTheme.colorScheme.error)
         Button(onClick = onMyAds, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(stringResource(R.string.profile_my_ads)) }
         return
     }
@@ -288,6 +304,7 @@ private fun BannerBookingForm(ui: AdBookUi, vm: AdBookViewModel, onWallet: () ->
     androidx.compose.material3.OutlinedTextField(value = ui.phone, onValueChange = vm::setPhone, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_phone)) })
     Text(stringResource(R.string.ads_whatsapp), fontWeight = FontWeight.Bold)
     androidx.compose.material3.OutlinedTextField(value = ui.whatsapp, onValueChange = vm::setWhatsapp, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_phone)) })
+    AdPicturePicker(ui.sizes.banner.width, ui.sizes.banner.height, picture, onPicture)
     Text(stringResource(R.string.ads_note), fontWeight = FontWeight.Bold)
     androidx.compose.material3.OutlinedTextField(value = ui.note, onValueChange = { vm.setNote(it.take(600)) }, placeholder = { Hint(stringResource(R.string.ads_note_ph)) }, minLines = 3, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth())
 
@@ -302,7 +319,7 @@ private fun BannerBookingForm(ui: AdBookUi, vm: AdBookViewModel, onWallet: () ->
     }
     ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     if (!enough) OutlinedButton(onClick = onWallet, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.ads_top_up)) }
-    Button(onClick = vm::bookBanner, enabled = ui.bannerDays != 0 && ui.phone.isNotBlank() && !ui.busy && enough, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) {
+    Button(onClick = { vm.bookBanner(picture?.bytes) }, enabled = ui.bannerDays != 0 && ui.phone.isNotBlank() && !ui.busy && enough, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) {
         Text(stringResource(if (ui.busy) R.string.ads_booking else R.string.ads_book))
     }
 }
@@ -316,7 +333,7 @@ private fun startLabel(day: Int): String = when (day) {
 
 /* ---------------- my ads ---------------- */
 
-data class MyAdsUi(val loading: Boolean = true, val ads: List<MyAdDto> = emptyList(), val banners: List<com.dalilacom.app.data.network.BannerBookingDto> = emptyList(), val message: String? = null)
+data class MyAdsUi(val pictureFor: Pair<String, String>? = null, val sizes: com.dalilacom.app.data.network.AdSizesDto = com.dalilacom.app.data.network.AdSizesDto(), val loading: Boolean = true, val ads: List<MyAdDto> = emptyList(), val banners: List<com.dalilacom.app.data.network.BannerBookingDto> = emptyList(), val message: String? = null)
 
 class MyAdsViewModel(private val store: StoreRepository) : ViewModel() {
     private val _ui = MutableStateFlow(MyAdsUi())
@@ -325,7 +342,20 @@ class MyAdsViewModel(private val store: StoreRepository) : ViewModel() {
     init { load() }
 
     fun load() {
-        viewModelScope.launch { _ui.value = MyAdsUi(loading = false, ads = store.myAds(), banners = store.myBannerBookings()) }
+        viewModelScope.launch { _ui.value = MyAdsUi(loading = false, ads = store.myAds(), banners = store.myBannerBookings(), sizes = store.adPackages()?.sizes ?: com.dalilacom.app.data.network.AdSizesDto()) }
+    }
+
+    /** Opens the picture window of a booking that is still waiting (kind: banner | space). */
+    fun askPicture(kind: String, id: String) = _ui.update { it.copy(pictureFor = kind to id, message = null) }
+    fun closePicture() = _ui.update { it.copy(pictureFor = null) }
+
+    fun sendPicture(jpeg: ByteArray) {
+        val (kind, id) = _ui.value.pictureFor ?: return
+        viewModelScope.launch {
+            store.uploadAdPicture(kind, id, jpeg).onFailure { e -> _ui.update { it.copy(message = e.message) } }
+            _ui.update { it.copy(pictureFor = null) }
+            load()
+        }
     }
 
     fun cancelBanner(id: String) {
@@ -353,6 +383,17 @@ fun MyAdsScreen(container: AppContainer, onBack: () -> Unit, onBook: () -> Unit)
         Button(onClick = onBook, shape = RoundedCornerShape(4.dp), modifier = Modifier.padding(16.dp).fillMaxWidth().height(46.dp)) { Text("📢  " + stringResource(R.string.ads_book_cta)) }
         if (ui.loading) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }; return@Column }
         ui.message?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp)) }
+        ui.pictureFor?.let { (kind, _) ->
+            var picked by remember(ui.pictureFor) { mutableStateOf<AdPicture?>(null) }
+            val size = if (kind == "banner") ui.sizes.banner else ui.sizes.space
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = vm::closePicture,
+                title = { Text(stringResource(R.string.ads_img_label)) },
+                text = { AdPicturePicker(size.width, size.height, picked) { picked = it } },
+                confirmButton = { TextButton(enabled = picked != null, onClick = { picked?.let { vm.sendPicture(it.bytes) } }) { Text(stringResource(R.string.ads_img_send)) } },
+                dismissButton = { TextButton(onClick = vm::closePicture) { Text(stringResource(R.string.browse_close)) } },
+            )
+        }
         if (ui.banners.isNotEmpty()) {
             Text(stringResource(R.string.ads_my_banners), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
             ui.banners.forEach { b ->
@@ -364,6 +405,8 @@ fun MyAdsScreen(container: AppContainer, onBack: () -> Unit, onBook: () -> Unit)
                         }
                         Text(b.requestedStart.take(10) + " · ${b.credits} · ${b.phone}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         b.rejectionReason?.let { Text(it, fontSize = 12.sp) }
+                        if (b.status == "PENDING" || b.status == "CONTACTED") OutlinedButton(onClick = { vm.askPicture("banner", b.id) }, shape = RoundedCornerShape(4.dp)) { Text("🖼️  " + stringResource(if (b.hasImage) R.string.ads_img_change else R.string.ads_img_add)) }
+                        if (b.hasImage) Text("✓ " + stringResource(R.string.ads_img_sent), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (b.status == "PENDING") OutlinedButton(onClick = { vm.cancelBanner(b.id) }, shape = RoundedCornerShape(4.dp)) { Text(stringResource(R.string.ads_cancel)) }
                     }
                 }
@@ -382,6 +425,8 @@ fun MyAdsScreen(container: AppContainer, onBack: () -> Unit, onBook: () -> Unit)
                         Text(stringResource(R.string.ads_days_n, ad.days) + " · " + ad.startsAt.take(10) + " → " + ad.endsAt.take(10) + " · ${ad.credits}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("👁 ${ad.impressions}   👆 ${ad.clicks}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         ad.rejectionReason?.let { Text(it, fontSize = 12.sp) }
+                        if (ad.state == "PENDING") OutlinedButton(onClick = { vm.askPicture("space", ad.id) }, shape = RoundedCornerShape(4.dp)) { Text("🖼️  " + stringResource(if (ad.hasImage) R.string.ads_img_change else R.string.ads_img_add)) }
+                        if (ad.hasImage) Text("✓ " + stringResource(R.string.ads_img_sent), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (ad.state == "PENDING") OutlinedButton(onClick = { vm.cancel(ad.id) }, shape = RoundedCornerShape(4.dp)) { Text(stringResource(R.string.ads_cancel)) }
                     }
                 }

@@ -425,7 +425,7 @@ async function render() {
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   const keepFocus = active && active.id === "disc-q" ? active.selectionStart : null;
-  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml();
+  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml();
   wireUpAfterRender();
   placeDiscPopup();
   trDom(el); // translate the rendered Arabic when another language is on
@@ -2896,7 +2896,7 @@ function storeSlot(sl) {
   const off = storeOff(p);
   return `
     <div class="store-slot ${sl.ad ? "is-ad" : ""}" role="button" tabindex="0" onclick="storeSlotOpen('${sl.adId || ""}','${p.id}')">
-      ${storePic(p)}
+      ${sl.creativeUrl ? `<div class="store-pic"><img src="${esc(sl.creativeUrl)}" alt="" loading="lazy"></div>` : storePic(p)}
       ${sl.ad ? `<span class="store-slot-tag">${esc(t("ads.tag"))}</span>` : `<span class="store-slot-here" onclick="event.stopPropagation();openAdBooking()">📢 ${esc(t("ads.here"))}</span>`}
       <span class="store-slot-info">
         <b>${fmt(p.memberDiscountEnabled ? p.memberPriceCents : p.priceCents)}</b>
@@ -2977,7 +2977,7 @@ function screenAdBook() {
   }
   if (a.done) {
     return `${backRow()}
-      <div class="success-banner" style="margin-top:12px">${esc(a.done.autoApprove ? t("ads.doneLive") : t("ads.doneWaiting"))}</div>
+      <div class="success-banner" style="margin-top:12px">${esc(a.done.autoApprove ? t("ads.doneLive") : t("ads.doneWaiting"))}</div>${a.imageProblem ? `<div class="error-banner" style="margin-top:8px">${esc(t("ads.imgLater"))}</div>` : ""}
       <div style="height:14px"></div>
       <button class="btn" style="max-width:260px" onclick="S._myAds=null;back();go('myAds')">${esc(t("profile.myAds"))}</button>`;
   }
@@ -3001,6 +3001,7 @@ function screenAdBook() {
           <b>${esc(t("ads.daysN", { n: p.days }))}</b><span>${p.credits} ${esc(a.creditName)}</span>
         </button>`).join("")}</div></div>
     <div class="field"><label>${esc(t("ads.pickStart"))}</label>${adCalendarHtml(a)}</div>
+    ${adImageHtml("space")}
     <div class="card" style="margin-top:6px">
       <div class="list-row"><span>${esc(t("ads.yourBalance"))}</span><span class="price">${a.balance} ${esc(a.creditName)}</span></div>
       ${chosen ? `<div class="list-row"><span>${esc(t("ads.price"))}</span><span class="price" style="color:var(--primary)">${chosen.credits} ${esc(a.creditName)}</span></div>` : ""}
@@ -3011,6 +3012,122 @@ function screenAdBook() {
     ${!enough ? `<button class="btn outline" style="margin-top:8px" onclick="go('wallet')">${esc(t("ads.topUp"))}</button>` : ""}
     <div style="height:12px"></div>
     <button class="btn" ${!a.productId || !a.days || a.busy || !enough ? "disabled" : ""} onclick="submitAdBooking()">${esc(a.busy ? t("ads.booking") : t("ads.book"))}</button>`}`;
+}
+
+/* ---------------- the picture of an ad booking: the exact size is written, and the photo is cut to it here ---------------- */
+
+const AD_SIZES = { banner: [1600, 600], space: [800, 500] }; // the server tells the same sizes in /ads/packages
+function adSize(kind) { const s = (S._adBook && S._adBook.sizes) || null; return s && s[kind] ? [s[kind].width, s[kind].height] : AD_SIZES[kind]; }
+S._adImg = S._adImg || {};
+
+/** The photo brought to exactly w x h: "fill" cuts the edges and keeps the middle, "whole" keeps all of it on a plain background. */
+function fitAdPhoto(file, w, h, mode) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode"));
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        const cover = Math.max(w / img.width, h / img.height);
+        if (mode === "whole") {
+          // the photo whole, centred; the edges are filled with a soft copy of itself so no empty bars show
+          ctx.filter = "blur(24px)";
+          ctx.drawImage(img, (w - img.width * cover) / 2, (h - img.height * cover) / 2, img.width * cover, img.height * cover);
+          ctx.filter = "none";
+          const fit = Math.min(w / img.width, h / img.height);
+          ctx.drawImage(img, (w - img.width * fit) / 2, (h - img.height * fit) / 2, img.width * fit, img.height * fit);
+        } else {
+          ctx.drawImage(img, (w - img.width * cover) / 2, (h - img.height * cover) / 2, img.width * cover, img.height * cover);
+        }
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("encode"))), "image/jpeg", 0.86);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function adImageRebuild(kind) {
+  const im = S._adImg[kind];
+  if (!im || !im.file) return;
+  const [w, h] = adSize(kind);
+  try {
+    const blob = await fitAdPhoto(im.file, w, h, im.mode);
+    if (im.url) URL.revokeObjectURL(im.url);
+    im.blob = blob; im.url = URL.createObjectURL(blob); im.error = "";
+  } catch (e) { im.error = t("ads.imgReadFail"); }
+  render();
+}
+function adImagePicked(kind, input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  S._adImg[kind] = { file, mode: "fill", blob: null, url: "", error: "" };
+  adImageRebuild(kind);
+}
+function adImageMode(kind, mode) { if (S._adImg[kind]) { S._adImg[kind].mode = mode; adImageRebuild(kind); } }
+function adImageClear(kind) { if (S._adImg[kind] && S._adImg[kind].url) URL.revokeObjectURL(S._adImg[kind].url); S._adImg[kind] = null; render(); }
+
+/** The picture part of a booking form: the written size, the picker, and the preview as the store will show it. */
+function adImageHtml(kind) {
+  const [w, h] = adSize(kind);
+  const im = S._adImg[kind];
+  return `<div class="field ad-image"><label>${esc(t("ads.imgLabel"))}</label>
+    <p class="muted" style="margin:0 0 6px">${esc(t("ads.imgSize", { w, h }))} ${esc(t("ads.imgAuto"))}</p>
+    <input type="file" accept="image/*" onchange="adImagePicked('${kind}', this)">
+    ${im && im.error ? `<div class="error-banner" style="margin-top:6px">${esc(im.error)}</div>` : ""}
+    ${im && im.url ? `<div class="ad-preview" style="aspect-ratio:${w} / ${h}"><img src="${esc(im.url)}" alt=""></div>
+      <div class="chips-row" style="margin-top:6px">
+        <button class="chip ${im.mode === "fill" ? "active" : ""}" onclick="adImageMode('${kind}','fill')">${esc(t("ads.imgFill"))}</button>
+        <button class="chip ${im.mode === "whole" ? "active" : ""}" onclick="adImageMode('${kind}','whole')">${esc(t("ads.imgWhole"))}</button>
+        <button class="chip" onclick="adImageClear('${kind}')">✕ ${esc(t("ads.imgRemove"))}</button>
+      </div>` : ""}
+  </div>`;
+}
+
+/** Sends the prepared picture of a booking (raw JPEG). Returns an error text, or "" when it went (or there was none). */
+async function adImageUpload(kind, bookingId) {
+  const im = S._adImg[kind];
+  if (!im || !im.blob) return "";
+  const path = kind === "banner" ? "/ads/banners/" + bookingId + "/image" : "/ads/" + bookingId + "/image";
+  try {
+    const res = await fetch(API_BASE + path, { method: "PUT", headers: { "Content-Type": "image/jpeg", "Accept-Language": LANG, Authorization: "Bearer " + S.token }, body: im.blob });
+    if (!res.ok) return errMsg(await res.json().catch(() => ({})), t("ads.imgUploadFail"));
+  } catch (e) { return t("ads.imgUploadFail"); }
+  adImageClear(kind);
+  return "";
+}
+
+/** From "my ads": add or change the picture of a booking that is still waiting. */
+function adImageAddOpen(kind, id) { S._adImg[kind] = null; S._adImgFor = { kind, id, busy: false, error: "" }; render(); }
+function adImageAddClose() { S._adImgFor = null; render(); }
+async function adImageAddSend() {
+  const f = S._adImgFor;
+  if (!f || f.busy) return;
+  const im = S._adImg[f.kind];
+  if (!im || !im.blob) { f.error = t("ads.imgPick"); return render(); }
+  f.busy = true; f.error = ""; render();
+  const err = await adImageUpload(f.kind, f.id);
+  f.busy = false;
+  if (err) { f.error = err; return render(); }
+  S._adImgFor = null;
+  loadMyAds();
+}
+function adImageAddHtml() {
+  const f = S._adImgFor;
+  if (!f) return "";
+  S._adBook = S._adBook || {};
+  return `<div class="deals-intro" onclick="adImageAddClose()">
+    <div class="deals-box lm-card" onclick="event.stopPropagation()" style="max-height:88vh;overflow:auto">
+      <h3>${esc(t("ads.imgAddTitle"))}</h3>
+      ${f.error ? `<p class="error-banner">${esc(f.error)}</p>` : ""}
+      ${adImageHtml(f.kind)}
+      <div class="lm-actions"><button class="btn" ${f.busy ? "disabled" : ""} onclick="adImageAddSend()">${esc(t("ads.imgSend"))}</button><button class="btn ghost" onclick="adImageAddClose()">${esc(t("follow.close"))}</button></div>
+    </div>
+  </div>`;
 }
 
 /** A big banner: choose the length, leave a number, pay; the team calls to agree what the banner says. */
@@ -3024,7 +3141,7 @@ function screenBannerBooking(a) {
     starts.push([dt.toISOString(), d === 1 ? t("ads.tomorrow") : dt.toLocaleDateString(LANG, { weekday: "long", day: "numeric", month: "short" })]);
   }
   if (a.bannerDone) {
-    return `<div class="success-banner">${esc(t("ads.bannerDone"))}</div><div style="height:14px"></div>
+    return `<div class="success-banner">${esc(t("ads.bannerDone"))}</div>${a.imageProblem ? `<div class="error-banner" style="margin-top:8px">${esc(t("ads.imgLater"))}</div>` : ""}<div style="height:14px"></div>
       <button class="btn" style="max-width:260px" onclick="S._myAds=null;back();go('myAds')">${esc(t("profile.myAds"))}</button>`;
   }
   if (!pk.length) return `<div class="error-banner">${esc(t("ads.noBannerPacks"))}</div>`;
@@ -3041,6 +3158,7 @@ function screenBannerBooking(a) {
       <input type="tel" inputmode="tel" value="${esc(a.phone || "")}" oninput="S._adBook.phone=this.value" placeholder="+963 9xx xxx xxx"></div>
     <div class="field"><label>${esc(t("ads.whatsapp"))}</label>
       <input type="tel" inputmode="tel" value="${esc(a.whatsapp || "")}" oninput="S._adBook.whatsapp=this.value" placeholder="+963 9xx xxx xxx"></div>
+    ${adImageHtml("banner")}
     <div class="field"><label>${esc(t("ads.note"))}</label>
       <textarea rows="3" maxlength="600" oninput="S._adBook.note=this.value" placeholder="${esc(t("ads.notePh"))}">${esc(a.note || "")}</textarea></div>
     <div class="card" style="margin-top:6px">
@@ -3063,8 +3181,11 @@ async function submitBannerBooking() {
   if ((a.note || "").trim()) body.note = a.note.trim();
   const { ok, data } = await api("POST", "/ads/banners", body);
   a.busy = false;
-  if (ok) a.bannerDone = true;
-  else a.error = errMsg(data, t("ads.failed"));
+  if (ok) {
+    a.bannerDone = true;
+    const problem = await adImageUpload("banner", data.id);
+    if (problem) a.imageProblem = problem;
+  } else a.error = errMsg(data, t("ads.failed"));
   render();
 }
 
@@ -3078,6 +3199,7 @@ async function loadAdBook() {
   a.balance = pk.ok ? pk.data.balance || 0 : 0;
   a.autoApprove = pk.ok ? pk.data.autoApprove : false;
   a.bannerPackages = pk.ok ? pk.data.bannerPackages || [] : [];
+  if (pk.ok && pk.data.sizes) a.sizes = pk.data.sizes;
   if (a.bannerPackages.length) a.bannerDays = a.bannerPackages[0].days;
   if (me.ok) { a.phone = me.data.phone || ""; a.whatsapp = me.data.whatsapp || ""; }
   a.products = mine.ok ? mine.data.filter((p) => p.isActive && p.stock > 0) : [];
@@ -3094,7 +3216,13 @@ async function submitAdBooking() {
   if (a.start) body.start = a.start;
   const { ok, data } = await api("POST", "/ads", body);
   a.busy = false;
-  if (ok) { a.done = { autoApprove: data.status === "ACTIVE" }; }
+  if (ok) {
+    a.done = { autoApprove: data.status === "ACTIVE" };
+    const hadPicture = !!(S._adImg.space && S._adImg.space.blob);
+    const problem = await adImageUpload("space", data.id);
+    if (problem) a.imageProblem = problem;
+    else if (hadPicture) a.done.autoApprove = false; // a picture sent with it waits to be looked at, even when the booking was approved by itself
+  }
   else {
     a.error = errMsg(data, t("ads.failed"));
     if (data && data.error && data.error.details && data.error.details.nextAvailable) a.nextAvailable = data.error.details.nextAvailable;
@@ -3117,6 +3245,7 @@ function screenMyAds() {
         <div class="title-line"><strong>${esc(t("ads.daysN", { n: b.days }))}</strong><span class="badge ${b.status === "SCHEDULED" ? "success" : b.status === "PENDING" || b.status === "CONTACTED" ? "warning" : "neutral"}">${esc(t("ads.bb." + b.status))}</span></div>
         <p class="muted">${new Date(b.requestedStart).toLocaleDateString(LANG, { day: "numeric", month: "short" })} · ${b.credits} · ${esc(b.phone)}</p>
         ${b.rejectionReason ? `<p class="muted">${esc(b.rejectionReason)}</p>` : ""}
+        ${b.status === "PENDING" || b.status === "CONTACTED" ? `<button class="btn outline small" style="width:auto" onclick="adImageAddOpen('banner','${b.id}')">🖼️ ${esc(t(b.hasImage ? "ads.imgChange" : "ads.imgAdd"))}</button> ` : ""}${b.hasImage ? `<span class="muted">✓ ${esc(t("ads.imgSent"))}</span> ` : ""}
         ${b.status === "PENDING" ? `<button class="btn outline small" style="width:auto" onclick="cancelMyBanner('${b.id}')">${esc(t("ads.cancel"))}</button>` : ""}
       </div>`).join("")}<div class="section-title">${esc(t("ads.mySpaces"))}</div>` : ""}
     ${m.list.length === 0 ? `<div class="empty-state">${esc(t("ads.none"))}</div>` : m.list.map((a) => `
@@ -3125,6 +3254,7 @@ function screenMyAds() {
         <p class="muted">${esc(t("ads.daysN", { n: a.days }))} · ${day(a.startsAt)} → ${day(a.endsAt)} · ${a.credits}</p>
         <p class="muted">👁 ${a.impressions} · 👆 ${a.clicks}</p>
         ${a.rejectionReason ? `<p class="muted">${esc(a.rejectionReason)}</p>` : ""}
+        ${a.state === "PENDING" ? `<button class="btn outline small" style="width:auto" onclick="adImageAddOpen('space','${a.id}')">🖼️ ${esc(t(a.hasImage ? "ads.imgChange" : "ads.imgAdd"))}</button> ` : ""}${a.hasImage ? `<span class="muted">✓ ${esc(t("ads.imgSent"))}</span> ` : ""}
         ${a.state === "PENDING" ? `<button class="btn outline small" style="width:auto" onclick="cancelMyAd('${a.id}')">${esc(t("ads.cancel"))}</button>` : ""}
       </div>`).join("")}`;
 }

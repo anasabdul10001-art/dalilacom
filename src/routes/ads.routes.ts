@@ -5,7 +5,9 @@ import { prisma } from "../prisma";
 import { sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { getSettings } from "../services/settings.service";
-import { AD_SLOTS, adAvailability, adState, bookAd, bookBanner, cancelAd, cancelBannerBooking, ownMerchant } from "../services/ads.service";
+import express from "express";
+import { AD_SLOTS, AdError, adAvailability, adState, bookAd, bookBanner, cancelAd, cancelBannerBooking, ownMerchant } from "../services/ads.service";
+import { CREATIVE_SIZES, MAX_CREATIVE_BYTES, creativeIds, getCreative, saveCreative } from "../services/adCreative.service";
 import { optionalUserId } from "../services/viewerCountry.service";
 import { route } from "../lib/asyncRoute";
 
@@ -22,6 +24,7 @@ adsRouter.get("/packages", route(async (req, res) => {
   res.json({
     packages: [...settings.ads.packages].sort((a, b) => a.days - b.days),
     bannerPackages: [...settings.ads.bannerPackages].sort((a, b) => a.days - b.days),
+    sizes: { banner: CREATIVE_SIZES.BANNER, space: CREATIVE_SIZES.SPACE }, // the exact size of the picture each kind needs
     creditName: settings.creditName,
     creditsPerUsd: settings.creditsPerUsd,
     slots: AD_SLOTS,
@@ -73,7 +76,35 @@ adsRouter.post("/banners", requireAuth, requireRole(Role.MERCHANT), route(async 
 adsRouter.get("/banners/mine", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await ownMerchant(req.user!.id);
   const rows = await prisma.bannerBooking.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: "desc" }, take: 50 });
-  res.json(rows.map((b) => ({ id: b.id, days: b.days, credits: b.credits, requestedStart: b.requestedStart, status: b.status, phone: b.phone, rejectionReason: b.rejectionReason })));
+  const withPicture = await creativeIds("BANNER", rows.map((b) => b.id));
+  res.json(rows.map((b) => ({ id: b.id, days: b.days, credits: b.credits, requestedStart: b.requestedStart, status: b.status, phone: b.phone, rejectionReason: b.rejectionReason, hasImage: withPicture.has(b.id) })));
+}));
+
+const creativeBody = express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: MAX_CREATIVE_BYTES });
+
+// The picture for a booking: raw image bytes (the screen cuts it to the exact size first; the server makes sure of it)
+async function receiveCreative(kind: "BANNER" | "SPACE", req: import("express").Request, res: import("express").Response) {
+  const body = req.body;
+  if (!Buffer.isBuffer(body) || body.length === 0) throw new AdError(415, "UNSUPPORTED_MEDIA", "أرسل الصورة بصيغة JPEG أو PNG أو WebP");
+  res.json(await saveCreative(req.user!.id, kind, req.params.id, body));
+}
+adsRouter.put("/banners/:id/image", requireAuth, requireRole(Role.MERCHANT), creativeBody, route((req, res) => receiveCreative("BANNER", req, res)));
+adsRouter.put("/:id/image", requireAuth, requireRole(Role.MERCHANT), creativeBody, route((req, res) => receiveCreative("SPACE", req, res)));
+
+// the shop looks at the picture it sent
+adsRouter.get("/banners/:id/image", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const merchant = await ownMerchant(req.user!.id);
+  const b = await prisma.bannerBooking.findFirst({ where: { id: req.params.id, merchantId: merchant.id }, select: { id: true } });
+  const c = b ? await getCreative("BANNER", b.id) : null;
+  if (!c) throw new AdError(404, "NOT_FOUND", "ما في صورة");
+  res.set({ "Content-Type": c.mime, "Cache-Control": "private, no-store" }).end(Buffer.from(c.data));
+}));
+adsRouter.get("/:id/image", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
+  const merchant = await ownMerchant(req.user!.id);
+  const a = await prisma.adBooking.findFirst({ where: { id: req.params.id, merchantId: merchant.id }, select: { id: true } });
+  const c = a ? await getCreative("SPACE", a.id) : null;
+  if (!c) throw new AdError(404, "NOT_FOUND", "ما في صورة");
+  res.set({ "Content-Type": c.mime, "Cache-Control": "private, no-store" }).end(Buffer.from(c.data));
 }));
 
 adsRouter.post("/banners/:id/cancel", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
@@ -89,8 +120,10 @@ adsRouter.get("/mine", requireAuth, requireRole(Role.MERCHANT), route(async (req
     orderBy: { createdAt: "desc" },
     take: 100,
   });
+  const withPicture = await creativeIds("SPACE", rows.map((a) => a.id));
   res.json(rows.map((a) => ({
     id: a.id,
+    hasImage: withPicture.has(a.id),
     product: a.product,
     days: a.days,
     credits: a.credits,

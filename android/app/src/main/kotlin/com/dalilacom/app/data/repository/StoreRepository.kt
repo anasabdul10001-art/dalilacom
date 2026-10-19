@@ -124,6 +124,13 @@ class StoreRepository(private val api: ApiService) {
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.ads_failed))))
     }
 
+    /** The picture of a booking (kind: "banner" or "space"); returns the server's own message when it was refused. */
+    suspend fun uploadAdPicture(kind: String, bookingId: String, jpeg: ByteArray): Result<Unit> {
+        val body = jpeg.toRequestBody("image/jpeg".toMediaType())
+        val response = safeApiCall { if (kind == "banner") api.uploadBannerImage(bookingId, body) else api.uploadAdImage(bookingId, body) } ?: return Result.failure(Exception(AppStrings.get(R.string.ads_failed)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.ads_img_upload_fail))))
+    }
+
     suspend fun adPackages(): AdPackagesDto? = safeApiCall { api.adPackages() }?.takeIf { it.isSuccessful }?.body()
 
     suspend fun myAds(): List<MyAdDto> = safeApiCall { api.myAds() }?.takeIf { it.isSuccessful }?.body().orEmpty()

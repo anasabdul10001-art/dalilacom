@@ -999,4 +999,18 @@
     <string name="shop_approved">✅ انقبل نشاطك وصار على الخريطة</string>
     <string name="shop_rejected">ما انقبل نشاطك:</string>
     <string name="shop_pending">وصلنا طلبك وهو قيد المراجعة، بنخبرك بالنتيجة</string>
+    <string name="ads_img_label">صورة الإعلان (اختياري)</string>
+    <string name="ads_img_size">المقاس المطلوب: %1$d × %2$d بكسل.</string>
+    <string name="ads_img_auto">ما بتحتاج تعدّل صورتك: بنقصّها تلقائيًا على المقاس وبتشوف المعاينة، والفريق بيوافق عليها قبل ما تنزل.</string>
+    <string name="ads_img_pick">اختر صورة</string>
+    <string name="ads_img_change">غيّر الصورة</string>
+    <string name="ads_img_add">أضف صورة</string>
+    <string name="ads_img_send">إرسال الصورة</string>
+    <string name="ads_img_sent">صورة مرفوعة</string>
+    <string name="ads_img_fill">قص تلقائي (ملء الإطار)</string>
+    <string name="ads_img_whole">الصورة كاملة</string>
+    <string name="ads_img_remove">شيل الصورة</string>
+    <string name="ads_img_read_fail">ما قدرنا نقرأ هالصورة، جرّب صورة ثانية</string>
+    <string name="ads_img_upload_fail">تعذّر رفع الصورة</string>
+    <string name="ads_img_later">تم الحجز، لكن الصورة ما انرفعت. بتقدر ترفعها من «إعلاناتي».</string>
 </resources>

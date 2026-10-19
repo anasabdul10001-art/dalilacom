@@ -6,6 +6,7 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
 import { DEFAULT_COUNTRY, currencyOf, onlyCountry, viewerCountry } from "../services/viewerCountry.service";
 import { AD_SLOTS, liveAds } from "../services/ads.service";
+import { creativeIds, getCreative } from "../services/adCreative.service";
 import { getSettings } from "../services/settings.service";
 import { normalizeText } from "../services/category.service";
 import { route } from "../lib/asyncRoute";
@@ -130,11 +131,12 @@ storeRouter.get("/home", async (req, res) => {
   const bySlot = new Map(live.map((a) => [a.slot, a]));
   const advertised = new Set(live.map((a) => a.productId));
   const fillers = (await prisma.product.findMany({ where: await visibleFor({}, country), include, orderBy: sorts.popular, take: AD_SLOTS * 2 })).filter((p) => !advertised.has(p.id));
+  const withPicture = await creativeIds("SPACE", live.map((a) => a.id));
   const slots = Array.from({ length: AD_SLOTS }, (_, i) => {
     const ad = bySlot.get(i + 1);
-    if (ad) return { slot: i + 1, ad: true, adId: ad.id, product: view(ad.product) };
+    if (ad) return { slot: i + 1, ad: true, adId: ad.id, creativeUrl: withPicture.has(ad.id) ? `/store/ad-images/${ad.id}` : null, product: view(ad.product) };
     const filler = fillers.shift();
-    return filler ? { slot: i + 1, ad: false, adId: null, product: view(filler) } : null;
+    return filler ? { slot: i + 1, ad: false, adId: null, creativeUrl: null, product: view(filler) } : null;
   }).filter((s) => s !== null);
   if (live.length) void prisma.adBooking.updateMany({ where: { id: { in: live.map((a) => a.id) } }, data: { impressions: { increment: 1 } } }).catch(() => {});
   const cheapest = [...settings.ads.packages].sort((a, b) => a.credits - b.credits)[0];
@@ -207,6 +209,18 @@ storeRouter.get("/products/:id", async (req, res) => {
   await translateProducts(resolveLanguage(req), [main, ...relatedViews]);
   await translateRecords(resolveLanguage(req), shippingViews, ["name"]);
   res.json({ ...main, currency: await currencyOf(country), shipping: shippingViews, related: relatedViews });
+});
+
+// the picture a shop sent for its small space, shown only while that ad is running
+storeRouter.get("/ad-images/:id", async (req, res) => {
+  const parsed = z.object({ id: z.string().uuid() }).safeParse(req.params);
+  if (!parsed.success) return sendError(res, 404, "NOT_FOUND", "No picture");
+  const now = new Date();
+  const ad = await prisma.adBooking.findFirst({ where: { id: parsed.data.id, status: "ACTIVE", startsAt: { lte: now }, endsAt: { gt: now } }, select: { id: true } });
+  const c = ad ? await getCreative("SPACE", ad.id) : null;
+  if (!c) return sendError(res, 404, "NOT_FOUND", "No picture");
+  res.set({ "Content-Type": c.mime, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=3600", "Content-Disposition": "inline" });
+  res.send(Buffer.from(c.data));
 });
 
 /* ---------------- the big rotating banners of the front page ---------------- */

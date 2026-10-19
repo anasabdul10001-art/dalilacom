@@ -657,7 +657,8 @@ private fun AdSlotPlaceholder(i: Int, onClick: () -> Unit) {
 private fun AdSlot(sl: com.dalilacom.app.data.network.StoreSlotDto, onOpen: () -> Unit, onAdvertise: () -> Unit, onAdd: () -> Unit) {
     val p = sl.product
     Box(Modifier.width(168.dp).aspectRatio(1.4f).clip(RoundedCornerShape(6.dp)).clickable(onClick = onOpen)) {
-        StorePic(p, Modifier.fillMaxSize(), emojiSize = 44.sp)
+        if (sl.creativeUrl != null) AsyncImage(model = com.dalilacom.app.data.network.absoluteUrl(sl.creativeUrl), contentDescription = p.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        else StorePic(p, Modifier.fillMaxSize(), emojiSize = 44.sp)
         if (sl.ad) Text(stringResource(R.string.ads_tag), color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(Color(0xC7000000), RoundedCornerShape(3.dp)).padding(horizontal = 7.dp, vertical = 2.dp))
         else Text("📢 " + stringResource(R.string.ads_here), color = Color(0xFF111111), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(Color(0xEBFFFFFF), RoundedCornerShape(3.dp)).clickable(onClick = onAdvertise).padding(horizontal = 7.dp, vertical = 2.dp))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0x00000000), Color(0xB8000000)))).padding(start = 8.dp, end = 40.dp, top = 16.dp, bottom = 6.dp)) {
