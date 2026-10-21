@@ -2954,9 +2954,14 @@ async function lmLoad(page) {
   const total = Object.values(d.counts).reduce((a, b) => a + b, 0);
   document.getElementById('lm-counts').innerHTML = `<button class="secondary small" onclick="lmFilterStatus('')">الكل ${fmt(total)}</button> ` + Object.entries(LM_STATUS).map(([k, [label]]) => `<button class="secondary small" onclick="lmFilterStatus('${k}')">${label} <b>${fmt(d.counts[k] || 0)}</b></button>`).join(' ');
   const bulk = document.getElementById('lm-bulk');
-  if (status === 'PENDING_REVIEW' && d.total > 0) {
+  // the approve-all button is always there while places wait for review (whatever status is being looked at)
+  const waiting = d.counts.PENDING_REVIEW || 0;
+  const kindName = kind ? ((lm.kinds.find(k => k.slug === kind) || {}).nameAr || kind) : '';
+  if (waiting > 0) {
     bulk.style.display = 'block';
-    bulk.innerHTML = `<button onclick="lmBulk('approve')">✅ اعتماد الكل (${fmt(d.total)}) حسب الفلتر</button> <button class="danger" onclick="lmBulk('delete')">🗑️ حذف الكل (${fmt(d.total)})</button> <span class="muted">الأماكن اللي بدون اسم عربي معلّمة ⚠️، عدّلها قبل الاعتماد.</span>`;
+    bulk.innerHTML = `<button onclick="lmBulk('approve')">✅ اعتماد كل المنتظرة${kind ? ' من نوع «' + esc(kindName) + '»' : ''} ${kind ? '' : ' (' + fmt(waiting) + ')'} وإظهارها على الخريطة</button> ` +
+      (status === 'PENDING_REVIEW' ? `<button class="danger" onclick="lmBulk('delete')">🗑️ حذف كل المنتظرة${kind ? ' من نوع «' + esc(kindName) + '»' : ''}</button> ` : '') +
+      `<span class="muted">الأماكن اللي بدون اسم عربي معلّمة ⚠️، عدّلها قبل الاعتماد.</span>`;
   } else { bulk.style.display = 'none'; }
   document.getElementById('lm-body').innerHTML = d.items.length ? d.items.map((l, i) => `
     <tr>
@@ -2991,8 +2996,9 @@ async function lmDelete(id) {
 }
 
 async function lmBulk(action) {
-  const filter = { status: document.getElementById('lm-f-status').value || undefined, kind: document.getElementById('lm-f-kind').value || undefined };
-  if (!confirm(action === 'approve' ? 'تعتمد كل الأماكن بهالفلتر وتظهر على الخريطة؟' : 'تحذف كل الأماكن بهالفلتر؟ ما بيرجعوا.')) return;
+  // only the places waiting for review (never the hidden or the shown ones), of the kind chosen in the filter if any
+  const filter = { status: 'PENDING_REVIEW', kind: document.getElementById('lm-f-kind').value || undefined };
+  if (!confirm(action === 'approve' ? 'تعتمد كل الأماكن المنتظرة للمراجعة وتظهر على الخريطة؟' : 'تحذف كل الأماكن المنتظرة للمراجعة؟ ما بيرجعوا.')) return;
   const r = await api('POST', '/admin/landmarks/review', { action, filter });
   if (!r.ok) { alert(errText(r.data, 'تعذّر التنفيذ')); return; }
   alert('تم: ' + fmt(r.data.changed) + ' مكان');
