@@ -3146,12 +3146,22 @@ async function lmImport() {
   const latitude = parseFloat(document.getElementById('lm-i-lat').value), longitude = parseFloat(document.getElementById('lm-i-lng').value), radiusKm = parseFloat(document.getElementById('lm-i-r').value);
   if (!kinds.length) { msg.textContent = 'اختار نوع واحد على الأقل'; return; }
   if (![latitude, longitude, radiusKm].every(Number.isFinite)) { msg.textContent = 'اختار مدينة أو اكتب الإحداثيات'; return; }
-  btn.disabled = true; msg.textContent = 'جاري الجلب… ممكن ياخد حتى دقيقتين';
-  const r = await api('POST', '/admin/landmarks/import', { latitude, longitude, radiusKm, kinds });
+  btn.disabled = true;
+  // a few kinds at a time: each request stays short (the map-data service is shared and slow), and the totals are added up here
+  const parts = []; for (let i = 0; i < kinds.length; i += 4) parts.push(kinds.slice(i, i + 4));
+  const names = Object.fromEntries(lm.kinds.map(k => [k.slug, k.nameAr]));
+  const sum = { total: 0, skipped: 0, unnamed: 0, withoutArabic: 0, created: {} };
+  let failed = '';
+  for (let i = 0; i < parts.length; i++) {
+    msg.textContent = `جاري الجلب (${i + 1} من ${parts.length})… ممكن ياخد دقيقة لكل دفعة`;
+    const r = await api('POST', '/admin/landmarks/import', { latitude, longitude, radiusKm, kinds: parts[i] });
+    if (!r.ok) { failed = `تعذّرت دفعة (${parts[i].map(k => names[k] || k).join('، ')}): ` + errText(r.data, 'تعذّر الاستيراد'); break; }
+    const d = r.data;
+    sum.total += d.total; sum.skipped += d.skipped; sum.unnamed += d.unnamed; sum.withoutArabic += d.withoutArabic;
+    Object.entries(d.created).forEach(([k, n]) => { sum.created[k] = (sum.created[k] || 0) + n; });
+  }
   btn.disabled = false;
-  if (!r.ok) { msg.textContent = errText(r.data, 'تعذّر الاستيراد'); return; }
-  const d = r.data, names = Object.fromEntries(lm.kinds.map(k => [k.slug, k.nameAr]));
-  msg.innerHTML = `انجلب <b>${fmt(d.total)}</b> مكان جديد (${Object.entries(d.created).map(([k, n]) => fmt(n) + ' ' + (names[k] || k)).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(d.skipped)} · بدون اسم ${fmt(d.unnamed)} · بدون اسم عربي ${fmt(d.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
+  msg.innerHTML = (failed ? `<span style="color:var(--danger,#b71c1c)">${esc(failed)}</span><br>` : '') + `انجلب <b>${fmt(sum.total)}</b> مكان جديد (${Object.entries(sum.created).map(([k, n]) => fmt(n) + ' ' + (names[k] || k)).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(sum.skipped)} · بدون اسم ${fmt(sum.unnamed)} · بدون اسم عربي ${fmt(sum.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
 }
 
 
