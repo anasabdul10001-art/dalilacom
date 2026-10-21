@@ -18,7 +18,7 @@ import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { AppReleaseError, getAppDownloadInfo, getAppUpdate, setAppUpdate, MAX_APK_BYTES, saveAppRelease, setAppDownloadVisible } from "../services/appRelease.service";
 import { adminOverview } from "../services/adminStats.service";
-import { adminClaims, approveClaim, askForInfo, claimFile, rejectClaim } from "../services/landmarkClaim.service";
+import { adminClaims, approveClaim, askForInfo, claimFile, dismissDuplicate, landmarkDuplicates, rejectClaim } from "../services/landmarkClaim.service";
 import { adminList, createKind, createLandmark, deleteLandmark, importFromOsm, LandmarkError, listKinds, reviewLandmarks, updateKind, updateLandmark } from "../services/landmark.service";
 import { getSocialLinks, saveSocialLinks, SOCIAL_PLATFORMS, SocialLinkError } from "../services/socialLinks.service";
 import { adjustBalance, InsufficientBalanceError } from "../services/wallet.service";
@@ -120,6 +120,17 @@ adminRouter.patch("/landmarks/:id", route(async (req, res) => {
   if (!parsed.success) return sendValidationError(res, parsed.error);
   try {
     res.json(await updateLandmark(req.params.id, parsed.data));
+  } catch (err) { landmarkFail(res, err); }
+}));
+
+// public places that have a shop of the same name right next to them (the shop registered on its own): hide the place or say it is another one
+adminRouter.get("/landmark-duplicates", route(async (_req, res) => {
+  res.json({ items: await landmarkDuplicates() });
+}));
+adminRouter.post("/landmarks/:id/duplicate-dismiss", route(async (req, res) => {
+  try {
+    await dismissDuplicate(req.params.id);
+    res.json({ ok: true });
   } catch (err) { landmarkFail(res, err); }
 }));
 

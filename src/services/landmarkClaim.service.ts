@@ -5,7 +5,8 @@ import { sniffImageMime } from "../lib/image";
 import { notify } from "./notification.service";
 import { getDefaultCountry } from "./geo.service";
 import { createBusinessFromMerchantProfile } from "./business.service";
-import { findSimilar, LandmarkError } from "./landmark.service";
+import { findSimilar, LandmarkError, distanceKm, nameKey, sameName } from "./landmark.service";
+import { normalizeText } from "./category.service";
 
 /**
  * "This place is mine": the manager or owner of a private place that is on the map as a landmark (a private hospital) asks to take it
@@ -93,6 +94,85 @@ export async function similarClaimable(input: { name: string; latitude: number; 
   return found
     .filter((l) => l.status === "ACTIVE" && l.kind.claimable && l.sector !== "PUBLIC")
     .map((l) => ({ id: l.id, name: l.name, kind: { slug: l.kind.slug, name: l.kind.nameAr, nameEn: l.kind.nameEn, icon: l.kind.icon }, address: l.address, latitude: l.latitude, longitude: l.longitude }));
+}
+
+
+/** The longest word of a name that says which place it is (not "mosque" or "hospital"), normalised the way the database copy is. */
+function distinctiveWord(name: string): string | null {
+  const key = nameKey(name);
+  return key.split(" ").filter((w) => w.length >= 3).sort((a, b) => b.length - a.length)[0] ?? null;
+}
+
+/** The same Arabic spelling folding as normalizeText, done inside the database so a typed "الاسد" finds a stored "الأسد". */
+const FOLD_FROM = String.fromCharCode(0x0623, 0x0625, 0x0622, 0x0671, 0x0629, 0x0649, 0x0626, 0x0624);
+const FOLD_TO = String.fromCharCode(0x0627, 0x0627, 0x0627, 0x0627, 0x0647, 0x064a, 0x064a, 0x0648);
+const DIACRITICS = "[" + String.fromCharCode(0x064b) + "-" + String.fromCharCode(0x065f, 0x0670, 0x0640) + "]";
+
+/**
+ * Claimable places that look like the shop being registered when the person did not put a pin: the same name, and an address that does not
+ * contradict (when both have one they share a word). The place is offered "claim it" instead of making a duplicate.
+ */
+export async function similarClaimableByName(input: { name: string; address?: string | null }) {
+  const word = distinctiveWord(input.name);
+  if (!word) return [];
+  const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT l."id" FROM "Landmark" l JOIN "LandmarkKind" k ON k."id" = l."kindId"
+    WHERE l."status" = 'ACTIVE' AND k."claimable" = true AND k."isActive" = true AND l."sector" IS DISTINCT FROM 'PUBLIC'
+      AND translate(lower(regexp_replace(l."name", ${DIACRITICS}, '', 'g')), ${FOLD_FROM}, ${FOLD_TO}) LIKE ${"%" + word + "%"}
+    LIMIT 80`);
+  if (!rows.length) return [];
+  const found = await prisma.landmark.findMany({ where: { id: { in: rows.map((r) => r.id) } }, include: { kind: true } });
+  const typed = normalizeText(input.address ?? "").split(" ").filter((w) => w.length >= 3);
+  return found
+    .filter((l) => sameName(l.name, input.name))
+    .filter((l) => {
+      const theirs = normalizeText(l.address ?? "").split(" ").filter((w) => w.length >= 3);
+      return !typed.length || !theirs.length || typed.some((w) => theirs.includes(w));
+    })
+    .slice(0, 5)
+    .map((l) => ({ id: l.id, name: l.name, kind: { slug: l.kind.slug, name: l.kind.nameAr, nameEn: l.kind.nameEn, icon: l.kind.icon }, address: l.address, latitude: l.latitude, longitude: l.longitude }));
+}
+
+/**
+ * Public places (of the kinds an owner can claim) that have a shop with the same name right next to them: the shop was probably registered
+ * on its own, so the place is now shown twice. The admin hides the place, or says it is a different one.
+ */
+export async function landmarkDuplicates() {
+  const [shops, branches] = await Promise.all([
+    prisma.merchantProfile.findMany({ where: { approvalStatus: "APPROVED", latitude: { not: null }, longitude: { not: null } }, select: { id: true, businessName: true, address: true, latitude: true, longitude: true }, orderBy: { createdAt: "desc" }, take: 3000 }),
+    prisma.shopBranch.findMany({ where: { isActive: true, merchant: { approvalStatus: "APPROVED" } }, select: { merchantId: true, name: true, address: true, latitude: true, longitude: true, merchant: { select: { businessName: true } } }, take: 3000 }),
+  ]);
+  const points = [
+    ...shops.map((s) => ({ shopId: s.id, name: s.businessName, address: s.address, lat: s.latitude!, lng: s.longitude! })),
+    ...branches.map((b) => ({ shopId: b.merchantId, name: b.merchant.businessName, address: b.address, lat: b.latitude, lng: b.longitude })),
+  ];
+  const maxKm = 0.15;
+  const pairs = new Map<string, { landmark: { id: string; name: string; address: string | null; latitude: number; longitude: number; kind: { icon: string; nameAr: string } }; shop: { id: string; name: string; address: string | null }; km: number }>();
+  for (let i = 0; i < points.length; i += 25) {
+    await Promise.all(points.slice(i, i + 25).map(async (p) => {
+      const dLat = maxKm / 111.32;
+      const dLng = maxKm / (111.32 * Math.max(0.2, Math.cos((p.lat * Math.PI) / 180)));
+      const near = await prisma.landmark.findMany({
+        where: { status: "ACTIVE", duplicateDismissed: false, kind: { claimable: true, isActive: true }, latitude: { gte: p.lat - dLat, lte: p.lat + dLat }, longitude: { gte: p.lng - dLng, lte: p.lng + dLng } },
+        include: { kind: true },
+        take: 20,
+      });
+      for (const l of near) {
+        const km = distanceKm(l.latitude, l.longitude, p.lat, p.lng);
+        if (km > maxKm || !sameName(l.name, p.name)) continue;
+        const old = pairs.get(l.id);
+        if (!old || km < old.km) pairs.set(l.id, { landmark: { id: l.id, name: l.name, address: l.address, latitude: l.latitude, longitude: l.longitude, kind: { icon: l.kind.icon, nameAr: l.kind.nameAr } }, shop: { id: p.shopId, name: p.name, address: p.address }, km });
+      }
+    }));
+  }
+  return [...pairs.values()].sort((a, b) => a.km - b.km);
+}
+
+/** "Not the same place": the pair is not offered again. */
+export async function dismissDuplicate(landmarkId: string) {
+  const l = await prisma.landmark.findUnique({ where: { id: landmarkId }, select: { id: true } });
+  if (!l) throw new LandmarkError("Place not found", 404);
+  await prisma.landmark.update({ where: { id: landmarkId }, data: { duplicateDismissed: true } });
 }
 
 /* ---------------- the admin's side ---------------- */

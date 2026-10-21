@@ -40,8 +40,8 @@ class DiscoverRepository(private val api: ApiService) {
     }
 
     /** Public places of the same name close to where a shop is being registered (to offer "claim it" instead of a duplicate). */
-    suspend fun similarLandmarks(name: String, lat: Double, lng: Double): List<com.dalilacom.app.data.network.SimilarLandmarkDto> {
-        val response = safeApiCall { api.similarLandmarks(name, lat, lng) } ?: return emptyList()
+    suspend fun similarLandmarks(name: String, lat: Double?, lng: Double?, address: String? = null): List<com.dalilacom.app.data.network.SimilarLandmarkDto> {
+        val response = safeApiCall { api.similarLandmarks(name, lat, lng, address?.ifBlank { null }) } ?: return emptyList()
         return response.body()?.items.orEmpty().takeIf { response.isSuccessful } ?: emptyList()
     }
 

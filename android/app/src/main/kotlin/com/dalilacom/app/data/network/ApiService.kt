@@ -300,7 +300,7 @@ interface ApiService {
     ): Response<LandmarksDto>
 
     @GET("landmarks/similar")
-    suspend fun similarLandmarks(@Query("name") name: String, @Query("lat") lat: Double, @Query("lng") lng: Double): Response<SimilarLandmarksDto>
+    suspend fun similarLandmarks(@Query("name") name: String, @Query("lat") lat: Double? = null, @Query("lng") lng: Double? = null, @Query("address") address: String? = null): Response<SimilarLandmarksDto>
 
     @GET("landmarks/{id}")
     suspend fun landmark(@Path("id") id: String): Response<LandmarkDto>

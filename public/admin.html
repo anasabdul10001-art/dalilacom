@@ -290,6 +290,7 @@
         <button data-tab="form" onclick="lmTab('form')">➕ إضافة مكان</button>
         <button data-tab="import" onclick="lmTab('import')">⬇️ استيراد من OpenStreetMap</button>
         <button data-tab="claims" onclick="lmTab('claims')">📨 طلبات المطالبة<span id="lm-claims-badge"></span></button>
+        <button data-tab="dups" onclick="lmTab('dups')">🔁 معالم صار لها محل<span id="lm-dups-badge"></span></button>
         <button data-tab="kinds" onclick="lmTab('kinds')">🏷️ الأنواع</button>
       </div>
 
@@ -364,6 +365,14 @@
           <div id="lm-i-kinds" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px"></div>
           <button onclick="lmImport()" id="lm-i-btn">جلب الأماكن</button> <span id="lm-i-msg" class="muted"></span>
           <p class="muted" style="margin-top:14px">البيانات من © OpenStreetMap contributors (رخصة ODbL).</p>
+        </div>
+      </div>
+
+      <div id="lm-pane-dups" style="display:none">
+        <div class="card">
+          <h3>🔁 معالم صار لها محل بنفس الاسم</h3>
+          <p class="muted">هدول أماكن عامة (مشفى خاص، مدرسة...) ظاهرة على الخريطة، وبنفس المكان تقريبًا في محل مسجّل باسمها. غالبًا هو نفسه، فالمكان بيظهر مرتين. اضغط <b>إخفاء المعلم</b> إذا هو نفسه، أو <b>مو نفس المكان</b> إذا لا (ما بيطلع هالزوج مرة ثانية).</p>
+          <div id="ld-list"></div>
         </div>
       </div>
 
@@ -2917,6 +2926,7 @@ async function lmOpen() {
     document.getElementById('lm-cities').innerHTML = LM_CITIES.map(([n, la, ln]) => `<button class="secondary small" onclick="lmPickCity(${la},${ln})">${n}</button>`).join('');
   }
   lmTab('list');
+  lmDupsBadge();
   api('GET', '/admin/landmark-claims?status=PENDING').then(r => { if (r.ok) document.getElementById('lm-claims-badge').textContent = r.data.total ? ' ' + r.data.total : ''; });
 }
 
@@ -2933,9 +2943,10 @@ async function lmLoadKinds() {
 
 function lmTab(name) {
   document.querySelectorAll('#lm-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-  ['list', 'form', 'import', 'claims', 'kinds'].forEach(p => { document.getElementById('lm-pane-' + p).style.display = p === name ? 'block' : 'none'; });
+  ['list', 'form', 'import', 'claims', 'dups', 'kinds'].forEach(p => { document.getElementById('lm-pane-' + p).style.display = p === name ? 'block' : 'none'; });
   if (name === 'list') lmLoad(lm.page || 1);
   if (name === 'claims') lmLoadClaims(1);
+  if (name === 'dups') lmLoadDups();
   if (name === 'form') { if (!lm.editingId) lmResetForm(); setTimeout(lmInitMap, 50); }
 }
 
@@ -3162,6 +3173,44 @@ async function lmImport() {
   }
   btn.disabled = false;
   msg.innerHTML = (failed ? `<span style="color:var(--danger,#b71c1c)">${esc(failed)}</span><br>` : '') + `انجلب <b>${fmt(sum.total)}</b> مكان جديد (${Object.entries(sum.created).map(([k, n]) => fmt(n) + ' ' + (names[k] || k)).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(sum.skipped)} · بدون اسم ${fmt(sum.unnamed)} · بدون اسم عربي ${fmt(sum.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
+}
+
+
+/* ---- places that now have a shop of the same name next to them ---- */
+
+async function lmDupsBadge() {
+  const r = await api('GET', '/admin/landmark-duplicates');
+  document.getElementById('lm-dups-badge').textContent = r.ok && r.data.items.length ? ' ' + r.data.items.length : '';
+}
+
+async function lmLoadDups() {
+  const box = document.getElementById('ld-list');
+  box.innerHTML = '<p class="muted">جاري البحث…</p>';
+  const r = await api('GET', '/admin/landmark-duplicates');
+  if (!r.ok) { box.innerHTML = `<p class="muted">${esc(errText(r.data, 'تعذّر التحميل'))}</p>`; return; }
+  document.getElementById('lm-dups-badge').textContent = r.data.items.length ? ' ' + r.data.items.length : '';
+  box.innerHTML = r.data.items.length ? `<table><thead><tr><th>المعلم (على الخريطة)</th><th>المحل المسجّل</th><th>المسافة</th><th></th></tr></thead><tbody>` + r.data.items.map(d => `
+    <tr>
+      <td>${esc(d.landmark.kind.icon)} <b>${esc(d.landmark.name)}</b><br><small class="muted">${esc(d.landmark.address || '—')}</small></td>
+      <td>🏪 <b>${esc(d.shop.name)}</b><br><small class="muted">${esc(d.shop.address || '—')}</small></td>
+      <td>${Math.round(d.km * 1000)} م</td>
+      <td style="white-space:nowrap">
+        <button class="small" onclick="lmDupHide('${d.landmark.id}')">🙈 إخفاء المعلم</button>
+        <button class="small secondary" onclick="lmDupDismiss('${d.landmark.id}')">✋ مو نفس المكان</button>
+      </td>
+    </tr>`).join('') + '</tbody></table>' : '<p class="muted">ما في معالم مكررة 👌</p>';
+}
+
+async function lmDupHide(id) {
+  const r = await api('PATCH', '/admin/landmarks/' + id, { status: 'HIDDEN' });
+  if (!r.ok) { alert(errText(r.data, 'تعذّر الإخفاء')); return; }
+  lmLoadDups();
+}
+
+async function lmDupDismiss(id) {
+  const r = await api('POST', '/admin/landmarks/' + id + '/duplicate-dismiss', {});
+  if (!r.ok) { alert(errText(r.data, 'تعذّر التنفيذ')); return; }
+  lmLoadDups();
 }
 
 

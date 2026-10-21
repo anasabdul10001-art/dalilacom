@@ -50,8 +50,9 @@ class MerchantRegisterViewModel(
         }
         _uiState.value = _uiState.value.copy(isSubmitting = true, error = null)
         viewModelScope.launch {
-            if (!skipSimilar && location != null) {
-                val similar = discoverRepository.similarLandmarks(businessName.trim(), location.first, location.second)
+            // with a pin: the same name close to it; without one (an address only): the same name and an address that does not contradict
+            if (!skipSimilar && (location != null || address.isNotBlank())) {
+                val similar = discoverRepository.similarLandmarks(businessName.trim(), location?.first, location?.second, address)
                 if (similar.isNotEmpty()) {
                     _uiState.value = _uiState.value.copy(isSubmitting = false, similar = similar)
                     return@launch

@@ -1748,6 +1748,7 @@ model Landmark {
   source      String          @default("ADMIN") // ADMIN | OSM
   sourceRef   String?         @unique // "osm:node/123": importing again never duplicates
   claimedMerchantId String? // set when the real owner took it over
+  duplicateDismissed Boolean @default(false) // the admin looked at a shop with the same name nearby and said: not the same place
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 

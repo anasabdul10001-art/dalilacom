@@ -1555,8 +1555,11 @@ function landmarkClaimHtml() {
 }
 
 /** Before a shop is registered: is there a public place of the same name close by? Then offer to claim it instead of a duplicate. */
-async function lmCheckSimilar(name, lat, lng) {
-  const params = new URLSearchParams({ name, lat, lng });
+async function lmCheckSimilar(name, lat, lng, address) {
+  // with a pin: the same name close to it; without one: the same name and an address that does not contradict
+  const params = new URLSearchParams({ name });
+  if (lat != null && lng != null) { params.set("lat", lat); params.set("lng", lng); }
+  if (address) params.set("address", address);
   const { ok, data } = await api("GET", "/landmarks/similar?" + params.toString());
   return ok && data.items ? data.items : [];
 }
@@ -4061,8 +4064,8 @@ async function submitMerchantRegister() {
   const pin = !online && S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
   if (!online && !pin.latitude && !address) { S.error = t("addr.need"); return render(); } // a place that is not pinned must be written down
   const proposed = S._catSugOpen && (S._catSug || "").trim().length >= 2 ? { suggestedCategory: S._catSug.trim() } : {};
-  if (pin.latitude && !S._lmSimilarOk) {
-    const similar = await lmCheckSimilar(businessName, pin.latitude, pin.longitude);
+  if (!online && !S._lmSimilarOk && (pin.latitude || address)) {
+    const similar = await lmCheckSimilar(businessName, pin.latitude, pin.longitude, address);
     if (similar.length) { S._lmSimilar = { items: similar }; return render(); }
   }
   S._lmSimilarOk = false;

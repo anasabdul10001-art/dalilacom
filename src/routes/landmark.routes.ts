@@ -7,7 +7,7 @@ import express from "express";
 import { sendError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { LandmarkError, listKinds, publicLandmark, publicLandmarks } from "../services/landmark.service";
-import { addClaimFile, CLAIM_ROLES, MAX_CLAIM_FILE_BYTES, myClaimFor, myClaims, resubmitClaim, similarClaimable, submitClaim, withdrawClaim } from "../services/landmarkClaim.service";
+import { addClaimFile, CLAIM_ROLES, MAX_CLAIM_FILE_BYTES, myClaimFor, myClaims, resubmitClaim, similarClaimable, similarClaimableByName, submitClaim, withdrawClaim } from "../services/landmarkClaim.service";
 
 export const landmarkRouter = Router();
 
@@ -49,9 +49,11 @@ landmarkRouter.get("/", route(async (req, res) => {
 
 // "Is the shop I am about to register already on the map as a landmark?" — then it can be claimed instead of duplicated
 landmarkRouter.get("/similar", route(async (req, res) => {
-  const parsed = z.object({ name: z.string().trim().min(2).max(120), lat: z.coerce.number().min(-90).max(90), lng: z.coerce.number().min(-180).max(180) }).safeParse(req.query);
+  const parsed = z.object({ name: z.string().trim().min(2).max(120), lat: z.coerce.number().min(-90).max(90).optional(), lng: z.coerce.number().min(-180).max(180).optional(), address: z.string().trim().max(200).optional() }).safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  res.json({ items: await similarClaimable({ name: parsed.data.name, latitude: parsed.data.lat, longitude: parsed.data.lng }) });
+  const { name, lat, lng, address } = parsed.data;
+  // with a pin: the same name close to it; without one: the same name and an address that does not contradict
+  res.json({ items: lat !== undefined && lng !== undefined ? await similarClaimable({ name, latitude: lat, longitude: lng }) : await similarClaimableByName({ name, address }) });
 }));
 
 landmarkRouter.get("/claims/mine", requireAuth, route(async (req, res) => {
