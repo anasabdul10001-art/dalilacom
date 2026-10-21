@@ -1381,12 +1381,14 @@ function moveMap(fn) {
   fn();
 }
 
-/* ---- public places on the map: mosques, hospitals, parks, main streets (they belong to nobody's account) ---- */
+/* ---- public places on the map: mosques, schools, hospitals, parks, streets... (they belong to nobody's account) ---- */
 
 const LM = { on: true, items: [], timer: null, drawn: "" };
 try { if (localStorage.getItem("dlk_landmarks") === "off") LM.on = false; } catch (e) {}
 // how close the map must be before a kind is drawn (mosques are many, so they wait for a closer view)
-function lmMinZoom(slug) { return slug === "mosque" ? 14 : slug === "main_street" || slug === "hospital" || slug === "park" ? 12 : 13; }
+const LM_ZOOM_12 = ["main_street", "hospital", "park", "neighborhood", "airport", "train_station", "university"];
+const LM_ZOOM_14 = ["mosque", "church", "school", "kindergarten", "police", "fire_station", "post_office", "market"];
+function lmMinZoom(slug) { return LM_ZOOM_12.includes(slug) ? 12 : LM_ZOOM_14.includes(slug) ? 14 : 13; }
 
 function lmSchedule() {
   clearTimeout(LM.timer);
@@ -1398,7 +1400,7 @@ async function lmFetch() {
   if (!map || !S._lmLayer) return;
   if (!LM.on || map.getZoom() < 12) { LM.items = []; lmDraw(); return; }
   const b = map.getBounds();
-  const params = new URLSearchParams({ minLat: b.getSouth(), maxLat: b.getNorth(), minLng: b.getWest(), maxLng: b.getEast(), limit: 300 });
+  const params = new URLSearchParams({ minLat: b.getSouth(), maxLat: b.getNorth(), minLng: b.getWest(), maxLng: b.getEast(), zoom: map.getZoom(), limit: 300 });
   const { ok, data } = await api("GET", "/landmarks?" + params.toString());
   LM.items = ok && data.items ? data.items : [];
   lmDraw();

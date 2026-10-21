@@ -102,6 +102,47 @@ describe("public places", () => {
   });
 });
 
+describe("more kinds of places", () => {
+  it("ships churches, schools, bus stations, neighbourhoods and more", async () => {
+    const slugs = (await request(app).get("/landmarks/kinds")).body.map((k: { slug: string }) => k.slug);
+    expect(slugs).toEqual(expect.arrayContaining(["church", "school", "kindergarten", "university", "government", "police", "fire_station", "post_office", "bus_station", "train_station", "airport", "stadium", "museum", "historic", "market", "square", "neighborhood"]));
+  });
+
+  it("imports them from OpenStreetMap, each into its own kind, with the public/private sector of a school", async () => {
+    const at = { lat: BASE.lat - 0.4, lon: BASE.lng };
+    const fake = async () => [
+      { type: "node" as const, id: 9101, ...at, tags: { amenity: "place_of_worship", religion: "christian", "name:ar": `كنيسة الاستيراد ${tag}` } },
+      { type: "way" as const, id: 9102, center: { lat: at.lat, lon: at.lon + 0.1 }, tags: { amenity: "school", "name:ar": `مدرسة الاستيراد ${tag}`, "operator:type": "private" } },
+      { type: "node" as const, id: 9103, lat: at.lat, lon: at.lon + 0.2, tags: { amenity: "bus_station", "name:ar": `كراج الاستيراد ${tag}` } },
+      { type: "node" as const, id: 9104, lat: at.lat, lon: at.lon + 0.3, tags: { place: "suburb", "name:ar": `حي الاستيراد ${tag}` } },
+      { type: "node" as const, id: 9105, lat: at.lat, lon: at.lon + 0.4, tags: { amenity: "place_of_worship", religion: "muslim", "name:ar": `جامع آخر ${tag}` } }, // a mosque: not asked for here
+    ];
+    const done = await importFromOsm({ latitude: at.lat, longitude: at.lon, radiusKm: 60, kinds: ["church", "school", "bus_station", "neighborhood"], fetcher: fake });
+    expect(done.created).toEqual({ church: 1, school: 1, bus_station: 1, neighborhood: 1 });
+    const school = await prisma.landmark.findFirst({ where: { sourceRef: "osm:way/9102" } });
+    expect(school!.sector).toBe("PRIVATE");
+    const church = await prisma.landmark.findFirst({ where: { sourceRef: "osm:node/9101" }, include: { kind: true } });
+    expect(church!.kind.slug).toBe("church");
+  });
+
+  it("leaves out the kinds that are drawn only closer up when the map is zoomed out", async () => {
+    const kind = await prisma.landmarkKind.findUnique({ where: { slug: "school" } });
+    const hospital = await prisma.landmarkKind.findUnique({ where: { slug: "hospital" } });
+    const place = (kindId: string, name: string) => prisma.landmark.create({ data: { kindId, name: `${name} ${tag}`, latitude: BASE.lat - 0.6, longitude: BASE.lng, status: "ACTIVE" } });
+    const school = await place(kind!.id, "مدرسة الزوم");
+    const hosp = await place(hospital!.id, "مشفى الزوم");
+    const box = { minLat: BASE.lat - 0.65, maxLat: BASE.lat - 0.55, minLng: BASE.lng - 0.05, maxLng: BASE.lng + 0.05 };
+    const far = (await request(app).get("/landmarks").query({ ...box, zoom: 12 })).body.items.map((l: { id: string }) => l.id);
+    expect(far).toContain(hosp.id);
+    expect(far).not.toContain(school.id);
+    const near = (await request(app).get("/landmarks").query({ ...box, zoom: 15 })).body.items.map((l: { id: string }) => l.id);
+    expect(near).toEqual(expect.arrayContaining([hosp.id, school.id]));
+    // an old app that sends no zoom still gets everything
+    const all = (await request(app).get("/landmarks").query(box)).body.items.map((l: { id: string }) => l.id);
+    expect(all).toEqual(expect.arrayContaining([hosp.id, school.id]));
+  });
+});
+
 describe("import from OpenStreetMap into the review list", () => {
   it("puts places in the review list, joins street pieces, skips what is already there", async () => {
     const fake = async () => [

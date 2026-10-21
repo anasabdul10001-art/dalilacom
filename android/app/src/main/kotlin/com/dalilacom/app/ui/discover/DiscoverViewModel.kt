@@ -204,7 +204,7 @@ class DiscoverViewModel(
             return
         }
         landmarksJob = viewModelScope.launch {
-            val found = repository.landmarks(bounds)
+            val found = repository.landmarks(bounds, zoom)
             _uiState.update { it.copy(landmarks = found) }
         }
     }

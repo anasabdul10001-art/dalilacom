@@ -17,6 +17,7 @@ const listSchema = z.object({
   minLng: z.coerce.number().min(-180).max(180).optional(),
   maxLng: z.coerce.number().min(-180).max(180).optional(),
   kinds: z.string().max(200).optional(), // "mosque,hospital"
+  zoom: z.coerce.number().min(0).max(25).optional(),
   q: z.string().trim().max(80).optional(),
   limit: z.coerce.number().int().min(1).max(500).default(300),
 });

@@ -2907,7 +2907,7 @@ function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const lm = { kinds: [], items: {}, page: 1, editingId: null, map: null, layer: null, path: [], inited: false };
 const LM_STATUS = { ACTIVE: ['ظاهر', 'APPROVED'], PENDING_REVIEW: ['بانتظار المراجعة', 'PENDING'], HIDDEN: ['مخفي', 'inactive'], CLAIMED: ['استلمه صاحبه', 'APPROVED'] };
 const LM_CITIES = [['دمشق', 33.5138, 36.2765], ['حلب', 36.2021, 37.1343], ['حمص', 34.7324, 36.7137], ['حماة', 35.1318, 36.7578], ['اللاذقية', 35.5317, 35.7901], ['طرطوس', 34.8890, 35.8866], ['درعا', 32.6189, 36.1021], ['إدلب', 35.9306, 36.6339], ['دير الزور', 35.3359, 40.1408], ['الحسكة', 36.5024, 40.7477], ['السويداء', 32.7090, 36.5663]];
-const LM_IMPORTABLE = ['mosque', 'hospital', 'park', 'main_street'];
+const LM_IMPORTABLE = ['mosque', 'church', 'hospital', 'park', 'school', 'kindergarten', 'university', 'government', 'police', 'fire_station', 'post_office', 'bus_station', 'train_station', 'airport', 'stadium', 'museum', 'historic', 'market', 'square', 'neighborhood', 'main_street'];
 const hasArabicText = (s) => /[؀-ۿ]/.test(s || '');
 
 async function lmOpen() {
@@ -2927,7 +2927,7 @@ async function lmLoadKinds() {
   const opts = lm.kinds.map(k => `<option value="${k.id}" data-slug="${esc(k.slug)}" data-geo="${k.geometry}">${esc(k.icon)} ${esc(k.nameAr)}</option>`).join('');
   document.getElementById('lm-kind').innerHTML = opts;
   document.getElementById('lm-f-kind').innerHTML = '<option value="">كل الأنواع</option>' + lm.kinds.map(k => `<option value="${esc(k.slug)}">${esc(k.icon)} ${esc(k.nameAr)}</option>`).join('');
-  document.getElementById('lm-i-kinds').innerHTML = lm.kinds.filter(k => LM_IMPORTABLE.includes(k.slug)).map(k => `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;font-size:14px;color:var(--text)"><input type="checkbox" class="lm-i-kind" value="${esc(k.slug)}" checked> ${esc(k.icon)} ${esc(k.nameAr)}</label>`).join('');
+  document.getElementById('lm-i-kinds').innerHTML = lm.kinds.filter(k => LM_IMPORTABLE.includes(k.slug)).map(k => `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;font-size:14px;color:var(--text)"><input type="checkbox" class="lm-i-kind" value="${esc(k.slug)}"${['mosque', 'hospital', 'park', 'main_street'].includes(k.slug) ? ' checked' : ''}> ${esc(k.icon)} ${esc(k.nameAr)}</label>`).join('') + ` <button class="secondary small" type="button" onclick="document.querySelectorAll('.lm-i-kind').forEach(c => { c.checked = true; })">تحديد الكل</button>`;
   lmRenderKinds();
 }
 
@@ -3144,8 +3144,8 @@ async function lmImport() {
   const r = await api('POST', '/admin/landmarks/import', { latitude, longitude, radiusKm, kinds });
   btn.disabled = false;
   if (!r.ok) { msg.textContent = errText(r.data, 'تعذّر الاستيراد'); return; }
-  const d = r.data, names = { mosque: 'جامع', hospital: 'مشفى', park: 'حديقة', main_street: 'شارع' };
-  msg.innerHTML = `انجلب <b>${fmt(d.total)}</b> مكان جديد (${Object.entries(d.created).map(([k, n]) => fmt(n) + ' ' + names[k]).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(d.skipped)} · بدون اسم ${fmt(d.unnamed)} · بدون اسم عربي ${fmt(d.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
+  const d = r.data, names = Object.fromEntries(lm.kinds.map(k => [k.slug, k.nameAr]));
+  msg.innerHTML = `انجلب <b>${fmt(d.total)}</b> مكان جديد (${Object.entries(d.created).map(([k, n]) => fmt(n) + ' ' + (names[k] || k)).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(d.skipped)} · بدون اسم ${fmt(d.unnamed)} · بدون اسم عربي ${fmt(d.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
 }
 
 

@@ -101,6 +101,7 @@ export async function updateKind(id: string, input: Partial<KindInput>) {
 export interface PublicQuery {
   minLat?: number; maxLat?: number; minLng?: number; maxLng?: number;
   kinds?: string[]; // slugs
+  zoom?: number; // the map's zoom: kinds that are drawn only closer up are left out (they would use the limit for nothing)
   q?: string;
   limit: number;
   lang: string;
@@ -127,10 +128,15 @@ function shape(l: LandmarkWithKind, lang: string) {
 
 export async function publicLandmarks(q: PublicQuery) {
   const hasBox = q.minLat !== undefined && q.maxLat !== undefined && q.minLng !== undefined && q.maxLng !== undefined;
+  let slugs = q.kinds?.length ? q.kinds : undefined;
+  if (q.zoom !== undefined) {
+    const zoom = q.zoom;
+    slugs = (await listKinds(true)).map((k) => k.slug).filter((s) => kindMinZoom(s) <= zoom && (!slugs || slugs.includes(s)));
+  }
   const rows = await prisma.landmark.findMany({
     where: {
       status: "ACTIVE",
-      kind: { isActive: true, ...(q.kinds?.length ? { slug: { in: q.kinds } } : {}) },
+      kind: { isActive: true, ...(slugs ? { slug: { in: slugs } } : {}) },
       ...(hasBox ? { latitude: { gte: q.minLat, lte: q.maxLat }, longitude: { gte: q.minLng, lte: q.maxLng } } : {}),
       ...(q.q ? { OR: [{ name: { contains: q.q, mode: "insensitive" } }, { nameEn: { contains: q.q, mode: "insensitive" } }, { address: { contains: q.q, mode: "insensitive" } }] } : {}),
     },
@@ -253,7 +259,42 @@ export async function reviewLandmarks(input: { ids?: string[]; filter?: { status
 /* ---------------- import from OpenStreetMap ---------------- */
 
 const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
-export const IMPORTABLE = ["mosque", "hospital", "park", "main_street"] as const;
+
+/** What each kind of point looks like in OpenStreetMap: the Overpass selectors that fetch it, and the test that says an element belongs to it. */
+interface OsmRule { selectors: string[]; match: (t: Record<string, string>) => boolean; dupKm?: number }
+const OSM_POINT_KINDS: Record<string, OsmRule> = {
+  mosque: { selectors: [`["amenity"="place_of_worship"]["religion"="muslim"]`], match: (t) => t.amenity === "place_of_worship" && t.religion === "muslim" },
+  church: { selectors: [`["amenity"="place_of_worship"]["religion"="christian"]`], match: (t) => t.amenity === "place_of_worship" && t.religion === "christian" },
+  hospital: { selectors: [`["amenity"="hospital"]`], match: (t) => t.amenity === "hospital" },
+  park: { selectors: [`["leisure"="park"]`], match: (t) => t.leisure === "park" },
+  school: { selectors: [`["amenity"="school"]`], match: (t) => t.amenity === "school" },
+  kindergarten: { selectors: [`["amenity"="kindergarten"]`], match: (t) => t.amenity === "kindergarten" },
+  university: { selectors: [`["amenity"~"^(university|college)$"]`], match: (t) => t.amenity === "university" || t.amenity === "college" },
+  government: { selectors: [`["office"="government"]`, `["amenity"~"^(townhall|courthouse)$"]`], match: (t) => t.office === "government" || t.amenity === "townhall" || t.amenity === "courthouse" },
+  police: { selectors: [`["amenity"="police"]`], match: (t) => t.amenity === "police" },
+  fire_station: { selectors: [`["amenity"="fire_station"]`], match: (t) => t.amenity === "fire_station" },
+  post_office: { selectors: [`["amenity"="post_office"]`], match: (t) => t.amenity === "post_office" },
+  bus_station: { selectors: [`["amenity"="bus_station"]`], match: (t) => t.amenity === "bus_station" },
+  train_station: { selectors: [`["railway"="station"]`], match: (t) => t.railway === "station" },
+  airport: { selectors: [`["aeroway"="aerodrome"]`], match: (t) => t.aeroway === "aerodrome" },
+  stadium: { selectors: [`["leisure"="stadium"]`], match: (t) => t.leisure === "stadium" },
+  museum: { selectors: [`["tourism"="museum"]`], match: (t) => t.tourism === "museum" },
+  historic: { selectors: [`["historic"~"^(castle|fort|archaeological_site)$"]`], match: (t) => ["castle", "fort", "archaeological_site"].includes(t.historic) },
+  market: { selectors: [`["amenity"="marketplace"]`], match: (t) => t.amenity === "marketplace" },
+  square: { selectors: [`["place"="square"]`], match: (t) => t.place === "square" },
+  neighborhood: { selectors: [`["place"~"^(suburb|neighbourhood|quarter)$"]`], match: (t) => ["suburb", "neighbourhood", "quarter"].includes(t.place), dupKm: 1 },
+};
+export const IMPORTABLE = [...Object.keys(OSM_POINT_KINDS), "main_street"] as const;
+
+/** Kinds where "public or private" matters (a private one may be claimed by its owner). */
+const SECTOR_KINDS = new Set(["hospital", "school", "kindergarten", "university"]);
+
+/** How close the map must be before a kind is drawn: many small places (mosques, schools) wait for a closer view. */
+const ZOOM_12 = new Set(["main_street", "hospital", "park", "neighborhood", "airport", "train_station", "university"]);
+const ZOOM_14 = new Set(["mosque", "church", "school", "kindergarten", "police", "fire_station", "post_office", "market"]);
+export function kindMinZoom(slug: string): number {
+  return ZOOM_12.has(slug) ? 12 : ZOOM_14.has(slug) ? 14 : 13;
+}
 
 interface OsmElement {
   type: "node" | "way" | "relation";
@@ -267,10 +308,7 @@ interface OsmElement {
 
 function overpassQuery(slugs: string[], s: number, w: number, n: number, e: number): string {
   const box = `(${s},${w},${n},${e})`;
-  const points: string[] = [];
-  if (slugs.includes("mosque")) points.push(`nwr["amenity"="place_of_worship"]["religion"="muslim"]${box};`);
-  if (slugs.includes("hospital")) points.push(`nwr["amenity"="hospital"]${box};`);
-  if (slugs.includes("park")) points.push(`nwr["leisure"="park"]${box};`);
+  const points = slugs.flatMap((s) => (OSM_POINT_KINDS[s]?.selectors ?? []).map((sel) => `nwr${sel}${box};`));
   const parts: string[] = ["[out:json][timeout:90];"];
   if (points.length) parts.push(`(${points.join("")})->.a;.a out center tags;`);
   if (slugs.includes("main_street")) parts.push(`way["highway"~"^(motorway|trunk|primary)$"]["name"]${box}->.b;.b out geom tags;`);
@@ -342,14 +380,14 @@ export async function importFromOsm(input: { latitude: number; longitude: number
     const lat = el.lat ?? el.center?.lat;
     const lng = el.lon ?? el.center?.lon;
     if (lat === undefined || lng === undefined) continue;
-    const slug = tags.amenity === "hospital" ? "hospital" : tags.leisure === "park" ? "park" : "mosque";
-    const kind = kindBySlug.get(slug);
-    if (!kind) continue;
+    const slug = slugs.find((s) => OSM_POINT_KINDS[s]?.match(tags));
+    const kind = slug ? kindBySlug.get(slug) : undefined;
+    if (!slug || !kind) continue;
     const ref = `osm:${el.type}/${el.id}`;
-    if (refs.has(ref) || dup(name, lat, lng, kind.id, 0.12)) { skipped++; continue; }
+    if (refs.has(ref) || dup(name, lat, lng, kind.id, OSM_POINT_KINDS[slug].dupKm ?? 0.12)) { skipped++; continue; }
     refs.add(ref);
     const op = (tags["operator:type"] || tags.ownership || "").toLowerCase();
-    const sector: LandmarkSector | null = slug !== "hospital" ? null : /gov|public|state/.test(op) ? "PUBLIC" : /private/.test(op) ? "PRIVATE" : null;
+    const sector: LandmarkSector | null = !SECTOR_KINDS.has(slug) ? null : /gov|public|state/.test(op) ? "PUBLIC" : /private/.test(op) ? "PRIVATE" : null;
     if (!hasArabic(name)) withoutArabic++;
     const street = [tags["addr:street"], tags["addr:housenumber"]].filter(Boolean).join(" ");
     rows.push({ kindId: kind.id, name, nameEn: nameEn ?? null, sector, status: "PENDING_REVIEW", cityId: input.cityId ?? null, address: street || null, phone: tags.phone || tags["contact:phone"] || null, latitude: lat, longitude: lng, source: "OSM", sourceRef: ref });

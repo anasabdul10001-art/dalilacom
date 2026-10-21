@@ -10,7 +10,7 @@
   var style = document.createElement("style");
   style.textContent =
     ".pw-wrap{position:relative;display:block}.pw-wrap>input{width:100%;padding-inline-end:44px!important;box-sizing:border-box}" +
-    ".pw-eye{position:absolute;inset-inline-end:6px;top:50%;transform:translateY(-50%);width:34px;height:34px;padding:0;border:0;border-radius:8px;background:transparent!important;color:#6b5d5b!important;display:flex;align-items:center;justify-content:center;cursor:pointer}" +
+    ".pw-eye{position:absolute;inset-inline-end:6px;top:50%;transform:translateY(-50%);width:34px!important;height:34px!important;min-width:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:8px;box-shadow:none!important;line-height:1;background:transparent!important;color:#6b5d5b!important;display:flex;align-items:center;justify-content:center;cursor:pointer}" +
     ".pw-eye:hover{color:#ba2a34!important}";
   document.head.appendChild(style);
 

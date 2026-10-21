@@ -292,6 +292,7 @@ interface ApiService {
         @Query("maxLat") maxLat: Double,
         @Query("minLng") minLng: Double,
         @Query("maxLng") maxLng: Double,
+        @Query("zoom") zoom: Double? = null,
         @Query("limit") limit: Int = 300,
     ): Response<LandmarksDto>
 

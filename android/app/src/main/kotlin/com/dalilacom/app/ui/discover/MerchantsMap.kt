@@ -202,7 +202,11 @@ private fun streetLabel(context: Context, text: String, colorHex: String): Bitma
 }
 
 /** How close the map must be before a kind is drawn (mosques are many, so they wait for a closer view). */
-private fun landmarkMinZoom(slug: String): Double = when (slug) { "mosque" -> 14.0; "main_street", "hospital", "park" -> 12.0; else -> 13.0 }
+private fun landmarkMinZoom(slug: String): Double = when (slug) {
+    "main_street", "hospital", "park", "neighborhood", "airport", "train_station", "university" -> 12.0
+    "mosque", "church", "school", "kindergarten", "police", "fire_station", "post_office", "market" -> 14.0
+    else -> 13.0
+}
 
 /**
  * OpenStreetMap view (no API key needed): the user's position, one pin per merchant, pins that

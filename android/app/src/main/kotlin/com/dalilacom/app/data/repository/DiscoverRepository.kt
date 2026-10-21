@@ -42,8 +42,8 @@ class DiscoverRepository(private val api: ApiService) {
     }
 
     /** The public places inside the rectangle the map shows. */
-    suspend fun landmarks(bounds: MapBounds): List<com.dalilacom.app.data.network.LandmarkDto> {
-        val response = safeApiCall { api.landmarks(bounds.south, bounds.north, bounds.west, bounds.east) } ?: return emptyList()
+    suspend fun landmarks(bounds: MapBounds, zoom: Double? = null): List<com.dalilacom.app.data.network.LandmarkDto> {
+        val response = safeApiCall { api.landmarks(bounds.south, bounds.north, bounds.west, bounds.east, zoom) } ?: return emptyList()
         return response.body()?.items.orEmpty().takeIf { response.isSuccessful } ?: emptyList()
     }
 
