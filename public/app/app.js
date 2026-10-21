@@ -1415,13 +1415,16 @@ function lmDraw() {
   LM.items.forEach((p) => {
     if (z < lmMinZoom(p.kind.slug)) return;
     if (p.kind.geometry === "LINE" && Array.isArray(p.path)) {
-      p.path.forEach((seg) => L.polyline(seg, { color: p.kind.color, weight: 5, opacity: 0.8 }).on("click", () => lmOpen(p.id)).addTo(S._lmLayer));
+      p.path.forEach((seg) => L.polyline(seg, { color: p.kind.color, weight: 3, opacity: 0.4 }).on("click", () => lmOpen(p.id)).addTo(S._lmLayer));
       if (z >= 14) {
-        L.marker([p.latitude, p.longitude], { icon: L.divIcon({ className: "", html: `<span class="lm-street-label" style="border-color:${esc(p.kind.color)};color:${esc(p.kind.color)}">${esc(p.name)}</span>`, iconSize: [0, 0] }), zIndexOffset: -500 }).on("click", () => lmOpen(p.id)).addTo(S._lmLayer);
+        L.marker([p.latitude, p.longitude], { icon: L.divIcon({ className: "", html: `<span class="lm-street-label">${esc(p.name)}</span>`, iconSize: [0, 0] }), zIndexOffset: -500 }).on("click", () => lmOpen(p.id)).addTo(S._lmLayer);
       }
       return;
     }
-    const icon = L.divIcon({ className: "", html: `<div class="lm-pin" style="background:${esc(p.kind.color)}" title="${esc(p.name)}">${esc(p.kind.icon)}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+    // from afar a small soft dot; from 15 a small round icon; from 16 its name beside it
+    const icon = z < 15
+      ? L.divIcon({ className: "", html: `<div class="lm-dot" style="background:${esc(p.kind.color)}" title="${esc(p.name)}"></div>`, iconSize: [12, 12], iconAnchor: [6, 6] })
+      : L.divIcon({ className: "", html: `<div class="lm-poi" title="${esc(p.name)}"><div class="lm-pico">${esc(p.kind.icon)}</div>${z >= 16 ? `<span class="lm-name" dir="auto">${esc(p.name)}</span>` : ""}</div>`, iconSize: [22, 22], iconAnchor: [11, 11] });
     L.marker([p.latitude, p.longitude], { icon, zIndexOffset: -500 }).on("click", () => lmOpen(p.id)).addTo(S._lmLayer);
   });
 }

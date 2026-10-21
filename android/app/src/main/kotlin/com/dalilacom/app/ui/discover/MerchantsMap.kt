@@ -161,43 +161,73 @@ private val landmarkIcons = HashMap<String, BitmapDrawable>()
 
 /** A public place: a round badge in its kind's colour, white ring, its emoji in the middle (smaller and calmer than a shop's pin). */
 private fun landmarkIcon(context: Context, emoji: String, colorHex: String): BitmapDrawable = landmarkIcons.getOrPut("$emoji|$colorHex") {
+    // a small round icon: soft white disc, a thin grey edge, a faint shadow, the icon small inside
     val d = context.resources.displayMetrics.density
-    val size = (32 * d).toInt()
+    val pad = 3 * d
+    val disc = 22 * d
+    val size = (disc + 2 * pad).toInt()
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    paint.color = Color.WHITE
-    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
-    paint.color = runCatching { Color.parseColor(colorHex) }.getOrDefault(Color.DKGRAY)
-    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 2.5f * d, paint)
-    paint.color = Color.WHITE
+    paint.color = Color.argb(245, 255, 255, 255)
+    paint.setShadowLayer(2.5f * d, 0f, 1f * d, Color.argb(60, 0, 0, 0))
+    canvas.drawCircle(size / 2f, size / 2f, disc / 2f, paint)
+    paint.clearShadowLayer()
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = 1f * d
+    paint.color = Color.argb(46, 60, 64, 67)
+    canvas.drawCircle(size / 2f, size / 2f, disc / 2f, paint)
+    paint.style = Paint.Style.FILL
+    paint.color = Color.BLACK
     paint.textAlign = Paint.Align.CENTER
-    paint.textSize = 15 * d
+    paint.textSize = 12 * d
     canvas.drawText(emoji, size / 2f, size / 2f - (paint.descent() + paint.ascent()) / 2, paint)
     BitmapDrawable(context.resources, bitmap)
 }
 
-/** The name of a street, written on a small white label in its colour. */
-private fun streetLabel(context: Context, text: String, colorHex: String): BitmapDrawable {
+/** From afar: only a small soft dot in the kind's colour, with a thin white ring. */
+private fun landmarkDot(context: Context, colorHex: String): BitmapDrawable = landmarkIcons.getOrPut("dot|$colorHex") {
     val d = context.resources.displayMetrics.density
-    val color = runCatching { Color.parseColor(colorHex) }.getOrDefault(Color.DKGRAY)
+    val size = (13 * d).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    paint.textSize = 12 * d
-    paint.isFakeBoldText = true
-    val w = (paint.measureText(text) + 14 * d).toInt()
-    val h = (22 * d).toInt()
+    paint.color = Color.WHITE
+    paint.setShadowLayer(1.5f * d, 0f, 0.5f * d, Color.argb(70, 0, 0, 0))
+    canvas.drawCircle(size / 2f, size / 2f, 5.5f * d, paint)
+    paint.clearShadowLayer()
+    paint.color = runCatching { Color.parseColor(colorHex) }.getOrDefault(Color.DKGRAY)
+    paint.alpha = 225
+    canvas.drawCircle(size / 2f, size / 2f, 4.2f * d, paint)
+    BitmapDrawable(context.resources, bitmap)
+}
+
+/** A name written in small grey letters with a white halo (no box). [startPadDp] leaves room at the left for the icon the name sits beside. */
+private fun placeLabel(context: Context, text: String, startPadDp: Float, centered: Boolean): BitmapDrawable {
+    val d = context.resources.displayMetrics.density
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    paint.textSize = 11 * d
+    paint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+    val maxText = 120 * d
+    val fits = paint.breakText(text, true, maxText, null)
+    val shown = if (fits < text.length) text.take(fits).trimEnd() + "…" else text
+    val textW = paint.measureText(shown)
+    val halo = 2.5f * d
+    val w = (startPadDp * d + textW + 2 * halo).toInt() + 2
+    val h = (16 * d).toInt()
     val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
-    val box = android.graphics.RectF(1 * d, 1 * d, w - 1 * d, h - 1 * d)
-    paint.color = Color.argb(235, 255, 255, 255)
-    canvas.drawRoundRect(box, 6 * d, 6 * d, paint)
-    paint.style = Paint.Style.STROKE
-    paint.strokeWidth = 1.5f * d
-    paint.color = color
-    canvas.drawRoundRect(box, 6 * d, 6 * d, paint)
-    paint.style = Paint.Style.FILL
+    val x = if (centered) w / 2f else startPadDp * d + halo + textW / 2f
+    val y = h / 2f - (paint.descent() + paint.ascent()) / 2
     paint.textAlign = Paint.Align.CENTER
-    canvas.drawText(text, w / 2f, h / 2f - (paint.descent() + paint.ascent()) / 2, paint)
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = halo
+    paint.strokeJoin = Paint.Join.ROUND
+    paint.color = Color.argb(235, 255, 255, 255)
+    canvas.drawText(shown, x, y, paint)
+    paint.style = Paint.Style.FILL
+    paint.color = Color.parseColor(if (centered) "#5F6368" else "#3C4043")
+    canvas.drawText(shown, x, y, paint)
     return BitmapDrawable(context.resources, bitmap)
 }
 
@@ -329,8 +359,8 @@ fun MerchantsMap(
                         Polyline(map).apply {
                             setPoints(segment.map { GeoPoint(it[0], it[1]) })
                             outlinePaint.color = color
-                            outlinePaint.alpha = 210
-                            outlinePaint.strokeWidth = 5 * context.resources.displayMetrics.density
+                            outlinePaint.alpha = 100
+                            outlinePaint.strokeWidth = 3 * context.resources.displayMetrics.density
                             outlinePaint.strokeCap = Paint.Cap.ROUND
                             setOnClickListener { _, _, _ -> latestOnLandmark(place); true }
                         },
@@ -340,7 +370,7 @@ fun MerchantsMap(
                     Marker(map).apply {
                         position = GeoPoint(place.latitude, place.longitude)
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                        icon = streetLabel(context, place.name, place.kind.color)
+                        icon = placeLabel(context, place.name, 0f, centered = true)
                         setInfoWindow(null)
                         setOnMarkerClickListener { _, _ -> latestOnLandmark(place); true }
                         map.overlays.add(this)
@@ -348,14 +378,25 @@ fun MerchantsMap(
                 }
                 continue
             }
+            // from afar a small soft dot; from zoom 15 a small round icon; from 16 its name beside it
             Marker(map).apply {
                 position = GeoPoint(place.latitude, place.longitude)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                icon = landmarkIcon(context, place.kind.icon, place.kind.color)
+                icon = if (zoom < 15.0) landmarkDot(context, place.kind.color) else landmarkIcon(context, place.kind.icon, place.kind.color)
                 title = place.name
                 setInfoWindow(null)
                 setOnMarkerClickListener { _, _ -> latestOnLandmark(place); true }
                 map.overlays.add(this)
+            }
+            if (zoom >= 16.0) {
+                Marker(map).apply {
+                    position = GeoPoint(place.latitude, place.longitude)
+                    setAnchor(0f, Marker.ANCHOR_CENTER)
+                    icon = placeLabel(context, place.name, 14f, centered = false)
+                    setInfoWindow(null)
+                    setOnMarkerClickListener { _, _ -> latestOnLandmark(place); true }
+                    map.overlays.add(this)
+                }
             }
         }
         val measured = map.width > 0

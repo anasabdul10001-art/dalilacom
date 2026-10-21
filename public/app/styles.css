@@ -1615,8 +1615,12 @@ input::placeholder, textarea::placeholder { color: #b3a8a5; opacity: 1; }
 :root[data-theme="dark"] input::placeholder, :root[data-theme="dark"] textarea::placeholder { color: #6f6461; }
 
 /* the public places on the map (mosques, hospitals, parks, main streets) */
-.lm-pin { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); display: grid; place-items: center; font-size: 15px; line-height: 1; }
-.lm-street-label { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; background: rgba(255, 255, 255, .92); border: 1.5px solid; border-radius: 6px; padding: 1px 7px; font-weight: 800; font-size: 12px; pointer-events: auto; }
+/* public places, the way a map draws them: a small soft dot from afar, a small round icon closer, its name closer still */
+.lm-dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .25), 0 1px 2px rgba(0, 0, 0, .25); opacity: .9; }
+.lm-poi { position: relative; width: 22px; height: 22px; }
+.lm-pico { width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, .96); border: 1px solid rgba(60, 64, 67, .18); box-shadow: 0 1px 3px rgba(0, 0, 0, .22); display: grid; place-items: center; font-size: 12px; line-height: 1; }
+.lm-name { position: absolute; inset-inline-start: 26px; top: 50%; transform: translateY(-50%); white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; font-size: 11px; font-weight: 600; color: #3c4043; text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 3px #fff; pointer-events: none; }
+.lm-street-label { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font-weight: 600; font-size: 11px; color: #5f6368; text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 3px #fff; pointer-events: auto; }
 .lm-card { text-align: start; }
 .lm-card p { margin: 6px 0; font-size: 14px; }
 .lm-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
