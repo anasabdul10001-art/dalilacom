@@ -991,6 +991,8 @@
     <string name="lm_similar_title">This place is already on the map</string>
     <string name="lm_similar_text">There is a public place nearby with the same name. If it is your place, claim it instead of registering a new one:</string>
     <string name="lm_claim_it">It is my place, claim it</string>
+    <string name="mr_guess_title">Suggested profession from the shop name:</string>
+    <string name="mr_guess_auto">We picked “%1$s” for you. If it is not right, choose another one here or from the lists below.</string>
     <string name="lm_not_same">No, it is a different place — continue registering</string>
     <string name="shop_approved">✅ Your business was approved and is on the map</string>
     <string name="shop_rejected">Your business was not accepted:</string>

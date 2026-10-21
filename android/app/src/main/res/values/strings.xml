@@ -995,6 +995,8 @@
     <string name="lm_similar_title">هذا المكان موجود على الخريطة</string>
     <string name="lm_similar_text">في مكان عام قريب بنفس الاسم. إذا هو نفس مكانك، طالب بملكيته بدل ما تسجّل مكان جديد:</string>
     <string name="lm_claim_it">هو مكاني، طالب بالملكية</string>
+    <string name="mr_guess_title">المهنة المقترحة حسب اسم المحل:</string>
+    <string name="mr_guess_auto">اخترنا لك «%1$s». إذا ما بتناسب، اختار غيرها من هون أو من القوائم تحت.</string>
     <string name="lm_not_same">لا، هذا مكان مختلف — تابع التسجيل</string>
     <string name="shop_approved">✅ انقبل نشاطك وصار على الخريطة</string>
     <string name="shop_rejected">ما انقبل نشاطك:</string>

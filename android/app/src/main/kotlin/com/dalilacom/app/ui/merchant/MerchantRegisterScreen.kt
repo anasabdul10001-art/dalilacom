@@ -38,6 +38,8 @@ import com.dalilacom.app.ui.common.ProfessionPicker
 import com.dalilacom.app.ui.common.isOnlineCategory
 import androidx.compose.ui.res.stringResource
 import com.dalilacom.app.ui.common.LocationPicker
+import com.dalilacom.app.data.network.CategoryHitDto
+import kotlinx.coroutines.delay
 
 @Composable
 fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, onBack: () -> Unit, onClaimLandmark: (String) -> Unit = {}) {
@@ -49,6 +51,9 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
     var phone by remember { mutableStateOf("") }
     var whatsapp by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
+    var guess by remember { mutableStateOf<List<CategoryHitDto>>(emptyList()) } // what the shop's name points to
+    var categoryAuto by remember { mutableStateOf(false) } // the profession was chosen for the person (until they choose themselves)
+    var categoryManual by remember { mutableStateOf(false) }
     var location by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var suggestion by remember { mutableStateOf("") }
     var autoAddress by remember { mutableStateOf("") } // what the map filled in
@@ -71,6 +76,21 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
         }
         android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_LONG).show()
         onRegistered()
+    }
+
+    // while the name is typed: the profession it points to is suggested (and chosen, unless the person already chose one)
+    LaunchedEffect(businessName) {
+        val name = businessName.trim()
+        if (name.length < 3) {
+            guess = emptyList()
+            if (categoryAuto) { selectedCategoryId = null; categoryAuto = false }
+            return@LaunchedEffect
+        }
+        delay(600)
+        val found = viewModel.guessCategory(name)
+        guess = found
+        if (found.isNotEmpty() && !categoryManual) { selectedCategoryId = found.first().id; categoryAuto = true }
+        else if (found.isEmpty() && categoryAuto) { selectedCategoryId = null; categoryAuto = false }
     }
 
     if (state.similar.isNotEmpty()) {
@@ -108,12 +128,28 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             modifier = Modifier.fillMaxWidth(),
         placeholder = { Hint(stringResource(R.string.ph_shop)) },
     )
+        if (guess.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text("✨ " + stringResource(R.string.mr_guess_title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(guess, key = { it.id }) { g ->
+                    FilterChip(
+                        selected = selectedCategoryId == g.id,
+                        onClick = { selectedCategoryId = g.id; categoryAuto = false; categoryManual = true },
+                        label = { Text((g.icon?.let { "$it " } ?: "") + g.name) },
+                    )
+                }
+            }
+            if (categoryAuto) guess.firstOrNull { it.id == selectedCategoryId }?.let {
+                Text(stringResource(R.string.mr_guess_auto, it.name), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         Spacer(Modifier.height(12.dp))
 
         Text(stringResource(R.string.mp_sec_profession), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(6.dp))
         ProfessionPicker(
-            tree = state.categories, selectedId = selectedCategoryId, onSelect = { selectedCategoryId = it },
+            tree = state.categories, selectedId = selectedCategoryId, onSelect = { selectedCategoryId = it; categoryAuto = false; categoryManual = true },
             search = viewModel::searchCategories, suggestion = suggestion, onSuggestion = { suggestion = it },
         )
         Spacer(Modifier.height(12.dp))

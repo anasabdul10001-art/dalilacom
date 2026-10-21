@@ -6,6 +6,7 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { resolveLanguage } from "../lib/languages";
 import { categoryTreeFor, invalidateCategoryCache, searchCategories } from "../services/category.service";
+import { guessShopCategory } from "../services/shopCategoryGuess.service";
 
 export const categoryRouter = Router();
 
@@ -20,6 +21,20 @@ categoryRouter.get("/search", async (req, res) => {
   const parsed = z.object({ q: z.string().trim().min(1).max(60) }).safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await searchCategories(parsed.data.q, resolveLanguage(req), 10));
+});
+
+// A person registering a shop: the profession the shop's own name points to (its words first, the AI when they are not clear).
+const guessUse = new Map<string, { day: string; n: number }>();
+const DAILY_AI_GUESSES = 40;
+categoryRouter.get("/for-name", requireAuth, async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(2).max(80) }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const day = new Date().toISOString().slice(0, 10);
+  const used = guessUse.get(req.user!.id);
+  const n = used && used.day === day ? used.n : 0;
+  const result = await guessShopCategory(parsed.data.name, resolveLanguage(req), n < DAILY_AI_GUESSES);
+  if (result.source === "AI") guessUse.set(req.user!.id, { day, n: n + 1 });
+  res.json(result);
 });
 
 function slugify(name: string): string {

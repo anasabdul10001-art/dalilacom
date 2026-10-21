@@ -48,5 +48,5 @@
     (window.requestAnimationFrame || setTimeout)(function () { queued = false; enhance(); });
   }
   new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
-  if (document.readyState !== "loading") enhance(); else document.addEventListener("DOMContentLoaded", enhance);
+  if (document.readyState !== "loading") enhance(); else document.addEventListener("DOMContentLoaded", function () { enhance(); });
 })();

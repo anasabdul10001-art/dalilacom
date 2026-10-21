@@ -210,6 +210,10 @@ data class CategoryHitDto(
     val online: Boolean = false,
 )
 
+/** The professions a shop's own name points to (its words first, then the AI): [source] is WORDS, AI or NONE. */
+@Serializable
+data class NameGuessDto(val items: List<CategoryHitDto> = emptyList(), val source: String = "NONE")
+
 /** A profession a shop proposed, and what the team decided. */
 @Serializable
 data class CategorySuggestionDto(val name: String, val status: String, val note: String? = null)

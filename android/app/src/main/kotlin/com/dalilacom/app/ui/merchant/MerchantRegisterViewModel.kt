@@ -39,6 +39,7 @@ class MerchantRegisterViewModel(
 
     suspend fun searchCategories(query: String) = discoverRepository.searchCategories(query)
     suspend fun addressFor(lat: Double, lng: Double) = discoverRepository.addressFor(lat, lng)
+    suspend fun guessCategory(name: String) = discoverRepository.guessCategoryForName(name)
 
     fun dismissSimilar() { _uiState.value = _uiState.value.copy(similar = emptyList()) }
 

@@ -425,14 +425,14 @@ async function render() {
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   // the map search box keeps its own element through every redraw: a new one lost the caret (Arabic letters came out reversed), the undo history and the typing in progress
-  const keepQ = active && active.id === "disc-q" ? active : null;
+  const keepQ = active && (active.id === "disc-q" || active.id === "mr-name") ? active : null;
   const caret = keepQ ? [keepQ.selectionStart, keepQ.selectionEnd] : null;
   el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml();
   wireUpAfterRender();
   placeDiscPopup();
   trDom(el); // translate the rendered Arabic when another language is on
   if (keepQ) {
-    const fresh = document.getElementById("disc-q");
+    const fresh = document.getElementById(keepQ.id);
     if (fresh && fresh !== keepQ) {
       if (keepQ.value !== fresh.value) keepQ.value = fresh.value; // a change made by the app (clear, a pick) wins over what is there
       keepQ.placeholder = fresh.placeholder;
@@ -3980,8 +3980,9 @@ function screenMerchantRegister() {
     <h1 class="screen-title">سجّل كصاحب نشاط</h1>
     <p class="screen-sub">بيصير حسابك صاحب نشاط بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</p>
     <div class="section-title">${esc(t("mp.secName"))}</div>
-    <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="مثال: مطعم الياسمين" value="${esc(m.name || "")}" /></div>
+    <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="مثال: مطعم الياسمين" value="${esc(m.name || "")}" oninput="mrNameTyped(this.value)" /></div>
     <div class="section-title">${esc(t("mp.secProfession"))}</div>
+    ${mrGuessHtml(m)}
     ${categoryPickerHtml(m.categories, m.selectedCat, "selectMerchCategory")}
     <div class="section-title">${esc(t("mp.secContact"))}</div>
     <div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" /></div>
@@ -4006,7 +4007,43 @@ function snapshotMerchRegDraft() {
 function selectMerchCategory(id) {
   snapshotMerchRegDraft();
   S._merchReg.selectedCat = id;
+  S._merchReg.catAuto = false; // the person chose: the name never overrides it again
+  S._merchReg.catManual = true;
   render();
+}
+
+/* What the shop's name says about its work: while the person types the name, the profession is guessed (its words, then the AI) and chosen for them until they choose themselves. */
+let mrGuessTimer = null;
+let mrGuessSeq = 0;
+function mrNameTyped(value) {
+  const m = S._merchReg;
+  if (!m) return;
+  clearTimeout(mrGuessTimer);
+  const name = value.trim();
+  if (name.length < 3) { if (m.guess) { m.guess = null; if (m.catAuto) { m.selectedCat = null; m.catAuto = false; } render(); } return; }
+  mrGuessTimer = setTimeout(async () => {
+    const seq = ++mrGuessSeq;
+    const { ok, data } = await api("GET", "/categories/for-name?lang=" + LANG + "&name=" + encodeURIComponent(name));
+    if (seq !== mrGuessSeq || !S._merchReg || S.screen !== "merchantRegister") return;
+    const items = ok && data && Array.isArray(data.items) ? data.items : [];
+    m.guess = items.length ? items : null;
+    if (items.length && !m.catManual) { m.selectedCat = items[0].id; m.catAuto = true; }
+    else if (!items.length && m.catAuto) { m.selectedCat = null; m.catAuto = false; }
+    snapshotMerchRegDraft();
+    render();
+  }, 600);
+}
+
+function mrGuessHtml(m) {
+  if (!m.guess || !m.guess.length) return "";
+  const chip = (g) => {
+    const parent = (g.path || "").split(" › ").slice(-2, -1)[0];
+    return `<button type="button" class="chip ${m.selectedCat === g.id ? "active" : ""}" onclick="selectMerchCategory('${g.id}')">${esc((g.icon ? g.icon + " " : "") + g.name)}${parent ? ` <small class="muted">· ${esc(parent)}</small>` : ""}</button>`;
+  };
+  const picked = m.catAuto ? m.guess.find((g) => g.id === m.selectedCat) : null;
+  return `<div class="info-banner mr-guess"><div>✨ ${esc(t("mr.guessTitle"))}</div>
+    <div class="chip-row" style="flex-wrap:wrap;margin-top:6px">${m.guess.map(chip).join("")}</div>
+    ${picked ? `<div class="muted" style="font-size:12px;margin-top:6px">${esc(t("mr.guessAuto", { name: picked.name }))}</div>` : ""}</div>`;
 }
 
 async function submitMerchantRegister() {

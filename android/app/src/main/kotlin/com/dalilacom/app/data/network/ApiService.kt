@@ -160,6 +160,9 @@ interface ApiService {
     @GET("categories/search")
     suspend fun searchCategories(@Query("q") query: String): Response<List<CategoryHitDto>>
 
+    @GET("categories/for-name")
+    suspend fun categoryForName(@Query("name") name: String): Response<NameGuessDto>
+
     @POST("merchant/category-suggestions")
     suspend fun suggestCategory(@Body body: CategorySuggestRequest): Response<Unit>
 
