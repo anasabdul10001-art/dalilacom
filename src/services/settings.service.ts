@@ -53,6 +53,13 @@ export interface PlatformSettings {
     pricePerAnnouncement: number;
   };
   ads: AdSettings;
+  /**
+   * Who is told when the team approves a new discount of a shop (the super admin changes this any time):
+   * OFF nobody · CITY the people of the shop's city · CITY_MEMBERS only card holders of that city · MEMBERS every card holder ·
+   * FOLLOWERS those who saved the shop · RADIUS everyone within radiusKm of the shop · COUNTRY the shop's whole country · EVERYONE every account.
+   * alsoFollowers adds the shop's followers to whatever the mode picks.
+   */
+  discountNotify: { mode: "OFF" | "CITY" | "CITY_MEMBERS" | "MEMBERS" | "FOLLOWERS" | "RADIUS" | "COUNTRY" | "EVERYONE"; radiusKm: number; alsoFollowers: boolean };
   /** The AI for shops (descriptions from photos, photo editing): free uses per month, then a price in wallet credits. */
   ai: { freePerMonth: number; creditsPerUse: number; packages: AiPackage[] };
   /**
@@ -69,6 +76,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   responder: { priceCustomer: 500, priceMerchant: 1000, periodDays: 30, trialDays: 7, monthlyAiReplyLimit: 500 },
   payment: { usdtTrc20Address: "", localWallets: [], sypPerUsd: 0 },
   broadcasts: { merchantDefaultMonthly: 10, maxRadiusKm: 50, merchantMaxAudience: 2000, pricePerAnnouncement: 0 },
+  discountNotify: { mode: "CITY", radiusKm: 10, alsoFollowers: true },
   ads: {
     packages: [
       { days: 1, credits: 300 },
@@ -105,6 +113,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     payment: { ...DEFAULT_SETTINGS.payment, ...(stored.payment ?? {}) },
     broadcasts: { ...DEFAULT_SETTINGS.broadcasts, ...(stored.broadcasts ?? {}) },
     ads: { ...DEFAULT_SETTINGS.ads, ...(stored.ads ?? {}) },
+    discountNotify: { ...DEFAULT_SETTINGS.discountNotify, ...(stored.discountNotify ?? {}) },
     ai: { ...DEFAULT_SETTINGS.ai, ...(stored.ai ?? {}) },
     referral: { ...DEFAULT_SETTINGS.referral, ...(stored.referral ?? {}) },
   };
@@ -119,6 +128,7 @@ export async function saveSettings(patch: Partial<PlatformSettings>) {
     payment: { ...current.payment, ...(patch.payment ?? {}) },
     broadcasts: { ...current.broadcasts, ...(patch.broadcasts ?? {}) },
     ads: { ...current.ads, ...(patch.ads ?? {}) },
+    discountNotify: { ...current.discountNotify, ...(patch.discountNotify ?? {}) },
     ai: { ...current.ai, ...(patch.ai ?? {}) },
     referral: { ...current.referral, ...(patch.referral ?? {}) },
   };

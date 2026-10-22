@@ -18,6 +18,7 @@ import { route } from "../lib/asyncRoute";
 import { getSettings, saveSettings } from "../services/settings.service";
 import { AppReleaseError, getAppDownloadInfo, getAppUpdate, setAppUpdate, MAX_APK_BYTES, saveAppRelease, setAppDownloadVisible } from "../services/appRelease.service";
 import { adminOverview } from "../services/adminStats.service";
+import { announceDiscount, discountAudience } from "../services/discountAnnounce.service";
 import { adminClaims, approveClaim, askForInfo, claimFile, dismissDuplicate, landmarkDuplicates, rejectClaim } from "../services/landmarkClaim.service";
 import { adminList, createKind, createLandmark, deleteLandmark, importFromOsm, LandmarkError, listKinds, reviewLandmarks, updateKind, updateLandmark } from "../services/landmark.service";
 import { getSocialLinks, saveSocialLinks, SOCIAL_PLATFORMS, SocialLinkError } from "../services/socialLinks.service";
@@ -213,6 +214,14 @@ const settingsSchema = z.object({
       periodDays: z.number().int().positive(),
       trialDays: z.number().int().nonnegative(),
       monthlyAiReplyLimit: z.number().int().nonnegative(),
+    })
+    .partial()
+    .optional(),
+  discountNotify: z
+    .object({
+      mode: z.enum(["OFF", "CITY", "CITY_MEMBERS", "MEMBERS", "FOLLOWERS", "RADIUS", "COUNTRY", "EVERYONE"]),
+      radiusKm: z.number().positive().max(500),
+      alsoFollowers: z.boolean(),
     })
     .partial()
     .optional(),
@@ -932,12 +941,22 @@ adminRouter.get("/discounts", async (req, res) => {
   })));
 });
 
+// how many people the current choice would reach for one shop (so the owner sees the effect before changing it)
+adminRouter.get("/discount-notify/preview/:merchantId", route(async (req, res) => {
+  const m = await prisma.merchantProfile.findUnique({ where: { id: req.params.merchantId }, select: { id: true, userId: true, latitude: true, longitude: true } });
+  if (!m) return sendError(res, 404, "NOT_FOUND", "Merchant not found");
+  const out = await discountAudience(m);
+  res.json({ mode: out.mode, people: out.ids.length });
+}));
+
 adminRouter.post("/discounts/:id/approve", async (req, res) => {
   const d = await prisma.discount.findUnique({ where: { id: req.params.id }, include: { merchant: { select: { userId: true } } } });
   if (!d) return sendError(res, 404, "NOT_FOUND", "الحسم غير موجود");
   await prisma.discount.update({ where: { id: d.id }, data: { status: "APPROVED", rejectionReason: null } });
   await notify({ userId: d.merchant.userId, type: "SYSTEM", title: "تمت الموافقة على حسمك", body: d.title, data: { kind: "DISCOUNT_APPROVED", discountId: d.id }, email: false });
-  res.json({ ok: true });
+  // the people the platform settings choose are told about it, once (a failure here never undoes the approval)
+  const reached = await announceDiscount(d.id).catch(() => ({ targeted: 0, delivered: 0 }));
+  res.json({ ok: true, announced: reached });
 });
 
 adminRouter.post("/discounts/:id/reject", async (req, res) => {

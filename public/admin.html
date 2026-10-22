@@ -675,6 +675,29 @@
       </div>
 
       <div class="card">
+        <h3>🏷️ إشعار الحسم الجديد</h3>
+        <p class="muted">لما توافق على حسم جديد لمحل، بيوصل إشعار تلقائي لهالفئة (مرة وحدة لكل حسم، ما بيتكرر لو تعدّل). غيّر الاختيار بأي وقت حسب عدد المستخدمين. المحل نفسه ما بيوصله إشعار.</p>
+        <label>مين بيوصله إشعار الحسم؟</label>
+        <select id="dn-mode" onchange="dnModeChanged()">
+          <option value="CITY">كل الناس بمدينة المحل (الافتراضي)</option>
+          <option value="CITY_MEMBERS">حاملو بطاقة الحسم بمدينة المحل فقط</option>
+          <option value="MEMBERS">كل حاملي بطاقة الحسم (بأي مدينة)</option>
+          <option value="FOLLOWERS">متابعو المحل فقط</option>
+          <option value="RADIUS">كل القريبين من المحل (ضمن مسافة)</option>
+          <option value="COUNTRY">كل الناس بالبلد</option>
+          <option value="EVERYONE">كل من عنده حساب على التطبيق</option>
+          <option value="OFF">بدون إشعار تلقائي</option>
+        </select>
+        <div id="dn-radius-row" style="display:none">
+          <label>المسافة حول المحل (كم)</label>
+          <input id="dn-radius" inputmode="decimal" placeholder="مثال: 10" />
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer"><input type="checkbox" id="dn-followers" style="width:auto"> أضف متابعي المحل دائمًا مع الفئة المختارة</label>
+        <button style="margin-top:12px" onclick="saveDiscountNotify()">حفظ</button>
+        <span id="dn-msg" class="muted" style="margin-right:10px"></span>
+      </div>
+
+      <div class="card">
         <h3>إعلانات أصحاب الأنشطة بانتظار المراجعة</h3>
         <p class="muted">لا يصل أي إعلان من صاحب نشاط لأحد قبل موافقتك. الفحص الآلي توصية فقط — القرار لك.</p>
         <table style="margin-top:12px">
@@ -1760,6 +1783,13 @@ async function loadBroadcasts() {
     document.getElementById('bc-limit-radius').value = settings.data.broadcasts.maxRadiusKm;
     document.getElementById('bc-limit-audience').value = settings.data.broadcasts.merchantMaxAudience;
   }
+  if (settings.ok && settings.data.discountNotify) {
+    const dn = settings.data.discountNotify;
+    document.getElementById('dn-mode').value = dn.mode;
+    document.getElementById('dn-radius').value = dn.radiusKm;
+    document.getElementById('dn-followers').checked = !!dn.alsoFollowers;
+    dnModeChanged();
+  }
   const count = document.getElementById('bc-pending-count');
   count.textContent = pending.data.length;
   count.style.display = pending.data.length ? 'inline-block' : 'none';
@@ -1790,6 +1820,17 @@ async function loadBroadcasts() {
   if (countries.ok && select.options.length <= 1) {
     countries.data.forEach(c => select.add(new Option(c.nameArabic || c.name, c.id)));
   }
+}
+
+function dnModeChanged() { document.getElementById('dn-radius-row').style.display = document.getElementById('dn-mode').value === 'RADIUS' ? 'block' : 'none'; }
+
+async function saveDiscountNotify() {
+  const msg = document.getElementById('dn-msg');
+  const mode = document.getElementById('dn-mode').value;
+  const radiusKm = Number(String(document.getElementById('dn-radius').value).replace(',', '.')) || 10;
+  if (mode === 'RADIUS' && !(radiusKm > 0)) { msg.textContent = 'اكتب المسافة'; return; }
+  const { ok, data } = await api('PUT', '/admin/settings', { discountNotify: { mode, radiusKm, alsoFollowers: document.getElementById('dn-followers').checked } });
+  msg.textContent = ok ? 'تم الحفظ ✅' : errText(data, 'تعذّر الحفظ');
 }
 
 async function saveBroadcastLimits() {

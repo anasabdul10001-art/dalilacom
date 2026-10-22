@@ -510,6 +510,7 @@ model Discount {
   // The super admin approves every discount before customers can use it.
   status           DiscountApproval @default(PENDING)
   rejectionReason  String?
+  announcedAt      DateTime? // when the people were told about it (once, never again after an edit)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
