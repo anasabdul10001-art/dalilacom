@@ -7,6 +7,7 @@ import { getDefaultCountry } from "./geo.service";
 import { createBusinessFromMerchantProfile } from "./business.service";
 import { findSimilar, LandmarkError, distanceKm, nameKey, sameName } from "./landmark.service";
 import { normalizeText } from "./category.service";
+import { foldedColumn } from "../lib/arabicFold";
 
 /**
  * "This place is mine": the manager or owner of a private place that is on the map as a landmark (a private hospital) asks to take it
@@ -103,11 +104,6 @@ function distinctiveWord(name: string): string | null {
   return key.split(" ").filter((w) => w.length >= 3).sort((a, b) => b.length - a.length)[0] ?? null;
 }
 
-/** The same Arabic spelling folding as normalizeText, done inside the database so a typed "الاسد" finds a stored "الأسد". */
-const FOLD_FROM = String.fromCharCode(0x0623, 0x0625, 0x0622, 0x0671, 0x0629, 0x0649, 0x0626, 0x0624);
-const FOLD_TO = String.fromCharCode(0x0627, 0x0627, 0x0627, 0x0627, 0x0647, 0x064a, 0x064a, 0x0648);
-const DIACRITICS = "[" + String.fromCharCode(0x064b) + "-" + String.fromCharCode(0x065f, 0x0670, 0x0640) + "]";
-
 /**
  * Claimable places that look like the shop being registered when the person did not put a pin: the same name, and an address that does not
  * contradict (when both have one they share a word). The place is offered "claim it" instead of making a duplicate.
@@ -118,7 +114,7 @@ export async function similarClaimableByName(input: { name: string; address?: st
   const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
     SELECT l."id" FROM "Landmark" l JOIN "LandmarkKind" k ON k."id" = l."kindId"
     WHERE l."status" = 'ACTIVE' AND k."claimable" = true AND k."isActive" = true AND l."sector" IS DISTINCT FROM 'PUBLIC'
-      AND translate(lower(regexp_replace(l."name", ${DIACRITICS}, '', 'g')), ${FOLD_FROM}, ${FOLD_TO}) LIKE ${"%" + word + "%"}
+      AND ${foldedColumn(Prisma.raw('l."name"'))} LIKE ${"%" + word + "%"}
     LIMIT 80`);
   if (!rows.length) return [];
   const found = await prisma.landmark.findMany({ where: { id: { in: rows.map((r) => r.id) } }, include: { kind: true } });

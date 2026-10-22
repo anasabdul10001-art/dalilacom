@@ -1180,6 +1180,7 @@ function tabDiscover() {
         </div>` : ""}
         <div class="sheet-list">
           ${picked.length ? `<button class="show-all" onclick="clearSelectedMerchant()">↩ ${esc(t("sheet.showAll", { n: list.length }))}</button>` : ""}
+          ${placeRowsHtml(d)}
           ${d.loading ? spinner() : (sheetList.length ? sheetList.map(merchantRowHtml).join("") : `<div class="empty-state">${esc(d.radiusKm ? t("sheet.emptyRadius", { n: d.radiusKm }) : deals ? t("deals.empty") : t("sheet.empty"))}</div>`)}
         </div>
       </div>
@@ -1276,10 +1277,11 @@ function suggestHtml(d) {
     return `<div class="suggest-box"><div class="suggest-head">${esc(t("search.recent"))}</div>${recent.map((q) => `<div class="suggest-item" onmousedown="pickRecent('${esc(q).replace(/'/g, "&#39;")}')">🕘 ${esc(q)}</div>`).join("")}</div>`;
   }
   const s = d.suggest;
-  if (!s || (!s.merchants.length && !s.categories.length)) return "";
+  const items = (d.sugItems || []).slice(0, 8);
+  if ((!s || !s.categories.length) && !items.length) return "";
   return `<div class="suggest-box">
-    ${s.categories.map((c) => `<div class="suggest-item" onmousedown="pickCategory('${c.id}')">${esc(c.icon || "🗂️")} ${esc(c.path || c.name)}${c.merchantCount ? ` <span class="muted">· ${esc(t("browse.count", { n: c.merchantCount }))}</span>` : ""}</div>`).join("")}
-    ${s.merchants.map((m) => `<div class="suggest-item" onmousedown="go('merchantDetail',{merchantId:'${m.id}'})">🏪 ${esc(m.businessName)}${m.category ? ` <span class="muted">· ${esc(catName(m.category))}</span>` : ""}</div>`).join("")}
+    ${(s ? s.categories : []).map((c) => `<div class="suggest-item" onmousedown="pickCategory('${c.id}')">${esc(c.icon || "🗂️")} ${esc(c.path || c.name)}${c.merchantCount ? ` <span class="muted">· ${esc(t("browse.count", { n: c.merchantCount }))}</span>` : ""}</div>`).join("")}
+    ${items.map((i) => `<div class="suggest-item" onmousedown="pickSuggestItem('${i.id}','${i.type}')">${i.type === "landmark" ? esc(i.kind.icon) : "🏪"} ${esc(i.name)} <span class="muted">· ${esc(i.type === "landmark" ? i.kind.name : catName(i.category))}</span>${suggestDistance(i.distanceKm)}</div>`).join("")}
   </div>`;
 }
 
@@ -1290,17 +1292,95 @@ function onDiscoverQuery(v) {
   d.showSuggest = true;
   clearTimeout(suggestTimer);
   suggestTimer = setTimeout(async () => {
-    if (!d.query.trim()) { d.suggest = null; return searchMerchants(); }
-    const { ok, data } = await api("GET", "/merchant/suggest?lang=" + LANG + "&q=" + encodeURIComponent(d.query.trim()));
-    d.suggest = ok ? data : null;
+    if (!d.query.trim()) { d.suggest = null; clearSearchPlaces(); return searchMerchants(); }
+    await runUnifiedSearch(false);
     searchMerchants();
   }, 280);
 }
+
+/* ---- one search for shops and public places (mosques, schools, castles...): the nearest and best first ---- */
+
+/** Where the nearness is measured from: the person's place, else the middle of the map; the server falls back to the chosen city. */
+function searchRef() {
+  const d = S._discover;
+  if (d.userLoc) return { lat: d.userLoc.lat, lng: d.userLoc.lng };
+  if (S._map) { const c = S._map.getCenter(); return { lat: c.lat, lng: c.lng }; }
+  return null;
+}
+
+async function runUnifiedSearch(fit) {
+  const d = S._discover;
+  const q = d.query.trim();
+  if (!q) return;
+  const params = new URLSearchParams({ q, limit: 40, lang: LANG });
+  const ref = searchRef();
+  if (ref) { params.set("lat", ref.lat); params.set("lng", ref.lng); }
+  const city = typeof localCity === "function" ? localCity() : null;
+  if (city && city.id) params.set("cityId", city.id);
+  const [cat, uni] = await Promise.all([
+    api("GET", "/merchant/suggest?lang=" + LANG + "&q=" + encodeURIComponent(q)),
+    api("GET", "/search?" + params.toString()),
+  ]);
+  if (d.query.trim() !== q) return; // the person kept typing: a newer answer is coming
+  d.suggest = cat.ok ? cat.data : null;
+  d.sugItems = uni.ok && uni.data.items ? uni.data.items : [];
+  d.lmResults = d.sugItems.filter((i) => i.type === "landmark");
+  S._searchLm = d.lmResults;
+  if (fit) fitSearchResults(); else { lmDraw(); render(); }
+}
+
+function clearSearchPlaces() {
+  const d = S._discover;
+  d.sugItems = []; d.lmResults = []; d.pulseId = null;
+  S._searchLm = [];
+  lmDraw();
+}
+
+/** The map goes to the results: one result is zoomed on, several are all shown with the best one marked. */
+function fitSearchResults() {
+  const d = S._discover;
+  const found = (d.sugItems || []).filter((i) => i.latitude != null && i.longitude != null).slice(0, 8);
+  d.pulseId = d.lmResults && d.lmResults[0] ? d.lmResults[0].id : null;
+  S._lmOpen = null;
+  render();
+  lmDraw();
+  if (!S._map || !found.length) return;
+  clearTimeout(S._pulseTimer);
+  S._pulseTimer = setTimeout(() => { d.pulseId = null; lmDraw(); }, 9000);
+  moveMap(() => {
+    if (found.length === 1) S._map.setView([found[0].latitude, found[0].longitude], found[0].kind && found[0].kind.slug === "main_street" ? 15 : 17);
+    else S._map.fitBounds(found.map((i) => [i.latitude, i.longitude]), { padding: [60, 60], maxZoom: 16 });
+  });
+}
+
+/** One place picked from the list: the map goes to it, a ring pulses around it and its card opens. */
+function flyToPlace(id) {
+  const d = S._discover;
+  const item = (d.lmResults || []).find((x) => x.id === id);
+  if (!item) return;
+  d.showSuggest = false;
+  d.pulseId = id;
+  S._lmOpen = item.place || null;
+  render();
+  lmDraw();
+  clearTimeout(S._pulseTimer);
+  S._pulseTimer = setTimeout(() => { d.pulseId = null; lmDraw(); }, 9000);
+  if (S._map) moveMap(() => S._map.setView([item.latitude, item.longitude], item.kind && item.kind.slug === "main_street" ? 15 : 17));
+}
+
+function pickSuggestItem(id, type) {
+  if (type === "shop") return go("merchantDetail", { merchantId: id });
+  flyToPlace(id);
+}
+
+function suggestDistance(km) {
+  return km == null ? "" : ` <span class="muted">· ${km < 1 ? Math.round(km * 1000) + " " + esc(t("unit.m")) : km.toFixed(1) + " " + esc(t("unit.km"))}</span>`;
+}
 function onDiscoverFocus() { const d = S._discover; if (d.showSuggest) return; d.showSuggest = true; render(); } // already open: nothing to redraw (a redraw puts the focus back, which would call this again)
 function onDiscoverBlur() { setTimeout(() => { const a = document.activeElement; if (a && a.id === "disc-q") return; if (S._discover && S._discover.showSuggest) { S._discover.showSuggest = false; render(); } }, 200); }
-function onDiscoverSubmit() { pushRecent(S._discover.query); S._discover.showSuggest = false; render(); }
-function onDiscoverClear() { S._discover.query = ""; S._discover.suggest = null; searchMerchants(); }
-function pickRecent(q) { S._discover.query = q; S._discover.showSuggest = false; pushRecent(q); searchMerchants(); }
+async function onDiscoverSubmit() { const d = S._discover; pushRecent(d.query); d.showSuggest = false; render(); if (d.query.trim()) { await runUnifiedSearch(true); searchMerchants(); } }
+function onDiscoverClear() { S._discover.query = ""; S._discover.suggest = null; clearSearchPlaces(); searchMerchants(); }
+async function pickRecent(q) { S._discover.query = q; S._discover.showSuggest = false; pushRecent(q); render(); await runUnifiedSearch(true); searchMerchants(); }
 function pickCategory(id) { S._discover.query = ""; S._discover.categoryId = id; S._discover.showSuggest = false; searchMerchants(); }
 function onDiscoverReset() { Object.assign(S._discover, { categoryId: "", openNow: false, discountsOnly: S.homeTab === "deals" }); searchMerchants(); }
 function toggleDiscoverFlag(flag) { S._discover[flag] = !S._discover[flag]; render(); }
@@ -1407,10 +1487,24 @@ async function lmFetch() {
   lmDraw();
 }
 
+/** The places a search found: bigger than the ordinary ones, with their name; the best one gets a pulsing ring. */
+function lmDrawResults() {
+  const hits = (S._searchLm || []).filter((p) => p.latitude != null && p.longitude != null);
+  const pulse = S._discover ? S._discover.pulseId : null;
+  hits.forEach((p, i) => {
+    const top = p.id === pulse; // the ring pulses around the one just picked (or the best one of a search)
+    const best = i === 0; // the nearest-and-best stays a little bigger
+    if (p.kind.geometry === "LINE" && p.place && Array.isArray(p.place.path)) p.place.path.forEach((seg) => L.polyline(seg, { color: p.kind.color, weight: top ? 6 : 4, opacity: 0.75 }).on("click", () => flyToPlace(p.id)).addTo(S._lmLayer));
+    const html = `<div class="lm-hit ${top ? "top" : ""} ${best ? "best" : ""}" style="--c:${esc(p.kind.color)}">${top ? `<span class="lm-pulse"></span><span class="lm-pulse two"></span>` : ""}<span class="lm-hit-ico">${esc(p.kind.icon)}</span><span class="lm-hit-name" dir="auto">${esc(p.name)}</span></div>`;
+    L.marker([p.latitude, p.longitude], { icon: L.divIcon({ className: "", html, iconSize: [30, 30], iconAnchor: [15, 15] }), zIndexOffset: top ? 800 : best ? 500 : 300 }).on("click", () => flyToPlace(p.id)).addTo(S._lmLayer);
+  });
+}
+
 function lmDraw() {
   const map = S._map;
   if (!map || !S._lmLayer) return;
   S._lmLayer.clearLayers();
+  lmDrawResults();
   if (!LM.on) return;
   const z = map.getZoom();
   LM.items.forEach((p) => {
@@ -1437,9 +1531,10 @@ function lmToggle() {
   if (LM.on) lmFetch(); else lmDraw();
 }
 
-function lmOpen(id) { S._lmOpen = LM.items.find((x) => x.id === id) || null; render(); }
+function lmFind(id) { return LM.items.find((x) => x.id === id) || ((S._searchLm || []).find((x) => x.id === id) || {}).place || null; }
+function lmOpen(id) { S._lmOpen = lmFind(id); render(); }
 function lmClose() { S._lmOpen = null; render(); }
-function lmDirections(id) { const p = LM.items.find((x) => x.id === id); S._lmOpen = null; if (p) startRoute(p.id, "driving"); }
+function lmDirections(id) { const p = lmFind(id); S._lmOpen = null; if (p) startRoute(p.id, "driving"); }
 
 /* ---- claiming a public place: "this place is mine" ---- */
 
@@ -1718,6 +1813,19 @@ function flattenCategories(cats) {
   const out = [];
   for (const c of cats) { out.push(c); for (const ch of c.children || []) out.push(ch); }
   return out;
+}
+
+/** The public places a search found, above the shops: a tap goes to the place on the map. */
+function placeRowsHtml(d) {
+  const places = d.query && d.query.trim() ? (d.lmResults || []).slice(0, 6) : [];
+  if (!places.length) return "";
+  return `<div class="muted place-rows-head">${esc(t("sr.places"))}</div>` + places.map((p) => `
+    <div class="card place-card clickable" onclick="flyToPlace('${p.id}')">
+      <div class="title-line"><div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <span class="place-ico" style="background:${esc(p.kind.color)}">${esc(p.kind.icon)}</span>
+        <div style="min-width:0"><strong>${esc(p.name)}</strong><p class="muted" style="margin:0">${esc(p.kind.name)}${p.address ? " · " + esc(p.address) : ""}</p></div>
+      </div>${p.distanceKm != null ? `<span class="badge neutral">${p.distanceKm < 1 ? Math.round(p.distanceKm * 1000) + " " + esc(t("unit.m")) : p.distanceKm.toFixed(1) + " " + esc(t("unit.km"))}</span>` : ""}</div>
+    </div>`).join("");
 }
 
 function merchantRowHtml(m) {

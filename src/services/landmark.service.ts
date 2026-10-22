@@ -109,7 +109,7 @@ export interface PublicQuery {
 
 type LandmarkWithKind = Prisma.LandmarkGetPayload<{ include: { kind: true } }>;
 
-function shape(l: LandmarkWithKind, lang: string) {
+export function shape(l: LandmarkWithKind, lang: string) {
   const en = lang !== "ar";
   return {
     id: l.id,

@@ -1678,3 +1678,14 @@ html[dir="ltr"] .setup-step .s-go { transform: scaleX(-1); }
 .city-gate h3 { margin: 0 0 6px; }
 .city-gate select { width: 100%; margin-top: 10px; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface, #fff); color: inherit; font: inherit; }
 .loc-saved { margin: 8px 0 0; color: #1e8e3e; font-weight: 700; font-size: 13px; }
+
+/* what a search found on the map: the places drawn bigger with their name; the best one has a ring that pulses */
+.lm-hit { position: relative; width: 30px; height: 30px; }
+.lm-hit-ico { position: relative; z-index: 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; line-height: 1; background: #fff; border: 2.5px solid var(--c, #ba2a34); box-shadow: 0 2px 8px rgba(0, 0, 0, .35); }
+.lm-hit.top .lm-hit-ico, .lm-hit.best .lm-hit-ico { transform: scale(1.25); }
+.lm-hit-name { position: absolute; z-index: 2; inset-inline-start: 36px; top: 50%; transform: translateY(-50%); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 800; color: #202124; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 4px #fff; pointer-events: none; }
+.lm-pulse { position: absolute; z-index: 1; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--c, #ba2a34); opacity: .35; animation: lmPulse 1.8s ease-out infinite; pointer-events: none; }
+.lm-pulse.two { animation-delay: .9s; }
+@keyframes lmPulse { 0% { transform: scale(1); opacity: .45; } 100% { transform: scale(3.4); opacity: 0; } }
+.place-rows-head { font-size: 12px; font-weight: 700; margin: 2px 4px 4px; }
+.place-ico { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
