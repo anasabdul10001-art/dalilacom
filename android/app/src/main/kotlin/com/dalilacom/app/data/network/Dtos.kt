@@ -210,6 +210,12 @@ data class CategoryHitDto(
     val online: Boolean = false,
 )
 
+@Serializable
+data class MyLocationDto(val location: MyLocationPointDto? = null)
+
+@Serializable
+data class MyLocationPointDto(val latitude: Double, val longitude: Double)
+
 /** The professions a shop's own name points to (its words first, then the AI): [source] is WORDS, AI or NONE. */
 @Serializable
 data class NameGuessDto(val items: List<CategoryHitDto> = emptyList(), val source: String = "NONE")

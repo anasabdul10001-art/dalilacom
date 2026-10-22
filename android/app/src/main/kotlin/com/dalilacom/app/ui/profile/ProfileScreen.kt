@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.dalilacom.app.R
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -137,6 +138,38 @@ fun ProfileScreen(
                     }
                 },
             )
+        }
+        // with the switch on, the person sets where they are: a map, and a button that keeps the place
+        if (shareLocation) {
+            var picked by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+            var saved by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+            var busy by remember { mutableStateOf(false) }
+            val context = androidx.compose.ui.platform.LocalContext.current
+            LaunchedEffect(Unit) { container.profileRepository.savedLocation()?.let { picked = it; saved = it } }
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.loc_title), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.loc_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(6.dp))
+            com.dalilacom.app.ui.common.LocationPicker(value = picked, onChange = { picked = it })
+            Spacer(Modifier.height(8.dp))
+            Button(
+                enabled = picked != null && !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    val p = picked ?: return@Button
+                    busy = true
+                    scope.launch {
+                        val ok = container.profileRepository.setLocation(p.first, p.second)
+                        busy = false
+                        if (ok) saved = p
+                        android.widget.Toast.makeText(context, context.getString(if (ok) R.string.loc_done else R.string.loc_failed), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                },
+            ) { Text("📍  " + stringResource(R.string.loc_set)) }
+            val s = saved; val p = picked
+            if (s != null && p != null && kotlin.math.abs(s.first - p.first) < 0.006 && kotlin.math.abs(s.second - p.second) < 0.006) {
+                Text("✓ " + stringResource(R.string.loc_saved), color = Color(0xFF1E8E3E), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 4.dp))
+            }
         }
         Spacer(Modifier.height(8.dp))
         if (role == "MERCHANT") {

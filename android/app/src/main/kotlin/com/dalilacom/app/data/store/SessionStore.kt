@@ -30,6 +30,17 @@ class SessionStore(private val context: Context) {
         runCatching { context.dalilacomDataStore.edit { it[shareLocationKey] = on } }
     }
 
+    private val cityIdKey = stringPreferencesKey("city_id")
+    private val cityCountryKey = stringPreferencesKey("city_country")
+
+    /** The city the person chose the first time (kept on this device; a signed-in account keeps its own on the server). */
+    suspend fun getCityId(): String? = runCatching { context.dalilacomDataStore.data.map { it[cityIdKey] }.first() }.getOrNull()
+    suspend fun getCityCountry(): String? = runCatching { context.dalilacomDataStore.data.map { it[cityCountryKey] }.first() }.getOrNull()
+
+    suspend fun saveCity(id: String, countryCode: String) {
+        runCatching { context.dalilacomDataStore.edit { it[cityIdKey] = id; it[cityCountryKey] = countryCode } }
+    }
+
     private val dealsIntroKey = androidx.datastore.preferences.core.booleanPreferencesKey("deals_intro_hidden")
 
     /** Whether the person asked never to see the message that opens the deals tab again. */

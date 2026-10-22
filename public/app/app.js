@@ -25,7 +25,7 @@ const S = {
   role: localStorage.getItem("dlk_role") || null,
   screen: S_initialScreen(),
   homeTab: "discover",
-  merchantTab: "redeem",
+  merchantTab: "home",
   params: {},
   stack: [],
   busy: false,
@@ -130,6 +130,7 @@ function setToken(token, role) {
   loadMarket(); // the account's own country decides the currency
   saveAccountLanguage(); // push notifications and emails are written in this language
   claimStoredJoin(); // a code from a referral link, for accounts made with Google or Facebook
+  ensureCity(); // the first sign-in asks for the city (a choice made as a visitor is copied to the account)
 }
 
 function saveAccountLanguage() {
@@ -170,7 +171,7 @@ function go(screen, params) {
 
 function back() {
   stopQrLoop();
-  const prev = S.stack.pop() || { screen: "home", params: {}, homeTab: "home", merchantTab: "redeem" };
+  const prev = S.stack.pop() || { screen: "home", params: {}, homeTab: "home", merchantTab: "home" };
   S.screen = prev.screen;
   S.params = prev.params;
   S.homeTab = prev.homeTab || S.homeTab;
@@ -427,7 +428,7 @@ async function render() {
   // the map search box keeps its own element through every redraw: a new one lost the caret (Arabic letters came out reversed), the undo history and the typing in progress
   const keepQ = active && (active.id === "disc-q" || active.id === "mr-name") ? active : null;
   const caret = keepQ ? [keepQ.selectionStart, keepQ.selectionEnd] : null;
-  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml();
+  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml() + cityGateHtml();
   wireUpAfterRender();
   placeDiscPopup();
   trDom(el); // translate the rendered Arabic when another language is on
@@ -1318,7 +1319,7 @@ function reportLocation(loc) {
 async function setShareLocation(on) {
   try { localStorage.setItem("dlk_share_loc", on ? "1" : "0"); } catch (e) {}
   if (on) { if (S._discover && S._discover.userLoc) reportLocation(S._discover.userLoc); }
-  else await api("DELETE", "/profile/location");
+  else { await api("DELETE", "/profile/location"); S._pickOwner = null; S._myLoc = null; }
   render();
 }
 
@@ -1952,13 +1953,14 @@ function tabProfile() {
       <div style="height:14px"></div>
       ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
       ${S.role === "MERCHANT"
-        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
+        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='home';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
            <div style="height:8px"></div>
            <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button>`
         : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`}
       <div style="height:10px"></div>
       <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
       <p class="muted" style="margin:0 0 10px">${esc(t("profile.shareLocationSub"))}</p>
+      ${shareLocationOn() ? myLocationHtml() : ""}
       <button class="btn outline" style="max-width:240px" onclick="S._acct=null;go('account')">${esc(t("profile.account"))}</button>
       <div style="height:10px"></div>
       ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
@@ -3440,7 +3442,7 @@ async function wizPickFiles(input) {
 /** Back to merchant mode (the shop's own screen), as if its button had just been pressed. */
 function backToShop() {
   S.homeTab = "profile";
-  S.stack = [{ screen: "home", params: {}, homeTab: "profile", merchantTab: "redeem" }];
+  S.stack = [{ screen: "home", params: {}, homeTab: "profile", merchantTab: "home" }];
   S.merchantTab = "catalog"; S.screen = "merchantMode"; S.params = {}; S.error = null; S._catalog = null;
   render();
 }
@@ -4152,6 +4154,7 @@ function pickReset(lat, lng) {
  */
 let _revTimer = null;
 function fillAddressFromPin(lat, lng) {
+  if (S._pickOwner === "profile") { const sv = document.getElementById("my-loc-saved"); if (sv) sv.style.display = "none"; return; }
   clearTimeout(_revTimer);
   _revTimer = setTimeout(async () => {
     const { ok, data } = await api("GET", "/geo/reverse?lat=" + lat + "&lng=" + lng + "&lang=" + LANG);
@@ -4249,9 +4252,54 @@ async function saveMerchantProfile() {
   render();
 }
 
+
+/* ---- merchant: the home of the shop — what is left to set up (always open) and the quick ways in ---- */
+
+function tabMerchantHome() {
+  if (!S._onboarding) S._onboarding = { steps: null, at: 0 };
+  const o = S._onboarding;
+  if (!o.fetching && Date.now() - o.at > 15000) { o.fetching = true; loadOnboarding(); }
+  const st = o.steps;
+  const quick = [
+    ["📦", "ms.q.product", "openProductWizard()"],
+    ["🏷️", "ms.q.discount", "mfabGo('add')"],
+    ["🕒", "ms.q.hours", "S._hours=null;go('merchantHours')"],
+    ["📍", "ms.q.shop", "S._mprof=null;go('merchantProfile')"],
+    ["📣", "ms.q.ads", "setMerchantTab('promo')"],
+    ["🧾", "ms.q.orders", "setMerchantTab('orders')"],
+  ].map(([ico, key, act]) => `<button class="quick" onclick="${act}"><span class="q-ico">${ico}</span><span>${esc(t(key))}</span></button>`).join("");
+  const quickHtml = `<div class="section-title">${esc(t("ms.quick"))}</div><div class="quick-grid">${quick}</div>`;
+  if (!st) return `<div class="setup-card">${spinner()}</div>${quickHtml}`;
+  const rows = [
+    [st.location, "location", "S._mprof=null;go('merchantProfile')"],
+    [st.hours, "hours", "S._hours=null;go('merchantHours')"],
+    [st.discount, "discount", "mfabGo('add')"],
+    [st.product, "product", "openProductWizard()"],
+    [st.approved, "approved", ""],
+  ];
+  const done = rows.filter((r) => r[0]).length;
+  if (done === rows.length) return `<div class="setup-card all-done"><div class="setup-done"><span>🎉</span><div><b>${esc(t("ms.allDone"))}</b><small>${esc(t("ms.allDoneSub"))}</small></div></div></div>${quickHtml}`;
+  const step = ([ok, key, act], i) => `
+    <button class="setup-step ${ok ? "done" : ""}" ${ok || !act ? "disabled" : `onclick="${act}"`}>
+      <span class="s-ico">${ok ? "✓" : i + 1}</span>
+      <span class="s-txt"><b>${esc(t("ms.s." + key))}</b><small>${esc(t("ms.h." + key))}</small></span>
+      ${ok || !act ? "" : `<span class="s-go">‹</span>`}
+    </button>`;
+  return `
+    <div class="setup-card">
+      <div class="setup-head">
+        <div class="setup-titles"><h2>${esc(t("ms.setupTitle"))}</h2><p>${esc(t("ms.setupSub"))}</p></div>
+        <div class="setup-ring" style="--p:${done * 20}"><b>${done}</b><small>${esc(t("ms.ofN", { n: rows.length }))}</small></div>
+      </div>
+      ${st.approved ? "" : `<div class="setup-wait">⏳ ${esc(t("ms.waitAdmin"))}</div>`}
+      <div class="setup-steps">${rows.map(step).join("")}</div>
+    </div>${quickHtml}`;
+}
+
 /* ---- merchant: what's left before the shop shows up on the map ---- */
 
 function merchantChecklistHtml() {
+  if (S.merchantTab === "home") return ""; // the home tab shows the setup steps in full
   if (!S._onboarding) S._onboarding = { steps: null, at: 0 };
   const o = S._onboarding;
   if (!o.fetching && Date.now() - o.at > 15000) { o.fetching = true; loadOnboarding(); }
@@ -4261,7 +4309,7 @@ function merchantChecklistHtml() {
   const item = (ok, label, action) => `<div class="check-item ${ok ? "ok" : ""}" ${ok ? "" : `onclick="${action}"`}><span>${ok ? "✅" : "⬜"}</span> ${label}</div>`;
   return `
     <div class="card checklist slim">
-      <div class="title-line" onclick="S._checklistOpen=!S._checklistOpen;render()" style="cursor:pointer"><strong>جهّز محلك ليظهر للزبائن</strong><span class="badge ${o.steps.approved ? "success" : "warning"}">${done}/5 ${S._checklistOpen ? "▴" : "▾"}</span></div>
+      <div class="title-line" onclick="S._checklistOpen=!S._checklistOpen;render()" style="cursor:pointer"><strong>${esc(t("ms.setupTitle"))}</strong><span class="badge ${o.steps.approved ? "success" : "warning"}">${done}/5 ${S._checklistOpen ? "▴" : "▾"}</span></div>
       <div class="check-line"><i style="width:${done * 20}%"></i></div>
       ${!S._checklistOpen ? "" : `${o.steps.approved ? "" : `<p class="muted" style="margin:4px 0 8px">⏳ طلبك بانتظار موافقة الإدارة — ما رح يظهر محلك على الخريطة قبلها.</p>`}
       ${item(o.steps.location, "حدّد موقع نشاطك على الخريطة", "S._mprof=null;go('merchantProfile')")}
@@ -5408,7 +5456,7 @@ async function subscribeFromPricing(planId) {
 /* ================= MERCHANT MODE SHELL ================= */
 
 const MERCHANT_TABS = [
-  { id: "redeem", label: "تأكيد حسم", icon: "scan" },
+  { id: "home", label: "الرئيسية", icon: "home" }, // confirming a discount is the camera / "give a discount" button, not a tab
   { id: "orders", label: "طلبات واردة", icon: "orders" },
   { id: "catalog", label: "الكتالوج", icon: "box" },
   { id: "promo", label: "إعلاناتي", icon: "bell" },
@@ -5444,7 +5492,7 @@ function screenMerchantModeShell() {
         <button class="btn outline" onclick="back()">${esc(t("shop.backToAccount"))}</button>
       </div>`;
   }
-  const body = { redeem: tabRedeem, orders: tabMerchantOrders, catalog: tabCatalog, promo: tabPromo }[S.merchantTab]();
+  const body = { home: tabMerchantHome, redeem: tabRedeem, orders: tabMerchantOrders, catalog: tabCatalog, promo: tabPromo }[S.merchantTab]();
   return `
     <button class="back-btn" onclick="back()">‹ رجوع لحساب الزبون</button>
     ${merchantChecklistHtml()}
@@ -6859,6 +6907,113 @@ async function respSendInbox(id) {
   loadResponder();
 }
 
+
+/* ---- the person's city: asked once (the first time the app is used, or the first sign-in); without it area announcements cannot reach them ---- */
+
+function localCity() {
+  try { return JSON.parse(localStorage.getItem("dlk_city") || "null"); } catch (e) { return null; }
+}
+function cityRemember(c) {
+  try { localStorage.setItem("dlk_city", JSON.stringify(c)); } catch (e) {}
+}
+
+/** A signed-in person's city is kept on the account (a choice made as a visitor is copied there); a visitor's stays on this device. */
+async function ensureCity() {
+  if (S._cityEnsuring) return;
+  S._cityEnsuring = true;
+  try {
+    const mine = localCity();
+    if (S.token) {
+      const { ok, data } = await api("GET", "/profile/me");
+      if (!ok) return;
+      if (data.cityId) { if (!mine || mine.id !== data.cityId) cityRemember({ id: data.cityId, countryCode: data.countryCode }); return; }
+      if (mine) { await api("PATCH", "/profile/me", { countryCode: mine.countryCode, cityId: mine.id }); return; }
+    } else if (mine) return;
+    await cityGateOpen();
+  } finally { S._cityEnsuring = false; }
+}
+
+async function cityGateOpen() {
+  const market = await api("GET", "/geo/market"); // the country is told from the account or the connection, never asked
+  const countries = await api("GET", "/geo/countries");
+  const list = countries.ok ? countries.data : [];
+  const country = list.find((c) => market.ok && c.isoCode2 === market.data.country) || list[0];
+  if (!country) return;
+  const cities = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "CITY" }));
+  if (!cities.ok || !cities.data.length) return; // no cities set up yet: nothing to choose from
+  S._cityGate = { country, cities: cities.data, picked: "", busy: false, error: null };
+  render();
+}
+
+function cityGateHtml() {
+  const g = S._cityGate;
+  if (!g) return "";
+  return `<div class="deals-intro">
+    <div class="deals-box city-gate">
+      <div class="city-ico">📍</div>
+      <h3>${esc(t("city.title"))}</h3>
+      <p class="muted">${esc(t("city.sub"))}</p>
+      <select id="city-pick" onchange="S._cityGate.picked=this.value;render()">
+        <option value="">${esc(t("city.choose"))}</option>
+        ${g.cities.map((c) => `<option value="${c.id}" ${g.picked === c.id ? "selected" : ""}>${esc(geoName(c))}</option>`).join("")}
+      </select>
+      ${g.error ? `<div class="error-banner" style="margin-top:8px">${esc(g.error)}</div>` : ""}
+      <button class="btn" style="margin-top:12px" ${g.picked && !g.busy ? "" : "disabled"} onclick="cityGateConfirm()">${esc(t("city.confirm"))}</button>
+    </div>
+  </div>`;
+}
+
+async function cityGateConfirm() {
+  const g = S._cityGate;
+  if (!g || !g.picked) return;
+  const city = g.cities.find((c) => c.id === g.picked);
+  g.busy = true; g.error = null; render();
+  if (S.token) {
+    const { ok, data } = await api("PATCH", "/profile/me", { countryCode: g.country.isoCode2, cityId: city.id });
+    if (!ok) { g.busy = false; g.error = errMsg(data, t("city.failed")); return render(); }
+  }
+  cityRemember({ id: city.id, name: geoName(city), countryCode: g.country.isoCode2 });
+  S._cityGate = null;
+  S._store = null; // another city: another shops list
+  render();
+}
+
+/* ---- the place the person sets for nearby offers: a map under the switch and a "set" button ---- */
+
+function myLocationHtml() {
+  if (S._pickOwner !== "profile") {
+    // the pin starts where the person set it last time
+    S._pickOwner = "profile";
+    pickReset(null, null);
+    S._myLoc = { saved: null, busy: false };
+    api("GET", "/profile/location").then(({ ok, data }) => {
+      if (ok && data.location && S._pickOwner === "profile") { pickReset(data.location.latitude, data.location.longitude); S._myLoc.saved = data.location; }
+      render();
+    });
+  }
+  const m = S._myLoc || {};
+  const p = S._pick || {};
+  const same = m.saved && p.lat != null && Math.abs(m.saved.latitude - p.lat) < 0.006 && Math.abs(m.saved.longitude - p.lng) < 0.006;
+  return `<div class="card my-loc" style="width:100%;text-align:start">
+    <div class="section-title" style="margin:0 0 4px">${esc(t("loc.title"))}</div>
+    <p class="muted" style="margin:0 0 8px">${esc(t("loc.hint"))}</p>
+    ${pickerHtml(t("loc.mapLabel"))}
+    <button class="btn" ${m.busy ? "disabled" : ""} onclick="saveMyLocation()">📍 ${esc(t("loc.set"))}</button>
+    <p id="my-loc-saved" class="loc-saved" style="${same ? "" : "display:none"}">✓ ${esc(t("loc.saved"))}</p>
+  </div>`;
+}
+
+async function saveMyLocation() {
+  if (!S._pick || S._pick.lat == null) return toast(t("loc.needPin"));
+  const m = S._myLoc = S._myLoc || {};
+  m.busy = true; render();
+  const { ok } = await api("PUT", "/profile/location", { latitude: S._pick.lat, longitude: S._pick.lng });
+  m.busy = false;
+  if (ok) m.saved = { latitude: S._pick.lat, longitude: S._pick.lng };
+  toast(ok ? t("loc.done") : t("loc.failed"));
+  render();
+}
+
 /* ---------------- boot ---------------- */
 
 function qs(id) { return document.getElementById(id); }
@@ -6870,7 +7025,7 @@ function wireUpAfterRender() {
   if (S.screen === "home" && (S.homeTab === "discover" || S.homeTab === "deals") && S._discover) {
     renderDiscoverMap();
   }
-  if (S.screen === "merchantRegister" || S.screen === "merchantProfile" || S.screen === "merchantBranches") renderPicker();
+  if (S.screen === "merchantRegister" || S.screen === "merchantProfile" || S.screen === "merchantBranches" || (S.screen === "home" && S.homeTab === "profile" && shareLocationOn())) renderPicker();
   if (S.screen === "store" && S._store && S._store.slides && S._store.slides.length > 1) { if (!S._sliderTimer) storeSliderRestart(); }
   else if (S._sliderTimer) { clearInterval(S._sliderTimer); S._sliderTimer = null; }
 }
@@ -6925,6 +7080,7 @@ loadSocialLinks();
 loadAppDownloadLink();
 
 bootSocialReturn().then((social) => {
+  setTimeout(ensureCity, 1200); // first use: ask for the city once
   if (social) return;
   if (bootMetaReturn()) return;
   bootReferralCapture().then((handled) => {

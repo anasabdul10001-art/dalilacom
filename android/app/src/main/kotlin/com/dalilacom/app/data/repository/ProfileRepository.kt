@@ -48,6 +48,14 @@ class ProfileRepository(private val api: ApiService) {
         safeApiCall { api.putLocation(LocationRequest(latitude, longitude)) }
     }
 
+    /** The place the person set last time (as the server keeps it), so the map starts where the pin was. */
+    suspend fun savedLocation(): Pair<Double, Double>? =
+        safeApiCall { api.getLocation() }?.takeIf { it.isSuccessful }?.body()?.location?.let { it.latitude to it.longitude }
+
+    /** The person pressed "set": true when the server kept the place. */
+    suspend fun setLocation(latitude: Double, longitude: Double): Boolean =
+        safeApiCall { api.putLocation(LocationRequest(latitude, longitude)) }?.isSuccessful == true
+
     /** The person opted out: the server forgets the position it kept. */
     suspend fun forgetLocation() {
         safeApiCall { api.deleteLocation() }

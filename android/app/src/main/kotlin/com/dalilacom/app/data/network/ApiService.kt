@@ -25,6 +25,9 @@ interface ApiService {
     @PUT("profile/location")
     suspend fun putLocation(@Body body: LocationRequest): Response<kotlinx.serialization.json.JsonElement>
 
+    @GET("profile/location")
+    suspend fun getLocation(): Response<MyLocationDto>
+
     @DELETE("profile/location")
     suspend fun deleteLocation(): Response<kotlinx.serialization.json.JsonElement>
 

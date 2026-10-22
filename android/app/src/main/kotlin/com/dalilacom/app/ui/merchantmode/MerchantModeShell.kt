@@ -47,6 +47,11 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.ui.Alignment
 import androidx.core.content.ContextCompat
@@ -56,15 +61,16 @@ import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
 
 private enum class MerchantTab(@androidx.annotation.StringRes val labelRes: Int, val icon: ImageVector) {
-    Redeem(R.string.s_d9724d06, Icons.Filled.QrCodeScanner),
+    Home(R.string.ms_tab_home, Icons.Filled.Home),
+    Redeem(R.string.s_d9724d06, Icons.Filled.QrCodeScanner), // not in the bar: the camera button and "give a discount" open it
     Orders(R.string.s_c5ffc332, Icons.AutoMirrored.Filled.ListAlt),
     Catalog(R.string.s_d766cb06, Icons.Filled.Inventory2),
     Promo(R.string.promo_tab, Icons.Filled.Campaign),
 }
 
 @Composable
-fun MerchantModeShell(rootNavController: NavHostController, container: AppContainer) {
-    var selectedTab by rememberSaveable { mutableStateOf(MerchantTab.Redeem) }
+fun MerchantModeShell(rootNavController: NavHostController, container: AppContainer, startOnRedeem: Boolean = false) {
+    var selectedTab by rememberSaveable { mutableStateOf(if (startOnRedeem) MerchantTab.Redeem else MerchantTab.Home) }
     val factory = remember { ViewModelFactory(container) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -130,7 +136,7 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
     Scaffold(
         bottomBar = {
             NavigationBar {
-                MerchantTab.values().forEach { tab ->
+                MerchantTab.values().filter { it != MerchantTab.Redeem }.forEach { tab ->
                     NavigationBarItem(
                         selected = selectedTab == tab,
                         onClick = { selectedTab = tab },
@@ -144,7 +150,7 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
       Box(Modifier.padding(padding).fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             TextButton(onClick = { rootNavController.popBackStack() }) { Text(AppStrings.get(R.string.s_a24110f8)) }
-            onboarding?.takeUnless { it.complete }?.let { steps ->
+            onboarding?.takeUnless { it.complete || selectedTab == MerchantTab.Home }?.let { steps ->
                 SetupChecklist(
                     steps = steps,
                     onLocation = { rootNavController.navigate("merchantProfile") },
@@ -153,6 +159,16 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                 )
             }
             when (selectedTab) {
+                MerchantTab.Home -> MerchantHome(
+                    steps = onboarding,
+                    onLocation = { rootNavController.navigate("merchantProfile") },
+                    onHours = { rootNavController.navigate("merchantHours") },
+                    onDiscount = { rootNavController.navigate("discounts") },
+                    onProduct = { rootNavController.navigate("productWizard") },
+                    onOrders = { selectedTab = MerchantTab.Orders },
+                    onAds = { selectedTab = MerchantTab.Promo },
+                    onShop = { rootNavController.navigate("merchantProfile") },
+                )
                 MerchantTab.Redeem -> RedeemScreen(factory, onOpenHistory = { rootNavController.navigate("discountHistory/shop") }, onExportReceipt = { ref ->
                     scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/discount/$ref", AppStrings.get(R.string.s_153612e1)) }
                 })
@@ -182,6 +198,134 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
             ) { Icon(Icons.Filled.QrCodeScanner, contentDescription = androidx.compose.ui.res.stringResource(R.string.scan_fab_desc)) }
         }
       }
+    }
+}
+
+
+/** The home of the shop: what is left to set up (always open, with a progress ring) and the quick ways in. */
+@Composable
+private fun MerchantHome(
+    steps: OnboardingDto?,
+    onLocation: () -> Unit, onHours: () -> Unit, onDiscount: () -> Unit, onProduct: () -> Unit,
+    onOrders: () -> Unit, onAds: () -> Unit, onShop: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
+        if (steps == null) {
+            Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator() }
+        } else if (steps.complete) {
+            Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("🎉", style = MaterialTheme.typography.headlineMedium)
+                    Spacer(Modifier.padding(horizontal = 6.dp))
+                    Column {
+                        Text(androidx.compose.ui.res.stringResource(R.string.ms_all_done), style = MaterialTheme.typography.titleMedium)
+                        Text(androidx.compose.ui.res.stringResource(R.string.ms_all_done_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        } else {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(androidx.compose.ui.res.stringResource(R.string.ms_setup_title), style = MaterialTheme.typography.titleLarge)
+                            Text(androidx.compose.ui.res.stringResource(R.string.ms_setup_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(Modifier.padding(horizontal = 8.dp))
+                        Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                progress = { steps.doneCount / 5f },
+                                modifier = Modifier.fillMaxSize(),
+                                strokeWidth = 6.dp,
+                                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("${steps.doneCount}", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+                                Text(androidx.compose.ui.res.stringResource(R.string.ms_of_n, 5), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                    if (!steps.approved) {
+                        Surface(shape = RoundedCornerShape(12.dp), color = Color(0x29F0AD4E), modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                            Text("⏳ " + androidx.compose.ui.res.stringResource(R.string.ms_wait_admin), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    SetupStep(1, steps.location, R.string.ms_s_location, R.string.ms_h_location, onLocation)
+                    SetupStep(2, steps.hours, R.string.ms_s_hours, R.string.ms_h_hours, onHours)
+                    SetupStep(3, steps.discount, R.string.ms_s_discount, R.string.ms_h_discount, onDiscount)
+                    SetupStep(4, steps.product, R.string.ms_s_product, R.string.ms_h_product, onProduct)
+                    SetupStep(5, steps.approved, R.string.ms_s_approved, R.string.ms_h_approved, null)
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(androidx.compose.ui.res.stringResource(R.string.ms_quick), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(8.dp))
+        val quick = listOf(
+            Triple("📦", R.string.ms_q_product, onProduct),
+            Triple("🏷️", R.string.ms_q_discount, onDiscount),
+            Triple("🕒", R.string.ms_q_hours, onHours),
+            Triple("📍", R.string.ms_q_shop, onShop),
+            Triple("📣", R.string.ms_q_ads, onAds),
+            Triple("🧾", R.string.ms_q_orders, onOrders),
+        )
+        quick.chunked(2).forEach { pair ->
+            Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                pair.forEach { (icon, label, action) ->
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).clickable(onClick = action),
+                    ) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), modifier = Modifier.size(36.dp)) {
+                                Box(contentAlignment = Alignment.Center) { Text(icon, style = MaterialTheme.typography.titleMedium) }
+                            }
+                            Spacer(Modifier.padding(horizontal = 5.dp))
+                            Text(androidx.compose.ui.res.stringResource(label), style = MaterialTheme.typography.labelLarge, maxLines = 2)
+                        }
+                    }
+                }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+        Spacer(Modifier.height(72.dp))
+    }
+}
+
+@Composable
+private fun SetupStep(number: Int, done: Boolean, @androidx.annotation.StringRes title: Int, @androidx.annotation.StringRes hint: Int, onClick: (() -> Unit)?) {
+    val clickable = !done && onClick != null
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(14.dp)).let { if (clickable) it.clickable(onClick = onClick!!) else it },
+    ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = androidx.compose.foundation.shape.CircleShape, color = if (done) Color(0xFF1E8E3E) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), modifier = Modifier.size(30.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(if (done) "✓" else "$number", color = if (done) Color.White else MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+            Spacer(Modifier.padding(horizontal = 6.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    androidx.compose.ui.res.stringResource(title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    textDecoration = if (done) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                )
+                Text(androidx.compose.ui.res.stringResource(hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (clickable) Text("‹", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 

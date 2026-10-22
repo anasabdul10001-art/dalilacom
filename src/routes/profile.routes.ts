@@ -141,6 +141,12 @@ profileRouter.put("/location", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// The place the person set (rounded as stored), so the map under the switch starts where the pin was.
+profileRouter.get("/location", requireAuth, async (req, res) => {
+  const u = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { lastLatitude: true, lastLongitude: true } });
+  res.json({ location: u && u.lastLatitude != null && u.lastLongitude != null ? { latitude: u.lastLatitude, longitude: u.lastLongitude } : null });
+});
+
 profileRouter.delete("/location", requireAuth, async (req, res) => {
   await prisma.user.update({ where: { id: req.user!.id }, data: { lastLatitude: null, lastLongitude: null, locationUpdatedAt: null } });
   res.json({ ok: true });

@@ -338,6 +338,9 @@ fun DalilacomNavGraph(
         composable("merchantMode") {
             MerchantModeShell(rootNavController = navController, container = container)
         }
+        composable("merchantMode/redeem") {
+            MerchantModeShell(rootNavController = navController, container = container, startOnRedeem = true)
+        }
         composable(
             "merchantProduct?productId={productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType; nullable = true; defaultValue = null }),
@@ -361,7 +364,7 @@ fun DalilacomNavGraph(
         onTipsOff = { tipsScope.launch { container.sessionStore.saveFabTipsOff(true) } },
         onCard = { navController.navigate("card") },
         onAddDiscount = { navController.navigate("discounts") },
-        onGiveDiscount = { navController.navigate("merchantMode") }, // opens on the tab where a member's code is scanned
+        onGiveDiscount = { navController.navigate("merchantMode/redeem") }, // opens on the tab where a member's code is scanned
     )
     }
 }

@@ -92,6 +92,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     val factory = remember { ViewModelFactory(container) }
     com.dalilacom.app.ui.common.UpdatePrompt(container.storeRepository)
     var isGuest by remember { mutableStateOf(false) }
+    com.dalilacom.app.ui.common.CityGate(container, signedInKey = isGuest)
     LaunchedEffect(Unit) {
         isGuest = !container.authRepository.hasStoredSession()
         if (!isGuest) container.profileRepository.me() // fetched ahead, so the profile tab already has the name and photo
@@ -109,7 +110,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
             route = "home", inHome = true, bottomPadding = bottom, merchant = isMerchant,
             onCard = { rootNavController.navigate("card") },
             onAddDiscount = { rootNavController.navigate("discounts") },
-            onGiveDiscount = { rootNavController.navigate("merchantMode") },
+            onGiveDiscount = { rootNavController.navigate("merchantMode/redeem") },
             tipsOff = tipsOffHome,
             onTipsOff = { homeScope.launch { container.sessionStore.saveFabTipsOff(true) } },
         )
