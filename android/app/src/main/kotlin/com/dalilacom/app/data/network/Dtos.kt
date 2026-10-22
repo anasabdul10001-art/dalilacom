@@ -726,6 +726,28 @@ data class LandmarkDto(
     val claimable: Boolean = false,
 )
 
+/** One answer of the search: a registered shop or a public place, with how far it is. */
+@Serializable
+data class SearchItemDto(
+    val type: String,
+    val id: String,
+    val name: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val distanceKm: Double? = null,
+    val address: String? = null,
+    val kind: LandmarkKindDto? = null,
+    val category: SearchCategoryDto? = null,
+    /** The full public place (what its card shows). */
+    val place: LandmarkDto? = null,
+)
+
+@Serializable
+data class SearchCategoryDto(val id: String, val name: String, val icon: String? = null)
+
+@Serializable
+data class SearchResponseDto(val items: List<SearchItemDto> = emptyList())
+
 @Serializable
 data class ClaimStateDto(val id: String, val status: String, val message: String? = null)
 

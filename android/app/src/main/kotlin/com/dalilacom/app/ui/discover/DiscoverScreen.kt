@@ -287,6 +287,9 @@ fun DiscoverScreen(
                     scope.launch { sheetState.partialExpand() }
                 },
                 onUserMoved = viewModel::onViewportMoved,
+                searchPlaces = state.found.filter { it.type == "landmark" },
+                pulseId = state.pulseId,
+                flyTo = state.flyTo,
                 recenterTick = recenterTick,
                 route = state.route?.data?.geometry,
                 routeWalking = state.route?.mode == "walking",
@@ -368,6 +371,7 @@ fun DiscoverScreen(
                 if (route == null) SuggestionsPanel(
                     state = state,
                     onMerchant = { id -> viewModel.onSearchFocus(false); onMerchantClick(id) },
+                    onPlace = viewModel::pickPlace,
                     onCategory = viewModel::pickCategory,
                     onRecent = viewModel::pickRecent,
                 )
@@ -502,15 +506,19 @@ private fun SearchPill(
 private fun SuggestionsPanel(
     state: DiscoverUiState,
     onMerchant: (String) -> Unit,
+    onPlace: (com.dalilacom.app.data.network.SearchItemDto) -> Unit,
     onCategory: (String) -> Unit,
     onRecent: (String) -> Unit,
 ) {
     if (!state.searchFocused) return
     val typing = state.query.isNotBlank()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    fun far(d: Double?) = d?.let { if (it < 1) context.getString(R.string.unit_m, Math.round(it * 1000).toInt()) else context.getString(R.string.unit_km, it) }
     val rows: List<Triple<String, String, () -> Unit>> = if (typing) {
         state.suggestions.categories.map { Triple(it.icon ?: "🗂️", it.path ?: it.name) { onCategory(it.id) } } +
-            state.suggestions.merchants.map { m ->
-                Triple("🏪", listOfNotNull(m.businessName, m.category?.name).joinToString(" · ")) { onMerchant(m.id) }
+            state.found.take(8).map { item ->
+                if (item.type == "landmark") Triple(item.kind?.icon ?: "📍", listOfNotNull(item.name, item.kind?.name, far(item.distanceKm)).joinToString(" · ")) { onPlace(item) }
+                else Triple("🏪", listOfNotNull(item.name, item.category?.name, far(item.distanceKm)).joinToString(" · ")) { onMerchant(item.id) }
             }
     } else {
         state.recentSearches.map { q -> Triple("🕘", q) { onRecent(q) } }

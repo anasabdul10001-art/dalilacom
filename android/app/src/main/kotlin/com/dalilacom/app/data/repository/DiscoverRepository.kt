@@ -12,6 +12,10 @@ class DiscoverRepository(private val api: ApiService) {
     suspend fun searchCategories(query: String): List<com.dalilacom.app.data.network.CategoryHitDto> =
         safeApiCall { api.searchCategories(query) }?.takeIf { it.isSuccessful }?.body().orEmpty()
 
+    /** Shops and public places matching what was typed, nearest and best first; empty when nothing fits or the call failed. */
+    suspend fun search(q: String, lat: Double?, lng: Double?, cityId: String?): List<com.dalilacom.app.data.network.SearchItemDto> =
+        safeApiCall { api.search(q, lat, lng, cityId) }?.takeIf { it.isSuccessful }?.body()?.items.orEmpty()
+
     /** The professions a shop name points to; empty when nothing fits or the call failed. */
     suspend fun guessCategoryForName(name: String): List<com.dalilacom.app.data.network.CategoryHitDto> =
         safeApiCall { api.categoryForName(name) }?.takeIf { it.isSuccessful }?.body()?.items.orEmpty()

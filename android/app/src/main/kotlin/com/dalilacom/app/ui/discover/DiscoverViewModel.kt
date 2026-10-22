@@ -89,7 +89,14 @@ data class DiscoverUiState(
     val landmarks: List<com.dalilacom.app.data.network.LandmarkDto> = emptyList(),
     val landmarksOn: Boolean = true,
     val openedLandmark: com.dalilacom.app.data.network.LandmarkDto? = null,
+    /** What the search found (shops and public places, nearest and best first), the place a ring pulses around, and the place the map should go to. */
+    val found: List<com.dalilacom.app.data.network.SearchItemDto> = emptyList(),
+    val pulseId: String? = null,
+    val flyTo: FlyTo? = null,
 )
+
+/** The map goes to a point (or frames several): [tick] makes the same target act again. */
+data class FlyTo(val points: List<Pair<Double, Double>>, val zoom: Double, val tick: Int)
 
 class DiscoverViewModel(
     private val repository: DiscoverRepository,
@@ -121,19 +128,62 @@ class DiscoverViewModel(
         suggestJob?.cancel()
         suggestJob = viewModelScope.launch {
             delay(280)
-            val suggestions = if (query.isBlank()) SuggestResponse() else places.suggest(query.trim())
-            _uiState.update { it.copy(suggestions = suggestions) }
+            if (query.isBlank()) {
+                _uiState.update { it.copy(suggestions = SuggestResponse(), found = emptyList(), pulseId = null) }
+            } else {
+                val suggestions = places.suggest(query.trim())
+                val found = runSearch(query.trim())
+                _uiState.update { it.copy(suggestions = suggestions, found = found) }
+            }
             search()
         }
     }
 
     fun onSearchFocus(focused: Boolean) = _uiState.update { it.copy(searchFocused = focused) }
 
+    /** Where the nearness is measured from: the person's place, else the middle of the map; the server falls back to the chosen city. */
+    private suspend fun runSearch(query: String): List<com.dalilacom.app.data.network.SearchItemDto> {
+        val here = _uiState.value.userLocation
+        val view = lastView?.first
+        val lat = here?.first ?: view?.let { (it.north + it.south) / 2 }
+        val lng = here?.second ?: view?.let { (it.east + it.west) / 2 }
+        return repository.search(query, lat, lng, sessionStore.getCityId())
+    }
+
+    /** Enter / the search button: the map goes to the results (one is zoomed on, several are all shown) and the best one pulses. */
     fun submitSearch() {
         val query = _uiState.value.query
         viewModelScope.launch {
             sessionStore.pushRecentSearch(query)
             _uiState.update { it.copy(recentSearches = sessionStore.getRecentSearches(), searchFocused = false) }
+            if (query.isBlank()) return@launch
+            val found = runSearch(query.trim())
+            _uiState.update { it.copy(found = found) }
+            showFound(found)
+        }
+    }
+
+    private fun showFound(found: List<com.dalilacom.app.data.network.SearchItemDto>) {
+        val located = found.filter { it.latitude != null && it.longitude != null }.take(8)
+        if (located.isEmpty()) return
+        val best = found.firstOrNull { it.type == "landmark" }
+        _uiState.update {
+            it.copy(
+                pulseId = best?.id, openedLandmark = null,
+                flyTo = FlyTo(located.map { p -> p.latitude!! to p.longitude!! }, if (located.size == 1) 17.0 else 0.0, (it.flyTo?.tick ?: 0) + 1),
+            )
+        }
+    }
+
+    /** One place picked from the list: the map goes to it, a ring pulses around it and its card opens. */
+    fun pickPlace(item: com.dalilacom.app.data.network.SearchItemDto) {
+        val lat = item.latitude ?: return
+        val lng = item.longitude ?: return
+        _uiState.update {
+            it.copy(
+                searchFocused = false, pulseId = item.id, openedLandmark = item.place,
+                flyTo = FlyTo(listOf(lat to lng), if (item.kind?.slug == "main_street") 15.0 else 17.0, (it.flyTo?.tick ?: 0) + 1),
+            )
         }
     }
 
@@ -142,6 +192,9 @@ class DiscoverViewModel(
         viewModelScope.launch {
             sessionStore.pushRecentSearch(query)
             _uiState.update { it.copy(recentSearches = sessionStore.getRecentSearches()) }
+            val found = runSearch(query.trim())
+            _uiState.update { it.copy(found = found) }
+            showFound(found)
         }
         search()
     }

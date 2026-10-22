@@ -302,6 +302,10 @@ interface ApiService {
         @Query("limit") limit: Int = 300,
     ): Response<LandmarksDto>
 
+    /** Shops and public places in one list, nearest and best first. */
+    @GET("search")
+    suspend fun search(@Query("q") q: String, @Query("lat") lat: Double? = null, @Query("lng") lng: Double? = null, @Query("cityId") cityId: String? = null, @Query("limit") limit: Int = 40): Response<SearchResponseDto>
+
     @GET("landmarks/similar")
     suspend fun similarLandmarks(@Query("name") name: String, @Query("lat") lat: Double? = null, @Query("lng") lng: Double? = null, @Query("address") address: String? = null): Response<SimilarLandmarksDto>
 

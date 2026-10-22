@@ -231,6 +231,51 @@ private fun placeLabel(context: Context, text: String, startPadDp: Float, center
     return BitmapDrawable(context.resources, bitmap)
 }
 
+/** A ring that grows and fades around a point, again and again for a few seconds (the place a search found). */
+private class PulseOverlay(private val point: GeoPoint, private val color: Int, private val density: Float) : org.osmdroid.views.overlay.Overlay() {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val start = SystemClock.uptimeMillis()
+
+    override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean) {
+        if (shadow) return
+        val age = SystemClock.uptimeMillis() - start
+        if (age > 9000) return
+        val p = mapView.projection.toPixels(point, null)
+        for (phase in listOf(0f, 0.5f)) {
+            val t = ((age / 1800f) + phase) % 1f
+            paint.color = color
+            paint.alpha = ((1f - t) * 110).toInt()
+            canvas.drawCircle(p.x.toFloat(), p.y.toFloat(), (15 + 42 * t) * density, paint)
+        }
+        mapView.postInvalidateOnAnimation()
+    }
+}
+
+/** A place a search found: bigger than the ordinary ones, with a ring in the kind's colour. */
+private fun foundIcon(context: Context, emoji: String, colorHex: String, best: Boolean): BitmapDrawable = landmarkIcons.getOrPut("found|$emoji|$colorHex|$best") {
+    val d = context.resources.displayMetrics.density
+    val disc = (if (best) 36 else 30) * d
+    val pad = 4 * d
+    val size = (disc + 2 * pad).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    paint.color = Color.WHITE
+    paint.setShadowLayer(3f * d, 0f, 1f * d, Color.argb(90, 0, 0, 0))
+    canvas.drawCircle(size / 2f, size / 2f, disc / 2f, paint)
+    paint.clearShadowLayer()
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = 2.5f * d
+    paint.color = runCatching { Color.parseColor(colorHex) }.getOrDefault(Color.DKGRAY)
+    canvas.drawCircle(size / 2f, size / 2f, disc / 2f - 1.2f * d, paint)
+    paint.style = Paint.Style.FILL
+    paint.color = Color.BLACK
+    paint.textAlign = Paint.Align.CENTER
+    paint.textSize = (if (best) 18 else 15) * d
+    canvas.drawText(emoji, size / 2f, size / 2f - (paint.descent() + paint.ascent()) / 2, paint)
+    BitmapDrawable(context.resources, bitmap)
+}
+
 /** How close the map must be before a kind is drawn (mosques are many, so they wait for a closer view). */
 private fun landmarkMinZoom(slug: String): Double = when (slug) {
     "main_street", "hospital", "park", "neighborhood", "airport", "train_station", "university" -> 12.0
@@ -264,6 +309,10 @@ fun MerchantsMap(
     landmarks: List<com.dalilacom.app.data.network.LandmarkDto> = emptyList(),
     onLandmark: (com.dalilacom.app.data.network.LandmarkDto) -> Unit = {},
     onView: (MapBounds, Double) -> Unit = { _, _ -> },
+    /** The public places a search found (always drawn, bigger), the one a ring pulses around, and where the camera should go. */
+    searchPlaces: List<com.dalilacom.app.data.network.SearchItemDto> = emptyList(),
+    pulseId: String? = null,
+    flyTo: FlyTo? = null,
     /** A touch on the empty map (not on a pin). */
     onMapTap: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -308,6 +357,8 @@ fun MerchantsMap(
     val latestOnLandmark by rememberUpdatedState(onLandmark)
     val latestOnView by rememberUpdatedState(onView)
     val latestOnMapTap by rememberUpdatedState(onMapTap)
+    val latestSearchPlaces by rememberUpdatedState(searchPlaces)
+    val latestPulse by rememberUpdatedState(pulseId)
 
     fun redraw(map: MapView) {
         map.overlays.clear()
@@ -397,6 +448,30 @@ fun MerchantsMap(
                     setOnMarkerClickListener { _, _ -> latestOnLandmark(place); true }
                     map.overlays.add(this)
                 }
+            }
+        }
+        latestSearchPlaces.filter { it.latitude != null && it.longitude != null }.forEachIndexed { i, item ->
+            val point = GeoPoint(item.latitude!!, item.longitude!!)
+            val kind = item.kind ?: return@forEachIndexed
+            val color = runCatching { Color.parseColor(kind.color) }.getOrDefault(Color.DKGRAY)
+            if (item.id == latestPulse) map.overlays.add(PulseOverlay(point, color, context.resources.displayMetrics.density))
+            val place = item.place
+            Marker(map).apply {
+                position = point
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = foundIcon(context, kind.icon, kind.color, i == 0)
+                title = item.name
+                setInfoWindow(null)
+                setOnMarkerClickListener { _, _ -> if (place != null) latestOnLandmark(place); true }
+                map.overlays.add(this)
+            }
+            Marker(map).apply {
+                position = point
+                setAnchor(0f, Marker.ANCHOR_CENTER)
+                icon = placeLabel(context, item.name, 22f, centered = false)
+                setInfoWindow(null)
+                setOnMarkerClickListener { _, _ -> if (place != null) latestOnLandmark(place); true }
+                map.overlays.add(this)
             }
         }
         val measured = map.width > 0
@@ -527,6 +602,21 @@ fun MerchantsMap(
             lifecycleOwner.lifecycle.removeObserver(observer)
             mapView.onPause()
             mapView.onDetach()
+        }
+    }
+
+    // A search result was picked or submitted: go to it (one point is zoomed on, several are all framed).
+    LaunchedEffect(flyTo?.tick) {
+        val target = flyTo ?: return@LaunchedEffect
+        if (target.tick == 0 || target.points.isEmpty()) return@LaunchedEffect
+        programmatic {
+            if (target.points.size == 1) {
+                mapView.controller.setZoom(target.zoom)
+                mapView.controller.animateTo(GeoPoint(target.points[0].first, target.points[0].second))
+            } else {
+                mapView.post { mapView.zoomToBoundingBox(BoundingBox.fromGeoPoints(target.points.map { GeoPoint(it.first, it.second) }).increaseByScale(1.5f), true, 90) }
+            }
+            mapView.invalidate()
         }
     }
 
