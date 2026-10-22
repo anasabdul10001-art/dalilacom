@@ -239,7 +239,7 @@
         <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()"><span class="ni">🏷️</span><span class="nt">الحسومات</span><span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
         <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()"><span class="ni">🛡️</span><span class="nt">مراجعة المنتجات</span><span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
         <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()"><span class="ni">📢</span><span class="nt">إعلانات المتجر</span><span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
-        <div class="nav-item" data-section="topups" onclick="showSection('topups')"><span class="ni">💰</span><span class="nt">طلبات الشحن</span></div>
+        <div class="nav-item" data-section="topups" onclick="showSection('topups')"><span class="ni">💰</span><span class="nt">طلبات الإيداع</span></div>
         <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()"><span class="ni">💡</span><span class="nt">اقتراحات المهن</span><span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
         <div class="nav-item" data-section="broadcasts" onclick="showSection('broadcasts')"><span class="ni">📣</span><span class="nt">الإعلانات</span><span id="bc-pending-count" class="badge PENDING" style="display:none"></span></div>
       </div>
@@ -995,7 +995,7 @@
     </div>
 
     <div class="section" id="section-topups" style="display:none">
-      <h2>طلبات الشحن</h2>
+      <h2>طلبات الإيداع</h2>
       <p class="subtitle">حوالات المحافظ المحلية بانتظار تأكيدك. USDT بينتحقق منه السيرفر تلقائيًا.</p>
       <div class="filters">
         <button class="active" data-tstatus="PENDING" onclick="loadTopups('PENDING')">بانتظار</button>
@@ -1010,7 +1010,7 @@
         <div class="row">
           <div><label>بريد المستخدم</label><input placeholder="name@example.com" id="adj-email" /></div>
           <div><label>المبلغ (سالب للخصم)</label><input placeholder="مثال: 100" id="adj-amount" /></div>
-          <div><label>ملاحظة</label><input placeholder="مثال: شحن رصيد يدوي" id="adj-note" /></div>
+          <div><label>ملاحظة</label><input placeholder="مثال: إيداع رصيد يدوي" id="adj-note" /></div>
         </div>
         <button style="margin-top:12px" onclick="adjustWallet()">تنفيذ</button>
       </div>
@@ -1117,7 +1117,7 @@ const HOME_WAIT = [
   ['discounts', '🏷️', 'حسومات بانتظار الموافقة', 'discounts', 'loadDiscounts()'],
   ['products', '🛡️', 'منتجات بانتظار المراجعة', 'prodreview', 'loadProductReview()'],
   ['ads', '📢', 'طلبات إعلانات المتجر', 'ads', 'loadAds()'],
-  ['topups', '💰', 'طلبات شحن الرصيد', 'topups', "loadTopups('PENDING')"],
+  ['topups', '💰', 'طلبات إيداع الرصيد', 'topups', "loadTopups('PENDING')"],
   ['suggestions', '💡', 'اقتراحات مهن', 'suggestions', 'loadSuggestions()'],
   ['marketers', '📣', 'طلبات مسوّقين', 'marketers', 'loadMarketers()'],
   ['broadcasts', '🔔', 'إعلانات بانتظار المراجعة', 'broadcasts', 'loadBroadcasts()'],
