@@ -90,6 +90,9 @@ describe("while the site is closed to search (the default)", () => {
     const robots = await request(app).get("/robots.txt");
     expect(robots.text).toContain("Disallow: /");
     expect(robots.text).not.toContain("Allow: /\n\nUser-agent: GPTBot");
+    // Meta's crawler alone may read the site (Facebook Login checks the policy pages; link previews).
+    expect(robots.text).toContain("User-agent: facebookexternalhit\nAllow: /");
+    expect(robots.text).toMatch(/User-agent: \*\nDisallow: \/\n$/);
     expect(robots.headers["x-robots-tag"]).toContain("noindex");
     const home = await request(app).get("/");
     expect(home.text).toContain('<meta name="robots" content="noindex, nofollow, noarchive"');
