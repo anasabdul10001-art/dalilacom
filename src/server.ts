@@ -106,7 +106,13 @@ app.get(["/", "/app/"], async (req, res, next) => {
   }
 });
 // robots.txt and llms.txt come before the static files: while indexing is off (the default) every crawler is told to stay out.
-const CLOSED_ROBOTS = "# The site is not open to search engines yet.\nUser-agent: *\nDisallow: /\n";
+// Meta's crawler is the one exception: Facebook Login needs it to read the privacy, terms and data-deletion pages,
+// and it draws the preview card when someone shares a dalilacom.com link. It does not index anything for search.
+const CLOSED_ROBOTS =
+  "# Meta (Facebook Login checks and link previews) may read the site.\n" +
+  "User-agent: facebookexternalhit\nAllow: /\n\n" +
+  "User-agent: Facebot\nAllow: /\n\n" +
+  "# The site is not open to search engines yet.\nUser-agent: *\nDisallow: /\n";
 app.get("/robots.txt", (_req, res, next) => {
   if (searchIndexingOn()) return next(); // the open version is the file in public/
   res.type("text/plain").set("X-Robots-Tag", "noindex, nofollow").send(CLOSED_ROBOTS);
