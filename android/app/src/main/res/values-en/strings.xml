@@ -122,7 +122,7 @@
     <string name="guest_profile_sub">The map and the directory are open to everyone. You only need an account for a discount card or to list your shop.</string>
     <string name="guest_profile_p1">Get the discount card</string>
     <string name="guest_profile_p2">List your shop and add your products and offers</string>
-    <string name="guest_profile_p3">Turn on the auto-responder for your customers\' messages</string>
+    <string name="guest_profile_p3">Open your online store and put your business on the map</string>
 
     <string name="browse_title">Browse categories</string>
     <string name="browse_all">All %1$s</string>
@@ -1047,4 +1047,17 @@
     <string name="ads_img_upload_fail">The picture could not be uploaded</string>
     <string name="ads_img_later">The booking is made, but the picture was not uploaded. You can add it from My ads.</string>
     <string name="sheet_show_all">Show all places (%1$d)</string>
+    <string name="auth_feat_title">What you get with Dalilacom</string>
+    <string name="auth_feat_1_icon">💳</string>
+    <string name="auth_feat_1_t">A digital discount card</string>
+    <string name="auth_feat_1_s">A QR card on your phone that gives you discounts at the member shops.</string>
+    <string name="auth_feat_2_icon">🏷️</string>
+    <string name="auth_feat_2_t">Offer a discount to your customers</string>
+    <string name="auth_feat_2_s">Set the discount you want and let members enjoy it at your place.</string>
+    <string name="auth_feat_3_icon">🛍️</string>
+    <string name="auth_feat_3_t">Your own online store</string>
+    <string name="auth_feat_3_s">Add your products with prices and photos and receive orders in the app.</string>
+    <string name="auth_feat_4_icon">📍</string>
+    <string name="auth_feat_4_t">Your business on the map</string>
+    <string name="auth_feat_4_s">Register your shop name, details and address so people nearby can find you.</string>
 </resources>

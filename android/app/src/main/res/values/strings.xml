@@ -126,7 +126,7 @@
     <string name="guest_profile_sub">الخريطة ودليل المحلات مفتوحين للكل. الحساب بتحتاجه إذا بدك بطاقة حسم أو تسجّل محلك كصاحب نشاط.</string>
     <string name="guest_profile_p1">احصل على بطاقة الحسم</string>
     <string name="guest_profile_p2">سجّل محلك كصاحب نشاط وأضف منتجاتك وعروضك</string>
-    <string name="guest_profile_p3">فعّل المجيب الآلي لمحادثات زبائنك</string>
+    <string name="guest_profile_p3">افتح متجرك الإلكتروني وسجّل نشاطك على الخريطة</string>
 
     <string name="browse_title">تصفّح الأقسام</string>
     <string name="browse_all">كل %1$s</string>
@@ -1051,4 +1051,17 @@
     <string name="ads_img_upload_fail">تعذّر رفع الصورة</string>
     <string name="ads_img_later">تم الحجز، لكن الصورة ما انرفعت. بتقدر ترفعها من «إعلاناتي».</string>
     <string name="sheet_show_all">عرض كل المحلات (%1$d)</string>
+    <string name="auth_feat_title">شو بتحصل عليه بدليلكم</string>
+    <string name="auth_feat_1_icon">💳</string>
+    <string name="auth_feat_1_t">بطاقة حسم رقمية</string>
+    <string name="auth_feat_1_s">بطاقة بـ QR على موبايلك تعطيك خصومات عند المحلات المشتركة.</string>
+    <string name="auth_feat_2_icon">🏷️</string>
+    <string name="auth_feat_2_t">قدّم خصمًا لزبائنك</string>
+    <string name="auth_feat_2_s">حدّد نسبة الحسم اللي بدك ياها وخلّي الأعضاء يستفيدوا منها عندك.</string>
+    <string name="auth_feat_3_icon">🛍️</string>
+    <string name="auth_feat_3_t">متجر إلكتروني خاص فيك</string>
+    <string name="auth_feat_3_s">أضف منتجاتك بأسعارها وصورها، واستقبل الطلبات من التطبيق.</string>
+    <string name="auth_feat_4_icon">📍</string>
+    <string name="auth_feat_4_t">نشاطك على الخريطة</string>
+    <string name="auth_feat_4_s">سجّل اسم محلك وبياناتك وعنوانك ليلاقيك الناس بالقرب منهم.</string>
 </resources>

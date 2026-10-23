@@ -1689,3 +1689,10 @@ html[dir="ltr"] .setup-step .s-go { transform: scaleX(-1); }
 @keyframes lmPulse { 0% { transform: scale(1); opacity: .45; } 100% { transform: scale(3.4); opacity: 0; } }
 .place-rows-head { font-size: 12px; font-weight: 700; margin: 2px 4px 4px; }
 .place-ico { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
+
+.auth-feats { margin: 4px 0 18px; padding: 14px 16px; border-radius: 16px; background: var(--surface, #fff); border: 1px solid var(--border, #ddd); }
+.auth-feats h2 { margin: 0 0 8px; font-size: 15px; }
+.auth-feat { display: flex; align-items: flex-start; gap: 12px; padding: 7px 0; }
+.auth-feat .ic { font-size: 22px; line-height: 1.2; }
+.auth-feat b { display: block; font-size: 14px; }
+.auth-feat small { display: block; color: var(--muted, #777); font-size: 12.5px; line-height: 1.5; }

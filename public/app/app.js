@@ -668,6 +668,12 @@ async function doForgot() {
   render();
 }
 
+/** What a person gets from an account: only things that exist today (section 17: nothing promised that is not built). */
+function authFeaturesHtml() {
+  const rows = [["💳", 1], ["🏷️", 2], ["🛍️", 3], ["📍", 4]];
+  return `<div class="auth-feats"><h2>${esc(t("auth.feat.title"))}</h2>${rows.map(([ic, n]) => `<div class="auth-feat"><span class="ic">${ic}</span><div><b>${esc(t("auth.feat." + n + ".t"))}</b><small>${esc(t("auth.feat." + n + ".s"))}</small></div></div>`).join("")}</div>`;
+}
+
 function screenLogin() {
   const draft = S.params.draft || {};
   return `
@@ -675,6 +681,7 @@ function screenLogin() {
     ${authLogoHtml()}
     <h1 class="screen-title">تسجيل الدخول</h1>
     <p class="screen-sub">أهلًا فيك بدليلكم — دخّل بياناتك</p>
+    ${authFeaturesHtml()}
     <div class="field"><label>الإيميل</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
     <div class="field"><label>كلمة السر</label><input id="f-password" type="password" placeholder="••••••••" value="${esc(draft.password || "")}" /></div>
     ${errorBanner()}
@@ -722,6 +729,7 @@ function screenRegister() {
   return `
     <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
     <h1 class="screen-title">إنشاء حساب جديد</h1>
+    ${authFeaturesHtml()}
     <p class="screen-sub">${esc(t("reg.who"))}</p>
     <div class="intent-cards">
       <button class="intent-card ${intent === "MERCHANT" ? "on" : ""}" onclick="setRegisterIntent('MERCHANT')">
