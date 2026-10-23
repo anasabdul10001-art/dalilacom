@@ -1,5 +1,7 @@
 package com.dalilacom.app.ui.auth
 
+import androidx.compose.foundation.clickable
+
 import com.dalilacom.app.ui.common.Hint
 
 import com.dalilacom.app.R
@@ -56,6 +58,7 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var referralCode by remember { mutableStateOf("") }
+    var acceptTerms by remember { mutableStateOf(false) }
     var signupIntent by remember { mutableStateOf(SignupIntent.CUSTOMER) }
     val places by viewModel.places.collectAsState()
     LaunchedEffect(Unit) { viewModel.loadPlaces() }
@@ -135,7 +138,15 @@ fun RegisterScreen(
             modifier = Modifier.fillMaxWidth(),
         placeholder = { Hint(stringResource(R.string.ph_ref_code)) },
     )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.foundation.layout.Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable { acceptTerms = !acceptTerms },
+        ) {
+            androidx.compose.material3.Checkbox(checked = acceptTerms, onCheckedChange = { acceptTerms = it })
+            Text(stringResource(R.string.reg_accept_terms), style = MaterialTheme.typography.bodySmall)
+        }
+        Spacer(Modifier.height(8.dp))
 
         if (uiState is AuthUiState.Error) {
             Text((uiState as AuthUiState.Error).message, color = MaterialTheme.colorScheme.error)
@@ -146,7 +157,7 @@ fun RegisterScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.register(email.trim(), password, fullName.trim(), referralCode) },
+                onClick = { viewModel.register(email.trim(), password, fullName.trim(), referralCode, acceptTerms) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(AppStrings.get(R.string.s_a40a6e99)) }
         }

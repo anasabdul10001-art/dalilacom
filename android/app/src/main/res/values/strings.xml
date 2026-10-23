@@ -1064,4 +1064,26 @@
     <string name="auth_feat_4_icon">📍</string>
     <string name="auth_feat_4_t">نشاطك على الخريطة</string>
     <string name="auth_feat_4_s">سجّل اسم محلك وبياناتك وعنوانك ليلاقيك الناس بالقرب منهم.</string>
+    <string name="pay_cod">الدفع عند الاستلام</string>
+    <string name="pay_pending">بانتظار الدفع</string>
+    <string name="pay_paid_cash">تم استلام النقد</string>
+    <string name="pay_paid_online">مدفوع إلكترونيًا</string>
+    <string name="pay_failed">لم يتم الدفع</string>
+    <string name="pay_refunded">مُسترجع</string>
+    <string name="pay_confirm_cash">تأكيد استلام النقد</string>
+    <string name="pay_confirm_failed">تعذّر التأكيد</string>
+    <string name="reg_accept_terms">أوافق على شروط الاستخدام وسياسة الخصوصية</string>
+    <string name="reg_must_accept">لازم توافق على شروط الاستخدام وسياسة الخصوصية لتسجّل</string>
+    <string name="profile_export_data">تحميل بياناتي</string>
+    <string name="profile_export_failed">تعذّر تجهيز بياناتك</string>
+    <string name="price_currency">العملة اللي بتكتب فيها أسعار منتجاتك</string>
+    <string name="price_syp">ليرة سورية</string>
+    <string name="price_usd">دولار</string>
+    <string name="price_rate_title">أسعار الليرة والدولار</string>
+    <string name="price_rate_sub">اختار مرة وحدة بأي عملة بتسعّر كل منتجاتك. وإذا بدك تظهر الأسعار بالليرة والدولار اكتب كم ليرة بيساوي الدولار عندك؛ ولما تغيّر السعر بتتحدّث أسعار كل منتجاتك لحالها.</string>
+    <string name="price_rate_label">1 دولار =</string>
+    <string name="price_rate_unit">ليرة</string>
+    <string name="price_save">حفظ الأسعار</string>
+    <string name="price_failed">تعذّر حفظ إعدادات الأسعار</string>
+    <string name="price_show_both">اعرض أسعاري بالليرة والدولار معًا (يحتاج سعر الصرف)</string>
 </resources>

@@ -5,6 +5,7 @@ import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.OrderDto
+import com.dalilacom.app.data.network.PaymentDto
 import com.dalilacom.app.data.network.UpdateOrderStatusRequest
 import com.dalilacom.app.data.network.safeApiCall
 
@@ -35,6 +36,15 @@ class OrderRepository(private val api: ApiService) {
         } else {
             Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_cdffc53b))))
         }
+    }
+
+    /** The shop got the cash for a pay-on-delivery order. */
+    suspend fun confirmCash(id: String): Result<PaymentDto> {
+        val response = safeApiCall { api.confirmCash(id) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body)
+        else Result.failure(Exception(errorText(response, AppStrings.get(R.string.pay_confirm_failed))))
     }
 
     suspend fun cancel(id: String): Result<OrderDto> {

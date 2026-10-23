@@ -8,6 +8,12 @@ export async function currencyOf(countryCode: string): Promise<string> {
   return country?.currencyCode ?? "EUR";
 }
 
+/** The money a shop's prices are kept in: the currency of its owner's country (the platform's first country when unknown). */
+export async function marketOfUser(userId: string): Promise<string> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { countryCode: true } });
+  return currencyOf(u?.countryCode ?? DEFAULT_COUNTRY);
+}
+
 let marketCache: { at: number; only: string | null } | null = null;
 
 /** The one country the platform serves, or null when more than one is set up (cached for half a minute). */

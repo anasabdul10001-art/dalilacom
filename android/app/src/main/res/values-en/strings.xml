@@ -1060,4 +1060,26 @@
     <string name="auth_feat_4_icon">📍</string>
     <string name="auth_feat_4_t">Your business on the map</string>
     <string name="auth_feat_4_s">Register your shop name, details and address so people nearby can find you.</string>
+    <string name="pay_cod">Cash on delivery</string>
+    <string name="pay_pending">Waiting for payment</string>
+    <string name="pay_paid_cash">Cash received</string>
+    <string name="pay_paid_online">Paid online</string>
+    <string name="pay_failed">Not paid</string>
+    <string name="pay_refunded">Refunded</string>
+    <string name="pay_confirm_cash">Confirm cash received</string>
+    <string name="pay_confirm_failed">Could not confirm</string>
+    <string name="reg_accept_terms">I accept the terms of use and the privacy policy</string>
+    <string name="reg_must_accept">You must accept the terms of use and the privacy policy to sign up</string>
+    <string name="profile_export_data">Download my data</string>
+    <string name="profile_export_failed">Your data could not be prepared</string>
+    <string name="price_currency">The money you write your product prices in</string>
+    <string name="price_syp">Syrian pound</string>
+    <string name="price_usd">US dollar</string>
+    <string name="price_rate_title">Pound and dollar prices</string>
+    <string name="price_rate_sub">Choose once which money you price all your products in. To show prices in pounds and dollars together, write how many pounds one dollar is worth to you; when you change that rate, all your product prices update by themselves.</string>
+    <string name="price_rate_label">1 dollar =</string>
+    <string name="price_rate_unit">pounds</string>
+    <string name="price_save">Save prices</string>
+    <string name="price_failed">Could not save the price settings</string>
+    <string name="price_show_both">Show my prices in pounds and dollars together (needs the rate)</string>
 </resources>

@@ -61,6 +61,14 @@ class OrderDetailViewModel(
         }
     }
 
+    fun confirmCash() {
+        viewModelScope.launch {
+            repository.confirmCash(orderId)
+                .onSuccess { _uiState.value = _uiState.value.copy(order = repository.getOrder(orderId) ?: _uiState.value.order) }
+                .onFailure { _uiState.value = _uiState.value.copy(error = it.message) }
+        }
+    }
+
     fun cancel() {
         _uiState.value = _uiState.value.copy(isCancelling = true, error = null)
         viewModelScope.launch {

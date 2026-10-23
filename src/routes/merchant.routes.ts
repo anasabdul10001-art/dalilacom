@@ -20,6 +20,8 @@ import { createBusinessFromMerchantProfile } from "../services/business.service"
 import { getDefaultCountry } from "../services/geo.service";
 import { adminDecidedShop, reviewShopQuick } from "../services/shopReview.service";
 import { computeOpenStatus, openingHoursSchema } from "../services/hours.service";
+import { PRICE_CURRENCIES, isPriceCurrency, reapplyShopPricing, shopMoney } from "../lib/pricing";
+import { marketOfUser } from "../services/viewerCountry.service";
 
 export const merchantRouter = Router();
 
@@ -191,6 +193,33 @@ merchantRouter.patch("/me", requireAuth, requireRole(Role.MERCHANT), async (req,
     return res.json(await prisma.merchantProfile.findUnique({ where: { id: existing.id } }));
   }
   res.json(updated);
+});
+
+const pricingSchema = z.object({
+  priceCurrency: z.enum(PRICE_CURRENCIES).optional(), // the money the shop writes ALL its prices in
+  usdRateSyp: z.number().int().min(1).max(100_000_000).nullable().optional(), // lira per dollar, the shop's own rate
+  showBothCurrencies: z.boolean().optional(), // show shoppers the price in lira and in dollars
+});
+
+// Merchant: the shop's pricing, set once for the whole shop (Syria prices in lira or dollars): the money its prices are
+// written in, its own dollar rate and whether shoppers see both. A new rate or money reprices every product at once.
+merchantRouter.put("/pricing", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const parsed = pricingSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const shop = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!shop) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
+  const market = await marketOfUser(shop.userId);
+  if (!isPriceCurrency(market)) return sendError(res, 400, "BAD_REQUEST", "تسعير الليرة والدولار غير متوفر في بلدك");
+  const from = shopMoney(shop, market)!;
+  const to = parsed.data.priceCurrency ?? from;
+  const rate = parsed.data.usdRateSyp !== undefined ? parsed.data.usdRateSyp : shop.usdRateSyp;
+  const both = parsed.data.showBothCurrencies ?? shop.showBothCurrencies;
+  if (!rate && (to !== market || both)) return sendError(res, 400, "USD_RATE_REQUIRED", "حدّد سعر صرف الدولار أولًا من إعدادات الأسعار");
+  await prisma.$transaction(async (tx) => {
+    await tx.merchantProfile.update({ where: { id: shop.id }, data: { priceCurrency: to, usdRateSyp: rate ?? null, showBothCurrencies: both } });
+    if (to !== from || (rate ?? null) !== shop.usdRateSyp) await reapplyShopPricing(tx, shop.id, { from, to, oldRate: shop.usdRateSyp, newRate: rate ?? null }, market);
+  });
+  res.json({ priceCurrency: to, usdRateSyp: rate ?? null, showBothCurrencies: both });
 });
 
 // Admin: list merchants awaiting manual review (section 14/63)

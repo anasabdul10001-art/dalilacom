@@ -107,12 +107,13 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         _places.value = _places.value.copy(cityId = city.id)
     }
 
-    fun register(email: String, password: String, fullName: String, referralCode: String = "") {
+    fun register(email: String, password: String, fullName: String, referralCode: String = "", acceptTerms: Boolean = false) {
         val problem = when {
             fullName.isBlank() -> R.string.err_enter_name
             email.isBlank() -> R.string.err_enter_email
             password.isBlank() -> R.string.err_enter_password
             password.length < 8 -> R.string.err_password_short
+            !acceptTerms -> R.string.reg_must_accept
             else -> null
         }
         if (problem != null) {
@@ -123,7 +124,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         val p = _places.value
         val countryCode = p.countries.firstOrNull { it.id == p.countryId }?.isoCode2
         viewModelScope.launch {
-            repository.register(email, password, fullName, countryCode, p.cityId, referralCode)
+            repository.register(email, password, fullName, countryCode, p.cityId, referralCode, acceptTerms)
                 .onSuccess { _uiState.value = AuthUiState.Success }
                 .onFailure { _uiState.value = AuthUiState.Error(it.message ?: AppStrings.get(R.string.s_6c21e27c)) }
         }

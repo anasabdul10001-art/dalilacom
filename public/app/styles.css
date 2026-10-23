@@ -1696,3 +1696,6 @@ html[dir="ltr"] .setup-step .s-go { transform: scaleX(-1); }
 .auth-feat .ic { font-size: 22px; line-height: 1.2; }
 .auth-feat b { display: block; font-size: 14px; }
 .auth-feat small { display: block; color: var(--muted, #777); font-size: 12.5px; line-height: 1.5; }
+.check-row { display: flex; align-items: flex-start; gap: 10px; margin: 6px 0 14px; font-size: 13.5px; cursor: pointer; }
+.check-row input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.muted b.ok { color: var(--success, #2e7d32); }

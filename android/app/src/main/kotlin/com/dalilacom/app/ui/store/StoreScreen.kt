@@ -140,13 +140,13 @@ fun StorePrice(product: StoreProductDto, big: Boolean = false) {
     if (product.memberDiscountEnabled && product.memberPriceCents != null) {
         Column {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(formatCents(product.memberPriceCents), fontWeight = FontWeight.ExtraBold, fontSize = size, color = StoreSale)
+                Text(com.dalilacom.app.ui.common.storePrice(product, true), fontWeight = FontWeight.ExtraBold, fontSize = size, color = StoreSale)
                 Spacer(Modifier.width(7.dp))
-                Text(formatCents(product.priceCents), textDecoration = TextDecoration.LineThrough, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = if (big) 15.sp else 12.sp)
+                Text(com.dalilacom.app.ui.common.storePrice(product, false), textDecoration = TextDecoration.LineThrough, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = if (big) 15.sp else 12.sp)
             }
             Text(stringResource(R.string.store_off_label, product.offPercent()), color = StoreSale, fontSize = if (big) 14.sp else 12.sp)
         }
-    } else Text(formatCents(product.priceCents), fontWeight = FontWeight.ExtraBold, fontSize = size)
+    } else Text(com.dalilacom.app.ui.common.storePrice(product, false), fontWeight = FontWeight.ExtraBold, fontSize = size)
 }
 
 @Composable
@@ -663,7 +663,7 @@ private fun AdSlot(sl: com.dalilacom.app.data.network.StoreSlotDto, onOpen: () -
         else Text("📢 " + stringResource(R.string.ads_here), color = Color(0xFF111111), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(Color(0xEBFFFFFF), RoundedCornerShape(3.dp)).clickable(onClick = onAdvertise).padding(horizontal = 7.dp, vertical = 2.dp))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0x00000000), Color(0xB8000000)))).padding(start = 8.dp, end = 40.dp, top = 16.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(formatCents(if (p.memberDiscountEnabled && p.memberPriceCents != null) p.memberPriceCents else p.priceCents), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                Text(com.dalilacom.app.ui.common.storePrice(p, p.memberDiscountEnabled && p.memberPriceCents != null), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
                 if (p.offPercent() > 0) Text("  -${p.offPercent()}%", color = StoreSale, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
             }
             Text(p.name, color = Color.White.copy(alpha = 0.92f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

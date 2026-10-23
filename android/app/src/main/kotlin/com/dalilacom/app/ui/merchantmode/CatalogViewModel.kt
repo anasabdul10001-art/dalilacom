@@ -19,6 +19,9 @@ data class CatalogUiState(
     val storeClosed: Boolean = false,
     val discounts: List<DiscountDto> = emptyList(),
     val products: List<ProductDto> = emptyList(),
+    val usdRateSyp: Int? = null,
+    val priceCurrency: String? = null,
+    val showBothCurrencies: Boolean = false,
     val discountTitle: String = "",
     val discountPercent: String = "",
     val isAddingDiscount: Boolean = false,
@@ -46,7 +49,18 @@ class CatalogViewModel(
                 storeClosed = me?.storePlan?.let { it.required && !it.active } == true,
                 discounts = me?.discounts.orEmpty(),
                 products = products,
+                usdRateSyp = me?.usdRateSyp,
+                priceCurrency = me?.priceCurrency,
+                showBothCurrencies = me?.showBothCurrencies == true,
             )
+        }
+    }
+
+    fun savePricing(currency: String, rate: Int?, showBoth: Boolean) {
+        viewModelScope.launch {
+            merchantRepository.setPricing(currency, rate, showBoth)
+                .onSuccess { _uiState.value = _uiState.value.copy(error = null); refresh() }
+                .onFailure { _uiState.value = _uiState.value.copy(error = it.message) }
         }
     }
 

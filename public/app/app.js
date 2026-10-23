@@ -65,13 +65,45 @@ function esc(s) {
 /** Money in the currency of the shopper's country (S.currency, from /geo/market): dollars in Syria for now, euros elsewhere unless set. */
 const CURRENCY_SYMBOL = { USD: "$", EUR: "€", GBP: "£", TRY: "₺" };
 
-function fmt(cents) {
-  const code = S.currency || "EUR";
+function fmt(cents, codeOverride) {
+  const code = codeOverride || S.currency || "EUR";
   const amount = (Number(cents || 0) / 100).toFixed(2);
   const sym = CURRENCY_SYMBOL[code];
   if (!sym) return `${amount} ${code}`;
   return LANG === "en" ? `${sym}${amount}` : `${amount} ${sym}`;
 }
+
+/**
+ * A product's price as its shop wants shoppers to see it (Syria prices in pounds or dollars): the pound amount, the dollar
+ * amount, or both. Anywhere else, or when the shop has no dollar rate, it is the plain amount.
+ */
+function priceText(p, member) {
+  const M = S.currency;
+  const canon = member ? p.memberPriceCents : p.priceCents;
+  const alt = member ? p.altMemberPriceCents : p.altPriceCents;
+  if (!p.altCurrency || alt == null) return fmt(canon);
+  const d = p.displayCurrency || M;
+  const as = (c) => fmt(c === M ? canon : alt, c);
+  if (d === "BOTH") return as(M) + " · " + as(p.altCurrency);
+  return as(d === M ? M : p.altCurrency);
+}
+
+/** The money this shop writes its prices in (its one pricing setting), once it is known. */
+function shopMoneyCode() {
+  if (S._shopPricing === undefined) {
+    S._shopPricing = null;
+    api("GET", "/merchant/me").then(({ ok, data }) => { if (ok) { S._shopPricing = { priceCurrency: data.priceCurrency || null }; render(); } });
+  }
+  return (S._shopPricing && S._shopPricing.priceCurrency) || S.currency;
+}
+
+/** The shop's own view of a product's price: what it typed, and the market amount it comes to. */
+function ownPriceText(p) {
+  return p.enteredPriceCents != null ? `${fmt(p.enteredPriceCents, shopMoneyCode())} (${fmt(p.priceCents)})` : fmt(p.priceCents);
+}
+
+/** Syria prices in pounds or dollars: the other markets have one money only. */
+const hasTwoMoneys = () => S.currency === "SYP" || S.currency === "USD";
 
 async function loadMarket() {
   const { ok, data } = await api("GET", "/geo/market");
@@ -485,6 +517,28 @@ const ORDER_ACTION_LABEL = {
   DELIVERED: "تم التسليم",
 };
 
+/** How an order is being paid and how far it is settled (section 54): only cash on delivery exists today. */
+function payLineHtml(payment) {
+  if (!payment) return "";
+  const done = payment.status === "PAID_CASH" || payment.status === "PAID_ONLINE";
+  return `<p class="muted">💵 ${esc(t("pay.cod"))} · <b class="${done ? "ok" : ""}">${esc(t("pay." + payment.status))}</b></p>`;
+}
+
+/** The shop's button once the order is on its way: the cash was handed over. */
+function confirmCashButton(ord, small) {
+  const p = ord.payment;
+  if (!p || p.method !== "COD" || p.status !== "PENDING" || !["SHIPPED", "DELIVERED"].includes(ord.status)) return "";
+  return `<button class="btn ${small ? "small " : ""}outline" style="${small ? "width:auto;" : ""}margin-top:8px" onclick="confirmCash('${ord.id}')">💵 ${esc(t("pay.confirmCash"))}</button>`;
+}
+
+async function confirmCash(id) {
+  const { ok, data } = await api("POST", `/orders/${id}/payment/confirm-cash`);
+  if (!ok) return toast(errMsg(data, "تعذّر التأكيد"));
+  toast(t("pay.cashConfirmed"));
+  S._mOrders = null; S._orderDetail = null;
+  render();
+}
+
 function orderBadge(status) {
   return `<span class="badge ${ORDER_STATUS_CLASS[status] || "neutral"}">${esc(ORDER_STATUS_LABEL[status] || status)}</span>`;
 }
@@ -746,6 +800,7 @@ function screenRegister() {
     <div class="field"><label>المدينة</label><select id="f-city" ${g.cities.length ? "" : "disabled"}><option value="">${cityHint}</option>${cityOpts}</select></div>
     <div class="field"><label>${esc(t("ref.codeOptional"))}</label><input id="f-ref" placeholder="مثال: AB12CD" dir="ltr" autocapitalize="characters" value="${esc(draft.ref !== undefined ? draft.ref : storedJoin())}" /></div>
     ${errorBanner()}
+    <label class="check-row"><input type="checkbox" id="f-terms" ${draft.terms ? "checked" : ""} /> <span>${esc(t("reg.acceptTerms"))}</span></label>
     <button class="btn" onclick="doRegister()">إنشاء الحساب</button>
     ${socialButtonsHtml()}
     <button class="link-btn" onclick="reset('login')">عندك حساب أصلًا؟ سجل دخول</button>
@@ -763,6 +818,7 @@ function snapshotRegisterDraft() {
     region: qs("f-region") ? qs("f-region").value : (S.params.draft || {}).region,
     city: qs("f-city") ? qs("f-city").value : (S.params.draft || {}).city,
     ref: qs("f-ref") ? qs("f-ref").value : (S.params.draft || {}).ref,
+    terms: qs("f-terms") ? qs("f-terms").checked : (S.params.draft || {}).terms,
   };
 }
 
@@ -829,8 +885,9 @@ async function doRegister() {
   if (!fullName) { S.error = "اكتب اسمك"; return render(); }
   if (!email) { S.error = "اكتب الإيميل"; return render(); }
   if (password.length < 8) { S.error = "كلمة السر لازم تكون 8 أحرف أو أكثر"; return render(); }
+  if (!qs("f-terms").checked) { S.error = t("reg.mustAccept"); return render(); }
   S.busy = true; S.error = null; render();
-  const body = { email, password, fullName };
+  const body = { email, password, fullName, acceptTerms: true };
   const d = S.params.draft || {};
   if (d.country) body.countryCode = d.country;
   if (d.city) body.cityId = d.city;
@@ -847,6 +904,18 @@ async function doRegister() {
     S.error = errMsg(data, "تعذّر إنشاء الحساب");
     render();
   }
+}
+
+/** "Download my data" (GDPR right of access): the server's JSON saved as a file. */
+async function downloadMyData() {
+  let res;
+  try { res = await fetch(API_BASE + "/profile/export", { headers: { Authorization: "Bearer " + S.token, "Accept-Language": LANG } }); } catch (e) { return toast(t("profile.exportFailed")); }
+  if (!res.ok) return toast(t("profile.exportFailed"));
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url; a.download = "dalilacom-my-data.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 async function deleteMyAccount() {
@@ -1401,7 +1470,7 @@ function shareLocationOn() {
 }
 
 function reportLocation(loc) {
-  if (S.token && shareLocationOn()) api("PUT", "/profile/location", { latitude: loc.lat, longitude: loc.lng });
+  if (S.token && shareLocationOn()) api("PUT", "/profile/location", { latitude: loc.lat, longitude: loc.lng, consent: true });
 }
 
 async function setShareLocation(on) {
@@ -1935,6 +2004,7 @@ function tabCart() {
       <div class="divider"></div>
       ${shipTotal(c) > 0 ? `<div class="title-line"><span>${esc(t("ship.title"))}</span><span class="price">${fmt(shipTotal(c))}</span></div>` : ""}
       <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(c.totalCents + shipTotal(c))}</span></div>
+      <p class="muted">💵 ${esc(t("pay.cod"))}</p>
       <div style="height:10px"></div>
       <button class="btn" onclick="doCheckout()">إتمام الطلب</button>
     ` : ""}
@@ -2015,7 +2085,7 @@ async function doCheckout() {
   const shipping = {};
   ((S._cart && S._cart.shipping) || []).forEach((x) => { if (pick[x.merchantId]) shipping[x.merchantId] = pick[x.merchantId]; });
   S.busy = true; render();
-  const { ok, data } = await api("POST", "/cart/checkout", { shipping });
+  const { ok, data } = await api("POST", "/cart/checkout", { shipping, paymentMethod: "COD" });
   S.busy = false;
   if (ok) {
     S._cart = null;
@@ -2091,6 +2161,8 @@ function tabProfile() {
       <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
       <div style="height:14px"></div>
       ${followUsHtml(true)}
+      <button class="btn outline" style="max-width:240px" onclick="downloadMyData()">⬇️ ${esc(t("profile.exportData"))}</button>
+      <div style="height:10px"></div>
       <button class="btn secondary" style="max-width:240px" onclick="doLogout()">${esc(t("profile.logout"))}</button>
       <div style="height:10px"></div>
       <button class="link-btn" style="color:var(--danger, #b71c1c)" onclick="deleteMyAccount()">${esc(t("profile.deleteAccount"))}</button>
@@ -3049,7 +3121,7 @@ function storeSlot(sl) {
       ${sl.creativeUrl ? `<div class="store-pic"><img src="${esc(sl.creativeUrl)}" alt="" loading="lazy"></div>` : storePic(p)}
       ${sl.ad ? `<span class="store-slot-tag">${esc(t("ads.tag"))}</span>` : `<span class="store-slot-here" onclick="event.stopPropagation();openAdBooking()">📢 ${esc(t("ads.here"))}</span>`}
       <span class="store-slot-info">
-        <b>${fmt(p.memberDiscountEnabled ? p.memberPriceCents : p.priceCents)}</b>
+        <b>${priceText(p, !!p.memberDiscountEnabled)}</b>
         ${off ? `<em>-${off}%</em>` : ""}
         <small>${esc(p.name)}</small>
       </span>
@@ -3526,7 +3598,7 @@ function screenProductWizard() {
       ${w.specs.map((x, i) => `<div class="wiz-spec"><input value="${esc(x.label)}" onchange="S._wiz.specs[${i}].label=this.value" placeholder="${esc(t("wiz.specLabel"))}"><input value="${esc(x.value)}" onchange="S._wiz.specs[${i}].value=this.value" placeholder="${esc(t("wiz.specValue"))}"><button onclick="S._wiz.specs.splice(${i},1);render()" aria-label="x">✕</button></div>`).join("")}
       <button class="link-btn" onclick="S._wiz.specs.push({label:'',value:''});render()">+ ${esc(t("wiz.addSpec"))}</button></div>
 
-    <div class="field"><label>${esc(t("wiz.price"))} (${esc(cur === "USD" ? "$" : cur === "EUR" ? "€" : cur)})</label>
+    <div class="field"><label>${esc(t("wiz.price"))} (${esc(hasTwoMoneys() ? (shopMoneyCode() === "USD" ? "$" : "SYP") : cur === "EUR" ? "€" : cur)})</label>
       <input class="wiz-price" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(w.price)}" oninput="S._wiz.price=this.value" placeholder="0.00">
       ${w.priceHint ? `<p class="muted" style="margin:6px 0 0">💡 ${esc(t("wiz.priceHint", { min: fmt(w.priceHint.min), max: fmt(w.priceHint.max) }))}</p>` : ""}</div>
 
@@ -3857,8 +3929,8 @@ function storeCount(n) { return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/
 
 function storePrice(p) {
   return p.memberDiscountEnabled
-    ? `<div class="store-price sale"><b>${fmt(p.memberPriceCents)}</b><s>${fmt(p.priceCents)}</s></div><div class="store-off">${esc(t("store.offLabel", { n: storeOff(p) }))}</div>`
-    : `<div class="store-price"><b>${fmt(p.priceCents)}</b></div>`;
+    ? `<div class="store-price sale"><b>${priceText(p, true)}</b><s>${priceText(p, false)}</s></div><div class="store-off">${esc(t("store.offLabel", { n: storeOff(p) }))}</div>`
+    : `<div class="store-price"><b>${priceText(p, false)}</b></div>`;
 }
 
 function storeCard(p) {
@@ -3972,9 +4044,9 @@ function screenProductDetail() {
           </div>
           <div class="pd-price-box">
             ${prod.memberDiscountEnabled
-              ? `<b class="sale">${fmt(prod.memberPriceCents)}</b><s>${fmt(prod.priceCents)}</s><span class="store-tag off inline">-${off}%</span>
+              ? `<b class="sale">${priceText(prod, true)}</b><s>${priceText(prod, false)}</s><span class="store-tag off inline">-${off}%</span>
                  <div class="pd-member">⭐ ${esc(t("store.memberPrice"))}</div>`
-              : `<b>${fmt(prod.priceCents)}</b>`}
+              : `<b>${priceText(prod, false)}</b>`}
           </div>
           ${prod.description ? `<p class="pd-desc">${esc(prod.description)}</p>` : ""}
           ${(prod.specs && prod.specs.length) || prod.condition ? `<div class="pd-specs">
@@ -4063,6 +4135,8 @@ function screenOrderDetail() {
     ${ord.shippingName ? `<div class="list-row" style="padding:6px 0"><span>🚚 ${esc(ord.shippingName)}</span><span class="price">${ord.shippingCents ? fmt(ord.shippingCents) : esc(t("ship.free"))}</span></div>` : ""}
     <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(ord.totalCents)}</span></div>
     ${ord.memberDiscountCents > 0 ? `<p class="muted">وفّرت ${fmt(ord.memberDiscountCents)} بسعر أعضاء دليلكم</p>` : ""}
+    ${payLineHtml(ord.payment)}
+    ${ord.customer ? confirmCashButton(ord, false) : ""}
     ${ord.status === "DELIVERED" && ord.rated ? `
       <div class="section-title">${esc(t("rv.rateTitle"))}</div>
       <div class="rv-rate-list">
@@ -6358,6 +6432,8 @@ function tabMerchantOrders() {
         <div class="title-line"><strong>${esc(ord.orderNumber)}</strong>${orderBadge(ord.status)}</div>
         <p class="muted">${esc(ord.user ? ord.user.fullName : "")}${ord.customerRating && ord.customerRating.ratingCount ? ` · <span class="star">★ ${ord.customerRating.rating.toFixed(1)}</span> (${ord.customerRating.ratingCount})` : ""}</p>
         <p class="price">${fmt(ord.totalCents)}</p>
+        ${payLineHtml(ord.payment)}
+        ${confirmCashButton(ord, true)}
         ${ord.status === "DELIVERED" && ord.user ? `<button class="btn small outline" style="width:auto;margin-top:6px" onclick="openReview('customer','${ord.user.id}','${esc(ord.user.fullName).replace(/'/g, "&#39;")}',0,'')">⭐ ${esc(ord.ratedCustomer ? t("rv.edit") : t("rv.rateCustomer"))}</button>` : ""}
         ${(next.length || canCancel) ? `<div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">
           ${next.map((s) => `<button class="btn small" style="width:auto" onclick="advanceMerchantOrder('${ord.id}','${s}')">${esc(ORDER_ACTION_LABEL[s] || s)}</button>`).join("")}
@@ -6442,6 +6518,7 @@ function tabCatalog() {
 
     ${c.storeClosed ? `<div class="card" style="border-color:var(--primary)"><strong>${esc(t("sp.closedTitle"))}</strong><p class="muted" style="margin:4px 0 10px">${esc(t("sp.closedSub"))}</p><button class="btn" onclick="openStorePlans()">🛍️ ${esc(t("sp.choose.btn"))}</button></div>` : `<button class="btn wiz-start" onclick="openProductWizard()">📷 ${esc(t("wiz.start"))}</button>`}
     ${c.storeClosed ? "" : `<p class="muted" style="margin:6px 0 0;text-align:center">${esc(t("wiz.startSub"))}</p>`}
+    ${pricingCardHtml(c)}
     <div class="title-line" style="margin:16px 0 8px">
       <strong>المنتجات</strong>
       ${c.storeClosed ? "" : `<button class="btn small" style="width:auto" onclick="go('productEdit', {productId:null})">+ منتج جديد</button>`}
@@ -6451,7 +6528,7 @@ function tabCatalog() {
         <div class="title-line"><strong>${esc(p.name)}</strong><span class="badge ${p.isActive ? "success" : "neutral"}">${p.isActive ? "نشط" : "غير نشط"}</span></div>
         ${p.moderation === "PENDING" ? `<p class="info-banner">⏳ ${esc(t("rev.pending"))}</p>` : ""}
         ${p.moderation === "REJECTED" ? `<p class="error-banner">⚠️ ${esc(t("rev.rejected", { why: p.moderationNote || "" }))}</p>` : ""}
-        <p class="muted">${fmt(p.priceCents)} — مخزون: ${p.stock}</p>
+        <p class="muted">${ownPriceText(p)} — مخزون: ${p.stock}</p>
       </div>`).join("")}
     ${errorBanner()}
   `;
@@ -6467,9 +6544,39 @@ async function loadCatalog() {
     loading: false,
     storeClosed: !!(meRes.ok && meRes.data.storePlan && meRes.data.storePlan.required && !meRes.data.storePlan.active),
     discounts: meRes.ok ? meRes.data.discounts : [],
+    usdRateSyp: meRes.ok ? meRes.data.usdRateSyp : null,
+    priceCurrency: meRes.ok && meRes.data.priceCurrency ? meRes.data.priceCurrency : S.currency,
+    showBothCurrencies: meRes.ok ? !!meRes.data.showBothCurrencies : false,
     products: prodRes.ok ? prodRes.data : [],
     affiliates: affRes.ok ? affRes.data : [],
   };
+  render();
+}
+
+/** Syria only: the shop's pricing, set once for all its products: the money it writes prices in, its dollar rate, and whether shoppers see both. */
+function pricingCardHtml(c) {
+  if (!hasTwoMoneys()) return "";
+  const cur = c.priceCurrency || S.currency;
+  return `<div class="card">
+    <strong>${esc(t("price.rateTitle"))}</strong>
+    <p class="muted" style="margin:4px 0 10px">${esc(t("price.rateSub"))}</p>
+    <div class="field"><label>${esc(t("price.currency"))}</label>
+      <select id="pr-currency"><option value="SYP" ${cur === "SYP" ? "selected" : ""}>${esc(t("price.syp"))}</option><option value="USD" ${cur === "USD" ? "selected" : ""}>${esc(t("price.usd"))}</option></select></div>
+    <div class="field"><label>${esc(t("price.rateLabel"))}</label>
+      <div class="row" style="gap:8px;align-items:center"><input id="pr-rate" type="number" inputmode="numeric" min="1" step="1" dir="ltr" placeholder="15000" value="${esc(c.usdRateSyp || "")}" /><span>${esc(t("price.rateUnit"))}</span></div></div>
+    <label class="check-row"><input type="checkbox" id="pr-both" ${c.showBothCurrencies ? "checked" : ""} /> <span>${esc(t("price.showBoth"))}</span></label>
+    <button class="btn small" style="width:auto" onclick="savePricing()">${esc(t("price.save"))}</button>
+  </div>`;
+}
+
+async function savePricing() {
+  const raw = latinDigits(qs("pr-rate").value.trim());
+  const rate = raw ? parseInt(raw, 10) : null;
+  if (raw && !(rate >= 1)) return toast(t("price.failed"));
+  const { ok, data } = await api("PUT", "/merchant/pricing", { priceCurrency: qs("pr-currency").value, usdRateSyp: rate, showBothCurrencies: qs("pr-both").checked });
+  if (!ok) return toast(errMsg(data, t("price.failed")));
+  toast(t("price.saved"));
+  S._catalog = null; S._shopPricing = undefined;
   render();
 }
 
@@ -6530,7 +6637,7 @@ function screenProductEdit() {
     <div class="field"><label>اسم المنتج</label><input id="pe-name" placeholder="مثال: قميص قطن أبيض" value="${esc(p.name)}" /></div>
     <div class="field"><label>الوصف (اختياري)</label><input id="pe-desc" placeholder="وصف قصير للمنتج، مثال: قميص قطن 100% مريح" value="${esc(p.description)}" /></div>
     <div class="row">
-      <div class="field"><label>السعر</label><input id="pe-price" placeholder="مثال: 25.00" value="${esc(p.price)}" /></div>
+      <div class="field"><label>السعر${hasTwoMoneys() ? ` (${esc(shopMoneyCode())})` : ""}</label><input id="pe-price" placeholder="مثال: 25.00" value="${esc(p.price)}" /></div>
       <div class="field"><label>المخزون</label><input id="pe-stock" inputmode="numeric" value="${esc(p.stock)}" placeholder="${esc(t("pe.stockPh"))}" /></div>
     </div>
     <div class="field"><label>SKU (اختياري)</label><input id="pe-sku" placeholder="مثال: SH-001" value="${esc(p.sku)}" /></div>
@@ -6574,9 +6681,9 @@ async function initProductEdit(productId) {
   const prod = prodRes.data;
   S._prodEdit = {
     productId, isNew: false, loading: false, categories,
-    name: prod.name, description: prod.description || "", price: (prod.priceCents / 100).toString(),
+    name: prod.name, description: prod.description || "", price: ((prod.enteredPriceCents != null ? prod.enteredPriceCents : prod.priceCents) / 100).toString(),
     stock: String(prod.stock), sku: "", memberDiscountEnabled: prod.memberDiscountEnabled,
-    memberPrice: prod.memberPriceCents != null ? (prod.memberPriceCents / 100).toString() : "",
+    memberPrice: (prod.enteredPriceCents != null ? prod.enteredMemberPriceCents : prod.memberPriceCents) != null ? ((prod.enteredPriceCents != null ? prod.enteredMemberPriceCents : prod.memberPriceCents) / 100).toString() : "",
     isActive: prod.isActive, selectedCat: prod.categoryId || null, productCategoryId: prod.productCategoryId || null,
     images: Array.isArray(prod.images) && prod.images.length ? prod.images : prod.imageUrl ? [prod.imageUrl] : [],
   };
@@ -7123,7 +7230,7 @@ async function saveMyLocation() {
   if (!S._pick || S._pick.lat == null) return toast(t("loc.needPin"));
   const m = S._myLoc = S._myLoc || {};
   m.busy = true; render();
-  const { ok } = await api("PUT", "/profile/location", { latitude: S._pick.lat, longitude: S._pick.lng });
+  const { ok } = await api("PUT", "/profile/location", { latitude: S._pick.lat, longitude: S._pick.lng, consent: true });
   m.busy = false;
   if (ok) m.saved = { latitude: S._pick.lat, longitude: S._pick.lng };
   toast(ok ? t("loc.done") : t("loc.failed"));
