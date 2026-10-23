@@ -19,6 +19,8 @@ import { optionalUserId } from "../services/viewerCountry.service";
 import { translateProducts } from "../services/contentTranslation.service";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
+import { priceColumns } from "../lib/pricing";
+import { marketOfUser } from "../services/viewerCountry.service";
 
 export const productRouter = Router();
 
@@ -93,8 +95,10 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res
     filedSection = await sectionOfProductCategory(rest.productCategoryId);
     if (!(await prisma.productCategory.findUnique({ where: { id: rest.productCategoryId }, select: { id: true } }))) return sendError(res, 404, "NOT_FOUND", "Category not found");
   }
+  const columns = priceColumns({ priceCents: rest.priceCents, memberPriceCents: rest.memberPriceCents }, result.merchant, await marketOfUser(result.merchant.userId)); // in the shop's own money (one setting for the whole shop)
+  if (!columns) return sendError(res, 400, "USD_RATE_REQUIRED", "حدّد سعر صرف الدولار أولًا من إعدادات الأسعار");
   const product = await prisma.product.create({
-    data: { merchantId: result.merchant.id, ...rest, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images?.length ? { images, imageUrl: images[0] } : {}) },
+    data: { merchantId: result.merchant.id, ...rest, ...columns, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images?.length ? { images, imageUrl: images[0] } : {}) },
   });
   const outcome = await moderateProduct(product.id); // looked at before anyone sees it
   res.status(201).json({ ...product, moderation: outcome.moderation, moderationNote: outcome.note });
@@ -299,9 +303,18 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req,
     if (!(await prisma.productCategory.findUnique({ where: { id: rest.productCategoryId }, select: { id: true } }))) return sendError(res, 404, "NOT_FOUND", "Category not found");
     filedSection = await sectionOfProductCategory(rest.productCategoryId);
   }
+  // a price edit is written in the shop's own money again: converted with the shop's rate when that is not the market currency
+  let priceData: Record<string, unknown> = {};
+  if (rest.priceCents !== undefined || rest.memberPriceCents !== undefined) {
+    const typedPrice = existing.enteredPriceCents ?? existing.priceCents;
+    const typedMember = existing.enteredPriceCents != null ? existing.enteredMemberPriceCents : existing.memberPriceCents;
+    const columns = priceColumns({ priceCents: rest.priceCents ?? typedPrice, memberPriceCents: rest.memberPriceCents !== undefined ? rest.memberPriceCents : typedMember }, merchant, await marketOfUser(merchant.userId));
+    if (!columns) return sendError(res, 400, "USD_RATE_REQUIRED", "حدّد سعر صرف الدولار أولًا من إعدادات الأسعار");
+    priceData = columns;
+  }
   const product = await prisma.product.update({
     where: { id: existing.id },
-    data: { ...rest, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images !== undefined ? { images, imageUrl: images[0] ?? null } : {}) },
+    data: { ...rest, ...priceData, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images !== undefined ? { images, imageUrl: images[0] ?? null } : {}) },
   });
   // a change to what shoppers read or see has to be looked at again; a price or a stock change does not
   const changed = REVIEWED_FIELDS.some((f) => (f === "images" ? images !== undefined : (rest as Record<string, unknown>)[f] !== undefined));

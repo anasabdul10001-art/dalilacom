@@ -3,7 +3,7 @@ package com.dalilacom.app.data.network
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class RegisterRequest(val email: String, val password: String, val fullName: String, val countryCode: String? = null, val cityId: String? = null, val referralCode: String? = null)
+data class RegisterRequest(val email: String, val password: String, val fullName: String, val countryCode: String? = null, val cityId: String? = null, val referralCode: String? = null, val acceptTerms: Boolean? = null)
 
 @Serializable
 data class LoginRequest(val email: String, val password: String)
@@ -42,7 +42,7 @@ data class UpdateProfileRequest(
 data class DeleteAccountRequest(val confirm: Boolean, val password: String? = null)
 
 @Serializable
-data class LocationRequest(val latitude: Double, val longitude: Double)
+data class LocationRequest(val latitude: Double, val longitude: Double, val consent: Boolean? = null)
 
 @Serializable
 data class MeResponse(val user: UserDto, val emailDeliveryEnabled: Boolean = false)
@@ -405,6 +405,8 @@ data class ProductDto(
     val priceCents: Int,
     val memberDiscountEnabled: Boolean = false,
     val memberPriceCents: Int? = null,
+    val enteredPriceCents: Int? = null,
+    val enteredMemberPriceCents: Int? = null,
     val stock: Int,
     val isActive: Boolean = true,
     val images: List<String> = emptyList(),
@@ -475,6 +477,15 @@ data class OrderItemDto(
 )
 
 @Serializable
+data class PaymentDto(
+    val id: String,
+    val method: String,
+    val status: String,
+    val amountCents: Int,
+    val paidAt: String? = null,
+)
+
+@Serializable
 data class OrderDto(
     val id: String,
     val orderNumber: String,
@@ -493,6 +504,7 @@ data class OrderDto(
     val customer: CustomerRefDto? = null,
     val customerRating: RatingDto? = null,
     val ratedCustomer: Boolean = false,
+    val payment: PaymentDto? = null,
 )
 
 @Serializable
@@ -590,7 +602,14 @@ data class MerchantMeDto(
     val categorySuggestion: CategorySuggestionDto? = null,
     val categoryOnline: Boolean = false,
     val storePlan: StorePlanStateDto? = null,
+    val usdRateSyp: Int? = null,
+    val priceCurrency: String? = null,
+    val showBothCurrencies: Boolean = false,
 )
+
+/** The shop's pricing, set once for the whole shop; no defaults, so a cleared rate is sent as null. */
+@Serializable
+data class PricingRequest(val priceCurrency: String, val usdRateSyp: Int?, val showBothCurrencies: Boolean)
 
 /** What still stands between a merchant and being found on the map. */
 @Serializable
@@ -789,6 +808,10 @@ data class StoreProductDto(
     val priceCents: Int,
     val memberDiscountEnabled: Boolean = false,
     val memberPriceCents: Int? = null,
+    val displayCurrency: String? = null,
+    val altCurrency: String? = null,
+    val altPriceCents: Int? = null,
+    val altMemberPriceCents: Int? = null,
     val stock: Int = 0,
     val imageUrl: String? = null,
     val images: List<String> = emptyList(),

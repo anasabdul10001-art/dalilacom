@@ -184,6 +184,13 @@ class MerchantRepository(
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.disc_failed))))
     }
 
+    /** The shop's pricing, once for the whole shop: the money its prices are written in, its dollar rate (pounds per dollar) and whether shoppers see both. */
+    suspend fun setPricing(currency: String, rate: Int?, showBoth: Boolean): Result<Unit> {
+        val response = safeApiCall { api.putPricing(com.dalilacom.app.data.network.PricingRequest(currency, rate, showBoth)) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.price_failed))))
+    }
+
     suspend fun addDiscount(title: String, percent: Int): Result<DiscountDto> {
         val response = safeApiCall { api.addDiscount(CreateDiscountRequest(title, percent)) }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))

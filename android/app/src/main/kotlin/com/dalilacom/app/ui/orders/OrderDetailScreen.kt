@@ -86,6 +86,8 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
                     Text(AppStrings.get(R.string.s_413c51af), style = MaterialTheme.typography.titleMedium)
                     Text(formatCents(order.totalCents), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
+                com.dalilacom.app.ui.common.PaymentLine(order)
+                if (order.customer != null) com.dalilacom.app.ui.common.ConfirmCashButton(order) { viewModel.confirmCash() }
                 if (order.memberDiscountCents > 0) {
                     Text(AppStrings.get(R.string.fmt_saved, formatCents(order.memberDiscountCents)), style = MaterialTheme.typography.bodySmall)
                 }

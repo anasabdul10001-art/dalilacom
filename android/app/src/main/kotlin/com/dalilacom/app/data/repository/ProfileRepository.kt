@@ -43,9 +43,17 @@ class ProfileRepository(private val api: ApiService) {
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.profile_delete_failed))))
     }
 
+    /** "Download my data" (GDPR right of access): the JSON the server holds about the person. */
+    suspend fun exportData(): Result<String> {
+        val response = safeApiCall { api.exportMyData() }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val text = if (response.isSuccessful) response.body()?.string() else null
+        return if (text != null) Result.success(text) else Result.failure(Exception(AppStrings.get(R.string.profile_export_failed)))
+    }
+
     /** The person opted in: tell the server roughly where they are (it rounds to ~1 km). Silent on failure. */
     suspend fun reportLocation(latitude: Double, longitude: Double) {
-        safeApiCall { api.putLocation(LocationRequest(latitude, longitude)) }
+        safeApiCall { api.putLocation(LocationRequest(latitude, longitude, consent = true)) }
     }
 
     /** The place the person set last time (as the server keeps it), so the map starts where the pin was. */
@@ -54,7 +62,7 @@ class ProfileRepository(private val api: ApiService) {
 
     /** The person pressed "set": true when the server kept the place. */
     suspend fun setLocation(latitude: Double, longitude: Double): Boolean =
-        safeApiCall { api.putLocation(LocationRequest(latitude, longitude)) }?.isSuccessful == true
+        safeApiCall { api.putLocation(LocationRequest(latitude, longitude, consent = true)) }?.isSuccessful == true
 
     /** The person opted out: the server forgets the position it kept. */
     suspend fun forgetLocation() {

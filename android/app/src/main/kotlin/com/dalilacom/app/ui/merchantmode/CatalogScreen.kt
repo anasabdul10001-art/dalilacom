@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.data.network.ProductDto
 import com.dalilacom.app.ui.ViewModelFactory
-import com.dalilacom.app.ui.common.formatCents
+import com.dalilacom.app.ui.common.ownPrice
 
 @Composable
 fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, onAddProduct: () -> Unit, onOpenHours: () -> Unit, onOpenProfile: () -> Unit, onAddByPhoto: () -> Unit = {}, onOpenDiscounts: () -> Unit = {}, onOpenShipping: () -> Unit = {}, onOpenAiPlans: () -> Unit = {}, onOpenBranches: () -> Unit = {}, onOpenStore: () -> Unit = {}) {
@@ -83,6 +83,9 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
             )
         }
 
+        Spacer(Modifier.height(12.dp))
+        com.dalilacom.app.ui.common.PricingCard(state.priceCurrency, state.usdRateSyp, state.showBothCurrencies) { currency, rate, both -> viewModel.savePricing(currency, rate, both) }
+
         Spacer(Modifier.height(20.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -98,7 +101,7 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
             state.isLoading -> CircularProgressIndicator()
             state.products.isEmpty() -> Text(AppStrings.get(R.string.s_69bbe90d), style = MaterialTheme.typography.bodyMedium)
             else -> state.products.forEach { product ->
-                CatalogProductRow(product, onClick = { onProductClick(product.id) })
+                CatalogProductRow(product, state.priceCurrency, onClick = { onProductClick(product.id) })
             }
         }
 
@@ -110,7 +113,7 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
 }
 
 @Composable
-private fun CatalogProductRow(product: ProductDto, onClick: () -> Unit) {
+private fun CatalogProductRow(product: ProductDto, shopMoney: String?, onClick: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable(onClick = onClick)) {
         Column(Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -123,7 +126,7 @@ private fun CatalogProductRow(product: ProductDto, onClick: () -> Unit) {
             }
             if (product.moderation == "PENDING") Text("⏳ " + androidx.compose.ui.res.stringResource(R.string.rev_pending), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
             if (product.moderation == "REJECTED") Text("⚠️ " + androidx.compose.ui.res.stringResource(R.string.rev_rejected, product.moderationNote.orEmpty()), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            Text(AppStrings.get(R.string.fmt_price_stock, formatCents(product.priceCents), product.stock), style = MaterialTheme.typography.bodySmall)
+            Text(AppStrings.get(R.string.fmt_price_stock, ownPrice(product, shopMoney), product.stock), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

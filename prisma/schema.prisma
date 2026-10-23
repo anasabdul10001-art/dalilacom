@@ -39,6 +39,20 @@ enum OrderStatus {
   CANCELLED
 }
 
+// How an order is paid (sections 54 / 59.4). Only COD is live; ONLINE is the slot for a real gateway later.
+enum PaymentMethod {
+  COD
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID_CASH // the merchant confirmed the cash arrived
+  PAID_ONLINE
+  FAILED
+  REFUNDED
+}
+
 enum CommissionType {
   PERCENT
   FIXED
@@ -73,6 +87,9 @@ model User {
   // join to render a price. `cityId` points at a GeoUnit.
   countryCode       String?
   cityId            String?
+  termsAcceptedAt   DateTime? // GDPR (section 65): when the person accepted the terms and the privacy policy
+  termsVersion      String? // which version of the two texts they accepted
+  locationConsentAt DateTime? // explicit consent to use their location; null = not given or withdrawn
   vatNumber         String? // EU business customers: shown on invoices, enables reverse charge later
   avatarUpdatedAt   DateTime? // set when a profile photo exists; also the cache-busting version in its URL
   createdAt         DateTime  @default(now())
@@ -328,6 +345,9 @@ model MerchantProfile {
   id              String                 @id @default(uuid())
   userId          String                 @unique
   businessName    String
+  usdRateSyp      Int? // the shop's own rate: how many lira one dollar is worth to it (set in its account)
+  priceCurrency      String? // SYP | USD: the money the shop writes ALL its prices in (one setting for the whole shop); null = the market currency
+  showBothCurrencies Boolean @default(false) // show shoppers the price in lira and in dollars (needs usdRateSyp)
   categoryId      String
   address         String?
   latitude        Float?
@@ -386,34 +406,40 @@ model ShopBranch {
 
 // A product in a merchant's e-commerce store (section 5/26)
 model Product {
-  id                    String            @id @default(uuid())
-  merchantId            String
-  categoryId            String?
-  moderation            ProductModeration @default(APPROVED) // only approved products are shown to shoppers
-  moderationNote        String? // why it waits or was refused
-  moderatedAt           DateTime?
-  productCategoryId     String? // the product category (ProductCategory), not the shop's profession
-  name                  String
-  description           String?
-  priceCents            Int
-  memberDiscountEnabled Boolean           @default(false)
-  memberPriceCents      Int? // set by the merchant when memberDiscountEnabled (section 5 example: €100 -> €85)
-  stock                 Int               @default(0)
-  sku                   String?
-  isActive              Boolean           @default(true) // merchant-controlled visibility, independent of stock (section 59.1)
+  id                      String            @id @default(uuid())
+  merchantId              String
+  categoryId              String?
+  moderation              ProductModeration @default(APPROVED) // only approved products are shown to shoppers
+  moderationNote          String? // why it waits or was refused
+  moderatedAt             DateTime?
+  productCategoryId       String? // the product category (ProductCategory), not the shop's profession
+  name                    String
+  description             String?
+  priceCents              Int
+  memberDiscountEnabled   Boolean           @default(false)
+  memberPriceCents        Int? // set by the merchant when memberDiscountEnabled (section 5 example: €100 -> €85)
+  // Syria prices in lira or dollar, one choice for the whole shop (MerchantProfile.priceCurrency). priceCents / memberPriceCents
+  // stay in the market currency of the country, which every order and cart works with; when the shop writes its prices in the
+  // other one of lira / dollar, these hold what it typed and the market amounts are worked out with the shop's own dollar
+  // rate, again for every product whenever that rate changes.
+  enteredPriceCents       Int?
+  enteredMemberPriceCents Int?
+  stock                   Int               @default(0)
+  sku                     String?
+  isActive                Boolean           @default(true) // merchant-controlled visibility, independent of stock (section 59.1)
   // The online store: a picture (a generated one is drawn from `icon` when there is no photo), the section it is
   // listed under, and the figures a shopper looks at.
-  imageUrl              String?
-  images                String[]          @default([]) // every picture, the first one is imageUrl
-  specs                 Json? // [{ label, value }] shown as the product's details
-  condition             String? // NEW | USED
-  icon                  String?
-  storeSection          String?
-  rating                Float             @default(0)
-  ratingCount           Int               @default(0)
-  soldCount             Int               @default(0)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  imageUrl                String?
+  images                  String[]          @default([]) // every picture, the first one is imageUrl
+  specs                   Json? // [{ label, value }] shown as the product's details
+  condition               String? // NEW | USED
+  icon                    String?
+  storeSection            String?
+  rating                  Float             @default(0)
+  ratingCount             Int               @default(0)
+  soldCount               Int               @default(0)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
 
   merchant           MerchantProfile     @relation(fields: [merchantId], references: [id])
   category           Category?           @relation(fields: [categoryId], references: [id])
@@ -473,9 +499,28 @@ model Order {
   user     User            @relation(fields: [userId], references: [id])
   merchant MerchantProfile @relation(fields: [merchantId], references: [id])
   items    OrderItem[]
+  payment  Payment?
 
   @@index([userId])
   @@index([merchantId])
+}
+
+// One payment per (sub-)order: what the customer owes and how far it has been settled.
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  amountCents   Int
+  reference     String? // the gateway's transaction id, when there is one
+  paidAt        DateTime?
+  confirmedById String? // the user (merchant or staff) who confirmed a cash payment
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([status])
 }
 
 model OrderItem {
@@ -1733,25 +1778,25 @@ model LandmarkKind {
 
 /// A public place on the map that belongs to nobody's account: a mosque, a hospital, a park, a main street.
 model Landmark {
-  id          String          @id @default(uuid())
-  kindId      String
-  name        String // Arabic (the source language)
-  nameEn      String?
-  description String?
-  sector      LandmarkSector?
-  status      LandmarkStatus  @default(ACTIVE)
-  cityId      String? // a GeoUnit id, kept plain so the geo tables stay untouched
-  address     String?
-  phone       String?
-  latitude    Float // the pin; for a line, the point where its name is written
-  longitude   Float
-  path        Json? // a line: a list of segments, each a list of [lat, lng]
-  source      String          @default("ADMIN") // ADMIN | OSM
-  sourceRef   String?         @unique // "osm:node/123": importing again never duplicates
-  claimedMerchantId String? // set when the real owner took it over
-  duplicateDismissed Boolean @default(false) // the admin looked at a shop with the same name nearby and said: not the same place
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id                 String          @id @default(uuid())
+  kindId             String
+  name               String // Arabic (the source language)
+  nameEn             String?
+  description        String?
+  sector             LandmarkSector?
+  status             LandmarkStatus  @default(ACTIVE)
+  cityId             String? // a GeoUnit id, kept plain so the geo tables stay untouched
+  address            String?
+  phone              String?
+  latitude           Float // the pin; for a line, the point where its name is written
+  longitude          Float
+  path               Json? // a line: a list of segments, each a list of [lat, lng]
+  source             String          @default("ADMIN") // ADMIN | OSM
+  sourceRef          String?         @unique // "osm:node/123": importing again never duplicates
+  claimedMerchantId  String? // set when the real owner took it over
+  duplicateDismissed Boolean         @default(false) // the admin looked at a shop with the same name nearby and said: not the same place
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   kind   LandmarkKind    @relation(fields: [kindId], references: [id])
   claims LandmarkClaim[]

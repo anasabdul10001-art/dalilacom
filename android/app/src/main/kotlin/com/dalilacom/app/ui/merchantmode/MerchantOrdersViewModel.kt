@@ -49,6 +49,14 @@ class MerchantOrdersViewModel(private val repository: OrderRepository, private v
         }
     }
 
+    fun confirmCash(orderId: String) {
+        viewModelScope.launch {
+            repository.confirmCash(orderId)
+                .onSuccess { refresh() }
+                .onFailure { _uiState.value = _uiState.value.copy(error = it.message) }
+        }
+    }
+
     fun advance(orderId: String, status: String) {
         viewModelScope.launch {
             repository.updateStatus(orderId, status)

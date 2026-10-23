@@ -102,6 +102,7 @@ fun CartScreen(factory: ViewModelFactory, onCheckoutSuccess: () -> Unit) {
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+                Text("💵 " + stringResource(R.string.pay_cod), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(12.dp))
                 Button(onClick = viewModel::checkout, modifier = Modifier.fillMaxWidth()) {
                     Text(AppStrings.get(R.string.s_9a40a38b))

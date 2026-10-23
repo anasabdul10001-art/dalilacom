@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
+import { altView, displayCurrencyOf } from "../lib/pricing";
 import { DEFAULT_COUNTRY, currencyOf, onlyCountry, viewerCountry } from "../services/viewerCountry.service";
 import { AD_SLOTS, liveAds } from "../services/ads.service";
 import { creativeIds, getCreative } from "../services/adCreative.service";
@@ -19,7 +20,7 @@ import { translateProducts, translateRecords } from "../services/contentTranslat
  */
 export const storeRouter = Router();
 
-type ProductWithShop = Prisma.ProductGetPayload<{ include: { merchant: { select: { id: true; businessName: true } } } }>;
+type ProductWithShop = Prisma.ProductGetPayload<{ include: { merchant: { select: { id: true; businessName: true; usdRateSyp: true; priceCurrency: true; showBothCurrencies: true } } } }>;
 
 /** A stable colour (0-359) from the id, used by the clients to paint the picture when a product has no photo. */
 function hueOf(id: string): number {
@@ -28,7 +29,7 @@ function hueOf(id: string): number {
   return h;
 }
 
-function view(p: ProductWithShop) {
+function view(p: ProductWithShop, market: string) {
   const section = STORE_SECTIONS.find((s) => s.id === p.storeSection) ?? null;
   return {
     id: p.id,
@@ -37,6 +38,8 @@ function view(p: ProductWithShop) {
     priceCents: p.priceCents,
     memberDiscountEnabled: p.memberDiscountEnabled && p.memberPriceCents != null,
     memberPriceCents: p.memberPriceCents,
+    displayCurrency: displayCurrencyOf(p.merchant, market), // SYP | USD | BOTH: what the shop wants shoppers to see
+    ...altView(p, p.merchant, market), // the same price in the other of lira / dollar (when known)
     stock: p.stock,
     imageUrl: p.imageUrl ?? p.images[0] ?? null,
     specs: Array.isArray(p.specs) ? p.specs : [],
@@ -98,7 +101,7 @@ async function visibleFor(query: unknown, country: string): Promise<Prisma.Produ
   return { isActive: true, stock: { gt: 0 }, moderation: "APPROVED", merchant };
 }
 
-const include = { merchant: { select: { id: true, businessName: true } } } as const;
+const include = { merchant: { select: { id: true, businessName: true, usdRateSyp: true, priceCurrency: true, showBothCurrencies: true } } } as const;
 
 const sorts: Record<string, Prisma.ProductOrderByWithRelationInput[]> = {
   popular: [{ soldCount: "desc" }, { createdAt: "desc" }],
@@ -118,6 +121,7 @@ async function sectionsWithCounts(visible: Prisma.ProductWhereInput) {
 storeRouter.get("/home", async (req, res) => {
   const country = await viewerCountry(req);
   const visible = await visibleFor(req.query, country);
+  const market = await currencyOf(country);
   const [sections, best, deals, newest] = await Promise.all([
     sectionsWithCounts(visible),
     prisma.product.findMany({ where: visible, include, orderBy: sorts.popular, take: 12 }),
@@ -134,17 +138,17 @@ storeRouter.get("/home", async (req, res) => {
   const withPicture = await creativeIds("SPACE", live.map((a) => a.id));
   const slots = Array.from({ length: AD_SLOTS }, (_, i) => {
     const ad = bySlot.get(i + 1);
-    if (ad) return { slot: i + 1, ad: true, adId: ad.id, creativeUrl: withPicture.has(ad.id) ? `/store/ad-images/${ad.id}` : null, product: view(ad.product) };
+    if (ad) return { slot: i + 1, ad: true, adId: ad.id, creativeUrl: withPicture.has(ad.id) ? `/store/ad-images/${ad.id}` : null, product: view(ad.product, market) };
     const filler = fillers.shift();
-    return filler ? { slot: i + 1, ad: false, adId: null, creativeUrl: null, product: view(filler) } : null;
+    return filler ? { slot: i + 1, ad: false, adId: null, creativeUrl: null, product: view(filler, market) } : null;
   }).filter((s) => s !== null);
   if (live.length) void prisma.adBooking.updateMany({ where: { id: { in: live.map((a) => a.id) } }, data: { impressions: { increment: 1 } } }).catch(() => {});
   const cheapest = [...settings.ads.packages].sort((a, b) => a.credits - b.credits)[0];
   const adOffer = cheapest ? { fromCredits: cheapest.credits, days: cheapest.days, creditName: settings.creditName } : null;
 
-  const bestSellers = best.map(view);
-  const dealViews = deals.map(view);
-  const newViews = newest.map(view);
+  const bestSellers = best.map((p) => view(p, market));
+  const dealViews = deals.map((p) => view(p, market));
+  const newViews = newest.map((p) => view(p, market));
   await translateProducts(resolveLanguage(req), [...bestSellers, ...dealViews, ...newViews, ...slots.map((x) => x!.product)]); // the reader's language
   res.json({ country, currency: await currencyOf(country), sections, slots, adOffer, bestSellers, deals: dealViews, newest: newViews });
 });
@@ -179,7 +183,8 @@ storeRouter.get("/products", async (req, res) => {
     prisma.product.count({ where }),
     prisma.product.findMany({ where, include, orderBy: sorts[sort], take: limit, skip: offset }),
   ]);
-  const views = items.map(view);
+  const market = await currencyOf(country);
+  const views = items.map((p) => view(p, market));
   await translateProducts(resolveLanguage(req), views);
   res.json({ total, currency: await currencyOf(country), items: views });
 });
@@ -203,8 +208,9 @@ storeRouter.get("/products/:id", async (req, res) => {
     take: 8,
   });
   const shipping = await prisma.shippingMethod.findMany({ where: { merchantId: product.merchantId, isActive: true }, orderBy: { createdAt: "asc" } });
-  const main = view(product);
-  const relatedViews = related.map(view);
+  const market = await currencyOf(country);
+  const main = view(product, market);
+  const relatedViews = related.map((p) => view(p, market));
   const shippingViews = shipping.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents }));
   await translateProducts(resolveLanguage(req), [main, ...relatedViews]);
   await translateRecords(resolveLanguage(req), shippingViews, ["name"]);

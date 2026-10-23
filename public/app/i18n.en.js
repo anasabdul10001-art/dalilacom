@@ -140,6 +140,10 @@ DICT.en = {
   "fab.tips": "Why offer a discount? Shops with a discount appear in the Deals tab, which shoppers open to look for offers.||Free advertising for your shop: a discount badge shows on the map and on its page, and every user sees it.||Dalilacom card holders look for shops that give a discount, so you win more customers.||A clear discount makes the customer choose you over the shop next door.||You are in control: the discount for the whole shop or for chosen products, how long, and how many times.||When a customer shows their card code, you see their discount and confirm it in seconds.||A small discount today, regular customers tomorrow.",
   "acct.look": "Appearance and language", "acct.dark": "Dark mode", "acct.language": "Language",
   "cd.endsIn": "Ends in", "cd.ended": "Ended", "cd.day": "d",
+  "auth.feat.title": "What you get with Dalilacom", "auth.feat.1.t": "A digital discount card", "auth.feat.1.s": "A QR card on your phone that gives you discounts at the member shops.", "auth.feat.2.t": "Offer a discount to your customers", "auth.feat.2.s": "Set the discount you want and let members enjoy it at your place.", "auth.feat.3.t": "Your own online store", "auth.feat.3.s": "Add your products with prices and photos and receive orders in the app.", "auth.feat.4.t": "Your business on the map", "auth.feat.4.s": "Register your shop name, details and address so people nearby can find you.",
+  "pay.cod": "Cash on delivery", "pay.PENDING": "Waiting for payment", "pay.PAID_CASH": "Cash received", "pay.PAID_ONLINE": "Paid online", "pay.FAILED": "Not paid", "pay.REFUNDED": "Refunded", "pay.confirmCash": "Confirm cash received", "pay.cashConfirmed": "Cash receipt confirmed", "reg.acceptTerms": "I accept the terms of use and the privacy policy", "reg.mustAccept": "You must accept the terms of use and the privacy policy to sign up", "profile.exportData": "Download my data", "profile.exportFailed": "Your data could not be prepared",
+  "price.currency": "The money you write your product prices in", "price.syp": "Syrian pound", "price.usd": "US dollar", "price.rateTitle": "Pound and dollar prices", "price.rateSub": "Choose once which money you price all your products in. To show prices in pounds and dollars together, write how many pounds one dollar is worth to you; when you change that rate, all your product prices update by themselves.", "price.rateLabel": "1 dollar =", "price.rateUnit": "pounds", "price.save": "Save prices", "price.saved": "Price settings saved", "price.failed": "Could not save the price settings",
+  "price.showBoth": "Show my prices in pounds and dollars together (needs the rate)",
   "reg.who": "How do you want to use Dalilacom?", "reg.bizTitle": "I have a business and want to join", "reg.bizSub": "For companies, shops, doctors, lawyers, craftspeople and service providers.", "reg.userTitle": "I am looking and want to benefit from Dalilacom", "reg.userSub": "For people who want to discover places, services and products and enjoy the offers.", "reg.bizNote": "We will ask for your business details after you create the account",
   "sp.title": "My store", "sp.choose": "Choose your store plan to open selling and add your products. There is a free plan and other plans.", "sp.change": "Change or renew your plan", "sp.noPlansYet": "Your store is open, there are no plans to choose right now.", "sp.open": "Open the store", "sp.current": "Your current plan: {name}", "sp.until": "Ends on {date}", "sp.choose.btn": "Choose this plan", "sp.renew": "Renew", "sp.chosen": "Your store is open ✓", "sp.failed": "The request could not be done", "sp.closedTitle": "Your store is still closed", "sp.closedSub": "Choose a plan (free or paid) to be able to add products and sell.",
   "ads.cal.loading": "Loading the calendar...", "ads.cal.ok": "Available", "ads.cal.few": "Almost full", "ads.cal.full": "Booked", "ads.cal.blocked": "The length does not fit", "ads.cal.free": "Free spaces: {n}",
@@ -197,7 +201,7 @@ DICT.en = {
   "guest.orders.title": "Your orders", "guest.orders.sub": "Sign in to follow your orders and their status.",
   "guest.orders.p1": "Track each order step by step", "guest.orders.p2": "Cancel an order before it ships",
   "guest.profile.title": "Open your account", "guest.profile.sub": "The map and the directory are open to everyone. You only need an account for a discount card or to list your shop.",
-  "guest.profile.p1": "Get the discount card", "guest.profile.p2": "List your shop and add your products and offers", "guest.profile.p3": "Turn on the auto-responder for your customers' messages",
+  "guest.profile.p1": "Get the discount card", "guest.profile.p2": "List your shop and add your products and offers", "guest.profile.p3": "Open your online store and put your business on the map",
 
   "browse.title": "Browse categories", "browse.all": "All {name}", "browse.count": "{n} places", "browse.soon": "Coming soon",
   "browse.back": "‹ Back", "browse.close": "Close",
@@ -250,6 +254,7 @@ DICT.en = {
 // To add a language, copy this file (e.g. i18n.de.js), translate the values, keep the keys, and load it in index.html.
 // PHRASES = whole texts; PATTERNS = texts with numbers or names inside (regex -> replacement or function).
 PHRASES.en = {
+  "تعذّر التأكيد": "Could not confirm",
   "% من كل عملية": "% of each transaction",
   "+ منتج جديد": "+ New product",
   "SKU (اختياري)": "SKU (optional)",

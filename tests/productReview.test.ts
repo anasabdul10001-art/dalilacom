@@ -129,11 +129,12 @@ describe("the admin opens any product, accepted or refused, and fixes it", () =>
     const s = await shop();
     const boss = await account("rvboss2", { role: "ADMIN" });
     const good = await add(s, "قميص قطن أبيض");
-    const bad = await add(s, "منتج BLOCK للتعديل");
+    const tag = crypto.randomUUID().slice(0, 8); // earlier runs leave refused products in the test database, so the search must be unique to this run
+    const bad = await add(s, `منتج BLOCK للتعديل ${tag}`);
     expect(good.body.moderation).toBe("APPROVED");
     expect(bad.body.moderation).toBe("REJECTED");
 
-    const all = await request(app).get("/admin/products").set(boss.auth).query({ status: "ALL", q: "للتعديل" });
+    const all = await request(app).get("/admin/products").set(boss.auth).query({ status: "ALL", q: tag });
     expect(all.status).toBe(200);
     expect(all.body.map((p: { id: string }) => p.id)).toEqual([bad.body.id]);
     expect(Number(all.headers["x-total-count"])).toBe(1);

@@ -186,6 +186,24 @@ fun ProfileScreen(
         com.dalilacom.app.ui.common.LegalLinks()
         Spacer(Modifier.height(16.dp))
 
+        // "Download my data" (GDPR right of access): everything held about the person, handed to the share sheet as text
+        val exportContext = androidx.compose.ui.platform.LocalContext.current
+        OutlinedButton(onClick = {
+            scope.launch {
+                container.profileRepository.exportData()
+                    .onSuccess { json ->
+                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, "dalilacom-my-data.json")
+                            putExtra(android.content.Intent.EXTRA_TEXT, json)
+                        }
+                        exportContext.startActivity(android.content.Intent.createChooser(send, null))
+                    }
+                    .onFailure { android.widget.Toast.makeText(exportContext, it.message, android.widget.Toast.LENGTH_SHORT).show() }
+            }
+        }, modifier = Modifier.fillMaxWidth()) { Text("⬇️ " + stringResource(R.string.profile_export_data)) }
+        Spacer(Modifier.height(12.dp))
+
         Button(onClick = {
             scope.launch {
                 container.notificationRepository.unregisterCurrentDevice() // before the session is gone

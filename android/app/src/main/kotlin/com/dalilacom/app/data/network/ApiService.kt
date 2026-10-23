@@ -22,6 +22,9 @@ interface ApiService {
     @retrofit2.http.HTTP(method = "DELETE", path = "profile/me", hasBody = true)
     suspend fun deleteAccount(@Body body: DeleteAccountRequest): Response<kotlinx.serialization.json.JsonElement>
 
+    @GET("profile/export")
+    suspend fun exportMyData(): Response<okhttp3.ResponseBody>
+
     @PUT("profile/location")
     suspend fun putLocation(@Body body: LocationRequest): Response<kotlinx.serialization.json.JsonElement>
 
@@ -373,6 +376,9 @@ interface ApiService {
     @GET("merchant/me")
     suspend fun getMerchantMe(): Response<MerchantMeDto>
 
+    @PUT("merchant/pricing")
+    suspend fun putPricing(@Body body: PricingRequest): Response<kotlinx.serialization.json.JsonElement>
+
     @PATCH("merchant/me")
     suspend fun updateMerchantMe(@Body body: UpdateMerchantRequest): Response<MerchantMeDto>
 
@@ -474,6 +480,9 @@ interface ApiService {
 
     @GET("orders/{id}")
     suspend fun getOrder(@Path("id") id: String): Response<OrderDto>
+
+    @POST("orders/{id}/payment/confirm-cash")
+    suspend fun confirmCash(@Path("id") id: String): Response<PaymentDto>
 
     @PATCH("orders/{id}/status")
     suspend fun updateOrderStatus(@Path("id") id: String, @Body body: UpdateOrderStatusRequest): Response<OrderDto>

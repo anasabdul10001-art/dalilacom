@@ -122,7 +122,7 @@
     <string name="guest_profile_sub">The map and the directory are open to everyone. You only need an account for a discount card or to list your shop.</string>
     <string name="guest_profile_p1">Get the discount card</string>
     <string name="guest_profile_p2">List your shop and add your products and offers</string>
-    <string name="guest_profile_p3">Turn on the auto-responder for your customers\' messages</string>
+    <string name="guest_profile_p3">Open your online store and put your business on the map</string>
 
     <string name="browse_title">Browse categories</string>
     <string name="browse_all">All %1$s</string>
@@ -1047,4 +1047,39 @@
     <string name="ads_img_upload_fail">The picture could not be uploaded</string>
     <string name="ads_img_later">The booking is made, but the picture was not uploaded. You can add it from My ads.</string>
     <string name="sheet_show_all">Show all places (%1$d)</string>
+    <string name="auth_feat_title">What you get with Dalilacom</string>
+    <string name="auth_feat_1_icon">💳</string>
+    <string name="auth_feat_1_t">A digital discount card</string>
+    <string name="auth_feat_1_s">A QR card on your phone that gives you discounts at the member shops.</string>
+    <string name="auth_feat_2_icon">🏷️</string>
+    <string name="auth_feat_2_t">Offer a discount to your customers</string>
+    <string name="auth_feat_2_s">Set the discount you want and let members enjoy it at your place.</string>
+    <string name="auth_feat_3_icon">🛍️</string>
+    <string name="auth_feat_3_t">Your own online store</string>
+    <string name="auth_feat_3_s">Add your products with prices and photos and receive orders in the app.</string>
+    <string name="auth_feat_4_icon">📍</string>
+    <string name="auth_feat_4_t">Your business on the map</string>
+    <string name="auth_feat_4_s">Register your shop name, details and address so people nearby can find you.</string>
+    <string name="pay_cod">Cash on delivery</string>
+    <string name="pay_pending">Waiting for payment</string>
+    <string name="pay_paid_cash">Cash received</string>
+    <string name="pay_paid_online">Paid online</string>
+    <string name="pay_failed">Not paid</string>
+    <string name="pay_refunded">Refunded</string>
+    <string name="pay_confirm_cash">Confirm cash received</string>
+    <string name="pay_confirm_failed">Could not confirm</string>
+    <string name="reg_accept_terms">I accept the terms of use and the privacy policy</string>
+    <string name="reg_must_accept">You must accept the terms of use and the privacy policy to sign up</string>
+    <string name="profile_export_data">Download my data</string>
+    <string name="profile_export_failed">Your data could not be prepared</string>
+    <string name="price_currency">The money you write your product prices in</string>
+    <string name="price_syp">Syrian pound</string>
+    <string name="price_usd">US dollar</string>
+    <string name="price_rate_title">Pound and dollar prices</string>
+    <string name="price_rate_sub">Choose once which money you price all your products in. To show prices in pounds and dollars together, write how many pounds one dollar is worth to you; when you change that rate, all your product prices update by themselves.</string>
+    <string name="price_rate_label">1 dollar =</string>
+    <string name="price_rate_unit">pounds</string>
+    <string name="price_save">Save prices</string>
+    <string name="price_failed">Could not save the price settings</string>
+    <string name="price_show_both">Show my prices in pounds and dollars together (needs the rate)</string>
 </resources>
