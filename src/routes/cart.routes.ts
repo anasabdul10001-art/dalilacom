@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { PaymentMethod } from "@prisma/client";
 import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../prisma";
@@ -7,6 +8,7 @@ import { requireAuth } from "../middleware/auth";
 import { getActiveMembership } from "../services/membership.service";
 import { recordAffiliateCommissionIfReferred } from "../services/affiliate.service";
 import { notify } from "../services/notification.service";
+import { createOrderPayment, isMethodAvailable } from "../services/payment.service";
 
 export const cartRouter = Router();
 
@@ -132,13 +134,17 @@ function generateOrderNumber(): string {
 
 // Checkout: a cart holding products from several merchants splits into one Order per
 // merchant (section 59.5 "Sub-Orders"), each tracked and updated independently from then on.
-const checkoutSchema = z.object({ shipping: z.record(z.string().uuid()).optional() }); // shop id -> the chosen shipping method id
+const checkoutSchema = z.object({ shipping: z.record(z.string().uuid()).optional(), paymentMethod: z.nativeEnum(PaymentMethod).default("COD") }); // shop id -> the chosen shipping method id
 
 cartRouter.post("/checkout", requireAuth, async (req, res) => {
   const userId = req.user!.id;
   const checkoutBody = checkoutSchema.safeParse(req.body ?? {});
   if (!checkoutBody.success) return sendValidationError(res, checkoutBody.error);
   const chosenShipping = checkoutBody.data.shipping ?? {};
+  const paymentMethod = checkoutBody.data.paymentMethod;
+  if (!isMethodAvailable(paymentMethod)) {
+    return sendError(res, 400, "PAYMENT_METHOD_UNAVAILABLE", "طريقة الدفع هذه غير متوفرة حاليًا، اختر الدفع عند الاستلام");
+  }
   const cart = await getOrCreateCart(userId);
   const items = await prisma.cartItem.findMany({
     where: { cartId: cart.id },
@@ -223,8 +229,9 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
           },
           include: { items: true },
         });
+        const payment = await createOrderPayment(tx, order.id, paymentMethod, order.totalCents);
         await recordAffiliateCommissionIfReferred(tx, merchantId, userId, "ORDER", order.id, order.totalCents);
-        createdOrders.push(order);
+        createdOrders.push({ ...order, payment });
       }
 
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });

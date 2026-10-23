@@ -39,6 +39,20 @@ enum OrderStatus {
   CANCELLED
 }
 
+// How an order is paid (sections 54 / 59.4). Only COD is live; ONLINE is the slot for a real gateway later.
+enum PaymentMethod {
+  COD
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID_CASH // the merchant confirmed the cash arrived
+  PAID_ONLINE
+  FAILED
+  REFUNDED
+}
+
 enum CommissionType {
   PERCENT
   FIXED
@@ -73,6 +87,9 @@ model User {
   // join to render a price. `cityId` points at a GeoUnit.
   countryCode       String?
   cityId            String?
+  termsAcceptedAt   DateTime? // GDPR (section 65): when the person accepted the terms and the privacy policy
+  termsVersion      String? // which version of the two texts they accepted
+  locationConsentAt DateTime? // explicit consent to use their location; null = not given or withdrawn
   vatNumber         String? // EU business customers: shown on invoices, enables reverse charge later
   avatarUpdatedAt   DateTime? // set when a profile photo exists; also the cache-busting version in its URL
   createdAt         DateTime  @default(now())
@@ -473,9 +490,28 @@ model Order {
   user     User            @relation(fields: [userId], references: [id])
   merchant MerchantProfile @relation(fields: [merchantId], references: [id])
   items    OrderItem[]
+  payment  Payment?
 
   @@index([userId])
   @@index([merchantId])
+}
+
+// One payment per (sub-)order: what the customer owes and how far it has been settled.
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  amountCents   Int
+  reference     String? // the gateway's transaction id, when there is one
+  paidAt        DateTime?
+  confirmedById String? // the user (merchant or staff) who confirmed a cash payment
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([status])
 }
 
 model OrderItem {

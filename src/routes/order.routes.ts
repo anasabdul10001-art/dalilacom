@@ -5,6 +5,7 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { notify } from "../services/notification.service";
+import { availablePaymentMethods, settleOnCancel } from "../services/payment.service";
 
 /** Customer-facing wording for each order state (section 13: "تغيير حالة الطلب"). */
 const STATUS_MESSAGE: Record<OrderStatus, string> = {
@@ -18,11 +19,16 @@ const STATUS_MESSAGE: Record<OrderStatus, string> = {
 
 export const orderRouter = Router();
 
+// The ways to pay that work right now (the apps show only these)
+orderRouter.get("/payment-methods", requireAuth, (_req, res) => {
+  res.json({ methods: availablePaymentMethods() });
+});
+
 // Customer: their own order history across all merchants (section 6/34)
 orderRouter.get("/mine", requireAuth, async (req, res) => {
   const orders = await prisma.order.findMany({
     where: { userId: req.user!.id },
-    include: { items: true, merchant: { select: { id: true, businessName: true } } },
+    include: { items: true, payment: true, merchant: { select: { id: true, businessName: true } } },
     orderBy: { createdAt: "desc" },
   });
   // what the customer has already rated, so a delivered order can offer only what is left to rate
@@ -43,7 +49,7 @@ orderRouter.get("/merchant", requireAuth, requireRole(Role.MERCHANT), async (req
   }
   const orders = await prisma.order.findMany({
     where: { merchantId: merchant.id },
-    include: { items: true, user: { select: { id: true, fullName: true } } },
+    include: { items: true, payment: true, user: { select: { id: true, fullName: true } } },
     orderBy: { createdAt: "desc" },
   });
   // how each customer's shops rate them, and whether this shop already rated them
@@ -60,7 +66,7 @@ orderRouter.get("/merchant", requireAuth, requireRole(Role.MERCHANT), async (req
 async function loadOrderForRequester(orderId: string, userId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: true, merchant: { select: { id: true, userId: true, businessName: true } } },
+    include: { items: true, payment: true, merchant: { select: { id: true, userId: true, businessName: true } } },
   });
   if (!order) return null;
   const isCustomer = order.userId === userId;
@@ -133,6 +139,7 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), async 
       for (const item of items) {
         await tx.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } });
       }
+      await settleOnCancel(tx, order.id);
     }
     return tx.order.update({
       where: { id: order.id },
@@ -168,6 +175,7 @@ orderRouter.post("/:id/cancel", requireAuth, async (req, res) => {
     for (const item of items) {
       await tx.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } });
     }
+    await settleOnCancel(tx, order.id);
     return tx.order.update({ where: { id: order.id }, data: { status: "CANCELLED" } });
   });
 
@@ -187,4 +195,24 @@ orderRouter.post("/:id/cancel", requireAuth, async (req, res) => {
   }
 
   res.json(updated);
+});
+
+// Merchant: the cash for a pay-on-delivery order arrived (section 54: manual confirmation). Only once the order is on its way or delivered.
+orderRouter.post("/:id/payment/confirm-cash", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { payment: true } });
+  if (!merchant || !order || order.merchantId !== merchant.id || !order.payment) {
+    return sendError(res, 404, "NOT_FOUND", "Order not found");
+  }
+  if (order.payment.method !== "COD" || order.payment.status !== "PENDING") {
+    return sendError(res, 409, "CONFLICT", "This payment is not waiting for cash");
+  }
+  if (order.status !== "SHIPPED" && order.status !== "DELIVERED") {
+    return sendError(res, 409, "CONFLICT", "الدفع النقدي بينأكد بعد ما يتشحن الطلب");
+  }
+  const payment = await prisma.payment.update({
+    where: { id: order.payment.id },
+    data: { status: "PAID_CASH", paidAt: new Date(), confirmedById: req.user!.id },
+  });
+  res.json(payment);
 });

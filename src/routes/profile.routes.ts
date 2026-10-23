@@ -7,6 +7,8 @@ import { avatarUrl } from "../lib/profile";
 import { isSupportedLanguage } from "../lib/languages";
 import bcrypt from "bcryptjs";
 import { anonymizeAccount } from "../services/accountDeletion.service";
+import { exportPersonalData } from "../services/dataExport.service";
+import { gdprStrict, TERMS_VERSION } from "../lib/consent";
 
 import { sniffImageMime } from "../lib/image";
 
@@ -128,15 +130,22 @@ profileRouter.put(
 
 // The app reports where the person is while they use the map (location allowed). Stored rounded to ~1 km — enough for a
 // shop's "within 5 km" announcement, not enough to follow anyone. DELETE forgets it.
-const locationSchema = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) });
+const locationSchema = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), consent: z.literal(true).optional() });
 const roundCoarse = (n: number) => Math.round(n * 100) / 100;
 
 profileRouter.put("/location", requireAuth, async (req, res) => {
   const parsed = locationSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
+  const current = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { locationConsentAt: true } });
+  if (gdprStrict() && !current.locationConsentAt && parsed.data.consent !== true) {
+    return sendError(res, 403, "LOCATION_CONSENT_REQUIRED", "لازم توافق صراحةً على استخدام موقعك أولًا");
+  }
   await prisma.user.update({
     where: { id: req.user!.id },
-    data: { lastLatitude: roundCoarse(parsed.data.latitude), lastLongitude: roundCoarse(parsed.data.longitude), locationUpdatedAt: new Date() },
+    data: {
+      lastLatitude: roundCoarse(parsed.data.latitude), lastLongitude: roundCoarse(parsed.data.longitude), locationUpdatedAt: new Date(),
+      ...(parsed.data.consent === true && !current.locationConsentAt ? { locationConsentAt: new Date() } : {}),
+    },
   });
   res.json({ ok: true });
 });
@@ -148,8 +157,41 @@ profileRouter.get("/location", requireAuth, async (req, res) => {
 });
 
 profileRouter.delete("/location", requireAuth, async (req, res) => {
-  await prisma.user.update({ where: { id: req.user!.id }, data: { lastLatitude: null, lastLongitude: null, locationUpdatedAt: null } });
+  await prisma.user.update({ where: { id: req.user!.id }, data: { lastLatitude: null, lastLongitude: null, locationUpdatedAt: null, locationConsentAt: null } }); // forgetting the place also withdraws the consent
   res.json({ ok: true });
+});
+
+/* ---------------- GDPR (section 65): consent and right of access ---------------- */
+
+profileRouter.get("/consent", requireAuth, async (req, res) => {
+  const u = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { termsAcceptedAt: true, termsVersion: true, locationConsentAt: true } });
+  res.json({ currentTermsVersion: TERMS_VERSION, terms: { acceptedAt: u.termsAcceptedAt, version: u.termsVersion, upToDate: u.termsVersion === TERMS_VERSION }, location: { consentAt: u.locationConsentAt } });
+});
+
+const consentSchema = z.object({ terms: z.literal(true).optional(), location: z.boolean().optional() });
+
+// Accept the current terms (existing accounts and new versions) and/or give or withdraw consent to use the location.
+profileRouter.put("/consent", requireAuth, async (req, res) => {
+  const parsed = consentSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const { terms, location } = parsed.data;
+  await prisma.user.update({
+    where: { id: req.user!.id },
+    data: {
+      ...(terms ? { termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION } : {}),
+      ...(location === true ? { locationConsentAt: new Date() } : {}),
+      ...(location === false ? { locationConsentAt: null, lastLatitude: null, lastLongitude: null, locationUpdatedAt: null } : {}),
+    },
+  });
+  const u = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { termsAcceptedAt: true, termsVersion: true, locationConsentAt: true } });
+  res.json({ terms: { acceptedAt: u.termsAcceptedAt, version: u.termsVersion }, location: { consentAt: u.locationConsentAt } });
+});
+
+// "Download my data": everything held about the person, as a JSON file.
+profileRouter.get("/export", requireAuth, async (req, res) => {
+  const data = await exportPersonalData(req.user!.id);
+  res.setHeader("Content-Disposition", 'attachment; filename="dalilacom-my-data.json"');
+  res.json(data);
 });
 
 profileRouter.delete("/avatar", requireAuth, async (req, res) => {

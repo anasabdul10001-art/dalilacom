@@ -1,4 +1,5 @@
 import { attachReferral, payForSignup } from "../services/referral.service";
+import { gdprStrict, TERMS_VERSION } from "../lib/consent";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -81,12 +82,16 @@ const registerSchema = z.object({
   countryCode: z.string().trim().length(2).toUpperCase().optional(),
   cityId: z.string().uuid().optional(),
   referralCode: z.string().trim().max(20).optional(), // the marketer's code from the link the person came with
+  acceptTerms: z.boolean().optional(), // GDPR (section 65): true = the person accepted the terms and the privacy policy
 });
 
 authRouter.post("/register", registerRateLimiter, async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const { email, phone, password, fullName, countryCode, cityId, referralCode } = parsed.data;
+  const { email, phone, password, fullName, countryCode, cityId, referralCode, acceptTerms } = parsed.data;
+  if (gdprStrict() && acceptTerms !== true) {
+    return sendError(res, 400, "TERMS_NOT_ACCEPTED", "لازم توافق على شروط الاستخدام وسياسة الخصوصية لتسجّل");
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -104,7 +109,7 @@ authRouter.post("/register", registerRateLimiter, async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({
-    data: { email, phone, passwordHash, fullName, language: resolveLanguage(req), ...place },
+    data: { email, phone, passwordHash, fullName, language: resolveLanguage(req), ...place, ...(acceptTerms === true ? { termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION } : {}) },
   });
 
   await attachReferral(user.id, referralCode).catch(() => false); // a wrong or old code never stops a sign-up
