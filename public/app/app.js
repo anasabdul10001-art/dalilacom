@@ -451,6 +451,55 @@ function dockStartTimer() {
   _dockTimer = setTimeout(() => dockSet(false), 5000);
 }
 
+/**
+ * The row of filters over the map scrolls by touch, but a mouse had no way to see the rest: it gets two arrows (shown only on the
+ * side that has more), the wheel, and click-and-drag.
+ */
+function chipsMetrics(row) {
+  const max = row.scrollWidth - row.clientWidth;
+  const fromLeft = getComputedStyle(row).direction === "rtl" ? max + row.scrollLeft : row.scrollLeft; // RTL scrollLeft runs from 0 down to -max
+  return { max, fromLeft };
+}
+
+function chipsArrows(row) {
+  const wrap = row.parentElement;
+  const m = chipsMetrics(row);
+  wrap.querySelector(".chips-arrow.left").classList.toggle("show", m.fromLeft > 2);
+  wrap.querySelector(".chips-arrow.right").classList.toggle("show", m.fromLeft < m.max - 2);
+}
+
+function chipsScroll(btn, dir) {
+  const row = btn.parentElement.querySelector(".float-chips");
+  row.scrollBy({ left: dir * Math.max(120, row.clientWidth * 0.7), behavior: "smooth" });
+}
+
+function wireChipRows(restoreAt) {
+  document.querySelectorAll(".float-chips").forEach((row) => {
+    if (restoreAt != null) row.scrollLeft = restoreAt;
+    chipsArrows(row);
+    row.addEventListener("scroll", () => chipsArrows(row), { passive: true });
+    // the wheel moves the row sideways while the pointer is over it (and leaves the page alone when there is nothing to scroll)
+    row.addEventListener("wheel", (e) => {
+      if (chipsMetrics(row).max <= 2 || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
+      e.preventDefault();
+      row.scrollBy({ left: getComputedStyle(row).direction === "rtl" ? -e.deltaY : e.deltaY }); // scrolling down reads on, which is leftwards in Arabic
+    }, { passive: false });
+    // click and drag with a mouse (a finger already scrolls it); a drag does not count as a click on a chip
+    let drag = null;
+    row.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse" || e.button !== 0) return;
+      drag = { x: e.clientX, at: row.scrollLeft, moved: false };
+    });
+    window.addEventListener("pointermove", (e) => {
+      if (!drag || !document.body.contains(row)) return;
+      const dx = e.clientX - drag.x;
+      if (Math.abs(dx) > 5) drag.moved = true;
+      if (drag.moved) row.scrollLeft = drag.at - dx;
+    });
+    window.addEventListener("pointerup", () => { if (drag && drag.moved) { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; row.addEventListener("click", stop, { capture: true, once: true }); } drag = null; });
+  });
+}
+
 async function render() {
   const el = root();
   if (!el) return;
@@ -460,8 +509,10 @@ async function render() {
   // the map search box keeps its own element through every redraw: a new one lost the caret (Arabic letters came out reversed), the undo history and the typing in progress
   const keepQ = active && (active.id === "disc-q" || active.id === "mr-name") ? active : null;
   const caret = keepQ ? [keepQ.selectionStart, keepQ.selectionEnd] : null;
+  const chipsAt = el.querySelector(".float-chips") ? el.querySelector(".float-chips").scrollLeft : null; // the row of filters stays where the person scrolled it
   el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml() + cityGateHtml();
   wireUpAfterRender();
+  wireChipRows(chipsAt);
   placeDiscPopup();
   trDom(el); // translate the rendered Arabic when another language is on
   if (keepQ) {
@@ -1226,6 +1277,8 @@ function tabDiscover() {
           </div>
           ${suggestHtml(d)}
         </div>
+        <div class="float-chips-wrap">
+        <button class="chips-arrow left" type="button" aria-label="‹" onclick="chipsScroll(this, -1)">‹</button>
         <div class="float-chips">
           <button class="chip chip-links" onclick="openLinks()">🔗 ${esc(t("follow.us"))}</button>
           <button class="chip ${LM.on ? "active" : ""}" onclick="lmToggle()">🕌 ${esc(t("lm.chip"))}</button>
@@ -1233,6 +1286,8 @@ function tabDiscover() {
           <button class="chip ${d.openNow ? "active" : ""}" onclick="toggleDiscoverFlag('openNow')">${esc(t("filter.openNow"))}</button>
           ${deals ? "" : `<button class="chip ${d.discountsOnly ? "active" : ""}" onclick="toggleDiscoverFlag('discountsOnly')">${esc(t("filter.discounts"))}</button>`}
           ${categoryChipsHtml(d)}
+        </div>
+        <button class="chips-arrow right" type="button" aria-label="›" onclick="chipsScroll(this, 1)">›</button>
         </div>
         ${d.locError ? `<div class="float-note">📍 ${esc(d.locError)} <button class="chip" style="margin-top:6px" onclick="requestDiscoverLocation(true)">${esc(t("loc.retry"))}</button></div>` : ""}
       </div>
