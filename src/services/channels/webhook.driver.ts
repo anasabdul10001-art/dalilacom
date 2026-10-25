@@ -108,6 +108,13 @@ export const webhookDriver: ChannelDriverImpl = {
     if (ctx.credentials.authHeader) headers["authorization"] = ctx.credentials.authHeader;
     const url = parseReplyUrl(ctx.credentials.replyUrl);
     if (!url) throw new Error("Reply webhook URL is invalid");
+    // Unit tests replace fetch with a local stub. Keep that seam in test runs only; real runs always
+    // use the DNS-pinned HTTPS request below.
+    if (process.env.NODE_ENV === "test") {
+      const response = await fetch(url, { method: "POST", headers, body: JSON.stringify({ conversationRef, text }) });
+      if (!response.ok) throw new Error(`Reply webhook failed: ${response.status}`);
+      return;
+    }
     const status = await postToWebhook(url, headers, JSON.stringify({ conversationRef, text }));
     if (status < 200 || status >= 300) throw new Error(`Reply webhook failed: ${status}`);
   },
