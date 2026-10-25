@@ -28,6 +28,15 @@ document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = T[el
 document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = T[el.dataset.i18nPh]; });
 const JSON_HEADERS = { "Content-Type": "application/json", "Accept-Language": LANG };
 
+document.getElementById("request-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  void submitRequest();
+});
+document.getElementById("reset-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  void submitReset();
+});
+
 function getToken() {
   return new URLSearchParams(window.location.search).get("token") || "";
 }
