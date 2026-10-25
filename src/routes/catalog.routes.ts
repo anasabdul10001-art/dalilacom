@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { OfferStatus, ProductCondition } from "@prisma/client";
+import { OfferStatus, Prisma, ProductCondition } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
@@ -23,7 +23,7 @@ const productMasterSchema = z.object({
   barcode: z.string().optional(),
   categoryId: z.string().uuid().optional(),
   description: z.string().optional(),
-  specifications: z.record(z.any()).optional(),
+  specifications: z.record(z.string(), z.any()).optional(),
 });
 
 // The product itself, never a price/stock/condition (section: Product Master) — several
@@ -35,7 +35,7 @@ catalogRouter.post("/products", requireAuth, async (req, res) => {
     const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
     if (!category) return sendError(res, 404, "NOT_FOUND", "Category not found");
   }
-  const master = await prisma.productMaster.create({ data: parsed.data });
+  const master = await prisma.productMaster.create({ data: parsed.data as Prisma.ProductMasterUncheckedCreateInput });
   res.status(201).json(master);
 });
 
@@ -132,7 +132,7 @@ catalogRouter.post("/offers", requireAuth, async (req, res) => {
 
   let masterId = productMasterId;
   if (!masterId) {
-    const master = await prisma.productMaster.create({ data: productMaster! });
+    const master = await prisma.productMaster.create({ data: productMaster! as Prisma.ProductMasterUncheckedCreateInput });
     masterId = master.id;
   } else {
     const master = await prisma.productMaster.findUnique({ where: { id: masterId } });

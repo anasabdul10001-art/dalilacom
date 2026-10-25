@@ -94,6 +94,8 @@ class MainActivity : ComponentActivity() {
         socialReturn.value = SocialReturn.from(intent)
     }
 
-    private fun metaReturnIntent(intent: Intent?): Intent? =
-        intent?.takeIf { it.data?.scheme == "dalilacom" }
+    private fun metaReturnIntent(intent: Intent?): Intent? = intent?.takeIf {
+        val uri = it.data
+        uri?.scheme == "dalilacom" && uri.host == "responder" && uri.path == "/meta"
+    }
 }

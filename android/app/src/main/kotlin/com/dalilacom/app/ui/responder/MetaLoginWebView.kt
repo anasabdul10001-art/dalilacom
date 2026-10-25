@@ -9,6 +9,7 @@ import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebSettings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +29,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.dalilacom.app.MainActivity
+import com.dalilacom.app.data.network.BASE_URL
 
 /**
  * The Facebook Page-linking dialog, shown inside the app. Opened through the phone's browser, a facebook.com link can be
@@ -38,11 +41,18 @@ import com.dalilacom.app.MainActivity
 @Composable
 fun MetaLoginWebView(url: String, onClose: () -> Unit) {
     val context = LocalContext.current
+    val appHost = Uri.parse(BASE_URL).host.orEmpty()
     val webView = remember {
         WebView(context).apply {
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            settings.allowFileAccess = false
+            settings.allowContentAccess = false
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            settings.javaScriptCanOpenWindowsAutomatically = false
+            settings.setSupportMultipleWindows(false)
+            settings.safeBrowsingEnabled = true
             // an embedded browser announces itself with "; wv" — sign-in pages treat that differently, so look like the browser
             settings.userAgentString = settings.userAgentString.replace("; wv", "")
             CookieManager.getInstance().setAcceptCookie(true)
@@ -50,15 +60,25 @@ fun MetaLoginWebView(url: String, onClose: () -> Unit) {
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     val target = request.url
-                    if (target.scheme == "dalilacom") {
+                    if (isMetaReturn(target)) {
+                        if (!request.isForMainFrame) return true
                         handBack(context, target)
                         onClose()
                         return true
                     }
-                    return false
+                    return !isAllowedMetaPage(target, appHost)
                 }
             }
-            loadUrl(url)
+            if (isAllowedMetaPage(Uri.parse(url), appHost)) loadUrl(url)
+        }
+    }
+
+    DisposableEffect(webView) {
+        onDispose {
+            webView.stopLoading()
+            webView.loadUrl("about:blank")
+            webView.removeAllViews()
+            webView.destroy()
         }
     }
 
@@ -74,7 +94,17 @@ fun MetaLoginWebView(url: String, onClose: () -> Unit) {
     }
 }
 
+private fun isMetaReturn(uri: Uri): Boolean =
+    uri.scheme == "dalilacom" && uri.host == "responder" && uri.path == "/meta"
+
+private fun isAllowedMetaPage(uri: Uri, appHost: String): Boolean {
+    if (uri.scheme != "https" || uri.userInfo != null || (uri.port != -1 && uri.port != 443)) return false
+    val host = uri.host?.lowercase() ?: return false
+    return host == appHost.lowercase() || host == "facebook.com" || host.endsWith(".facebook.com")
+}
+
 private fun handBack(context: Context, uri: Uri) {
+    if (!isMetaReturn(uri)) return
     runCatching {
         context.startActivity(Intent(Intent.ACTION_VIEW, uri, context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
     }

@@ -157,7 +157,7 @@ responderRouter.get("/connections", requireAuth, async (req, res) => {
   );
 });
 
-const connectSchema = z.object({ channelId: z.string().uuid(), credentials: z.record(z.string()) });
+const connectSchema = z.object({ channelId: z.string().uuid(), credentials: z.record(z.string(), z.string()) });
 
 responderRouter.post("/connections", requireAuth, async (req, res) => {
   const parsed = connectSchema.safeParse(req.body);

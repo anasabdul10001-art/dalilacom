@@ -25,6 +25,10 @@ import {
 
 export const metaOAuthRouter = Router();
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
+}
+
 /** Same gate as the manual connect flow: the auto-responder has to be running to attach a Page. */
 async function responderRunning(userId: string): Promise<boolean> {
   const sub = await getSubscription(userId);
@@ -33,12 +37,10 @@ async function responderRunning(userId: string): Promise<boolean> {
 
 function page(title: string, body: string, deepLink?: string, autoRedirect = true): string {
   const link = deepLink
-    ? `<p><a class="btn" href="${deepLink}">${autoRedirect ? "ارجع إلى تطبيق دليلكم" : "افتح تطبيق دليلكم لاختيار الصفحة"}</a></p>${
-        autoRedirect ? `<script>setTimeout(function(){location.href=${JSON.stringify(deepLink)}},1200)</script>` : ""
-      }`
+    ? `<p><a class="btn"${autoRedirect ? ' data-auto-redirect="true"' : ""} href="${escapeHtml(deepLink)}">${autoRedirect ? "ارجع إلى تطبيق دليلكم" : "افتح تطبيق دليلكم لاختيار الصفحة"}</a></p>`
     : "";
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title><style>
+<title>${escapeHtml(title)}</title><style>
 body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#faf7f7;color:#1a1a1a;margin:0;padding:40px 16px;text-align:center}
 .card{max-width:520px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;box-shadow:0 6px 24px rgba(0,0,0,.06)}
 h2{color:#BA2A34;margin:0 0 8px}p{line-height:1.7;color:#444}
@@ -46,7 +48,7 @@ h2{color:#BA2A34;margin:0 0 8px}p{line-height:1.7;color:#444}
 .pg{display:block;text-align:right;border:1px solid #eee;border-radius:12px;padding:14px;margin:10px 0}
 .pg b{display:block;margin-bottom:8px}.pg a{margin-left:8px}
 .muted{color:#888;font-size:13px}</style></head>
-<body><div class="card"><h2>🅳 دليلكم</h2><p>${title}</p>${body}${link}</div></body></html>`;
+<body><div class="card"><h2>🅳 دليلكم</h2><p>${escapeHtml(title)}</p>${body}${link}</div>${autoRedirect && deepLink ? '<script src="/meta-oauth-return.js" defer></script>' : ""}</body></html>`;
 }
 
 /* ---------------- what the app asks before showing the button ---------------- */
@@ -88,7 +90,7 @@ metaOAuthRouter.get("/oauth/start", requireAuth, async (req, res) => {
   });
 });
 
-/** The app opens this in the phone's browser; it carries on to Facebook by script. The state proves who started it. */
+/** The app opens this in the phone's browser; the signed state proves who started it. */
 metaOAuthRouter.get("/oauth/go", (req, res) => {
   const state = typeof req.query.state === "string" ? req.query.state : undefined;
   const userId = verifyState(state);
@@ -96,10 +98,7 @@ metaOAuthRouter.get("/oauth/go", (req, res) => {
     return res.status(400).send(page("تعذّر إكمال الربط", "<p>رابط البدء غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.</p>"));
   }
   const target = metaDialogUrl(userId, state);
-  res.send(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>دليلكم</title></head>
-<body style="font-family:system-ui,sans-serif;text-align:center;padding:48px 16px;color:#444"><p>جاري فتح فيسبوك…</p>
-<noscript><p><a href="${target.replace(/&/g, "&amp;")}">تابع إلى فيسبوك</a></p></noscript>
-<script>setTimeout(function(){location.replace(${JSON.stringify(target)})},150)</script></body></html>`);
+  res.redirect(302, target);
 });
 
 /* ---------------- step 2: Facebook sends the merchant's browser back here ---------------- */
@@ -117,7 +116,7 @@ metaOAuthRouter.get("/oauth/callback", async (req, res) => {
 
   if (typeof req.query.error === "string") {
     const reason = typeof req.query.error_description === "string" ? req.query.error_description : req.query.error;
-    return res.status(400).send(page("تم إلغاء الربط", `<p>ما تم منح الصلاحية: ${reason}</p>`, back({ ok: "0" })));
+    return res.status(400).send(page("تم إلغاء الربط", `<p>ما تم منح الصلاحية: ${escapeHtml(reason.slice(0, 300))}</p>`, back({ ok: "0" })));
   }
 
   const code = typeof req.query.code === "string" ? req.query.code : undefined;
@@ -128,7 +127,7 @@ metaOAuthRouter.get("/oauth/callback", async (req, res) => {
     pages = await exchangeCodeForPages(code);
   } catch (err) {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الاتصال بفيسبوك";
-    return res.status(502).send(page("تعذّر إكمال الربط", `<p>${message}</p>`, back({ ok: "0" })));
+    return res.status(502).send(page("تعذّر إكمال الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, back({ ok: "0" })));
   }
 
   if (pages.length === 0) {
@@ -144,22 +143,24 @@ metaOAuthRouter.get("/oauth/callback", async (req, res) => {
     try {
       const connection = await connectFromSession({ userId, sessionId, pageId: pages[0].id, driver: "FACEBOOK" });
       return res.send(
-        page(`تم ربط «${pages[0].name}» ✅`, "<p>صار المجيب الآلي يرد على تعليقات ورسائل صفحتك.</p>", back({ ok: "1", connectionId: connection.id })),
+        page(`تم ربط «${pages[0].name.slice(0, 150)}» ✅`, "<p>صار المجيب الآلي يرد على تعليقات ورسائل صفحتك.</p>", back({ ok: "1", connectionId: connection.id })),
       );
     } catch (err) {
       const message = err instanceof MetaOAuthError ? err.message : "تعذّر ربط الصفحة";
-      return res.status(400).send(page("تعذّر ربط الصفحة", `<p>${message}</p>`, back({ ok: "0" })));
+      return res.status(400).send(page("تعذّر ربط الصفحة", `<p>${escapeHtml(message.slice(0, 300))}</p>`, back({ ok: "0" })));
     }
   }
 
   // Several Pages: let the merchant pick, in the browser, with signed links.
   const rows = pages
     .map((p) => {
-      const fb = `<a class="btn" href="/responder/meta/oauth/pick?session=${sessionId}&page=${p.id}&driver=FACEBOOK&sig=${signPickerToken(sessionId, p.id, "FACEBOOK")}${web ? "&web=1" : ""}">ربط الصفحة</a>`;
+      const pageName = escapeHtml(p.name.slice(0, 150));
+      const fbParams = new URLSearchParams({ session: sessionId, page: p.id, driver: "FACEBOOK", sig: signPickerToken(sessionId, p.id, "FACEBOOK"), ...(web ? { web: "1" } : {}) });
+      const fb = `<a class="btn" href="/responder/meta/oauth/pick?${escapeHtml(fbParams.toString())}">ربط الصفحة</a>`;
       const ig = p.instagramAccountId
-        ? `<a class="btn" href="/responder/meta/oauth/pick?session=${sessionId}&page=${p.id}&driver=INSTAGRAM&sig=${signPickerToken(sessionId, p.id, "INSTAGRAM")}${web ? "&web=1" : ""}">ربط إنستغرام${p.instagramUsername ? ` (@${p.instagramUsername})` : ""}</a>`
+        ? `<a class="btn" href="/responder/meta/oauth/pick?${escapeHtml(new URLSearchParams({ session: sessionId, page: p.id, driver: "INSTAGRAM", sig: signPickerToken(sessionId, p.id, "INSTAGRAM"), ...(web ? { web: "1" } : {}) }).toString())}">ربط إنستغرام${p.instagramUsername ? ` (@${escapeHtml(p.instagramUsername.slice(0, 100))})` : ""}</a>`
         : "";
-      return `<div class="pg"><b>${p.name}</b>${fb}${ig}</div>`;
+      return `<div class="pg"><b>${pageName}</b>${fb}${ig}</div>`;
     })
     .join("");
 
@@ -201,7 +202,7 @@ metaOAuthRouter.get("/oauth/pick", async (req, res) => {
     return res.send(page("تم الربط ✅", "<p>صار المجيب الآلي مربوطًا. ارجع للتطبيق لتشوف القناة.</p>", appDeepLink({ ok: "1", connectionId: connection.id }, web)));
   } catch (err) {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الربط";
-    return res.status(400).send(page("تعذّر الربط", `<p>${message}</p>`, appDeepLink({ ok: "0" }, web)));
+    return res.status(400).send(page("تعذّر الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, appDeepLink({ ok: "0" }, web)));
   }
 });
 

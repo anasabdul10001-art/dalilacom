@@ -78,7 +78,8 @@ export function appDeepLink(params: Record<string, string> = {}, web = false): s
   const query = new URLSearchParams(params).toString();
   // The web preview (/app/) is the other place a merchant can start from: send the browser back there, not to the phone app.
   if (web) return `/app/?${new URLSearchParams({ meta: "1", ...params }).toString()}`;
-  const scheme = process.env.APP_DEEP_LINK_SCHEME || "dalilacom";
+  // This must match the Android manifest; do not let a deploy setting turn a page link into an arbitrary URI scheme.
+  const scheme = "dalilacom";
   return `${scheme}://responder/meta${query ? `?${query}` : ""}`;
 }
 
