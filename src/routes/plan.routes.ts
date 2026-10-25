@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma";
@@ -41,9 +42,9 @@ async function countryFor(req: { headers: Record<string, unknown>; query: Record
 }
 
 // Public: the whole pricing page in one call (sections 24/60).
-planRouter.get("/catalog", async (req, res) => {
+planRouter.get("/catalog", route(async (req, res) => {
   res.json(await getCatalog(await countryFor(req as never), resolveLanguage(req)));
-});
+}));
 
 /* ---------------- admin: plans, specifications, country prices, tax rates ---------------- */
 
@@ -61,15 +62,15 @@ const planBody = {
   isActive: z.boolean().default(true),
 };
 
-planRouter.get("/admin", requireAuth, requireRole(Role.ADMIN), async (_req, res) => {
+planRouter.get("/admin", requireAuth, requireRole(Role.ADMIN), route(async (_req, res) => {
   res.json(await listPlansForAdmin());
-});
+}));
 
-planRouter.post("/", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+planRouter.post("/", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = z.object(planBody).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.status(201).json(await prisma.servicePlan.create({ data: parsed.data }));
-});
+}));
 
 const updatePlanBody = z.object({
   name: z.string().min(2).optional(),
@@ -84,15 +85,15 @@ const updatePlanBody = z.object({
   isActive: z.boolean().optional(),
 });
 
-planRouter.patch("/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+planRouter.patch("/:id", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = updatePlanBody.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.servicePlan.findUnique({ where: { id: req.params.id } });
   if (!existing) return sendError(res, 404, "NOT_FOUND", "الباقة غير موجودة");
   res.json(await prisma.servicePlan.update({ where: { id: existing.id }, data: parsed.data }));
-});
+}));
 
-planRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+planRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   try {
     await deletePlan(req.params.id);
     res.json({ deleted: true });
@@ -102,9 +103,9 @@ planRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), async (req, res)
     }
     throw err;
   }
-});
+}));
 
-planRouter.put("/:id/features", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+planRouter.put("/:id/features", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = z
     .object({ features: z.array(z.object({ text: z.string().min(1).max(200), included: z.boolean().default(true) })).max(40) })
     .safeParse(req.body);
@@ -112,9 +113,9 @@ planRouter.put("/:id/features", requireAuth, requireRole(Role.ADMIN), async (req
   const existing = await prisma.servicePlan.findUnique({ where: { id: req.params.id } });
   if (!existing) return sendError(res, 404, "NOT_FOUND", "الباقة غير موجودة");
   res.json(await replaceFeatures(existing.id, parsed.data.features));
-});
+}));
 
-planRouter.put("/:id/prices", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+planRouter.put("/:id/prices", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = z
     .object({
       prices: z
@@ -136,13 +137,13 @@ planRouter.put("/:id/prices", requireAuth, requireRole(Role.ADMIN), async (req, 
   const duplicates = new Set(parsed.data.prices.map((p) => p.countryId)).size !== parsed.data.prices.length;
   if (duplicates) return sendError(res, 400, "BAD_REQUEST", "كل بلد مرة وحدة بس");
   res.json(await replacePrices(existing.id, parsed.data.prices));
-});
+}));
 
-planRouter.get("/tax-rates", requireAuth, requireRole(Role.ADMIN), async (_req, res) => {
+planRouter.get("/tax-rates", requireAuth, requireRole(Role.ADMIN), route(async (_req, res) => {
   res.json(await listTaxRates());
-});
+}));
 
-planRouter.put("/tax-rates", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+planRouter.put("/tax-rates", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = z
     .object({
       countryId: z.string().uuid().nullable().optional(),
@@ -153,9 +154,9 @@ planRouter.put("/tax-rates", requireAuth, requireRole(Role.ADMIN), async (req, r
     .safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await upsertTaxRate(parsed.data));
-});
+}));
 
-planRouter.delete("/tax-rates/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+planRouter.delete("/tax-rates/:id", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   await deleteTaxRate(req.params.id);
   res.json({ deleted: true });
-});
+}));

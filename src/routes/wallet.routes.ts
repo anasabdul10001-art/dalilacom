@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
@@ -12,7 +13,7 @@ const DUPLICATE_TOPUP = "هذا الطلب موجود سابقًا — رقم ا
 
 export const walletRouter = Router();
 
-walletRouter.get("/", requireAuth, async (req, res) => {
+walletRouter.get("/", requireAuth, route(async (req, res) => {
   const settings = await getSettings();
   const wallet = await prisma.wallet.findUnique({ where: { userId: req.user!.id } });
   const transactions = await prisma.walletTransaction.findMany({
@@ -21,10 +22,10 @@ walletRouter.get("/", requireAuth, async (req, res) => {
     take: 50,
   });
   res.json({ balance: wallet?.balance ?? 0, creditName: settings.creditName, transactions });
-});
+}));
 
 // How the user can pay: the platform's USDT address and local wallet accounts, exactly as the super admin set them.
-walletRouter.get("/methods", requireAuth, async (_req, res) => {
+walletRouter.get("/methods", requireAuth, route(async (_req, res) => {
   const s = await getSettings();
   res.json({
     creditName: s.creditName,
@@ -33,7 +34,7 @@ walletRouter.get("/methods", requireAuth, async (_req, res) => {
     localWallets: s.payment.localWallets.map((w) => ({ ...w, auto: w.key === SHAM_CASH && shamCashConfigured() })), // auto: the transfer is checked and credited at once
     sypPerUsd: s.payment.sypPerUsd,
   });
-});
+}));
 
 const topUpSchema = z.object({
   method: z.string().min(2),
@@ -41,7 +42,7 @@ const topUpSchema = z.object({
   amountClaimed: z.number().positive().optional(),
 });
 
-walletRouter.post("/topups", requireAuth, async (req, res) => {
+walletRouter.post("/topups", requireAuth, route(async (req, res) => {
   const parsed = topUpSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { method, reference, amountClaimed } = parsed.data;
@@ -127,9 +128,9 @@ walletRouter.post("/topups", requireAuth, async (req, res) => {
     }
     throw err;
   }
-});
+}));
 
-walletRouter.get("/topups", requireAuth, async (req, res) => {
+walletRouter.get("/topups", requireAuth, route(async (req, res) => {
   const list = await prisma.topUpRequest.findMany({ where: { userId: req.user!.id }, orderBy: { createdAt: "desc" }, take: 50 });
   res.json(list);
-});
+}));

@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { sendError, sendValidationError } from "../lib/apiError";
@@ -18,7 +19,7 @@ const routeQuery = z.object({
 
 // Public (the map works for guests): the real road route, distance and time between two points.
 // Proxied through us so the routing provider can change without shipping new apps, and so it's rate limited.
-routeRouter.get("/", routeRateLimiter, async (req, res) => {
+routeRouter.get("/", routeRateLimiter, route(async (req, res) => {
   const parsed = routeQuery.safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { fromLat, fromLng, toLat, toLng, mode } = parsed.data;
@@ -29,4 +30,4 @@ routeRouter.get("/", routeRateLimiter, async (req, res) => {
     if (err instanceof RouteUnavailableError) return sendError(res, 502, "ROUTE_UNAVAILABLE", "خدمة المسارات غير متاحة حاليًا");
     throw err;
   }
-});
+}));

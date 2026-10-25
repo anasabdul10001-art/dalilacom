@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { Role } from "@prisma/client";
@@ -14,7 +15,7 @@ import { discountScopeInfo, liveDiscountWhere, memberUse } from "../lib/discount
 export const qrRouter = Router();
 
 // Customer: fetch the current rotating code for their own digital card (section 19/62)
-qrRouter.get("/mine", requireAuth, async (req, res) => {
+qrRouter.get("/mine", requireAuth, route(async (req, res) => {
   const membership = await prisma.membership.findFirst({
     where: { userId: req.user!.id },
     orderBy: { createdAt: "desc" },
@@ -25,7 +26,7 @@ qrRouter.get("/mine", requireAuth, async (req, res) => {
 
   const { code, expiresInSeconds } = generateCurrentCode(membership.qrSecret);
   res.json({ memberNumber: membership.memberNumber, code, expiresInSeconds });
-});
+}));
 
 const scanSchema = z.object({
   memberNumber: z.string(),
@@ -47,7 +48,7 @@ async function resolveVerifiedMembership(memberNumber: string, code: string) {
 }
 
 // Merchant: step 1 — scan & verify (read-only, section 20 "MEMBER VERIFIED")
-qrRouter.post("/verify", qrVerifyRateLimiter, requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+qrRouter.post("/verify", qrVerifyRateLimiter, requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = scanSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -78,7 +79,7 @@ qrRouter.post("/verify", qrVerifyRateLimiter, requireAuth, requireRole(Role.MERC
     discount: best ? { id: best.id, title: best.title, percent: best.percent } : null, // what older apps show
     discounts,
   });
-});
+}));
 
 const redeemSchema = z.object({
   memberNumber: z.string(),
@@ -88,7 +89,7 @@ const redeemSchema = z.object({
 });
 
 // Merchant: step 2 — enter bill amount & confirm (section 20 "Confirm Discount")
-qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = redeemSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -198,10 +199,10 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
     finalAmountCents: transaction.finalAmountCents,
     createdAt: transaction.createdAt,
   });
-});
+}));
 
 // Shop: the discounts it confirmed (newest first), with who they were for and the totals.
-qrRouter.get("/transactions/shop", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+qrRouter.get("/transactions/shop", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id }, select: { id: true } });
   if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   const [rows, total] = await Promise.all([
@@ -220,10 +221,10 @@ qrRouter.get("/transactions/shop", requireAuth, requireRole(Role.MERCHANT), asyn
       billAmountCents: r.billAmountCents, discountPercent: r.discountPercent, discountAmountCents: r.discountAmountCents, finalAmountCents: r.finalAmountCents,
     })),
   });
-});
+}));
 
 // Customer: discount history (section 34 "عند الزبون: سجل حسوماته الخاص")
-qrRouter.get("/transactions/mine", requireAuth, async (req, res) => {
+qrRouter.get("/transactions/mine", requireAuth, route(async (req, res) => {
   const memberships = await prisma.membership.findMany({ where: { userId: req.user!.id }, select: { id: true } });
   const transactions = await prisma.discountTransaction.findMany({
     where: { membershipId: { in: memberships.map((m) => m.id) } },
@@ -231,4 +232,4 @@ qrRouter.get("/transactions/mine", requireAuth, async (req, res) => {
     orderBy: { createdAt: "desc" },
   });
   res.json(transactions);
-});
+}));

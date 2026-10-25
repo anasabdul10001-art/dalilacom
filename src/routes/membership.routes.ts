@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import crypto from "crypto";
 import { z } from "zod";
@@ -13,7 +14,7 @@ import { creditsChargeFor } from "../services/plan.service";
 export const membershipRouter = Router();
 
 // Public: list plans a customer can subscribe to
-membershipRouter.get("/plans", async (_req, res) => {
+membershipRouter.get("/plans", route(async (_req, res) => {
   const plans = await prisma.servicePlan.findMany({
     // The catalogue also holds merchant plans and (later) add-ons; this endpoint stays membership-only
     // so the Android app and the web preview keep getting exactly what they used to.
@@ -21,7 +22,7 @@ membershipRouter.get("/plans", async (_req, res) => {
     orderBy: { priceCents: "asc" },
   });
   res.json(plans);
-});
+}));
 
 // Admin only, used to seed/manage plans until the real admin dashboard exists
 const createPlanSchema = z.object({
@@ -34,20 +35,20 @@ const createPlanSchema = z.object({
   priceCredits: z.number().int().nonnegative().nullable().optional(),
 });
 
-membershipRouter.post("/plans", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+membershipRouter.post("/plans", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = createPlanSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
   }
   const plan = await prisma.servicePlan.create({ data: { ...parsed.data, service: "MEMBERSHIP" } });
   res.status(201).json(plan);
-});
+}));
 
 // Admin: every plan including inactive ones, for the admin dashboard (section 24/60)
-membershipRouter.get("/plans/all", requireAuth, requireRole(Role.ADMIN), async (_req, res) => {
+membershipRouter.get("/plans/all", requireAuth, requireRole(Role.ADMIN), route(async (_req, res) => {
   const plans = await prisma.servicePlan.findMany({ where: { service: "MEMBERSHIP" }, orderBy: { priceCents: "asc" } });
   res.json(plans);
-});
+}));
 
 const updatePlanSchema = z.object({
   name: z.string().min(2).optional(),
@@ -58,7 +59,7 @@ const updatePlanSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-membershipRouter.patch("/plans/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+membershipRouter.patch("/plans/:id", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = updatePlanSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -69,7 +70,7 @@ membershipRouter.patch("/plans/:id", requireAuth, requireRole(Role.ADMIN), async
   }
   const plan = await prisma.servicePlan.update({ where: { id: existing.id }, data: parsed.data });
   res.json(plan);
-});
+}));
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A card can be renewed this long before it ends (the same window the expiry reminder uses). */
@@ -81,7 +82,7 @@ function generateMemberNumber(): string {
   return `DLK-${n}`;
 }
 
-membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
+membershipRouter.post("/subscribe", requireAuth, route(async (req, res) => {
   const parsed = z.object({ planId: z.string().uuid() }).safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -187,9 +188,9 @@ membershipRouter.post("/subscribe", requireAuth, async (req, res) => {
     isTrial: membership.isTrial,
     walletBalance,
   });
-});
+}));
 
-membershipRouter.get("/me", requireAuth, async (req, res) => {
+membershipRouter.get("/me", requireAuth, route(async (req, res) => {
   const membership = await prisma.membership.findFirst({
     where: { userId: req.user!.id },
     orderBy: { createdAt: "desc" },
@@ -214,4 +215,4 @@ membershipRouter.get("/me", requireAuth, async (req, res) => {
     isTrial: membership.isTrial,
     plan: { name: membership.plan.name, durationDays: membership.plan.durationDays },
   });
-});
+}));

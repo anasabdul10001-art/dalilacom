@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { OfferStatus, Prisma, ProductCondition } from "@prisma/client";
@@ -28,7 +29,7 @@ const productMasterSchema = z.object({
 
 // The product itself, never a price/stock/condition (section: Product Master) — several
 // MerchantOffers from different Businesses can point at the same ProductMaster.
-catalogRouter.post("/products", requireAuth, async (req, res) => {
+catalogRouter.post("/products", requireAuth, route(async (req, res) => {
   const parsed = productMasterSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   if (parsed.data.categoryId) {
@@ -37,14 +38,14 @@ catalogRouter.post("/products", requireAuth, async (req, res) => {
   }
   const master = await prisma.productMaster.create({ data: parsed.data as Prisma.ProductMasterUncheckedCreateInput });
   res.status(201).json(master);
-});
+}));
 
 const listMastersSchema = z.object({
   q: z.string().optional(),
   categoryId: z.string().uuid().optional(),
 });
 
-catalogRouter.get("/products", async (req, res) => {
+catalogRouter.get("/products", route(async (req, res) => {
   const parsed = listMastersSchema.safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { q, categoryId } = parsed.data;
@@ -57,11 +58,11 @@ catalogRouter.get("/products", async (req, res) => {
     orderBy: { createdAt: "desc" },
   });
   res.json(masters);
-});
+}));
 
 // Public: a product with every active offer across every business — the actual point of
 // splitting Product Master from Merchant Offer (comparison shopping).
-catalogRouter.get("/products/:id", async (req, res) => {
+catalogRouter.get("/products/:id", route(async (req, res) => {
   const master = await prisma.productMaster.findUnique({
     where: { id: req.params.id },
     include: {
@@ -75,7 +76,7 @@ catalogRouter.get("/products/:id", async (req, res) => {
   });
   if (!master || master.status !== "ACTIVE") return sendError(res, 404, "NOT_FOUND", "Product not found");
   res.json(master);
-});
+}));
 
 /* ---------------- merchant offer ---------------- */
 
@@ -110,7 +111,7 @@ const createOfferSchema = z
 // A Business's offer of a product — either an existing ProductMaster (productMasterId) or a
 // brand-new one created in the same call (productMaster). Price/stock/condition live here, never
 // on ProductMaster (section: Merchant Offer / Product Condition).
-catalogRouter.post("/offers", requireAuth, async (req, res) => {
+catalogRouter.post("/offers", requireAuth, route(async (req, res) => {
   const parsed = createOfferSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { businessId, branchId, productMasterId, productMaster, ...offerFields } = parsed.data;
@@ -145,9 +146,9 @@ catalogRouter.post("/offers", requireAuth, async (req, res) => {
     data: { ...offerFields, currency, businessId, branchId, productMasterId: masterId },
   });
   res.status(201).json(offer);
-});
+}));
 
-catalogRouter.get("/offers/mine", requireAuth, async (req, res) => {
+catalogRouter.get("/offers/mine", requireAuth, route(async (req, res) => {
   const parsed = z.object({ businessId: z.string().uuid() }).safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   try {
@@ -161,7 +162,7 @@ catalogRouter.get("/offers/mine", requireAuth, async (req, res) => {
     orderBy: { createdAt: "desc" },
   });
   res.json(offers);
-});
+}));
 
 const updateOfferSchema = z
   .object({
@@ -178,7 +179,7 @@ const updateOfferSchema = z
     branchId: z.string().uuid().nullable().optional(),
   });
 
-catalogRouter.patch("/offers/:id", requireAuth, async (req, res) => {
+catalogRouter.patch("/offers/:id", requireAuth, route(async (req, res) => {
   const parsed = updateOfferSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -199,4 +200,4 @@ catalogRouter.patch("/offers/:id", requireAuth, async (req, res) => {
 
   const offer = await prisma.merchantOffer.update({ where: { id: existing.id }, data: parsed.data });
   res.json(offer);
-});
+}));

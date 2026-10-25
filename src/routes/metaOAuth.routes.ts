@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { ChannelDriver } from "@prisma/client";
 import { prisma } from "../prisma";
@@ -53,7 +54,7 @@ h2{color:#BA2A34;margin:0 0 8px}p{line-height:1.7;color:#444}
 
 /* ---------------- what the app asks before showing the button ---------------- */
 
-metaOAuthRouter.get("/oauth/status", requireAuth, async (req, res) => {
+metaOAuthRouter.get("/oauth/status", requireAuth, route(async (req, res) => {
   res.json({
     available: metaOAuthConfigured(),
     responderRunning: await responderRunning(req.user!.id),
@@ -61,11 +62,11 @@ metaOAuthRouter.get("/oauth/status", requireAuth, async (req, res) => {
     scopes: metaScopes(),
     deepLink: appDeepLink(),
   });
-});
+}));
 
 /* ---------------- step 1: the app opens this URL in a browser / Custom Tab ---------------- */
 
-metaOAuthRouter.get("/oauth/start", requireAuth, async (req, res) => {
+metaOAuthRouter.get("/oauth/start", requireAuth, route(async (req, res) => {
   if (!metaOAuthConfigured()) {
     return sendError(
       res,
@@ -88,7 +89,7 @@ metaOAuthRouter.get("/oauth/start", requireAuth, async (req, res) => {
     scopes: metaScopes(),
     expiresInMinutes: 15,
   });
-});
+}));
 
 /** The app opens this in the phone's browser; the signed state proves who started it. */
 metaOAuthRouter.get("/oauth/go", (req, res) => {
@@ -103,7 +104,7 @@ metaOAuthRouter.get("/oauth/go", (req, res) => {
 
 /* ---------------- step 2: Facebook sends the merchant's browser back here ---------------- */
 
-metaOAuthRouter.get("/oauth/callback", async (req, res) => {
+metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
   const rawState = typeof req.query.state === "string" ? req.query.state : undefined;
   const userId = verifyState(rawState);
   if (!userId) {
@@ -174,11 +175,11 @@ metaOAuthRouter.get("/oauth/callback", async (req, res) => {
       false,
     ),
   );
-});
+}));
 
 /* ---------------- step 3 (browser path): the merchant clicked one of the Pages ---------------- */
 
-metaOAuthRouter.get("/oauth/pick", async (req, res) => {
+metaOAuthRouter.get("/oauth/pick", route(async (req, res) => {
   const sessionId = typeof req.query.session === "string" ? req.query.session : "";
   const pageId = typeof req.query.page === "string" ? req.query.page : "";
   const driver = (typeof req.query.driver === "string" ? req.query.driver : "FACEBOOK") as ChannelDriver;
@@ -204,7 +205,7 @@ metaOAuthRouter.get("/oauth/pick", async (req, res) => {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الربط";
     return res.status(400).send(page("تعذّر الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, appDeepLink({ ok: "0" }, web)));
   }
-});
+}));
 
 /** The owner of a (still usable) session, used by the browser path which has no app token. */
 async function sessionOwner(sessionId: string): Promise<string | null> {
@@ -218,7 +219,7 @@ async function sessionOwner(sessionId: string): Promise<string | null> {
 
 /* ---------------- step 3 (app path): the app shows the picker itself ---------------- */
 
-metaOAuthRouter.get("/oauth/session/:id", requireAuth, async (req, res) => {
+metaOAuthRouter.get("/oauth/session/:id", requireAuth, route(async (req, res) => {
   const pages = await readSession(req.params.id, req.user!.id);
   if (!pages) return sendError(res, 404, "SESSION_INVALID", "انتهت صلاحية الربط — ابدأ من جديد");
   res.json({
@@ -230,9 +231,9 @@ metaOAuthRouter.get("/oauth/session/:id", requireAuth, async (req, res) => {
       instagramUsername: p.instagramUsername ?? null,
     })),
   });
-});
+}));
 
-metaOAuthRouter.post("/oauth/complete", requireAuth, async (req, res) => {
+metaOAuthRouter.post("/oauth/complete", requireAuth, route(async (req, res) => {
   const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
   const pageId = typeof req.body?.pageId === "string" ? req.body.pageId : "";
   const driver: ChannelDriver = req.body?.driver === "INSTAGRAM" ? "INSTAGRAM" : "FACEBOOK";
@@ -249,4 +250,4 @@ metaOAuthRouter.post("/oauth/complete", requireAuth, async (req, res) => {
     if (err instanceof MetaOAuthError) return sendError(res, err.status, err.code, err.message);
     throw err;
   }
-});
+}));

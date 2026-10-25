@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { Role } from "@prisma/client";
@@ -12,21 +13,21 @@ export const categoryRouter = Router();
 
 // Public: the full section > profession > specialty tree, named in the requested language
 // (?lang=en or Accept-Language; Arabic when unknown), with how many approved places sit under each node.
-categoryRouter.get("/", async (req, res) => {
+categoryRouter.get("/", route(async (req, res) => {
   res.json(await categoryTreeFor(resolveLanguage(req)));
-});
+}));
 
 // Public: ranked categories for what the person typed — spelling-tolerant, any language, synonym-aware.
-categoryRouter.get("/search", async (req, res) => {
+categoryRouter.get("/search", route(async (req, res) => {
   const parsed = z.object({ q: z.string().trim().min(1).max(60) }).safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await searchCategories(parsed.data.q, resolveLanguage(req), 10));
-});
+}));
 
 // A person registering a shop: the profession the shop's own name points to (its words first, the AI when they are not clear).
 const guessUse = new Map<string, { day: string; n: number }>();
 const DAILY_AI_GUESSES = 40;
-categoryRouter.get("/for-name", requireAuth, async (req, res) => {
+categoryRouter.get("/for-name", requireAuth, route(async (req, res) => {
   const parsed = z.object({ name: z.string().trim().min(2).max(80) }).safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const day = new Date().toISOString().slice(0, 10);
@@ -35,7 +36,7 @@ categoryRouter.get("/for-name", requireAuth, async (req, res) => {
   const result = await guessShopCategory(parsed.data.name, resolveLanguage(req), n < DAILY_AI_GUESSES);
   if (result.source === "AI") guessUse.set(req.user!.id, { day, n: n + 1 });
   res.json(result);
-});
+}));
 
 function slugify(name: string): string {
   return name
@@ -69,7 +70,7 @@ async function applyTranslations(categoryId: string, translations: z.infer<typeo
 }
 
 // Admin-managed, not hardcoded (section 10)
-categoryRouter.post("/", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+categoryRouter.post("/", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = createCategorySchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -94,7 +95,7 @@ categoryRouter.post("/", requireAuth, requireRole(Role.ADMIN), async (req, res) 
   await applyTranslations(category.id, translations);
   invalidateCategoryCache();
   res.status(201).json(category);
-});
+}));
 
 const updateCategorySchema = z.object({
   name: z.string().min(2).optional(),
@@ -106,7 +107,7 @@ const updateCategorySchema = z.object({
 
 // Admin-managed edits (section 10) — slug is left untouched on rename since nothing else
 // in the app routes by slug yet.
-categoryRouter.patch("/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+categoryRouter.patch("/:id", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = updateCategorySchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -132,11 +133,11 @@ categoryRouter.patch("/:id", requireAuth, requireRole(Role.ADMIN), async (req, r
   await applyTranslations(existing.id, translations);
   invalidateCategoryCache();
   res.json(category);
-});
+}));
 
 // Admin: refuse to delete a category still in use anywhere, rather than silently orphaning
 // the merchants/products/subcategories that reference it.
-categoryRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+categoryRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const existing = await prisma.category.findUnique({ where: { id: req.params.id } });
   if (!existing) {
     return sendError(res, 404, "NOT_FOUND", "Category not found");
@@ -157,4 +158,4 @@ categoryRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), async (req, 
 
   await prisma.category.delete({ where: { id: existing.id } });
   res.json({ id: existing.id });
-});
+}));

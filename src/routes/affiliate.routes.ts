@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import crypto from "crypto";
 import { z } from "zod";
@@ -29,7 +30,7 @@ const addAffiliateSchema = z.object({
 
 // Merchant: add an existing app user to their own affiliate/marketer team (section: merchant-run
 // affiliate program — distinct from any platform-wide affiliate system).
-affiliateRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+affiliateRouter.post("/", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = addAffiliateSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -65,10 +66,10 @@ affiliateRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, r
     },
   });
   res.status(201).json(affiliate);
-});
+}));
 
 // Merchant: their own affiliate roster with performance stats.
-affiliateRouter.get("/", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+affiliateRouter.get("/", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) {
     return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
@@ -98,7 +99,7 @@ affiliateRouter.get("/", requireAuth, requireRole(Role.MERCHANT), async (req, re
       totalCommissionCents: totalByAffiliate.get(a.id) ?? 0,
     })),
   );
-});
+}));
 
 const updateAffiliateSchema = z.object({
   commissionType: z.nativeEnum(CommissionType).optional(),
@@ -108,7 +109,7 @@ const updateAffiliateSchema = z.object({
 
 // Merchant: adjust a commission rate or deactivate an affiliate (kept, not deleted — their
 // history of referrals/commissions must stay intact).
-affiliateRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+affiliateRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = updateAffiliateSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -125,7 +126,7 @@ affiliateRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (re
 
   const updated = await prisma.merchantAffiliate.update({ where: { id: existing.id }, data: parsed.data });
   res.json(updated);
-});
+}));
 
 const clickSchema = z.object({
   productId: z.string().uuid(),
@@ -135,7 +136,7 @@ const clickSchema = z.object({
 // Any signed-in user: opening a product through an affiliate's referral link. Records the
 // referral only if this customer doesn't already have a live (non-expired) one for this
 // merchant — first click wins, no overriding an active referral.
-affiliateRouter.post("/click", requireAuth, async (req, res) => {
+affiliateRouter.post("/click", requireAuth, route(async (req, res) => {
   const parsed = clickSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -171,10 +172,10 @@ affiliateRouter.post("/click", requireAuth, async (req, res) => {
     });
   }
   res.status(201).json({ tracked: true, expiresAt });
-});
+}));
 
 // Customer: every merchant I'm an affiliate for, with my own code/link and performance.
-affiliateRouter.get("/mine", requireAuth, async (req, res) => {
+affiliateRouter.get("/mine", requireAuth, route(async (req, res) => {
   const affiliates = await prisma.merchantAffiliate.findMany({
     where: { userId: req.user!.id },
     include: { merchant: { select: { id: true, businessName: true } }, _count: { select: { referrals: true } } },
@@ -199,4 +200,4 @@ affiliateRouter.get("/mine", requireAuth, async (req, res) => {
       totalCommissionCents: totalByAffiliate.get(a.id) ?? 0,
     })),
   );
-});
+}));

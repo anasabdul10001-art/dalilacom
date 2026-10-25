@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { resolveLanguage } from "../lib/languages";
 import { translateText } from "../i18n";
 import { Router } from "express";
@@ -42,7 +43,7 @@ function insufficient(res: any, err: InsufficientBalanceError) {
   return sendError(res, 402, "PAYMENT_REQUIRED", "رصيدك ما بيكفي — اشحن محفظتك أول", { balance: err.balance, needed: err.needed });
 }
 
-responderRouter.get("/status", requireAuth, async (req, res) => {
+responderRouter.get("/status", requireAuth, route(async (req, res) => {
   const [sub, settings, wallet] = await Promise.all([
     getSubscription(req.user!.id),
     getSettings(),
@@ -69,9 +70,9 @@ responderRouter.get("/status", requireAuth, async (req, res) => {
     fallbackMode: sub.fallbackMode,
     fallbackReply: sub.fallbackReply,
   });
-});
+}));
 
-responderRouter.post("/activate", requireAuth, async (req, res) => {
+responderRouter.post("/activate", requireAuth, route(async (req, res) => {
   try {
     const result = await activate(req.user!.id, req.user!.role);
     res.status(201).json(result);
@@ -80,16 +81,16 @@ responderRouter.post("/activate", requireAuth, async (req, res) => {
     if (err instanceof InsufficientBalanceError) return insufficient(res, err);
     throw err;
   }
-});
+}));
 
-responderRouter.post("/renew", requireAuth, async (req, res) => {
+responderRouter.post("/renew", requireAuth, route(async (req, res) => {
   try {
     res.json(await pay(req.user!.id, req.user!.role));
   } catch (err) {
     if (err instanceof InsufficientBalanceError) return insufficient(res, err);
     throw err;
   }
-});
+}));
 
 const profileSchema = z.object({
   businessDescription: z.string().max(1000).optional(),
@@ -98,7 +99,7 @@ const profileSchema = z.object({
   fallbackReply: z.string().max(1000).optional(),
 });
 
-responderRouter.patch("/profile", requireAuth, async (req, res) => {
+responderRouter.patch("/profile", requireAuth, route(async (req, res) => {
   const parsed = profileSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   await getSubscription(req.user!.id);
@@ -109,19 +110,19 @@ responderRouter.patch("/profile", requireAuth, async (req, res) => {
   if (mode === "TEMPLATE" && !reply?.trim()) return sendError(res, 400, "BAD_REQUEST", "اكتب نص الرد الاحتياطي");
   const sub = await prisma.responderSubscription.update({ where: { userId: req.user!.id }, data: merged });
   res.json({ businessDescription: sub.businessDescription, tone: sub.tone, fallbackMode: sub.fallbackMode, fallbackReply: sub.fallbackReply });
-});
+}));
 
 // The last 30 days at a glance: what was answered, what waits for a person, what failed.
-responderRouter.get("/stats", requireAuth, async (req, res) => {
+responderRouter.get("/stats", requireAuth, route(async (req, res) => {
   const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
   const groups = await prisma.responderInteraction.groupBy({ by: ["status"], where: { userId: req.user!.id, createdAt: { gte: since } }, _count: { _all: true } });
   const count = (status: string) => groups.find((g) => g.status === status)?._count._all ?? 0;
   res.json({ days: 30, sent: count("SENT"), needsReview: count("NEEDS_REVIEW"), failed: count("FAILED"), skipped: count("SKIPPED") });
-});
+}));
 
 /* ---------------- channels & connections ---------------- */
 
-responderRouter.get("/channels", requireAuth, async (req, res) => {
+responderRouter.get("/channels", requireAuth, route(async (req, res) => {
   const lang = resolveLanguage(req);
   const channels = await prisma.socialChannel.findMany({ where: { isEnabled: true }, orderBy: { createdAt: "asc" } });
   res.json(
@@ -134,9 +135,9 @@ responderRouter.get("/channels", requireAuth, async (req, res) => {
       fields: CREDENTIAL_FIELDS[c.driver].map((f) => ({ ...f, label: translateText(f.label, lang) })),
     })),
   );
-});
+}));
 
-responderRouter.get("/connections", requireAuth, async (req, res) => {
+responderRouter.get("/connections", requireAuth, route(async (req, res) => {
   const list = await prisma.channelConnection.findMany({
     where: { userId: req.user!.id },
     include: { channel: { select: { name: true, driver: true } } },
@@ -155,11 +156,11 @@ responderRouter.get("/connections", requireAuth, async (req, res) => {
       hookUrl: c.channel.driver === "GENERIC_WEBHOOK" ? `${base}/hooks/${c.hookToken}` : null,
     })),
   );
-});
+}));
 
 const connectSchema = z.object({ channelId: z.string().uuid(), credentials: z.record(z.string(), z.string()) });
 
-responderRouter.post("/connections", requireAuth, async (req, res) => {
+responderRouter.post("/connections", requireAuth, route(async (req, res) => {
   const parsed = connectSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -199,19 +200,19 @@ responderRouter.post("/connections", requireAuth, async (req, res) => {
     },
   });
   res.status(201).json({ id: connection.id, externalAccountId: connection.externalAccountId });
-});
+}));
 
-responderRouter.patch("/connections/:id", requireAuth, async (req, res) => {
+responderRouter.patch("/connections/:id", requireAuth, route(async (req, res) => {
   const parsed = z.object({ isActive: z.boolean() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.channelConnection.findUnique({ where: { id: req.params.id } });
   if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Connection not found");
   const updated = await prisma.channelConnection.update({ where: { id: existing.id }, data: { isActive: parsed.data.isActive } });
   res.json({ id: updated.id, isActive: updated.isActive });
-});
+}));
 
 // Recent posts of a connected Facebook/Instagram account, so a rule can be limited to specific ones.
-responderRouter.get("/connections/:id/posts", requireAuth, async (req, res) => {
+responderRouter.get("/connections/:id/posts", requireAuth, route(async (req, res) => {
   const connection = await prisma.channelConnection.findUnique({ where: { id: req.params.id }, include: { channel: true } });
   if (!connection || connection.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Connection not found");
   const driver = drivers[connection.channel.driver];
@@ -227,7 +228,7 @@ responderRouter.get("/connections/:id/posts", requireAuth, async (req, res) => {
   } catch (err) {
     return sendError(res, 502, "BAD_GATEWAY", err instanceof Error ? err.message : "تعذّر جلب المنشورات");
   }
-});
+}));
 
 /* ---------------- rules ---------------- */
 
@@ -242,11 +243,11 @@ const ruleSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-responderRouter.get("/rules", requireAuth, async (req, res) => {
+responderRouter.get("/rules", requireAuth, route(async (req, res) => {
   res.json(await prisma.responderRule.findMany({ where: { userId: req.user!.id }, orderBy: { createdAt: "asc" } }));
-});
+}));
 
-responderRouter.post("/rules", requireAuth, async (req, res) => {
+responderRouter.post("/rules", requireAuth, route(async (req, res) => {
   const parsed = ruleSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   if (parsed.data.mode === "FIXED" && !parsed.data.replyTemplate.trim()) {
@@ -257,9 +258,9 @@ responderRouter.post("/rules", requireAuth, async (req, res) => {
   }
   const rule = await prisma.responderRule.create({ data: { ...parsed.data, userId: req.user!.id } });
   res.status(201).json(rule);
-});
+}));
 
-responderRouter.patch("/rules/:id", requireAuth, async (req, res) => {
+responderRouter.patch("/rules/:id", requireAuth, route(async (req, res) => {
   // Defaults in ruleSchema belong to creation only. Zod keeps them inside .partial(), so repeat
   // these fields as optional here or a tiny edit would clear existing rule settings.
   const parsed = ruleSchema.partial().extend({
@@ -273,18 +274,18 @@ responderRouter.patch("/rules/:id", requireAuth, async (req, res) => {
   const existing = await prisma.responderRule.findUnique({ where: { id: req.params.id } });
   if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Rule not found");
   res.json(await prisma.responderRule.update({ where: { id: existing.id }, data: parsed.data }));
-});
+}));
 
-responderRouter.delete("/rules/:id", requireAuth, async (req, res) => {
+responderRouter.delete("/rules/:id", requireAuth, route(async (req, res) => {
   const existing = await prisma.responderRule.findUnique({ where: { id: req.params.id } });
   if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Rule not found");
   await prisma.responderRule.delete({ where: { id: existing.id } });
   res.json({ id: existing.id });
-});
+}));
 
 /* ---------------- inbox ---------------- */
 
-responderRouter.get("/inbox", requireAuth, async (req, res) => {
+responderRouter.get("/inbox", requireAuth, route(async (req, res) => {
   const status = z.enum(["SENT", "NEEDS_REVIEW", "FAILED", "SKIPPED"]).optional().safeParse(req.query.status);
   const list = await prisma.responderInteraction.findMany({
     where: { userId: req.user!.id, ...(status.success && status.data ? { status: status.data } : {}) },
@@ -293,10 +294,10 @@ responderRouter.get("/inbox", requireAuth, async (req, res) => {
     take: 100,
   });
   res.json(list.map((i) => ({ ...i, channel: i.connection.channel.name, connection: undefined })));
-});
+}));
 
 // A person answers a message the responder held back (complaints, failed sends, AI unavailable).
-responderRouter.post("/inbox/:id/send", requireAuth, async (req, res) => {
+responderRouter.post("/inbox/:id/send", requireAuth, route(async (req, res) => {
   const parsed = z.object({ reply: z.string().trim().min(1).max(2000) }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -321,4 +322,4 @@ responderRouter.post("/inbox/:id/send", requireAuth, async (req, res) => {
     data: { status: "SENT", reply: parsed.data.reply, reason: null },
   });
   res.json(updated);
-});
+}));

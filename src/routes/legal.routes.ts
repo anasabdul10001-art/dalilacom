@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import crypto from "crypto";
 import express, { Router } from "express";
 import { sendError } from "../lib/apiError";
@@ -31,14 +32,14 @@ export function parseSignedRequest(signed: unknown, secret: string | undefined):
 
 const appSecret = () => process.env.FACEBOOK_LOGIN_APP_SECRET || process.env.META_APP_SECRET;
 
-legalRouter.post("/facebook/deauthorize", async (req, res) => {
+legalRouter.post("/facebook/deauthorize", route(async (req, res) => {
   const facebookId = parseSignedRequest(req.body?.signed_request, appSecret());
   if (!facebookId) return sendError(res, 400, "BAD_REQUEST", "Invalid signed request");
   await unlinkFacebook(facebookId);
   res.json({ ok: true });
-});
+}));
 
-legalRouter.post("/facebook/data-deletion", async (req, res) => {
+legalRouter.post("/facebook/data-deletion", route(async (req, res) => {
   const facebookId = parseSignedRequest(req.body?.signed_request, appSecret());
   if (!facebookId) return sendError(res, 400, "BAD_REQUEST", "Invalid signed request");
   await unlinkFacebook(facebookId);
@@ -46,4 +47,4 @@ legalRouter.post("/facebook/data-deletion", async (req, res) => {
   const code = crypto.randomBytes(8).toString("hex");
   const base = process.env.PUBLIC_BASE_URL ?? "";
   res.json({ url: `${base}/data-deletion.html?code=${code}`, confirmation_code: code });
-});
+}));

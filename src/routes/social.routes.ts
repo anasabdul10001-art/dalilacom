@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router, Response } from "express";
 import { z } from "zod";
 import { sendError, sendValidationError } from "../lib/apiError";
@@ -61,7 +62,7 @@ socialRouter.get("/:provider/start", socialLoginRateLimiter, (req, res) => {
   res.redirect(url);
 });
 
-socialRouter.get("/:provider/callback", socialLoginRateLimiter, async (req, res) => {
+socialRouter.get("/:provider/callback", socialLoginRateLimiter, route(async (req, res) => {
   const provider = parseProvider(req.params.provider);
   const state = typeof req.query.state === "string" ? readState(req.query.state) : null;
   // an unreadable or expired link (a reload, a very slow sign-in): a friendly page with the way back instead of a raw error
@@ -86,12 +87,12 @@ socialRouter.get("/:provider/callback", socialLoginRateLimiter, async (req, res)
     }
     throw err;
   }
-});
+}));
 
 const completeSchema = z.object({ pending: z.string().min(20).max(2000), email: z.string().trim().toLowerCase().email().max(200) });
 
 /** The person typed the email the provider did not give us: make the account and sign in (the address is confirmed by mail). */
-socialRouter.post("/complete", socialLoginRateLimiter, async (req, res) => {
+socialRouter.post("/complete", socialLoginRateLimiter, route(async (req, res) => {
   const parsed = completeSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const pending = readPending(parsed.data.pending);
@@ -109,16 +110,16 @@ socialRouter.post("/complete", socialLoginRateLimiter, async (req, res) => {
     }
     throw err;
   }
-});
+}));
 
 const exchangeSchema = z.object({ ticket: z.string().min(16).max(200) });
 
 /** The app/web page trades its one-time ticket for a normal session — the same answer as a password login. */
-socialRouter.post("/exchange", socialLoginRateLimiter, async (req, res) => {
+socialRouter.post("/exchange", socialLoginRateLimiter, route(async (req, res) => {
   const parsed = exchangeSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const user = await redeemTicket(parsed.data.ticket);
   if (!user) return sendError(res, 401, "TICKET_INVALID", "The sign-in expired — try again");
   const token = signAuthToken({ sub: user.id, role: user.role, tokenVersion: user.tokenVersion });
   res.json({ token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, emailVerified: user.isEmailVerified } });
-});
+}));

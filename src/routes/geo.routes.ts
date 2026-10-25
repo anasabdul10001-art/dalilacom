@@ -15,14 +15,14 @@ export const geoRouter = Router();
 /* ---------------- countries ---------------- */
 
 // The shopper's market: their country (account, else where they connect from) and its currency, so every price is shown in it.
-geoRouter.get("/market", async (req, res) => {
+geoRouter.get("/market", route(async (req, res) => {
   const country = await viewerCountry(req);
   res.json({ country, currencyCode: await currencyOf(country) });
-});
+}));
 
-geoRouter.get("/countries", async (_req, res) => {
+geoRouter.get("/countries", route(async (_req, res) => {
   res.json(await prisma.country.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }));
-});
+}));
 
 const countrySchema = z.object({
   name: z.string().min(1),
@@ -39,7 +39,7 @@ const countrySchema = z.object({
 });
 
 // Admin-managed, never hardcoded in application logic (section: Country).
-geoRouter.post("/countries", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+geoRouter.post("/countries", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = countrySchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   try {
@@ -51,7 +51,7 @@ geoRouter.post("/countries", requireAuth, requireRole(Role.ADMIN), async (req, r
     if (err?.code === "P2002") return sendError(res, 409, "CONFLICT", "Country with this ISO code already exists");
     throw err;
   }
-});
+}));
 
 /* ---------------- geo units (Region / City / Area) ---------------- */
 
@@ -71,7 +71,7 @@ geoRouter.get("/reverse", reverseGeocodeRateLimiter, route(async (req, res) => {
 
 // Public browse — e.g. "cities in Syria" (countryId + level=CITY) or "children of this region"
 // (parentId). Powers city-selection onboarding and any future location picker.
-geoRouter.get("/units", async (req, res) => {
+geoRouter.get("/units", route(async (req, res) => {
   const parsed = listUnitsSchema.safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { countryId, level, parentId, q } = parsed.data;
@@ -86,16 +86,16 @@ geoRouter.get("/units", async (req, res) => {
     orderBy: { name: "asc" },
   });
   res.json(units);
-});
+}));
 
-geoRouter.get("/units/:id", async (req, res) => {
+geoRouter.get("/units/:id", route(async (req, res) => {
   const unit = await prisma.geoUnit.findUnique({
     where: { id: req.params.id },
     include: { children: { where: { isActive: true }, orderBy: { name: "asc" } }, country: true },
   });
   if (!unit || !unit.isActive) return sendError(res, 404, "NOT_FOUND", "Geo unit not found");
   res.json(unit);
-});
+}));
 
 const createUnitSchema = z.object({
   countryId: z.string().uuid(),
@@ -112,7 +112,7 @@ const createUnitSchema = z.object({
 // Admin-managed hierarchy creation, with structural validation that mirrors the real-world shape
 // (section: Geographic Level) — a REGION has no parent, a CITY's parent (if any) must be a
 // REGION in the same country, and an AREA's parent must be a CITY in the same country.
-geoRouter.post("/units", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+geoRouter.post("/units", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = createUnitSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { countryId, level, parentId, ...rest } = parsed.data;
@@ -139,7 +139,7 @@ geoRouter.post("/units", requireAuth, requireRole(Role.ADMIN), async (req, res) 
 
   const unit = await prisma.geoUnit.create({ data: { countryId, level, parentId, ...rest } });
   res.status(201).json(unit);
-});
+}));
 
 const updateUnitSchema = z.object({
   name: z.string().min(1).optional(),
@@ -153,11 +153,11 @@ const updateUnitSchema = z.object({
 
 // Renaming/toggling only — re-parenting or changing level/country is out of scope for this
 // phase (it would ripple into every Address/Business/Branch already pointing at it).
-geoRouter.patch("/units/:id", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+geoRouter.patch("/units/:id", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = updateUnitSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.geoUnit.findUnique({ where: { id: req.params.id } });
   if (!existing) return sendError(res, 404, "NOT_FOUND", "Geo unit not found");
   const unit = await prisma.geoUnit.update({ where: { id: existing.id }, data: parsed.data });
   res.json(unit);
-});
+}));

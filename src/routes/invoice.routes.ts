@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Response, Router } from "express";
 import { prisma } from "../prisma";
 import { sendError } from "../lib/apiError";
@@ -42,7 +43,7 @@ function sendHtml(res: Response, doc: DocumentData, lang: string) {
 }
 
 // The customer or the owning merchant can print an order's invoice; it always carries the merchant's name + photo.
-invoiceRouter.get("/order/:id", async (req, res) => {
+invoiceRouter.get("/order/:id", route(async (req, res) => {
   const order = await prisma.order.findUnique({
     where: { id: req.params.id },
     include: { items: true, user: { select: { fullName: true, countryCode: true, vatNumber: true } }, merchant: merchantInclude },
@@ -76,10 +77,10 @@ invoiceRouter.get("/order/:id", async (req, res) => {
     ],
     footnote: "شكراً لتعاملكم معنا — صدرت هذه الفاتورة عبر منصة دليلكم",
   }, resolveLanguage(req));
-});
+}));
 
 // A confirmed discount (QR) transaction: the member or the merchant who confirmed it.
-invoiceRouter.get("/discount/:ref", async (req, res) => {
+invoiceRouter.get("/discount/:ref", route(async (req, res) => {
   const tx = await prisma.discountTransaction.findUnique({
     where: { transactionRef: req.params.ref },
     include: { membership: { include: { user: { select: { id: true, fullName: true } } } }, merchant: merchantInclude },
@@ -100,4 +101,4 @@ invoiceRouter.get("/discount/:ref", async (req, res) => {
     totals: [{ label: "المبلغ النهائي", value: formatMoney(tx.finalAmountCents), strong: true }],
     footnote: "صدر هذا الإيصال عبر منصة دليلكم",
   }, resolveLanguage(req));
-});
+}));

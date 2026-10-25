@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { PaymentMethod } from "@prisma/client";
 import crypto from "crypto";
@@ -58,16 +59,16 @@ async function buildCartView(userId: string) {
   return { items: view, shipping, totalCents: view.reduce((sum, i) => sum + i.lineTotalCents, 0) };
 }
 
-cartRouter.get("/", requireAuth, async (req, res) => {
+cartRouter.get("/", requireAuth, route(async (req, res) => {
   res.json(await buildCartView(req.user!.id));
-});
+}));
 
 const addItemSchema = z.object({
   productId: z.string().uuid(),
   quantity: z.number().int().positive().default(1),
 });
 
-cartRouter.post("/items", requireAuth, async (req, res) => {
+cartRouter.post("/items", requireAuth, route(async (req, res) => {
   const parsed = addItemSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -95,11 +96,11 @@ cartRouter.post("/items", requireAuth, async (req, res) => {
   });
 
   res.status(201).json(await buildCartView(req.user!.id));
-});
+}));
 
 const updateItemSchema = z.object({ quantity: z.number().int().positive() });
 
-cartRouter.patch("/items/:id", requireAuth, async (req, res) => {
+cartRouter.patch("/items/:id", requireAuth, route(async (req, res) => {
   const parsed = updateItemSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -116,9 +117,9 @@ cartRouter.patch("/items/:id", requireAuth, async (req, res) => {
 
   await prisma.cartItem.update({ where: { id: item.id }, data: { quantity: parsed.data.quantity } });
   res.json(await buildCartView(req.user!.id));
-});
+}));
 
-cartRouter.delete("/items/:id", requireAuth, async (req, res) => {
+cartRouter.delete("/items/:id", requireAuth, route(async (req, res) => {
   const cart = await getOrCreateCart(req.user!.id);
   const item = await prisma.cartItem.findUnique({ where: { id: req.params.id } });
   if (!item || item.cartId !== cart.id) {
@@ -126,7 +127,7 @@ cartRouter.delete("/items/:id", requireAuth, async (req, res) => {
   }
   await prisma.cartItem.delete({ where: { id: item.id } });
   res.json(await buildCartView(req.user!.id));
-});
+}));
 
 function generateOrderNumber(): string {
   return `ORD-${crypto.randomInt(1_000_000_000, 9_999_999_999)}`;
@@ -136,7 +137,7 @@ function generateOrderNumber(): string {
 // merchant (section 59.5 "Sub-Orders"), each tracked and updated independently from then on.
 const checkoutSchema = z.object({ shipping: z.record(z.string().uuid(), z.string()).optional(), paymentMethod: z.nativeEnum(PaymentMethod).default("COD") }); // shop id -> the chosen shipping method id
 
-cartRouter.post("/checkout", requireAuth, async (req, res) => {
+cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
   const userId = req.user!.id;
   const checkoutBody = checkoutSchema.safeParse(req.body ?? {});
   if (!checkoutBody.success) return sendValidationError(res, checkoutBody.error);
@@ -280,4 +281,4 @@ cartRouter.post("/checkout", requireAuth, async (req, res) => {
     }
     throw err;
   }
-});
+}));

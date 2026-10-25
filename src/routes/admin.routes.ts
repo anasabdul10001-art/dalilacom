@@ -337,11 +337,11 @@ adminRouter.post("/category-suggestions/:id/reject", route(async (req, res) => {
   res.json({ ok: true });
 }));
 
-adminRouter.get("/settings", async (_req, res) => {
+adminRouter.get("/settings", route(async (_req, res) => {
   res.json(await getSettings());
-});
+}));
 
-adminRouter.put("/settings", async (req, res) => {
+adminRouter.put("/settings", route(async (req, res) => {
   const parsed = settingsSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const keys = parsed.data.payment?.localWallets?.map((w) => w.key) ?? [];
@@ -349,7 +349,7 @@ adminRouter.put("/settings", async (req, res) => {
     return sendError(res, 400, "BAD_REQUEST", "مفاتيح المحافظ لازم تكون فريدة ومو USDT_TRC20");
   }
   res.json(await saveSettings(parsed.data as any));
-});
+}));
 
 /* ---------------- our own social media links: address + show/hide for each ---------------- */
 
@@ -490,7 +490,7 @@ adminRouter.patch("/marketers/:id", route(async (req, res) => {
 const USERS_PAGE = 50; // the list shows 50 accounts a page
 const usersQuerySchema = z.object({ q: z.string().trim().max(80).optional(), role: z.nativeEnum(Role).optional(), page: z.coerce.number().int().min(1).max(100000).default(1) });
 
-adminRouter.get("/users", async (req, res) => {
+adminRouter.get("/users", route(async (req, res) => {
   const parsed = usersQuerySchema.safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { q, role, page } = parsed.data;
@@ -513,7 +513,7 @@ adminRouter.get("/users", async (req, res) => {
   // the list itself stays a plain array; the total and the page size ride in headers
   res.set({ "X-Total-Count": String(total), "X-Page-Size": String(USERS_PAGE) });
   res.json(users);
-});
+}));
 
 const userId = (id: string) => ({ id });
 
@@ -600,7 +600,7 @@ adminRouter.delete("/users/:id", route(async (req, res) => {
 
 /* ---------------- a shop's plan decides how many announcements it may send ---------------- */
 
-adminRouter.put("/merchants/:id/plan", async (req, res) => {
+adminRouter.put("/merchants/:id/plan", route(async (req, res) => {
   const parsed = z.object({ planId: z.string().uuid().nullable() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const merchant = await prisma.merchantProfile.findUnique({ where: { id: req.params.id }, select: { id: true } });
@@ -611,7 +611,7 @@ adminRouter.put("/merchants/:id/plan", async (req, res) => {
   }
   const updated = await prisma.merchantProfile.update({ where: { id: merchant.id }, data: { planId: parsed.data.planId }, select: { id: true, planId: true } });
   res.json(updated);
-});
+}));
 
 /* ---------------- social channels (super admin can add new ones without code) ---------------- */
 
@@ -622,11 +622,11 @@ const channelSchema = z.object({
   isEnabled: z.boolean().default(true),
 });
 
-adminRouter.get("/channels", async (_req, res) => {
+adminRouter.get("/channels", route(async (_req, res) => {
   res.json(await prisma.socialChannel.findMany({ orderBy: { createdAt: "asc" }, include: { _count: { select: { connections: true } } } }));
-});
+}));
 
-adminRouter.post("/channels", async (req, res) => {
+adminRouter.post("/channels", route(async (req, res) => {
   const parsed = channelSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   try {
@@ -637,19 +637,19 @@ adminRouter.post("/channels", async (req, res) => {
     }
     throw err;
   }
-});
+}));
 
-adminRouter.patch("/channels/:id", async (req, res) => {
+adminRouter.patch("/channels/:id", route(async (req, res) => {
   const parsed = channelSchema.pick({ name: true, isEnabled: true }).partial().extend({ isEnabled: z.boolean().optional() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.socialChannel.findUnique({ where: { id: req.params.id } });
   if (!existing) return sendError(res, 404, "NOT_FOUND", "Channel not found");
   res.json(await prisma.socialChannel.update({ where: { id: existing.id }, data: parsed.data }));
-});
+}));
 
 /* ---------------- top-up requests (local wallets are confirmed by hand) ---------------- */
 
-adminRouter.get("/topups", async (req, res) => {
+adminRouter.get("/topups", route(async (req, res) => {
   const status = z.nativeEnum(TopUpStatus).optional().safeParse(req.query.status);
   res.json(
     await prisma.topUpRequest.findMany({
@@ -659,9 +659,9 @@ adminRouter.get("/topups", async (req, res) => {
       take: 200,
     }),
   );
-});
+}));
 
-adminRouter.post("/topups/:id/approve", async (req, res) => {
+adminRouter.post("/topups/:id/approve", route(async (req, res) => {
   const parsed = z.object({ amountCredits: z.number().int().positive() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const result = await prisma.$transaction(async (tx) => {
@@ -680,9 +680,9 @@ adminRouter.post("/topups/:id/approve", async (req, res) => {
   if (result.code === 404) return sendError(res, 404, "NOT_FOUND", "Request not found");
   if (result.code === 409) return sendError(res, 409, "CONFLICT", "الطلب انعالج من قبل");
   res.json({ id: req.params.id, status: "APPROVED" });
-});
+}));
 
-adminRouter.post("/topups/:id/reject", async (req, res) => {
+adminRouter.post("/topups/:id/reject", route(async (req, res) => {
   const parsed = z.object({ note: z.string().min(1).max(300) }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const claimed = await prisma.topUpRequest.updateMany({
@@ -691,11 +691,11 @@ adminRouter.post("/topups/:id/reject", async (req, res) => {
   });
   if (claimed.count === 0) return sendError(res, 409, "CONFLICT", "الطلب غير موجود أو انعالج من قبل");
   res.json({ id: req.params.id, status: "REJECTED" });
-});
+}));
 
 /* ---------------- manual wallet adjustment & subscriptions overview ---------------- */
 
-adminRouter.post("/wallet/adjust", async (req, res) => {
+adminRouter.post("/wallet/adjust", route(async (req, res) => {
   const parsed = z
     .object({ userEmail: z.string().email(), amount: z.number().int().refine((n) => n !== 0), note: z.string().max(200).optional() })
     .safeParse(req.body);
@@ -711,9 +711,9 @@ adminRouter.post("/wallet/adjust", async (req, res) => {
     if (err instanceof InsufficientBalanceError) return sendError(res, 409, "CONFLICT", "الرصيد ما بيكفي للخصم");
     throw err;
   }
-});
+}));
 
-adminRouter.get("/responder/subscriptions", async (_req, res) => {
+adminRouter.get("/responder/subscriptions", route(async (_req, res) => {
   res.json(
     await prisma.responderSubscription.findMany({
       where: { status: { not: "OFF" } },
@@ -722,17 +722,17 @@ adminRouter.get("/responder/subscriptions", async (_req, res) => {
       take: 200,
     }),
   );
-});
+}));
 
 /* ---------------- AI provider check (booleans + counters only — no keys, no message text) ---------------- */
 
 /* ---------------- push notifications: is Firebase set up, and does a message reach this admin's phone? ---------------- */
 
-adminRouter.get("/push-status", async (_req, res) => {
+adminRouter.get("/push-status", route(async (_req, res) => {
   res.json(await pushStatus());
-});
+}));
 
-adminRouter.post("/push-test", async (req, res) => {
+adminRouter.post("/push-test", route(async (req, res) => {
   const devices = await prisma.deviceToken.count({ where: { userId: req.user!.id } });
   if (!devices) {
     return sendError(res, 409, "NO_DEVICE", "ما في جهاز مسجّل لحسابك — سجّل دخولك بتطبيق أندرويد (النسخة الجديدة) بهالحساب أول.");
@@ -744,7 +744,7 @@ adminRouter.post("/push-test", async (req, res) => {
   const body = translateText("إذا وصلك هذا الإشعار فالإشعارات شغّالة.", lang);
   const delivered = await sendPushToUser(req.user!.id, { title, body, data: { type: "TEST" } }, errors);
   res.json({ devices, delivered, errors });
-});
+}));
 
 /* ---------------- the product categories shops added themselves ---------------- */
 
@@ -856,35 +856,35 @@ adminRouter.post("/ai-image-test", route(async (_req, res) => {
   res.json({ ok: !!edited, ms: Date.now() - started, reason: edited ? null : lastImageEditError() });
 }));
 
-adminRouter.get("/ai-status", async (_req, res) => {
+adminRouter.get("/ai-status", route(async (_req, res) => {
   res.json({
     ...aiProviderStatus(),
     vision: visionAvailable(), // can any configured provider look at a photo (search by photo, a product from a photo)?
     usage: aiUsage(), // this process, exact
     usageTotals: await aiTotals(), // durable, survives deploys; null if the database is unreachable
   });
-});
+}));
 
 // Asks one provider a tiny real question, so a newly added key is proven by an actual answer.
-adminRouter.post("/ai-test", async (req, res) => {
+adminRouter.post("/ai-test", route(async (req, res) => {
   const provider = typeof req.body?.provider === "string" ? req.body.provider : "";
   const result = await testProvider(provider);
   if (!result) return sendError(res, 404, "NOT_FOUND", "Unknown provider");
   res.json(result);
-});
+}));
 
 // Sample shops and 50 sample products for the online store, to judge its look before real merchants fill it.
-adminRouter.post("/demo-store", async (_req, res) => {
+adminRouter.post("/demo-store", route(async (_req, res) => {
   res.json(await addDemoStore());
-});
+}));
 
-adminRouter.delete("/demo-store", async (_req, res) => {
+adminRouter.delete("/demo-store", route(async (_req, res) => {
   res.json(await removeDemoStore());
-});
+}));
 
 /* ---------------- advertising space bookings ---------------- */
 
-adminRouter.get("/ads", async (req, res) => {
+adminRouter.get("/ads", route(async (req, res) => {
   const status = typeof req.query.status === "string" ? req.query.status : undefined;
   const rows = await prisma.adBooking.findMany({
     where: status && ["PENDING", "ACTIVE", "REJECTED", "CANCELLED"].includes(status) ? { status: status as "PENDING" | "ACTIVE" | "REJECTED" | "CANCELLED" } : {},
@@ -911,7 +911,7 @@ adminRouter.get("/ads", async (req, res) => {
     rejectionReason: a.rejectionReason,
     createdAt: a.createdAt,
   })));
-});
+}));
 
 adminRouter.post("/ads/:id/approve", route(async (req, res) => {
   await approveAd(req.params.id);
@@ -926,7 +926,7 @@ adminRouter.post("/ads/:id/reject", route(async (req, res) => {
 
 /* ---------------- discounts: every shop's discount waits here for approval ---------------- */
 
-adminRouter.get("/discounts", async (req, res) => {
+adminRouter.get("/discounts", route(async (req, res) => {
   const status = typeof req.query.status === "string" ? req.query.status : undefined;
   const rows = await prisma.discount.findMany({
     where: status && ["PENDING", "APPROVED", "REJECTED"].includes(status) ? { status: status as "PENDING" } : {},
@@ -939,7 +939,7 @@ adminRouter.get("/discounts", async (req, res) => {
     id: d.id, merchant: d.merchant, title: d.title, percent: d.percent, description: d.description, startDate: d.startDate, endDate: d.endDate,
     maxCustomers: d.maxCustomers, perCustomerLimit: d.perCustomerLimit, status: d.status, state: discountState(d), rejectionReason: d.rejectionReason, ...scopeOf(d),
   })));
-});
+}));
 
 // how many people the current choice would reach for one shop (so the owner sees the effect before changing it)
 adminRouter.get("/discount-notify/preview/:merchantId", route(async (req, res) => {
@@ -949,7 +949,7 @@ adminRouter.get("/discount-notify/preview/:merchantId", route(async (req, res) =
   res.json({ mode: out.mode, people: out.ids.length });
 }));
 
-adminRouter.post("/discounts/:id/approve", async (req, res) => {
+adminRouter.post("/discounts/:id/approve", route(async (req, res) => {
   const d = await prisma.discount.findUnique({ where: { id: req.params.id }, include: { merchant: { select: { userId: true } } } });
   if (!d) return sendError(res, 404, "NOT_FOUND", "الحسم غير موجود");
   await prisma.discount.update({ where: { id: d.id }, data: { status: "APPROVED", rejectionReason: null } });
@@ -957,9 +957,9 @@ adminRouter.post("/discounts/:id/approve", async (req, res) => {
   // the people the platform settings choose are told about it, once (a failure here never undoes the approval)
   const reached = await announceDiscount(d.id).catch(() => ({ targeted: 0, delivered: 0 }));
   res.json({ ok: true, announced: reached });
-});
+}));
 
-adminRouter.post("/discounts/:id/reject", async (req, res) => {
+adminRouter.post("/discounts/:id/reject", route(async (req, res) => {
   const reason = z.object({ reason: z.string().trim().max(300).optional() }).safeParse(req.body);
   const d = await prisma.discount.findUnique({ where: { id: req.params.id }, include: { merchant: { select: { userId: true } } } });
   if (!d) return sendError(res, 404, "NOT_FOUND", "الحسم غير موجود");
@@ -967,11 +967,11 @@ adminRouter.post("/discounts/:id/reject", async (req, res) => {
   await prisma.discount.update({ where: { id: d.id }, data: { status: "REJECTED", rejectionReason: why ?? null } });
   await notify({ userId: d.merchant.userId, type: "SYSTEM", title: "لم تتم الموافقة على حسمك", body: why ? `${d.title} — السبب: ${why}` : d.title, data: { kind: "DISCOUNT_REJECTED", discountId: d.id }, email: false });
   res.json({ ok: true });
-});
+}));
 
 /* ---------------- big-banner bookings: the shops that asked for one, with the number to call ---------------- */
 
-adminRouter.get("/banner-bookings", async (req, res) => {
+adminRouter.get("/banner-bookings", route(async (req, res) => {
   const status = typeof req.query.status === "string" ? req.query.status : undefined;
   const rows = await prisma.bannerBooking.findMany({
     where: status && ["PENDING", "CONTACTED", "SCHEDULED", "REJECTED", "CANCELLED"].includes(status) ? { status: status as "PENDING" } : {},
@@ -981,7 +981,7 @@ adminRouter.get("/banner-bookings", async (req, res) => {
   });
   const withPicture = await creativeIds("BANNER", rows.map((b) => b.id));
   res.json(rows.map((b) => ({ ...b, hasImage: withPicture.has(b.id) })));
-});
+}));
 
 // the picture a shop sent with its booking, for the admin's eyes (kind: banner | space)
 adminRouter.get("/ad-creatives/:kind/:bookingId", route(async (req, res) => {
@@ -1041,12 +1041,12 @@ const bannerSelect = {
   countryCode: true, startsAt: true, endsAt: true, imageMime: true, imageUpdatedAt: true, views: true, clicks: true, bookingId: true, createdAt: true,
 } as const;
 
-adminRouter.get("/banners", async (_req, res) => {
+adminRouter.get("/banners", route(async (_req, res) => {
   const rows = await prisma.storeBanner.findMany({ select: bannerSelect, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
   res.json(rows.map((b) => ({ ...b, imageUrl: b.imageMime ? `/store/banners/${b.id}/image?v=${b.imageUpdatedAt?.getTime() ?? 0}` : null })));
-});
+}));
 
-adminRouter.post("/banners", async (req, res) => {
+adminRouter.post("/banners", route(async (req, res) => {
   const parsed = bannerFields.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const last = await prisma.storeBanner.aggregate({ _max: { sortOrder: true } });
@@ -1058,9 +1058,9 @@ adminRouter.post("/banners", async (req, res) => {
   // the shop's own picture becomes the banner's picture (the admin can still upload another over it)
   if (banner.bookingId && (await copyCreativeToBanner(banner.bookingId, banner.id))) return res.status(201).json({ ...banner, imageUrl: `/store/banners/${banner.id}/image?v=${Date.now()}` });
   res.status(201).json(banner);
-});
+}));
 
-adminRouter.patch("/banners/:id", async (req, res) => {
+adminRouter.patch("/banners/:id", route(async (req, res) => {
   // Default banner appearance is only for creation; editing a title must retain the saved style.
   const parsed = bannerFields.partial().extend({
     bg: z.enum(["coral", "black", "blue", "green", "purple", "gold"]).optional(),
@@ -1073,18 +1073,18 @@ adminRouter.patch("/banners/:id", async (req, res) => {
   const updated = await prisma.storeBanner.update({ where: { id: req.params.id }, data: bannerData(parsed.data), select: bannerSelect });
   if (updated.bookingId) await linkBannerToBooking(updated.bookingId, updated.id);
   res.json(updated);
-});
+}));
 
-adminRouter.delete("/banners/:id", async (req, res) => {
+adminRouter.delete("/banners/:id", route(async (req, res) => {
   await prisma.storeBanner.deleteMany({ where: { id: req.params.id } });
   res.json({ ok: true });
-});
+}));
 
 // The picture comes as raw image bytes (like profile photos); a banner without one is drawn from its colour.
 adminRouter.put(
   "/banners/:id/image",
   express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: 2 * 1024 * 1024 }),
-  async (req, res) => {
+  route(async (req, res) => {
     const body = req.body;
     if (!Buffer.isBuffer(body) || body.length === 0) return sendError(res, 415, "UNSUPPORTED_MEDIA", "أرسل الصورة بصيغة JPEG أو PNG أو WebP");
     const mime = sniffImageMime(body);
@@ -1093,18 +1093,18 @@ adminRouter.put(
     if (!exists) return sendError(res, 404, "NOT_FOUND", "البانر غير موجود");
     await prisma.storeBanner.update({ where: { id: req.params.id }, data: { imageMime: mime, imageData: body, imageUpdatedAt: new Date() } });
     res.json({ ok: true });
-  },
+  }),
 );
 
-adminRouter.delete("/banners/:id/image", async (req, res) => {
+adminRouter.delete("/banners/:id/image", route(async (req, res) => {
   await prisma.storeBanner.updateMany({ where: { id: req.params.id }, data: { imageMime: null, imageData: null, imageUpdatedAt: null } });
   res.json({ ok: true });
-});
+}));
 
 // The new order of all the banners (the ids, first to last).
-adminRouter.put("/banners-order", async (req, res) => {
+adminRouter.put("/banners-order", route(async (req, res) => {
   const parsed = z.object({ ids: z.array(z.string().uuid()).max(500) }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   await prisma.$transaction(parsed.data.ids.map((id, i) => prisma.storeBanner.updateMany({ where: { id }, data: { sortOrder: i + 1 } })));
   res.json({ ok: true });
-});
+}));
