@@ -46,6 +46,20 @@ function startDownload() {
   window.location.href = "/download/dalilacom.apk";
 }
 
+document.getElementById("backLink").addEventListener("click", goBack);
+document.getElementById("langToggle").addEventListener("click", toggleLang);
+document.querySelectorAll("#btn-ar, #btn-en").forEach(function (button) {
+  button.addEventListener("click", askBeforeDownload);
+});
+document.querySelectorAll("[data-download-continue]").forEach(function (button) {
+  button.addEventListener("click", startDownload);
+});
+document.querySelectorAll("[data-download-cancel]").forEach(function (button) {
+  button.addEventListener("click", function (event) {
+    event.currentTarget.closest("dialog").close();
+  });
+});
+
 // what is on offer now: the version and size, or a note when the owner has the link switched off
 function showOffer(info) {
   ["ar", "en"].forEach(function (l) {

@@ -71,6 +71,7 @@ const inlineEventHandlerFreePages = new Set([
   "/refund.html",
   "/shipping.html",
   "/reset-password.html",
+  "/download.html",
 ]);
 app.use((req, res, next) => {
   const headers = inlineEventHandlerFreePages.has(req.path) ? staticDocumentSecurityHeaders : securityHeaders;
