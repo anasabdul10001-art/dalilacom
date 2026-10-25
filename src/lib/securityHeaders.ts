@@ -1,21 +1,18 @@
 import helmet from "helmet";
 
 /**
- * The existing hand-rolled pages (public/admin.html, public/app/, public/index.html) use inline
- * <script>/<style> blocks and dozens of onclick="..." handlers — there's no nonce/hash-based CSP
- * possible without rewriting those pages into a real frontend (explicitly out of scope for this
- * phase). So script-src/style-src keep 'unsafe-inline' as a deliberate, documented trade-off;
- * everything else (frame-ancestors, object-src, HSTS, sniffing, referrer policy) is locked down.
+ * Executable inline script blocks now live in same-origin JavaScript files, so script-src no longer
+ * needs unsafe-inline. The existing hand-built pages still contain inline event-handler attributes
+ * and styles; those remain explicitly scoped to script-src-attr and style-src until they are
+ * migrated. Other protections (frame-ancestors, object-src, HSTS, sniffing, referrer policy) stay on.
  */
-export const securityHeaders = helmet({
+const createSecurityHeaders = (allowInlineEventHandlers: boolean) => helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      // Helmet's default CSP sets script-src-attr to 'none', which would silently disable every
-      // onclick="..." handler in admin.html/app.js (a CSP3 distinction from script-src itself) —
-      // must be opened up explicitly for the same reason scriptSrc allows 'unsafe-inline'.
-      scriptSrcAttr: ["'unsafe-inline'"],
+      scriptSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+      // Static legal pages use 'none'; interactive pages retain the exception during migration.
+      scriptSrcAttr: allowInlineEventHandlers ? ["'unsafe-inline'"] : ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org", "https://cdnjs.cloudflare.com"], // cdnjs: the map library's own pin pictures
@@ -32,3 +29,6 @@ export const securityHeaders = helmet({
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   crossOriginResourcePolicy: { policy: "same-site" },
 });
+
+export const securityHeaders = createSecurityHeaders(true);
+export const staticDocumentSecurityHeaders = createSecurityHeaders(false);

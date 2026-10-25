@@ -49,13 +49,6 @@
 <script src="i18n.en.js"></script>
 <script src="app.js"></script>
 <script src="pw-eye.js"></script>
-<script>
-  function tickClock() {
-    const el = document.getElementById("clock");
-    if (el) el.textContent = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  }
-  tickClock();
-  setInterval(tickClock, 30000);
-</script>
+<script src="boot.js"></script>
 </body>
 </html>

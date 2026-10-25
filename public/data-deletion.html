@@ -65,14 +65,6 @@
 <p class="muted nav-links"><a href="/about.html">About</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="/refund.html">Returns &amp; refunds</a> · <a href="/shipping.html">Shipping &amp; delivery</a> · <a href="/data-deletion.html">Data deletion</a></p>
 </section>
 </main>
-<script>
-  // Facebook sends people here with ?code=... after an automatic deletion request.
-  const code = new URLSearchParams(location.search).get("code");
-  if (code) {
-    const box = document.getElementById("status");
-    box.style.display = "block";
-    box.textContent = "تم استلام طلب الحذف ✅ رمز التأكيد: " + code + "  |  Deletion request received ✅ Confirmation code: " + code;
-  }
-</script>
+<script src="/data-deletion.js"></script>
 </body>
 </html>

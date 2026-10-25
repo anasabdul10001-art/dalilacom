@@ -39,7 +39,7 @@ import { getVisibleSocialLinks } from "./services/socialLinks.service";
 import { landmarkRouter } from "./routes/landmark.routes";
 import { searchRouter } from "./routes/search.routes";
 import { getAppDownloadInfo, getDownloadableApk, getAppUpdate } from "./services/appRelease.service";
-import { securityHeaders } from "./lib/securityHeaders";
+import { securityHeaders, staticDocumentSecurityHeaders } from "./lib/securityHeaders";
 import { corsMiddleware } from "./lib/corsConfig";
 import { localizeResponses } from "./lib/localize";
 import { ApiError, sendError, sendValidationError } from "./lib/apiError";
@@ -62,7 +62,20 @@ app.use((req, res, next) => {
   if (!isPage && !isSocialStart) return next();
   return res.redirect(302, base.replace(/\/+$/, "") + req.originalUrl);
 });
-app.use(securityHeaders);
+// These informational pages contain no scripts or inline event handlers, so block event attributes
+// there while the interactive pages are being migrated away from inline handlers.
+const inlineEventHandlerFreePages = new Set([
+  "/about.html",
+  "/privacy.html",
+  "/terms.html",
+  "/refund.html",
+  "/shipping.html",
+  "/reset-password.html",
+]);
+app.use((req, res, next) => {
+  const headers = inlineEventHandlerFreePages.has(req.path) ? staticDocumentSecurityHeaders : securityHeaders;
+  headers(req, res, next);
+});
 app.use(corsMiddleware);
 app.use(localizeResponses);
 // rawBody is kept only so Meta webhook signatures can be verified against the exact bytes sent.
