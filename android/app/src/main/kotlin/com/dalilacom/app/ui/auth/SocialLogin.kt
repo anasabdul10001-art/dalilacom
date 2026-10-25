@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.width
@@ -69,7 +70,7 @@ fun SocialButtons(viewModel: AuthViewModel) {
             }
         }
         if (providers.facebook || com.dalilacom.app.ui.common.ComingSoon.FACEBOOK_LOGIN) {
-            OutlinedButton(onClick = { if (com.dalilacom.app.ui.common.ComingSoon.FACEBOOK_LOGIN) com.dalilacom.app.ui.common.ComingSoon.say(context, AppStrings.get(R.string.soon_facebook)) else open("facebook") }, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) {
+            OutlinedButton(onClick = { if (com.dalilacom.app.ui.common.ComingSoon.FACEBOOK_LOGIN) com.dalilacom.app.ui.common.ComingSoon.say(context, AppStrings.get(R.string.soon_facebook)) else open("facebook") }, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp).graphicsLayer(alpha = 0.7f)) {
                 Image(painterResource(R.drawable.ic_facebook), contentDescription = null, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(AppStrings.get(R.string.social_facebook))
