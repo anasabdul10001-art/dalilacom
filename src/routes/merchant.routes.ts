@@ -659,7 +659,10 @@ merchantRouter.post("/discounts", requireAuth, requireRole(Role.MERCHANT), async
   res.status(201).json(discount);
 });
 
-const discountPatchSchema = z.object({ isActive: z.boolean().optional(), endNow: z.literal(true).optional() }).and(discountSchema.partial());
+// The default scope is for creating discounts only; a status-only change must not resubmit terms.
+const discountPatchSchema = z.object({ isActive: z.boolean().optional(), endNow: z.literal(true).optional() }).and(
+  discountSchema.partial().extend({ scope: z.enum(["ALL", "SECTION", "PRODUCTS"]).optional() }),
+);
 
 // Pause, resume or end a discount at once; changing its terms sends it to the admin again.
 merchantRouter.patch("/discounts/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {

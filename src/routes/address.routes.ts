@@ -56,7 +56,8 @@ addressRouter.post("/", requireAuth, async (req, res) => {
   res.status(201).json(address);
 });
 
-const updateAddressSchema = addressSchema.partial();
+// Keep the create-time default from silently making every edited address non-default.
+const updateAddressSchema = addressSchema.partial().extend({ isDefault: z.boolean().optional() });
 
 addressRouter.patch("/:id", requireAuth, async (req, res) => {
   const parsed = updateAddressSchema.safeParse(req.body);
