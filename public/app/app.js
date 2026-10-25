@@ -213,7 +213,7 @@ function back() {
 }
 
 /** Not open yet: the buttons stay, a tap only says it is coming (flip these when the Meta app and the auto-responder are ready). */
-const SOON = { facebookLogin: false, responder: true };
+const SOON = { facebookLogin: true, responder: true };
 
 function reset(screen) {
   stopQrLoop();
