@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { Role } from "@prisma/client";
@@ -44,7 +45,7 @@ function targetOf(data: z.infer<typeof previewSchema>): BroadcastTarget {
   return { countryId, geoUnitId, latitude, longitude, radiusKm, followers, everyone, role };
 }
 
-broadcastRouter.post("/preview", async (req, res) => {
+broadcastRouter.post("/preview", route(async (req, res) => {
   const parsed = previewSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   try {
@@ -52,9 +53,9 @@ broadcastRouter.post("/preview", async (req, res) => {
   } catch (err) {
     return fail(res, err);
   }
-});
+}));
 
-broadcastRouter.post("/", async (req, res) => {
+broadcastRouter.post("/", route(async (req, res) => {
   const parsed = sendSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { title, body, productId, discountId } = parsed.data;
@@ -64,12 +65,12 @@ broadcastRouter.post("/", async (req, res) => {
   } catch (err) {
     return fail(res, err);
   }
-});
+}));
 
 const statusSchema = z.object({ status: z.enum(["PENDING_REVIEW", "SENT", "REJECTED"]).optional() });
 
 /** What this account has sent, newest first (the admin sees everything, optionally only what waits for review). */
-broadcastRouter.get("/", async (req, res) => {
+broadcastRouter.get("/", route(async (req, res) => {
   const parsed = statusSchema.safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const admin = req.user!.role === Role.ADMIN;
@@ -81,18 +82,18 @@ broadcastRouter.get("/", async (req, res) => {
     include: admin ? { sender: { select: { fullName: true, email: true, merchantProfile: { select: { businessName: true } } } } } : undefined,
   });
   res.json(rows);
-});
+}));
 
-broadcastRouter.post("/:id/approve", requireRole(Role.ADMIN), async (req, res) => {
+broadcastRouter.post("/:id/approve", requireRole(Role.ADMIN), route(async (req, res) => {
   try {
     res.json(await approveBroadcast(req.params.id, { id: req.user!.id, role: req.user!.role }));
   } catch (err) {
     return fail(res, err);
   }
-});
+}));
 
 const rejectSchema = z.object({ reason: z.string().trim().min(3).max(300) });
-broadcastRouter.post("/:id/reject", requireRole(Role.ADMIN), async (req, res) => {
+broadcastRouter.post("/:id/reject", requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = rejectSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   try {
@@ -100,4 +101,4 @@ broadcastRouter.post("/:id/reject", requireRole(Role.ADMIN), async (req, res) =>
   } catch (err) {
     return fail(res, err);
   }
-});
+}));

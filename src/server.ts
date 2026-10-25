@@ -1,3 +1,4 @@
+import { route } from "./lib/asyncRoute";
 import "dotenv/config";
 import path from "path";
 import express, { NextFunction, Request, Response } from "express";
@@ -84,7 +85,7 @@ app.use(express.json({ verify: (req, _res, buf) => { (req as any).rawBody = buf;
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 // Our social media links that the owner switched on (the website, the Android app and the e-mails show them).
-app.get("/social-links", async (_req, res) => res.json({ links: await getVisibleSocialLinks() }));
+app.get("/social-links", route(async (_req, res) => res.json({ links: await getVisibleSocialLinks() })));
 
 // The developer test console (public/console.html) is for the owner only: the live service sets HIDE_DEV_CONSOLE=true so it exists
 // only on the testing address.
@@ -112,13 +113,13 @@ app.use((_req, res, next) => {
 
 // The main website: the app is served at the root of the domain (dalilacom.com/), and also at /app/.
 // It goes through renderSharePage so a shared link shows a proper preview card (a shop link: that shop's name and details).
-app.get(["/", "/app/"], async (req, res, next) => {
+app.get(["/", "/app/"], route(async (req, res, next) => {
   try {
     res.type("html").send(await renderSharePage(req.query.merchant));
   } catch (err) {
     next(err);
   }
-});
+}));
 // robots.txt and llms.txt come before the static files: while indexing is off (the default) every crawler is told to stay out.
 // Meta's crawler is the one exception: Facebook Login needs it to read the privacy, terms and data-deletion pages,
 // and it draws the preview card when someone shares a dalilacom.com link. It does not index anything for search.
@@ -137,25 +138,25 @@ app.get("/llms.txt", (_req, res, next) => {
 });
 
 // The list of pages for Google and other search engines (the home page and every approved shop).
-app.get("/sitemap.xml", async (_req, res, next) => {
+app.get("/sitemap.xml", route(async (_req, res, next) => {
   try {
     res.type("application/xml").send(await renderSitemap());
   } catch (err) {
     next(err);
   }
-});
+}));
 // The Android app as a file, for people whose phones cannot use Google Play (Syria). The owner uploads each version in the admin panel
 // (it lives in the database); these answer only while the link is switched on there.
-app.get("/app-download", async (_req, res) => {
+app.get("/app-download", route(async (_req, res) => {
   const info = await getAppDownloadInfo();
   res.json({ available: info.hasFile && info.visible, version: info.version ?? null, sizeBytes: info.sizeBytes ?? null, sha256: info.sha256 ?? null, uploadedAt: info.uploadedAt ?? null });
-});
+}));
 // What the app asks at start: is there a newer version, and has the owner switched the message on. Also where Google Play's page is, when the owner added it.
-app.get("/app-update", async (_req, res) => {
+app.get("/app-update", route(async (_req, res) => {
   const [update, links] = await Promise.all([getAppUpdate(), getVisibleSocialLinks()]);
   res.json({ version: update.version, notify: update.notify, playUrl: links.find((l) => l.platform === "googleplay")?.url ?? null });
-});
-app.get("/download/dalilacom.apk", async (_req, res) => {
+}));
+app.get("/download/dalilacom.apk", route(async (_req, res) => {
   const file = await getDownloadableApk();
   if (!file) return res.status(404).type("text/plain").send("Not available");
   res.set({
@@ -166,7 +167,7 @@ app.get("/download/dalilacom.apk", async (_req, res) => {
     "X-Robots-Tag": "noindex",
   });
   res.end(Buffer.from(file.data));
-});
+}));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 app.use("/auth/social", socialRouter);

@@ -66,7 +66,7 @@ const createProductSchema = productFieldsSchema
   });
 
 // Merchant: add a product to their store (section 5)
-productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = createProductSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -102,7 +102,7 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), async (req, res
   });
   const outcome = await moderateProduct(product.id); // looked at before anyone sees it
   res.status(201).json({ ...product, moderation: outcome.moderation, moderationNote: outcome.note });
-});
+}));
 
 /* ---------------- a product from a photo: upload, then let the AI suggest the words ---------------- */
 
@@ -269,7 +269,7 @@ productRouter.post("/ai-draft", requireAuth, requireRole(Role.MERCHANT), route(a
 }));
 
 // Merchant: manage their own catalog, including inactive/out-of-stock items (section 59.1)
-productRouter.get("/mine", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+productRouter.get("/mine", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) {
     return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
@@ -279,7 +279,7 @@ productRouter.get("/mine", requireAuth, requireRole(Role.MERCHANT), async (req, 
     orderBy: { createdAt: "desc" },
   });
   res.json(products);
-});
+}));
 
 // Creation defaults must not overwrite stock or member-price settings during partial updates.
 const updateProductSchema = productFieldsSchema.partial().extend({
@@ -288,7 +288,7 @@ const updateProductSchema = productFieldsSchema.partial().extend({
   isActive: z.boolean().optional(),
 });
 
-productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = updateProductSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -325,7 +325,7 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req,
   const changed = REVIEWED_FIELDS.some((f) => (f === "images" ? images !== undefined : (rest as Record<string, unknown>)[f] !== undefined));
   const outcome = changed ? await moderateProduct(product.id) : { moderation: product.moderation, note: product.moderationNote };
   res.json({ ...product, moderation: outcome.moderation, moderationNote: outcome.note });
-});
+}));
 
 const listProductsSchema = z.object({
   merchantId: z.string().uuid().optional(),
@@ -334,7 +334,7 @@ const listProductsSchema = z.object({
 });
 
 // Public: browse a merchant's storefront catalog (section 6)
-productRouter.get("/", async (req, res) => {
+productRouter.get("/", route(async (req, res) => {
   const parsed = listProductsSchema.safeParse(req.query);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -354,9 +354,9 @@ productRouter.get("/", async (req, res) => {
   const shown = products.map((p) => ({ ...p })); // copies: what is translated here is never saved
   await translateProducts(resolveLanguage(req), shown);
   res.json(shown);
-});
+}));
 
-productRouter.get("/:id", async (req, res) => {
+productRouter.get("/:id", route(async (req, res) => {
   const product = await prisma.product.findUnique({ where: { id: req.params.id }, include: { merchant: { select: { userId: true } } } });
   if (!product || !product.isActive) {
     return sendError(res, 404, "NOT_FOUND", "Product not found");
@@ -366,4 +366,4 @@ productRouter.get("/:id", async (req, res) => {
   const { merchant: _owner, ...shown } = product;
   void _owner;
   res.json(shown);
-});
+}));

@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { OrderStatus, Role } from "@prisma/client";
@@ -25,7 +26,7 @@ orderRouter.get("/payment-methods", requireAuth, (_req, res) => {
 });
 
 // Customer: their own order history across all merchants (section 6/34)
-orderRouter.get("/mine", requireAuth, async (req, res) => {
+orderRouter.get("/mine", requireAuth, route(async (req, res) => {
   const orders = await prisma.order.findMany({
     where: { userId: req.user!.id },
     include: { items: true, payment: true, merchant: { select: { id: true, businessName: true } } },
@@ -39,10 +40,10 @@ orderRouter.get("/mine", requireAuth, async (req, res) => {
   const ratedProducts = new Set(products.map((p) => p.productId));
   const ratedShops = new Set(shops.map((s) => s.merchantId));
   res.json(orders.map((o) => ({ ...o, rated: { shop: ratedShops.has(o.merchantId), products: o.items.map((i) => i.productId).filter((id) => ratedProducts.has(id)) } })));
-});
+}));
 
 // Merchant: orders placed with their store (section 45/6)
-orderRouter.get("/merchant", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+orderRouter.get("/merchant", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) {
     return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
@@ -61,7 +62,7 @@ orderRouter.get("/merchant", requireAuth, requireRole(Role.MERCHANT), async (req
   const rated = new Set(mine.map((m) => m.customerId));
   const standing = new Map(others.map((g) => [g.customerId, { rating: g._avg.stars ? Math.round(g._avg.stars * 10) / 10 : 0, ratingCount: g._count._all }]));
   res.json(orders.map((o) => ({ ...o, customerRating: standing.get(o.userId) ?? { rating: 0, ratingCount: 0 }, ratedCustomer: rated.has(o.userId) })));
-});
+}));
 
 async function loadOrderForRequester(orderId: string, userId: string) {
   const order = await prisma.order.findUnique({
@@ -75,7 +76,7 @@ async function loadOrderForRequester(orderId: string, userId: string) {
   return order;
 }
 
-orderRouter.get("/:id", requireAuth, async (req, res) => {
+orderRouter.get("/:id", requireAuth, route(async (req, res) => {
   const order = await loadOrderForRequester(req.params.id, req.user!.id);
   if (!order) {
     return sendError(res, 404, "NOT_FOUND", "Order not found");
@@ -94,7 +95,7 @@ orderRouter.get("/:id", requireAuth, async (req, res) => {
   ]);
   const customer = await prisma.user.findUnique({ where: { id: order.userId }, select: { id: true, fullName: true } });
   res.json({ ...order, customer, customerRating: { rating: standing._avg.stars ? Math.round(standing._avg.stars * 10) / 10 : 0, ratingCount: standing._count._all }, ratedCustomer: !!mine });
-});
+}));
 
 // Forward-only lifecycle (section 6); CANCELLED is reachable up until SHIPPED (section 59.6)
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -112,7 +113,7 @@ const updateStatusSchema = z.object({
 });
 
 // Merchant: move an order through its lifecycle (section 6/59.6)
-orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = updateStatusSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -158,10 +159,10 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), async 
   });
 
   res.json(updated);
-});
+}));
 
 // Customer: cancel their own order before it ships (section 59.6)
-orderRouter.post("/:id/cancel", requireAuth, async (req, res) => {
+orderRouter.post("/:id/cancel", requireAuth, route(async (req, res) => {
   const order = await prisma.order.findUnique({ where: { id: req.params.id } });
   if (!order || order.userId !== req.user!.id) {
     return sendError(res, 404, "NOT_FOUND", "Order not found");
@@ -195,10 +196,10 @@ orderRouter.post("/:id/cancel", requireAuth, async (req, res) => {
   }
 
   res.json(updated);
-});
+}));
 
 // Merchant: the cash for a pay-on-delivery order arrived (section 54: manual confirmation). Only once the order is on its way or delivered.
-orderRouter.post("/:id/payment/confirm-cash", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+orderRouter.post("/:id/payment/confirm-cash", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { payment: true } });
   if (!merchant || !order || order.merchantId !== merchant.id || !order.payment) {
@@ -215,4 +216,4 @@ orderRouter.post("/:id/payment/confirm-cash", requireAuth, requireRole(Role.MERC
     data: { status: "PAID_CASH", paidAt: new Date(), confirmedById: req.user!.id },
   });
   res.json(payment);
-});
+}));

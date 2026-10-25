@@ -118,7 +118,7 @@ async function sectionsWithCounts(visible: Prisma.ProductWhereInput) {
 }
 
 // The store's front page in one call: departments, best sellers, deals for members, newest.
-storeRouter.get("/home", async (req, res) => {
+storeRouter.get("/home", route(async (req, res) => {
   const country = await viewerCountry(req);
   const visible = await visibleFor(req.query, country);
   const market = await currencyOf(country);
@@ -151,7 +151,7 @@ storeRouter.get("/home", async (req, res) => {
   const newViews = newest.map((p) => view(p, market));
   await translateProducts(resolveLanguage(req), [...bestSellers, ...dealViews, ...newViews, ...slots.map((x) => x!.product)]); // the reader's language
   res.json({ country, currency: await currencyOf(country), sections, slots, adOffer, bestSellers, deals: dealViews, newest: newViews });
-});
+}));
 
 const listSchema = z.object({
   q: z.string().trim().max(80).optional(),
@@ -163,7 +163,7 @@ const listSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-storeRouter.get("/products", async (req, res) => {
+storeRouter.get("/products", route(async (req, res) => {
   const parsed = listSchema.safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { q, section, merchantId, deals, sort, limit, offset } = parsed.data;
@@ -187,15 +187,15 @@ storeRouter.get("/products", async (req, res) => {
   const views = items.map((p) => view(p, market));
   await translateProducts(resolveLanguage(req), views);
   res.json({ total, currency: await currencyOf(country), items: views });
-});
+}));
 
-storeRouter.get("/sections", async (req, res) => {
+storeRouter.get("/sections", route(async (req, res) => {
   // ?all=1: every section, sold in yet or not (a shop choosing where to list a product)
   if (req.query.all === "1") return res.json(STORE_SECTIONS.map((s) => ({ ...s, count: 0 })));
   res.json(await sectionsWithCounts(await visibleFor(req.query, await viewerCountry(req))));
-});
+}));
 
-storeRouter.get("/products/:id", async (req, res) => {
+storeRouter.get("/products/:id", route(async (req, res) => {
   const country = await viewerCountry(req);
   const visible = await visibleFor({}, country);
   // a product of another country's shop does not exist for this shopper
@@ -215,10 +215,10 @@ storeRouter.get("/products/:id", async (req, res) => {
   await translateProducts(resolveLanguage(req), [main, ...relatedViews]);
   await translateRecords(resolveLanguage(req), shippingViews, ["name"]);
   res.json({ ...main, currency: await currencyOf(country), shipping: shippingViews, related: relatedViews });
-});
+}));
 
 // the picture a shop sent for its small space, shown only while that ad is running
-storeRouter.get("/ad-images/:id", async (req, res) => {
+storeRouter.get("/ad-images/:id", route(async (req, res) => {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(req.params);
   if (!parsed.success) return sendError(res, 404, "NOT_FOUND", "No picture");
   const now = new Date();
@@ -227,13 +227,13 @@ storeRouter.get("/ad-images/:id", async (req, res) => {
   if (!c) return sendError(res, 404, "NOT_FOUND", "No picture");
   res.set({ "Content-Type": c.mime, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=3600", "Content-Disposition": "inline" });
   res.send(Buffer.from(c.data));
-});
+}));
 
 /* ---------------- the big rotating banners of the front page ---------------- */
 
 const bannerIdSchema = z.object({ id: z.string().uuid() });
 
-storeRouter.get("/banners", async (req, res) => {
+storeRouter.get("/banners", route(async (req, res) => {
   const country = await viewerCountry(req);
   const now = new Date();
   const [settings, rows] = await Promise.all([
@@ -261,31 +261,31 @@ storeRouter.get("/banners", async (req, res) => {
       target: { type: b.targetType, value: b.targetValue },
     })),
   });
-});
+}));
 
-storeRouter.get("/banners/:id/image", async (req, res) => {
+storeRouter.get("/banners/:id/image", route(async (req, res) => {
   const parsed = bannerIdSchema.safeParse(req.params);
   if (!parsed.success) return sendError(res, 404, "NOT_FOUND", "No picture");
   const banner = await prisma.storeBanner.findUnique({ where: { id: parsed.data.id }, select: { imageMime: true, imageData: true } });
   if (!banner?.imageData || !banner.imageMime) return sendError(res, 404, "NOT_FOUND", "No picture");
   res.set({ "Content-Type": banner.imageMime, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=86400", "Content-Disposition": "inline" });
   res.send(Buffer.from(banner.imageData));
-});
+}));
 
-storeRouter.post("/banners/:id/click", async (req, res) => {
+storeRouter.post("/banners/:id/click", route(async (req, res) => {
   const parsed = bannerIdSchema.safeParse(req.params);
   if (parsed.success) await prisma.storeBanner.updateMany({ where: { id: parsed.data.id }, data: { clicks: { increment: 1 } } });
   res.json({ ok: true });
-});
+}));
 
 /* ---------------- photos and searching by photo ---------------- */
 
 // A shop's product photos are public (the ids are random), like profile photos.
-storeRouter.get("/photos/:id", async (req, res) => {
+storeRouter.get("/photos/:id", route(async (req, res) => {
   const parsed = bannerIdSchema.safeParse(req.params);
   if (!parsed.success) return sendError(res, 404, "NOT_FOUND", "No picture");
   const photo = await prisma.productPhoto.findUnique({ where: { id: parsed.data.id }, select: { mime: true, data: true } });
   if (!photo) return sendError(res, 404, "NOT_FOUND", "No picture");
   res.set({ "Content-Type": photo.mime, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=604800, immutable", "Content-Disposition": "inline" });
   res.send(Buffer.from(photo.data));
-});
+}));

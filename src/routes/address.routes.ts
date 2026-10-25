@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { AddressLabel } from "@prisma/client";
@@ -8,14 +9,14 @@ import { InvalidGeoSelectionError, validateGeoSelection } from "../services/geo.
 
 export const addressRouter = Router();
 
-addressRouter.get("/", requireAuth, async (req, res) => {
+addressRouter.get("/", requireAuth, route(async (req, res) => {
   const addresses = await prisma.address.findMany({
     where: { userId: req.user!.id },
     include: { country: true, region: true, city: true, area: true },
     orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
   });
   res.json(addresses);
-});
+}));
 
 const addressSchema = z.object({
   countryId: z.string().uuid(),
@@ -35,7 +36,7 @@ const addressSchema = z.object({
 
 // Saved addresses (Home/Work/Other) — foundation for delivery/booking/home-services to reuse
 // later (section: Saved Addresses). Not a full address-book UI, just the correct data shape.
-addressRouter.post("/", requireAuth, async (req, res) => {
+addressRouter.post("/", requireAuth, route(async (req, res) => {
   const parsed = addressSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -54,12 +55,12 @@ addressRouter.post("/", requireAuth, async (req, res) => {
     return tx.address.create({ data: { ...parsed.data, userId } });
   });
   res.status(201).json(address);
-});
+}));
 
 // Keep the create-time default from silently making every edited address non-default.
 const updateAddressSchema = addressSchema.partial().extend({ isDefault: z.boolean().optional() });
 
-addressRouter.patch("/:id", requireAuth, async (req, res) => {
+addressRouter.patch("/:id", requireAuth, route(async (req, res) => {
   const parsed = updateAddressSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -87,11 +88,11 @@ addressRouter.patch("/:id", requireAuth, async (req, res) => {
     return tx.address.update({ where: { id: existing.id }, data: parsed.data });
   });
   res.json(address);
-});
+}));
 
-addressRouter.delete("/:id", requireAuth, async (req, res) => {
+addressRouter.delete("/:id", requireAuth, route(async (req, res) => {
   const existing = await prisma.address.findUnique({ where: { id: req.params.id } });
   if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Address not found");
   await prisma.address.delete({ where: { id: existing.id } });
   res.json({ id: existing.id });
-});
+}));

@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { prisma } from "../prisma";
 import { sendError } from "../lib/apiError";
@@ -19,7 +20,7 @@ webhookRouter.get("/meta", (req, res) => {
 });
 
 // Step 2 — deliveries. Every body is signed with the app secret; unsigned/mis-signed requests are refused.
-webhookRouter.post("/meta", async (req, res) => {
+webhookRouter.post("/meta", route(async (req, res) => {
   const secret = process.env.META_APP_SECRET;
   if (!secret) return sendError(res, 503, "SERVICE_UNAVAILABLE", "Meta app secret is not configured");
   if (!verifyMetaSignature((req as any).rawBody, req.headers["x-hub-signature-256"] as string | undefined, secret)) {
@@ -43,11 +44,11 @@ webhookRouter.post("/meta", async (req, res) => {
     }
   }
   res.status(200).json({ ok: true });
-});
+}));
 
 // Public endpoint platforms call with new customer messages. The unguessable hookToken in the path identifies
 // the connection; each driver also checks its own secret, so a leaked URL alone isn't enough.
-webhookRouter.post("/:hookToken", async (req, res) => {
+webhookRouter.post("/:hookToken", route(async (req, res) => {
   const connection = await prisma.channelConnection.findUnique({
     where: { hookToken: req.params.hookToken },
     include: { channel: true },
@@ -65,4 +66,4 @@ webhookRouter.post("/:hookToken", async (req, res) => {
 
   await handleIncoming(connection, msg);
   res.status(200).json({ ok: true });
-});
+}));

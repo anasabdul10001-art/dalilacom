@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import express, { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma";
@@ -37,9 +38,9 @@ async function profileOf(userId: string) {
   };
 }
 
-profileRouter.get("/me", requireAuth, async (req, res) => {
+profileRouter.get("/me", requireAuth, route(async (req, res) => {
   res.json(await profileOf(req.user!.id));
-});
+}));
 
 const deleteAccountSchema = z.object({ confirm: z.literal(true), password: z.string().optional() });
 
@@ -47,7 +48,7 @@ const deleteAccountSchema = z.object({ confirm: z.literal(true), password: z.str
  * "Delete my account": everything personal is removed at once (see accountDeletion.service) and every session ends. A
  * password account must repeat its password; an account that signs in through Google/Facebook has none to repeat.
  */
-profileRouter.delete("/me", requireAuth, async (req, res) => {
+profileRouter.delete("/me", requireAuth, route(async (req, res) => {
   const parsed = deleteAccountSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { passwordHash: true, socialIdentities: { select: { id: true } } } });
@@ -59,7 +60,7 @@ profileRouter.delete("/me", requireAuth, async (req, res) => {
   }
   await anonymizeAccount(req.user!.id);
   res.json({ ok: true });
-});
+}));
 
 const updateProfileSchema = z.object({
   fullName: z.string().trim().min(2).max(80).optional(),
@@ -80,7 +81,7 @@ const updateProfileSchema = z.object({
     .optional(),
 });
 
-profileRouter.patch("/me", requireAuth, async (req, res) => {
+profileRouter.patch("/me", requireAuth, route(async (req, res) => {
   const parsed = updateProfileSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { fullName, bio, language, countryCode, cityId, vatNumber, phone } = parsed.data;
@@ -101,14 +102,14 @@ profileRouter.patch("/me", requireAuth, async (req, res) => {
     },
   });
   res.json(await profileOf(req.user!.id));
-});
+}));
 
 // The photo is sent as the raw image bytes (not JSON/base64) — smaller and no parser limits to raise.
 profileRouter.put(
   "/avatar",
   requireAuth,
   express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: MAX_AVATAR_BYTES }),
-  async (req, res) => {
+  route(async (req, res) => {
     const body = req.body;
     if (!Buffer.isBuffer(body) || body.length === 0) {
       return sendError(res, 415, "UNSUPPORTED_MEDIA", "أرسل الصورة بصيغة JPEG أو PNG أو WebP");
@@ -125,7 +126,7 @@ profileRouter.put(
       prisma.user.update({ where: { id: req.user!.id }, data: { avatarUpdatedAt: now } }),
     ]);
     res.json(await profileOf(req.user!.id));
-  },
+  }),
 );
 
 // The app reports where the person is while they use the map (location allowed). Stored rounded to ~1 km — enough for a
@@ -133,7 +134,7 @@ profileRouter.put(
 const locationSchema = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), consent: z.literal(true).optional() });
 const roundCoarse = (n: number) => Math.round(n * 100) / 100;
 
-profileRouter.put("/location", requireAuth, async (req, res) => {
+profileRouter.put("/location", requireAuth, route(async (req, res) => {
   const parsed = locationSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const current = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { locationConsentAt: true } });
@@ -148,30 +149,30 @@ profileRouter.put("/location", requireAuth, async (req, res) => {
     },
   });
   res.json({ ok: true });
-});
+}));
 
 // The place the person set (rounded as stored), so the map under the switch starts where the pin was.
-profileRouter.get("/location", requireAuth, async (req, res) => {
+profileRouter.get("/location", requireAuth, route(async (req, res) => {
   const u = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { lastLatitude: true, lastLongitude: true } });
   res.json({ location: u && u.lastLatitude != null && u.lastLongitude != null ? { latitude: u.lastLatitude, longitude: u.lastLongitude } : null });
-});
+}));
 
-profileRouter.delete("/location", requireAuth, async (req, res) => {
+profileRouter.delete("/location", requireAuth, route(async (req, res) => {
   await prisma.user.update({ where: { id: req.user!.id }, data: { lastLatitude: null, lastLongitude: null, locationUpdatedAt: null, locationConsentAt: null } }); // forgetting the place also withdraws the consent
   res.json({ ok: true });
-});
+}));
 
 /* ---------------- GDPR (section 65): consent and right of access ---------------- */
 
-profileRouter.get("/consent", requireAuth, async (req, res) => {
+profileRouter.get("/consent", requireAuth, route(async (req, res) => {
   const u = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { termsAcceptedAt: true, termsVersion: true, locationConsentAt: true } });
   res.json({ currentTermsVersion: TERMS_VERSION, terms: { acceptedAt: u.termsAcceptedAt, version: u.termsVersion, upToDate: u.termsVersion === TERMS_VERSION }, location: { consentAt: u.locationConsentAt } });
-});
+}));
 
 const consentSchema = z.object({ terms: z.literal(true).optional(), location: z.boolean().optional() });
 
 // Accept the current terms (existing accounts and new versions) and/or give or withdraw consent to use the location.
-profileRouter.put("/consent", requireAuth, async (req, res) => {
+profileRouter.put("/consent", requireAuth, route(async (req, res) => {
   const parsed = consentSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { terms, location } = parsed.data;
@@ -185,25 +186,25 @@ profileRouter.put("/consent", requireAuth, async (req, res) => {
   });
   const u = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { termsAcceptedAt: true, termsVersion: true, locationConsentAt: true } });
   res.json({ terms: { acceptedAt: u.termsAcceptedAt, version: u.termsVersion }, location: { consentAt: u.locationConsentAt } });
-});
+}));
 
 // "Download my data": everything held about the person, as a JSON file.
-profileRouter.get("/export", requireAuth, async (req, res) => {
+profileRouter.get("/export", requireAuth, route(async (req, res) => {
   const data = await exportPersonalData(req.user!.id);
   res.setHeader("Content-Disposition", 'attachment; filename="dalilacom-my-data.json"');
   res.json(data);
-});
+}));
 
-profileRouter.delete("/avatar", requireAuth, async (req, res) => {
+profileRouter.delete("/avatar", requireAuth, route(async (req, res) => {
   await prisma.$transaction([
     prisma.userAvatar.deleteMany({ where: { userId: req.user!.id } }),
     prisma.user.update({ where: { id: req.user!.id }, data: { avatarUpdatedAt: null } }),
   ]);
   res.json(await profileOf(req.user!.id));
-});
+}));
 
 // Public by account id (ids are random UUIDs, and a profile photo is meant to be seen by other people).
-profileRouter.get("/avatar/:userId", async (req, res) => {
+profileRouter.get("/avatar/:userId", route(async (req, res) => {
   const avatar = await prisma.userAvatar.findUnique({ where: { userId: req.params.userId } });
   if (!avatar) return sendError(res, 404, "NOT_FOUND", "No photo");
   res.set({
@@ -213,4 +214,4 @@ profileRouter.get("/avatar/:userId", async (req, res) => {
     "Content-Disposition": "inline",
   });
   res.send(Buffer.from(avatar.data));
-});
+}));

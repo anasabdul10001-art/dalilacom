@@ -49,7 +49,7 @@ const registerMerchantSchema = z
   .refine(bothOrNeitherCoordinate, { message: "latitude and longitude must be provided together" });
 
 // A regular user turns their account into a merchant account (pending admin approval — section 63)
-merchantRouter.post("/register", requireAuth, async (req, res) => {
+merchantRouter.post("/register", requireAuth, route(async (req, res) => {
   const parsed = registerMerchantSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -93,19 +93,19 @@ merchantRouter.post("/register", requireAuth, async (req, res) => {
     approvalStatus: review.status,
     reason: review.status === "APPROVED" ? null : review.note,
   });
-});
+}));
 
 // A shop that cannot find its profession proposes one (it stays under the closest profession it chose until the admin decides).
-merchantRouter.post("/category-suggestions", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.post("/category-suggestions", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = z.object({ name: z.string().trim().min(2).max(60) }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   const row = await createSuggestion(merchant.id, req.user!.id, parsed.data.name, merchant.categoryId);
   res.status(201).json({ id: row.id, name: row.name, status: row.status });
-});
+}));
 
-merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
     where: { userId: req.user!.id },
     include: { discounts: true, _count: { select: { products: true } }, user: ownerProfileSelect },
@@ -130,7 +130,7 @@ merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), async (req, r
       product: _count.products > 0,
     },
   });
-});
+}));
 
 const updateMerchantSchema = z
   .object({
@@ -146,7 +146,7 @@ const updateMerchantSchema = z
 
 // Merchant: edit the public listing (name, category, address, pin on the map, contacts). The mirrored
 // Business/main Branch rows from the Phase 1B dual-write are kept in step in the same transaction.
-merchantRouter.patch("/me", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.patch("/me", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = updateMerchantSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
@@ -193,7 +193,7 @@ merchantRouter.patch("/me", requireAuth, requireRole(Role.MERCHANT), async (req,
     return res.json(await prisma.merchantProfile.findUnique({ where: { id: existing.id } }));
   }
   res.json(updated);
-});
+}));
 
 const pricingSchema = z.object({
   priceCurrency: z.enum(PRICE_CURRENCIES).optional(), // the money the shop writes ALL its prices in
@@ -203,7 +203,7 @@ const pricingSchema = z.object({
 
 // Merchant: the shop's pricing, set once for the whole shop (Syria prices in lira or dollars): the money its prices are
 // written in, its own dollar rate and whether shoppers see both. A new rate or money reprices every product at once.
-merchantRouter.put("/pricing", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.put("/pricing", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = pricingSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const shop = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
@@ -220,24 +220,24 @@ merchantRouter.put("/pricing", requireAuth, requireRole(Role.MERCHANT), async (r
     if (to !== from || (rate ?? null) !== shop.usdRateSyp) await reapplyShopPricing(tx, shop.id, { from, to, oldRate: shop.usdRateSyp, newRate: rate ?? null }, market);
   });
   res.json({ priceCurrency: to, usdRateSyp: rate ?? null, showBothCurrencies: both });
-});
+}));
 
 // Admin: list merchants awaiting manual review (section 14/63)
-merchantRouter.get("/pending", requireAuth, requireRole(Role.ADMIN), async (_req, res) => {
+merchantRouter.get("/pending", requireAuth, requireRole(Role.ADMIN), route(async (_req, res) => {
   const pending = await prisma.merchantProfile.findMany({
     where: { approvalStatus: "PENDING" },
     include: { user: { select: { email: true, fullName: true } } },
     orderBy: { createdAt: "asc" },
   });
   res.json(pending);
-});
+}));
 
 const listMerchantsAdminSchema = z.object({
   status: z.nativeEnum(MerchantApprovalStatus).optional(),
 });
 
 // Admin: every merchant regardless of status, for the admin dashboard (section 14)
-merchantRouter.get("/list", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+merchantRouter.get("/list", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = listMerchantsAdminSchema.safeParse(req.query);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -248,7 +248,7 @@ merchantRouter.get("/list", requireAuth, requireRole(Role.ADMIN), async (req, re
     orderBy: { createdAt: "desc" },
   });
   res.json(merchants);
-});
+}));
 
 function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -280,7 +280,7 @@ async function platformTimeZone() {
 }
 
 // Public: browse/search approved merchants (section 9/10/11 — discovery by category, name, and location)
-merchantRouter.get("/", async (req, res) => {
+merchantRouter.get("/", route(async (req, res) => {
   const parsed = searchMerchantsSchema.safeParse(req.query);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -371,10 +371,10 @@ merchantRouter.get("/", async (req, res) => {
   }
 
   res.json(merchants);
-});
+}));
 
 // Public: type-ahead for the search box — a few matching merchants and categories.
-merchantRouter.get("/suggest", async (req, res) => {
+merchantRouter.get("/suggest", route(async (req, res) => {
   const parsed = z.object({ q: z.string().trim().min(1).max(60) }).safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { q } = parsed.data;
@@ -390,12 +390,12 @@ merchantRouter.get("/suggest", async (req, res) => {
   ]);
   const localize = await categoryNameLocalizer(resolveLanguage(req));
   res.json({ merchants: merchants.map(localize), categories });
-});
+}));
 
 const hoursBodySchema = z.object({ openingHours: openingHoursSchema.nullable() });
 
 // Merchant: set (or clear, with null) their weekly opening hours.
-merchantRouter.put("/me/hours", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.put("/me/hours", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = hoursBodySchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
@@ -405,7 +405,7 @@ merchantRouter.put("/me/hours", requireAuth, requireRole(Role.MERCHANT), async (
     data: { openingHours: parsed.data.openingHours === null ? Prisma.JsonNull : parsed.data.openingHours },
   });
   res.json({ openingHours: updated.openingHours, openStatus: computeOpenStatus(updated.openingHours, await platformTimeZone()) });
-});
+}));
 
 // Public: a merchant's storefront profile (section 8)
 /* ---------------- the shop's discount system ---------------- */
@@ -440,15 +440,15 @@ const shippingSchema = z.object({
     .max(8),
 });
 
-merchantRouter.get("/shipping-methods", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.get("/shipping-methods", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   const rows = await prisma.shippingMethod.findMany({ where: { merchantId: merchant.id, isActive: true }, orderBy: { createdAt: "asc" } });
   res.json(rows.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })));
-});
+}));
 
 // The whole list at once (the form sends what it shows): the shop needs at least one method.
-merchantRouter.put("/shipping-methods", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.put("/shipping-methods", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = shippingSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const own = await ownApprovedShop(req.user!.id);
@@ -462,7 +462,7 @@ merchantRouter.put("/shipping-methods", requireAuth, requireRole(Role.MERCHANT),
     return created;
   });
   res.json(rows.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })));
-});
+}));
 
 /* ---------------- the shop's store plan: the store opens when a plan is chosen ---------------- */
 
@@ -503,14 +503,14 @@ const branchSchema = z.object({
   longitude: z.number().min(-180).max(180),
 });
 
-merchantRouter.get("/branches", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.get("/branches", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   const rows = await prisma.shopBranch.findMany({ where: { merchantId: merchant.id, isActive: true }, orderBy: { createdAt: "asc" } });
   res.json(rows.map(branchJson));
-});
+}));
 
-merchantRouter.post("/branches", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.post("/branches", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = branchSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const own = await ownApprovedShop(req.user!.id);
@@ -518,9 +518,9 @@ merchantRouter.post("/branches", requireAuth, requireRole(Role.MERCHANT), async 
   if ((await prisma.shopBranch.count({ where: { merchantId: own.merchant.id, isActive: true } })) >= MAX_BRANCHES) return sendError(res, 400, "BAD_REQUEST", "Too many branches");
   const row = await prisma.shopBranch.create({ data: { merchantId: own.merchant.id, ...parsed.data } });
   res.status(201).json(branchJson(row));
-});
+}));
 
-merchantRouter.patch("/branches/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.patch("/branches/:id", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = branchSchema.partial().safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
@@ -528,16 +528,16 @@ merchantRouter.patch("/branches/:id", requireAuth, requireRole(Role.MERCHANT), a
   const row = await prisma.shopBranch.findFirst({ where: { id: req.params.id, merchantId: merchant.id, isActive: true } });
   if (!row) return sendError(res, 404, "NOT_FOUND", "Branch not found");
   res.json(branchJson(await prisma.shopBranch.update({ where: { id: row.id }, data: parsed.data })));
-});
+}));
 
-merchantRouter.delete("/branches/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.delete("/branches/:id", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   const row = await prisma.shopBranch.findFirst({ where: { id: req.params.id, merchantId: merchant.id, isActive: true } });
   if (!row) return sendError(res, 404, "NOT_FOUND", "Branch not found");
   await prisma.shopBranch.update({ where: { id: row.id }, data: { isActive: false } });
   res.json({ ok: true });
-});
+}));
 
 /** Checks what the form chose against the shop's own data; returns the values to save or the reason it is wrong. */
 async function discountTerms(merchantId: string, input: z.infer<typeof discountSchema>) {
@@ -575,7 +575,7 @@ async function tellAdminsAboutDiscount(shopName: string, title: string, edited: 
   await Promise.all(admins.map((a) => notify({ userId: a.id, type: "SYSTEM", title: edited ? "حسم معدّل للمراجعة" : "طلب حسم جديد للمراجعة", body: `${shopName}: ${title}`, data: { kind: "DISCOUNT_REVIEW" }, email: false })));
 }
 
-merchantRouter.get("/discounts", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.get("/discounts", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   const rows = await prisma.discount.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: "desc" } });
@@ -593,9 +593,9 @@ merchantRouter.get("/discounts", requireAuth, requireRole(Role.MERCHANT), async 
       uses: u?._count._all ?? 0, customers: people.filter((p) => p.discountId === d.id).length, savedCents: u?._sum.discountAmountCents ?? 0,
     };
   }));
-});
+}));
 
-merchantRouter.get("/:id", async (req, res) => {
+merchantRouter.get("/:id", route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
     where: { id: req.params.id },
     include: { category: true, discounts: { where: liveDiscountWhere(), orderBy: { percent: "desc" } }, user: ownerProfileSelect, shippingMethods: { where: { isActive: true }, orderBy: { createdAt: "asc" } }, branches: { where: { isActive: true }, orderBy: { createdAt: "asc" } } },
@@ -621,20 +621,20 @@ merchantRouter.get("/:id", async (req, res) => {
   await translateRecords(lang, branches as unknown as Record<string, unknown>[], ["name", "city", "address"]);
   await translateRecords(lang, discounts as unknown as Record<string, unknown>[], ["title", "description"]);
   res.json(page);
-});
+}));
 
-merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+merchantRouter.post("/:id/approve", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const merchant = await prisma.merchantProfile.update({
     where: { id: req.params.id },
     data: { approvalStatus: "APPROVED", rejectionReason: null },
   });
   await adminDecidedShop(merchant.id, true, null);
   res.json({ id: merchant.id, approvalStatus: merchant.approvalStatus });
-});
+}));
 
 const rejectSchema = z.object({ reason: z.string().min(3) });
 
-merchantRouter.post("/:id/reject", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+merchantRouter.post("/:id/reject", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
   const parsed = rejectSchema.safeParse(req.body);
   if (!parsed.success) {
     return sendValidationError(res, parsed.error);
@@ -645,9 +645,9 @@ merchantRouter.post("/:id/reject", requireAuth, requireRole(Role.ADMIN), async (
   });
   await adminDecidedShop(merchant.id, false, parsed.data.reason);
   res.json({ id: merchant.id, approvalStatus: merchant.approvalStatus, rejectionReason: merchant.rejectionReason });
-});
+}));
 
-merchantRouter.post("/discounts", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.post("/discounts", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = discountSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const own = await ownApprovedShop(req.user!.id);
@@ -657,7 +657,7 @@ merchantRouter.post("/discounts", requireAuth, requireRole(Role.MERCHANT), async
   const discount = await prisma.discount.create({ data: { merchantId: own.merchant.id, ...terms.data } }); // waits for the admin
   await tellAdminsAboutDiscount(own.merchant.businessName, discount.title, false);
   res.status(201).json(discount);
-});
+}));
 
 // The default scope is for creating discounts only; a status-only change must not resubmit terms.
 const discountPatchSchema = z.object({ isActive: z.boolean().optional(), endNow: z.literal(true).optional() }).and(
@@ -665,7 +665,7 @@ const discountPatchSchema = z.object({ isActive: z.boolean().optional(), endNow:
 );
 
 // Pause, resume or end a discount at once; changing its terms sends it to the admin again.
-merchantRouter.patch("/discounts/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.patch("/discounts/:id", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = discountPatchSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const own = await ownApprovedShop(req.user!.id);
@@ -688,9 +688,9 @@ merchantRouter.patch("/discounts/:id", requireAuth, requireRole(Role.MERCHANT), 
   const updated = await prisma.discount.update({ where: { id: existing.id }, data: { ...checked.data, status: "PENDING", rejectionReason: null, ...(isActive !== undefined ? { isActive } : {}) } });
   await tellAdminsAboutDiscount(own.merchant.businessName, updated.title, true);
   res.json(updated);
-});
+}));
 
-merchantRouter.delete("/discounts/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
+merchantRouter.delete("/discounts/:id", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const own = await ownApprovedShop(req.user!.id);
   if (own.error || !own.merchant) return sendError(res, own.error?.[0] ?? 404, own.error?.[1] ?? "NOT_FOUND", own.error?.[2] ?? "Not found");
   const existing = await prisma.discount.findFirst({ where: { id: req.params.id, merchantId: own.merchant.id }, include: { _count: { select: { discountTransactions: true } } } });
@@ -699,4 +699,4 @@ merchantRouter.delete("/discounts/:id", requireAuth, requireRole(Role.MERCHANT),
   if (existing._count.discountTransactions > 0) await prisma.discount.update({ where: { id: existing.id }, data: { isActive: false } });
   else await prisma.discount.delete({ where: { id: existing.id } });
   res.json({ ok: true });
-});
+}));

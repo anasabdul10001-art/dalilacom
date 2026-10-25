@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { attachReferral, payForSignup } from "../services/referral.service";
 import { gdprStrict, TERMS_VERSION } from "../lib/consent";
 import { Router } from "express";
@@ -85,7 +86,7 @@ const registerSchema = z.object({
   acceptTerms: z.boolean().optional(), // GDPR (section 65): true = the person accepted the terms and the privacy policy
 });
 
-authRouter.post("/register", registerRateLimiter, async (req, res) => {
+authRouter.post("/register", registerRateLimiter, route(async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { email, phone, password, fullName, countryCode, cityId, referralCode, acceptTerms } = parsed.data;
@@ -122,7 +123,7 @@ authRouter.post("/register", registerRateLimiter, async (req, res) => {
   // gate login — see Phase 1A report). Existing Android/web clients depend on this behavior.
   const token = signAuthToken({ sub: user.id, role: user.role, tokenVersion: user.tokenVersion });
   return res.status(201).json({ token, user: publicUserShape(user) });
-});
+}));
 
 /* ---------------- login ---------------- */
 
@@ -131,7 +132,7 @@ const loginSchema = z.object({
   password: z.string(),
 });
 
-authRouter.post("/login", loginRateLimiter, async (req, res) => {
+authRouter.post("/login", loginRateLimiter, route(async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { email, password } = parsed.data;
@@ -156,29 +157,29 @@ authRouter.post("/login", loginRateLimiter, async (req, res) => {
   await logSecurityEvent({ userId: user.id, type: "LOGIN_SUCCESS", req });
   const token = signAuthToken({ sub: user.id, role: user.role, tokenVersion: user.tokenVersion });
   return res.json({ token, user: publicUserShape(user) });
-});
+}));
 
 /* ---------------- current user ---------------- */
 
 // The signed-in user's own profile, including whether their email is verified yet.
-authRouter.get("/me", requireAuth, async (req, res) => {
+authRouter.get("/me", requireAuth, route(async (req, res) => {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
   // emailDeliveryEnabled lets clients avoid offering "resend verification" while no mail provider is configured.
   res.json({ user: publicUserShape(user), emailDeliveryEnabled: !!process.env.SMTP_HOST });
-});
+}));
 
 /* ---------------- logout ---------------- */
 
 // Bumping tokenVersion invalidates this JWT (and every other JWT already issued to this
 // user, on every device) immediately, even though JWTs are otherwise stateless.
-authRouter.post("/logout", requireAuth, async (req, res) => {
+authRouter.post("/logout", requireAuth, route(async (req, res) => {
   await prisma.user.update({
     where: { id: req.user!.id },
     data: { tokenVersion: { increment: 1 } },
   });
   await logSecurityEvent({ userId: req.user!.id, type: "LOGOUT", req });
   res.json({ message: "Logged out" });
-});
+}));
 
 /* ---------------- email verification ---------------- */
 
@@ -205,7 +206,7 @@ async function consumeVerificationToken(rawToken: string) {
 
 const verifyEmailBodySchema = z.object({ token: z.string().min(10) });
 
-authRouter.post("/verify-email", verifyEmailRateLimiter, async (req, res) => {
+authRouter.post("/verify-email", verifyEmailRateLimiter, route(async (req, res) => {
   const parsed = verifyEmailBodySchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -213,11 +214,11 @@ authRouter.post("/verify-email", verifyEmailRateLimiter, async (req, res) => {
   if (result.outcome === "INVALID") return sendError(res, 400, "INVALID_VERIFICATION_TOKEN", "رابط التحقق غير صالح");
   if (result.outcome === "EXPIRED") return sendError(res, 400, "VERIFICATION_TOKEN_EXPIRED", "انتهت صلاحية رابط التحقق، اطلب رابطًا جديدًا");
   return res.json({ message: "تم توثيق البريد الإلكتروني بنجاح", alreadyVerified: result.outcome === "ALREADY_VERIFIED" });
-});
+}));
 
 // Convenience for clicking the raw link straight from an email client — same-origin GET, no
 // frontend build required for this phase. Never returns JSON secrets, just a small HTML page.
-authRouter.get("/verify-email", verifyEmailRateLimiter, async (req, res) => {
+authRouter.get("/verify-email", verifyEmailRateLimiter, route(async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
   const parsed = verifyEmailBodySchema.safeParse({ token });
   const result = parsed.success ? await consumeVerificationToken(parsed.data.token) : { outcome: "INVALID" as const };
@@ -231,11 +232,11 @@ authRouter.get("/verify-email", verifyEmailRateLimiter, async (req, res) => {
   res.status(result.outcome === "INVALID" ? 400 : 200).type("html").send(
     `<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><body style="font-family:sans-serif;padding:40px;text-align:center;color:#1a1a1a"><h2>دليلكم</h2><p>${messages[result.outcome]}</p></body></html>`,
   );
-});
+}));
 
 const resendSchema = z.object({ email: z.string().email() });
 
-authRouter.post("/resend-verification", resendVerificationRateLimiter, async (req, res) => {
+authRouter.post("/resend-verification", resendVerificationRateLimiter, route(async (req, res) => {
   const parsed = resendSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -248,13 +249,13 @@ authRouter.post("/resend-verification", resendVerificationRateLimiter, async (re
   }
   // Same response whether or not the account exists/needs it — no account enumeration.
   return res.json({ message: "إذا كان هذا البريد مسجّلًا وغير موثّق، أرسلنا رابط تحقق جديد" });
-});
+}));
 
 /* ---------------- password reset ---------------- */
 
 const forgotPasswordSchema = z.object({ email: z.string().email() });
 
-authRouter.post("/forgot-password", forgotPasswordRateLimiter, async (req, res) => {
+authRouter.post("/forgot-password", forgotPasswordRateLimiter, route(async (req, res) => {
   const parsed = forgotPasswordSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -270,11 +271,11 @@ authRouter.post("/forgot-password", forgotPasswordRateLimiter, async (req, res) 
   }
   // Deliberately identical response regardless of whether the email exists (section: Password Reset).
   return res.json({ message: "إذا كان هذا البريد مسجّلًا، أرسلنا رابط إعادة تعيين كلمة السر" });
-});
+}));
 
 const resetPasswordSchema = z.object({ token: z.string().min(10), newPassword: z.string().min(8) });
 
-authRouter.post("/reset-password", resetPasswordRateLimiter, async (req, res) => {
+authRouter.post("/reset-password", resetPasswordRateLimiter, route(async (req, res) => {
   const parsed = resetPasswordSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { token, newPassword } = parsed.data;
@@ -298,7 +299,7 @@ authRouter.post("/reset-password", resetPasswordRateLimiter, async (req, res) =>
   ]);
   await logSecurityEvent({ userId: record.userId, type: "PASSWORD_RESET_COMPLETED", req });
   return res.json({ message: "تم تغيير كلمة السر بنجاح، سجّل الدخول من جديد" });
-});
+}));
 
 /* ---------------- change email (signed-in) ---------------- */
 
@@ -328,7 +329,7 @@ async function sendEmailChangeMails(oldEmail: string, newEmail: string, rawToken
 }
 
 // Needs real mail delivery: without it the confirmation link would never reach the new address, so it is refused honestly.
-authRouter.post("/change-email", loginRateLimiter, requireAuth, async (req, res) => {
+authRouter.post("/change-email", loginRateLimiter, requireAuth, route(async (req, res) => {
   const parsed = changeEmailSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   if (!process.env.SMTP_HOST) {
@@ -349,11 +350,11 @@ authRouter.post("/change-email", loginRateLimiter, requireAuth, async (req, res)
   await sendEmailChangeMails(user.email, parsed.data.newEmail, raw, resolveLanguage(req));
   await logSecurityEvent({ userId: user.id, type: "EMAIL_CHANGE_REQUESTED", req });
   return res.json({ message: "أرسلنا رابط التأكيد للبريد الجديد. اضغطه ليتم التغيير." });
-});
+}));
 
 // The link in the email: a small page, as for email verification. On success the account carries the new, already-confirmed
 // address and every session ends — the person signs in again with the new email.
-authRouter.get("/confirm-email-change", verifyEmailRateLimiter, async (req, res) => {
+authRouter.get("/confirm-email-change", verifyEmailRateLimiter, route(async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
   let outcome: "CHANGED" | "EXPIRED" | "INVALID" | "TAKEN" = "INVALID";
   const record = token.length >= 10 ? await prisma.emailChangeToken.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } }) : null;
@@ -390,7 +391,7 @@ authRouter.get("/confirm-email-change", verifyEmailRateLimiter, async (req, res)
   res.status(outcome === "CHANGED" ? 200 : 400).type("html").send(
     `<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><body style="font-family:sans-serif;padding:40px;text-align:center;color:#1a1a1a"><h2>دليلكم</h2><p>${messages[outcome]}</p></body></html>`,
   );
-});
+}));
 
 /* ---------------- change password (signed-in) ---------------- */
 
@@ -398,7 +399,7 @@ const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newP
 
 // Lets a signed-in user rotate their own password without needing email delivery — the old token
 // is revoked (tokenVersion bump) and a fresh one is returned so this device stays signed in.
-authRouter.post("/change-password", loginRateLimiter, requireAuth, async (req, res) => {
+authRouter.post("/change-password", loginRateLimiter, requireAuth, route(async (req, res) => {
   const parsed = changePasswordSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -417,4 +418,4 @@ authRouter.post("/change-password", loginRateLimiter, requireAuth, async (req, r
   await logSecurityEvent({ userId: user.id, type: "PASSWORD_RESET_COMPLETED", req, metadata: { via: "change_password" } });
   const token = signAuthToken({ sub: updated.id, role: updated.role, tokenVersion: updated.tokenVersion });
   return res.json({ token, message: "تم تغيير كلمة السر" });
-});
+}));

@@ -1,3 +1,4 @@
+import { route } from "../lib/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { BranchStatus, BusinessMemberRole, BusinessStatus } from "@prisma/client";
@@ -37,7 +38,7 @@ const businessSchema = geoFieldsSchema.extend({
 
 // A user can own/work at more than one Business (section: Business Ownership) — this is the
 // go-forward creation path alongside the legacy /merchant/register, which keeps working as-is.
-businessRouter.post("/", requireAuth, async (req, res) => {
+businessRouter.post("/", requireAuth, route(async (req, res) => {
   const parsed = businessSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -58,20 +59,20 @@ businessRouter.post("/", requireAuth, async (req, res) => {
     return created;
   });
   res.status(201).json(business);
-});
+}));
 
 // Every business the caller is an active member of, across any businesses (section: multiple
 // Businesses for same User).
-businessRouter.get("/mine", requireAuth, async (req, res) => {
+businessRouter.get("/mine", requireAuth, route(async (req, res) => {
   const memberships = await prisma.businessMember.findMany({
     where: { userId: req.user!.id, status: "ACTIVE" },
     include: { business: { include: { category: true, _count: { select: { branches: true } } } } },
     orderBy: { createdAt: "desc" },
   });
   res.json(memberships.map((m) => ({ role: m.role, business: m.business })));
-});
+}));
 
-businessRouter.get("/:id", async (req, res) => {
+businessRouter.get("/:id", route(async (req, res) => {
   const business = await prisma.business.findUnique({
     where: { id: req.params.id },
     include: { category: true, branches: { where: { status: "ACTIVE" } } },
@@ -83,11 +84,11 @@ businessRouter.get("/:id", async (req, res) => {
     if (!auth) return sendError(res, 404, "NOT_FOUND", "Business not found");
   }
   res.json(business);
-});
+}));
 
 const updateBusinessSchema = businessSchema.partial();
 
-businessRouter.patch("/:id", requireAuth, async (req, res) => {
+businessRouter.patch("/:id", requireAuth, route(async (req, res) => {
   const parsed = updateBusinessSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -114,7 +115,7 @@ businessRouter.patch("/:id", requireAuth, async (req, res) => {
 
   const business = await prisma.business.update({ where: { id: existing.id }, data: parsed.data });
   res.json(business);
-});
+}));
 
 const ALLOWED_BUSINESS_TRANSITIONS: Record<BusinessStatus, BusinessStatus[]> = {
   DRAFT: ["ACTIVE", "ARCHIVED"],
@@ -126,7 +127,7 @@ const ALLOWED_BUSINESS_TRANSITIONS: Record<BusinessStatus, BusinessStatus[]> = {
 
 const statusSchema = z.object({ status: z.nativeEnum(BusinessStatus) });
 
-businessRouter.patch("/:id/status", requireAuth, async (req, res) => {
+businessRouter.patch("/:id/status", requireAuth, route(async (req, res) => {
   const parsed = statusSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -143,11 +144,11 @@ businessRouter.patch("/:id/status", requireAuth, async (req, res) => {
   }
   const business = await prisma.business.update({ where: { id: existing.id }, data: { status: parsed.data.status } });
   res.json(business);
-});
+}));
 
 /* ---------------- members ---------------- */
 
-businessRouter.get("/:id/members", requireAuth, async (req, res) => {
+businessRouter.get("/:id/members", requireAuth, route(async (req, res) => {
   try {
     await requireBusinessMember(req.params.id, req.user!.id);
   } catch (err) {
@@ -159,14 +160,14 @@ businessRouter.get("/:id/members", requireAuth, async (req, res) => {
     orderBy: { createdAt: "asc" },
   });
   res.json(members);
-});
+}));
 
 const addMemberSchema = z.object({
   userEmail: z.string().email(),
   role: z.nativeEnum(BusinessMemberRole).default("STAFF"),
 });
 
-businessRouter.post("/:id/members", requireAuth, async (req, res) => {
+businessRouter.post("/:id/members", requireAuth, route(async (req, res) => {
   const parsed = addMemberSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -190,7 +191,7 @@ businessRouter.post("/:id/members", requireAuth, async (req, res) => {
     if (err?.code === "P2002") return sendError(res, 409, "CONFLICT", "This user is already a member of this business");
     throw err;
   }
-});
+}));
 
 /* ---------------- branches ---------------- */
 
@@ -204,7 +205,7 @@ const branchSchema = geoFieldsSchema.extend({
 
 // A Business can have 0..N branches — nothing here makes a branch mandatory (section: Business
 // Without Physical Branch).
-businessRouter.post("/:id/branches", requireAuth, async (req, res) => {
+businessRouter.post("/:id/branches", requireAuth, route(async (req, res) => {
   const parsed = branchSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -225,21 +226,21 @@ businessRouter.post("/:id/branches", requireAuth, async (req, res) => {
 
   const branch = await prisma.branch.create({ data: { ...parsed.data, businessId: business.id } });
   res.status(201).json(branch);
-});
+}));
 
-businessRouter.get("/:id/branches", async (req, res) => {
+businessRouter.get("/:id/branches", route(async (req, res) => {
   const branches = await prisma.branch.findMany({
     where: { businessId: req.params.id, status: "ACTIVE" },
     orderBy: [{ isMain: "desc" }, { createdAt: "asc" }],
   });
   res.json(branches);
-});
+}));
 
 export const branchRouter = Router();
 
 const updateBranchSchema = branchSchema.partial().extend({ status: z.nativeEnum(BranchStatus).optional() });
 
-branchRouter.patch("/:id", requireAuth, async (req, res) => {
+branchRouter.patch("/:id", requireAuth, route(async (req, res) => {
   const parsed = updateBranchSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -266,4 +267,4 @@ branchRouter.patch("/:id", requireAuth, async (req, res) => {
 
   const branch = await prisma.branch.update({ where: { id: existing.id }, data: parsed.data });
   res.json(branch);
-});
+}));
