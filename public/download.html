@@ -35,8 +35,8 @@
 <body>
 <main>
 <div class="langbar">
-  <a class="back" id="backLink" href="/app/" onclick="goBack(event)"><span class="arrow" aria-hidden="true">&rarr;</span> <span id="backText">الرجوع إلى دليلكم</span></a>
-  <button type="button" id="langToggle" onclick="toggleLang()">English</button>
+  <a class="back" id="backLink" href="/app/"><span class="arrow" aria-hidden="true">&rarr;</span> <span id="backText">الرجوع إلى دليلكم</span></a>
+  <button type="button" id="langToggle">English</button>
 </div>
 
 <!-- ============ العربية ============ -->
@@ -45,7 +45,7 @@
 <p class="muted"><span id="ver-ar"></span></p>
 
 <p>لو جوجل بلاي ما بيفتح عندك (مثل سوريا)، نزّل التطبيق مباشرة من هون.</p>
-<p><a class="btn" id="btn-ar" href="/download/dalilacom.apk" onclick="askBeforeDownload(event)">تنزيل التطبيق (APK)</a></p>
+<p><a class="btn" id="btn-ar" href="/download/dalilacom.apk">تنزيل التطبيق (APK)</a></p>
 <p class="muted" id="na-ar" hidden>التحميل المباشر غير متاح حاليًا. جرّب لاحقًا أو استخدم جوجل بلاي أو الموقع.</p>
 
 <div class="box">
@@ -74,7 +74,7 @@
 <p class="muted"><span id="ver-en"></span></p>
 
 <p>If Google Play is not available where you are, download the app directly from here.</p>
-<p><a class="btn" id="btn-en" href="/download/dalilacom.apk" onclick="askBeforeDownload(event)">Download the app (APK)</a></p>
+<p><a class="btn" id="btn-en" href="/download/dalilacom.apk">Download the app (APK)</a></p>
 <p class="muted" id="na-en" hidden>The direct download is not available right now. Try later, or use Google Play or the website.</p>
 
 <div class="box">
@@ -102,12 +102,12 @@
 <dialog id="dlg-ar" dir="rtl">
   <h3>قبل ما تنزّل</h3>
   <p>رح يظهر لك تحذير من أندرويد لأنك عم تنزّل التطبيق مباشرة من موقعنا وليس من جوجل بلاي. هاد طبيعي وما في خطر. كمّل التنزيل والتثبيت وبيشتغل عادي.</p>
-  <div class="row"><button class="btn" onclick="startDownload()">فهمت، كمّل التنزيل</button><button class="btn ghost" onclick="this.closest('dialog').close()">إلغاء</button></div>
+  <div class="row"><button class="btn" type="button" data-download-continue>فهمت، كمّل التنزيل</button><button class="btn ghost" type="button" data-download-cancel>إلغاء</button></div>
 </dialog>
 <dialog id="dlg-en" dir="ltr">
   <h3>Before you download</h3>
   <p>Android will show you a warning because you are downloading the app straight from our website and not from Google Play. This is normal and safe. Continue the download and the install and it will work as usual.</p>
-  <div class="row"><button class="btn" onclick="startDownload()">Got it, continue</button><button class="btn ghost" onclick="this.closest('dialog').close()">Cancel</button></div>
+  <div class="row"><button class="btn" type="button" data-download-continue>Got it, continue</button><button class="btn ghost" type="button" data-download-cancel>Cancel</button></div>
 </dialog>
 
 <script src="/download.js"></script>
