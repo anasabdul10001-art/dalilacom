@@ -1,20 +1,17 @@
 import helmet from "helmet";
 
 /**
- * The existing hand-rolled pages (public/admin.html, public/app/, public/index.html) use inline
- * <script>/<style> blocks and dozens of onclick="..." handlers — there's no nonce/hash-based CSP
- * possible without rewriting those pages into a real frontend (explicitly out of scope for this
- * phase). So script-src/style-src keep 'unsafe-inline' as a deliberate, documented trade-off;
- * everything else (frame-ancestors, object-src, HSTS, sniffing, referrer policy) is locked down.
+ * Executable inline script blocks now live in same-origin JavaScript files, so script-src no longer
+ * needs unsafe-inline. The existing hand-built pages still contain inline event-handler attributes
+ * and styles; those remain explicitly scoped to script-src-attr and style-src until they are
+ * migrated. Other protections (frame-ancestors, object-src, HSTS, sniffing, referrer policy) stay on.
  */
 export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      // Helmet's default CSP sets script-src-attr to 'none', which would silently disable every
-      // onclick="..." handler in admin.html/app.js (a CSP3 distinction from script-src itself) —
-      // must be opened up explicitly for the same reason scriptSrc allows 'unsafe-inline'.
+      scriptSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+      // Remaining onclick/onchange attributes in the existing HTML and rendered app markup.
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
