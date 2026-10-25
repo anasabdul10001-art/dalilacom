@@ -640,7 +640,7 @@ adminRouter.post("/channels", async (req, res) => {
 });
 
 adminRouter.patch("/channels/:id", async (req, res) => {
-  const parsed = channelSchema.pick({ name: true, isEnabled: true }).partial().safeParse(req.body);
+  const parsed = channelSchema.pick({ name: true, isEnabled: true }).partial().extend({ isEnabled: z.boolean().optional() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.socialChannel.findUnique({ where: { id: req.params.id } });
   if (!existing) return sendError(res, 404, "NOT_FOUND", "Channel not found");
@@ -1061,7 +1061,12 @@ adminRouter.post("/banners", async (req, res) => {
 });
 
 adminRouter.patch("/banners/:id", async (req, res) => {
-  const parsed = bannerFields.partial().safeParse(req.body);
+  // Default banner appearance is only for creation; editing a title must retain the saved style.
+  const parsed = bannerFields.partial().extend({
+    bg: z.enum(["coral", "black", "blue", "green", "purple", "gold"]).optional(),
+    targetType: z.enum(["none", "product", "section", "shop", "deals", "url"]).optional(),
+    isActive: z.boolean().optional(),
+  }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const exists = await prisma.storeBanner.findUnique({ where: { id: req.params.id }, select: { id: true } });
   if (!exists) return sendError(res, 404, "NOT_FOUND", "البانر غير موجود");

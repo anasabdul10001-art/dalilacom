@@ -281,7 +281,12 @@ productRouter.get("/mine", requireAuth, requireRole(Role.MERCHANT), async (req, 
   res.json(products);
 });
 
-const updateProductSchema = productFieldsSchema.partial().extend({ isActive: z.boolean().optional() });
+// Creation defaults must not overwrite stock or member-price settings during partial updates.
+const updateProductSchema = productFieldsSchema.partial().extend({
+  stock: z.number().int().nonnegative().optional(),
+  memberDiscountEnabled: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+});
 
 productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), async (req, res) => {
   const parsed = updateProductSchema.safeParse(req.body);

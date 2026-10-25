@@ -7,7 +7,7 @@ data class SocialReturn(val ticket: String?, val error: String?, val pending: St
     companion object {
         fun from(intent: Intent?): SocialReturn? {
             val uri = intent?.data ?: return null
-            if (uri.scheme != "dalilacom" || uri.host != "auth" || uri.path?.startsWith("/social") != true) return null
+            if (uri.scheme != "dalilacom" || uri.host != "auth" || uri.path != "/social") return null
             return SocialReturn(ticket = uri.getQueryParameter("ticket"), error = uri.getQueryParameter("social_error"), pending = uri.getQueryParameter("social_pending"))
         }
     }

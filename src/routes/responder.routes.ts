@@ -157,7 +157,7 @@ responderRouter.get("/connections", requireAuth, async (req, res) => {
   );
 });
 
-const connectSchema = z.object({ channelId: z.string().uuid(), credentials: z.record(z.string()) });
+const connectSchema = z.object({ channelId: z.string().uuid(), credentials: z.record(z.string(), z.string()) });
 
 responderRouter.post("/connections", requireAuth, async (req, res) => {
   const parsed = connectSchema.safeParse(req.body);
@@ -260,7 +260,15 @@ responderRouter.post("/rules", requireAuth, async (req, res) => {
 });
 
 responderRouter.patch("/rules/:id", requireAuth, async (req, res) => {
-  const parsed = ruleSchema.partial().safeParse(req.body);
+  // Defaults in ruleSchema belong to creation only. Zod keeps them inside .partial(), so repeat
+  // these fields as optional here or a tiny edit would clear existing rule settings.
+  const parsed = ruleSchema.partial().extend({
+    mode: z.enum(["FIXED", "AI"]).optional(),
+    replyTemplate: z.string().max(1000).optional(),
+    aiInstructions: z.string().max(1000).optional(),
+    postIds: z.array(z.string().min(1).max(100)).max(30).optional(),
+    isActive: z.boolean().optional(),
+  }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const existing = await prisma.responderRule.findUnique({ where: { id: req.params.id } });
   if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Rule not found");

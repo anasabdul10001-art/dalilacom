@@ -134,7 +134,7 @@ function generateOrderNumber(): string {
 
 // Checkout: a cart holding products from several merchants splits into one Order per
 // merchant (section 59.5 "Sub-Orders"), each tracked and updated independently from then on.
-const checkoutSchema = z.object({ shipping: z.record(z.string().uuid()).optional(), paymentMethod: z.nativeEnum(PaymentMethod).default("COD") }); // shop id -> the chosen shipping method id
+const checkoutSchema = z.object({ shipping: z.record(z.string().uuid(), z.string()).optional(), paymentMethod: z.nativeEnum(PaymentMethod).default("COD") }); // shop id -> the chosen shipping method id
 
 cartRouter.post("/checkout", requireAuth, async (req, res) => {
   const userId = req.user!.id;

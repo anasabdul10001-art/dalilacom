@@ -12,7 +12,8 @@ import android.net.Uri
  */
 object ExternalBrowser {
     fun open(context: Context, url: String) {
-        val uri = Uri.parse(url)
+        val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return
+        if (uri.scheme !in setOf("https", "http") || uri.host.isNullOrBlank() || uri.userInfo != null) return
         val probe = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com")).addCategory(Intent.CATEGORY_BROWSABLE)
         val browser = runCatching { context.packageManager.resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName }.getOrNull()
         val intent = Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
