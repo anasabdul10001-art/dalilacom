@@ -1908,7 +1908,7 @@ async function adjustWallet() {
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 // ---- Landmarks: mosques, hospitals, parks, main streets (places without an owner's account) ----
-const lm = { kinds: [], items: {}, page: 1, editingId: null, map: null, layer: null, path: [], inited: false, importMap: null, importMarker: null, importCircle: null };
+const lm = { kinds: [], items: {}, page: 1, editingId: null, map: null, layer: null, path: [], inited: false, importMap: null, importMarker: null, importCircle: null, listRequestId: 0 };
 const LM_STATUS = { ACTIVE: ['ظاهر', 'APPROVED'], PENDING_REVIEW: ['بانتظار المراجعة', 'PENDING'], HIDDEN: ['مخفي', 'inactive'], CLAIMED: ['استلمه صاحبه', 'APPROVED'] };
 const LM_CITIES = [['دمشق', 33.5138, 36.2765], ['حلب', 36.2021, 37.1343], ['حمص', 34.7324, 36.7137], ['حماة', 35.1318, 36.7578], ['اللاذقية', 35.5317, 35.7901], ['طرطوس', 34.8890, 35.8866], ['درعا', 32.6189, 36.1021], ['إدلب', 35.9306, 36.6339], ['دير الزور', 35.3359, 40.1408], ['الحسكة', 36.5024, 40.7477], ['السويداء', 32.7090, 36.5663]];
 const LM_IMPORTABLE = ['mosque', 'church', 'hospital', 'park', 'school', 'kindergarten', 'university', 'government', 'police', 'fire_station', 'post_office', 'bus_station', 'train_station', 'airport', 'stadium', 'museum', 'historic', 'market', 'square', 'neighborhood', 'main_street'];
@@ -1948,12 +1948,17 @@ function lmTab(name) {
 
 async function lmLoad(page) {
   lm.page = page || 1;
+  const requestId = ++lm.listRequestId;
   const params = new URLSearchParams({ page: lm.page });
   const status = document.getElementById('lm-f-status').value, kind = document.getElementById('lm-f-kind').value, q = document.getElementById('lm-f-q').value.trim();
   if (status) params.set('status', status);
   if (kind) params.set('kind', kind);
   if (q) params.set('q', q);
+  document.getElementById('lm-body').innerHTML = '<tr><td colspan="6" class="muted">جاري البحث…</td></tr>';
   const r = await api('GET', '/admin/landmarks?' + params.toString());
+  // Searches can overlap (for example, pressing Enter and then the search button).
+  // Never let a slower, older response replace the results for the latest query.
+  if (requestId !== lm.listRequestId) return;
   if (!r.ok) { document.getElementById('lm-body').innerHTML = `<tr><td colspan="6" class="muted">${esc(errText(r.data, 'تعذّر التحميل'))}</td></tr>`; return; }
   const d = r.data;
   lm.items = {};
