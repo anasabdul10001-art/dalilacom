@@ -2204,6 +2204,8 @@ function tabProfile() {
       ${shareLocationOn() ? myLocationHtml() : ""}
       <button class="btn outline" style="max-width:240px" onclick="S._acct=null;go('account')">${esc(t("profile.account"))}</button>
       <div style="height:10px"></div>
+      <button class="btn outline" style="max-width:240px" onclick="go('favorites')">♥ ${esc(t("profile.favorites"))}</button>
+      <div style="height:10px"></div>
       ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>

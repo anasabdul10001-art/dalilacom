@@ -89,7 +89,7 @@ DICT.en = {
   "route.failed": "Couldn't calculate the route", "route.needLocation": "Allow location access to draw the route, or open it in Google Maps",
   "dur.min1": "1 min", "dur.min2": "2 min", "dur.min3to10": "{n} min", "dur.min": "{n} min", "dur.hm": "{h} h {m} min",
 
-  "profile.edit": "✏️ Edit my profile", "profile.myAccount": "My account",
+  "profile.edit": "✏️ Edit my profile", "profile.myAccount": "My account", "profile.favorites": "My saved places",
   "profile.merchantMode": "Business mode", "profile.registerMerchant": "Register as a business",
   "ref.become": "Ask to become a marketer", "ref.becomeSub": "Choose the kind of marketing that suits you. The administration reviews your request and lets you know.", "ref.phone": "Your phone (to reach you)", "ref.note": "Note (optional)",
   "ref.electronic": "Online marketer", "ref.electronicSub": "You share your link on the internet and social media", "ref.field": "Field marketer", "ref.fieldSub": "You visit people and shops and introduce them to Dalilacom",

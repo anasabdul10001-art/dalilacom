@@ -53,6 +53,7 @@ fun ProfileScreen(
     onOpenStore: () -> Unit = {},
     onOpenMyAds: () -> Unit = {},
     onOpenWallet: () -> Unit,
+    onOpenFavorites: () -> Unit = {},
     onOpenMarketing: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
 ) {
@@ -86,6 +87,7 @@ fun ProfileScreen(
         }
         TextButton(onClick = onEditProfile) { Text(stringResource(R.string.profile_edit)) }
         TextButton(onClick = onOpenAccount) { Text(stringResource(R.string.profile_account_settings)) }
+        OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
         Spacer(Modifier.height(24.dp))
 
         // Only nag about verifying when the server can actually deliver the email.

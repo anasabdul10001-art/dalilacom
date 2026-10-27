@@ -251,6 +251,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onOpenNotifications = { rootNavController.navigate("notifications") },
                         onOpenMyAds = { rootNavController.navigate("myAds") },
                         onOpenWallet = { rootNavController.navigate("wallet") },
+                        onOpenFavorites = { rootNavController.navigate("favorites") },
                         onOpenMarketing = { rootNavController.navigate("marketing") },
                         onOpenHistory = { rootNavController.navigate("discountHistory/mine") },
                     )

@@ -88,7 +88,7 @@ DICT.ar = {
   "route.failed": "تعذّر حساب الطريق", "route.needLocation": "فعّل صلاحية الموقع من المتصفح لنرسم لك الطريق، أو افتحه بخرائط جوجل",
   "dur.min1": "دقيقة", "dur.min2": "دقيقتان", "dur.min3to10": "{n} دقائق", "dur.min": "{n} دقيقة", "dur.hm": "{h} س {m} د",
 
-  "profile.edit": "✏️ تعديل ملفي الشخصي", "profile.myAccount": "حسابي",
+  "profile.edit": "✏️ تعديل ملفي الشخصي", "profile.myAccount": "حسابي", "profile.favorites": "أماكني المحفوظة",
   "profile.merchantMode": "وضع النشاط", "profile.registerMerchant": "سجّل كصاحب نشاط",
   "ref.become": "طلب التحويل إلى مسوّق", "ref.becomeSub": "اختر نوع التسويق اللي بيناسبك. الإدارة بتراجع طلبك وبتعلمك بالقرار.", "ref.phone": "رقم هاتفك (للتواصل)", "ref.note": "ملاحظة (اختياري)",
   "ref.electronic": "مسوّق إلكتروني", "ref.electronicSub": "بتشارك رابطك عبر الإنترنت ومواقع التواصل", "ref.field": "مسوّق ميداني", "ref.fieldSub": "بتزور الناس والمحلات وبتعرّفهم على دليلكم",
