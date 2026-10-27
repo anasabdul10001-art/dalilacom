@@ -349,8 +349,15 @@ export async function importFromOsm(input: { latitude: number; longitude: number
   const kindBySlug = new Map(kinds.map((k) => [k.slug, k]));
   const dLat = input.radiusKm / 111.32;
   const dLng = input.radiusKm / (111.32 * Math.max(0.2, Math.cos((input.latitude * Math.PI) / 180)));
-  const [s, w, n, e] = [input.latitude - dLat, input.longitude - dLng, input.latitude + dLat, input.longitude + dLng];
-  const elements = await (input.fetcher ?? callOverpass)(overpassQuery(slugs, s, w, n, e));
+  const [s, w, n, e] = [Math.max(-90, input.latitude - dLat), dLng >= 180 ? -180 : Math.max(-180, input.longitude - dLng), Math.min(90, input.latitude + dLat), dLng >= 180 ? 180 : Math.min(180, input.longitude + dLng)];
+  const fetchedElements = await (input.fetcher ?? callOverpass)(overpassQuery(slugs, s, w, n, e));
+  // Overpass searches a rectangle. Keep imported places inside the circular area shown to the admin.
+  const elements = fetchedElements.filter((el) => {
+    const lat = el.lat ?? el.center?.lat;
+    const lng = el.lon ?? el.center?.lon;
+    if (lat !== undefined && lng !== undefined) return distanceKm(input.latitude, input.longitude, lat, lng) <= input.radiusKm;
+    return (el.geometry ?? []).some((point) => distanceKm(input.latitude, input.longitude, point.lat, point.lon) <= input.radiusKm);
+  });
 
   const existing = await prisma.landmark.findMany({ where: { latitude: { gte: s, lte: n }, longitude: { gte: w, lte: e } }, select: { name: true, latitude: true, longitude: true, kindId: true, sourceRef: true } });
   const refs = new Set(existing.map((x) => x.sourceRef).filter(Boolean) as string[]);

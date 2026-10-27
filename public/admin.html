@@ -354,13 +354,14 @@
         <div class="card">
           <h3>⬇️ استيراد من OpenStreetMap</h3>
           <p class="muted">بيجيب الأماكن الموجودة حول نقطة محددة وبيحطها بقائمة <b>«بانتظار المراجعة»</b>. ما بيظهر منها شي على الخريطة قبل ما تعتمده. الأسماء بالعربي من OSM ممكن تكون ناقصة، فبتعدّلها قبل الاعتماد. الأماكن اللي موجودة عندنا مسبقًا ما بتنكرر.</p>
-          <label>اختار مدينة (أو اكتب الإحداثيات تحت)</label>
+          <label>اختار مدينة، أو اضغط على الخريطة لتحديد مركز المنطقة (وتقدر تحرك الدبوس)</label>
           <div id="lm-cities" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
           <div class="grid2">
             <div class="field"><label>خط العرض</label><input id="lm-i-lat" dir="ltr" placeholder="مثال: 33.5138"></div>
             <div class="field"><label>خط الطول</label><input id="lm-i-lng" dir="ltr" placeholder="مثال: 36.2765"></div>
-            <div class="field"><label>نصف القطر (كم، حتى 25)</label><input id="lm-i-r" dir="ltr" value="8" placeholder="مثال: 8"></div>
+            <div class="field"><label>نصف قطر المنطقة بالكيلومتر</label><input id="lm-i-r" type="number" min="0.1" step="any" dir="ltr" value="8" placeholder="مثال: 50"></div>
           </div>
+          <div id="lm-i-map" style="height:360px;border-radius:14px;margin:10px 0 16px;border:1px solid var(--line,#ddd)"></div>
           <label>الأنواع</label>
           <div id="lm-i-kinds" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px"></div>
           <button onclick="lmImport()" id="lm-i-btn">جلب الأماكن</button> <span id="lm-i-msg" class="muted"></span>

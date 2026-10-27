@@ -1908,7 +1908,7 @@ async function adjustWallet() {
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 // ---- Landmarks: mosques, hospitals, parks, main streets (places without an owner's account) ----
-const lm = { kinds: [], items: {}, page: 1, editingId: null, map: null, layer: null, path: [], inited: false };
+const lm = { kinds: [], items: {}, page: 1, editingId: null, map: null, layer: null, path: [], inited: false, importMap: null, importMarker: null, importCircle: null };
 const LM_STATUS = { ACTIVE: ['ظاهر', 'APPROVED'], PENDING_REVIEW: ['بانتظار المراجعة', 'PENDING'], HIDDEN: ['مخفي', 'inactive'], CLAIMED: ['استلمه صاحبه', 'APPROVED'] };
 const LM_CITIES = [['دمشق', 33.5138, 36.2765], ['حلب', 36.2021, 37.1343], ['حمص', 34.7324, 36.7137], ['حماة', 35.1318, 36.7578], ['اللاذقية', 35.5317, 35.7901], ['طرطوس', 34.8890, 35.8866], ['درعا', 32.6189, 36.1021], ['إدلب', 35.9306, 36.6339], ['دير الزور', 35.3359, 40.1408], ['الحسكة', 36.5024, 40.7477], ['السويداء', 32.7090, 36.5663]];
 const LM_IMPORTABLE = ['mosque', 'church', 'hospital', 'park', 'school', 'kindergarten', 'university', 'government', 'police', 'fire_station', 'post_office', 'bus_station', 'train_station', 'airport', 'stadium', 'museum', 'historic', 'market', 'square', 'neighborhood', 'main_street'];
@@ -1932,7 +1932,7 @@ async function lmLoadKinds() {
   const opts = lm.kinds.map(k => `<option value="${k.id}" data-slug="${esc(k.slug)}" data-geo="${k.geometry}">${esc(k.icon)} ${esc(k.nameAr)}</option>`).join('');
   document.getElementById('lm-kind').innerHTML = opts;
   document.getElementById('lm-f-kind').innerHTML = '<option value="">كل الأنواع</option>' + lm.kinds.map(k => `<option value="${esc(k.slug)}">${esc(k.icon)} ${esc(k.nameAr)}</option>`).join('');
-  document.getElementById('lm-i-kinds').innerHTML = lm.kinds.filter(k => LM_IMPORTABLE.includes(k.slug)).map(k => `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;font-size:14px;color:var(--text)"><input type="checkbox" class="lm-i-kind" value="${esc(k.slug)}"${['mosque', 'hospital', 'park', 'main_street'].includes(k.slug) ? ' checked' : ''}> ${esc(k.icon)} ${esc(k.nameAr)}</label>`).join('') + ` <button class="secondary small" type="button" onclick="document.querySelectorAll('.lm-i-kind').forEach(c => { c.checked = true; })">تحديد الكل</button>`;
+  document.getElementById('lm-i-kinds').innerHTML = `<div style="display:flex;gap:8px;width:100%;margin-bottom:4px"><button class="secondary small" type="button" onclick="lmImportKinds(true)">تحديد الكل</button><button class="secondary small" type="button" onclick="lmImportKinds(false)">إلغاء التحديد</button></div>` + lm.kinds.filter(k => LM_IMPORTABLE.includes(k.slug)).map(k => `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;font-size:14px;color:var(--text)"><input type="checkbox" class="lm-i-kind" value="${esc(k.slug)}"${['mosque', 'hospital', 'park', 'main_street'].includes(k.slug) ? ' checked' : ''}> ${esc(k.icon)} ${esc(k.nameAr)}</label>`).join('');
   lmRenderKinds();
 }
 
@@ -1943,6 +1943,7 @@ function lmTab(name) {
   if (name === 'claims') lmLoadClaims(1);
   if (name === 'dups') lmLoadDups();
   if (name === 'form') { if (!lm.editingId) lmResetForm(); setTimeout(lmInitMap, 50); }
+  if (name === 'import') setTimeout(lmInitImportMap, 50);
 }
 
 async function lmLoad(page) {
@@ -2144,7 +2145,69 @@ async function lmSave(force) {
 
 /* ---- import ---- */
 
-function lmPickCity(lat, lng) { document.getElementById('lm-i-lat').value = lat; document.getElementById('lm-i-lng').value = lng; }
+function lmImportKinds(checked) { document.querySelectorAll('.lm-i-kind').forEach(c => { c.checked = checked; }); }
+
+function lmImportCenter() {
+  const lat = parseFloat(document.getElementById('lm-i-lat').value), lng = parseFloat(document.getElementById('lm-i-lng').value);
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? [lat, lng] : null;
+}
+
+function lmImportRadius() {
+  const radius = parseFloat(document.getElementById('lm-i-r').value);
+  return Number.isFinite(radius) && radius > 0 ? radius : null;
+}
+
+function lmDrawImportArea(fit) {
+  if (!lm.importMap || !window.L) return;
+  const center = lmImportCenter(), radius = lmImportRadius();
+  if (!center) return;
+  if (lm.importMarker) lm.importMap.removeLayer(lm.importMarker);
+  lm.importMarker = L.marker(center, { draggable: true }).addTo(lm.importMap);
+  lm.importMarker.on('dragend', () => {
+    const p = lm.importMarker.getLatLng();
+    document.getElementById('lm-i-lat').value = p.lat.toFixed(6);
+    document.getElementById('lm-i-lng').value = p.lng.toFixed(6);
+    lmDrawImportArea(false);
+  });
+  if (lm.importCircle) lm.importMap.removeLayer(lm.importCircle);
+  if (radius) {
+    lm.importCircle = L.circle(center, { radius: radius * 1000, color: '#ba2a34', weight: 2, fillColor: '#ba2a34', fillOpacity: 0.12 }).addTo(lm.importMap);
+    if (fit) lm.importMap.fitBounds(lm.importCircle.getBounds(), { padding: [20, 20], maxZoom: 14 });
+  } else if (fit) lm.importMap.setView(center, 12);
+}
+
+function lmInitImportMap() {
+  if (!window.L) { document.getElementById('lm-i-map').textContent = 'تعذّر تحميل الخريطة'; return; }
+  let created = false;
+  if (!lm.importMap) {
+    lm.importMap = L.map('lm-i-map').setView(lmImportCenter() || [33.5138, 36.2765], 11);
+    created = true;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(lm.importMap);
+    lm.importMap.on('click', e => {
+      document.getElementById('lm-i-lat').value = e.latlng.lat.toFixed(6);
+      document.getElementById('lm-i-lng').value = e.latlng.lng.toFixed(6);
+      lmDrawImportArea(false);
+    });
+    document.getElementById('lm-i-r').addEventListener('input', () => lmDrawImportArea(true));
+    ['lm-i-lat', 'lm-i-lng'].forEach(id => document.getElementById(id).addEventListener('change', () => lmDrawImportArea(true)));
+  }
+  lm.importMap.invalidateSize();
+  if (!lmImportCenter()) {
+    document.getElementById('lm-i-lat').value = '33.5138';
+    document.getElementById('lm-i-lng').value = '36.2765';
+  }
+  if (created) lm.importMap.setView(lmImportCenter(), 11);
+  lmDrawImportArea(false);
+}
+
+function lmPickCity(lat, lng) {
+  document.getElementById('lm-i-lat').value = lat;
+  document.getElementById('lm-i-lng').value = lng;
+  if (lm.importMap) {
+    lm.importMap.setView([lat, lng], 12);
+    lmDrawImportArea(false);
+  }
+}
 
 async function lmImport() {
   const msg = document.getElementById('lm-i-msg'), btn = document.getElementById('lm-i-btn');

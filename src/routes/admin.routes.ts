@@ -152,7 +152,7 @@ adminRouter.post("/landmarks/review", route(async (req, res) => {
 adminRouter.post("/landmarks/import", route(async (req, res) => {
   const parsed = z.object({
     latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180),
-    radiusKm: z.number().min(0.5).max(25), kinds: z.array(z.string().max(30)).min(1).max(10),
+    radiusKm: z.number().positive(), kinds: z.array(z.string().max(30)).min(1),
     cityId: z.string().uuid().nullable().optional(),
   }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
