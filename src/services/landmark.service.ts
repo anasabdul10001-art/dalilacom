@@ -258,7 +258,7 @@ export async function reviewLandmarks(input: { ids?: string[]; filter?: { status
 
 /* ---------------- import from OpenStreetMap ---------------- */
 
-const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
+const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
 
 /** What each kind of point looks like in OpenStreetMap: the Overpass selectors that fetch it, and the test that says an element belongs to it. */
 interface OsmRule { selectors: string[]; match: (t: Record<string, string>) => boolean; dupKm?: number }
@@ -309,34 +309,32 @@ interface OsmElement {
 function overpassQuery(slugs: string[], s: number, w: number, n: number, e: number): string {
   const box = `(${s},${w},${n},${e})`;
   const points = slugs.flatMap((s) => (OSM_POINT_KINDS[s]?.selectors ?? []).map((sel) => `nwr${sel}${box};`));
-  const parts: string[] = ["[out:json][timeout:90];"];
+  // Keep the upstream query bounded too; the HTTP deadline below is only a safety net.
+  const parts: string[] = ["[out:json][timeout:35];"];
   if (points.length) parts.push(`(${points.join("")})->.a;.a out center tags;`);
   if (slugs.includes("main_street")) parts.push(`way["highway"~"^(motorway|trunk|primary)$"]["name"]${box}->.b;.b out geom tags;`);
   return parts.join("\n");
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/** The public Overpass servers are shared and sometimes busy (429/502/504): try each one, with a pause, a few times. */
+/** Shared map servers can stall. Try a short, bounded request at each mirror once instead of tying up an admin request for half an hour. */
 async function callOverpass(query: string): Promise<OsmElement[]> {
   let lastError = "";
-  for (let round = 0; round < 3; round++) {
-    for (const url of OVERPASS) {
-      try {
-        const ctl = new AbortController();
-        const timer = setTimeout(() => ctl.abort(), 100_000);
-        const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Dalilacom/1.0 (info@dalilacom.com)" }, body: "data=" + encodeURIComponent(query), signal: ctl.signal });
-        clearTimeout(timer);
-        if (!res.ok) { lastError = `HTTP ${res.status}`; continue; }
-        const json = (await res.json()) as { elements?: OsmElement[] };
-        return json.elements ?? [];
-      } catch (err) {
-        lastError = err instanceof Error ? err.message : String(err);
-      }
+  for (const url of OVERPASS) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 25_000);
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Dalilacom/1.0 (info@dalilacom.com)" }, body: "data=" + encodeURIComponent(query), signal: ctl.signal });
+      if (!res.ok) { lastError = `HTTP ${res.status}`; continue; }
+      // Keep the timeout active while reading the response; large 50 km results can take time to download too.
+      const json = (await res.json()) as { elements?: OsmElement[] };
+      return json.elements ?? [];
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+    } finally {
+      clearTimeout(timer);
     }
-    await sleep(6_000 * (round + 1));
   }
-  throw new LandmarkError("The map data service did not answer, try again in a minute", 502, lastError);
+  throw new LandmarkError("مصدر الخريطة تأخر أو لم يرد. لم نترك الطلب معلقًا؛ جرّب مساحة أصغر أو أعد المحاولة بعد قليل.", 502, lastError);
 }
 
 const hasArabic = (s: string) => /[؀-ۿ]/.test(s);
@@ -361,7 +359,34 @@ export async function importFromOsm(input: { latitude: number; longitude: number
 
   const existing = await prisma.landmark.findMany({ where: { latitude: { gte: s, lte: n }, longitude: { gte: w, lte: e } }, select: { name: true, latitude: true, longitude: true, kindId: true, sourceRef: true } });
   const refs = new Set(existing.map((x) => x.sourceRef).filter(Boolean) as string[]);
-  const dup = (name: string, lat: number, lng: number, kindId: string, km: number) => existing.some((x) => x.kindId === kindId && sameName(x.name, name) && distanceKm(x.latitude, x.longitude, lat, lng) <= km);
+  // Compare only nearby points of the same kind. The old scan checked every fetched place
+  // against every existing place (quadratic work), which becomes millions of comparisons
+  // when importing a large radius with all categories selected.
+  const cellKm = 2;
+  const longitudeScale = 111.32 * Math.max(0.2, Math.cos((input.latitude * Math.PI) / 180));
+  const cellFor = (lat: number, lng: number) => `${Math.floor(lat * 111.32 / cellKm)}:${Math.floor(lng * longitudeScale / cellKm)}`;
+  const nearbyByKind = new Map<string, Map<string, typeof existing>>();
+  const addNearby = (kindId: string, place: (typeof existing)[number]) => {
+    let cells = nearbyByKind.get(kindId);
+    if (!cells) { cells = new Map(); nearbyByKind.set(kindId, cells); }
+    const key = cellFor(place.latitude, place.longitude);
+    const bucket = cells.get(key) ?? [];
+    bucket.push(place);
+    cells.set(key, bucket);
+  };
+  existing.forEach((place) => addNearby(place.kindId, place));
+  const dup = (name: string, lat: number, lng: number, kindId: string, km: number) => {
+    const cells = nearbyByKind.get(kindId);
+    if (!cells) return false;
+    const [row, col] = cellFor(lat, lng).split(":").map(Number);
+    const span = Math.ceil(km / cellKm) + 1;
+    for (let y = row - span; y <= row + span; y++) for (let x = col - span; x <= col + span; x++) {
+      for (const place of cells.get(`${y}:${x}`) ?? []) {
+        if (sameName(place.name, name) && distanceKm(place.latitude, place.longitude, lat, lng) <= km) return true;
+      }
+    }
+    return false;
+  };
 
   const created: Record<string, number> = {};
   let skipped = 0;
@@ -398,6 +423,7 @@ export async function importFromOsm(input: { latitude: number; longitude: number
     if (!hasArabic(name)) withoutArabic++;
     const street = [tags["addr:street"], tags["addr:housenumber"]].filter(Boolean).join(" ");
     rows.push({ kindId: kind.id, name, nameEn: nameEn ?? null, sector, status: "PENDING_REVIEW", cityId: input.cityId ?? null, address: street || null, phone: tags.phone || tags["contact:phone"] || null, latitude: lat, longitude: lng, source: "OSM", sourceRef: ref });
+    addNearby(kind.id, { name, latitude: lat, longitude: lng, kindId: kind.id, sourceRef: ref });
     created[slug] = (created[slug] ?? 0) + 1;
   }
 
@@ -410,6 +436,7 @@ export async function importFromOsm(input: { latitude: number; longitude: number
       if (dup(st.name, mid[0], mid[1], streetKind.id, 2.5)) { skipped++; continue; }
       if (!hasArabic(st.name)) withoutArabic++;
       rows.push({ kindId: streetKind.id, name: st.name, nameEn: st.nameEn ?? null, status: "PENDING_REVIEW", cityId: input.cityId ?? null, latitude: mid[0], longitude: mid[1], path: st.segments.slice(0, 40).map((seg) => seg.filter((_, i) => i % Math.max(1, Math.ceil(seg.length / 400)) === 0)), source: "OSM" });
+      addNearby(streetKind.id, { name: st.name, latitude: mid[0], longitude: mid[1], kindId: streetKind.id, sourceRef: null });
       created.main_street = (created.main_street ?? 0) + 1;
     }
   }

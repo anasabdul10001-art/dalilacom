@@ -7,9 +7,16 @@ const state = {
 async function api(method, path, body) {
   const headers = { 'Content-Type': 'application/json' };
   if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
-  const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  const data = await res.json().catch(() => ({}));
-  return { ok: res.ok, status: res.status, data };
+  try {
+    const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(110_000) });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  } catch (error) {
+    const message = error?.name === 'TimeoutError' || error?.name === 'AbortError'
+      ? 'انتهت مهلة الاتصال. العملية أخذت وقتًا أطول من اللازم؛ جرّب مساحة أصغر.'
+      : 'تعذّر الاتصال بالخادم. تأكد من الإنترنت وحاول مرة أخرى.';
+    return { ok: false, status: 0, data: { error: { message } } };
+  }
 }
 
 function errText(d, f) { const e = d && d.error; if (!e) return f; if (typeof e === 'string') return e; const fe = Object.values((e.details && e.details.fieldErrors) || {}).flat()[0]; return fe || e.message || f; }
@@ -2226,16 +2233,21 @@ async function lmImport() {
   const names = Object.fromEntries(lm.kinds.map(k => [k.slug, k.nameAr]));
   const sum = { total: 0, skipped: 0, unnamed: 0, withoutArabic: 0, created: {} };
   let failed = '';
-  for (let i = 0; i < parts.length; i++) {
-    msg.textContent = `جاري الجلب (${i + 1} من ${parts.length})… ممكن ياخد دقيقة لكل دفعة`;
-    const r = await api('POST', '/admin/landmarks/import', { latitude, longitude, radiusKm, kinds: parts[i] });
-    if (!r.ok) { failed = `تعذّرت دفعة (${parts[i].map(k => names[k] || k).join('، ')}): ` + errText(r.data, 'تعذّر الاستيراد'); break; }
-    const d = r.data;
-    sum.total += d.total; sum.skipped += d.skipped; sum.unnamed += d.unnamed; sum.withoutArabic += d.withoutArabic;
-    Object.entries(d.created).forEach(([k, n]) => { sum.created[k] = (sum.created[k] || 0) + n; });
+  try {
+    for (let i = 0; i < parts.length; i++) {
+      msg.textContent = `جاري الجلب (${i + 1} من ${parts.length})… الطلب محدود الوقت، وقد يحتاج عدة دقائق للمساحات الكبيرة`;
+      const r = await api('POST', '/admin/landmarks/import', { latitude, longitude, radiusKm, kinds: parts[i] });
+      if (!r.ok) { failed = `تعذّرت دفعة (${parts[i].map(k => names[k] || k).join('، ')}): ` + errText(r.data, 'تعذّر الاستيراد'); break; }
+      const d = r.data;
+      sum.total += d.total; sum.skipped += d.skipped; sum.unnamed += d.unnamed; sum.withoutArabic += d.withoutArabic;
+      Object.entries(d.created).forEach(([k, n]) => { sum.created[k] = (sum.created[k] || 0) + n; });
+    }
+    msg.innerHTML = (failed ? `<span style="color:var(--danger,#b71c1c)">${esc(failed)}</span><br>` : '') + `انجلب <b>${fmt(sum.total)}</b> مكان جديد (${Object.entries(sum.created).map(([k, n]) => fmt(n) + ' ' + (names[k] || k)).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(sum.skipped)} · بدون اسم ${fmt(sum.unnamed)} · بدون اسم عربي ${fmt(sum.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
+  } catch (error) {
+    msg.textContent = `توقف الجلب بأمان. ${error?.message || 'تعذّر الاتصال؛ أعد المحاولة أو صغّر المساحة.'}`;
+  } finally {
+    btn.disabled = false;
   }
-  btn.disabled = false;
-  msg.innerHTML = (failed ? `<span style="color:var(--danger,#b71c1c)">${esc(failed)}</span><br>` : '') + `انجلب <b>${fmt(sum.total)}</b> مكان جديد (${Object.entries(sum.created).map(([k, n]) => fmt(n) + ' ' + (names[k] || k)).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(sum.skipped)} · بدون اسم ${fmt(sum.unnamed)} · بدون اسم عربي ${fmt(sum.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
 }
 
 
