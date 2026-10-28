@@ -259,6 +259,7 @@ export async function reviewLandmarks(input: { ids?: string[]; filter?: { status
 /* ---------------- import from OpenStreetMap ---------------- */
 
 const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
+const OVERPASS_CH_URL = "https://api.overpass.ch/v1/interpreter";
 
 /** What each kind of point looks like in OpenStreetMap: the Overpass selectors that fetch it, and the test that says an element belongs to it. */
 interface OsmRule { selectors: string[]; match: (t: Record<string, string>) => boolean; dupKm?: number }
@@ -306,18 +307,54 @@ interface OsmElement {
   tags?: Record<string, string>;
 }
 
-function overpassQuery(slugs: string[], s: number, w: number, n: number, e: number): string {
+function overpassQuery(slugs: string[], s: number, w: number, n: number, e: number, timeoutSeconds = 35): string {
   const box = `(${s},${w},${n},${e})`;
   const points = slugs.flatMap((s) => (OSM_POINT_KINDS[s]?.selectors ?? []).map((sel) => `nwr${sel}${box};`));
   // Keep the upstream query bounded too; the HTTP deadline below is only a safety net.
-  const parts: string[] = ["[out:json][timeout:35];"];
+  const parts: string[] = [`[out:json][timeout:${timeoutSeconds}];`];
   if (points.length) parts.push(`(${points.join("")})->.a;.a out center tags;`);
   if (slugs.includes("main_street")) parts.push(`way["highway"~"^(motorway|trunk|primary)$"]["name"]${box}->.b;.b out geom tags;`);
   return parts.join("\n");
 }
 
 /** Shared map servers can stall. Try a short, bounded request at each mirror once instead of tying up an admin request for half an hour. */
+async function callDedicatedOverpass(query: string, apiKey: string): Promise<OsmElement[]> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 58_000); // Overpass.ch's free plan allows queries up to 60 seconds.
+  try {
+    const res = await fetch(OVERPASS_CH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Dalilacom/1.0 (info@dalilacom.com)",
+        "X-API-Key": apiKey,
+      },
+      body: "data=" + encodeURIComponent(query),
+      signal: ctl.signal,
+    });
+    if (!res.ok) {
+      // Do not include the request URL or key in error text or logs.
+      const upstreamText = (await res.text()).slice(0, 500);
+      if (res.status === 401 || res.status === 403) throw new LandmarkError("مفتاح خدمة الخريطة غير صحيح أو غير مفعّل. راجع صفحة مفاتيح API في حساب Overpass.", 502, `HTTP ${res.status}`);
+      if (res.status === 429) throw new LandmarkError("وصل حساب Overpass للحد المؤقت أو الشهري. انتظر قليلًا أو راجع الاستهلاك في حسابك.", 429, upstreamText);
+      if (res.status === 503) throw new LandmarkError("خدمة الخريطة مشغولة حاليًا. انتظر قليلًا ثم أعد المحاولة.", 503, upstreamText);
+      if (res.status === 504) throw new LandmarkError("المنطقة أو الأنواع المختارة أكبر من مهلة الخطة المجانية. جرّب دائرة أصغر أو أنواعًا أقل في كل مرة.", 504, upstreamText);
+      throw new LandmarkError("لم يكتمل طلب الخريطة. أعد المحاولة بعد قليل.", 502, `HTTP ${res.status}: ${upstreamText}`);
+    }
+    const json = (await res.json()) as { elements?: OsmElement[] };
+    return json.elements ?? [];
+  } catch (err) {
+    if (err instanceof LandmarkError) throw err;
+    const details = err instanceof Error ? err.message : String(err);
+    throw new LandmarkError("تأخر مصدر الخريطة المخصص. لم نترك الطلب معلقًا؛ جرّب مساحة أصغر أو أعد المحاولة.", 504, details);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function callOverpass(query: string): Promise<OsmElement[]> {
+  const apiKey = process.env.OVERPASS_API_KEY?.trim();
+  if (apiKey) return callDedicatedOverpass(query, apiKey);
   let lastError = "";
   for (const url of OVERPASS) {
     const ctl = new AbortController();
@@ -348,7 +385,8 @@ export async function importFromOsm(input: { latitude: number; longitude: number
   const dLat = input.radiusKm / 111.32;
   const dLng = input.radiusKm / (111.32 * Math.max(0.2, Math.cos((input.latitude * Math.PI) / 180)));
   const [s, w, n, e] = [Math.max(-90, input.latitude - dLat), dLng >= 180 ? -180 : Math.max(-180, input.longitude - dLng), Math.min(90, input.latitude + dLat), dLng >= 180 ? 180 : Math.min(180, input.longitude + dLng)];
-  const fetchedElements = await (input.fetcher ?? callOverpass)(overpassQuery(slugs, s, w, n, e));
+  const configuredOverpassKey = process.env.OVERPASS_API_KEY?.trim();
+  const fetchedElements = await (input.fetcher ?? callOverpass)(overpassQuery(slugs, s, w, n, e, configuredOverpassKey ? 55 : 35));
   // Overpass searches a rectangle. Keep imported places inside the circular area shown to the admin.
   const elements = fetchedElements.filter((el) => {
     const lat = el.lat ?? el.center?.lat;

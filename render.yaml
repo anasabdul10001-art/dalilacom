@@ -133,6 +133,9 @@ services:
       # The developer test console is only for the owner: it is served on the testing address, not here.
       - key: HIDE_DEV_CONSOLE
         value: "true"
+      # Optional, server-only Overpass.ch key for reliable large landmark imports.
+      - key: OVERPASS_API_KEY
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       # Tried before Anthropic (see src/services/ai.service.ts). Leave unset to keep using Anthropic only.
