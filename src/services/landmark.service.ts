@@ -282,6 +282,22 @@ const OSM_POINT_KINDS: Record<string, OsmRule> = {
   museum: { selectors: [`["tourism"="museum"]`], match: (t) => t.tourism === "museum" },
   historic: { selectors: [`["historic"~"^(castle|fort|archaeological_site)$"]`], match: (t) => ["castle", "fort", "archaeological_site"].includes(t.historic) },
   market: { selectors: [`["amenity"="marketplace"]`], match: (t) => t.amenity === "marketplace" },
+  restaurant: { selectors: [`["amenity"~"^(restaurant|cafe|fast_food|food_court|ice_cream|bar|pub)$"]`], match: (t) => ["restaurant", "cafe", "fast_food", "food_court", "ice_cream", "bar", "pub"].includes(t.amenity) },
+  bakery: { selectors: [`["shop"="bakery"]`], match: (t) => t.shop === "bakery" },
+  pharmacy: { selectors: [`["amenity"="pharmacy"]`], match: (t) => t.amenity === "pharmacy" },
+  clinic: { selectors: [`["amenity"~"^(clinic|doctors|dentist|veterinary)$"]`, `["healthcare"~"^(clinic|doctor|dentist|physiotherapist|hospital)$"]`], match: (t) => ["clinic", "doctors", "dentist", "veterinary"].includes(t.amenity) || ["clinic", "doctor", "dentist", "physiotherapist", "hospital"].includes(t.healthcare) },
+  bank: { selectors: [`["amenity"="bank"]`], match: (t) => t.amenity === "bank" },
+  atm: { selectors: [`["amenity"="atm"]`], match: (t) => t.amenity === "atm" },
+  fuel: { selectors: [`["amenity"="fuel"]`], match: (t) => t.amenity === "fuel" },
+  bus_stop: { selectors: [`["highway"="bus_stop"]`], match: (t) => t.highway === "bus_stop" },
+  parking: { selectors: [`["amenity"="parking"]`], match: (t) => t.amenity === "parking" },
+  toilets: { selectors: [`["amenity"="toilets"]`], match: (t) => t.amenity === "toilets" },
+  drinking_water: { selectors: [`["amenity"="drinking_water"]`], match: (t) => t.amenity === "drinking_water" },
+  library: { selectors: [`["amenity"="library"]`], match: (t) => t.amenity === "library" },
+  hotel: { selectors: [`["tourism"~"^(hotel|hostel|guest_house|motel)$"]`], match: (t) => ["hotel", "hostel", "guest_house", "motel"].includes(t.tourism) },
+  attraction: { selectors: [`["tourism"~"^(attraction|viewpoint)$"]`, `["historic"~"^(monument|memorial)$"]`], match: (t) => ["attraction", "viewpoint"].includes(t.tourism) || ["monument", "memorial"].includes(t.historic) },
+  shop: { selectors: [`["shop"]`], match: (t) => !!t.shop },
+  services: { selectors: [`["office"]`, `["craft"]`], match: (t) => !!t.office || !!t.craft },
   square: { selectors: [`["place"="square"]`], match: (t) => t.place === "square" },
   neighborhood: { selectors: [`["place"~"^(suburb|neighbourhood|quarter)$"]`], match: (t) => ["suburb", "neighbourhood", "quarter"].includes(t.place), dupKm: 1 },
 };
@@ -292,7 +308,7 @@ const SECTOR_KINDS = new Set(["hospital", "school", "kindergarten", "university"
 
 /** How close the map must be before a kind is drawn: many small places (mosques, schools) wait for a closer view. */
 const ZOOM_12 = new Set(["main_street", "hospital", "park", "neighborhood", "airport", "train_station", "university"]);
-const ZOOM_14 = new Set(["mosque", "church", "school", "kindergarten", "police", "fire_station", "post_office", "market"]);
+const ZOOM_14 = new Set(["mosque", "church", "school", "kindergarten", "police", "fire_station", "post_office", "market", "restaurant", "bakery", "pharmacy", "clinic", "bank", "atm", "fuel", "bus_stop", "parking", "toilets", "drinking_water", "library", "shop", "services"]);
 export function kindMinZoom(slug: string): number {
   return ZOOM_12.has(slug) ? 12 : ZOOM_14.has(slug) ? 14 : 13;
 }

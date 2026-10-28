@@ -1918,7 +1918,7 @@ function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const lm = { kinds: [], items: {}, page: 1, editingId: null, map: null, layer: null, path: [], inited: false, importMap: null, importMarker: null, importCircle: null, listRequestId: 0 };
 const LM_STATUS = { ACTIVE: ['ظاهر', 'APPROVED'], PENDING_REVIEW: ['بانتظار المراجعة', 'PENDING'], HIDDEN: ['مخفي', 'inactive'], CLAIMED: ['استلمه صاحبه', 'APPROVED'] };
 const LM_CITIES = [['دمشق', 33.5138, 36.2765], ['حلب', 36.2021, 37.1343], ['حمص', 34.7324, 36.7137], ['حماة', 35.1318, 36.7578], ['اللاذقية', 35.5317, 35.7901], ['طرطوس', 34.8890, 35.8866], ['درعا', 32.6189, 36.1021], ['إدلب', 35.9306, 36.6339], ['دير الزور', 35.3359, 40.1408], ['الحسكة', 36.5024, 40.7477], ['السويداء', 32.7090, 36.5663]];
-const LM_IMPORTABLE = ['mosque', 'church', 'hospital', 'park', 'school', 'kindergarten', 'university', 'government', 'police', 'fire_station', 'post_office', 'bus_station', 'train_station', 'airport', 'stadium', 'museum', 'historic', 'market', 'square', 'neighborhood', 'main_street'];
+const LM_IMPORTABLE = ['mosque', 'church', 'hospital', 'park', 'school', 'kindergarten', 'university', 'government', 'police', 'fire_station', 'post_office', 'bus_station', 'train_station', 'airport', 'stadium', 'museum', 'historic', 'market', 'restaurant', 'bakery', 'pharmacy', 'clinic', 'bank', 'atm', 'fuel', 'bus_stop', 'parking', 'toilets', 'drinking_water', 'library', 'hotel', 'attraction', 'shop', 'services', 'square', 'neighborhood', 'main_street'];
 const hasArabicText = (s) => /[؀-ۿ]/.test(s || '');
 
 async function lmOpen() {
