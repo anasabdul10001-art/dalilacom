@@ -6607,6 +6607,20 @@ function tabCatalog() {
   if (c.loading) return `<h1 class="screen-title">الكتالوج</h1>${spinner()}`;
   return `
     <h1 class="screen-title">الكتالوج</h1>
+    <div class="card" style="border:2px solid var(--primary)">
+      <div class="title-line"><strong>📦 ${esc(t("catalog.myProducts", { n: (c.products || []).length }))}</strong>
+        ${c.storeClosed ? "" : `<button class="btn small" style="width:auto" onclick="go('productEdit', {productId:null})">+ ${esc(t("catalog.addProduct"))}</button>`}
+      </div>
+      <p class="muted" style="margin:4px 0 10px">${esc(t("catalog.editHint"))}</p>
+      ${(c.products || []).length === 0 ? `<div class="empty-state">ما في منتجات بعد</div>` : c.products.map((p) => `
+        <div class="card clickable" onclick="go('productEdit', {productId:'${p.id}'})">
+          <div class="title-line"><strong>${esc(p.name)}</strong><span class="badge ${p.isActive ? "success" : "neutral"}">${p.isActive ? "نشط" : "غير نشط"}</span></div>
+          ${p.moderation === "PENDING" ? `<p class="info-banner">⏳ ${esc(t("rev.pending"))}</p>` : ""}
+          ${p.moderation === "REJECTED" ? `<p class="error-banner">⚠️ ${esc(t("rev.rejected", { why: p.moderationNote || "" }))}</p>` : ""}
+          <p class="muted">${ownPriceText(p)} — مخزون: ${p.stock}</p>
+          <span class="link-btn">✏️ ${esc(t("catalog.editProduct"))}</span>
+        </div>`).join("")}
+    </div>
     <div class="row" style="margin-bottom:12px">
       <button class="btn outline" onclick="S._mprof=null;go('merchantProfile')">📍 بيانات المحل ومكانه</button>
       <button class="btn outline" onclick="S._hours=null;go('merchantHours')">🕒 ساعات العمل</button>
@@ -6650,17 +6664,6 @@ function tabCatalog() {
     ${c.storeClosed ? `<div class="card" style="border-color:var(--primary)"><strong>${esc(t("sp.closedTitle"))}</strong><p class="muted" style="margin:4px 0 10px">${esc(t("sp.closedSub"))}</p><button class="btn" onclick="openStorePlans()">🛍️ ${esc(t("sp.choose.btn"))}</button></div>` : `<button class="btn wiz-start" onclick="openProductWizard()">📷 ${esc(t("wiz.start"))}</button>`}
     ${c.storeClosed ? "" : `<p class="muted" style="margin:6px 0 0;text-align:center">${esc(t("wiz.startSub"))}</p>`}
     ${pricingCardHtml(c)}
-    <div class="title-line" style="margin:16px 0 8px">
-      <strong>المنتجات</strong>
-      ${c.storeClosed ? "" : `<button class="btn small" style="width:auto" onclick="go('productEdit', {productId:null})">+ منتج جديد</button>`}
-    </div>
-    ${(c.products || []).length === 0 ? `<div class="empty-state">ما في منتجات بعد</div>` : c.products.map((p) => `
-      <div class="card clickable" onclick="go('productEdit', {productId:'${p.id}'})">
-        <div class="title-line"><strong>${esc(p.name)}</strong><span class="badge ${p.isActive ? "success" : "neutral"}">${p.isActive ? "نشط" : "غير نشط"}</span></div>
-        ${p.moderation === "PENDING" ? `<p class="info-banner">⏳ ${esc(t("rev.pending"))}</p>` : ""}
-        ${p.moderation === "REJECTED" ? `<p class="error-banner">⚠️ ${esc(t("rev.rejected", { why: p.moderationNote || "" }))}</p>` : ""}
-        <p class="muted">${ownPriceText(p)} — مخزون: ${p.stock}</p>
-      </div>`).join("")}
     ${errorBanner()}
   `;
 }

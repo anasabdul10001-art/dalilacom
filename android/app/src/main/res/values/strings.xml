@@ -466,6 +466,9 @@
     <string name="shop_tab_all">كل المنتجات</string>
     <string name="shop_tab_offers">العروض</string>
     <string name="shop_no_offers">ما في عروض فعّالة حالياً</string>
+    <string name="catalog_my_products">منتجاتي (%1$d)</string>
+    <string name="catalog_edit_hint">اضغط على أي منتج لتعديل اسمه أو سعره أو صوره ومعلوماته.</string>
+    <string name="catalog_edit_product">اضغط للتعديل</string>
     <string name="shop_tab_about">عن المتجر</string>
     <string name="shop_all_products">كل المنتجات</string>
     <string name="shop_best_in_shop">الأكثر مبيعًا في المتجر</string>

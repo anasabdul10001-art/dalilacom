@@ -41,6 +41,19 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text(AppStrings.get(R.string.s_d766cb06), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.catalog_my_products, state.products.size), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            if (!state.storeClosed) Button(onClick = onAddProduct) { Text(AppStrings.get(R.string.s_261429f0)) }
+        }
+        Text(stringResource(R.string.catalog_edit_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 3.dp, bottom = 8.dp))
+        when {
+            state.isLoading -> CircularProgressIndicator()
+            state.products.isEmpty() -> Text(AppStrings.get(R.string.s_69bbe90d), style = MaterialTheme.typography.bodyMedium)
+            else -> state.products.forEach { product ->
+                CatalogProductRow(product, state.priceCurrency, onClick = { onProductClick(product.id) })
+            }
+        }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.material3.OutlinedButton(onClick = onOpenProfile, modifier = Modifier.weight(1f)) { Text(AppStrings.get(R.string.s_8008e7e0)) }
@@ -87,24 +100,6 @@ fun CatalogScreen(factory: ViewModelFactory, onProductClick: (String) -> Unit, o
         com.dalilacom.app.ui.common.PricingCard(state.priceCurrency, state.usdRateSyp, state.showBothCurrencies) { currency, rate, both -> viewModel.savePricing(currency, rate, both) }
 
         Spacer(Modifier.height(20.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(AppStrings.get(R.string.s_6793a69f), style = MaterialTheme.typography.titleMedium)
-            if (!state.storeClosed) Button(onClick = onAddProduct) { Text(AppStrings.get(R.string.s_261429f0)) }
-        }
-        Spacer(Modifier.height(8.dp))
-
-        when {
-            state.isLoading -> CircularProgressIndicator()
-            state.products.isEmpty() -> Text(AppStrings.get(R.string.s_69bbe90d), style = MaterialTheme.typography.bodyMedium)
-            else -> state.products.forEach { product ->
-                CatalogProductRow(product, state.priceCurrency, onClick = { onProductClick(product.id) })
-            }
-        }
-
         state.error?.let {
             Spacer(Modifier.height(8.dp))
             Text(it, color = MaterialTheme.colorScheme.error)
@@ -118,11 +113,10 @@ private fun CatalogProductRow(product: ProductDto, shopMoney: String?, onClick: 
         Column(Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(product.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    if (product.isActive) AppStrings.get(R.string.s_41b05461) else AppStrings.get(R.string.s_cbc18737),
-                    color = if (product.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(if (product.isActive) AppStrings.get(R.string.s_41b05461) else AppStrings.get(R.string.s_cbc18737), color = if (product.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.catalog_edit_product), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                }
             }
             if (product.moderation == "PENDING") Text("⏳ " + androidx.compose.ui.res.stringResource(R.string.rev_pending), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
             if (product.moderation == "REJECTED") Text("⚠️ " + androidx.compose.ui.res.stringResource(R.string.rev_rejected, product.moderationNote.orEmpty()), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
