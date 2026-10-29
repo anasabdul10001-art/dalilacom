@@ -115,7 +115,7 @@ fun LocationPicker(
     }
 
     // Frame the existing pin when the form opens, and again whenever "my location" is used.
-    LaunchedEffect(recenterTick) {
+    LaunchedEffect(recenterTick, value) {
         value?.let {
             mapView.controller.setZoom(16.0)
             mapView.controller.animateTo(GeoPoint(it.first, it.second))

@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +40,7 @@ import com.dalilacom.app.ui.common.isOnlineCategory
 import androidx.compose.ui.res.stringResource
 import com.dalilacom.app.ui.common.LocationPicker
 import com.dalilacom.app.data.network.CategoryHitDto
+import com.dalilacom.app.data.network.AddressSuggestionDto
 import kotlinx.coroutines.delay
 
 @Composable
@@ -48,6 +50,7 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
 
     var businessName by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    var addressSuggestions by remember { mutableStateOf<List<AddressSuggestionDto>>(emptyList()) }
     var phone by remember { mutableStateOf("") }
     var whatsapp by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
@@ -61,6 +64,13 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
     val addressNeeded = stringResource(R.string.addr_need)
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val online = isOnlineCategory(state.categories, selectedCategoryId)
+
+    LaunchedEffect(address, autoAddress) {
+        val query = address.trim()
+        if (query.length < 3 || query == autoAddress) { addressSuggestions = emptyList(); return@LaunchedEffect }
+        delay(500)
+        addressSuggestions = viewModel.searchAddresses(query)
+    }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val shopApproved = stringResource(R.string.shop_approved)
@@ -163,6 +173,26 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
             placeholder = { Hint(stringResource(R.string.mp_address_ph)) },
             modifier = Modifier.fillMaxWidth(),
         )
+        if (addressSuggestions.isNotEmpty()) {
+            Card(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                Column(Modifier.padding(4.dp)) {
+                    addressSuggestions.forEach { item ->
+                        TextButton(onClick = {
+                            address = item.address.ifBlank { item.label }
+                            autoAddress = address
+                            addressSuggestions = emptyList()
+                            location = item.latitude to item.longitude
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.fillMaxWidth()) {
+                                Text(item.label, style = MaterialTheme.typography.bodyMedium)
+                                item.city?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            }
+                        }
+                    }
+                    Text("© OpenStreetMap contributors", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                }
+            }
+        }
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.mp_sec_map), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(6.dp))

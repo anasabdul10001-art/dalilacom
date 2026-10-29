@@ -40,6 +40,7 @@ import com.dalilacom.app.R
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.data.network.BranchDto
 import com.dalilacom.app.data.network.BranchRequest
+import com.dalilacom.app.data.network.AddressSuggestionDto
 import com.dalilacom.app.ui.common.LocationPicker
 import kotlinx.coroutines.launch
 
@@ -54,6 +55,7 @@ fun BranchesScreen(container: AppContainer, onBack: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var city by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    var addressSuggestions by remember { mutableStateOf<List<AddressSuggestionDto>>(emptyList()) }
     var phone by remember { mutableStateOf("") }
     var location by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -70,9 +72,16 @@ fun BranchesScreen(container: AppContainer, onBack: () -> Unit) {
     }
     LaunchedEffect(Unit) { reload(); loading = false }
 
+    LaunchedEffect(address, autoAddress) {
+        val query = address.trim()
+        if (query.length < 3 || query == autoAddress) { addressSuggestions = emptyList(); return@LaunchedEffect }
+        kotlinx.coroutines.delay(500)
+        addressSuggestions = container.discoverRepository.suggestAddresses(query)
+    }
+
     fun open(b: BranchDto?) {
         editId = b?.id; name = b?.name.orEmpty(); city = b?.city.orEmpty(); address = b?.address.orEmpty(); phone = b?.phone.orEmpty()
-        location = b?.let { it.latitude to it.longitude }; error = null; editing = true
+        location = b?.let { it.latitude to it.longitude }; autoAddress = b?.address.orEmpty(); autoCity = b?.city.orEmpty(); addressSuggestions = emptyList(); error = null; editing = true
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -107,6 +116,27 @@ fun BranchesScreen(container: AppContainer, onBack: () -> Unit) {
             OutlinedTextField(value = city, onValueChange = { city = it.take(60) }, label = { Text(stringResource(R.string.br_city)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_city)) })
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(value = address, onValueChange = { address = it.take(200) }, label = { Text(stringResource(R.string.br_address)) }, placeholder = { Hint(stringResource(R.string.mp_address_ph)) }, modifier = Modifier.fillMaxWidth())
+            if (addressSuggestions.isNotEmpty()) {
+                Card(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                    Column(Modifier.padding(4.dp)) {
+                        addressSuggestions.forEach { item ->
+                            TextButton(onClick = {
+                                address = item.address.ifBlank { item.label }
+                                autoAddress = address
+                                if (item.city != null) { city = item.city; autoCity = item.city }
+                                addressSuggestions = emptyList()
+                                location = item.latitude to item.longitude
+                            }, modifier = Modifier.fillMaxWidth()) {
+                                Column(Modifier.fillMaxWidth()) {
+                                    Text(item.label, style = MaterialTheme.typography.bodyMedium)
+                                    item.city?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                }
+                            }
+                        }
+                        Text("© OpenStreetMap contributors", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                    }
+                }
+            }
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.br_pick), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LocationPicker(value = location, onChange = { picked ->

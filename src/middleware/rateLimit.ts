@@ -23,6 +23,7 @@ function makeLimiter(name: string, defaultMax: number, defaultWindowMinutes: num
 }
 
 export const reverseGeocodeRateLimiter = makeLimiter("GEO_REVERSE", 60, 1);
+export const addressSuggestRateLimiter = makeLimiter("GEO_SUGGEST", 30, 1);
 export const loginRateLimiter = makeLimiter("AUTH_LOGIN", 10, 15);
 export const socialLoginRateLimiter = makeLimiter("AUTH_SOCIAL", 40, 15);
 export const registerRateLimiter = makeLimiter("AUTH_REGISTER", 10, 60);

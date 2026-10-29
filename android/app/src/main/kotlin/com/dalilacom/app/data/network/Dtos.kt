@@ -330,6 +330,16 @@ data class MerchantDto(
     val branchName: String? = null,
     val branchCount: Int = 0,
     val branches: List<BranchDto> = emptyList(),
+    val locations: List<MerchantMapLocationDto> = emptyList(),
+)
+
+@Serializable
+data class MerchantMapLocationDto(
+    val id: String,
+    val branchName: String? = null,
+    val address: String? = null,
+    val latitude: Double,
+    val longitude: Double,
 )
 
 /** Another place of the same shop, maybe in another city. */
@@ -1049,6 +1059,16 @@ data class AddProductCategoryResponse(val id: String, val created: Boolean = tru
 /** A pinned place in words: the street, area and city, ready for the address field. */
 @Serializable
 data class PlaceInWordsDto(val address: String? = null, val city: String? = null)
+
+@Serializable
+data class AddressSuggestionDto(
+    val id: String,
+    val label: String,
+    val address: String,
+    val city: String? = null,
+    val latitude: Double,
+    val longitude: Double,
+)
 
 /** Whether the shop's store is open: it opens when a plan is chosen (while the owner has set store plans). */
 @Serializable

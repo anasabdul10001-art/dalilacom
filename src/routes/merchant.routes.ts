@@ -349,6 +349,10 @@ merchantRouter.get("/", route(async (req, res) => {
         branchId: best?.branchId ?? null,
         branchName: best?.branchName ?? null,
         branchCount: branches.length,
+        // A shop is still one result in lists, but the map needs a pin for every physical location.
+        locations: places
+          .filter((place) => radiusKm === undefined || lat === undefined || lng === undefined || haversineDistanceKm(lat, lng, place.latitude, place.longitude) <= radiusKm)
+          .map((place) => ({ id: place.branchId ?? "main", branchName: place.branchName, address: place.address, latitude: place.latitude, longitude: place.longitude })),
         openStatus: computeOpenStatus(m.openingHours, tz, now),
       }),
     ];

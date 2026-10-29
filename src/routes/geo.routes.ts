@@ -5,8 +5,9 @@ import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { currencyOf, viewerCountry } from "../services/viewerCountry.service";
-import { reverseGeocodeRateLimiter } from "../middleware/rateLimit";
+import { addressSuggestRateLimiter, reverseGeocodeRateLimiter } from "../middleware/rateLimit";
 import { reverseGeocode } from "../services/reverseGeocode.service";
+import { suggestAddresses } from "../services/addressSuggest.service";
 import { resolveLanguage } from "../lib/languages";
 import { route } from "../lib/asyncRoute";
 
@@ -67,6 +68,13 @@ geoRouter.get("/reverse", reverseGeocodeRateLimiter, route(async (req, res) => {
   const parsed = z.object({ lat: z.coerce.number().min(-90).max(90), lng: z.coerce.number().min(-180).max(180) }).safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await reverseGeocode(parsed.data.lat, parsed.data.lng, resolveLanguage(req)));
+}));
+
+// Search-as-you-type address lookup. Photon supports autocomplete; the public Nominatim API does not.
+geoRouter.get("/suggest", addressSuggestRateLimiter, route(async (req, res) => {
+  const parsed = z.object({ q: z.string().trim().min(3).max(120) }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await suggestAddresses(parsed.data.q));
 }));
 
 // Public browse — e.g. "cities in Syria" (countryId + level=CITY) or "children of this region"

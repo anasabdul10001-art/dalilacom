@@ -341,7 +341,16 @@ fun MerchantsMap(
         block()
     }
 
-    val located = merchants.filter { it.latitude != null && it.longitude != null }
+    val located = merchants.flatMap { merchant ->
+        if (merchant.locations.isNotEmpty()) merchant.locations.map { place ->
+            merchant.copy(
+                latitude = place.latitude,
+                longitude = place.longitude,
+                branchName = place.branchName ?: merchant.branchName,
+                address = place.address ?: merchant.address,
+            )
+        } else if (merchant.latitude != null && merchant.longitude != null) listOf(merchant) else emptyList()
+    }
     val latestMerchants by rememberUpdatedState(located)
     val latestSelected by rememberUpdatedState(selectedId)
     val latestUser by rememberUpdatedState(userLocation)

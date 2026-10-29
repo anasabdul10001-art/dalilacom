@@ -24,6 +24,10 @@ class DiscoverRepository(private val api: ApiService) {
     suspend fun addressFor(lat: Double, lng: Double): com.dalilacom.app.data.network.PlaceInWordsDto? =
         safeApiCall { api.reverseGeocode(lat, lng) }?.takeIf { it.isSuccessful }?.body()?.takeIf { !it.address.isNullOrBlank() }
 
+    /** Places and street names matching the text typed into a shop address field. */
+    suspend fun suggestAddresses(query: String): List<com.dalilacom.app.data.network.AddressSuggestionDto> =
+        safeApiCall { api.suggestAddresses(query) }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
     suspend fun getCategories(): List<CategoryDto> {
         val response = safeApiCall { api.getCategories() } ?: return emptyList()
         return response.body().orEmpty().takeIf { response.isSuccessful } ?: emptyList()

@@ -1594,6 +1594,13 @@ function moveMap(fn) {
   fn();
 }
 
+function merchantMapPoints(merchant) {
+  const points = Array.isArray(merchant.locations) && merchant.locations.length
+    ? merchant.locations
+    : [{ id: merchant.branchId || "main", branchName: merchant.branchName, address: merchant.address, latitude: merchant.latitude, longitude: merchant.longitude }];
+  return points.filter((p) => p.latitude != null && p.longitude != null).map((p) => ({ ...merchant, ...p, _mapPlaceId: p.id || "main" }));
+}
+
 /* ---- public places on the map: mosques, schools, hospitals, parks, streets... (they belong to nobody's account) ---- */
 
 const LM = { on: true, items: [], timer: null, drawn: "" };
@@ -1889,7 +1896,7 @@ function syncRadiusLayer() {
     moveMap(() => map.fitBounds(S._radiusLayer.getBounds(), pad));
   } else if (d.userLoc) {
     // "Any distance": frame the user together with every place on the map.
-    const pts = (S._visible || []).filter((m) => m.latitude != null && m.longitude != null).map((m) => [m.latitude, m.longitude]);
+    const pts = (S._visible || []).flatMap(merchantMapPoints).map((m) => [m.latitude, m.longitude]);
     pts.push([d.userLoc.lat, d.userLoc.lng]);
     moveMap(() => map.fitBounds(L.latLngBounds(pts), { ...pad, maxZoom: 15 }));
   }
@@ -1898,7 +1905,7 @@ function syncRadiusLayer() {
 function syncMapMarkers() {
   const d = S._discover;
   const map = S._map;
-  const located = (S._visible || []).filter((m) => m.latitude != null && m.longitude != null);
+  const located = (S._visible || []).flatMap(merchantMapPoints);
 
   syncRouteLayer();
   syncRadiusLayer();
@@ -1907,7 +1914,7 @@ function syncMapMarkers() {
     L.circleMarker([d.userLoc.lat, d.userLoc.lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#1e6fe0", fillOpacity: 1 }).addTo(S._userLayer).bindPopup("موقعك");
   }
 
-  const key = located.map((m) => m.id).join(",") + "|" + (d.selectedId || "");
+  const key = located.map((m) => `${m.id}:${m._mapPlaceId}`).join(",") + "|" + (d.selectedId || "");
   if (key !== S._mapKey) {
     S._mapKey = key;
     S._cluster.clearLayers();
@@ -1927,7 +1934,7 @@ function syncMapMarkers() {
         iconSize: [size, size],
         iconAnchor: [size / 2, size],
       });
-      L.marker([m.latitude, m.longitude], { icon, zIndexOffset: selected ? 1000 : 0 }).on("click", () => selectMerchant(m.id)).addTo(S._cluster);
+      L.marker([m.latitude, m.longitude], { icon, zIndexOffset: selected ? 1000 : 0, title: [m.businessName, m.branchName || m.address].filter(Boolean).join(" — ") }).on("click", () => selectMerchant(m.id)).addTo(S._cluster);
     });
     // Nothing known about the user yet: frame the merchants instead of showing an empty map.
     if (!d.userLoc && located.length && !S._fitted) {
@@ -4240,7 +4247,7 @@ function screenMerchantRegister() {
     ${mrGuessHtml(m)}
     ${categoryPickerHtml(m.categories, m.selectedCat, "selectMerchCategory")}
     <div class="section-title">${esc(t("mp.secContact"))}</div>
-    <div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" /></div>
+    <div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" oninput="addressTyped('mr',this.value)" /><div id="addr-suggest-mr">${addressSuggestionHtml("mr")}</div></div>
     ${catIsOnline(m.categories, m.selectedCat) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     <div class="row">
       <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="+963 9xx xxx xxx" value="${esc(m.phone || "")}" /></div>
@@ -4411,6 +4418,12 @@ function fillAddressFromPin(lat, lng) {
     if (el) {
       el.value = data.address;
       S._autoAddr = data.address;
+      const owner = qs("mr-address") ? "mr" : qs("mp-address") ? "mp" : "br";
+      if (S._addressSuggestTimers) clearTimeout(S._addressSuggestTimers[owner]);
+      if (S._addressSuggestSeq) S._addressSuggestSeq[owner] = (S._addressSuggestSeq[owner] || 0) + 1;
+      if (S._addressSuggestions) S._addressSuggestions[owner] = [];
+      const suggestBox = document.getElementById(`addr-suggest-${owner}`);
+      if (suggestBox) suggestBox.innerHTML = "";
       if (S._merchReg && qs("mr-address")) S._merchReg.address = data.address;
       if (S._mprof && qs("mp-address")) S._mprof.address = data.address;
       if (S._br && S._br.form && qs("br-address")) S._br.form.address = data.address;
@@ -4422,6 +4435,61 @@ function fillAddressFromPin(lat, lng) {
       if (S._br && S._br.form) S._br.form.city = data.city;
     }
   }, 700);
+}
+
+/* Address autocomplete for merchant signup, profile and every shop branch. */
+function addressSuggestionHtml(owner) {
+  const rows = S._addressSuggestions && S._addressSuggestions[owner];
+  if (!rows || !rows.length) return "";
+  return `<div class="address-suggest">${rows.map((x, i) => `<button type="button" onclick="pickAddressSuggestion('${owner}',${i})"><strong>${esc(x.label)}</strong>${x.city ? `<small>${esc(x.city)}</small>` : ""}</button>`).join("")}<small class="address-suggest-credit">اقتراحات العناوين من © OpenStreetMap contributors</small></div>`;
+}
+
+function addressTyped(owner, value) {
+  if (!S._addressSuggestions) S._addressSuggestions = {};
+  if (!S._addressSuggestSeq) S._addressSuggestSeq = {};
+  if (!S._addressSuggestTimers) S._addressSuggestTimers = {};
+  const draft = owner === "mr" ? S._merchReg : owner === "mp" ? S._mprof : owner === "br" ? S._br?.form : null;
+  if (draft) draft.address = value;
+  clearTimeout(S._addressSuggestTimers[owner]);
+  S._addressSuggestSeq[owner] = (S._addressSuggestSeq[owner] || 0) + 1;
+  S._addressSuggestions[owner] = [];
+  const box = document.getElementById(`addr-suggest-${owner}`);
+  if (box) box.innerHTML = "";
+  const query = value.trim();
+  if (query.length < 3) return;
+  S._addressSuggestTimers[owner] = setTimeout(async () => {
+    const seq = S._addressSuggestSeq[owner];
+    const { ok, data } = await api("GET", "/geo/suggest?q=" + encodeURIComponent(query));
+    if (S._addressSuggestSeq[owner] !== seq) return;
+    S._addressSuggestions[owner] = ok && Array.isArray(data) ? data : [];
+    const target = document.getElementById(`addr-suggest-${owner}`);
+    if (target) target.innerHTML = addressSuggestionHtml(owner);
+  }, 500);
+}
+
+function pickAddressSuggestion(owner, index) {
+  const item = S._addressSuggestions?.[owner]?.[index];
+  if (!item) return;
+  const inputId = owner === "mr" ? "mr-address" : owner === "mp" ? "mp-address" : "br-address";
+  const input = document.getElementById(inputId);
+  const value = item.address || item.label;
+  if (input) input.value = value;
+  if (owner === "mr" && S._merchReg) S._merchReg.address = value;
+  if (owner === "mp" && S._mprof) S._mprof.address = value;
+  if (owner === "br" && S._br?.form) {
+    S._br.form.address = value;
+    if (item.city) {
+      S._br.form.city = item.city;
+      const cityInput = document.getElementById("br-city");
+      if (cityInput) cityInput.value = item.city;
+    }
+  }
+  S._addressSuggestions[owner] = [];
+  S._addressSuggestSeq[owner] = (S._addressSuggestSeq[owner] || 0) + 1;
+  S._autoAddr = value;
+  const box = document.getElementById(`addr-suggest-${owner}`);
+  if (box) box.innerHTML = "";
+  pickSet(item.latitude, item.longitude, true);
 }
 
 function pickUseMyLocation() {
@@ -4450,7 +4518,7 @@ function screenMerchantProfile() {
     ${m.suggestion && m.suggestion.status === "REJECTED" ? `<div class="error-banner">${esc(t("cat.sugRejected", { name: m.suggestion.name }))}${m.suggestion.note ? " — " + esc(m.suggestion.note) : ""}</div>` : ""}
     ${categoryPickerHtml(m.categories || [], m.categoryId, "mprofCategory", "sendCategorySuggestion()")}
     <div class="section-title">${esc(t("mp.secContact"))}</div>
-    <div class="field"><label>${esc(t("mp.address"))}</label><input id="mp-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" /></div>
+    <div class="field"><label>${esc(t("mp.address"))}</label><input id="mp-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" oninput="addressTyped('mp',this.value)" /><div id="addr-suggest-mp">${addressSuggestionHtml("mp")}</div></div>
     ${catIsOnline(m.categories || [], m.categoryId) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
     <div class="row">
       <div class="field"><label>الهاتف</label><input id="mp-phone" placeholder="+963 9xx xxx xxx" value="${esc(m.phone || "")}" /></div>
@@ -5824,6 +5892,8 @@ async function openBranches() {
 }
 
 function branchForm(b) {
+  if (S._addressSuggestions) S._addressSuggestions.br = [];
+  if (S._addressSuggestSeq) S._addressSuggestSeq.br = (S._addressSuggestSeq.br || 0) + 1;
   S._br.form = { id: b ? b.id : null, name: b ? b.name : "", city: b ? b.city || "" : "", address: b ? b.address || "" : "", phone: b ? b.phone || "" : "" };
   S._br.error = null;
   pickReset(b ? b.latitude : null, b ? b.longitude : null);
@@ -5841,7 +5911,7 @@ function screenBranches() {
       <h1 class="screen-title">${esc(x.id ? t("br.edit") : t("br.add"))}</h1>
       <div class="field"><label>${esc(t("br.name"))}</label><input value="${esc(x.name)}" maxlength="60" placeholder="${esc(t("br.namePh"))}" oninput="S._br.form.name=this.value"></div>
       <div class="field"><label>${esc(t("br.city"))}</label><input id="br-city" placeholder="مثال: دمشق" value="${esc(x.city)}" maxlength="60" oninput="S._br.form.city=this.value"></div>
-      <div class="field"><label>${esc(t("br.address"))}</label><input id="br-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(x.address)}" maxlength="200" oninput="S._br.form.address=this.value"></div>
+      <div class="field"><label>${esc(t("br.address"))}</label><input id="br-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(x.address)}" maxlength="200" oninput="addressTyped('br',this.value)"><div id="addr-suggest-br">${addressSuggestionHtml("br")}</div></div>
       ${pickerHtml(t("br.pickLabel"))}
       <div class="field"><label>${esc(t("br.phone"))}</label><input type="tel" value="${esc(x.phone)}" maxlength="30" placeholder="+963 9xx xxx xxx" oninput="S._br.form.phone=this.value"></div>
       ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}
