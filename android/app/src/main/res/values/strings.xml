@@ -1091,4 +1091,12 @@
     <string name="price_save">حفظ الأسعار</string>
     <string name="price_failed">تعذّر حفظ إعدادات الأسعار</string>
     <string name="price_show_both">اعرض أسعاري بالليرة والدولار معًا (يحتاج سعر الصرف)</string>
+    <string name="deals_hero_kicker">فرص حلوة بانتظارك</string>
+    <string name="deals_hero_title">التخفيضات والعروض</string>
+    <string name="deals_hero_sub">كل عروض المحلات والمنتجات، من الأقرب إليك للأبعد.</string>
+    <string name="deals_all">الكل</string><string name="deals_shops">المحلات</string><string name="deals_products">المنتجات</string>
+    <string name="deals_search">ابحث عن منتج أو محل أو عرض</string><string name="deals_filters">الفلاتر</string><string name="deals_map">الخريطة</string>
+    <string name="deals_shop_name">اسم المحل</string><string name="deals_product_name">اسم المنتج أو العرض</string><string name="deals_area">المنطقة أو الحي</string>
+    <string name="deals_all_professions">كل المهن والمحلات</string><string name="deals_all_categories">كل الأصناف</string><string name="deals_nearest">الأقرب إليّ</string><string name="deals_biggest">أعلى تخفيض</string><string name="deals_clear">مسح الفلاتر</string>
+    <string name="deals_loading">جاري تحميل العروض…</string><string name="deals_count">%1$d عرض</string><string name="deals_filter_empty">ما لقينا عروض بهالاختيارات. جرّب تغيّر الفلاتر.</string><string name="deals_all_distances">كل العروض ظاهرة مهما كانت بعيدة.</string>
 </resources>

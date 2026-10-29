@@ -1087,4 +1087,12 @@
     <string name="price_save">Save prices</string>
     <string name="price_failed">Could not save the price settings</string>
     <string name="price_show_both">Show my prices in pounds and dollars together (needs the rate)</string>
+    <string name="deals_hero_kicker">Great finds are waiting</string>
+    <string name="deals_hero_title">Deals and discounts</string>
+    <string name="deals_hero_sub">Shop and product deals from nearest to farthest.</string>
+    <string name="deals_all">All</string><string name="deals_shops">Shops</string><string name="deals_products">Products</string>
+    <string name="deals_search">Search products, shops, or deals</string><string name="deals_filters">Filters</string><string name="deals_map">Map</string>
+    <string name="deals_shop_name">Shop name</string><string name="deals_product_name">Product or deal name</string><string name="deals_area">Area or neighborhood</string>
+    <string name="deals_all_professions">All professions and shops</string><string name="deals_all_categories">All categories</string><string name="deals_nearest">Nearest to me</string><string name="deals_biggest">Biggest discount</string><string name="deals_clear">Clear filters</string>
+    <string name="deals_loading">Loading deals…</string><string name="deals_count">%1$d deals</string><string name="deals_filter_empty">No deals match. Try changing the filters.</string><string name="deals_all_distances">All deals are shown, no matter the distance.</string>
 </resources>

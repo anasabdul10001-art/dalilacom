@@ -238,8 +238,10 @@ function setHomeTab(tab) {
   // the deals tab is the map of the shops with a discount; it shares the map's state with the plain map tab
   if (tab === "deals" || tab === "discover") {
     const d = discoverState();
-    d.discountsOnly = tab === "deals";
-    if (tab === "deals") S._dealsIntro = !dealsIntroHidden();
+    const mapDeals = tab === "discover" && S._dealsMapMode;
+    S._dealsMapMode = false;
+    d.discountsOnly = tab === "deals" || !!mapDeals;
+    if (tab === "deals") { S._dealsIntro = false; S._deals = null; }
   }
   S.homeTab = tab;
   render();
@@ -261,7 +263,7 @@ const FAB_STORE = ["store", "productDetail"]; // the shop's discount button is n
 const FAB_CARD_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.6"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/></svg>`;
 const FAB_TAG_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>`;
 
-function isMapScreen() { return S.screen === "home" && (S.homeTab === "discover" || S.homeTab === "deals"); }
+function isMapScreen() { return S.screen === "home" && S.homeTab === "discover"; }
 function showCardFab() { return !FAB_HIDDEN.includes(S.screen) && !(S.screen === "home" && S.homeTab === "card"); }
 function showDiscFab() { return S.role === "MERCHANT" && !!S.token && !FAB_HIDDEN.includes(S.screen) && !FAB_STORE.includes(S.screen); }
 
@@ -503,7 +505,7 @@ function wireChipRows(restoreAt) {
 async function render() {
   const el = root();
   if (!el) return;
-  el.classList.toggle("map-mode", S.screen === "home" && (S.homeTab === "discover" || S.homeTab === "deals"));
+  el.classList.toggle("map-mode", S.screen === "home" && S.homeTab === "discover");
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   // the map search box keeps its own element through every redraw: a new one lost the caret (Arabic letters came out reversed), the undo history and the typing in progress
@@ -1243,7 +1245,135 @@ function dealsIntroHtml() {
 }
 
 function tabDeals() {
-  return dealsIntroHtml() + tabDiscover();
+  if (!S._deals) {
+    S._deals = { loading: true, shops: [], products: [], kind: "all", q: "", shop: "", product: "", area: "", profession: "", productCategory: "", shopCategory: "", sort: "near", filtersOpen: false };
+    loadDealsPage();
+  }
+  const d = S._deals;
+  if (!d.locAsked) { d.locAsked = true; requestDiscoverLocation(); }
+  const all = buildDealEntries(d);
+  const visible = filterDealEntries(d, all);
+  const shopCategories = uniqueDealValues(all.map((x) => ({ id: x.merchant.categoryId || x.merchant.category?.id || "", name: x.merchant.category?.name || x.merchant.category?.nameArabic || x.merchant.category?.nameEnglish || "" })));
+  const productCategories = uniqueDealValues(all.filter((x) => x.kind === "product").map((x) => ({ id: x.product.section?.id || x.product.section?.name || "", name: x.product.section?.name || "" })));
+  const areas = [...new Set(all.flatMap((x) => x.kind === "shop" ? [x.merchant.address, ...(x.merchant.branches || []).flatMap((b) => [b.city, b.address])] : [x.merchant?.address]).filter(Boolean).map((x) => String(x).trim()).filter(Boolean))].slice(0, 80);
+  const activeFilters = [d.shop, d.product, d.area, d.profession, d.productCategory].filter(Boolean).length;
+  return `
+    <main class="deals-page">
+      <section class="deals-hero">
+        <div><span class="deals-kicker">✨ ${esc(t("dealsPage.kicker"))}</span><h1>${esc(t("dealsPage.title"))}</h1><p>${esc(t("dealsPage.sub"))}</p></div>
+        <div class="deals-hero-art">🏷️</div>
+      </section>
+      <div class="deals-segments">
+        ${[["all", t("dealsPage.all")], ["shop", t("dealsPage.shops")], ["product", t("dealsPage.products")]].map(([id, label]) => `<button class="${d.kind === id ? "on" : ""}" onclick="dealSet('kind','${id}')">${esc(label)}</button>`).join("")}
+      </div>
+      <div class="deals-search"><span>⌕</span><input type="search" placeholder="${esc(t("dealsPage.search"))}" value="${esc(d.q)}" oninput="dealSet('q',this.value)" /><button onclick="openDealsMap()" title="${esc(t("dealsPage.map"))}">⌖</button></div>
+      <button class="deals-filter-toggle" onclick="dealSet('filtersOpen',${!d.filtersOpen})"><span>☷ ${esc(t("dealsPage.filters"))}${activeFilters ? ` <b>${activeFilters}</b>` : ""}</span><span>${d.filtersOpen ? "⌃" : "⌄"}</span></button>
+      ${d.filtersOpen ? `<section class="deals-filter-panel">
+        <div class="deals-filter-grid">
+          <label>${esc(t("dealsPage.productName"))}<input value="${esc(d.product)}" placeholder="${esc(t("dealsPage.productNameHint"))}" oninput="dealSet('product',this.value)" /></label>
+          <label>${esc(t("dealsPage.shopName"))}<input value="${esc(d.shop)}" placeholder="${esc(t("dealsPage.shopNameHint"))}" oninput="dealSet('shop',this.value)" /></label>
+          <label>${esc(t("dealsPage.area"))}<input list="deal-areas" value="${esc(d.area)}" placeholder="${esc(t("dealsPage.areaHint"))}" oninput="dealSet('area',this.value)" /><datalist id="deal-areas">${areas.map((a) => `<option value="${esc(a)}"></option>`).join("")}</datalist></label>
+          <label>${esc(t("dealsPage.profession"))}<select onchange="dealSet('profession',this.value)"><option value="">${esc(t("dealsPage.anyProfession"))}</option>${shopCategories.map((x) => `<option value="${esc(x.id)}" ${d.profession === x.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
+          <label>${esc(t("dealsPage.productCategory"))}<select onchange="dealSet('productCategory',this.value)"><option value="">${esc(t("dealsPage.anyCategory"))}</option>${productCategories.map((x) => `<option value="${esc(x.id)}" ${d.productCategory === x.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
+        </div>
+        <div class="deals-filter-footer"><button class="link-btn" onclick="resetDealFilters()">${esc(t("dealsPage.clear"))}</button><label>${esc(t("dealsPage.sort"))}<select onchange="dealSet('sort',this.value)"><option value="near" ${d.sort === "near" ? "selected" : ""}>${esc(t("dealsPage.nearest"))}</option><option value="discount" ${d.sort === "discount" ? "selected" : ""}>${esc(t("dealsPage.highest"))}</option></select></label></div>
+      </section>` : `<div class="deals-quick-filters">${[["shop", "🏪 " + t("dealsPage.shops")], ["product", "🛍️ " + t("dealsPage.products")], ["area", "📍 " + t("dealsPage.area")], ["profession", "🧰 " + t("dealsPage.profession")]].map(([key, label]) => `<button onclick="dealSet('filtersOpen',true)">${esc(label)} ⌄</button>`).join("")}</div>`}
+      <div class="deals-results-head"><div><b>${esc(d.loading ? t("dealsPage.loading") : t("dealsPage.resultCount", { n: visible.length }))}</b><small>${esc(d.userLoc ? t("dealsPage.sortedNear") : t("dealsPage.locHint"))}</small></div><button onclick="openDealsMap()">⌖ ${esc(t("dealsPage.map"))}</button></div>
+      ${d.loading ? `<div class="deals-loading">${spinner()}<p>${esc(t("dealsPage.loadingAll"))}</p></div>` : visible.length ? `<div class="deals-list">${visible.map(dealEntryCard).join("")}</div>` : `<div class="deals-empty"><span>🔎</span><b>${esc(t("dealsPage.emptyTitle"))}</b><p>${esc(t("dealsPage.emptySub"))}</p><button class="btn outline" onclick="resetDealFilters()">${esc(t("dealsPage.clear"))}</button></div>`}
+    </main>`;
+}
+
+async function loadDealsPage() {
+  const state = S._deals;
+  if (!state) return;
+  const shopsPromise = api("GET", "/merchant");
+  const products = [];
+  let offset = 0;
+  let total = Infinity;
+  while (offset < total) {
+    const { ok, data } = await api("GET", `/store/products?deals=1&sort=new&limit=60&offset=${offset}`);
+    if (!ok || !data || !data.items) break;
+    products.push(...data.items);
+    total = Number(data.total || 0);
+    offset += data.items.length;
+    if (!data.items.length) break;
+  }
+  const shopsRes = await shopsPromise;
+  if (S._deals !== state) return;
+  state.merchants = shopsRes.ok ? shopsRes.data : [];
+  state.shops = state.merchants.filter((m) => (m.discounts || []).length);
+  state.products = products;
+  state.loading = false;
+  render();
+}
+
+function dealSet(key, value) { if (!S._deals) return; S._deals[key] = value; render(); }
+function resetDealFilters() {
+  if (!S._deals) return;
+  Object.assign(S._deals, { q: "", shop: "", product: "", area: "", profession: "", productCategory: "", sort: "near" });
+  render();
+}
+function uniqueDealValues(items) {
+  const map = new Map();
+  items.forEach((x) => { if (x.id && x.name) map.set(x.id, x); });
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, LANG));
+}
+function buildDealEntries(state) {
+  const merchants = new Map((state.merchants || state.shops || []).map((m) => [m.id, m]));
+  const entries = [];
+  (state.shops || []).forEach((merchant) => (merchant.discounts || []).forEach((discount) => entries.push({ kind: "shop", merchant, discount })));
+  (state.products || []).forEach((product) => entries.push({ kind: "product", product, merchant: merchants.get(product.merchant?.id) || { id: product.merchant?.id, businessName: product.merchant?.name, address: "" } }));
+  const loc = discoverState().userLoc;
+  entries.forEach((x) => {
+    const m = x.merchant;
+    x.distanceKm = loc && m && m.latitude != null && m.longitude != null ? haversineKm(loc.lat, loc.lng, m.latitude, m.longitude) : null;
+  });
+  return entries;
+}
+function filterDealEntries(state, entries) {
+  const q = (state.q || "").trim().toLocaleLowerCase(LANG);
+  const shopQ = (state.shop || "").trim().toLocaleLowerCase(LANG);
+  const productQ = (state.product || "").trim().toLocaleLowerCase(LANG);
+  const areaQ = (state.area || "").trim().toLocaleLowerCase(LANG);
+  return entries.filter((x) => {
+    if (state.kind !== "all" && x.kind !== state.kind) return false;
+    const merchant = x.merchant || {};
+    const shopName = (merchant.businessName || "").toLocaleLowerCase(LANG);
+    const category = merchant.category || {};
+    const catId = merchant.categoryId || category.id || "";
+    const address = [merchant.address, ...(merchant.branches || []).flatMap((b) => [b.city, b.address])].filter(Boolean).join(" ").toLocaleLowerCase(LANG);
+    if (q && ![shopName, address, x.discount?.title, x.discount?.description, x.product?.name, category.name, category.nameArabic, category.nameEnglish].filter(Boolean).join(" ").toLocaleLowerCase(LANG).includes(q)) return false;
+    if (shopQ && !shopName.includes(shopQ)) return false;
+    if (productQ && !(x.product?.name || x.discount?.title || "").toLocaleLowerCase(LANG).includes(productQ)) return false;
+    if (areaQ && !address.includes(areaQ)) return false;
+    if (state.profession && catId !== state.profession) return false;
+    const prodCategory = x.product?.section?.id || x.product?.section?.name || "";
+    if (state.productCategory && (x.kind !== "product" || prodCategory !== state.productCategory)) return false;
+    return true;
+  }).sort((a, b) => state.sort === "discount"
+    ? (dealPercent(b) - dealPercent(a)) || ((a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+    : (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity) || (b.discount?.percent || dealPercent(b)) - (a.discount?.percent || dealPercent(a)));
+}
+function dealPercent(x) { return x.kind === "shop" ? Number(x.discount?.percent || 0) : x.product?.priceCents ? Math.round((1 - (x.product.memberPriceCents || x.product.priceCents) / x.product.priceCents) * 100) : 0; }
+function dealEntryCard(x) {
+  const distance = x.distanceKm == null ? "" : `<span>📍 ${x.distanceKm < 1 ? Math.round(x.distanceKm * 1000) + " " + esc(t("unit.m")) : x.distanceKm.toFixed(1) + " " + esc(t("unit.km"))}</span>`;
+  if (x.kind === "product") {
+    const p = x.product;
+    const pct = dealPercent(x);
+    return `<article class="deal-product-card" onclick="go('productDetail',{productId:'${p.id}'})"><div class="deal-product-image">${storePic(p)}<b>−${pct}%</b></div><div class="deal-product-copy"><small>${esc(x.merchant.businessName || p.merchant?.name || "")}</small><strong>${esc(p.name)}</strong><p>${esc(priceText(p, true))} <s>${esc(priceText(p, false))}</s></p><div class="deal-meta">${distance}${p.section?.name ? `<span>#${esc(p.section.name)}</span>` : ""}</div><span class="deal-card-link">${esc(t("dealsPage.viewProduct"))} ←</span></div></article>`;
+  }
+  const m = x.merchant, d = x.discount;
+  const scope = d.scope === "PRODUCTS" && d.productNames?.length ? d.productNames.slice(0, 2).join("، ") : d.scope === "SECTION" ? d.section?.name || t("disc.onAll") : t("dealsPage.wholeShop");
+  const productId = d.scope === "PRODUCTS" && d.productIds?.length === 1 ? d.productIds[0] : null;
+  const open = productId ? `go('productDetail',{productId:'${productId}'})` : `go('merchantDetail',{merchantId:'${m.id}',tab:'offers'})`;
+  return `<article class="deal-shop-card" onclick="${open}"><div class="deal-shop-icon">🏪</div><div class="deal-shop-copy"><small>${esc(m.category?.name || m.category?.nameArabic || t("dealsPage.shop"))}</small><strong>${esc(m.businessName)}</strong><span class="deal-shop-off">${esc(d.title)} · <b>${d.percent}%</b></span><p>${esc(scope)}</p><div class="deal-meta">${distance}${m.address ? `<span>📍 ${esc(m.address)}</span>` : ""}</div><span class="deal-card-link">${esc(productId ? t("dealsPage.viewProduct") : t("dealsPage.viewOffer"))} ←</span></div><span class="deal-heart">♡</span></article>`;
+}
+function openDealsMap() {
+  const d = discoverState();
+  d.discountsOnly = true; d.radiusKm = null; d.bounds = null; d.selectedId = null; d.query = ""; d.categoryId = "";
+  S._dealsMapMode = true;
+  setHomeTab("discover");
+  searchMerchants();
 }
 
 function tabDiscover() {
@@ -2561,8 +2691,9 @@ function hoursTable(m) {
 
 function screenMerchantDetail() {
   if (!S._merchantDetail || S._merchantDetail.id !== S.params.merchantId) {
-    S._merchantDetail = { id: S.params.merchantId, loading: true, tab: "home", q: "", sort: "popular" };
-    loadMerchantDetail(S.params.merchantId);
+    const initialTab = S.params.tab === "offers" ? "offers" : "home";
+    S._merchantDetail = { id: S.params.merchantId, loading: true, tab: initialTab, q: "", sort: "popular" };
+    loadMerchantDetail(S.params.merchantId, initialTab);
   }
   const m = S._merchantDetail;
   if (m.loading) return `<div class="store">${backRow()}${spinner()}</div>`;
@@ -2775,7 +2906,7 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-async function loadMerchantDetail(id) {
+async function loadMerchantDetail(id, initialTab = "home") {
   const [mRes, pRes, rvRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/store/products?limit=60&merchantId=" + id), api("GET", "/reviews/shops/" + id + "?limit=10")]);
   const merchant = mRes.ok ? mRes.data : null;
   const loc = S._discover && S._discover.userLoc;
@@ -2783,7 +2914,7 @@ async function loadMerchantDetail(id) {
   if (merchant && loc && merchant.latitude != null && merchant.longitude != null) {
     merchant.distanceKm = haversineKm(loc.lat, loc.lng, merchant.latitude, merchant.longitude);
   }
-  S._merchantDetail = { id, loading: false, merchant, products: pRes.ok ? pRes.data.items : [], reviews: rvRes.ok ? rvRes.data : null, tab: "home", q: "", sort: "popular" };
+  S._merchantDetail = { id, loading: false, merchant, products: pRes.ok ? pRes.data.items : [], reviews: rvRes.ok ? rvRes.data : null, tab: initialTab, q: "", sort: "popular" };
   render();
 }
 

@@ -63,6 +63,7 @@ import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.card.CardScreen
 import com.dalilacom.app.ui.cart.CartScreen
 import com.dalilacom.app.ui.discover.DiscoverScreen
+import com.dalilacom.app.ui.discover.DealsScreen
 import com.dalilacom.app.data.RouteTarget
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.foundation.clickable
@@ -88,6 +89,7 @@ private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) 
 @Composable
 fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Discover) }
+    var showDealsOnMap by rememberSaveable { mutableStateOf(false) }
     val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
     val factory = remember { ViewModelFactory(container) }
     com.dalilacom.app.ui.common.UpdatePrompt(container.storeRepository)
@@ -98,11 +100,6 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
         if (!isGuest) container.profileRepository.me() // fetched ahead, so the profile tab already has the name and photo
     }
     // the deals tab opens with an encouraging message, until the person asks never to see it again
-    var showCard by rememberSaveable { mutableStateOf(false) }
-    var dealsIntro by remember { mutableStateOf(false) }
-    var dealsIntroHidden by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { dealsIntroHidden = container.sessionStore.getDealsIntroHidden() }
-    val dealsPendingRoute = remember { MutableStateFlow<RouteTarget?>(null) }
     val tipsOffHome by container.sessionStore.fabTipsOffFlow.collectAsState(initial = false)
     val homeScope = androidx.compose.runtime.rememberCoroutineScope()
     val homeButtons: @Composable androidx.compose.foundation.layout.BoxScope.(androidx.compose.ui.unit.Dp) -> Unit = { bottom ->
@@ -139,12 +136,6 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     val goLogin = { rootNavController.navigate("login") }
     val goRegister = { rootNavController.navigate("register") }
 
-    if (dealsIntro && selectedTab == HomeTab.Deals) {
-        DealsIntro(
-            onDismiss = { dealsIntro = false },
-            onNever = { dealsIntro = false; dealsIntroHidden = true; scope.launch { container.sessionStore.hideDealsIntro() } },
-        )
-    }
 
     val soonResponder = stringResource(R.string.soon_responder)
     Scaffold(
@@ -170,7 +161,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                             onClick = {
                                 if (tab == HomeTab.Store) rootNavController.navigate("store")
                                 else {
-                                    if (tab == HomeTab.Deals) { showCard = false; dealsIntro = !dealsIntroHidden }
+                                    if (tab == HomeTab.Discover) showDealsOnMap = false
                                     selectedTab = tab
                                 }
                             },
@@ -189,6 +180,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                 HomeTab.Discover -> DiscoverScreen(
                     factory = factory,
                     isGuest = isGuest,
+                    dealsMode = showDealsOnMap,
                     pendingRoute = container.pendingRoute,
                     isDark = isDark,
                     onSetLanguage = { code -> scope.launch { container.sessionStore.saveLanguage(code) } },
@@ -199,20 +191,12 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     floatingButtons = homeButtons,
                 )
                 HomeTab.Responder, HomeTab.Store -> Unit // never selected: their buttons open their own screens
-                HomeTab.Deals ->
-                    DiscoverScreen(
-                        factory = factory,
-                        isGuest = isGuest,
-                        pendingRoute = dealsPendingRoute,
-                        isDark = isDark,
-                        onSetLanguage = { code -> scope.launch { container.sessionStore.saveLanguage(code) } },
-                        onToggleTheme = { scope.launch { container.sessionStore.saveTheme(if (isDark) "light" else "dark") } },
-                        onLogin = { goLogin() },
-                        onMerchantClick = { id -> rootNavController.navigate("merchant/$id") },
-                    onClaimLandmark = { id -> rootNavController.navigate("landmarkClaim/$id") },
-                        dealsMode = true,
-                        floatingButtons = homeButtons,
-                    )
+                HomeTab.Deals -> DealsScreen(
+                    container = container,
+                    onMap = { showDealsOnMap = true; selectedTab = HomeTab.Discover },
+                    onMerchant = { id -> rootNavController.navigate("merchant/$id") },
+                    onProduct = { id -> rootNavController.navigate("product/$id") },
+                )
                 HomeTab.Cart ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.ShoppingCart,
