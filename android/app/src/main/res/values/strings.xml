@@ -464,6 +464,8 @@
     <string name="shop_follow">تابع</string>
     <string name="shop_tab_home">الرئيسية</string>
     <string name="shop_tab_all">كل المنتجات</string>
+    <string name="shop_tab_offers">العروض</string>
+    <string name="shop_no_offers">ما في عروض فعّالة حالياً</string>
     <string name="shop_tab_about">عن المتجر</string>
     <string name="shop_all_products">كل المنتجات</string>
     <string name="shop_best_in_shop">الأكثر مبيعًا في المتجر</string>

@@ -186,6 +186,7 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
     data: {
       transactionRef: transaction.transactionRef,
       merchantId: merchant.id,
+      ...(transaction.discountId ? { discountId: transaction.discountId } : {}),
       discountPercent: transaction.discountPercent,
       finalAmountCents: transaction.finalAmountCents,
     },

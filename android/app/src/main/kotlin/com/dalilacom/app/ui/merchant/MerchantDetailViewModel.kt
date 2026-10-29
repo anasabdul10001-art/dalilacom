@@ -46,20 +46,21 @@ class MerchantDetailViewModel(
     private val reviewsRepository: com.dalilacom.app.data.repository.ReviewsRepository,
     private val placesRepository: PlacesRepository,
     private val merchantId: String,
+    initialTab: String = "home",
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(MerchantDetailUiState())
+    private val _uiState = MutableStateFlow(MerchantDetailUiState(tab = initialTab))
     val uiState: StateFlow<MerchantDetailUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
             val merchant = discoverRepository.getMerchant(merchantId)
             if (merchant == null) {
-                _uiState.value = MerchantDetailUiState(isLoading = false, error = AppStrings.get(R.string.place_not_found))
+                _uiState.value = MerchantDetailUiState(isLoading = false, tab = initialTab, error = AppStrings.get(R.string.place_not_found))
                 return@launch
             }
             val products = storeRepository.products(null, null, false, "popular", 0, StoreScope(), merchantId = merchantId, limit = 60)?.items.orEmpty()
             val saved = merchantId in placesRepository.favoriteIds()
-            _uiState.value = MerchantDetailUiState(isLoading = false, merchant = merchant, products = products, saved = saved, followers = merchant.followersCount, reviews = reviewsRepository.of("shop", merchantId))
+            _uiState.value = MerchantDetailUiState(isLoading = false, tab = initialTab, merchant = merchant, products = products, saved = saved, followers = merchant.followersCount, reviews = reviewsRepository.of("shop", merchantId))
         }
     }
 

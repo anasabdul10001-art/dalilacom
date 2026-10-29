@@ -2602,9 +2602,13 @@ function screenMerchantDetail() {
         ${x.address ? `<div class="place-row">📍 ${esc(x.address)}</div>` : ""}
         ${phone ? `<div class="place-row">📞 <a href="tel:${esc(phone)}">${esc(phone)}</a></div>` : ""}
         ${(x.branches || []).length ? `<div class="section-title">🏬 ${esc(t("br.shopBranches", { n: x.branches.length + (hasCoords ? 1 : 0) }))}</div>${x.branches.map((b) => `<div class="place-row"><b>${esc(b.name)}</b>${b.city || b.address ? " — " + esc([b.city, b.address].filter(Boolean).join("، ")) : ""}${b.phone ? ` · <a href="tel:${esc(b.phone)}">${esc(b.phone)}</a>` : ""} · <a href="https://www.google.com/maps/dir/?api=1&destination=${b.latitude},${b.longitude}" target="_blank" rel="noopener">${esc(t("card.directions"))}</a></div>`).join("")}` : ""}
-        ${(x.discounts || []).length ? `<div class="section-title">${esc(t("place.discounts"))}</div>${x.discounts.map((d) => customerDiscountCard(d)).join("")}` : ""}
         ${hoursTable(x)}
       </section>`;
+  } else if (m.tab === "offers") {
+    body = `<section class="store-sec">
+      <div class="store-sec-head"><h2>🏷️ ${esc(t("shop.tabOffers"))}</h2><small>${(x.discounts || []).length}</small></div>
+      ${(x.discounts || []).length ? x.discounts.map((d) => customerDiscountCard(d)).join("") : `<div class="empty">${esc(t("shop.noOffers"))}</div>`}
+    </section>`;
   } else if (m.tab === "all") {
     body = `
       <div class="store-bar"><h2>${esc(t("shop.allProducts"))} <small>${sorted.length}</small></h2>
@@ -2655,7 +2659,7 @@ function screenMerchantDetail() {
         <button onclick="shareMerchant()"><span>📤</span>${esc(t("place.share"))}</button>
       </div>
       <div class="store-tabs">
-        ${[["home", t("shop.tabHome")], ["all", t("shop.tabAll")], ["reviews", t("rv.title") + (votes ? ` (${votes})` : "")], ["about", t("shop.tabAbout")]].map(([id, label]) => `<button class="${m.tab === id ? "on" : ""}" onclick="S._merchantDetail.tab='${id}';render()">${esc(label)}</button>`).join("")}
+        ${[["home", t("shop.tabHome")], ["all", t("shop.tabAll")], ["offers", t("shop.tabOffers") + ((x.discounts || []).length ? ` (${x.discounts.length})` : "")], ["reviews", t("rv.title") + (votes ? ` (${votes})` : "")], ["about", t("shop.tabAbout")]].map(([id, label]) => `<button class="${m.tab === id ? "on" : ""}" onclick="S._merchantDetail.tab='${id}';render()">${esc(label)}</button>`).join("")}
       </div>
       ${body}
     </div>`;

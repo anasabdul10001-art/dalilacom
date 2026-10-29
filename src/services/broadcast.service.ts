@@ -155,7 +155,7 @@ interface Resolved {
   price: number;
   merchant: { id: string; businessName: string } | null;
   product: { id: string; name: string } | null;
-  discount: { id: string; title: string } | null;
+  discount: { id: string; title: string; productId: string | null } | null;
 }
 
 /** Applies who-may-do-what: admins reach anywhere; a merchant reaches a bounded area, and may only attach what is theirs. */
@@ -190,10 +190,11 @@ async function resolve(sender: Sender, target: BroadcastTarget, message?: Broadc
     ? await prisma.product.findFirst({ where: { id: message.productId, merchantId: merchant.id, isActive: true }, select: { id: true, name: true } })
     : null;
   if (message?.productId && !product) throw new BroadcastError(404, "NOT_FOUND", "Product not found in your shop");
-  const discount = message?.discountId
-    ? await prisma.discount.findFirst({ where: { id: message.discountId, merchantId: merchant.id, ...liveDiscountWhere() }, select: { id: true, title: true } })
+  const discountRow = message?.discountId
+    ? await prisma.discount.findFirst({ where: { id: message.discountId, merchantId: merchant.id, ...liveDiscountWhere() }, select: { id: true, title: true, scope: true, productIds: true } })
     : null;
-  if (message?.discountId && !discount) throw new BroadcastError(404, "NOT_FOUND", "Offer not found in your shop");
+  if (message?.discountId && !discountRow) throw new BroadcastError(404, "NOT_FOUND", "Offer not found in your shop");
+  const discount = discountRow ? { id: discountRow.id, title: discountRow.title, productId: discountRow.scope === "PRODUCTS" && discountRow.productIds.length === 1 ? discountRow.productIds[0] : null } : null;
 
   // the plan the super admin gave this shop decides the quota; with no plan, the platform default applies
   const quota = merchant.plan?.monthlyBroadcastLimit ?? broadcasts.merchantDefaultMonthly;
@@ -273,8 +274,8 @@ async function deliver(r: Resolved, sender: Sender, message: BroadcastMessage): 
         kind: "MERCHANT_PROMO",
         merchantId: r.merchant.id,
         businessName: r.merchant.businessName,
-        ...(r.product ? { productId: r.product.id } : {}),
         ...(r.discount ? { discountId: r.discount.id } : {}),
+        ...(r.product?.id || r.discount?.productId ? { productId: r.product?.id ?? r.discount?.productId! } : {}),
       }
     : { kind: "BROADCAST" };
 

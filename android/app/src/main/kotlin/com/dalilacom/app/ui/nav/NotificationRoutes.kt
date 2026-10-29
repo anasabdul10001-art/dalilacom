@@ -27,8 +27,10 @@ object NotificationRoutes {
                 else -> id("orderId")?.let { "order/$it" } ?: INBOX
             }
             "MEMBERSHIP_EXPIRING" -> "pricing"
-            "DISCOUNT_RECEIVED" -> shop ?: INBOX
-            "NEW_PRODUCT", "NEW_OFFER" -> product ?: shop ?: INBOX
+            "DISCOUNT_RECEIVED", "NEW_OFFER" -> product ?: shop?.let { shopRoute ->
+                id("discountId")?.let { "$shopRoute/offers/$it" } ?: "$shopRoute/offers"
+            } ?: INBOX
+            "NEW_PRODUCT" -> product ?: shop ?: INBOX
             // the auto-responder tells its owner about messages that wait, and about its own ending
             "SYSTEM" -> when {
                 data["kind"] == "RESPONDER" -> "responder"

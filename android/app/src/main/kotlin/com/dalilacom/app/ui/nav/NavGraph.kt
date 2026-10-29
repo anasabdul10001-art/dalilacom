@@ -177,6 +177,45 @@ fun DalilacomNavGraph(
                 onLogin = { navController.navigate("login") },
             )
         }
+        composable("merchant/{merchantId}/offers") { backStackEntry ->
+            val merchantId = backStackEntry.arguments?.getString("merchantId").orEmpty()
+            MerchantDetailScreen(
+                container = container,
+                merchantId = merchantId,
+                initialTab = "offers",
+                onProductClick = { productId -> navController.navigate("product/$productId") },
+                onDirections = { m ->
+                    val lat = m.latitude
+                    val lng = m.longitude
+                    if (lat != null && lng != null) {
+                        container.pendingRoute.value = RouteTarget(m.id, m.businessName, lat, lng)
+                        navController.popBackStack("home", inclusive = false)
+                    }
+                },
+                onBack = { navController.popBackStack() },
+                onLogin = { navController.navigate("login") },
+            )
+        }
+        composable("merchant/{merchantId}/offers/{discountId}") { backStackEntry ->
+            val merchantId = backStackEntry.arguments?.getString("merchantId").orEmpty()
+            MerchantDetailScreen(
+                container = container,
+                merchantId = merchantId,
+                initialTab = "offers",
+                targetDiscountId = backStackEntry.arguments?.getString("discountId"),
+                onProductClick = { productId -> navController.navigate("product/$productId") },
+                onDirections = { m ->
+                    val lat = m.latitude
+                    val lng = m.longitude
+                    if (lat != null && lng != null) {
+                        container.pendingRoute.value = RouteTarget(m.id, m.businessName, lat, lng)
+                        navController.popBackStack("home", inclusive = false)
+                    }
+                },
+                onBack = { navController.popBackStack() },
+                onLogin = { navController.navigate("login") },
+            )
+        }
         composable("product/{productId}") { backStackEntry ->
             val productId = backStackEntry.arguments?.getString("productId").orEmpty()
             StoreProductScreen(

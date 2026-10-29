@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -85,6 +87,8 @@ private const val SHARE_BASE = "https://dalilacom.com/app/?merchant="
 fun MerchantDetailScreen(
     container: AppContainer,
     merchantId: String,
+    initialTab: String = "home",
+    targetDiscountId: String? = null,
     onProductClick: (String) -> Unit,
     onDirections: (MerchantDto) -> Unit,
     onBack: () -> Unit,
@@ -93,7 +97,7 @@ fun MerchantDetailScreen(
     val viewModel: MerchantDetailViewModel = viewModel(
         factory = viewModelFactory {
             initializer {
-                MerchantDetailViewModel(container.discoverRepository, container.storeRepository, container.cartRepository, container.authRepository, container.reviewsRepository, container.placesRepository, merchantId)
+                MerchantDetailViewModel(container.discoverRepository, container.storeRepository, container.cartRepository, container.authRepository, container.reviewsRepository, container.placesRepository, merchantId, initialTab)
             }
         },
     )
@@ -185,8 +189,8 @@ fun MerchantDetailScreen(
                     item { Box(Modifier.padding(horizontal = 10.dp)) { ActionRow(context, merchant, onDirections) } }
                     // tabs
                     item {
-                        Row(Modifier.fillMaxWidth().background(Color.Black).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                            listOf("home" to R.string.shop_tab_home, "all" to R.string.shop_tab_all, "reviews" to R.string.rv_title, "about" to R.string.shop_tab_about).forEach { (id, label) ->
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).background(Color.Black).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                            listOf("home" to R.string.shop_tab_home, "all" to R.string.shop_tab_all, "offers" to R.string.shop_tab_offers, "reviews" to R.string.rv_title, "about" to R.string.shop_tab_about).forEach { (id, label) ->
                                 // the underline is as wide as the word (IntrinsicSize.Max): without it the first tab took the whole row and squeezed the others into a tall black column of letters
                                 Column(Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Max).clickable { viewModel.setTab(id) }.padding(top = 12.dp)) {
                                     Text(stringResource(label), color = if (state.tab == id) Color.White else Color.White.copy(alpha = 0.75f), fontWeight = if (state.tab == id) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 14.sp)
@@ -229,24 +233,29 @@ fun MerchantDetailScreen(
                                         }
                                     }
                                 }
-                                if (merchant.discounts.isNotEmpty()) {
-                                    SectionTitle(stringResource(R.string.place_discounts))
-                                    merchant.discounts.forEach { discount ->
-                                        Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.padding(bottom = 6.dp)) {
-                                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                                                Text("🏷️ ${discount.title} — ${discount.percent}%", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                                                Text(com.dalilacom.app.ui.merchantmode.discountScopeText(discount.scope, discount.section, discount.productNames), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
-                                                discount.endDate?.let { Text(stringResource(R.string.disc_until, it.take(10)), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall) }
-                                                com.dalilacom.app.ui.common.countdownText(discount.endDate)?.let { Text("⏳ " + stringResource(R.string.cd_ends_in) + " " + it, color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold) }
-                                                discount.myTimesLeft?.let { Text(stringResource(R.string.disc_times_left, it), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
-                                                if (discount.maxCustomers != null && discount.peopleLeft != null && discount.maxCustomers > 0) androidx.compose.material3.LinearProgressIndicator(progress = { (discount.peopleLeft.toFloat() / discount.maxCustomers).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(5.dp))
-                                                if (discount.maxCustomers != null && discount.peopleLeft != null) Text(stringResource(R.string.disc_places_left, discount.peopleLeft, discount.maxCustomers), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                                                if (!discount.description.isNullOrBlank()) Text(discount.description, color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
-                                            }
+                                if (merchant.openStatus?.hasHours == true) HoursSection(merchant)
+                            }
+                        }
+                        "offers" -> item {
+                            ShopCard {
+                                Text(stringResource(R.string.shop_tab_offers), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                                Spacer(Modifier.height(10.dp))
+                                if (merchant.discounts.isEmpty()) Text(stringResource(R.string.shop_no_offers), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                val visibleOffers = targetDiscountId?.let { id -> merchant.discounts.filter { it.id == id } }?.ifEmpty { merchant.discounts } ?: merchant.discounts
+                                visibleOffers.forEach { discount ->
+                                    Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                                        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                                            Text("🏷️ ${discount.title} — ${discount.percent}%", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                            Text(com.dalilacom.app.ui.merchantmode.discountScopeText(discount.scope, discount.section, discount.productNames), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
+                                            discount.endDate?.let { Text(stringResource(R.string.disc_until, it.take(10)), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall) }
+                                            com.dalilacom.app.ui.common.countdownText(discount.endDate)?.let { Text("⏳ " + stringResource(R.string.cd_ends_in) + " " + it, color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.ExtraBold) }
+                                            discount.myTimesLeft?.let { Text(stringResource(R.string.disc_times_left, it), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold) }
+                                            if (discount.maxCustomers != null && discount.peopleLeft != null && discount.maxCustomers > 0) androidx.compose.material3.LinearProgressIndicator(progress = { (discount.peopleLeft.toFloat() / discount.maxCustomers).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(5.dp))
+                                            if (discount.maxCustomers != null && discount.peopleLeft != null) Text(stringResource(R.string.disc_places_left, discount.peopleLeft, discount.maxCustomers), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                            if (!discount.description.isNullOrBlank()) Text(discount.description, color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
                                 }
-                                if (merchant.openStatus?.hasHours == true) HoursSection(merchant)
                             }
                         }
                         "all" -> item {

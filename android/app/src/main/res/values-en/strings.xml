@@ -460,6 +460,8 @@
     <string name="shop_follow">Follow</string>
     <string name="shop_tab_home">Home</string>
     <string name="shop_tab_all">All products</string>
+    <string name="shop_tab_offers">Offers</string>
+    <string name="shop_no_offers">There are no active offers right now</string>
     <string name="shop_tab_about">About</string>
     <string name="shop_all_products">All products</string>
     <string name="shop_best_in_shop">Best sellers in this shop</string>
