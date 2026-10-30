@@ -14,9 +14,10 @@ describe("the Impressum (legal notice, section 65 / German DDG)", () => {
     expect(res.text).toContain("Angaben gemäß § 5 DDG");
     expect(res.text).toContain("Legal Notice (Impressum)");
     expect(res.text).toContain("بيانات الجهة المسؤولة");
+    expect(res.text).toContain("Umsatzsteuer-Identifikationsnummer gemäß § 27a Umsatzsteuergesetz: DE460456215"); // the VAT ID is the one number the law asks for
   });
 
-  it("does not publish the personal numbers: tax numbers, phone", async () => {
+  it("does not publish the personal numbers: tax number, personal tax ID, phone", async () => {
     const res = await request(app).get("/impressum.html");
     expect(res.text).not.toMatch(/\d{2,3}\/\d{3}\/\d{5}/); // a Steuernummer
     expect(res.text).not.toMatch(/\b\d{2} \d{3} \d{3} \d{3}\b/); // a Steuer-Identifikationsnummer
