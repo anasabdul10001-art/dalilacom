@@ -960,8 +960,8 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
   .screen-body:not(.map-mode):has(> .tabbar) { padding-inline-start: 108px; }
   .screen-body:not(.map-mode) > *:not(.tabbar):not(.scan-fab) { width: 100%; max-width: 700px; flex: none; }
   /* Unlike account forms, the offers page is a full browsing page and should use the space beside the navigation rail. */
-  .screen-body:not(.map-mode) > *:not(.tabbar):not(.scan-fab):has(> .deals-page) { max-width: 1500px; }
-  .deals-page { max-width: 1500px; }
+  .screen-body:not(.map-mode) > *:not(.tabbar):not(.scan-fab):has(> .deals-page) { max-width: none; }
+  .deals-page { width: 100%; max-width: none; }
   .deals-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr)); gap: 14px; }
 
   /* the discover screen: results panel on the starting edge, map on the rest */
