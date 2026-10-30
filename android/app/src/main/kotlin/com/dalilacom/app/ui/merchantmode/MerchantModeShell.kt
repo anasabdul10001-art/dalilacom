@@ -64,7 +64,7 @@ private enum class MerchantTab(@androidx.annotation.StringRes val labelRes: Int,
     Home(R.string.ms_tab_home, Icons.Filled.Home),
     Redeem(R.string.s_d9724d06, Icons.Filled.QrCodeScanner), // not in the bar: the camera button and "give a discount" open it
     Orders(R.string.s_c5ffc332, Icons.AutoMirrored.Filled.ListAlt),
-    Catalog(R.string.s_d766cb06, Icons.Filled.Inventory2),
+    Catalog(R.string.merchant_manage_tab, Icons.Filled.Inventory2),
     Promo(R.string.promo_tab, Icons.Filled.Campaign),
 }
 

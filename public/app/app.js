@@ -5908,7 +5908,7 @@ async function subscribeFromPricing(planId) {
 const MERCHANT_TABS = [
   { id: "home", label: "الرئيسية", icon: "home" }, // confirming a discount is the camera / "give a discount" button, not a tab
   { id: "orders", label: "طلبات واردة", icon: "orders" },
-  { id: "catalog", label: "الكتالوج", icon: "box" },
+  { id: "catalog", labelKey: "merchant.manageTab", icon: "box" },
   { id: "promo", label: "إعلاناتي", icon: "bell" },
 ];
 
@@ -5949,9 +5949,9 @@ function screenMerchantModeShell() {
     <div>${body}</div>
     <button class="scan-fab" onclick="openScanner()" aria-label="${esc(t("scan.title"))}" title="${esc(t("scan.title"))}">📷</button>
     <div class="tabbar">
-      ${MERCHANT_TABS.map((t) => `
-        <button class="${S.merchantTab === t.id ? "active" : ""}" onclick="setMerchantTab('${t.id}')">
-          ${ICON[t.icon]}<span>${esc(t.label)}</span>
+      ${MERCHANT_TABS.map((tab) => `
+        <button class="${S.merchantTab === tab.id ? "active" : ""}" onclick="setMerchantTab('${tab.id}')">
+          ${ICON[tab.icon]}<span>${esc(tab.labelKey ? t(tab.labelKey) : tab.label)}</span>
         </button>`).join("")}
     </div>
   `;
@@ -6735,68 +6735,48 @@ async function cancelMerchantOrder(id) {
 function tabCatalog() {
   if (!S._catalog) { S._catalog = { loading: true }; loadCatalog(); }
   const c = S._catalog;
-  if (c.loading) return `<h1 class="screen-title">الكتالوج</h1>${spinner()}`;
+  if (c.loading) return `<main class="merchant-manage"><h1 class="screen-title">${esc(t("merchant.manageTitle"))}</h1>${spinner()}</main>`;
+  const products = c.products || [];
+  const imageOf = (p) => p.imageUrl || p.images?.[0] || "";
   return `
-    <h1 class="screen-title">الكتالوج</h1>
-    <div class="card" style="border:2px solid var(--primary)">
-      <div class="title-line"><strong>📦 ${esc(t("catalog.myProducts", { n: (c.products || []).length }))}</strong>
-        ${c.storeClosed ? "" : `<button class="btn small" style="width:auto" onclick="go('productEdit', {productId:null})">+ ${esc(t("catalog.addProduct"))}</button>`}
-      </div>
-      <p class="muted" style="margin:4px 0 10px">${esc(t("catalog.editHint"))}</p>
-      ${(c.products || []).length === 0 ? `<div class="empty-state">ما في منتجات بعد</div>` : c.products.map((p) => `
-        <div class="card clickable" onclick="go('productEdit', {productId:'${p.id}'})">
-          <div class="title-line"><strong>${esc(p.name)}</strong><span class="badge ${p.isActive ? "success" : "neutral"}">${p.isActive ? "نشط" : "غير نشط"}</span></div>
-          ${p.moderation === "PENDING" ? `<p class="info-banner">⏳ ${esc(t("rev.pending"))}</p>` : ""}
-          ${p.moderation === "REJECTED" ? `<p class="error-banner">⚠️ ${esc(t("rev.rejected", { why: p.moderationNote || "" }))}</p>` : ""}
-          <p class="muted">${ownPriceText(p)} — مخزون: ${p.stock}</p>
-          <span class="link-btn">✏️ ${esc(t("catalog.editProduct"))}</span>
-        </div>`).join("")}
-    </div>
-    <div class="row" style="margin-bottom:12px">
-      <button class="btn outline" onclick="S._mprof=null;go('merchantProfile')">📍 بيانات المحل ومكانه</button>
-      <button class="btn outline" onclick="S._hours=null;go('merchantHours')">🕒 ساعات العمل</button>
-    </div>
-    <button class="btn outline" style="margin-bottom:12px" onclick="openBranches()">🏬 ${esc(t("br.title"))}</button>
-    <button class="btn outline" style="margin-bottom:12px" onclick="openShipping()">🚚 ${esc(t("ship.title"))}</button>
-    <button class="btn outline" style="margin-bottom:12px" onclick="openAiPlans()">✨ ${esc(t("ai.plansTitle"))}</button>
-    <div class="card">
-      <div class="section-title" style="margin-top:0">${esc(t("disc.title"))}</div>
-      ${(c.discounts || []).length ? c.discounts.map((d) => `<p style="color:var(--primary)">🏷️ ${esc(d.title)} — ${d.percent}%</p>`).join("") : `<p class="muted">${esc(t("disc.none"))}</p>`}
-      <button class="btn" style="margin-top:8px" onclick="S._disc=null;go('discounts')">🏷️ ${esc(t("disc.open"))}</button>
-    </div>
-
-    <div class="card">
-      <div class="section-title" style="margin-top:0">المسوّقين</div>
-      ${(c.affiliates || []).length ? c.affiliates.map((af) => `
-        <div style="padding:6px 0;border-top:1px solid var(--border)">
-          <div class="title-line">
-            <strong>${esc(af.user.fullName)}</strong>
-            <span class="badge ${af.isActive ? "success" : "neutral"}">${af.isActive ? "نشط" : "معطّل"}</span>
-          </div>
-          <p class="muted">${esc(af.user.email)} — ${af.commissionType === "PERCENT" ? af.commissionValue + "%" : fmt(af.commissionValue)} لكل عملية</p>
-          <p class="muted">زبائن أحالهم: ${af.referredCount} — إجمالي عمولاته: ${fmt(af.totalCommissionCents)}</p>
-          <button class="btn small ${af.isActive ? "outline" : ""}" onclick="toggleCatalogAffiliate('${af.id}', ${!af.isActive})">${af.isActive ? "تعطيل" : "تفعيل"}</button>
-        </div>`).join("") : `<p class="muted">ما عندك مسوّقين بعد</p>`}
-      <div class="divider"></div>
-      <div class="field"><label>بريد المسوّق (لازم يكون عنده حساب بالتطبيق)</label><input id="aff-email" placeholder="marketer@example.com" value="${esc(c.affEmail || "")}" /></div>
-      <div class="row">
-        <div class="field">
-          <label>نوع العمولة</label>
-          <select id="aff-type">
-            <option value="PERCENT" ${c.affType === "FIXED" ? "" : "selected"}>نسبة %</option>
-            <option value="FIXED" ${c.affType === "FIXED" ? "selected" : ""}>مبلغ ثابت</option>
-          </select>
+    <main class="merchant-manage">
+      <section class="manage-hero"><span>🏪 ${esc(t("merchant.manageTab"))}</span><h1>${esc(t("merchant.manageTitle"))}</h1><p>${esc(t("merchant.manageIntro"))}</p></section>
+      ${c.storeClosed ? `<section class="manage-closed"><div><b>${esc(t("sp.closedTitle"))}</b><p>${esc(t("sp.closedSub"))}</p></div><button class="btn" onclick="openStorePlans()">🛍️ ${esc(t("sp.choose.btn"))}</button></section>` : `
+        <section class="manage-actions">
+          <button class="manage-action primary" onclick="openProductWizard()"><span>📷</span><b>${esc(t("merchant.addPhoto"))}</b><small>${esc(t("wiz.startSub"))}</small></button>
+          <button class="manage-action" onclick="go('productEdit',{productId:null})"><span>✍️</span><b>${esc(t("merchant.addManual"))}</b><small>${esc(t("wiz.manual"))}</small></button>
+        </section>`}
+      <section class="manage-products">
+        <div class="manage-section-head"><div><h2>📦 ${esc(t("merchant.products", { n: products.length }))}</h2><p>${esc(t("merchant.productsHint"))}</p></div><span class="manage-count">${products.filter((p) => p.isActive).length} ${esc(t("merchant.activeCount"))}</span></div>
+        ${products.length ? `<div class="manage-product-list">${products.map((p) => {
+          const photo = imageOf(p);
+          return `<button class="manage-product-row" onclick="go('productEdit',{productId:'${p.id}'})"><span class="manage-product-thumb">${photo ? `<img src="${esc(photo)}" alt="${esc(p.name)}" loading="lazy">` : "🛍️"}</span><span class="manage-product-info"><b>${esc(p.name)}</b><small>${esc(ownPriceText(p))} · ${esc(String(p.stock))} ${esc(t("merchant.stock"))}</small><span class="manage-product-state"><i class="badge ${p.isActive ? "success" : "neutral"}">${p.isActive ? esc(t("merchant.active")) : esc(t("merchant.inactive"))}</i>${p.moderation === "PENDING" ? `<i class="manage-review pending">⏳ ${esc(t("rev.pending"))}</i>` : ""}${p.moderation === "REJECTED" ? `<i class="manage-review rejected">⚠️ ${esc(t("rev.rejected", { why: p.moderationNote || "" }))}</i>` : ""}</span></span><span class="manage-edit">✏️</span></button>`;
+        }).join("")}</div>` : `<div class="manage-empty"><span>🛍️</span><b>${esc(t("merchant.emptyTitle"))}</b><p>${esc(t("merchant.emptySub"))}</p></div>`}
+      </section>
+      <section class="manage-tools"><h2>${esc(t("merchant.tools"))}</h2>
+        <div class="manage-tool-grid">
+          <button onclick="openShipping()"><span>🚚</span><b>${esc(t("merchant.shipping"))}</b></button>
+          <button onclick="openAiPlans()"><span>✨</span><b>${esc(t("merchant.ai"))}</b></button>
+          <button onclick="S._disc=null;go('discounts')"><span>🏷️</span><b>${esc(t("merchant.discounts"))}</b></button>
+          <button onclick="openBranches()"><span>🏬</span><b>${esc(t("merchant.branches"))}</b></button>
         </div>
-        <div class="field"><label>القيمة</label><input id="aff-value" placeholder="10" value="${esc(c.affValue || "")}" /></div>
-      </div>
-      <button class="btn small" onclick="addCatalogAffiliate()">إضافة مسوّق</button>
-    </div>
-
-    ${c.storeClosed ? `<div class="card" style="border-color:var(--primary)"><strong>${esc(t("sp.closedTitle"))}</strong><p class="muted" style="margin:4px 0 10px">${esc(t("sp.closedSub"))}</p><button class="btn" onclick="openStorePlans()">🛍️ ${esc(t("sp.choose.btn"))}</button></div>` : `<button class="btn wiz-start" onclick="openProductWizard()">📷 ${esc(t("wiz.start"))}</button>`}
-    ${c.storeClosed ? "" : `<p class="muted" style="margin:6px 0 0;text-align:center">${esc(t("wiz.startSub"))}</p>`}
-    ${pricingCardHtml(c)}
-    ${errorBanner()}
-  `;
+      </section>
+      <details class="manage-details"><summary>⚙️ ${esc(t("merchant.more"))}</summary>
+        <div class="manage-tool-grid">
+          <button onclick="S._mprof=null;go('merchantProfile')"><span>📍</span><b>${esc(t("merchant.details"))}</b></button>
+          <button onclick="S._hours=null;go('merchantHours')"><span>🕒</span><b>${esc(t("merchant.hours"))}</b></button>
+          <button onclick="go('merchantMode');setMerchantTab('promo')"><span>📢</span><b>${esc(t("ads.myBanners"))}</b></button>
+        </div>
+        <details class="manage-subdetails"><summary>💰 ${esc(t("merchant.pricing"))}</summary>${pricingCardHtml(c)}</details>
+      </details>
+      <details class="manage-details"><summary>🤝 ${esc(t("merchant.marketers"))}</summary>
+        ${(c.affiliates || []).length ? c.affiliates.map((af) => `<div class="manage-affiliate"><div><b>${esc(af.user.fullName)}</b><small>${esc(af.user.email)} · ${af.commissionType === "PERCENT" ? af.commissionValue + "%" : fmt(af.commissionValue)} ${esc(t("merchant.perSale"))}</small><small>${esc(t("merchant.referred"))}: ${af.referredCount} · ${esc(t("merchant.totalCommission"))}: ${fmt(af.totalCommissionCents)}</small></div><span class="badge ${af.isActive ? "success" : "neutral"}">${af.isActive ? esc(t("merchant.active")) : esc(t("merchant.inactive"))}</span><button class="btn small outline" onclick="toggleCatalogAffiliate('${af.id}',${!af.isActive})">${af.isActive ? esc(t("merchant.disable")) : esc(t("merchant.enable"))}</button></div>`).join("") : `<p class="muted">${esc(t("merchant.noMarketers"))}</p>`}
+        <div class="divider"></div><div class="field"><label>${esc(t("merchant.marketerEmail"))}</label><input id="aff-email" placeholder="marketer@example.com" value="${esc(c.affEmail || "")}" /></div>
+        <div class="row"><div class="field"><label>${esc(t("merchant.commissionType"))}</label><select id="aff-type"><option value="PERCENT" ${c.affType === "FIXED" ? "" : "selected"}>${esc(t("merchant.percent"))}</option><option value="FIXED" ${c.affType === "FIXED" ? "selected" : ""}>${esc(t("merchant.fixed"))}</option></select></div><div class="field"><label>${esc(t("merchant.value"))}</label><input id="aff-value" placeholder="10" value="${esc(c.affValue || "")}" /></div></div>
+        <button class="btn small" onclick="addCatalogAffiliate()">${esc(t("merchant.addMarketer"))}</button>
+      </details>
+      ${errorBanner()}
+    </main>`;
 }
 
 async function loadCatalog() {
