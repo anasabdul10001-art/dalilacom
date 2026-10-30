@@ -256,6 +256,7 @@ DICT.en = {
 // To add a language, copy this file (e.g. i18n.de.js), translate the values, keep the keys, and load it in index.html.
 // PHRASES = whole texts; PATTERNS = texts with numbers or names inside (regex -> replacement or function).
 PHRASES.en = {
+  "اقتراحات العناوين من © OpenStreetMap contributors": "Address suggestions from © OpenStreetMap contributors",
   "تعذّر التأكيد": "Could not confirm",
   "% من كل عملية": "% of each transaction",
   "+ منتج جديد": "+ New product",
