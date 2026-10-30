@@ -407,7 +407,7 @@ function logoSrc(kind, tone) {
 
 /** The essential pages (about, privacy, terms, returns, shipping): small links at the bottom of the main screens. */
 function legalLinksHtml() {
-  const L = [["about", "legal.about"], ["privacy", "legal.privacy"], ["terms", "legal.terms"], ["refund", "legal.refund"], ["shipping", "legal.shipping"]];
+  const L = [["about", "legal.about"], ["impressum", "legal.impressum"], ["privacy", "legal.privacy"], ["terms", "legal.terms"], ["refund", "legal.refund"], ["shipping", "legal.shipping"]];
   return `<nav class="legal-links" aria-label="legal">${L.map(([p, k]) => `<a href="/${p}.html" target="_blank" rel="noopener">${esc(t(k))}</a>`).join("")}</nav>`;
 }
 

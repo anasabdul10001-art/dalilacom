@@ -27,6 +27,7 @@ fun LegalLinks(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val items = listOf(
         R.string.legal_about to "/about.html",
+        R.string.legal_impressum to "/impressum.html",
         R.string.legal_privacy to "/privacy.html",
         R.string.legal_terms to "/terms.html",
         R.string.legal_refund to "/refund.html",
