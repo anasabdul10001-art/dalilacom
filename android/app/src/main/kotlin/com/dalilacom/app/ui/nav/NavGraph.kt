@@ -77,7 +77,7 @@ fun DalilacomNavGraph(
     LaunchedEffect(notificationRoute) {
         val route = notificationRoute ?: return@LaunchedEffect
         navController.currentBackStackEntryFlow.first { it.destination.route != null && it.destination.route != "splash" }
-        val needsAccount = route.startsWith("order/") || route == "merchantMode" || route == "responder" || route == "adminReview" || route == NotificationRoutes.INBOX
+        val needsAccount = route.startsWith("order/") || route.startsWith("merchantMode") || route == "responder" || route == "adminReview" || route == NotificationRoutes.INBOX
         if (route != "home" && (!needsAccount || container.tokenStore.getToken() != null)) navController.navigate(route)
         onNotificationRouteConsumed()
     }
@@ -241,7 +241,7 @@ fun DalilacomNavGraph(
             com.dalilacom.app.ui.merchantmode.StorePlansScreen(
                 container = container,
                 onBack = { navController.popBackStack() },
-                onOpenStore = { navController.navigate("merchantMode") { popUpTo("home") } },
+                onOpenStore = { navController.navigate("merchantMode/shop") { popUpTo("home") } },
             )
         }
         composable("branches") {
@@ -262,6 +262,7 @@ fun DalilacomNavGraph(
                 onLogin = { navController.navigate("login") },
                 onOpenMerchant = { id -> navController.navigate("merchant/$id") },
                 onBookAd = { kind -> navController.navigate("adBook?kind=$kind") },
+                onStartSelling = { navController.navigate("merchantRegister") },
             )
         }
         composable("productWizard") {
@@ -291,7 +292,7 @@ fun DalilacomNavGraph(
         composable("merchantRegister") {
             MerchantRegisterScreen(
                 factory = factory,
-                onRegistered = { navController.popBackStack() },
+                onRegistered = { navController.popBackStack(); navController.navigate("merchantMode/shop") { launchSingleTop = true } },
                 onBack = { navController.popBackStack() },
                 onClaimLandmark = { id -> navController.navigate("landmarkClaim/$id") },
             )
@@ -376,6 +377,9 @@ fun DalilacomNavGraph(
         }
         composable("merchantMode") {
             MerchantModeShell(rootNavController = navController, container = container)
+        }
+        composable("merchantMode/shop") {
+            MerchantModeShell(rootNavController = navController, container = container, startOnCatalog = true)
         }
         composable("merchantMode/redeem") {
             MerchantModeShell(rootNavController = navController, container = container, startOnRedeem = true)

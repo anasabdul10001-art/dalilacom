@@ -58,7 +58,7 @@ fun ProfileScreen(
     onOpenHistory: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
-    var role by remember { mutableStateOf<String?>(null) }
+    val role by container.sessionStore.roleFlow.collectAsState(initial = null)
     var account by remember { mutableStateOf<MeResponse?>(null) }
     var profile by remember { mutableStateOf<ProfileDto?>(container.profileRepository.cached) }
     var unread by remember { mutableStateOf(0) }
@@ -68,7 +68,6 @@ fun ProfileScreen(
         // all four at once, the name and photo first on screen: they used to arrive one request after the other
         kotlinx.coroutines.coroutineScope {
             launch { container.profileRepository.me()?.let { profile = it } }
-            launch { role = container.sessionStore.getRole() }
             launch { account = container.authRepository.me() }
             launch { unread = container.notificationRepository.unreadCount() }
         }
@@ -88,6 +87,15 @@ fun ProfileScreen(
         TextButton(onClick = onEditProfile) { Text(stringResource(R.string.profile_edit)) }
         TextButton(onClick = onOpenAccount) { Text(stringResource(R.string.profile_account_settings)) }
         OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
+        Spacer(Modifier.height(12.dp))
+        if (role == "MERCHANT") {
+            Button(onClick = onOpenMerchantMode, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_merchant_mode)) }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sp_title)) }
+        } else if (role == "CUSTOMER") {
+            Button(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_register_merchant)) }
+            Text(stringResource(R.string.profile_start_selling_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 5.dp))
+        }
         Spacer(Modifier.height(24.dp))
 
         // Only nag about verifying when the server can actually deliver the email.
@@ -110,13 +118,6 @@ fun ProfileScreen(
         if (role == "ADMIN") {
             Button(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.review_title)) }
             Spacer(Modifier.height(8.dp))
-        }
-        if (role == "MERCHANT") {
-            Button(onClick = onOpenMerchantMode, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_merchant_mode)) }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.sp_title)) }
-        } else {
-            OutlinedButton(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_register_merchant)) }
         }
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = onOpenNotifications, modifier = Modifier.fillMaxWidth()) {

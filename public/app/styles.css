@@ -1266,6 +1266,11 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .store-slotstrip::-webkit-scrollbar { display: none; }
 .store-slotstrip .store-slot { flex: none; width: 168px; }
 .store-adstrip { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 12px; padding: 12px 16px; border-radius: 8px; background: #111; color: #fff; font-size: 13.5px; }
+.store-seller-cta { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:10px 12px 0; padding:14px 16px; border:1px solid color-mix(in srgb,var(--primary) 28%,var(--border)); border-radius:12px; background:color-mix(in srgb,var(--primary) 5%,var(--surface)); }
+.store-seller-cta>div { display:grid; gap:4px; }
+.store-seller-cta small { color:var(--text-muted); line-height:1.45; }
+.store-seller-cta button { flex:none; border:0; border-radius:9px; padding:10px 13px; background:var(--primary); color:#fff; font:inherit; font-size:13px; font-weight:800; cursor:pointer; }
+@media(max-width:560px) { .store-seller-cta { align-items:stretch; flex-direction:column; } }
 .store-adstrip button { padding: 8px 18px; border: 0; border-radius: 4px; background: #fff; color: #111; font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; }
 
 .ad-packs { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }

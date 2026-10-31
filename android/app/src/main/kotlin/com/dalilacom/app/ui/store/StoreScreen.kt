@@ -232,10 +232,12 @@ fun StoreScreen(
     onLogin: () -> Unit,
     onOpenMerchant: (String) -> Unit = {},
     onBookAd: (String) -> Unit = {},
+    onStartSelling: () -> Unit = {},
 ) {
     val vm: StoreViewModel = viewModel(factory = ViewModelFactory(container))
     val ui by vm.ui.collectAsState()
     val context = LocalContext.current
+    val role by container.sessionStore.roleFlow.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
     var query by rememberSaveable { mutableStateOf("") }
     var sortOpen by remember { mutableStateOf(false) }
@@ -305,6 +307,15 @@ fun StoreScreen(
         }
 
         LazyColumn(contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
+            if (role == "CUSTOMER") item {
+                StoreCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("🛍️  " + stringResource(R.string.store_start_selling), fontWeight = FontWeight.ExtraBold)
+                        Text(stringResource(R.string.profile_start_selling_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick = onStartSelling, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_register_merchant)) }
+                    }
+                }
+            }
             // where: the whole country, one city, or around me
             item {
                 val where = when (ui.scope) {

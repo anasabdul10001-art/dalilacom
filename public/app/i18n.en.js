@@ -90,7 +90,8 @@ DICT.en = {
   "dur.min1": "1 min", "dur.min2": "2 min", "dur.min3to10": "{n} min", "dur.min": "{n} min", "dur.hm": "{h} h {m} min",
 
   "profile.edit": "✏️ Edit my profile", "profile.myAccount": "My account", "profile.favorites": "My saved places",
-  "profile.merchantMode": "Business mode", "profile.registerMerchant": "Register as a business",
+  "profile.merchantMode": "Manage my shop", "profile.registerMerchant": "Open your shop and start selling", "profile.startSellingSub": "Every account can have a shop and sell new or used products with a free or paid plan.",
+  "merchant.startTitle": "Open your online shop", "merchant.startIntro": "Every account can open a shop and sell new or used products. If you sell online or from home, choose an online business type; you won't need a map address. After your registration is approved, choose a plan and add products.", "merchant.startName": "Shop name", "merchant.startNamePlaceholder": "Example: My shop", "merchant.startType": "Shop type or business", "merchant.startSubmit": "Continue to open shop", "merchant.storeFrontCta": "Have products to sell?", "merchant.storeFrontSub": "Open your shop and add new or used products.",
   "ref.become": "Ask to become a marketer", "ref.becomeSub": "Choose the kind of marketing that suits you. The administration reviews your request and lets you know.", "ref.phone": "Your phone (to reach you)", "ref.note": "Note (optional)",
   "ref.electronic": "Online marketer", "ref.electronicSub": "You share your link on the internet and social media", "ref.field": "Field marketer", "ref.fieldSub": "You visit people and shops and introduce them to Dalilacom",
   "ref.sent": "Your request was sent, the administration will review it ✓", "ref.pending": "Your request is waiting for the administration's decision", "ref.rejected": "Your earlier request was not accepted. You can ask again.",

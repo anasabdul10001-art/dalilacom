@@ -113,7 +113,7 @@
     <string name="s_70a771db" formatted="false">تعذّر تأكيد الحسم</string>
     <string name="s_7121fbcc" formatted="false">تم ربط فيسبوك ✅</string>
     <string name="s_746ec1bd" formatted="false">سعر العضو لازم يكون أقل من السعر الأصلي</string>
-    <string name="s_749f9cfe" formatted="false">سجّل كصاحب نشاط</string>
+    <string name="s_749f9cfe" formatted="false">افتح متجرك الإلكتروني</string>
     <string name="s_760c65a1" formatted="false">الهاتف</string>
     <string name="s_77eb6cfd" formatted="false">نبذة عنك أو عن محلك (بتظهر للزبائن وعلى الفواتير)</string>
     <string name="s_79e32d1f" formatted="false">⏳ طلبك بانتظار موافقة الإدارة — ما رح يظهر محلك على الخريطة قبلها.</string>
@@ -202,7 +202,7 @@
     <string name="s_bc12337c" formatted="false">تعذّر تحميل الاتصالات</string>
     <string name="s_bdb567d9" formatted="false">تعذّر إلغاء الطلب</string>
     <string name="s_beb6f577" formatted="false">الكود غير صالح أو منتهي</string>
-    <string name="s_c03965c6" formatted="false">بيصير حسابك صاحب نشاط بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</string>
+    <string name="s_c03965c6" formatted="false">أي مستخدم يقدر يفتح متجره ويبيع الجديد أو المستعمل. إذا بتبيع أونلاين أو من البيت، اختر نوع نشاط أونلاين وما بتحتاج عنوانًا على الخريطة. بعد قبول التسجيل بتختار الباقة وبتضيف منتجاتك.</string>
     <string name="s_c2cbfa91" formatted="false">📄 تصدير الفاتورة PDF</string>
     <string name="s_c31663d5" formatted="false">محفظتي</string>
     <string name="s_c33c7465" formatted="false">ما عندك قواعد بعد</string>

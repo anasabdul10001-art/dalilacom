@@ -95,8 +95,9 @@
 
     <string name="profile_title">حسابي</string>
     <string name="profile_edit">✏️ تعديل ملفي الشخصي</string>
-    <string name="profile_merchant_mode">وضع النشاط</string>
-    <string name="profile_register_merchant">سجّل كصاحب نشاط</string>
+    <string name="profile_merchant_mode">إدارة متجري</string>
+    <string name="profile_register_merchant">افتح متجرك وابدأ البيع</string>
+    <string name="profile_start_selling_sub">لك متجر خاص فيك، وتقدر تبيع منتجات جديدة أو مستعملة بالباقة المجانية أو المدفوعة.</string>
     <string name="profile_favorites">♥ أماكني المحفوظة</string>
     <string name="profile_responder">المجيب الآلي</string>
     <string name="profile_wallet">محفظتي</string>
@@ -407,6 +408,7 @@
     <string name="store_results_for">نتائج البحث عن «%1$s»</string>
     <string name="store_search">ابحث عن منتج أو متجر</string>
     <string name="store_hero_title">تسوّق من كل متاجر مدينتك</string>
+    <string name="store_start_selling">عندك منتجات للبيع؟</string>
     <string name="store_hero_sub">آلاف المنتجات بمكان واحد، وأسعار خاصة لأعضاء دليلكم</string>
     <string name="store_deals">عروض الأعضاء</string>
     <string name="store_best">الأكثر مبيعًا</string>
@@ -1059,7 +1061,7 @@
     <string name="loc_done">تم حفظ موقعك ✓</string>
     <string name="loc_failed">تعذّر حفظ الموقع</string>
     <string name="lm_not_same">لا، هذا مكان مختلف — تابع التسجيل</string>
-    <string name="shop_approved">✅ انقبل نشاطك وصار على الخريطة</string>
+    <string name="shop_approved">✅ انفتح متجرك. هلق اختار الباقة وأضف منتجاتك.</string>
     <string name="shop_rejected">ما انقبل نشاطك:</string>
     <string name="shop_pending">وصلنا طلبك وهو قيد المراجعة، بنخبرك بالنتيجة</string>
     <string name="ads_img_label">صورة الإعلان (اختياري)</string>

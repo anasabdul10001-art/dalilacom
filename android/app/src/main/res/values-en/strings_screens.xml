@@ -113,7 +113,7 @@
     <string name="s_70a771db" formatted="false">Couldn\'t confirm the discount</string>
     <string name="s_7121fbcc" formatted="false">Facebook connected ✅</string>
     <string name="s_746ec1bd" formatted="false">The member price must be lower than the regular price</string>
-    <string name="s_749f9cfe" formatted="false">Register as a business</string>
+    <string name="s_749f9cfe" formatted="false">Open your online shop</string>
     <string name="s_760c65a1" formatted="false">Phone</string>
     <string name="s_77eb6cfd" formatted="false">About you or your shop (shown to customers and on invoices)</string>
     <string name="s_79e32d1f" formatted="false">⏳ Your request is waiting for admin approval — your shop won\'t appear on the map before that.</string>
@@ -202,7 +202,7 @@
     <string name="s_bc12337c" formatted="false">Couldn\'t load the connections</string>
     <string name="s_bdb567d9" formatted="false">Couldn\'t cancel the order</string>
     <string name="s_beb6f577" formatted="false">The code is invalid or expired</string>
-    <string name="s_c03965c6" formatted="false">Your account becomes a business account after admin approval, then your shop appears on the map</string>
+    <string name="s_c03965c6" formatted="false">Every account can open a shop and sell new or used products. If you sell online or from home, choose an online business type; you will not need a map address. After approval, choose a plan and add your products.</string>
     <string name="s_c2cbfa91" formatted="false">📄 Export invoice (PDF)</string>
     <string name="s_c31663d5" formatted="false">My wallet</string>
     <string name="s_c33c7465" formatted="false">You have no rules yet</string>

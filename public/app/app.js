@@ -2328,13 +2328,14 @@ function tabProfile() {
           ${p.bio ? `<p class="muted" style="margin:0 0 6px;max-width:260px">${esc(p.bio)}</p>` : ""}
           <button class="link-btn" onclick="go('profileEdit')">${esc(t("profile.edit"))}</button>`;
       })()}
-      <div style="height:14px"></div>
-      ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
+      <div style="height:10px"></div>
       ${S.role === "MERCHANT"
-        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='home';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
+        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='catalog';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
            <div style="height:8px"></div>
            <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button>`
-        : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`}
+        : S.role === "CUSTOMER" ? `<button class="btn" style="max-width:320px" onclick="go('merchantRegister')">🛍️ ${esc(t("profile.registerMerchant"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.startSellingSub"))}</p>` : ""}
+      <div style="height:14px"></div>
+      ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
       <div style="height:10px"></div>
       <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
       <p class="muted" style="margin:0 0 10px">${esc(t("profile.shareLocationSub"))}</p>
@@ -4214,6 +4215,7 @@ function screenStore() {
         ${sections.map((x) => `<button class="${st.section === x.id ? "on" : ""}" onclick="storePickSection('${x.id}')">${esc(storeSecName(x))}</button>`).join("")}
       </div>
       ${storeScopeBar(st)}
+      ${S.token && S.role === "CUSTOMER" ? `<section class="store-seller-cta"><div><b>🛍️ ${esc(t("merchant.storeFrontCta"))}</b><small>${esc(t("merchant.storeFrontSub"))}</small></div><button onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))} ←</button></section>` : ""}
       ${errorBanner()}
       ${body}
     </div>`;
@@ -4374,11 +4376,11 @@ function screenMerchantRegister() {
   const m = S._merchReg;
   return `
     ${backRow()}
-    <h1 class="screen-title">سجّل كصاحب نشاط</h1>
-    <p class="screen-sub">بيصير حسابك صاحب نشاط بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</p>
+    <h1 class="screen-title">${esc(t("merchant.startTitle"))}</h1>
+    <p class="screen-sub">${esc(t("merchant.startIntro"))}</p>
     <div class="section-title">${esc(t("mp.secName"))}</div>
-    <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="مثال: مطعم الياسمين" value="${esc(m.name || "")}" oninput="mrNameTyped(this.value)" /></div>
-    <div class="section-title">${esc(t("mp.secProfession"))}</div>
+    <div class="field"><label>${esc(t("merchant.startName"))}</label><input id="mr-name" placeholder="${esc(t("merchant.startNamePlaceholder"))}" value="${esc(m.name || "")}" oninput="mrNameTyped(this.value)" /></div>
+    <div class="section-title">${esc(t("merchant.startType"))}</div>
     ${mrGuessHtml(m)}
     ${categoryPickerHtml(m.categories, m.selectedCat, "selectMerchCategory")}
     <div class="section-title">${esc(t("mp.secContact"))}</div>
@@ -4389,7 +4391,7 @@ function screenMerchantRegister() {
       <div class="field"><label>واتساب (اختياري)</label><input id="mr-whatsapp" placeholder="مثال: 963912345678" value="${esc(m.whatsapp || "")}" /></div>
     </div>
     ${errorBanner()}
-    <button class="btn" ${S.busy ? "disabled" : ""} onclick="submitMerchantRegister()">سجّل</button>
+    <button class="btn" ${S.busy ? "disabled" : ""} onclick="submitMerchantRegister()">${esc(t("merchant.startSubmit"))}</button>
   `;
 }
 
@@ -4469,8 +4471,9 @@ async function submitMerchantRegister() {
     S._merchReg = null;
     S._catSug = ""; S._catSugOpen = false;
     S._onboarding = null;
-    back();
-    toast(data.approvalStatus === "APPROVED" ? "✅ انقبل نشاطك وصار على الخريطة" : data.approvalStatus === "REJECTED" ? tr("ما انقبل نشاطك:") + " " + (data.reason || tr("غير مناسب للنشر")) : "وصلنا طلبك وهو قيد المراجعة، بنخبرك بالنتيجة");
+    S.merchantTab = "catalog"; S._catalog = null; S._mstat = null;
+    reset("merchantMode");
+    toast(data.approvalStatus === "APPROVED" ? "✅ متجرك جاهز. اختار الباقة وابدأ أضف منتجاتك." : data.approvalStatus === "REJECTED" ? tr("ما انقبل طلب فتح المتجر:") + " " + (data.reason || tr("راجع البيانات وحاول مرة ثانية")) : "وصل طلب فتح متجرك، وهو قيد المراجعة. بنخبرك بالنتيجة.");
   } else {
     S.error = errMsg(data, "تعذّر تسجيل حساب النشاط");
     render();

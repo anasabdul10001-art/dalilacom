@@ -91,8 +91,9 @@
 
     <string name="profile_title">My account</string>
     <string name="profile_edit">✏️ Edit my profile</string>
-    <string name="profile_merchant_mode">Business mode</string>
-    <string name="profile_register_merchant">Register as a business</string>
+    <string name="profile_merchant_mode">Manage my shop</string>
+    <string name="profile_register_merchant">Open your shop and start selling</string>
+    <string name="profile_start_selling_sub">Every account can sell new or used products with a free or paid shop plan.</string>
     <string name="profile_favorites">♥ Saved places</string>
     <string name="profile_responder">Auto-responder</string>
     <string name="profile_wallet">My wallet</string>
@@ -403,6 +404,7 @@
     <string name="store_results_for">Results for “%1$s”</string>
     <string name="store_search">Search products or shops</string>
     <string name="store_hero_title">Shop every store in your city</string>
+    <string name="store_start_selling">Have products to sell?</string>
     <string name="store_hero_sub">Thousands of products in one place, with special prices for Dalilacom members</string>
     <string name="store_deals">Member deals</string>
     <string name="store_best">Best sellers</string>
@@ -1055,7 +1057,7 @@
     <string name="loc_done">Your location is saved ✓</string>
     <string name="loc_failed">Could not save the location</string>
     <string name="lm_not_same">No, it is a different place — continue registering</string>
-    <string name="shop_approved">✅ Your business was approved and is on the map</string>
+    <string name="shop_approved">✅ Your shop is open. Choose a plan and add your products.</string>
     <string name="shop_rejected">Your business was not accepted:</string>
     <string name="shop_pending">We got your request and it is being reviewed, we will tell you the result</string>
     <string name="ads_img_label">Picture of the ad (optional)</string>

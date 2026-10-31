@@ -69,8 +69,8 @@ private enum class MerchantTab(@androidx.annotation.StringRes val labelRes: Int,
 }
 
 @Composable
-fun MerchantModeShell(rootNavController: NavHostController, container: AppContainer, startOnRedeem: Boolean = false) {
-    var selectedTab by rememberSaveable { mutableStateOf(if (startOnRedeem) MerchantTab.Redeem else MerchantTab.Home) }
+fun MerchantModeShell(rootNavController: NavHostController, container: AppContainer, startOnRedeem: Boolean = false, startOnCatalog: Boolean = false) {
+    var selectedTab by rememberSaveable { mutableStateOf(if (startOnRedeem) MerchantTab.Redeem else if (startOnCatalog) MerchantTab.Catalog else MerchantTab.Home) }
     val factory = remember { ViewModelFactory(container) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()

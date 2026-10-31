@@ -89,7 +89,8 @@ DICT.ar = {
   "dur.min1": "دقيقة", "dur.min2": "دقيقتان", "dur.min3to10": "{n} دقائق", "dur.min": "{n} دقيقة", "dur.hm": "{h} س {m} د",
 
   "profile.edit": "✏️ تعديل ملفي الشخصي", "profile.myAccount": "حسابي", "profile.favorites": "أماكني المحفوظة",
-  "profile.merchantMode": "وضع النشاط", "profile.registerMerchant": "سجّل كصاحب نشاط",
+  "profile.merchantMode": "إدارة متجري", "profile.registerMerchant": "افتح متجرك وابدأ البيع", "profile.startSellingSub": "لك متجر خاص فيك، وتقدر تبيع منتجات جديدة أو مستعملة بالباقة المجانية أو المدفوعة.",
+  "merchant.startTitle": "افتح متجرك الإلكتروني", "merchant.startIntro": "أي مستخدم يقدر يفتح متجره ويبيع منتجات جديدة أو مستعملة. إذا كنت تبيع أونلاين أو من البيت، اختر نوع نشاط أونلاين وما بتحتاج عنوانًا على الخريطة. بعد قبول التسجيل بتختار الباقة وبتضيف منتجاتك.", "merchant.startName": "اسم متجرك", "merchant.startNamePlaceholder": "مثال: متجري", "merchant.startType": "نوع المتجر أو نشاطك", "merchant.startSubmit": "تابع لفتح المتجر", "merchant.storeFrontCta": "عندك منتجات للبيع؟", "merchant.storeFrontSub": "افتح متجرك وأضف منتجاتك الجديدة أو المستعملة.",
   "ref.become": "طلب التحويل إلى مسوّق", "ref.becomeSub": "اختر نوع التسويق اللي بيناسبك. الإدارة بتراجع طلبك وبتعلمك بالقرار.", "ref.phone": "رقم هاتفك (للتواصل)", "ref.note": "ملاحظة (اختياري)",
   "ref.electronic": "مسوّق إلكتروني", "ref.electronicSub": "بتشارك رابطك عبر الإنترنت ومواقع التواصل", "ref.field": "مسوّق ميداني", "ref.fieldSub": "بتزور الناس والمحلات وبتعرّفهم على دليلكم",
   "ref.sent": "وصل طلبك، الإدارة رح تراجعه ✓", "ref.pending": "طلبك بانتظار قرار الإدارة", "ref.rejected": "طلبك السابق ما انقبل. فيك تطلب من جديد.",
