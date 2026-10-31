@@ -67,6 +67,8 @@ data class DiscoverUiState(
     val query: String = "",
     val openNow: Boolean = false,
     val radiusKm: Double? = null,
+    val searchCenter: Pair<Double, Double>? = null,
+    val searchCenterLabel: String? = null,
     val discountsOnly: Boolean = false,
     val allMerchants: List<MerchantDto> = emptyList(),
     /** Filtered, with distance filled in, nearest first. */
@@ -143,7 +145,7 @@ class DiscoverViewModel(
 
     /** Where the nearness is measured from: the person's place, else the middle of the map; the server falls back to the chosen city. */
     private suspend fun runSearch(query: String): List<com.dalilacom.app.data.network.SearchItemDto> {
-        val here = _uiState.value.userLocation
+        val here = _uiState.value.searchCenter ?: _uiState.value.userLocation
         val view = lastView?.first
         val lat = here?.first ?: view?.let { (it.north + it.south) / 2 }
         val lng = here?.second ?: view?.let { (it.east + it.west) / 2 }
@@ -217,6 +219,13 @@ class DiscoverViewModel(
     fun onOpenNowChange(value: Boolean) = _uiState.update { recompute(it.copy(openNow = value)) }
 
     fun onRadiusSelected(radiusKm: Double?) = _uiState.update { recompute(it.copy(radiusKm = radiusKm)) }
+
+    suspend fun suggestSearchLocations(query: String) = repository.suggestAddresses(query)
+
+    fun applySearchLocation(center: Pair<Double, Double>, label: String, radiusKm: Double) {
+        _uiState.update { recompute(it.copy(searchCenter = center, searchCenterLabel = label, radiusKm = radiusKm, searchBounds = null, areaDirty = false, selectedMerchantId = null)) }
+        search()
+    }
 
     fun onDiscountsOnlyChange(value: Boolean) = _uiState.update { recompute(it.copy(discountsOnly = value)) }
 
@@ -525,7 +534,7 @@ class DiscoverViewModel(
     }
 
     private fun recompute(state: DiscoverUiState): DiscoverUiState {
-        val here = state.userLocation
+        val here = state.searchCenter ?: state.userLocation
         val withDistance = state.allMerchants.map { merchant ->
             val lat = merchant.latitude
             val lng = merchant.longitude

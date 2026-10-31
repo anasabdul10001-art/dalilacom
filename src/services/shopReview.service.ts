@@ -64,7 +64,7 @@ export async function reviewShop(merchantId: string, opts: { suggestedCategory?:
       where: { id: shop.id },
       data: { approvalStatus: status, rejectionReason: status === "REJECTED" ? note ?? "غير مناسب للنشر" : null, reviewNote: status === "PENDING" ? note : null, reviewSource: source },
     });
-    if (status !== current || status === "PENDING") await announce(shop.userId, shop.businessName, status, note, current);
+    if (status !== current || status === "PENDING") await announce(shop.userId, shop.businessName, status, note, current, shop.latitude !== null || shop.longitude !== null || !!shop.address);
     return { status, note, source };
   } catch (err) {
     console.error("Shop review failed:", err instanceof Error ? err.message : err);
@@ -72,9 +72,9 @@ export async function reviewShop(merchantId: string, opts: { suggestedCategory?:
   }
 }
 
-async function announce(userId: string, name: string, status: Status, note: string | null, before: Status) {
+async function announce(userId: string, name: string, status: Status, note: string | null, before: Status, mapListed = true) {
   if (status === "APPROVED") {
-    if (before !== "APPROVED") await notify({ userId, type: "SYSTEM", title: "انقبل نشاطك ✅", body: `«${name}» صار على دليلكم وبيظهر للزبائن.`, data: { kind: "SHOP_APPROVED" }, email: false });
+    if (before !== "APPROVED") await notify({ userId, type: "SYSTEM", title: mapListed ? "انقبل نشاطك ✅" : "متجرك جاهز ✅", body: mapListed ? `«${name}» صار على دليلكم وبيظهر للزبائن.` : `«${name}» جاهز لإضافة المنتجات. فيك تضيف عنوانه للخريطة بشكل منفصل إذا حابب.`, data: { kind: "SHOP_APPROVED" }, email: false });
   } else if (status === "REJECTED") {
     await notify({ userId, type: "SYSTEM", title: "ما انقبل نشاطك", body: `«${name}»: ${note ?? "غير مناسب للنشر"}. بتقدر تعدّل معلوماتك وتجرّب من جديد.`, data: { kind: "SHOP_REJECTED" }, email: false });
   } else {
@@ -84,10 +84,10 @@ async function announce(userId: string, name: string, status: Status, note: stri
 
 /** An admin's decision (the shop was waiting): the owner is told. */
 export async function adminDecidedShop(merchantId: string, approve: boolean, reason: string | null) {
-  const shop = await prisma.merchantProfile.findUnique({ where: { id: merchantId }, select: { userId: true, businessName: true } });
+  const shop = await prisma.merchantProfile.findUnique({ where: { id: merchantId }, select: { userId: true, businessName: true, address: true, latitude: true, longitude: true } });
   if (!shop) return;
   await prisma.merchantProfile.update({ where: { id: merchantId }, data: { reviewNote: null, reviewSource: "ADMIN" } });
-  await announce(shop.userId, shop.businessName, approve ? "APPROVED" : "REJECTED", reason, "PENDING");
+  await announce(shop.userId, shop.businessName, approve ? "APPROVED" : "REJECTED", reason, "PENDING", shop.latitude !== null || shop.longitude !== null || !!shop.address);
 }
 
 /** The registration waits for the answer, but not for long: after [ms] the shop just shows as waiting and the review finishes by itself. */

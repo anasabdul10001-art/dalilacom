@@ -32,9 +32,10 @@ class MerchantRepository(
         whatsapp: String? = null,
         location: Pair<Double, Double>? = null,
         suggestedCategory: String? = null,
+        storeOnly: Boolean = false,
     ): Result<RegisterMerchantResponse> {
         val response = safeApiCall {
-            api.registerMerchant(RegisterMerchantRequest(businessName, categoryId, address, phone, whatsapp, location?.first, location?.second, suggestedCategory))
+            api.registerMerchant(RegisterMerchantRequest(businessName, categoryId, address, phone, whatsapp, location?.first, location?.second, suggestedCategory, storeOnly))
         }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()

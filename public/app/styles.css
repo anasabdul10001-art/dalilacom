@@ -1828,3 +1828,23 @@ html[dir="ltr"] .setup-step .s-go { transform: scaleX(-1); }
 .chips-arrow.show { display: flex; }
 .chips-arrow.left { left: 0; }
 .chips-arrow.right { right: 0; }
+.location-search-btn{border:0;background:#edf4e9;color:#326f2b;border-radius:50%;width:34px;height:34px;flex:0 0 34px;font-size:17px;cursor:pointer}
+.location-search-page{position:fixed;inset:0;z-index:5000;background:#e9edeb;font-family:inherit}
+.location-search-map{position:absolute;inset:0;z-index:0}
+.location-search-panel{position:absolute;z-index:2;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;right:12px;margin-inline:auto;max-width:620px;background:rgba(255,255,255,.96);border-radius:16px;padding:12px 14px;box-shadow:0 3px 18px #0002}
+.location-search-title{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.location-search-title b{font-size:17px}
+.loc-back{border:0;background:#f1f0ed;border-radius:50%;width:34px;height:34px;font-size:24px;cursor:pointer}
+.location-search-field{height:42px;display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:22px;background:#f3f2ef}
+.location-search-field input{min-width:0;flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:14px}
+.location-search-field>button{border:0;background:#e9f2e5;color:#39782d;border-radius:50%;height:32px;width:32px;font-size:17px;cursor:pointer}
+.location-current{font-size:12px;color:#687168;margin:8px 3px 2px;min-height:17px}
+.location-radius-label{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:12px;color:#40443e}
+.location-radius-label b{font-size:13px}
+.location-radius-slider{width:100%;accent-color:#3d7e31;display:block;margin:7px 0 0}
+.location-radius-ends{display:flex;justify-content:space-between;color:#767b74;font-size:10px}
+.location-search-apply{width:100%;margin-top:10px}
+.location-search-suggestions{position:absolute;z-index:5;top:96px;left:14px;right:14px;display:flex;flex-direction:column;max-height:42vh;overflow:auto;background:#fff;border-radius:12px;box-shadow:0 5px 18px #0003}
+.location-search-suggestions button{border:0;border-bottom:1px solid #eee;background:#fff;padding:10px 12px;text-align:start;font:inherit;cursor:pointer}
+.location-search-suggestions small{display:block;color:#747a74;margin-inline-start:24px}
+@media(max-width:600px){.location-search-panel{left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 8px);padding:10px 12px}.location-search-suggestions{top:90px}}

@@ -530,10 +530,32 @@ data class RegisterMerchantRequest(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val suggestedCategory: String? = null,
+    val storeOnly: Boolean = false,
 )
 
 @Serializable
 data class RegisterMerchantResponse(val id: String, val businessName: String, val approvalStatus: String, val reason: String? = null)
+
+@Serializable
+data class ShopAffiliateUserDto(val fullName: String, val email: String)
+
+@Serializable
+data class ShopAffiliateDto(
+    val id: String,
+    val user: ShopAffiliateUserDto,
+    val commissionType: String,
+    val commissionValue: Int,
+    val referralCode: String,
+    val isActive: Boolean,
+    val referredCount: Int = 0,
+    val totalCommissionCents: Int = 0,
+)
+
+@Serializable
+data class AddShopAffiliateRequest(val userEmail: String, val commissionType: String, val commissionValue: Int)
+
+@Serializable
+data class UpdateShopAffiliateRequest(val isActive: Boolean)
 
 @Serializable
 data class VerifyRedeemRequest(val memberNumber: String, val code: String)

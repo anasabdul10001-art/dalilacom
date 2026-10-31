@@ -56,6 +56,7 @@ class AppContainer(context: Context) {
     val broadcastRepository = BroadcastRepository(api)
     val accountRepository = AccountRepository(api, tokenStore)
     val landmarkRepository = com.dalilacom.app.data.repository.LandmarkRepository(api)
+    val shopAffiliateRepository = com.dalilacom.app.data.repository.ShopAffiliateRepository(api)
 
     init {
         // our social media pages the owner switched on: read once at start; until they load the Facebook page shows

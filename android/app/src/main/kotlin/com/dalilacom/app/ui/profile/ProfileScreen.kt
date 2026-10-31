@@ -49,6 +49,9 @@ fun ProfileScreen(
     onOpenReview: () -> Unit,
     onOpenNotifications: () -> Unit,
     onRegisterMerchant: () -> Unit,
+    onOpenOnlineStore: () -> Unit = {},
+    onOpenMapListing: () -> Unit = {},
+    onOpenMarketingTeam: () -> Unit = {},
     onOpenMerchantMode: () -> Unit,
     onOpenStore: () -> Unit = {},
     onOpenMyAds: () -> Unit = {},
@@ -92,8 +95,15 @@ fun ProfileScreen(
             Button(onClick = onOpenMerchantMode, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_merchant_mode)) }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sp_title)) }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onOpenMapListing, modifier = Modifier.fillMaxWidth()) { Text("📍  " + stringResource(R.string.profile_map_listing)) }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onOpenMarketingTeam, modifier = Modifier.fillMaxWidth()) { Text("🤝  " + stringResource(R.string.profile_marketing_team)) }
         } else if (role == "CUSTOMER") {
-            Button(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_register_merchant)) }
+            Button(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text("📍  " + stringResource(R.string.profile_register_merchant)) }
+            Text(stringResource(R.string.profile_map_activity_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 5.dp))
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = onOpenOnlineStore, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_open_online_store)) }
             Text(stringResource(R.string.profile_start_selling_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 5.dp))
         }
         Spacer(Modifier.height(24.dp))

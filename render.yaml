@@ -130,6 +130,9 @@ services:
         sync: false
       - key: PUBLIC_BASE_URL
         value: "https://dalilacom.com"
+      # Public pages and approved shops are ready to appear in Google.
+      - key: SEARCH_INDEXING
+        value: "on"
       # The developer test console is only for the owner: it is served on the testing address, not here.
       - key: HIDE_DEV_CONSOLE
         value: "true"

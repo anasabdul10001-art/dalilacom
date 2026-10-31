@@ -388,6 +388,15 @@ interface ApiService {
     @POST("merchant/register")
     suspend fun registerMerchant(@Body body: RegisterMerchantRequest): Response<RegisterMerchantResponse>
 
+    @GET("affiliates")
+    suspend fun getMyMarketingTeam(): Response<List<ShopAffiliateDto>>
+
+    @POST("affiliates")
+    suspend fun addShopAffiliate(@Body body: AddShopAffiliateRequest): Response<kotlinx.serialization.json.JsonElement>
+
+    @PATCH("affiliates/{id}")
+    suspend fun updateShopAffiliate(@Path("id") id: String, @Body body: UpdateShopAffiliateRequest): Response<kotlinx.serialization.json.JsonElement>
+
     @POST("merchant/discounts")
     suspend fun addDiscount(@Body body: CreateDiscountRequest): Response<DiscountDto>
 

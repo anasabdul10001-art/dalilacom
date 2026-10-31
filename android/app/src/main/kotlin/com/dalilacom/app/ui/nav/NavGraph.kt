@@ -237,6 +237,9 @@ fun DalilacomNavGraph(
         composable("marketing") {
             com.dalilacom.app.ui.profile.MarketingScreen(container = container, onBack = { navController.popBackStack() })
         }
+        composable("marketingTeam") {
+            com.dalilacom.app.ui.merchantmode.MarketingTeamScreen(container = container, onBack = { navController.popBackStack() })
+        }
         composable("storePlans") {
             com.dalilacom.app.ui.merchantmode.StorePlansScreen(
                 container = container,
@@ -262,7 +265,7 @@ fun DalilacomNavGraph(
                 onLogin = { navController.navigate("login") },
                 onOpenMerchant = { id -> navController.navigate("merchant/$id") },
                 onBookAd = { kind -> navController.navigate("adBook?kind=$kind") },
-                onStartSelling = { navController.navigate("merchantRegister") },
+                onStartSelling = { navController.navigate("merchantRegister/store") },
             )
         }
         composable("productWizard") {
@@ -295,6 +298,15 @@ fun DalilacomNavGraph(
                 onRegistered = { navController.popBackStack(); navController.navigate("merchantMode/shop") { launchSingleTop = true } },
                 onBack = { navController.popBackStack() },
                 onClaimLandmark = { id -> navController.navigate("landmarkClaim/$id") },
+            )
+        }
+        composable("merchantRegister/{mode}") { entry ->
+            MerchantRegisterScreen(
+                factory = factory,
+                onRegistered = { navController.popBackStack(); navController.navigate("merchantMode/shop") { launchSingleTop = true } },
+                onBack = { navController.popBackStack() },
+                onClaimLandmark = { id -> navController.navigate("landmarkClaim/$id") },
+                storeOnly = entry.arguments?.getString("mode") == "store",
             )
         }
         composable("favorites") {

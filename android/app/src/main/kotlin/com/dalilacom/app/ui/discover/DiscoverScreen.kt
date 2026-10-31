@@ -62,6 +62,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SmallFloatingActionButton
@@ -70,6 +71,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -78,6 +80,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -90,6 +93,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
 import com.dalilacom.app.data.RouteTarget
@@ -153,6 +159,27 @@ fun DiscoverScreen(
     var recenterTick by remember { mutableIntStateOf(0) }
     var radiusFitTick by remember { mutableIntStateOf(0) }
     var languageMenuOpen by remember { mutableStateOf(false) }
+    var locationPickerOpen by remember { mutableStateOf(false) }
+    var locationQuery by remember { mutableStateOf("") }
+    var locationSelectedLabel by remember { mutableStateOf("") }
+    var locationCenter by remember { mutableStateOf(state.searchCenter ?: state.userLocation) }
+    var locationLabel by remember { mutableStateOf(state.searchCenterLabel.orEmpty()) }
+    var locationRadius by remember { mutableFloatStateOf((state.radiusKm ?: 10.0).toFloat().coerceIn(1f, 100f)) }
+    var locationSuggestions by remember { mutableStateOf<List<com.dalilacom.app.data.network.AddressSuggestionDto>>(emptyList()) }
+    var locationMapTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(locationPickerOpen, state.userLocation) {
+        if (locationPickerOpen && locationCenter == null && state.userLocation != null) {
+            locationCenter = state.userLocation
+            locationLabel = context.getString(R.string.location_my_location)
+            locationMapTick++
+        }
+    }
+    LaunchedEffect(locationPickerOpen, locationQuery, locationSelectedLabel) {
+        val q = locationQuery.trim()
+        if (!locationPickerOpen || q.length < 3 || q == locationSelectedLabel) { locationSuggestions = emptyList(); return@LaunchedEffect }
+        kotlinx.coroutines.delay(400)
+        locationSuggestions = viewModel.suggestSearchLocations(q)
+    }
     val categoryIndex = remember(state.categories) { indexCategories(state.categories) }
 
     fun fetchLocation() {
@@ -279,6 +306,7 @@ fun DiscoverScreen(
             MerchantsMap(
                 merchants = state.merchants,
                 userLocation = state.route?.nav?.position ?: state.userLocation,
+                radiusCenter = state.searchCenter ?: state.userLocation,
                 selectedId = state.selectedMerchantId,
                 onMapTap = { viewModel.selectMerchant(null) }, // a touch on the empty map brings the whole list back
                 onSelect = { id ->
@@ -349,6 +377,17 @@ fun DiscoverScreen(
                         onQueryChange = viewModel::onQueryChange,
                         onFocusChange = viewModel::onSearchFocus,
                         onSubmit = viewModel::submitSearch,
+                        onOpenLocation = {
+                            viewModel.onSearchFocus(false)
+                            locationQuery = ""
+                            locationSelectedLabel = ""
+                            locationSuggestions = emptyList()
+                            locationCenter = state.searchCenter ?: state.userLocation
+                            locationLabel = state.searchCenterLabel ?: if (state.userLocation != null) context.getString(R.string.location_my_location) else ""
+                            locationRadius = (state.radiusKm ?: 10.0).toFloat().coerceIn(1f, 100f)
+                            locationPickerOpen = true
+                            locationMapTick++
+                        },
                         modifier = Modifier.weight(1f),
                     )
                     if (isGuest) {
@@ -392,11 +431,11 @@ fun DiscoverScreen(
                         MapChip("${category.icon.orEmpty()} ${category.name}".trim(), state.selectedCategoryId == category.id) { viewModel.onCategorySelected(category.id) }
                     }
                 }
-                if (route == null && dealsMode && state.userLocation == null) {
+                if (route == null && dealsMode && state.userLocation == null && state.searchCenter == null) {
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.padding(horizontal = 12.dp)) { MapChip("📍 " + stringResource(R.string.deals_locate), false) { requestLocation() } }
                 }
-                if (route == null && state.userLocation != null) {
+                if (route == null && (state.userLocation != null || state.searchCenter != null)) {
                     Spacer(Modifier.height(8.dp))
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 12.dp),
@@ -462,6 +501,118 @@ fun DiscoverScreen(
             onPick = viewModel::pickCategory,
         )
     }
+    if (locationPickerOpen) SearchLocationPickerDialog(
+        query = locationQuery,
+        onQuery = { locationSelectedLabel = ""; locationQuery = it },
+        suggestions = locationSuggestions,
+        selectedCenter = locationCenter,
+        selectedLabel = locationLabel,
+        radiusKm = locationRadius,
+        mapTick = locationMapTick,
+        onChooseSuggestion = { item ->
+            locationCenter = item.latitude to item.longitude
+            locationLabel = item.label
+            locationQuery = item.label
+            locationSelectedLabel = item.label
+            locationSuggestions = emptyList()
+            locationMapTick++
+        },
+        onRadius = { locationRadius = it },
+        onUseCurrent = {
+            val current = state.userLocation
+            if (current == null) requestLocation() else {
+                locationCenter = current
+                locationLabel = context.getString(R.string.location_my_location)
+                locationQuery = ""
+                locationMapTick++
+            }
+        },
+        onClose = { locationPickerOpen = false },
+        onApply = {
+            val center = locationCenter
+            if (center != null) {
+                viewModel.applySearchLocation(center, locationLabel.ifBlank { context.getString(R.string.location_selected_pin) }, locationRadius.toDouble())
+                radiusFitTick++
+                locationPickerOpen = false
+            }
+        },
+    )
+    }
+}
+
+@Composable
+private fun SearchLocationPickerDialog(
+    query: String,
+    onQuery: (String) -> Unit,
+    suggestions: List<com.dalilacom.app.data.network.AddressSuggestionDto>,
+    selectedCenter: Pair<Double, Double>?,
+    selectedLabel: String,
+    radiusKm: Float,
+    mapTick: Int,
+    onChooseSuggestion: (com.dalilacom.app.data.network.AddressSuggestionDto) -> Unit,
+    onRadius: (Float) -> Unit,
+    onUseCurrent: () -> Unit,
+    onClose: () -> Unit,
+    onApply: () -> Unit,
+) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize()) {
+                MerchantsMap(
+                    merchants = emptyList(),
+                    userLocation = selectedCenter,
+                    radiusCenter = selectedCenter,
+                    selectedId = null,
+                    onSelect = {},
+                    onUserMoved = {},
+                    onMapTap = {},
+                    radiusKm = radiusKm.toDouble(),
+                    radiusFitTick = mapTick,
+                    flyTo = selectedCenter?.let { FlyTo(listOf(it), 12.0, mapTick) },
+                    modifier = Modifier.fillMaxSize(),
+                )
+                androidx.compose.material3.Card(
+                    modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 10.dp, vertical = 12.dp),
+                ) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = onClose) { Text("‹") }
+                            Text(stringResource(R.string.location_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            IconButton(onClick = onUseCurrent) { Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.location_my_location)) }
+                        }
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = onQuery,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text(stringResource(R.string.location_search_hint)) },
+                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        )
+                        if (suggestions.isNotEmpty()) {
+                            androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max = 190.dp)) {
+                                items(suggestions) { place ->
+                                    TextButton(onClick = { onChooseSuggestion(place) }, modifier = Modifier.fillMaxWidth()) {
+                                        Column(Modifier.fillMaxWidth()) {
+                                            Text(place.label, maxLines = 1)
+                                            place.city?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Text(if (selectedLabel.isBlank()) stringResource(R.string.location_pick_hint) else selectedLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.location_radius), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                            Text(stringResource(R.string.store_km, radiusKm.toInt()), style = MaterialTheme.typography.labelLarge)
+                        }
+                        Slider(value = radiusKm, onValueChange = onRadius, valueRange = 1f..100f)
+                    }
+                }
+                Button(onClick = onApply, enabled = selectedCenter != null, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 18.dp, vertical = 20.dp)) {
+                    Text(stringResource(R.string.location_show_results))
+                }
+            }
+        }
     }
 }
 
@@ -477,6 +628,7 @@ private fun SearchPill(
     onQueryChange: (String) -> Unit,
     onFocusChange: (Boolean) -> Unit,
     onSubmit: () -> Unit,
+    onOpenLocation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier, shape = RoundedCornerShape(28.dp), shadowElevation = 4.dp, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)) {
@@ -486,7 +638,10 @@ private fun SearchPill(
             placeholder = { Text(stringResource(R.string.search_placeholder), color = MaterialTheme.colorScheme.onSurfaceVariant) },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             trailingIcon = {
-                if (query.isNotEmpty()) IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.search_clear)) }
+                Row {
+                    IconButton(onClick = onOpenLocation) { Text("📍", fontSize = 17.sp) }
+                    if (query.isNotEmpty()) IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.search_clear)) }
+                }
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -603,7 +758,7 @@ private fun DirectorySheet(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                stringResource(if (collapsed) R.string.sheet_directory else if (dealsMode) R.string.deals_sheet_title else if (state.userLocation != null) R.string.sheet_nearby else R.string.sheet_directory),
+                stringResource(if (collapsed) R.string.sheet_directory else if (dealsMode) R.string.deals_sheet_title else if (state.userLocation != null || state.searchCenter != null) R.string.sheet_nearby else R.string.sheet_directory),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )

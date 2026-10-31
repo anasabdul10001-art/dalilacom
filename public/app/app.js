@@ -258,7 +258,7 @@ function root() {
 
 /* ---- the round floating buttons: the member card for everyone, the discount button for shops ---- */
 
-const FAB_HIDDEN = ["login", "register", "merchantRegister", "forgot", "socialEmail"];
+const FAB_HIDDEN = ["login", "register", "merchantRegister", "locationSearch", "forgot", "socialEmail"];
 const FAB_STORE = ["store", "productDetail"]; // the shop's discount button is not shown on the store screens
 const FAB_CARD_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.6"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/></svg>`;
 const FAB_TAG_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>`;
@@ -509,7 +509,7 @@ async function render() {
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   // the map search box keeps its own element through every redraw: a new one lost the caret (Arabic letters came out reversed), the undo history and the typing in progress
-  const keepQ = active && (active.id === "disc-q" || active.id === "mr-name") ? active : null;
+  const keepQ = active && (active.id === "disc-q" || active.id === "mr-name" || active.id === "loc-search-q") ? active : null;
   const caret = keepQ ? [keepQ.selectionStart, keepQ.selectionEnd] : null;
   const chipsAt = el.querySelector(".float-chips") ? el.querySelector(".float-chips").scrollLeft : null; // the row of filters stays where the person scrolled it
   el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml() + cityGateHtml();
@@ -527,6 +527,7 @@ async function render() {
       try { const n = keepQ.value.length; keepQ.setSelectionRange(Math.min(caret[0], n), Math.min(caret[1], n)); } catch (e) {}
     }
   }
+  if (S.screen === "locationSearch") renderLocationSearchMap();
 }
 
 function statusBadge(status) {
@@ -626,6 +627,7 @@ function renderScreen() {
     case "productDetail": return screenProductDetail();
     case "orderDetail": return screenOrderDetail();
     case "merchantRegister": return screenMerchantRegister();
+    case "locationSearch": return screenLocationSearch();
     case "merchantMode": return screenMerchantModeShell();
     case "shippingMethods": return screenShipping();
     case "merchantBranches": return screenBranches();
@@ -1173,7 +1175,7 @@ function discoverState() {
     S._discover = {
       loading: true, query: "", categoryId: "", categories: [], merchants: [],
       openNow: false, discountsOnly: false, radiusKm: null,
-      userLoc: null, locError: null, locAsked: false,
+      userLoc: null, searchCenter: null, searchLabel: "", locError: null, locAsked: false,
       favIds: [], suggest: null, showSuggest: false, areaDirty: false, bounds: null, browse: null,
     };
     loadCategories().then(() => searchMerchants());
@@ -1182,15 +1184,137 @@ function discoverState() {
   return S._discover;
 }
 
+function openLocationSearch() {
+  const d = discoverState();
+  S._locationSearch = {
+    query: "", suggestions: [], center: d.searchCenter || d.userLoc || null,
+    label: d.searchLabel || (d.userLoc ? t("location.myLocation") : ""), radiusKm: d.radiusKm || 10,
+  };
+  go("locationSearch");
+}
+
+function screenLocationSearch() {
+  const p = S._locationSearch || (S._locationSearch = { query: "", suggestions: [], center: null, label: "", radiusKm: 10 });
+  return `<div class="location-search-page">
+    <div id="location-search-map" class="location-search-map"></div>
+    <div class="location-search-panel">
+      <div class="location-search-title"><button class="loc-back" onclick="back()">‹</button><b>${esc(t("location.title"))}</b></div>
+      <div class="location-search-field"><span>⌕</span><input id="loc-search-q" autocomplete="off" placeholder="${esc(t("location.placeholder"))}" value="${esc(p.query)}" oninput="locationSearchTyped(this.value)" onkeydown="if(event.key==='Enter'){locationPickFirst()}" /><button onclick="useLocationSearchMyLocation()" title="${esc(t("location.myLocation"))}">📍</button></div>
+      ${p.suggestions.length ? `<div class="location-search-suggestions">${p.suggestions.map((x,i)=>`<button onclick="chooseSearchLocation(${i})"><b>📍 ${esc(x.label)}</b>${x.city?`<small>${esc(x.city)}</small>`:""}</button>`).join("")}</div>` : ""}
+      ${p.label ? `<div class="location-current">${esc(p.label)}</div>` : `<div class="location-current">${esc(t("location.choosePlace"))}</div>`}
+      <label class="location-radius-label"><span>${esc(t("location.radius"))}</span><b>${p.radiusKm} ${esc(t("unit.km"))}</b></label>
+      <input class="location-radius-slider" type="range" min="1" max="100" step="1" value="${p.radiusKm}" oninput="setLocationSearchRadius(this.value)" />
+      <div class="location-radius-ends"><span>1 ${esc(t("unit.km"))}</span><span>100 ${esc(t("unit.km"))}</span></div>
+      <button class="btn location-search-apply" onclick="applyLocationSearch()">${esc(t("location.showResults"))}</button>
+    </div>
+  </div>`;
+}
+
+let locationSearchTimer = null;
+function locationSearchTyped(value) {
+  const p = S._locationSearch;
+  if (!p) return;
+  p.query = value;
+  if (locationSearchTimer) clearTimeout(locationSearchTimer);
+  if (value.trim().length < 3) { p.suggestions = []; return render(); }
+  locationSearchTimer = setTimeout(async () => {
+    const query = p.query.trim();
+    const { ok, data } = await api("GET", "/geo/suggest?q=" + encodeURIComponent(query));
+    if (S.screen !== "locationSearch" || p.query.trim() !== query) return;
+    p.suggestions = ok && Array.isArray(data) ? data.slice(0, 6) : [];
+    render();
+  }, 450);
+  render();
+}
+function locationPickFirst() { if (S._locationSearch?.suggestions?.length) chooseSearchLocation(0); }
+function chooseSearchLocation(index) {
+  const p = S._locationSearch, place = p && p.suggestions[index];
+  if (!place) return;
+  p.center = { lat: Number(place.latitude), lng: Number(place.longitude) };
+  p.label = place.label || place.address || "";
+  p.query = p.label;
+  p.suggestions = [];
+  render();
+}
+function setLocationSearchRadius(value) {
+  if (!S._locationSearch) return;
+  S._locationSearch.radiusKm = Math.max(1, Math.min(100, Number(value) || 1));
+  const label = document.querySelector(".location-radius-label b");
+  if (label) label.textContent = S._locationSearch.radiusKm + " " + t("unit.km");
+  syncLocationSearchCircle();
+}
+function useLocationSearchMyLocation() {
+  const p = S._locationSearch;
+  if (!navigator.geolocation) return toast(t("loc.unavailable"));
+  navigator.geolocation.getCurrentPosition((pos) => {
+    p.center = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    p.label = t("location.myLocation"); p.query = ""; p.suggestions = [];
+    render();
+  }, (err) => toast(locErrorText(err.code)), { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 });
+}
+function applyLocationSearch() {
+  const p = S._locationSearch;
+  if (!p || !p.center) return toast(t("location.choosePlace"));
+  const d = discoverState();
+  d.searchCenter = p.center; d.searchLabel = p.label; d.radiusKm = p.radiusKm;
+  d.bounds = null; d.areaDirty = false; d.selectedId = null;
+  S._radiusFit = true; S._radiusDrawn = "";
+  back();
+  searchMerchants();
+}
+
+function renderLocationSearchMap() {
+  const slot = document.getElementById("location-search-map");
+  if (!slot || typeof L === "undefined") return;
+  if (!S._locSearchMap) {
+    const mapEl = document.createElement("div");
+    mapEl.style.cssText = "position:absolute;inset:0;width:100%;height:100%";
+    slot.appendChild(mapEl);
+    S._locSearchMapEl = mapEl;
+    const map = L.map(mapEl, { attributionControl: false, zoomControl: true }).setView([DAMASCUS.lat, DAMASCUS.lng], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+    L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
+    S._locSearchMap = map;
+    map.on("click", (e) => {
+      const p = S._locationSearch;
+      if (!p) return;
+      p.center = { lat: e.latlng.lat, lng: e.latlng.lng }; p.label = t("location.mapPin");
+      syncLocationSearchCircle();
+      const label = document.querySelector(".location-current"); if (label) label.textContent = p.label;
+    });
+  } else if (S._locSearchMapEl.parentElement !== slot) slot.appendChild(S._locSearchMapEl);
+  S._locSearchMap.invalidateSize();
+  syncLocationSearchCircle();
+}
+function syncLocationSearchCircle() {
+  const p = S._locationSearch, map = S._locSearchMap;
+  if (!p || !map) return;
+  if (S._locSearchCircle) map.removeLayer(S._locSearchCircle);
+  if (S._locSearchMarker) map.removeLayer(S._locSearchMarker);
+  if (!p.center) return;
+  S._locSearchCircle = L.circle([p.center.lat, p.center.lng], { radius: p.radiusKm * 1000, color: "#347a28", weight: 2, fillColor: "#397d2e", fillOpacity: 0.16 }).addTo(map);
+  S._locSearchMarker = L.marker([p.center.lat, p.center.lng], { draggable: true }).addTo(map);
+  S._locSearchMarker.on("dragend", () => {
+    const ll = S._locSearchMarker.getLatLng(); p.center = { lat: ll.lat, lng: ll.lng }; p.label = t("location.mapPin"); syncLocationSearchCircle();
+    const label = document.querySelector(".location-current"); if (label) label.textContent = p.label;
+  });
+  const key = `${p.center.lat},${p.center.lng},${p.radiusKm}`;
+  if (S._locSearchViewKey !== key) {
+    S._locSearchViewKey = key;
+    map.fitBounds(S._locSearchCircle.getBounds(), { padding: [36, 36], maxZoom: 14, animate: false });
+  }
+}
+
 // Filters, distance and ordering are applied client-side so toggling a chip never refetches.
 function visibleMerchants(d) {
+  const center = d.searchCenter || d.userLoc;
   let list = d.merchants.map((m) =>
-    d.userLoc && m.latitude != null && m.longitude != null
-      ? { ...m, distanceKm: haversineKm(d.userLoc.lat, d.userLoc.lng, m.latitude, m.longitude) }
+    center && m.latitude != null && m.longitude != null
+      ? { ...m, distanceKm: haversineKm(center.lat, center.lng, m.latitude, m.longitude) }
       : m);
   if (d.openNow) list = list.filter((m) => m.openStatus && m.openStatus.isOpen);
   if (d.discountsOnly) list = list.filter((m) => (m.discounts || []).length > 0);
-  if (d.radiusKm && d.userLoc) list = list.filter((m) => m.distanceKm != null && m.distanceKm <= d.radiusKm);
+  if (d.radiusKm && center) list = list.filter((m) => m.distanceKm != null && m.distanceKm <= d.radiusKm);
   return list.sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9) || a.businessName.localeCompare(b.businessName));
 }
 
@@ -1403,6 +1527,7 @@ function tabDiscover() {
             <input id="disc-q" placeholder="${esc(t("search.placeholder"))}" value="${esc(d.query)}" autocomplete="off"
               oninput="onDiscoverQuery(this.value)" onfocus="onDiscoverFocus()" onblur="onDiscoverBlur()" onkeydown="if(event.key==='Enter'){onDiscoverSubmit()}" />
             ${d.query ? `<button class="clear-x" onmousedown="onDiscoverClear()">✕</button>` : ""}
+            <button class="location-search-btn" onclick="openLocationSearch()" title="${esc(t("location.title"))}">📍</button>
             ${S.token ? "" : `<button class="login-pill" onclick="go('login')">${esc(t("login.pill"))}</button>`}
           </div>
           ${suggestHtml(d)}
@@ -1430,15 +1555,15 @@ function tabDiscover() {
       <div class="sheet ${S._sheet === "min" ? "is-min" : ""}" id="sheet">
         <div class="sheet-handle" onpointerdown="sheetDragStart(event)" onclick="sheetToggle()"><span></span></div>
         <div class="sheet-head" onpointerdown="sheetDragStart(event)" onclick="sheetHeadTap(event)">
-          <strong class="t-full">${esc(deals ? t("deals.sheetTitle") : d.userLoc ? t("sheet.nearby") : t("sheet.directory"))}</strong>
+          <strong class="t-full">${esc(deals ? t("deals.sheetTitle") : (d.searchCenter || d.userLoc) ? t("sheet.nearby") : t("sheet.directory"))}</strong>
           <strong class="t-min">${esc(t("sheet.directory"))}</strong>
           <span class="badge info sheet-count">${esc(t("sheet.count", { n: sheetList.length }))}</span>
           <button class="sheet-collapse" onclick="sheetCollapse(event)" aria-label="${esc(t("sheet.collapse"))}" title="${esc(t("sheet.collapse"))}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
-        ${(d.userLoc || d.bounds || deals) ? `<div class="sheet-chips">
+        ${(d.searchCenter || d.userLoc || d.bounds || deals) ? `<div class="sheet-chips">
           ${d.bounds ? `<button class="chip active" onclick="clearSearchArea()">${esc(t("area.clear"))}</button>` : ""}
           ${deals && !d.userLoc ? `<button class="chip" onclick="requestDiscoverLocation(true)">📍 ${esc(t("deals.locate"))}</button>` : ""}
-          ${d.userLoc ? (deals ? [null, 1, 3, 5, 10, 25] : [null, 2, 5, 10, 25]).map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${esc(r ? t("radius.km", { n: r }) : t("radius.any"))}</button>`).join("") : ""}
+          ${(d.searchCenter || d.userLoc) ? (deals ? [null, 1, 3, 5, 10, 25] : [null, 2, 5, 10, 25]).map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${esc(r ? t("radius.km", { n: r }) : t("radius.any"))}</button>`).join("") : ""}
         </div>` : ""}
         <div class="sheet-list">
           ${picked.length ? `<button class="show-all" onclick="clearSelectedMerchant()">↩ ${esc(t("sheet.showAll", { n: list.length }))}</button>` : ""}
@@ -2012,11 +2137,12 @@ function renderDiscoverMap() {
 function syncRadiusLayer() {
   const d = S._discover;
   const map = S._map;
-  const key = d.radiusKm && d.userLoc ? `${d.radiusKm}|${d.userLoc.lat}|${d.userLoc.lng}` : "";
+  const center = d.searchCenter || d.userLoc;
+  const key = d.radiusKm && center ? `${d.radiusKm}|${center.lat}|${center.lng}` : "";
   if (key !== S._radiusDrawn) {
     S._radiusDrawn = key;
     if (S._radiusLayer) { map.removeLayer(S._radiusLayer); S._radiusLayer = null; }
-    if (key) S._radiusLayer = L.circle([d.userLoc.lat, d.userLoc.lng], { radius: d.radiusKm * 1000, color: "#ba2a34", weight: 2, dashArray: "6 6", fillColor: "#ba2a34", fillOpacity: 0.06, interactive: false }).addTo(map);
+    if (key) S._radiusLayer = L.circle([center.lat, center.lng], { radius: d.radiusKm * 1000, color: "#ba2a34", weight: 2, dashArray: "6 6", fillColor: "#ba2a34", fillOpacity: 0.06, interactive: false }).addTo(map);
   }
   if (!S._radiusFit) return;
   S._radiusFit = false;
@@ -2024,10 +2150,10 @@ function syncRadiusLayer() {
   const pad = { paddingTopLeft: [20, 150], paddingBottomRight: [20, sheetPx + 20], animate: false };
   if (S._radiusLayer) {
     moveMap(() => map.fitBounds(S._radiusLayer.getBounds(), pad));
-  } else if (d.userLoc) {
+  } else if (center) {
     // "Any distance": frame the user together with every place on the map.
     const pts = (S._visible || []).flatMap(merchantMapPoints).map((m) => [m.latitude, m.longitude]);
-    pts.push([d.userLoc.lat, d.userLoc.lng]);
+    pts.push([center.lat, center.lng]);
     moveMap(() => map.fitBounds(L.latLngBounds(pts), { ...pad, maxZoom: 15 }));
   }
 }
@@ -2042,6 +2168,9 @@ function syncMapMarkers() {
   S._userLayer.clearLayers();
   if (d.userLoc) {
     L.circleMarker([d.userLoc.lat, d.userLoc.lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#1e6fe0", fillOpacity: 1 }).addTo(S._userLayer).bindPopup("موقعك");
+  }
+  if (d.searchCenter && (!d.userLoc || d.searchCenter.lat !== d.userLoc.lat || d.searchCenter.lng !== d.userLoc.lng)) {
+    L.circleMarker([d.searchCenter.lat, d.searchCenter.lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#397d2e", fillOpacity: 1 }).addTo(S._userLayer).bindPopup(esc(d.searchLabel || t("location.title")));
   }
 
   const key = located.map((m) => `${m.id}:${m._mapPlaceId}`).join(",") + "|" + (d.selectedId || "");
@@ -2332,8 +2461,8 @@ function tabProfile() {
       ${S.role === "MERCHANT"
         ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='catalog';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
            <div style="height:8px"></div>
-           <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button>`
-        : S.role === "CUSTOMER" ? `<button class="btn" style="max-width:320px" onclick="go('merchantRegister')">🛍️ ${esc(t("profile.registerMerchant"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.startSellingSub"))}</p>` : ""}
+           <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="S._mprof=null;go('merchantProfile')">📍 ${esc(t("profile.mapListing"))}</button>`
+        : S.role === "CUSTOMER" ? `<button class="btn" style="max-width:320px" onclick="go('merchantRegister',{mode:'map'})">📍 ${esc(t("profile.registerMerchant"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.mapActivitySub"))}</p><div style="height:10px"></div><button class="btn outline" style="max-width:320px" onclick="go('merchantRegister',{mode:'store'})">🛍️ ${esc(t("profile.openOnlineStore"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.startSellingSub"))}</p>` : ""}
       <div style="height:14px"></div>
       ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
       <div style="height:10px"></div>
@@ -2346,8 +2475,7 @@ function tabProfile() {
       <div style="height:10px"></div>
       ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
       <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>
-      <div style="height:10px"></div>
+      ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:280px" onclick="openMyMarketingTeam()">🤝 ${esc(t("profile.affiliates"))}</button><div style="height:10px"></div>` : ""}
       ${(() => { if (S._refMe == null) { loadRefMe(); return ""; } return `<button class="btn outline" style="max-width:240px" onclick="go('marketing')">📣 ${esc(t(S._refMe.isMarketer ? "ref.title" : "ref.become"))}</button><div style="height:10px"></div>`; })()}
       <div style="height:10px"></div>
       ${S.role === "ADMIN" ? `<button class="btn" style="max-width:240px" onclick="S._adr=null;go('adminReview')">📣 ${esc(t("adr.title"))}</button><div style="height:10px"></div>` : ""}
@@ -2364,6 +2492,14 @@ function tabProfile() {
       ${legalLinksHtml()}
     </div>
   `;
+}
+
+function openMyMarketingTeam() {
+  if (S.role !== "MERCHANT") return toast(t("profile.merchantOnlyTeam"));
+  S.merchantTab = "catalog";
+  S._catalog = null;
+  S._openMarketingTeam = true;
+  go("merchantMode");
 }
 
 /* ================= MARKETING: my referral link, the people I brought, what I earned ================= */
@@ -3395,7 +3531,7 @@ function screenAdBook() {
     return `${backRow()}
       <h1 class="screen-title">${esc(t("ads.bookTitle"))}</h1>
       <p class="screen-sub">${esc(t("ads.needShop"))}</p>
-      <button class="btn" style="max-width:260px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`;
+      <button class="btn" style="max-width:260px" onclick="go('merchantRegister',{mode:'store'})">${esc(t("profile.openOnlineStore"))}</button>`;
   }
   if (a.done) {
     return `${backRow()}
@@ -4215,7 +4351,7 @@ function screenStore() {
         ${sections.map((x) => `<button class="${st.section === x.id ? "on" : ""}" onclick="storePickSection('${x.id}')">${esc(storeSecName(x))}</button>`).join("")}
       </div>
       ${storeScopeBar(st)}
-      ${S.token && S.role === "CUSTOMER" ? `<section class="store-seller-cta"><div><b>🛍️ ${esc(t("merchant.storeFrontCta"))}</b><small>${esc(t("merchant.storeFrontSub"))}</small></div><button onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))} ←</button></section>` : ""}
+      ${S.token && S.role === "CUSTOMER" ? `<section class="store-seller-cta"><div><b>🛍️ ${esc(t("merchant.storeFrontCta"))}</b><small>${esc(t("merchant.storeFrontSub"))}</small></div><button onclick="go('merchantRegister',{mode:'store'})">${esc(t("profile.openOnlineStore"))} ←</button></section>` : ""}
       ${errorBanner()}
       ${body}
     </div>`;
@@ -4372,20 +4508,20 @@ async function cancelOrder() {
 /* ================= MERCHANT REGISTER ================= */
 
 function screenMerchantRegister() {
-  if (!S._merchReg) { S._merchReg = { categories: [] }; pickReset(null, null); api("GET", "/categories?lang=" + LANG).then((r) => { S._merchReg.categories = r.ok ? r.data : []; render(); }); }
+  const mode = S.params.mode === "store" ? "store" : "map";
+  if (!S._merchReg || S._merchReg.mode !== mode) { S._merchReg = { categories: [], mode }; pickReset(null, null); api("GET", "/categories?lang=" + LANG).then((r) => { if (S._merchReg && S._merchReg.mode === mode) { S._merchReg.categories = r.ok ? r.data : []; render(); } }); }
   const m = S._merchReg;
   return `
     ${backRow()}
-    <h1 class="screen-title">${esc(t("merchant.startTitle"))}</h1>
-    <p class="screen-sub">${esc(t("merchant.startIntro"))}</p>
+    <h1 class="screen-title">${esc(t(mode === "store" ? "merchant.storeTitle" : "merchant.mapTitle"))}</h1>
+    <p class="screen-sub">${esc(t(mode === "store" ? "merchant.storeIntro" : "merchant.mapIntro"))}</p>
     <div class="section-title">${esc(t("mp.secName"))}</div>
-    <div class="field"><label>${esc(t("merchant.startName"))}</label><input id="mr-name" placeholder="${esc(t("merchant.startNamePlaceholder"))}" value="${esc(m.name || "")}" oninput="mrNameTyped(this.value)" /></div>
+    <div class="field"><label>${esc(t(mode === "store" ? "merchant.storeName" : "merchant.mapName"))}</label><input id="mr-name" placeholder="${esc(t("merchant.startNamePlaceholder"))}" value="${esc(m.name || "")}" oninput="mrNameTyped(this.value)" /></div>
     <div class="section-title">${esc(t("merchant.startType"))}</div>
     ${mrGuessHtml(m)}
     ${categoryPickerHtml(m.categories, m.selectedCat, "selectMerchCategory")}
     <div class="section-title">${esc(t("mp.secContact"))}</div>
-    <div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" oninput="addressTyped('mr',this.value)" /><div id="addr-suggest-mr">${addressSuggestionHtml("mr")}</div></div>
-    ${catIsOnline(m.categories, m.selectedCat) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
+    ${mode === "store" ? `<div class="info-banner">${esc(t("merchant.storeNoMap"))}</div>` : `<div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" oninput="addressTyped('mr',this.value)" /><div id="addr-suggest-mr">${addressSuggestionHtml("mr")}</div></div>${pickerHtml(t("merchant.mapPin"))}`}
     <div class="row">
       <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="+963 9xx xxx xxx" value="${esc(m.phone || "")}" /></div>
       <div class="field"><label>واتساب (اختياري)</label><input id="mr-whatsapp" placeholder="مثال: 963912345678" value="${esc(m.whatsapp || "")}" /></div>
@@ -4450,20 +4586,21 @@ async function submitMerchantRegister() {
   const businessName = qs("mr-name").value.trim();
   const categoryId = S._merchReg.selectedCat;
   if (!businessName || !categoryId) { S.error = "عبّي اسم المحل واختر تصنيف"; return render(); }
-  const address = qs("mr-address").value.trim();
+  const mode = S._merchReg.mode || "map";
+  const address = qs("mr-address") ? qs("mr-address").value.trim() : "";
   const phone = qs("mr-phone").value.trim();
   const whatsapp = (qs("mr-whatsapp").value || "").replace(/\D/g, "");
   const online = catIsOnline(S._merchReg.categories, categoryId);
-  const pin = !online && S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
-  if (!online && !pin.latitude && !address) { S.error = t("addr.need"); return render(); } // a place that is not pinned must be written down
+  const pin = mode !== "store" && !online && S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
+  if (mode !== "store" && !online && !pin.latitude && !address) { S.error = t("addr.need"); return render(); } // map listings need a pin or written address
   const proposed = S._catSugOpen && (S._catSug || "").trim().length >= 2 ? { suggestedCategory: S._catSug.trim() } : {};
-  if (!online && !S._lmSimilarOk && (pin.latitude || address)) {
+  if (mode !== "store" && !online && !S._lmSimilarOk && (pin.latitude || address)) {
     const similar = await lmCheckSimilar(businessName, pin.latitude, pin.longitude, address);
     if (similar.length) { S._lmSimilar = { items: similar }; return render(); }
   }
   S._lmSimilarOk = false;
   S.busy = true; render();
-  const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined, whatsapp: whatsapp || undefined, ...pin, ...proposed });
+  const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined, whatsapp: whatsapp || undefined, storeOnly: S._merchReg.mode === "store", ...pin, ...proposed });
   S.busy = false;
   if (ok) {
     S.role = "MERCHANT";
@@ -4473,7 +4610,7 @@ async function submitMerchantRegister() {
     S._onboarding = null;
     S.merchantTab = "catalog"; S._catalog = null; S._mstat = null;
     reset("merchantMode");
-    toast(data.approvalStatus === "APPROVED" ? "✅ متجرك جاهز. اختار الباقة وابدأ أضف منتجاتك." : data.approvalStatus === "REJECTED" ? tr("ما انقبل طلب فتح المتجر:") + " " + (data.reason || tr("راجع البيانات وحاول مرة ثانية")) : "وصل طلب فتح متجرك، وهو قيد المراجعة. بنخبرك بالنتيجة.");
+    toast(data.approvalStatus === "APPROVED" ? (mode === "store" ? "✅ حساب متجرك جاهز. اختار الباقة وأضف منتجاتك." : "✅ تم تسجيل نشاطك، وصار ظاهر على الخريطة.") : data.approvalStatus === "REJECTED" ? tr("ما انقبل الطلب:") + " " + (data.reason || tr("راجع البيانات وحاول مرة ثانية")) : (mode === "store" ? "وصل طلب فتح متجرك، وهو قيد المراجعة." : "وصل طلب إضافة نشاطك على الخريطة، وهو قيد المراجعة."));
   } else {
     S.error = errMsg(data, "تعذّر تسجيل حساب النشاط");
     render();
@@ -6772,7 +6909,7 @@ function tabCatalog() {
         </div>
         <details class="manage-subdetails"><summary>💰 ${esc(t("merchant.pricing"))}</summary>${pricingCardHtml(c)}</details>
       </details>
-      <details class="manage-details"><summary>🤝 ${esc(t("merchant.marketers"))}</summary>
+      <details id="manage-marketing-team" class="manage-details" ${S._openMarketingTeam ? "open" : ""}><summary>🤝 ${esc(t("merchant.marketers"))}</summary>
         ${(c.affiliates || []).length ? c.affiliates.map((af) => `<div class="manage-affiliate"><div><b>${esc(af.user.fullName)}</b><small>${esc(af.user.email)} · ${af.commissionType === "PERCENT" ? af.commissionValue + "%" : fmt(af.commissionValue)} ${esc(t("merchant.perSale"))}</small><small>${esc(t("merchant.referred"))}: ${af.referredCount} · ${esc(t("merchant.totalCommission"))}: ${fmt(af.totalCommissionCents)}</small></div><span class="badge ${af.isActive ? "success" : "neutral"}">${af.isActive ? esc(t("merchant.active")) : esc(t("merchant.inactive"))}</span><button class="btn small outline" onclick="toggleCatalogAffiliate('${af.id}',${!af.isActive})">${af.isActive ? esc(t("merchant.disable")) : esc(t("merchant.enable"))}</button></div>`).join("") : `<p class="muted">${esc(t("merchant.noMarketers"))}</p>`}
         <div class="divider"></div><div class="field"><label>${esc(t("merchant.marketerEmail"))}</label><input id="aff-email" placeholder="marketer@example.com" value="${esc(c.affEmail || "")}" /></div>
         <div class="row"><div class="field"><label>${esc(t("merchant.commissionType"))}</label><select id="aff-type"><option value="PERCENT" ${c.affType === "FIXED" ? "" : "selected"}>${esc(t("merchant.percent"))}</option><option value="FIXED" ${c.affType === "FIXED" ? "selected" : ""}>${esc(t("merchant.fixed"))}</option></select></div><div class="field"><label>${esc(t("merchant.value"))}</label><input id="aff-value" placeholder="10" value="${esc(c.affValue || "")}" /></div></div>
@@ -7497,6 +7634,10 @@ function wireUpAfterRender() {
     renderDiscoverMap();
   }
   if (S.screen === "merchantRegister" || S.screen === "merchantProfile" || S.screen === "merchantBranches" || (S.screen === "home" && S.homeTab === "profile" && shareLocationOn())) renderPicker();
+  if (S.screen === "merchantMode" && S._openMarketingTeam) {
+    const team = document.getElementById("manage-marketing-team");
+    if (team) { S._openMarketingTeam = false; requestAnimationFrame(() => team.scrollIntoView({ behavior: "smooth", block: "center" })); }
+  }
   if (S.screen === "store" && S._store && S._store.slides && S._store.slides.length > 1) { if (!S._sliderTimer) storeSliderRestart(); }
   else if (S._sliderTimer) { clearInterval(S._sliderTimer); S._sliderTimer = null; }
 }

@@ -45,6 +45,8 @@ const registerMerchantSchema = z
     whatsapp: z.string().optional(),
     /** The shop could not find its profession: the one it proposes (it sits under the closest one it picked until the admin decides). */
     suggestedCategory: z.string().trim().min(2).max(60).optional(),
+    /** A standalone online-store signup may omit a public map address. The owner can add the listing later. */
+    storeOnly: z.boolean().optional().default(false),
   })
   .refine(bothOrNeitherCoordinate, { message: "latitude and longitude must be provided together" });
 
@@ -64,7 +66,7 @@ merchantRouter.post("/register", requireAuth, route(async (req, res) => {
   if (!category) {
     return sendError(res, 404, "NOT_FOUND", "Category not found");
   }
-  if (!category.isOnline && parsed.data.latitude === undefined && !parsed.data.address?.trim()) return sendError(res, 400, "BAD_REQUEST", ADDRESS_NEEDED);
+  if (!parsed.data.storeOnly && !category.isOnline && parsed.data.latitude === undefined && !parsed.data.address?.trim()) return sendError(res, 400, "BAD_REQUEST", ADDRESS_NEEDED);
 
   // Read outside the transaction (just a lookup) — the write itself, including the new
   // Business/Branch dual-write, stays atomic with the legacy MerchantProfile creation below
@@ -73,7 +75,7 @@ merchantRouter.post("/register", requireAuth, route(async (req, res) => {
   const defaultCountry = await getDefaultCountry();
 
   const merchant = await prisma.$transaction(async (tx) => {
-    const { suggestedCategory: _suggested, ...fields } = parsed.data;
+    const { suggestedCategory: _suggested, storeOnly: _storeOnly, ...fields } = parsed.data;
     const profile = await tx.merchantProfile.create({
       data: { userId: req.user!.id, ...fields },
     });
