@@ -20,8 +20,8 @@ android {
         applicationId = "com.dalilacom.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 32
-        versionName = "0.1.31"
+        versionCode = 33
+        versionName = "0.1.32"
     }
 
     // The upload key for Google Play: android/keystore.properties (not in git) names the keystore that lives outside the repository.
@@ -79,6 +79,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     implementation("androidx.activity:activity-compose:1.9.1")
+    // Coil brings Fragment 1.1.0 transitively through appcompat-resources; Play flags that old version.
+    implementation("androidx.fragment:fragment:1.8.9")
 
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.compose.ui:ui")
