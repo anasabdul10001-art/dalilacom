@@ -5047,6 +5047,7 @@ async function saveFitnessProfile() {
 /* ---- merchant: the home of the shop — what is left to set up (always open) and the quick ways in ---- */
 
 function tabMerchantHome() {
+  if (S.role === "MERCHANT" && !S._fitnessAccessChecked) loadFitnessAccess();
   if (!S._onboarding) S._onboarding = { steps: null, at: 0 };
   const o = S._onboarding;
   if (!o.fetching && Date.now() - o.at > 15000) { o.fetching = true; loadOnboarding(); }
@@ -5058,8 +5059,12 @@ function tabMerchantHome() {
     ["📍", "ms.q.shop", "S._mprof=null;go('merchantProfile')"],
     ["📣", "ms.q.ads", "setMerchantTab('promo')"],
     ["🧾", "ms.q.orders", "setMerchantTab('orders')"],
-  ].map(([ico, key, act]) => `<button class="quick" onclick="${act}"><span class="q-ico">${ico}</span><span>${esc(t(key))}</span></button>`).join("");
-  const quickHtml = `<div class="section-title">${esc(t("ms.quick"))}</div><div class="quick-grid">${quick}</div>`;
+  ];
+  if (S._fitnessAccess) {
+    quick.push(["🏋️", "fitness.profile", "openFitnessProfile()"]);
+    quick.push(["📋", "fitness.plansTitle", "openFitnessPlans()"]);
+  }
+  const quickHtml = `<div class="section-title">${esc(t("ms.quick"))}</div><div class="quick-grid">${quick.map(([ico, key, act]) => `<button class="quick" onclick="${act}"><span class="q-ico">${ico}</span><span>${esc(t(key))}</span></button>`).join("")}</div>`;
   if (!st) return `<div class="setup-card">${spinner()}</div>${quickHtml}`;
   const rows = [
     [st.location, "location", "S._mprof=null;go('merchantProfile')"],
