@@ -5017,7 +5017,9 @@ function openFitnessProfile() { S._fitnessProfile = null; go("fitnessProfile"); 
 async function loadFitnessProfile() {
   const [{ ok, data }, offers] = await Promise.all([api("GET", "/fitness-profile/me"), api("GET", "/fitness-profile/offers/me")]);
   S._fitnessOffers = offers.ok ? offers.data.items || [] : [];
-  S._fitnessProfile = ok ? { ...data, loading: false } : { loading: false, error: errMsg(data, t("fitness.loadFailed")) };
+  if (!offers.ok) { S._fitnessOfferMessage = errMsg(offers.data, t("fitness.offersLoadFailed")); S._fitnessOfferMessageKind = "error"; }
+  else { S._fitnessOfferMessage = ""; S._fitnessOfferMessageKind = ""; }
+  S._fitnessProfile = ok ? { ...data, loading: false, msg: t("fitness.loaded") } : { loading: false, error: errMsg(data, t("fitness.loadFailed")) };
   render();
 }
 function screenFitnessProfile() {
@@ -5033,15 +5035,48 @@ function screenFitnessProfile() {
     <div class="field"><label>${esc(t("fitness.achievements"))}</label><textarea id="fp-achievements" rows="4" placeholder="${esc(t("fitness.listHelp"))}">${esc(listText(p.achievements))}</textarea></div>
     <div class="field"><label>${esc(t("fitness.certifications"))}</label><textarea id="fp-certifications" rows="4" placeholder="${esc(t("fitness.listHelp"))}">${esc(listText(p.certifications))}</textarea><small class="muted">${esc(t("fitness.certificationNote"))}</small></div>
     <div class="field"><label>${esc(t("fitness.certificatePhotos"))}</label><input id="fp-certificate-photo" type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadFitnessCertificate(this.files[0])"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${(p.certificationPhotoIds || []).map(id => `<div style="position:relative"><img src="/store/photos/${encodeURIComponent(id)}" alt="" style="width:96px;height:96px;object-fit:cover;border-radius:8px"><button type="button" class="link-btn" onclick="removeFitnessCertificate('${esc(id)}')">✕</button></div>`).join("")}</div></div>
-    <button class="btn" onclick="saveFitnessProfile()">${esc(t("fitness.save"))}</button>${p.msg ? `<p class="muted">${esc(p.msg)}</p>` : ""}</div>${renderFitnessOffers()}`;
+    <button id="fitness-profile-save" class="btn" onclick="saveFitnessProfile(this)" ${S._fitnessProfileSaving ? "disabled" : ""}>${esc(S._fitnessProfileSaving ? t("fitness.savingNow") : t("fitness.save"))}</button><p id="fitness-profile-save-status" class="fitness-save-status ${p.msgKind === "error" ? "error-banner" : p.msgKind === "success" ? "success-banner" : "muted"}" role="status" aria-live="polite">${esc(p.msg || "")}</p></div>${renderFitnessOffers()}`;
 }
-async function saveFitnessProfile() {
+async function saveFitnessProfile(button) {
+  if (S._fitnessProfileSaving) return;
   const list = (id) => (document.getElementById(id)?.value || "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
-  const years = document.getElementById("fp-years")?.value;
-  const body = { displayName: document.getElementById("fp-name")?.value.trim() || null, headline: document.getElementById("fp-headline")?.value.trim() || null, yearsExperience: years === "" ? null : Number(years), specialties: list("fp-specialties"), achievements: list("fp-achievements"), certifications: list("fp-certifications"), certificationPhotoIds: S._fitnessProfile.certificationPhotoIds || [] };
-  const { ok, data } = await api("PUT", "/fitness-profile/me", body);
-  if (!ok) { S._fitnessProfile.error = errMsg(data, t("fitness.saveFailed")); render(); return; }
-  S._fitnessProfile = { ...data, loading: false, msg: t("fitness.saved") }; render();
+  const years = latinDigits(document.getElementById("fp-years")?.value || "").trim();
+  const yearsNumber = years === "" ? null : Number(years);
+  if (yearsNumber !== null && (!Number.isInteger(yearsNumber) || yearsNumber < 0 || yearsNumber > 70)) {
+    S._fitnessProfile = { ...S._fitnessProfile, msg: t("fitness.invalidYears"), msgKind: "error" };
+    render();
+    return;
+  }
+  const body = { displayName: document.getElementById("fp-name")?.value.trim() || null, headline: document.getElementById("fp-headline")?.value.trim() || null, yearsExperience: yearsNumber, specialties: list("fp-specialties"), achievements: list("fp-achievements"), certifications: list("fp-certifications"), certificationPhotoIds: S._fitnessProfile.certificationPhotoIds || [] };
+  S._fitnessProfileSaving = true;
+  S._fitnessProfile = { ...S._fitnessProfile, ...body, loading: false, msg: t("fitness.savingNow"), msgKind: "pending" };
+  const status = document.getElementById("fitness-profile-save-status");
+  const saveButton = button || document.getElementById("fitness-profile-save");
+  if (saveButton) { saveButton.disabled = true; saveButton.textContent = t("fitness.savingNow"); }
+  if (status) { status.className = "fitness-save-status muted"; status.textContent = t("fitness.savingNow"); }
+  try {
+    const result = await api("PUT", "/fitness-profile/me", body);
+    if (!result.ok) {
+      S._fitnessProfile = { ...S._fitnessProfile, ...body, loading: false, msg: errMsg(result.data, t("fitness.saveFailed")), msgKind: "error" };
+      render();
+      return;
+    }
+    const verify = await api("GET", "/fitness-profile/me");
+    if (!verify.ok) {
+      S._fitnessProfile = { ...result.data, ...body, loading: false, msg: t("fitness.saveAcceptedVerifyFailed"), msgKind: "error" };
+      render();
+      return;
+    }
+    S._fitnessProfile = { ...verify.data, loading: false, msg: t("fitness.savedVerified"), msgKind: "success" };
+    render();
+  } catch (_) {
+    S._fitnessProfile = { ...S._fitnessProfile, ...body, loading: false, msg: t("fitness.saveFailed"), msgKind: "error" };
+    render();
+  } finally {
+    S._fitnessProfileSaving = false;
+    const activeButton = document.getElementById("fitness-profile-save");
+    if (activeButton) { activeButton.disabled = false; activeButton.textContent = t("fitness.save"); }
+  }
 }
 
 /* ---- merchant: the home of the shop — what is left to set up (always open) and the quick ways in ---- */
@@ -7966,14 +8001,41 @@ async function removeFitnessCertificate(id) {
 }
 function renderFitnessOffers() {
   const offers = S._fitnessOffers || [];
-  const cards = offers.map(o => '<div class="card" style="padding:12px;margin:8px 0"><b>' + esc(o.title) + '</b><div>' + esc(o.durationMonths) + ' ' + esc(t("fitness.months")) + ' · ' + esc((o.priceCents / 100).toLocaleString()) + ' ' + esc(o.currency) + '</div>' + (o.description ? '<p>' + esc(o.description) + '</p>' : '') + '<button class="link-btn" onclick="deleteFitnessOffer(\'' + esc(o.id) + '\')">' + esc(t("fitness.deletePlan")) + '</button></div>').join("");
-  return '<h2>' + esc(t("fitness.monthlyOffers")) + '</h2><p class="muted">' + esc(t("fitness.offerHelp")) + '</p>' + cards + '<div class="card" style="padding:14px"><div class="field"><label>' + esc(t("fitness.offerName")) + '</label><input id="fo-title" maxlength="100"></div><div class="field"><label>' + esc(t("fitness.offerDescription")) + '</label><textarea id="fo-description" rows="2"></textarea></div><div style="display:flex;gap:8px"><div class="field" style="flex:1"><label>' + esc(t("fitness.offerMonths")) + '</label><input id="fo-months" type="number" min="1" max="24" value="1"></div><div class="field" style="flex:1"><label>' + esc(t("fitness.offerPrice")) + '</label><input id="fo-price" type="number" min="0" step="0.01"></div></div><div class="field"><label>' + esc(t("fitness.offerCurrency")) + '</label><select id="fo-currency"><option>USD</option><option>SYP</option><option>EUR</option><option>TRY</option></select></div><button class="btn" onclick="saveFitnessOffer()">' + esc(t("fitness.saveOffer")) + '</button></div>';
+  const cards = offers.length ? offers.map(o => '<div class="card" style="padding:12px;margin:8px 0"><b>' + esc(o.title) + '</b><div>' + esc(o.durationMonths) + ' ' + esc(t("fitness.months")) + ' · ' + esc((o.priceCents / 100).toLocaleString()) + ' ' + esc(o.currency) + '</div>' + (o.description ? '<p>' + esc(o.description) + '</p>' : '') + '<button class="link-btn" onclick="deleteFitnessOffer(\'' + esc(o.id) + '\')">' + esc(t("fitness.deletePlan")) + '</button></div>').join("") : '<p class="muted">' + esc(t("fitness.noOffersYet")) + '</p>';
+  const form = S._fitnessOfferForm || {};
+  const message = S._fitnessOfferMessage || "";
+  return '<h2>' + esc(t("fitness.monthlyOffers")) + '</h2><p class="muted">' + esc(t("fitness.offerHelp")) + '</p>' + cards + '<div class="card" style="padding:14px"><div class="field"><label>' + esc(t("fitness.offerName")) + '</label><input id="fo-title" maxlength="100" value="' + esc(form.title || "") + '"></div><div class="field"><label>' + esc(t("fitness.offerDescription")) + '</label><textarea id="fo-description" rows="2">' + esc(form.description || "") + '</textarea></div><div style="display:flex;gap:8px"><div class="field" style="flex:1"><label>' + esc(t("fitness.offerMonths")) + '</label><input id="fo-months" type="number" min="1" max="24" value="' + esc(form.months || "1") + '"></div><div class="field" style="flex:1"><label>' + esc(t("fitness.offerPrice")) + '</label><input id="fo-price" type="number" min="0" step="0.01" value="' + esc(form.price || "") + '"></div></div><div class="field"><label>' + esc(t("fitness.offerCurrency")) + '</label><select id="fo-currency"><option ' + (form.currency === "USD" || !form.currency ? "selected" : "") + '>USD</option><option ' + (form.currency === "SYP" ? "selected" : "") + '>SYP</option><option ' + (form.currency === "EUR" ? "selected" : "") + '>EUR</option><option ' + (form.currency === "TRY" ? "selected" : "") + '>TRY</option></select></div><button id="fitness-offer-save" class="btn" onclick="saveFitnessOffer(this)" ' + (S._fitnessOfferSaving ? "disabled" : "") + '>' + esc(S._fitnessOfferSaving ? t("fitness.savingNow") : t("fitness.saveOffer")) + '</button><p class="' + (S._fitnessOfferMessageKind === "error" ? "error-banner" : S._fitnessOfferMessageKind === "success" ? "success-banner" : "muted") + '" role="status" aria-live="polite">' + esc(message) + '</p></div>';
 }
-async function saveFitnessOffer() {
-  const body = {title: document.getElementById("fo-title")?.value.trim(), description: document.getElementById("fo-description")?.value.trim() || null, durationMonths:Number(document.getElementById("fo-months")?.value || 1), priceCents:Math.round(Number(document.getElementById("fo-price")?.value || 0)*100), currency:document.getElementById("fo-currency")?.value || "USD"};
-  const {ok,data} = await api("POST", "/fitness-profile/offers", body);
-  if (!ok) { toast(errMsg(data, t("fitness.offerSaveFailed"))); return; }
-  S._fitnessOffers = [data, ...(S._fitnessOffers || [])]; render();
+async function saveFitnessOffer(button) {
+  if (S._fitnessOfferSaving) return;
+  const rawTitle = document.getElementById("fo-title")?.value.trim() || "";
+  const rawDescription = document.getElementById("fo-description")?.value.trim() || "";
+  const rawMonths = latinDigits(document.getElementById("fo-months")?.value || "1").trim();
+  const rawPrice = latinDigits(document.getElementById("fo-price")?.value || "0").trim();
+  const months = Number(rawMonths), price = Number(rawPrice);
+  const currency = document.getElementById("fo-currency")?.value || "USD";
+  S._fitnessOfferForm = { title: rawTitle, description: rawDescription, months: rawMonths, price: rawPrice, currency };
+  const invalid = !rawTitle || rawTitle.length < 2 || !Number.isInteger(months) || months < 1 || months > 24 || !Number.isFinite(price) || price < 0 || price > 1000000;
+  if (invalid) {
+    S._fitnessOfferMessage = t("fitness.offerInvalid"); S._fitnessOfferMessageKind = "error"; render(); return;
+  }
+  const body = {title:rawTitle, description:rawDescription || null, durationMonths:months, priceCents:Math.round(price*100), currency};
+  S._fitnessOfferSaving = true; S._fitnessOfferMessage = t("fitness.savingNow"); S._fitnessOfferMessageKind = "pending";
+  if (button) { button.disabled = true; button.textContent = t("fitness.savingNow"); }
+  try {
+    const result = await api("POST", "/fitness-profile/offers", body);
+    if (!result.ok) {
+      S._fitnessOfferMessage = errMsg(result.data, t("fitness.offerSaveFailed")); S._fitnessOfferMessageKind = "error"; render(); return;
+    }
+    S._fitnessOffers = [result.data, ...(S._fitnessOffers || []).filter(o => o.id !== result.data.id)];
+    S._fitnessOfferForm = null; S._fitnessOfferMessage = t("fitness.offerSaved"); S._fitnessOfferMessageKind = "success"; render();
+  } catch (_) {
+    S._fitnessOfferMessage = t("fitness.offerSaveUnknown"); S._fitnessOfferMessageKind = "error"; render();
+  } finally {
+    S._fitnessOfferSaving = false;
+    const activeButton = document.getElementById("fitness-offer-save");
+    if (activeButton) { activeButton.disabled = false; activeButton.textContent = t("fitness.saveOffer"); }
+  }
 }
 async function deleteFitnessOffer(id) {
   if (!confirm(t("fitness.deleteConfirm"))) return;
