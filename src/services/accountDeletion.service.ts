@@ -14,6 +14,9 @@ export async function anonymizeAccount(userId: string): Promise<void> {
     if (!user) return;
 
     await tx.cartItem.deleteMany({ where: { cart: { userId } } });
+    // Medical information is removed when either the patient or doctor deletes their account.
+    await tx.doctorPatientConnection.deleteMany({ where: { OR: [{ patientUserId: userId }, { doctor: { userId } }] } });
+    await tx.doctorAppointment.deleteMany({ where: { OR: [{ patientUserId: userId }, { doctor: { userId } }] } });
     await tx.responderInteraction.deleteMany({ where: { userId } });
     await tx.responderRule.deleteMany({ where: { userId } });
     await tx.channelConnection.deleteMany({ where: { userId } });
@@ -69,6 +72,8 @@ export async function eraseAccount(userId: string): Promise<"deleted" | "anonymi
     await prisma.$transaction(async (tx) => {
       await tx.cartItem.deleteMany({ where: { cart: { userId } } });
       await tx.cart.deleteMany({ where: { userId } });
+      await tx.doctorPatientConnection.deleteMany({ where: { OR: [{ patientUserId: userId }, { doctor: { userId } }] } });
+      await tx.doctorAppointment.deleteMany({ where: { OR: [{ patientUserId: userId }, { doctor: { userId } }] } });
       await tx.responderInteraction.deleteMany({ where: { userId } });
       await tx.responderRule.deleteMany({ where: { userId } });
       await tx.channelConnection.deleteMany({ where: { userId } });

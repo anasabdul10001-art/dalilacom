@@ -8,6 +8,32 @@ data class RegisterRequest(val email: String, val password: String, val fullName
 @Serializable
 data class LoginRequest(val email: String, val password: String)
 
+@Serializable data class DoctorAppointmentSlotDto(val startsAt: String, val endsAt: String, val time: String)
+@Serializable data class DoctorAppointmentDayDto(val date: String, val slots: List<DoctorAppointmentSlotDto> = emptyList())
+@Serializable data class DoctorAppointmentPublicDoctorDto(val id: String, val name: String, val address: String? = null, val phone: String? = null)
+@Serializable data class DoctorAppointmentRefDto(val id: String, val businessName: String? = null, val name: String? = null, val address: String? = null, val phone: String? = null)
+@Serializable data class DoctorAppointmentScheduleDto(val doctor: DoctorAppointmentPublicDoctorDto, val timezone: String, val slotMinutes: Int = 30, val days: List<DoctorAppointmentDayDto> = emptyList())
+@Serializable data class DoctorAppointmentBookBody(val startsAt: String, val kind: String = "VISIT", val shareMedicalFile: Boolean = false, val visitReason: String = "")
+@Serializable data class DoctorAppointmentSettingsBody(val enabled: Boolean, val slotMinutes: Int, val advanceDays: Int)
+@Serializable data class DoctorAppointmentSettingsDto(val enabled: Boolean, val slotMinutes: Int, val advanceDays: Int, val hasHours: Boolean = true)
+@Serializable data class DoctorAppointmentPersonDto(val id: String, val fullName: String, val email: String? = null, val phone: String? = null)
+@Serializable data class DoctorAppointmentDiagnosisDto(val title: String? = null, val body: String? = null, val createdAt: String? = null)
+@Serializable data class DoctorAppointmentDto(val id: String, val startsAt: String, val endsAt: String, val status: String, val kind: String = "VISIT", val medicalFileShared: Boolean = false, val visitReason: String? = null, val latestDiagnosis: DoctorAppointmentDiagnosisDto? = null, val doctor: DoctorAppointmentRefDto? = null, val patient: DoctorAppointmentPersonDto? = null)
+@Serializable data class DoctorAppointmentListDto(val items: List<DoctorAppointmentDto> = emptyList())
+@Serializable data class ClinicAppointmentListDto(val items: List<DoctorAppointmentDto> = emptyList())
+
+@Serializable data class DoctorCareRequestBody(val email: String)
+@Serializable data class DoctorCareRespondBody(val accept: Boolean)
+@Serializable data class DoctorCareRecordBody(val kind: String, val title: String, val body: String)
+@Serializable data class DoctorCarePatientDto(val id: String, val fullName: String, val email: String)
+@Serializable data class DoctorCareDoctorDto(val id: String, val businessName: String, val category: DoctorCareCategoryDto? = null, val address: String? = null)
+@Serializable data class DoctorCareCategoryDto(val name: String)
+@Serializable data class DoctorCareConnectionDto(val id: String, val status: String, val requestedAt: String? = null, val consentedAt: String? = null, val revokedAt: String? = null, val patient: DoctorCarePatientDto? = null, val doctor: DoctorCareDoctorDto? = null)
+@Serializable data class DoctorCareProfileDto(val id: String, val name: String, val approved: Boolean)
+@Serializable data class DoctorCareDto(val mode: String, val doctor: DoctorCareProfileDto? = null, val patients: List<DoctorCareConnectionDto> = emptyList(), val requests: List<DoctorCareConnectionDto> = emptyList(), val doctors: List<DoctorCareConnectionDto> = emptyList())
+@Serializable data class DoctorCareRecordDto(val id: String, val kind: String, val title: String, val body: String, val createdAt: String, val authorName: String)
+@Serializable data class DoctorCareRecordsDto(val items: List<DoctorCareRecordDto> = emptyList())
+
 @Serializable
 data class UserDto(val id: String, val email: String, val fullName: String, val role: String, val emailVerified: Boolean = false)
 
@@ -320,6 +346,11 @@ data class MerchantDto(
     val phone: String? = null,
     val whatsapp: String? = null,
     val openingHours: Map<String, List<HourRangeDto>>? = null,
+    val isDoctor: Boolean = false,
+    val appointmentBookingEnabled: Boolean = false,
+    val isFitnessProvider: Boolean = false,
+    val fitnessProfile: FitnessProfileDto? = null,
+    val fitnessOffers: List<FitnessOfferDto> = emptyList(),
     val openStatus: OpenStatusDto? = null,
     val bio: String? = null,
     val avatarUrl: String? = null,
@@ -340,6 +371,17 @@ data class MerchantMapLocationDto(
     val address: String? = null,
     val latitude: Double,
     val longitude: Double,
+)
+
+@Serializable
+data class FitnessProfileDto(
+    val displayName: String? = null,
+    val headline: String? = null,
+    val yearsExperience: Int? = null,
+    val specialties: List<String> = emptyList(),
+    val achievements: List<String> = emptyList(),
+    val certifications: List<String> = emptyList(),
+    val certificationPhotoIds: List<String> = emptyList(),
 )
 
 /** Another place of the same shop, maybe in another city. */
@@ -637,7 +679,45 @@ data class MerchantMeDto(
     val usdRateSyp: Int? = null,
     val priceCurrency: String? = null,
     val showBothCurrencies: Boolean = false,
+    val isFitnessProvider: Boolean = false,
 )
+
+@Serializable
+data class FitnessProfileBody(
+    val displayName: String?,
+    val headline: String?,
+    val yearsExperience: Int?,
+    val specialties: List<String>,
+    val achievements: List<String>,
+    val certifications: List<String>,
+    val certificationPhotoIds: List<String> = emptyList(),
+)
+
+@Serializable
+data class FitnessOfferDto(val id: String, val title: String, val description: String? = null, val durationMonths: Int = 1, val priceCents: Int, val currency: String = "USD")
+@Serializable
+data class FitnessOfferBody(val title: String, val description: String? = null, val durationMonths: Int, val priceCents: Int, val currency: String = "USD")
+@Serializable
+data class FitnessOfferListDto(val items: List<FitnessOfferDto> = emptyList())
+
+@kotlinx.serialization.Serializable
+data class FitnessTraineeDto(val id: String, val fullName: String, val email: String? = null)
+@kotlinx.serialization.Serializable
+data class FitnessProgressDto(val id: String, val weightKg: Double? = null, val note: String? = null, val completedAt: String = "")
+@kotlinx.serialization.Serializable
+data class FitnessCoachDto(val businessName: String, val fitnessProfile: FitnessProfileDto? = null)
+@kotlinx.serialization.Serializable
+data class FitnessPlanDto(
+    val id: String, val kind: String, val title: String, val details: List<String> = emptyList(),
+    val notes: String? = null, val trainee: FitnessTraineeDto? = null, val coach: FitnessCoachDto? = null,
+    val progress: List<FitnessProgressDto> = emptyList(),
+)
+@kotlinx.serialization.Serializable
+data class FitnessPlanListDto(val items: List<FitnessPlanDto> = emptyList())
+@kotlinx.serialization.Serializable
+data class FitnessPlanBody(val traineeEmail: String, val kind: String, val title: String, val details: List<String>, val notes: String? = null)
+@kotlinx.serialization.Serializable
+data class FitnessProgressBody(val weightKg: Double? = null, val note: String? = null)
 
 /** The shop's pricing, set once for the whole shop; no defaults, so a cleared rate is sent as null. */
 @Serializable

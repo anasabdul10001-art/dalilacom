@@ -10,6 +10,12 @@ import com.dalilacom.app.data.network.DiscountInput
 import com.dalilacom.app.data.network.DiscountPatchRequest
 import com.dalilacom.app.data.network.MyDiscountDto
 import com.dalilacom.app.data.network.MerchantMeDto
+import com.dalilacom.app.data.network.FitnessProfileBody
+import com.dalilacom.app.data.network.FitnessProfileDto
+import com.dalilacom.app.data.network.FitnessOfferBody
+import com.dalilacom.app.data.network.FitnessOfferDto
+import com.dalilacom.app.data.network.FitnessOfferListDto
+import com.dalilacom.app.data.network.ProductPhotoDto
 import com.dalilacom.app.data.network.RedeemRequest
 import com.dalilacom.app.data.network.RedeemResponse
 import com.dalilacom.app.data.network.RegisterMerchantRequest
@@ -19,6 +25,8 @@ import com.dalilacom.app.data.network.VerifyRedeemRequest
 import com.dalilacom.app.data.network.VerifyResponse
 import com.dalilacom.app.data.network.safeApiCall
 import com.dalilacom.app.data.store.SessionStore
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class MerchantRepository(
     private val api: ApiService,
@@ -77,6 +85,41 @@ class MerchantRepository(
     suspend fun getMerchantMe(): MerchantMeDto? {
         val response = safeApiCall { api.getMerchantMe() } ?: return null
         return if (response.isSuccessful) response.body() else null
+    }
+
+    suspend fun getFitnessProfile(): Result<FitnessProfileDto> {
+        val response = safeApiCall { api.getFitnessProfile() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
+    }
+
+    suspend fun saveFitnessProfile(body: FitnessProfileBody): Result<FitnessProfileDto> {
+        val response = safeApiCall { api.saveFitnessProfile(body) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val result = response.body()
+        return if (response.isSuccessful && result != null) Result.success(result) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_43010e9c))))
+    }
+
+    suspend fun uploadFitnessCertificate(bytes: ByteArray): Result<ProductPhotoDto> {
+        val r = safeApiCall { api.uploadFitnessPhoto(bytes.toRequestBody("image/jpeg".toMediaType())) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = r.body()
+        return if (r.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(r, AppStrings.get(R.string.photo_failed))))
+    }
+
+    suspend fun fitnessOffers(): Result<List<FitnessOfferDto>> {
+        val r = safeApiCall { api.fitnessOffers() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (r.isSuccessful) Result.success(r.body()?.items.orEmpty()) else Result.failure(Exception(errorText(r, AppStrings.get(R.string.fitness_offer_failed))))
+    }
+
+    suspend fun createFitnessOffer(body: FitnessOfferBody): Result<FitnessOfferDto> {
+        val r = safeApiCall { api.createFitnessOffer(body) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val item = r.body()
+        return if (r.isSuccessful && item != null) Result.success(item) else Result.failure(Exception(errorText(r, AppStrings.get(R.string.fitness_offer_failed))))
+    }
+
+    suspend fun deleteFitnessOffer(id: String): Result<Unit> {
+        val r = safeApiCall { api.deleteFitnessOffer(id) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        return if (r.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(r, AppStrings.get(R.string.fitness_offer_failed))))
     }
 
     /** Edits the public listing: name, category, address, contacts and the pin on the map. */

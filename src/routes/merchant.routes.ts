@@ -22,6 +22,7 @@ import { adminDecidedShop, reviewShopQuick } from "../services/shopReview.servic
 import { computeOpenStatus, openingHoursSchema } from "../services/hours.service";
 import { PRICE_CURRENCIES, isPriceCurrency, reapplyShopPricing, shopMoney } from "../lib/pricing";
 import { marketOfUser } from "../services/viewerCountry.service";
+import { isFitnessProviderCategory } from "../services/fitnessProfile.service";
 
 export const merchantRouter = Router();
 
@@ -117,10 +118,12 @@ merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), route(async (
   }
   const { _count, ...profile } = withOwnerProfile(merchant);
   const categoryRow = await prisma.category.findUnique({ where: { id: merchant.categoryId }, select: { isOnline: true } });
+  const isFitnessProvider = await isFitnessProviderCategory(merchant.categoryId);
   const suggestion = await prisma.categorySuggestion.findFirst({ where: { merchantId: merchant.id }, orderBy: { createdAt: "desc" }, select: { name: true, status: true, note: true } });
   // What still stands between this merchant and being found on the map — drives the setup checklist.
   res.json({
     ...profile,
+    isFitnessProvider,
     categorySuggestion: suggestion,
     categoryOnline: categoryRow?.isOnline ?? false,
     storePlan: { required: await storePlanRequired(), active: !(await storePlanRequired()) || hasActiveStorePlan(merchant) },
@@ -604,7 +607,7 @@ merchantRouter.get("/discounts", requireAuth, requireRole(Role.MERCHANT), route(
 merchantRouter.get("/:id", route(async (req, res) => {
   const merchant = await prisma.merchantProfile.findUnique({
     where: { id: req.params.id },
-    include: { category: true, discounts: { where: liveDiscountWhere(), orderBy: { percent: "desc" } }, user: ownerProfileSelect, shippingMethods: { where: { isActive: true }, orderBy: { createdAt: "asc" } }, branches: { where: { isActive: true }, orderBy: { createdAt: "asc" } } },
+    include: { category: true, fitnessProfile: true, fitnessOffers: { where: { isActive: true }, orderBy: { createdAt: "desc" } }, discounts: { where: liveDiscountWhere(), orderBy: { percent: "desc" } }, user: ownerProfileSelect, shippingMethods: { where: { isActive: true }, orderBy: { createdAt: "asc" } }, branches: { where: { isActive: true }, orderBy: { createdAt: "asc" } } },
   });
   if (!merchant || merchant.approvalStatus !== "APPROVED") {
     return sendError(res, 404, "NOT_FOUND", "Merchant not found");
@@ -621,11 +624,15 @@ merchantRouter.get("/:id", route(async (req, res) => {
   }));
   const shippingMethods = merchant.shippingMethods.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents }));
   const branches = merchant.branches.map(branchJson);
-  const page = localize({ ...withOwnerProfile({ ...merchant, discounts, shippingMethods, branches }), ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }) as unknown as Record<string, unknown>;
+  const isDoctor = merchant.category.slug === "health-doctors" || merchant.category.slug.startsWith("health-doctors-");
+  const isFitnessProvider = await isFitnessProviderCategory(merchant.categoryId);
+  const appointmentSetting = isDoctor || isFitnessProvider ? await prisma.doctorAppointmentSetting.findUnique({ where: { doctorMerchantId: merchant.id }, select: { enabled: true } }) : null;
+  const page = localize({ ...withOwnerProfile({ ...merchant, discounts, shippingMethods, branches }), fitnessProfile: isFitnessProvider ? merchant.fitnessProfile : null, isFitnessProvider, isDoctor, appointmentBookingEnabled: appointmentSetting?.enabled ?? false, ...standing, openStatus: computeOpenStatus(merchant.openingHours, await platformTimeZone()) }) as unknown as Record<string, unknown>;
   const lang = resolveLanguage(req);
   await translateRecords(lang, [page], ["bio", "address"]);
   await translateRecords(lang, branches as unknown as Record<string, unknown>[], ["name", "city", "address"]);
   await translateRecords(lang, discounts as unknown as Record<string, unknown>[], ["title", "description"]);
+  if (isFitnessProvider && merchant.fitnessProfile) await translateRecords(lang, [page.fitnessProfile as Record<string, unknown>], ["headline"]);
   res.json(page);
 }));
 

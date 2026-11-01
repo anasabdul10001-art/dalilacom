@@ -46,11 +46,13 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -93,6 +95,7 @@ fun MerchantDetailScreen(
     onDirections: (MerchantDto) -> Unit,
     onBack: () -> Unit,
     onLogin: () -> Unit = {},
+    onBookAppointment: (String) -> Unit = {},
 ) {
     val viewModel: MerchantDetailViewModel = viewModel(
         factory = viewModelFactory {
@@ -156,7 +159,7 @@ fun MerchantDetailScreen(
                                     Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(merchant.businessName, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                                            Text(merchant.fitnessProfile?.displayName?.takeIf { merchant.isFitnessProvider && it.isNotBlank() } ?: merchant.businessName, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                                             Spacer(Modifier.width(6.dp))
                                             Box(Modifier.size(18.dp).clip(CircleShape).background(Color(0xFF1E8AFF)), contentAlignment = Alignment.Center) { Text("✓", color = Color.White, fontSize = 11.sp) }
                                         }
@@ -187,6 +190,11 @@ fun MerchantDetailScreen(
                         }
                     }
                     item { Box(Modifier.padding(horizontal = 10.dp)) { ActionRow(context, merchant, onDirections) } }
+                    if (merchant.appointmentBookingEnabled) item {
+                        Button(onClick = { onBookAppointment(merchant.id) }, modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
+                            Text("📅  " + stringResource(R.string.appointment_book))
+                        }
+                    }
                     // tabs
                     item {
                         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).background(Color.Black).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -212,6 +220,43 @@ fun MerchantDetailScreen(
                         }
                         "about" -> item {
                             ShopCard {
+                                merchant.fitnessProfile?.let { fp ->
+                                    SectionTitle("🏋️ " + stringResource(R.string.fitness_profile))
+                                    if (fp.displayName != null && fp.displayName != merchant.businessName) Text(merchant.businessName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    fp.headline?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                                    fp.yearsExperience?.let { Text(stringResource(R.string.fitness_years_value, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                    if (fp.specialties.isNotEmpty()) { SectionTitle(stringResource(R.string.fitness_specialties)); Text(fp.specialties.joinToString(" · "), style = MaterialTheme.typography.bodyMedium) }
+                                    if (fp.achievements.isNotEmpty()) { SectionTitle(stringResource(R.string.fitness_achievements)); fp.achievements.forEach { Text("🏆  $it", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 4.dp)) } }
+                                    if (fp.certifications.isNotEmpty()) {
+                                        SectionTitle(stringResource(R.string.fitness_certifications))
+                                        fp.certifications.forEach { Text("📜  $it", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 4.dp)) }
+                                        Text(stringResource(R.string.fitness_unverified), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    fp.certificationPhotoIds.forEach { photoId ->
+                                        coil.compose.AsyncImage(model = com.dalilacom.app.data.network.absoluteUrl("/store/photos/" + photoId), contentDescription = "صورة شهادة أو إنجاز", contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(12.dp)).padding(vertical = 5.dp))
+                                    }
+                                    if (fp.certificationPhotoIds.isNotEmpty()) Text(stringResource(R.string.fitness_unverified), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    HorizontalDivider(Modifier.padding(vertical = 10.dp))
+                                }
+                                if (merchant.isFitnessProvider && merchant.fitnessOffers.isNotEmpty()) {
+                                    SectionTitle("🎯 باقات التدريب الشهرية")
+                                    merchant.fitnessOffers.forEach { offer ->
+                                        Text(offer.title, style = MaterialTheme.typography.titleSmall)
+                                        Text(offer.durationMonths.toString() + " شهر · " + String.format("%,.2f", offer.priceCents / 100.0) + " " + offer.currency, style = MaterialTheme.typography.bodyMedium)
+                                        offer.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                        Spacer(Modifier.height(8.dp))
+                                    }
+                                    HorizontalDivider(Modifier.padding(vertical = 10.dp))
+                                }
+                                if (merchant.isFitnessProvider && merchant.discounts.isNotEmpty()) {
+                                    SectionTitle("🏷️ " + stringResource(R.string.fitness_current_offers))
+                                    merchant.discounts.forEach { offer ->
+                                        Text("${offer.percent}% · ${offer.title}", style = MaterialTheme.typography.titleSmall)
+                                        offer.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                        Spacer(Modifier.height(8.dp))
+                                    }
+                                    HorizontalDivider(Modifier.padding(vertical = 10.dp))
+                                }
                                 merchant.bio?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(10.dp)) }
                                 merchant.address?.let { Text("📍 $it", style = MaterialTheme.typography.bodyMedium) }
                                 merchant.phone?.takeIf { it.isNotBlank() }?.let { Spacer(Modifier.height(6.dp)); Text("📞 $it", style = MaterialTheme.typography.bodyMedium) }

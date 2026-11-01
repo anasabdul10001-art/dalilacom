@@ -13,6 +13,79 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ApiService {
+    @GET("fitness-plans/coach")
+    suspend fun fitnessCoachPlans(): Response<FitnessPlanListDto>
+
+    @POST("fitness-plans/coach")
+    suspend fun createFitnessPlan(@Body body: FitnessPlanBody): Response<FitnessPlanDto>
+
+    @GET("fitness-plans/mine")
+    suspend fun myFitnessPlans(): Response<FitnessPlanListDto>
+
+    @POST("fitness-plans/{id}/progress")
+    suspend fun addFitnessProgress(@Path("id") id: String, @Body body: FitnessProgressBody): Response<FitnessProgressDto>
+
+    @GET("fitness-profile/me")
+    suspend fun getFitnessProfile(): Response<FitnessProfileDto>
+
+    @PUT("fitness-profile/me")
+    suspend fun saveFitnessProfile(@Body body: FitnessProfileBody): Response<FitnessProfileDto>
+
+    @retrofit2.http.Headers("Content-Type: image/jpeg")
+    @POST("fitness-profile/photos")
+    suspend fun uploadFitnessPhoto(@Body body: RequestBody): Response<ProductPhotoDto>
+
+    @GET("fitness-profile/offers/me")
+    suspend fun fitnessOffers(): Response<FitnessOfferListDto>
+
+    @POST("fitness-profile/offers")
+    suspend fun createFitnessOffer(@Body body: FitnessOfferBody): Response<FitnessOfferDto>
+
+    @retrofit2.http.PATCH("fitness-profile/offers/{id}")
+    suspend fun updateFitnessOffer(@Path("id") id: String, @Body body: FitnessOfferBody): Response<FitnessOfferDto>
+
+    @DELETE("fitness-profile/offers/{id}")
+    suspend fun deleteFitnessOffer(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @GET("appointments/doctors/{doctorId}/slots")
+    suspend fun doctorAppointmentSlots(@Path("doctorId") doctorId: String, @Query("days") days: Int = 31): Response<DoctorAppointmentScheduleDto>
+
+    @POST("appointments/doctors/{doctorId}/book")
+    suspend fun bookDoctorAppointment(@Path("doctorId") doctorId: String, @Body body: DoctorAppointmentBookBody): Response<DoctorAppointmentDto>
+
+    @GET("appointments/mine")
+    suspend fun myDoctorAppointments(): Response<DoctorAppointmentListDto>
+
+    @GET("appointments/settings")
+    suspend fun doctorAppointmentSettings(): Response<DoctorAppointmentSettingsDto>
+
+    @PUT("appointments/settings")
+    suspend fun saveDoctorAppointmentSettings(@Body body: DoctorAppointmentSettingsBody): Response<DoctorAppointmentSettingsDto>
+
+    @GET("appointments/doctor/mine")
+    suspend fun myClinicAppointments(): Response<ClinicAppointmentListDto>
+
+    @POST("appointments/{id}/cancel")
+    suspend fun cancelDoctorAppointment(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @GET("doctor-care")
+    suspend fun doctorCare(): Response<DoctorCareDto>
+
+    @POST("doctor-care/requests")
+    suspend fun requestPatient(@Body body: DoctorCareRequestBody): Response<DoctorCareConnectionDto>
+
+    @POST("doctor-care/requests/{id}/respond")
+    suspend fun respondDoctorRequest(@Path("id") id: String, @Body body: DoctorCareRespondBody): Response<kotlinx.serialization.json.JsonElement>
+
+    @POST("doctor-care/connections/{id}/revoke")
+    suspend fun revokeDoctorCare(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @GET("doctor-care/connections/{id}/records")
+    suspend fun doctorCareRecords(@Path("id") id: String): Response<DoctorCareRecordsDto>
+
+    @POST("doctor-care/connections/{id}/records")
+    suspend fun addDoctorCareRecord(@Path("id") id: String, @Body body: DoctorCareRecordBody): Response<DoctorCareRecordDto>
+
     @POST("auth/register")
     suspend fun register(@Body body: RegisterRequest): Response<AuthResponse>
 

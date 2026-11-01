@@ -62,6 +62,13 @@ fun DalilacomNavGraph(
 ) {
     val navController = rememberNavController()
     val factory = remember { ViewModelFactory(container) }
+    fun finishAuthentication(registeringAsMerchant: Boolean = false) {
+        val bookingDoctorId = container.pendingDoctorBooking.value
+        container.pendingDoctorBooking.value = null
+        navController.navigate("home") { popUpTo(0) }
+        if (bookingDoctorId != null) navController.navigate("doctorAppointments/$bookingDoctorId")
+        else if (registeringAsMerchant) navController.navigate("merchantRegister")
+    }
 
     // Back from the Facebook login browser (dalilacom://responder/meta...). Only useful once the
     // merchant is signed in — on a cold start from the browser there is no session yet, so we skip it
@@ -77,7 +84,7 @@ fun DalilacomNavGraph(
     LaunchedEffect(notificationRoute) {
         val route = notificationRoute ?: return@LaunchedEffect
         navController.currentBackStackEntryFlow.first { it.destination.route != null && it.destination.route != "splash" }
-        val needsAccount = route.startsWith("order/") || route.startsWith("merchantMode") || route == "responder" || route == "adminReview" || route == NotificationRoutes.INBOX
+        val needsAccount = route.startsWith("order/") || route.startsWith("merchantMode") || route == "responder" || route == "adminReview" || route == "doctorAppointments" || route == NotificationRoutes.INBOX
         if (route != "home" && (!needsAccount || container.tokenStore.getToken() != null)) navController.navigate(route)
         onNotificationRouteConsumed()
     }
@@ -132,7 +139,7 @@ fun DalilacomNavGraph(
         composable("login") {
             LoginScreen(
                 factory = factory,
-                onLoginSuccess = { navController.navigate("home") { popUpTo(0) } },
+                onLoginSuccess = { finishAuthentication() },
                 onNavigateToRegister = { navController.navigate("register") },
                 onBrowseAsGuest = { navController.navigate("home") { popUpTo(0) } },
             )
@@ -141,13 +148,7 @@ fun DalilacomNavGraph(
             RegisterScreen(
                 factory = factory,
                 onRegisterSuccess = { registeringAsMerchant ->
-                    navController.navigate("home") { popUpTo(0) }
-                    // New merchant accounts go straight into the merchant-profile form instead
-                    // of making them hunt for "سجّل كتاجر" in their profile afterward — "home"
-                    // stays underneath on the back stack so its own back button works normally.
-                    if (registeringAsMerchant) {
-                        navController.navigate("merchantRegister")
-                    }
+                    finishAuthentication(registeringAsMerchant)
                 },
                 onNavigateToLogin = { navController.popBackStack() },
             )
@@ -175,6 +176,7 @@ fun DalilacomNavGraph(
                 },
                 onBack = { navController.popBackStack() },
                 onLogin = { navController.navigate("login") },
+                onBookAppointment = { id -> navController.navigate("doctorAppointments/$id") },
             )
         }
         composable("merchant/{merchantId}/offers") { backStackEntry ->
@@ -194,6 +196,7 @@ fun DalilacomNavGraph(
                 },
                 onBack = { navController.popBackStack() },
                 onLogin = { navController.navigate("login") },
+                onBookAppointment = { id -> navController.navigate("doctorAppointments/$id") },
             )
         }
         composable("merchant/{merchantId}/offers/{discountId}") { backStackEntry ->
@@ -214,6 +217,7 @@ fun DalilacomNavGraph(
                 },
                 onBack = { navController.popBackStack() },
                 onLogin = { navController.navigate("login") },
+                onBookAppointment = { id -> navController.navigate("doctorAppointments/$id") },
             )
         }
         composable("product/{productId}") { backStackEntry ->
@@ -346,6 +350,21 @@ fun DalilacomNavGraph(
         }
         composable("profileEdit") {
             ProfileEditScreen(factory = factory, onBack = { navController.popBackStack() })
+        }
+        composable("fitnessProfile") {
+            com.dalilacom.app.ui.profile.FitnessProfileScreen(container = container, onBack = { navController.popBackStack() })
+        }
+        composable("fitnessPlans") {
+            com.dalilacom.app.ui.profile.FitnessPlansScreen(container = container, onBack = { navController.popBackStack() })
+        }
+        composable("doctorCare") {
+            com.dalilacom.app.ui.profile.DoctorCareScreen(container = container, onBack = { navController.popBackStack() })
+        }
+        composable("doctorAppointments/{doctorId}") { entry ->
+            com.dalilacom.app.ui.profile.DoctorAppointmentsScreen(container, entry.arguments?.getString("doctorId"), onBack = { navController.popBackStack() }, onLogin = { navController.navigate("login") }, onManageHours = { navController.navigate("merchantHours") })
+        }
+        composable("myAppointments") {
+            com.dalilacom.app.ui.profile.DoctorAppointmentsScreen(container, onBack = { navController.popBackStack() }, onLogin = { navController.navigate("login") }, onManageHours = { navController.navigate("merchantHours") })
         }
         composable("merchantProfile") {
             MerchantProfileScreen(factory = factory, onBack = { navController.popBackStack() })

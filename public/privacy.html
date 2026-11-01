@@ -37,6 +37,9 @@
   <li><b>المجيب الآلي:</b> عندما يربط صاحب النشاط قناة (فيسبوك أو إنستغرام أو تيليغرام أو غيرها)، نعالج رسائل وتعليقات الزبائن الواصلة لتلك القناة لنردّ عليها، ونحتفظ بها في صندوق الوارد الخاص بصاحب النشاط مع الرد. مفاتيح الربط تُخزَّن مشفّرة.</li>
   <li><b>الإشعارات:</b> رمز جهازك (Firebase) لإرسال الإشعارات، وتفضيلاتك لها.</li>
   <li><b>بيانات تقنية:</b> سجلات أمنية (محاولات دخول، عنوان IP) لحماية الحسابات.</li>
+  <li><b>بيانات الرعاية الطبية:</b> إذا طلب طبيب معتمد ربط حسابك بملفه ووافقت أنت، تُحفظ الملاحظات الطبية التي يضيفها الطبيب، مثل التشخيص أو الدواء أو تعليمات المراجعة. محتوى هذه الملاحظات مشفّر في قاعدة البيانات ولا يظهر إلا للطبيب المرتبط ولك أنت. لا نعرضه على الخريطة أو المتجر ولا نرسله لمزودي الذكاء الاصطناعي. يمكنك إلغاء الربط، وعند حذف حساب الطبيب أو المريض تُحذف سجلات هذا الربط.</li>
+  <li><b>المواعيد الطبية:</b> عند حجز موعد مع طبيب، نحفظ وقت الموعد وحالته والطبيب والمريض لتأكيد الحجز وإدارته. يرى الطبيب اسم المريض وبريده ورقم هاتفه إذا كان محفوظًا في حسابه. ولا يشترط أن يكون لدى المريض ملف متابعة طبي عند الطبيب.</li>
+  <li><b>خطط التدريب والتغذية:</b> إذا أرسل لك مدرب خطة، نحفظ الخطة وملاحظاتك وقياسات التقدم التي تختار تسجيلها. لا يراها إلا المدرب الذي أرسلها وأنت، وتحذف عند حذف الخطة أو الحساب المرتبط.</li>
 </ul>
 
 <h2>2. كيف نستعملها</h2>
@@ -92,6 +95,9 @@
 
 <h2>2. How we use it</h2>
 <p>To run the service (card, orders, discounts), send the notifications you ask for, show you nearby shops, run the auto-responder for a merchant's account, prevent fraud and protect accounts, and to fix and improve the service. We do not sell your data.</p>
+<p><b>Medical care records:</b> If an approved doctor asks to link your account and you accept, the doctor may add private notes such as diagnoses, medication, and follow-up instructions. These notes are encrypted in our database and visible only to you and that linked doctor. They are not shown on the map or in the shop and are not sent to AI providers. You can revoke the link; deleting either account deletes the linked care records.</p>
+<p><b>Medical appointments:</b> When you book a doctor's appointment, we store the time, status, doctor and patient account to confirm and manage the booking. The doctor can see the patient's name, email and phone number if saved in the account. A prior medical-record link is not required to book.</p>
+<p><b>Training and nutrition plans:</b> If a coach sends you a plan, we store the plan and any notes or progress measurements you choose to submit. Only you and the coach who assigned it can view these details. They are deleted when the plan or linked account is deleted.</p>
 
 <h2>3. Artificial intelligence</h2>
 <p>Smart replies and the ethical screening of merchants' announcements use external AI providers. They receive the text of the message to answer and the shop's public information needed to answer (such as name and prices), never your email or password. We do not use your messages to train our own models.</p>
