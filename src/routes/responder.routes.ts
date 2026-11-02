@@ -13,6 +13,7 @@ import { getSettings } from "../services/settings.service";
 import { InsufficientBalanceError } from "../services/wallet.service";
 import { activate, AlreadyRunningError, getSubscription, isRunning, maybeNotifyEnding, pay, sendThroughConnection } from "../services/responder.service";
 import { metaOAuthRouter } from "./metaOAuth.routes";
+import { isMetaDriver, META_NOT_OPEN_MESSAGE, metaOpenFor } from "../lib/metaAccess";
 
 export const responderRouter = Router();
 
@@ -130,7 +131,7 @@ responderRouter.get("/channels", requireAuth, route(async (req, res) => {
       id: c.id,
       key: c.key,
       name: translateText(c.name, lang),
-      connectable: c.driver !== "META_PENDING",
+      connectable: c.driver !== "META_PENDING" && (!isMetaDriver(c.driver) || metaOpenFor(req.user!.role)),
       driver: c.driver,
       fields: CREDENTIAL_FIELDS[c.driver].map((f) => ({ ...f, label: translateText(f.label, lang) })),
     })),
@@ -164,11 +165,12 @@ responderRouter.post("/connections", requireAuth, route(async (req, res) => {
   const parsed = connectSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
-  const sub = await getSubscription(req.user!.id);
-  if (!isRunning(sub.status)) return sendError(res, 403, "FORBIDDEN", "فعّل المجيب الآلي أول (تجربة أو اشتراك)");
-
   const channel = await prisma.socialChannel.findUnique({ where: { id: parsed.data.channelId } });
   if (!channel || !channel.isEnabled) return sendError(res, 404, "NOT_FOUND", "القناة غير متاحة");
+  if (isMetaDriver(channel.driver) && !metaOpenFor(req.user!.role)) return sendError(res, 403, "META_NOT_OPEN", META_NOT_OPEN_MESSAGE);
+
+  const sub = await getSubscription(req.user!.id);
+  if (!isRunning(sub.status)) return sendError(res, 403, "FORBIDDEN", "فعّل المجيب الآلي أول (تجربة أو اشتراك)");
 
   const driver = drivers[channel.driver];
   const invalid = driver.validateCredentials(parsed.data.credentials);

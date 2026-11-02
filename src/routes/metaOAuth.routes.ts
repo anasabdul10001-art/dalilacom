@@ -4,6 +4,7 @@ import { ChannelDriver } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
+import { META_NOT_OPEN_MESSAGE, metaOpenFor } from "../lib/metaAccess";
 import { getSubscription, isRunning } from "../services/responder.service";
 import {
   appDeepLink,
@@ -56,7 +57,7 @@ h2{color:#BA2A34;margin:0 0 8px}p{line-height:1.7;color:#444}
 
 metaOAuthRouter.get("/oauth/status", requireAuth, route(async (req, res) => {
   res.json({
-    available: metaOAuthConfigured(),
+    available: metaOAuthConfigured() && metaOpenFor(req.user!.role),
     responderRunning: await responderRunning(req.user!.id),
     redirectUri: metaRedirectUri(),
     scopes: metaScopes(),
@@ -67,6 +68,7 @@ metaOAuthRouter.get("/oauth/status", requireAuth, route(async (req, res) => {
 /* ---------------- step 1: the app opens this URL in a browser / Custom Tab ---------------- */
 
 metaOAuthRouter.get("/oauth/start", requireAuth, route(async (req, res) => {
+  if (!metaOpenFor(req.user!.role)) return sendError(res, 403, "META_NOT_OPEN", META_NOT_OPEN_MESSAGE);
   if (!metaOAuthConfigured()) {
     return sendError(
       res,

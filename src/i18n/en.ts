@@ -121,6 +121,7 @@ export const en: LanguagePack = {
     "لم يكتمل طلب الخريطة. أعد المحاولة بعد قليل.": "The map request did not complete. Try again in a moment.",
     "تأخر مصدر الخريطة المخصص. لم نترك الطلب معلقًا؛ جرّب مساحة أصغر أو أعد المحاولة.": "The dedicated map source was slow. The request was not left hanging; try a smaller area or try again.",
     "مصدر الخريطة تأخر أو لم يرد. لم نترك الطلب معلقًا؛ جرّب مساحة أصغر أو أعد المحاولة بعد قليل.": "The map source was slow or did not answer. The request was not left hanging; try a smaller area or try again in a moment.",
+    "ربط فيسبوك وإنستغرام رح يتاح بعد ما توافق Meta على التطبيق — فيك تستعمل تيليغرام بالوقت الحالي": "Linking Facebook and Instagram will open once Meta approves the app — you can use Telegram for now",
     "الشحن": "Shipping",
     "تعذّر تحسين هالصورة، جرّب صورة ثانية": "This photo could not be improved, try another one",
     "انتهت استخداماتك المجانية للذكاء الاصطناعي هالشهر": "Your free AI uses for this month are finished",

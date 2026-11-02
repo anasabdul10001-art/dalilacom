@@ -215,7 +215,7 @@ function back() {
 }
 
 /** Not open yet: the buttons stay, a tap only says it is coming (flip these when the Meta app and the auto-responder are ready). */
-const SOON = { facebookLogin: true, responder: true };
+const SOON = { facebookLogin: true, responder: false };
 
 function reset(screen) {
   stopQrLoop();
@@ -7637,14 +7637,14 @@ function respChannels() {
     ${r.channels.map((c) => `
       <div class="card">
         <div class="title-line"><strong>${esc(c.name)}</strong>${c.connectable ? "" : `<span class="badge neutral">قريبًا</span>`}</div>
-        ${c.driver === "FACEBOOK" || c.driver === "INSTAGRAM" ? `
+        ${(c.driver === "FACEBOOK" || c.driver === "INSTAGRAM") && c.connectable ? `
           <button class="btn" onclick="respMetaLink()">ربط بحساب فيسبوك (الأسهل)</button>
           <p class="muted">بتسجّل دخول بفيسبوك وبتختار صفحتك، ما في داعي لأي أرقام أو رموز.</p>
           <div class="muted" style="margin:8px 0">أو يدويًا:</div>` : ""}
         ${c.connectable ? `
           ${c.fields.map((f) => `<div class="field"><label>${esc(f.label)}</label><input id="cf-${c.id}-${f.key}" ${f.secret ? 'type="password"' : ""} autocomplete="off" /></div>`).join("")}
           <button class="btn small" onclick="respConnect('${c.id}', ${JSON.stringify(c.fields.map((f) => f.key)).replace(/"/g, "&quot;")})">ربط</button>`
-        : `<p class="muted">الربط بحسابات ميتا بيحتاج موافقة منهم — لسا مو متاح.</p>`}
+        : `<p class="muted">${esc(t(c.driver === "FACEBOOK" || c.driver === "INSTAGRAM" ? "ربط فيسبوك وإنستغرام رح يتاح بعد ما توافق Meta على التطبيق — فيك تستعمل تيليغرام بالوقت الحالي" : "الربط بحسابات ميتا بيحتاج موافقة منهم — لسا مو متاح."))}</p>`}
       </div>`).join("")}
     <div class="section-title">اتصالاتي</div>
     ${r.connections.length === 0 ? `<div class="empty-state">ما في قنوات مربوطة</div>` : r.connections.map((c) => `
