@@ -85,7 +85,11 @@ fun ProfileScreen(
             if (role == "CUSTOMER") {
                 launch { container.doctorCareRepository.load().onSuccess { care -> hasDoctorConnection = care.requests.isNotEmpty() || care.doctors.isNotEmpty() } }
                 launch { container.doctorCareRepository.myAppointments().onSuccess { appointments -> hasDoctorAppointment = appointments.items.isNotEmpty() } }
-                launch { container.fitnessPlansRepository.myPlans().onSuccess { plans -> hasFitnessPlan = plans.isNotEmpty() } }
+                launch {
+                    val plans = container.fitnessPlansRepository.myPlans().getOrDefault(emptyList())
+                    val enrollments = container.fitnessPlansRepository.myEnrollments().getOrDefault(emptyList())
+                    hasFitnessPlan = plans.isNotEmpty() || enrollments.isNotEmpty()
+                }
             }
             if (role == "MERCHANT") {
                 launch { fitnessProvider = container.merchantRepository.getMerchantMe()?.isFitnessProvider == true }

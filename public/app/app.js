@@ -2471,13 +2471,17 @@ function loadProfileServiceActivity() {
   if (S._profileServiceActivity || !S.token) return;
   S._profileServiceActivity = { loading: true };
   const requests = [api("GET", "/doctor-care"), api("GET", "/appointments/mine"), api("GET", "/fitness-plans/mine")];
+  if (S.role === "CUSTOMER") requests.push(api("GET", "/fitness-enrollments/mine"));
   if (S.role === "MERCHANT") requests.push(api("GET", "/merchant/me"));
-  Promise.all(requests).then(([care, appointments, plans, merchant]) => {
+  Promise.all(requests).then(results => {
+    const [care, appointments, plans] = results;
+    const enrollmentData = S.role === "CUSTOMER" ? results[3] : null;
+    const merchant = S.role === "MERCHANT" ? results[3] : null;
     const doctorCare = care.ok ? care.data : null;
     S._profileServiceActivity = {
       hasMedicalActivity: !!((doctorCare?.requests || []).length || (doctorCare?.doctors || []).length || (appointments.ok && (appointments.data.items || []).length)),
       isDoctor: !!(doctorCare?.mode === "DOCTOR"),
-      hasTrainingActivity: !!(plans.ok && (plans.data.items || []).length),
+      hasTrainingActivity: !!((plans.ok && (plans.data.items || []).length) || (enrollmentData?.ok && (enrollmentData.data.items || []).length)),
       isFitnessProvider: !!(merchant?.ok && merchant.data.isFitnessProvider),
       loadedAt: Date.now(),
     };
@@ -3120,7 +3124,7 @@ function screenMerchantDetail() {
         <button onclick="shareMerchant()"><span>📤</span>${esc(t("place.share"))}</button>
       </div>
       ${x.isFitnessProvider && x.fitnessProfile ? `<section class="card" style="padding:16px;margin:14px 0"><h2>${esc(x.fitnessProfile.displayName || x.businessName)}</h2>${x.fitnessProfile.headline ? `<p>${esc(x.fitnessProfile.headline)}</p>` : ""}${x.fitnessProfile.yearsExperience != null ? `<p class="muted">${esc(t("fitness.yearsValue", { n: x.fitnessProfile.yearsExperience }))}</p>` : ""}${(x.fitnessProfile.specialties || []).length ? `<h3>${esc(t("fitness.specialties"))}</h3><div>${x.fitnessProfile.specialties.map(s => `<span class="chip">${esc(s)}</span>`).join(" ")}</div>` : ""}${(x.fitnessProfile.achievements || []).length ? `<h3>${esc(t("fitness.achievements"))}</h3><ul>${x.fitnessProfile.achievements.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}${(x.fitnessProfile.certifications || []).length ? `<h3>${esc(t("fitness.certifications"))}</h3><ul>${x.fitnessProfile.certifications.map(c => `<li>${esc(c)}</li>`).join("")}</ul><small class="muted">${esc(t("fitness.certificationPublicNote"))}</small>` : ""}${(x.discounts || []).length ? `<h3>${esc(t("fitness.currentOffers"))}</h3>${x.discounts.map(d => `<div class="card" style="padding:10px;margin:6px 0"><b>${esc(d.percent)}% · ${esc(d.title)}</b>${d.description ? `<div>${esc(d.description)}</div>` : ""}${d.endDate ? `<small class="muted">${esc(t("fitness.offerEnds"))} ${esc(new Date(d.endDate).toLocaleDateString())}</small>` : ""}</div>`).join("")}` : ""}</section>` : ""}
-      ${x.isFitnessProvider && x.fitnessProfile ? ('<section class="card" style="padding:16px;margin:12px 0"><h3>' + esc(t("fitness.certificatePhotos")) + '</h3><small class="muted">' + esc(t("fitness.certificationPublicNote")) + '</small>' + (x.fitnessProfile.certificationPhotoIds || []).map(function(id){return '<img src="/store/photos/' + encodeURIComponent(id) + '" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:8px;margin:4px">';}).join("") + '<h3>' + esc(t("fitness.monthlyOffers")) + '</h3>' + (x.fitnessOffers || []).map(function(o){return '<div class="card" style="padding:12px;margin:8px 0"><b>' + esc(o.title) + '</b><div>' + esc(o.durationMonths) + ' ' + esc(t("fitness.months")) + ' · ' + esc((o.priceCents/100).toLocaleString()) + ' ' + esc(o.currency) + '</div>' + (o.description ? '<p>' + esc(o.description) + '</p>' : '') + '</div>';}).join("") + '</section>') : ''}
+      ${x.isFitnessProvider && x.fitnessProfile ? ('<section class="card" style="padding:16px;margin:12px 0"><h3>' + esc(t("fitness.certificatePhotos")) + '</h3><small class="muted">' + esc(t("fitness.certificationPublicNote")) + '</small>' + (x.fitnessProfile.certificationPhotoIds || []).map(function(id){return '<img src="/store/photos/' + encodeURIComponent(id) + '" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:8px;margin:4px">';}).join("") + '<h3>' + esc(t("fitness.monthlyOffers")) + '</h3>' + (x.fitnessOffers || []).map(function(o){return '<div class="card" style="padding:12px;margin:8px 0"><b>' + esc(o.title) + '</b><div>' + esc(o.durationMonths) + ' ' + esc(t("fitness.months")) + ' · ' + esc((o.priceCents/100).toLocaleString()) + ' ' + esc(o.currency) + '</div>' + (o.description ? '<p>' + esc(o.description) + '</p>' : '') + (S.role === "CUSTOMER" ? '<button class="btn" ' + ((S._fitnessRequestedOfferIds || {})[o.id] ? 'disabled' : '') + ' onclick="requestFitnessOffer(\'' + esc(o.id) + '\')">' + esc(({ REQUESTED: t("fitness.statusRequested"), ACCEPTED: t("fitness.statusAccepted") })[(S._fitnessRequestedOfferIds || {})[o.id]] || t("fitness.requestJoin")) + '</button>' : (!S.token ? '<button class="btn outline" onclick="go(\'login\')">' + esc(t("fitness.requestJoin")) + '</button>' : '')) + '</div>';}).join("") + '</section>') : ''}
       <div class="store-tabs">
         ${[["home", t("shop.tabHome")], ["all", t("shop.tabAll")], ["offers", t("shop.tabOffers") + ((x.discounts || []).length ? ` (${x.discounts.length})` : "")], ["reviews", t("rv.title") + (votes ? ` (${votes})` : "")], ["about", t("shop.tabAbout")]].map(([id, label]) => `<button class="${m.tab === id ? "on" : ""}" onclick="S._merchantDetail.tab='${id}';render()">${esc(label)}</button>`).join("")}
       </div>
@@ -3239,13 +3243,14 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 }
 
 async function loadMerchantDetail(id, initialTab = "home") {
-  const [mRes, pRes, rvRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/store/products?limit=60&merchantId=" + id), api("GET", "/reviews/shops/" + id + "?limit=10")]);
+  const [mRes, pRes, rvRes, enrollmentRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/store/products?limit=60&merchantId=" + id), api("GET", "/reviews/shops/" + id + "?limit=10"), S.role === "CUSTOMER" && S.token ? api("GET", "/fitness-enrollments/mine") : Promise.resolve({ ok: false })]);
   const merchant = mRes.ok ? mRes.data : null;
   const loc = S._discover && S._discover.userLoc;
   // /merchant/:id doesn't compute distance; derive it from the location the map view already asked for.
   if (merchant && loc && merchant.latitude != null && merchant.longitude != null) {
     merchant.distanceKm = haversineKm(loc.lat, loc.lng, merchant.latitude, merchant.longitude);
   }
+  if (enrollmentRes?.ok) S._fitnessRequestedOfferIds = Object.fromEntries((enrollmentRes.data.items || []).filter(e => ["REQUESTED", "ACCEPTED"].includes(e.status)).map(e => [e.offer?.id, e.status]));
   S._merchantDetail = { id, loading: false, merchant, products: pRes.ok ? pRes.data.items : [], reviews: rvRes.ok ? rvRes.data : null, tab: initialTab, q: "", sort: "popular" };
   render();
 }
@@ -7970,28 +7975,44 @@ bootSocialReturn().then((social) => {
     if (!handled && !bootMerchantLink()) render();
   });
 });
+async function requestFitnessOffer(offerId) {
+  if (!S.token) { toast(t("appointment.loginRequired")); return go("login"); }
+  if (S.role !== "CUSTOMER") return toast(t("fitness.requestJoin"));
+  const {ok,data} = await api("POST", "/fitness-enrollments/offers/" + encodeURIComponent(offerId) + "/request", {});
+  if (!ok) return toast(errMsg(data, t("fitness.savePlanFailed")));
+  S._fitnessRequestedOfferIds = { ...(S._fitnessRequestedOfferIds || {}), [offerId]: "REQUESTED" };
+  toast(t("fitness.requestSent")); render();
+}
 function openFitnessPlans() { S._fitnessPlans = null; S._fitnessPlanForm = null; S._fitnessPlanTraineeFilter = null; go("fitnessPlans"); loadFitnessPlans(); }
 function loadFitnessPlans() {
-  Promise.all([api("GET", "/fitness-plans/coach"), api("GET", "/fitness-plans/coach/trainees")]).then(([plans, trainees]) => {
+  Promise.all([api("GET", "/fitness-plans/coach"), api("GET", "/fitness-plans/coach/trainees"), api("GET", "/fitness-enrollments/coach")]).then(([plans, trainees, enrollments]) => {
     S._fitnessPlans = plans.ok ? plans.data.items || [] : [];
     S._fitnessTrainees = trainees.ok ? trainees.data.items || [] : [];
+    S._fitnessEnrollments = enrollments.ok ? enrollments.data.items || [] : [];
     render();
   });
+}
+function fitnessWeekHtml(schedule) {
+  const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+  return days.filter(day => (schedule?.[day] || []).length).map(day => '<h4>' + esc(t("fitness.day." + day)) + '</h4><ul>' + schedule[day].map(item => '<li>' + esc(item) + '</li>').join("") + '</ul>').join("");
 }
 function screenFitnessPlans() {
   if (!S._fitnessPlans) return backRow() + spinner();
   const form = S._fitnessPlanForm || {};
   const trainees = S._fitnessTrainees || [];
+  const enrollments = S._fitnessEnrollments || [];
   const filtered = S._fitnessPlanTraineeFilter ? S._fitnessPlans.filter(p => p.trainee?.id === S._fitnessPlanTraineeFilter) : S._fitnessPlans;
   const chips = '<div style="display:flex;gap:8px;overflow:auto;margin:8px 0"><button class="chip" onclick="S._fitnessPlanTraineeFilter=null;render()">' + esc(t("fitness.allTrainees")) + ' (' + trainees.length + ')</button>' + trainees.map(summary => '<button class="chip" style="white-space:nowrap" onclick="S._fitnessPlanTraineeFilter=\'' + esc(summary.trainee.id) + '\';render()">' + esc(summary.trainee.fullName) + ' · ' + esc(summary.planCount) + '</button>').join("") + '</div>';
   const planDates = p => [p.startsAt && t("fitness.planStarts", { date: new Date(p.startsAt).toLocaleDateString() }), p.endsAt && t("fitness.planEnds", { date: new Date(p.endsAt).toLocaleDateString() })].filter(Boolean).join(" · ");
-  const plans = filtered.map(p => '<div class="card" style="padding:14px;margin:10px 0"><b>' + esc(p.title) + '</b><div class="muted">' + esc(p.trainee?.fullName || "") + ' · ' + esc(p.trainee?.email || "") + ' · ' + esc(p.kind === "WORKOUT" ? t("fitness.workout") : t("fitness.nutrition")) + '</div>' + (planDates(p) ? '<div class="muted">📅 ' + esc(planDates(p)) + '</div>' : '') + '<p>' + (p.details || []).map(esc).join("<br>") + '</p>' + (p.notes ? '<p>' + esc(p.notes) + '</p>' : '') + '<button class="btn outline" onclick="editFitnessPlan(\'' + esc(p.id) + '\')">' + esc(t("fitness.editPlan")) + '</button> <button class="btn outline" onclick="printFitnessPlan(\'' + esc(p.id) + '\')">📄 ' + esc(t("fitness.exportPdf")) + '</button> <button class="link-btn" onclick="deleteFitnessPlan(\'' + esc(p.id) + '\')">' + esc(t("fitness.deletePlan")) + '</button><h4>' + esc(t("fitness.progress")) + '</h4>' + (p.progress || []).map(x => '<div class="muted">' + esc(x.weightKg == null ? "" : x.weightKg + " kg") + ' · ' + esc(x.note || "") + ' · ' + esc(new Date(x.completedAt).toLocaleDateString()) + '</div>').join("") + '</div>').join("");
-  return backRow() + '<h1 class="screen-title">🏋️ ' + esc(t("fitness.plansTitle")) + '</h1><p class="screen-sub">' + esc(t("fitness.plansHelp")) + '</p>' + (form.id ? '<p class="success-banner">' + esc(t("fitness.editPlan")) + ' · ' + esc(form.traineeName || "") + '</p>' : '') + '<div class="card" style="padding:16px">' + (form.id ? '<div class="field"><label>' + esc(t("fitness.traineeEmail")) + '</label><input type="email" value="' + esc(form.traineeEmail || "") + '" readonly></div>' : '<div class="field"><label>' + esc(t("fitness.traineeEmail")) + '</label><input id="fplan-email" type="email" value="' + esc(form.traineeEmail || "") + '"></div>') + '<div class="field"><label>' + esc(t("fitness.planType")) + '</label><select id="fplan-kind"><option value="WORKOUT" ' + ((form.kind || "WORKOUT") === "WORKOUT" ? "selected" : "") + '>' + esc(t("fitness.workout")) + '</option><option value="NUTRITION" ' + (form.kind === "NUTRITION" ? "selected" : "") + '>' + esc(t("fitness.nutrition")) + '</option></select></div><div class="field"><label>' + esc(t("fitness.planName")) + '</label><input id="fplan-title" maxlength="100" value="' + esc(form.title || "") + '"></div><div class="field"><label>' + esc(t("fitness.planItems")) + '</label><textarea id="fplan-details" rows="8" placeholder="' + esc(t("fitness.planItemsHelp")) + '">' + esc(form.details || "") + '</textarea></div><div class="field"><label>' + esc(t("fitness.planNotes")) + '</label><textarea id="fplan-notes" rows="3">' + esc(form.notes || "") + '</textarea></div><div class="field"><label>' + esc(t("fitness.planStartDate")) + '</label><input id="fplan-start" type="date" value="' + esc(form.startsAt || "") + '"></div><div class="field"><label>' + esc(t("fitness.planEndDate")) + '</label><input id="fplan-end" type="date" value="' + esc(form.endsAt || "") + '"></div><button class="btn" onclick="saveFitnessPlan()">' + esc(form.id ? t("fitness.updatePlan") : t("fitness.savePlan")) + '</button>' + (form.id ? ' <button class="btn outline" onclick="cancelFitnessPlanEdit()">' + esc(t("fitness.cancelEditPlan")) + '</button>' : '') + '</div><h2>' + esc(t("fitness.traineesCount", { n: trainees.length })) + '</h2>' + chips + '<h2>' + esc(t("fitness.createdPlans")) + '</h2>' + (plans || '<p class="muted">' + esc(t("fitness.noPlans")) + '</p>');
+  const plans = filtered.map(p => '<div class="card" style="padding:14px;margin:10px 0"><b>' + esc(p.title) + '</b><div class="muted">' + esc(p.trainee?.fullName || "") + ' · ' + esc(p.trainee?.email || "") + ' · ' + esc(p.kind === "WORKOUT" ? t("fitness.workout") : t("fitness.nutrition")) + '</div>' + (planDates(p) ? '<div class="muted">📅 ' + esc(planDates(p)) + '</div>' : '') + (fitnessWeekHtml(p.weeklySchedule) || '<p>' + (p.details || []).map(esc).join("<br>") + '</p>') + (p.notes ? '<p>' + esc(p.notes) + '</p>' : '') + '<button class="btn outline" onclick="editFitnessPlan(\'' + esc(p.id) + '\')">' + esc(t("fitness.editPlan")) + '</button> <button class="btn outline" onclick="printFitnessPlan(\'' + esc(p.id) + '\')">📄 ' + esc(t("fitness.exportPdf")) + '</button> <button class="link-btn" onclick="deleteFitnessPlan(\'' + esc(p.id) + '\')">' + esc(t("fitness.deletePlan")) + '</button><h4>' + esc(t("fitness.progress")) + '</h4>' + (p.progress || []).map(x => '<div class="muted">' + esc(x.weightKg == null ? "" : x.weightKg + " kg") + ' · ' + esc(x.note || "") + ' · ' + esc(new Date(x.completedAt).toLocaleDateString()) + '</div>').join("") + '</div>').join("");
+  const statusText = status => t(({ REQUESTED: "fitness.statusRequested", ACCEPTED: "fitness.statusAccepted", REJECTED: "fitness.statusRejected", CANCELLED: "fitness.statusCancelled", COMPLETED: "fitness.statusCompleted" })[status] || "fitness.statusRequested");
+  const requestsHtml = enrollments.map(e => '<div class="card" style="padding:12px;margin:8px 0"><b>' + esc(e.offer?.title || "") + '</b><div>' + esc(e.user?.fullName || "") + ' · ' + esc(e.user?.email || "") + '</div><div class="muted">' + esc(statusText(e.status)) + (e.endsAt ? ' · ' + esc(t("fitness.planEnds", { date: new Date(e.endsAt).toLocaleDateString() })) : '') + '</div>' + (e.status === "REQUESTED" ? '<button class="btn" onclick="updateFitnessEnrollment(\'' + esc(e.id) + '\',\'ACCEPTED\')">' + esc(t("fitness.acceptRequest")) + '</button> <button class="btn outline" onclick="updateFitnessEnrollment(\'' + esc(e.id) + '\',\'REJECTED\')">' + esc(t("fitness.rejectRequest")) + '</button>' : '') + (e.status === "ACCEPTED" ? '<button class="btn outline" onclick="updateFitnessEnrollment(\'' + esc(e.id) + '\',\'COMPLETED\')">' + esc(t("fitness.completeEnrollment")) + '</button>' : '') + '</div>').join("");
+  return backRow() + '<h1 class="screen-title">🏋️ ' + esc(t("fitness.plansTitle")) + '</h1><p class="screen-sub">' + esc(t("fitness.plansHelp")) + '</p>' + (form.id ? '<p class="success-banner">' + esc(t("fitness.editPlan")) + ' · ' + esc(form.traineeName || "") + '</p>' : '') + '<div class="card" style="padding:16px">' + (form.id ? '<div class="field"><label>' + esc(t("fitness.traineeEmail")) + '</label><input type="email" value="' + esc(form.traineeEmail || "") + '" readonly></div>' : '<div class="field"><label>' + esc(t("fitness.traineeEmail")) + '</label><input id="fplan-email" type="email" value="' + esc(form.traineeEmail || "") + '"></div>') + '<div class="field"><label>' + esc(t("fitness.planType")) + '</label><select id="fplan-kind"><option value="WORKOUT" ' + ((form.kind || "WORKOUT") === "WORKOUT" ? "selected" : "") + '>' + esc(t("fitness.workout")) + '</option><option value="NUTRITION" ' + (form.kind === "NUTRITION" ? "selected" : "") + '>' + esc(t("fitness.nutrition")) + '</option></select></div><div class="field"><label>' + esc(t("fitness.planName")) + '</label><input id="fplan-title" maxlength="100" value="' + esc(form.title || "") + '"></div><div class="field"><label>' + esc(t("fitness.planItems")) + '</label><textarea id="fplan-details" rows="5" placeholder="' + esc(t("fitness.planItemsHelp")) + '">' + esc(form.details || "") + '</textarea></div><h3>' + esc(t("fitness.weeklySchedule")) + '</h3>' + ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"].map(day => '<div class="field"><label>' + esc(t("fitness.day." + day)) + '</label><textarea id="fplan-day-' + day + '" rows="2" placeholder="' + esc(t("fitness.dayItemsHelp")) + '">' + esc((form.weeklySchedule || {})[day]?.join("\n") || "") + '</textarea></div>').join("") + '<div class="field"><label>' + esc(t("fitness.planNotes")) + '</label><textarea id="fplan-notes" rows="3">' + esc(form.notes || "") + '</textarea></div><div class="field"><label>' + esc(t("fitness.planStartDate")) + '</label><input id="fplan-start" type="date" value="' + esc(form.startsAt || "") + '"></div><div class="field"><label>' + esc(t("fitness.planEndDate")) + '</label><input id="fplan-end" type="date" value="' + esc(form.endsAt || "") + '"></div><button class="btn" onclick="saveFitnessPlan()">' + esc(form.id ? t("fitness.updatePlan") : t("fitness.savePlan")) + '</button>' + (form.id ? ' <button class="btn outline" onclick="cancelFitnessPlanEdit()">' + esc(t("fitness.cancelEditPlan")) + '</button>' : '') + '</div><h2>' + esc(t("fitness.traineesCount", { n: trainees.length })) + '</h2>' + chips + '<h2>' + esc(t("fitness.createdPlans")) + '</h2>' + (plans || '<p class="muted">' + esc(t("fitness.noPlans")) + '</p>') + '<h2>' + esc(t("fitness.coachRequestsTitle")) + '</h2>' + (requestsHtml || '<p class="muted">' + esc(t("fitness.noEnrollments")) + '</p>');
 }
 function editFitnessPlan(id) {
   const p = (S._fitnessPlans || []).find(x => x.id === id);
   if (!p) return;
-  S._fitnessPlanForm = { id: p.id, traineeEmail: p.trainee?.email || "", traineeName: p.trainee?.fullName || "", kind: p.kind, title: p.title, details: (p.details || []).join("\n"), notes: p.notes || "", startsAt: p.startsAt?.slice(0, 10) || "", endsAt: p.endsAt?.slice(0, 10) || "" };
+  S._fitnessPlanForm = { id: p.id, traineeEmail: p.trainee?.email || "", traineeName: p.trainee?.fullName || "", kind: p.kind, title: p.title, details: (p.details || []).join("\n"), notes: p.notes || "", startsAt: p.startsAt?.slice(0, 10) || "", endsAt: p.endsAt?.slice(0, 10) || "", weeklySchedule: p.weeklySchedule || {} };
   render();
 }
 function cancelFitnessPlanEdit() { S._fitnessPlanForm = null; render(); }
@@ -7999,10 +8020,15 @@ async function saveFitnessPlan() {
   const form = S._fitnessPlanForm || {};
   const startDate = document.getElementById("fplan-start")?.value || "", endDate = document.getElementById("fplan-end")?.value || "";
   if (startDate && endDate && endDate < startDate) return toast(t("fitness.invalidPlanDates"));
-  const body = { ...(form.id ? {} : { traineeEmail: document.getElementById("fplan-email")?.value.trim() }), kind: document.getElementById("fplan-kind")?.value, title: document.getElementById("fplan-title")?.value.trim(), details: (document.getElementById("fplan-details")?.value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean), notes: document.getElementById("fplan-notes")?.value.trim() || null, startsAt: startDate ? new Date(startDate + "T12:00:00Z").toISOString() : null, endsAt: endDate ? new Date(endDate + "T12:00:00Z").toISOString() : null };
+  const body = { ...(form.id ? {} : { traineeEmail: document.getElementById("fplan-email")?.value.trim() }), kind: document.getElementById("fplan-kind")?.value, title: document.getElementById("fplan-title")?.value.trim(), details: (document.getElementById("fplan-details")?.value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean), notes: document.getElementById("fplan-notes")?.value.trim() || null, startsAt: startDate ? new Date(startDate + "T12:00:00Z").toISOString() : null, endsAt: endDate ? new Date(endDate + "T12:00:00Z").toISOString() : null, weeklySchedule: Object.fromEntries(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"].map(day => [day, (document.getElementById("fplan-day-" + day)?.value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean)]).filter(([, items]) => items.length)) };
   const {ok,data} = await api(form.id ? "PATCH" : "POST", form.id ? "/fitness-plans/coach/" + encodeURIComponent(form.id) : "/fitness-plans/coach", body);
   if (!ok) { toast(errMsg(data, t("fitness.savePlanFailed"))); return; }
   S._fitnessPlanForm = null; loadFitnessPlans(); toast(form.id ? t("fitness.planUpdated") : t("fitness.planSaved"));
+}
+async function updateFitnessEnrollment(id, status) {
+  const {ok,data} = await api("PATCH", "/fitness-enrollments/coach/" + encodeURIComponent(id), {status});
+  if (!ok) return toast(errMsg(data, t("fitness.savePlanFailed")));
+  toast(t("fitness.enrollmentUpdated")); loadFitnessPlans();
 }
 async function deleteFitnessPlan(id) {
   if (!confirm(t("fitness.deleteConfirm"))) return;
@@ -8015,17 +8041,33 @@ function printFitnessPlan(id) {
   const lang = LANG || "ar", rtl = lang === "ar";
   const title = p.kind === "WORKOUT" ? (rtl ? "خطة التمرين" : "Workout plan") : (rtl ? "الخطة الغذائية" : "Nutrition plan");
   const name = p.coachName || (S._profile && S._profile.fullName) || t("fitness.profile");
-  const items = (p.details || []).map(x => "<li>" + esc(x) + "</li>").join("");
+  const items = p.weeklySchedule && Object.keys(p.weeklySchedule).length ? fitnessWeekHtml(p.weeklySchedule) : "<ol>" + (p.details || []).map(x => "<li>" + esc(x) + "</li>").join("") + "</ol>";
   const w = window.open("", "_blank");
   if (!w) { toast(t("fitness.popupBlocked")); return; }
-  w.document.write('<!doctype html><html lang="' + lang + '" dir="' + (rtl ? "rtl" : "ltr") + '"><meta charset="utf-8"><title>' + esc(p.title) + '</title><style>body{font:17px Arial;max-width:760px;margin:32px auto;padding:20px;color:#222}header{display:flex;align-items:center;gap:16px;border-bottom:2px solid #b32332;padding-bottom:16px}header img{width:72px;height:72px;border-radius:50%;object-fit:cover}h1{color:#a21f2d}li{padding:8px 0;white-space:pre-wrap}.muted{color:#666}@media print{button{display:none}}</style><button onclick="window.print()">' + esc(t("fitness.exportPdf")) + '</button><header>' + ((S._profile && S._profile.avatarUrl) ? '<img src="' + esc(S._profile.avatarUrl) + '">' : "") + '<b>' + esc(name) + '</b></header><h1>' + esc(title) + ': ' + esc(p.title) + '</h1><h3>' + esc(p.trainee.fullName) + '</h3><ol>' + items + '</ol><h2>' + esc(t("fitness.planNotes")) + '</h2><p>' + esc(p.notes || "") + '</p><footer>Dalilacom</footer></html>');
+  w.document.write('<!doctype html><html lang="' + lang + '" dir="' + (rtl ? "rtl" : "ltr") + '"><meta charset="utf-8"><title>' + esc(p.title) + '</title><style>body{font:17px Arial;max-width:760px;margin:32px auto;padding:20px;color:#222}header{display:flex;align-items:center;gap:16px;border-bottom:2px solid #b32332;padding-bottom:16px}header img{width:72px;height:72px;border-radius:50%;object-fit:cover}h1{color:#a21f2d}li{padding:8px 0;white-space:pre-wrap}.muted{color:#666}@media print{button{display:none}}</style><button onclick="window.print()">' + esc(t("fitness.exportPdf")) + '</button><header>' + ((S._profile && S._profile.avatarUrl) ? '<img src="' + esc(S._profile.avatarUrl) + '">' : "") + '<b>' + esc(name) + '</b></header><h1>' + esc(title) + ': ' + esc(p.title) + '</h1><h3>' + esc(p.trainee.fullName) + '</h3>' + items + '<h2>' + esc(t("fitness.planNotes")) + '</h2><p>' + esc(p.notes || "") + '</p><footer>Dalilacom</footer></html>');
   w.document.close();
 }
-function openMyFitnessPlans() { S._myFitnessPlans = null; go("myFitnessPlans"); api("GET", "/fitness-plans/mine").then(({ok,data}) => { S._myFitnessPlans = ok ? data.items || [] : []; render(); }); }
+function openMyFitnessPlans() {
+  S._myFitnessPlans = null; S._myFitnessEnrollments = [];
+  go("myFitnessPlans");
+  Promise.all([api("GET", "/fitness-plans/mine"), api("GET", "/fitness-enrollments/mine")]).then(([plans, enrollments]) => {
+    S._myFitnessPlans = plans.ok ? plans.data.items || [] : [];
+    S._myFitnessEnrollments = enrollments.ok ? enrollments.data.items || [] : [];
+    S._fitnessRequestedOfferIds = Object.fromEntries((S._myFitnessEnrollments || []).filter(e => ["REQUESTED", "ACCEPTED"].includes(e.status)).map(e => [e.offerId || e.offer?.id, e.status]));
+    render();
+  });
+}
 function screenMyFitnessPlans() {
   if (!S._myFitnessPlans) return backRow() + spinner();
-  const items = S._myFitnessPlans.map(p => '<div class="card" style="padding:14px;margin:10px 0"><b>' + esc(p.title) + '</b><div class="muted">' + esc(p.coach.fitnessProfile?.displayName || p.coach.businessName) + ' · ' + esc(p.kind === "WORKOUT" ? t("fitness.workout") : t("fitness.nutrition")) + '</div>' + (p.startsAt ? '<div class="muted">📅 ' + esc(t("fitness.planStarts", { date: new Date(p.startsAt).toLocaleDateString() })) + '</div>' : '') + (p.endsAt ? '<div class="muted">⏳ ' + esc(t("fitness.planEnds", { date: new Date(p.endsAt).toLocaleDateString() })) + '</div>' : '') + '<ol>' + (p.details || []).map(x => '<li>' + esc(x) + '</li>').join("") + '</ol><p>' + esc(p.notes || "") + '</p><button class="btn outline" onclick="addFitnessProgress(\'' + esc(p.id) + '\')">' + esc(t("fitness.logProgress")) + '</button><input id="fp-weight-' + esc(p.id) + '" type="number" step="0.1" placeholder="' + esc(t("fitness.weightKg")) + '"><input id="fp-note-' + esc(p.id) + '" placeholder="' + esc(t("fitness.progressNote")) + '"><h4>' + esc(t("fitness.progress")) + '</h4>' + (p.progress || []).map(x => '<div class="muted">' + esc(x.weightKg == null ? "" : x.weightKg + " kg") + ' · ' + esc(x.note || "") + ' · ' + esc(new Date(x.completedAt).toLocaleDateString()) + '</div>').join("") + '</div>').join("");
-  return backRow() + '<h1 class="screen-title">🏋️ ' + esc(t("fitness.myPlans")) + '</h1>' + (items || '<p class="muted">' + esc(t("fitness.noPlans")) + '</p>');
+  const items = S._myFitnessPlans.map(p => `<div class="card" style="padding:14px;margin:10px 0"><b>${esc(p.title)}</b><div class="muted">${esc(p.coach.fitnessProfile?.displayName || p.coach.businessName)} · ${esc(p.kind === "WORKOUT" ? t("fitness.workout") : t("fitness.nutrition"))}</div>${p.startsAt ? `<div class="muted">📅 ${esc(t("fitness.planStarts", { date: new Date(p.startsAt).toLocaleDateString() }))}</div>` : ""}${p.endsAt ? `<div class="muted">⏳ ${esc(t("fitness.planEnds", { date: new Date(p.endsAt).toLocaleDateString() }))}</div>` : ""}${fitnessWeekHtml(p.weeklySchedule) || `<ol>${(p.details || []).map(x => `<li>${esc(x)}</li>`).join("")}</ol>`}<p>${esc(p.notes || "")}</p><button class="btn outline" onclick="addFitnessProgress('${esc(p.id)}')">${esc(t("fitness.logProgress"))}</button><input id="fp-weight-${esc(p.id)}" type="number" step="0.1" placeholder="${esc(t("fitness.weightKg"))}"><input id="fp-note-${esc(p.id)}" placeholder="${esc(t("fitness.progressNote"))}"><h4>${esc(t("fitness.progress"))}</h4>${(p.progress || []).map(x => `<div class="muted">${esc(x.weightKg == null ? "" : x.weightKg + " kg")} · ${esc(x.note || "")} · ${esc(new Date(x.completedAt).toLocaleDateString())}</div>`).join("")}</div>`).join("");
+  const statusKey = { REQUESTED: "fitness.statusRequested", ACCEPTED: "fitness.statusAccepted", REJECTED: "fitness.statusRejected", CANCELLED: "fitness.statusCancelled", COMPLETED: "fitness.statusCompleted" };
+  const enrollments = (S._myFitnessEnrollments || []).map(e => `<div class="card" style="padding:12px;margin:8px 0"><b>${esc(e.offer?.title || "")}</b><div>${esc(e.merchant?.fitnessProfile?.displayName || e.merchant?.businessName || "")}</div><div class="muted">${esc(t(statusKey[e.status] || "fitness.statusRequested"))}${e.endsAt ? " · " + esc(t("fitness.planEnds", { date: new Date(e.endsAt).toLocaleDateString() })) : ""}</div>${e.status === "REQUESTED" ? `<button class="link-btn" onclick="cancelFitnessEnrollment('${esc(e.id)}')">${esc(t("fitness.cancelRequest"))}</button>` : ""}${e.status === "ACCEPTED" ? `<p class="muted">${esc(t("fitness.paymentArranged"))}</p>` : ""}</div>`).join("");
+  return backRow() + `<h1 class="screen-title">🏋️ ${esc(t("fitness.myPlans"))}</h1>${items || `<p class="muted">${esc(t("fitness.noPlans"))}</p>`}<h2>${esc(t("fitness.enrollmentsTitle"))}</h2>${enrollments || `<p class="muted">${esc(t("fitness.noEnrollments"))}</p>`}`;
+}
+async function cancelFitnessEnrollment(id) {
+  const {ok,data} = await api("POST", "/fitness-enrollments/mine/" + encodeURIComponent(id) + "/cancel", {});
+  if (!ok) return toast(errMsg(data, t("fitness.savePlanFailed")));
+  openMyFitnessPlans();
 }
 async function addFitnessProgress(id) {
   const weight = document.getElementById("fp-weight-" + id)?.value;

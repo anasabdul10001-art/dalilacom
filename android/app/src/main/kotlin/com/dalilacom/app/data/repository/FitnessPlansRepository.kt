@@ -30,4 +30,26 @@ class FitnessPlansRepository(private val api: ApiService) {
         val r = safeApiCall { api.addFitnessProgress(id, body) } ?: return Result.failure(Exception("Network error"))
         return if (r.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(r, "Could not save progress")))
     }
+    suspend fun myEnrollments(): Result<List<FitnessEnrollmentDto>> {
+        val r = safeApiCall { api.myFitnessEnrollments() } ?: return Result.failure(Exception("Network error"))
+        return if (r.isSuccessful) Result.success(r.body()?.items.orEmpty()) else Result.failure(Exception(errorText(r, "Could not load package requests")))
+    }
+    suspend fun coachEnrollments(): Result<List<FitnessEnrollmentDto>> {
+        val r = safeApiCall { api.coachFitnessEnrollments() } ?: return Result.failure(Exception("Network error"))
+        return if (r.isSuccessful) Result.success(r.body()?.items.orEmpty()) else Result.failure(Exception(errorText(r, "Could not load trainees")))
+    }
+    suspend fun requestEnrollment(offerId: String): Result<FitnessEnrollmentDto> {
+        val r = safeApiCall { api.requestFitnessEnrollment(offerId) } ?: return Result.failure(Exception("Network error"))
+        val item = r.body()
+        return if (r.isSuccessful && item != null) Result.success(item) else Result.failure(Exception(errorText(r, "Could not request this package")))
+    }
+    suspend fun cancelEnrollment(id: String): Result<Unit> {
+        val r = safeApiCall { api.cancelFitnessEnrollment(id) } ?: return Result.failure(Exception("Network error"))
+        return if (r.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(r, "Could not cancel request")))
+    }
+    suspend fun updateEnrollment(id: String, status: String): Result<FitnessEnrollmentDto> {
+        val r = safeApiCall { api.updateFitnessEnrollment(id, FitnessEnrollmentStatusBody(status)) } ?: return Result.failure(Exception("Network error"))
+        val item = r.body()
+        return if (r.isSuccessful && item != null) Result.success(item) else Result.failure(Exception(errorText(r, "Could not update package request")))
+    }
 }

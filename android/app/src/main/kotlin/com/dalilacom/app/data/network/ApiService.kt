@@ -31,6 +31,21 @@ interface ApiService {
     @POST("fitness-plans/{id}/progress")
     suspend fun addFitnessProgress(@Path("id") id: String, @Body body: FitnessProgressBody): Response<FitnessProgressDto>
 
+    @GET("fitness-enrollments/mine")
+    suspend fun myFitnessEnrollments(): Response<FitnessEnrollmentListDto>
+
+    @POST("fitness-enrollments/offers/{offerId}/request")
+    suspend fun requestFitnessEnrollment(@Path("offerId") offerId: String): Response<FitnessEnrollmentDto>
+
+    @POST("fitness-enrollments/mine/{id}/cancel")
+    suspend fun cancelFitnessEnrollment(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @GET("fitness-enrollments/coach")
+    suspend fun coachFitnessEnrollments(): Response<FitnessEnrollmentListDto>
+
+    @PATCH("fitness-enrollments/coach/{id}")
+    suspend fun updateFitnessEnrollment(@Path("id") id: String, @Body body: FitnessEnrollmentStatusBody): Response<FitnessEnrollmentDto>
+
     @GET("fitness-profile/me")
     suspend fun getFitnessProfile(): Response<FitnessProfileDto>
 

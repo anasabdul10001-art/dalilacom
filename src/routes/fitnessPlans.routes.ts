@@ -9,6 +9,9 @@ import { isFitnessProviderCategory } from "../services/fitnessProfile.service";
 import { notify } from "../services/notification.service";
 
 export const fitnessPlansRouter = Router();
+const dayItemsSchema = z.array(z.string().trim().min(1).max(240)).max(20).optional();
+const weeklyScheduleSchema = z.object({ MONDAY: dayItemsSchema, TUESDAY: dayItemsSchema, WEDNESDAY: dayItemsSchema, THURSDAY: dayItemsSchema, FRIDAY: dayItemsSchema, SATURDAY: dayItemsSchema, SUNDAY: dayItemsSchema }).partial().optional();
+const hasScheduleItems = (schedule: unknown) => !!schedule && typeof schedule === "object" && Object.values(schedule as Record<string, unknown>).some((items) => Array.isArray(items) && items.length > 0);
 const coach = Router();
 coach.use(requireRole(Role.MERCHANT));
 coach.use(route(async (req, res, next) => {
@@ -19,9 +22,10 @@ coach.use(route(async (req, res, next) => {
 }));
 const bodySchema = z.object({
   traineeEmail: z.string().trim().email().max(254), kind: z.nativeEnum(FitnessPlanKind),
-  title: z.string().trim().min(2).max(100), details: z.array(z.string().trim().min(1).max(240)).min(1).max(80),
+  title: z.string().trim().min(2).max(100), details: z.array(z.string().trim().min(1).max(240)).max(80).default([]),
   notes: z.string().trim().max(2000).nullable().optional(), startsAt: z.string().datetime().nullable().optional(), endsAt: z.string().datetime().nullable().optional(),
-}).refine((value) => !value.startsAt || !value.endsAt || new Date(value.endsAt) >= new Date(value.startsAt), { message: "تاريخ نهاية الخطة يجب أن يكون بعد بدايتها", path: ["endsAt"] });
+  weeklySchedule: weeklyScheduleSchema,
+}).refine((value) => value.details.length > 0 || hasScheduleItems(value.weeklySchedule), { message: "أضف تفاصيل للخطة أو اكتب محتوى لأحد أيام الأسبوع", path: ["details"] }).refine((value) => !value.startsAt || !value.endsAt || new Date(value.endsAt) >= new Date(value.startsAt), { message: "تاريخ نهاية الخطة يجب أن يكون بعد بدايتها", path: ["endsAt"] });
 const updateSchema = z.object({
   kind: z.nativeEnum(FitnessPlanKind).optional(),
   title: z.string().trim().min(2).max(100).optional(),
@@ -29,6 +33,7 @@ const updateSchema = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
   startsAt: z.string().datetime().nullable().optional(),
   endsAt: z.string().datetime().nullable().optional(),
+  weeklySchedule: weeklyScheduleSchema,
 });
 
 coach.get("/", route(async (_req, res) => {
@@ -111,6 +116,10 @@ fitnessPlansRouter.get("/:id/print", route(async (req, res) => {
   const coachName = plan.coach.fitnessProfile?.displayName || plan.coach.businessName;
   const image = plan.coach.user.avatarUpdatedAt ? "/profile/avatar/" + plan.coach.userId + "?v=" + plan.coach.user.avatarUpdatedAt.getTime() : "";
   const lines = Array.isArray(plan.details) ? plan.details.map(x => "<li>" + esc(String(x)) + "</li>").join("") : "";
+  const dayLabels: Record<string, string> = ar ? { MONDAY: "الاثنين", TUESDAY: "الثلاثاء", WEDNESDAY: "الأربعاء", THURSDAY: "الخميس", FRIDAY: "الجمعة", SATURDAY: "السبت", SUNDAY: "الأحد" } : { MONDAY: "Monday", TUESDAY: "Tuesday", WEDNESDAY: "Wednesday", THURSDAY: "Thursday", FRIDAY: "Friday", SATURDAY: "Saturday", SUNDAY: "Sunday" };
+  const schedule = plan.weeklySchedule && typeof plan.weeklySchedule === "object" && !Array.isArray(plan.weeklySchedule) ? plan.weeklySchedule as Record<string, unknown> : null;
+  const scheduleHtml = schedule ? Object.entries(dayLabels).filter(([key]) => Array.isArray(schedule[key]) && (schedule[key] as unknown[]).length).map(([key, label]) => "<h2>" + label + "</h2><ol>" + (schedule[key] as unknown[]).map(item => "<li>" + esc(String(item)) + "</li>").join("") + "</ol>").join("") : "";
+  const planContent = scheduleHtml || "<ol>" + lines + "</ol>";
   const type = plan.kind === "WORKOUT" ? (ar ? "خطة التمرين" : "Workout plan") : (ar ? "الخطة الغذائية" : "Nutrition plan");
-  res.type("html").send("<!doctype html><html lang=\"" + lang + "\" dir=\"" + (ar ? "rtl" : "ltr") + "\"><meta charset=\"utf-8\"><title>" + esc(plan.title) + "</title><style>body{font:17px Arial;max-width:780px;margin:35px auto;padding:20px;color:#222}header{display:flex;align-items:center;gap:16px;border-bottom:2px solid #b32332;padding-bottom:16px}header img{width:72px;height:72px;border-radius:50%;object-fit:cover}h1{color:#a21f2d}li{padding:8px 0;white-space:pre-wrap}.muted{color:#666}@media print{button{display:none}}</style><button onclick=\"window.print()\">" + (ar ? "طباعة أو حفظ PDF" : "Print or save PDF") + "</button><header>" + (image ? "<img src=\"" + esc(image) + "\">" : "") + "<b>" + esc(coachName) + "</b></header><h1>" + esc(type + ": " + plan.title) + "</h1><h3>" + esc(plan.trainee.fullName) + "</h3><ol>" + lines + "</ol>" + (plan.notes ? "<h2>" + (ar ? "ملاحظات" : "Notes") + "</h2><p>" + esc(plan.notes).replace(/\n/g, "<br>") + "</p>" : "") + "<footer class=\"muted\">Dalilacom</footer></html>");
+  res.type("html").send("<!doctype html><html lang=\"" + lang + "\" dir=\"" + (ar ? "rtl" : "ltr") + "\"><meta charset=\"utf-8\"><title>" + esc(plan.title) + "</title><style>body{font:17px Arial;max-width:780px;margin:35px auto;padding:20px;color:#222}header{display:flex;align-items:center;gap:16px;border-bottom:2px solid #b32332;padding-bottom:16px}header img{width:72px;height:72px;border-radius:50%;object-fit:cover}h1{color:#a21f2d}li{padding:8px 0;white-space:pre-wrap}.muted{color:#666}@media print{button{display:none}}</style><button onclick=\"window.print()\">" + (ar ? "طباعة أو حفظ PDF" : "Print or save PDF") + "</button><header>" + (image ? "<img src=\"" + esc(image) + "\">" : "") + "<b>" + esc(coachName) + "</b></header><h1>" + esc(type + ": " + plan.title) + "</h1><h3>" + esc(plan.trainee.fullName) + "</h3>" + planContent + (plan.notes ? "<h2>" + (ar ? "ملاحظات" : "Notes") + "</h2><p>" + esc(plan.notes).replace(/\n/g, "<br>") + "</p>" : "") + "<footer class=\"muted\">Dalilacom</footer></html>");
 }));

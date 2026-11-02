@@ -13,6 +13,7 @@ import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.data.network.FitnessPlanBody
 import com.dalilacom.app.data.network.FitnessPlanUpdateBody
 import com.dalilacom.app.data.network.FitnessProgressBody
+import com.dalilacom.app.data.network.FitnessEnrollmentDto
 import com.dalilacom.app.ui.common.DocumentPrinter
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,8 @@ fun FitnessPlansScreen(container: AppContainer, onBack: () -> Unit) {
     var notes by remember { mutableStateOf("") }
     var startsAt by remember { mutableStateOf("") }
     var endsAt by remember { mutableStateOf("") }
+    var weeklySchedule by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var enrollments by remember { mutableStateOf<List<FitnessEnrollmentDto>>(emptyList()) }
     var kind by remember { mutableStateOf("WORKOUT") }
     var weight by remember { mutableStateOf("") }
     var progressNote by remember { mutableStateOf("") }
@@ -43,6 +46,8 @@ fun FitnessPlansScreen(container: AppContainer, onBack: () -> Unit) {
             val result = if (coachMode) container.fitnessPlansRepository.coachPlans() else container.fitnessPlansRepository.myPlans()
             result.onSuccess { items = it }.onFailure { error = it.message }
             if (coachMode) container.fitnessPlansRepository.coachTrainees().onSuccess { trainees = it }.onFailure { error = it.message }
+            if (coachMode) container.fitnessPlansRepository.coachEnrollments().onSuccess { enrollments = it }.onFailure { error = it.message }
+            else container.fitnessPlansRepository.myEnrollments().onSuccess { enrollments = it }.onFailure { error = it.message }
             busy = false
         }
     }
@@ -68,23 +73,28 @@ fun FitnessPlansScreen(container: AppContainer, onBack: () -> Unit) {
             OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text("ملاحظات") }, minLines = 2)
             OutlinedTextField(startsAt, { startsAt = it.filter { c -> c.isDigit() || c == '-' }.take(10) }, Modifier.fillMaxWidth(), label = { Text("تاريخ بداية الخطة (YYYY-MM-DD، اختياري)") }, singleLine = true)
             OutlinedTextField(endsAt, { endsAt = it.filter { c -> c.isDigit() || c == '-' }.take(10) }, Modifier.fillMaxWidth(), label = { Text("تاريخ نهاية الخطة (YYYY-MM-DD، اختياري)") }, singleLine = true)
-            Button(enabled = !busy && (editingPlanId != null || email.contains("@")) && title.length >= 2 && details.isNotBlank() && (startsAt.isBlank() || startsAt.length == 10) && (endsAt.isBlank() || endsAt.length == 10) && (startsAt.isBlank() || endsAt.isBlank() || endsAt >= startsAt), onClick = {
+            Text("خطة الأسبوع (اختياري)", style = MaterialTheme.typography.titleSmall)
+            listOf("MONDAY" to "الاثنين", "TUESDAY" to "الثلاثاء", "WEDNESDAY" to "الأربعاء", "THURSDAY" to "الخميس", "FRIDAY" to "الجمعة", "SATURDAY" to "السبت", "SUNDAY" to "الأحد").forEach { (key, label) ->
+                OutlinedTextField(weeklySchedule[key].orEmpty(), { weeklySchedule = weeklySchedule + (key to it) }, Modifier.fillMaxWidth(), label = { Text(label + " · تمرين أو وجبات، كل بند بسطر") }, minLines = 2)
+            }
+            Button(enabled = !busy && (editingPlanId != null || email.contains("@")) && title.length >= 2 && (details.isNotBlank() || weeklySchedule.values.any { it.isNotBlank() }) && (startsAt.isBlank() || startsAt.length == 10) && (endsAt.isBlank() || endsAt.length == 10) && (startsAt.isBlank() || endsAt.isBlank() || endsAt >= startsAt), onClick = {
                 scope.launch {
                     busy = true
                     error = null
                     val cleanDetails = details.lines().map(String::trim).filter(String::isNotBlank)
                     val startIso = startsAt.takeIf { it.isNotBlank() }?.let { "${it}T12:00:00.000Z" }
                     val endIso = endsAt.takeIf { it.isNotBlank() }?.let { "${it}T12:00:00.000Z" }
+                    val week = weeklySchedule.mapValues { (_, text) -> text.lines().map(String::trim).filter(String::isNotBlank) }.filterValues { it.isNotEmpty() }
                     val result = editingPlanId?.let { id ->
-                        container.fitnessPlansRepository.update(id, FitnessPlanUpdateBody(kind, title.trim(), cleanDetails, notes.trim().ifBlank { null }, startIso, endIso))
-                    } ?: container.fitnessPlansRepository.create(FitnessPlanBody(email.trim(), kind, title.trim(), cleanDetails, notes.trim().ifBlank { null }, startIso, endIso))
+                        container.fitnessPlansRepository.update(id, FitnessPlanUpdateBody(kind, title.trim(), cleanDetails, notes.trim().ifBlank { null }, startIso, endIso, week))
+                    } ?: container.fitnessPlansRepository.create(FitnessPlanBody(email.trim(), kind, title.trim(), cleanDetails, notes.trim().ifBlank { null }, startIso, endIso, week))
                     result.onSuccess {
-                        email = ""; title = ""; details = ""; notes = ""; startsAt = ""; endsAt = ""; editingPlanId = null; refresh()
+                        email = ""; title = ""; details = ""; notes = ""; startsAt = ""; endsAt = ""; weeklySchedule = emptyMap(); editingPlanId = null; refresh()
                     }.onFailure { error = it.message }
                     busy = false
                 }
             }, modifier = Modifier.fillMaxWidth()) { Text(if (busy) "جارٍ الحفظ…" else if (editingPlanId != null) "حفظ التعديل" else "إرسال الخطة") }
-            if (editingPlanId != null) TextButton(enabled = !busy, onClick = { editingPlanId = null; email = ""; title = ""; details = ""; notes = ""; startsAt = ""; endsAt = "" }) { Text("إلغاء التعديل") }
+            if (editingPlanId != null) TextButton(enabled = !busy, onClick = { editingPlanId = null; email = ""; title = ""; details = ""; notes = ""; startsAt = ""; endsAt = ""; weeklySchedule = emptyMap() }) { Text("إلغاء التعديل") }
             Text("المتدربون (${trainees.size})", style = MaterialTheme.typography.titleMedium)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = selectedTraineeId == null, onClick = { selectedTraineeId = null }, label = { Text("الكل") })
@@ -101,12 +111,16 @@ fun FitnessPlansScreen(container: AppContainer, onBack: () -> Unit) {
                     plan.startsAt?.take(10)?.let { Text("تبدأ: $it", style = MaterialTheme.typography.bodySmall) }
                     plan.endsAt?.take(10)?.let { Text("تنتهي: $it", style = MaterialTheme.typography.bodySmall) }
                     Text(if (coachMode) plan.trainee?.fullName.orEmpty() + " · " + plan.trainee?.email.orEmpty() else plan.coach?.fitnessProfile?.displayName ?: plan.coach?.businessName.orEmpty())
-                    plan.details.forEach { Text("• " + it) }
+                    if (plan.weeklySchedule.isNullOrEmpty()) plan.details.forEach { Text("• " + it) } else {
+                        listOf("MONDAY" to "الاثنين", "TUESDAY" to "الثلاثاء", "WEDNESDAY" to "الأربعاء", "THURSDAY" to "الخميس", "FRIDAY" to "الجمعة", "SATURDAY" to "السبت", "SUNDAY" to "الأحد").forEach { (key, label) ->
+                            plan.weeklySchedule[key]?.takeIf { it.isNotEmpty() }?.let { items -> Text(label, style = MaterialTheme.typography.titleSmall); items.forEach { Text("• $it") } }
+                        }
+                    }
                     plan.notes?.takeIf { it.isNotBlank() }?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     if (coachMode) Text("${plan.trainee?.fullName.orEmpty()} · ${plan.trainee?.email.orEmpty()}", style = MaterialTheme.typography.bodySmall)
                     OutlinedButton(onClick = { scope.launch { DocumentPrinter.export(context, container.tokenStore, "/fitness-plans/" + plan.id + "/print", "Dalilacom - " + plan.title) } }) { Text("📄 حفظ الخطة PDF") }
                     if (coachMode) OutlinedButton(enabled = !busy, onClick = {
-                        editingPlanId = plan.id; email = plan.trainee?.email.orEmpty(); kind = plan.kind; title = plan.title; details = plan.details.joinToString("\n"); notes = plan.notes.orEmpty(); startsAt = plan.startsAt?.take(10).orEmpty(); endsAt = plan.endsAt?.take(10).orEmpty(); error = null
+                        editingPlanId = plan.id; email = plan.trainee?.email.orEmpty(); kind = plan.kind; title = plan.title; details = plan.details.joinToString("\n"); notes = plan.notes.orEmpty(); startsAt = plan.startsAt?.take(10).orEmpty(); endsAt = plan.endsAt?.take(10).orEmpty(); weeklySchedule = plan.weeklySchedule.orEmpty().mapValues { it.value.joinToString("\n") }; error = null
                     }) { Text("تعديل الخطة") }
                     if (!coachMode) {
                         plan.progress.forEach { entry -> Text(entry.completedAt.take(10) + " · " + (entry.weightKg?.toString() ?: "") + " كغ · " + (entry.note ?: ""), style = MaterialTheme.typography.bodySmall) }
@@ -128,5 +142,26 @@ fun FitnessPlansScreen(container: AppContainer, onBack: () -> Unit) {
             }
         }
         if (!busy && items.isEmpty()) Text("ما في خطط لعرضها حاليًا.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(if (coachMode) "طلبات الانضمام للباقات" else "باقاتي التدريبية", style = MaterialTheme.typography.titleLarge)
+        if (enrollments.isEmpty()) Text("ما في طلبات أو باقات تدريبية بعد.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        enrollments.forEach { enrollment ->
+            ElevatedCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(enrollment.offer?.title.orEmpty(), style = MaterialTheme.typography.titleMedium)
+                    Text(if (coachMode) enrollment.user?.fullName.orEmpty() + " · " + enrollment.user?.email.orEmpty() else enrollment.merchant?.fitnessProfile?.displayName ?: enrollment.merchant?.businessName.orEmpty())
+                    Text("الحالة: " + when (enrollment.status) { "REQUESTED" -> "بانتظار رد المدرب"; "ACCEPTED" -> "مقبول"; "REJECTED" -> "غير مقبول"; "CANCELLED" -> "ملغي"; else -> "منتهي" })
+                    if (enrollment.status == "ACCEPTED") Text("المدة: ${enrollment.startsAt?.take(10).orEmpty()} – ${enrollment.endsAt?.take(10).orEmpty()}", style = MaterialTheme.typography.bodySmall)
+                    if (coachMode && enrollment.status == "REQUESTED") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(enabled = !busy, onClick = { scope.launch { busy = true; container.fitnessPlansRepository.updateEnrollment(enrollment.id, "ACCEPTED").onSuccess { refresh() }.onFailure { error = it.message }; busy = false } }) { Text("قبول") }
+                        TextButton(enabled = !busy, onClick = { scope.launch { busy = true; container.fitnessPlansRepository.updateEnrollment(enrollment.id, "REJECTED").onSuccess { refresh() }.onFailure { error = it.message }; busy = false } }) { Text("رفض") }
+                    }
+                    if (coachMode && enrollment.status == "ACCEPTED") TextButton(enabled = !busy, onClick = { scope.launch { busy = true; container.fitnessPlansRepository.updateEnrollment(enrollment.id, "COMPLETED").onSuccess { refresh() }.onFailure { error = it.message }; busy = false } }) { Text("إنهاء الاشتراك") }
+                    if (!coachMode && enrollment.status == "REQUESTED") {
+                        Text("الدفع غير مستقطع من التطبيق؛ تواصل مع المدرب للاتفاق عليه.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(enabled = !busy, onClick = { scope.launch { busy = true; container.fitnessPlansRepository.cancelEnrollment(enrollment.id).onSuccess { refresh() }.onFailure { error = it.message }; busy = false } }) { Text("إلغاء الطلب") }
+                    }
+                }
+            }
+        }
     }
 }

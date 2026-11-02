@@ -136,8 +136,9 @@ model User {
   doctorPatientLinks     DoctorPatientConnection[] @relation("DoctorPatient")
   authoredPatientRecords DoctorPatientRecord[]     @relation("PatientRecordAuthor")
   doctorAppointments     DoctorAppointment[]       @relation("AppointmentPatient")
-  fitnessPlans          FitnessPlan[]             @relation("FitnessTrainee")
-  fitnessProgress       FitnessProgress[]         @relation("FitnessProgressAuthor")
+  fitnessPlans           FitnessPlan[]             @relation("FitnessTrainee")
+  fitnessProgress        FitnessProgress[]         @relation("FitnessProgressAuthor")
+  fitnessEnrollments     FitnessEnrollment[]
 }
 
 // Only a SHA-256 hash of the raw token is ever stored — the raw value exists only in the
@@ -391,39 +392,69 @@ model MerchantProfile {
   fitnessProfile       FitnessProfile?
   fitnessPlans         FitnessPlan[]
   fitnessOffers        FitnessOffer[]
+  fitnessEnrollments   FitnessEnrollment[]
 
   @@index([categoryId])
 }
 
 // Public coaching profile details; the account avatar is reused as the coach's photo.
 model FitnessProfile {
-  id               String   @id @default(uuid())
-  merchantId       String   @unique
-  displayName      String?
-  headline         String?
-  yearsExperience  Int?
-  specialties      String[] @default([])
-  achievements     String[] @default([])
-  certifications   String[] @default([])
-  certificationPhotoIds String[] @default([])
-  updatedAt        DateTime @updatedAt
-  merchant         MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  id                    String          @id @default(uuid())
+  merchantId            String          @unique
+  displayName           String?
+  headline              String?
+  yearsExperience       Int?
+  specialties           String[]        @default([])
+  achievements          String[]        @default([])
+  certifications        String[]        @default([])
+  certificationPhotoIds String[]        @default([])
+  updatedAt             DateTime        @updatedAt
+  merchant              MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 }
 
 model FitnessOffer {
-  id              String   @id @default(uuid())
-  merchantId      String
-  title           String
-  description     String?  @db.Text
-  durationMonths  Int      @default(1)
-  priceCents      Int
-  currency        String   @default("USD")
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  merchant        MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  id             String              @id @default(uuid())
+  merchantId     String
+  title          String
+  description    String?             @db.Text
+  durationMonths Int                 @default(1)
+  priceCents     Int
+  currency       String              @default("USD")
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  merchant       MerchantProfile     @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  enrollments    FitnessEnrollment[]
 
   @@index([merchantId, isActive])
+}
+
+enum FitnessEnrollmentStatus {
+  REQUESTED
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+// A trainee's request to join a coach's package. Payment remains arranged directly with the coach.
+model FitnessEnrollment {
+  id         String                  @id @default(uuid())
+  offerId    String
+  merchantId String
+  userId     String
+  status     FitnessEnrollmentStatus @default(REQUESTED)
+  startsAt   DateTime?
+  endsAt     DateTime?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  offer      FitnessOffer            @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  merchant   MerchantProfile         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([offerId, userId])
+  @@index([merchantId, status, createdAt])
+  @@index([userId, status, createdAt])
 }
 
 enum FitnessPlanKind {
@@ -433,19 +464,20 @@ enum FitnessPlanKind {
 
 // Plans are private to their coach and the assigned trainee.
 model FitnessPlan {
-  id             String          @id @default(uuid())
+  id              String            @id @default(uuid())
   coachMerchantId String
   traineeUserId   String
   kind            FitnessPlanKind
   title           String
   details         Json
-  notes           String?         @db.Text
+  notes           String?           @db.Text
   startsAt        DateTime?
   endsAt          DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  coach           MerchantProfile @relation(fields: [coachMerchantId], references: [id], onDelete: Cascade)
-  trainee         User            @relation("FitnessTrainee", fields: [traineeUserId], references: [id], onDelete: Cascade)
+  weeklySchedule  Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  coach           MerchantProfile   @relation(fields: [coachMerchantId], references: [id], onDelete: Cascade)
+  trainee         User              @relation("FitnessTrainee", fields: [traineeUserId], references: [id], onDelete: Cascade)
   progress        FitnessProgress[]
 
   @@index([coachMerchantId, createdAt])
@@ -529,32 +561,32 @@ enum DoctorAppointmentKind {
 }
 
 model DoctorAppointmentSetting {
-  id                 String   @id @default(uuid())
-  doctorMerchantId   String   @unique
-  enabled            Boolean  @default(false)
-  slotMinutes        Int      @default(30)
-  advanceDays        Int      @default(30)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  doctor             MerchantProfile @relation(fields: [doctorMerchantId], references: [id], onDelete: Cascade)
+  id               String          @id @default(uuid())
+  doctorMerchantId String          @unique
+  enabled          Boolean         @default(false)
+  slotMinutes      Int             @default(30)
+  advanceDays      Int             @default(30)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  doctor           MerchantProfile @relation(fields: [doctorMerchantId], references: [id], onDelete: Cascade)
 }
 
 // Booking is separate from the optional doctor-patient medical record consent.
 model DoctorAppointment {
-  id               String                  @id @default(uuid())
-  doctorMerchantId String
-  patientUserId    String
-  startsAt         DateTime
-  endsAt           DateTime
-  kind             DoctorAppointmentKind   @default(VISIT)
-  complaintEnc     String?                 @db.Text
-  status           DoctorAppointmentStatus @default(CONFIRMED)
+  id                String                  @id @default(uuid())
+  doctorMerchantId  String
+  patientUserId     String
+  startsAt          DateTime
+  endsAt            DateTime
+  kind              DoctorAppointmentKind   @default(VISIT)
+  complaintEnc      String?                 @db.Text
+  status            DoctorAppointmentStatus @default(CONFIRMED)
   reminder24hSentAt DateTime?
   reminder1hSentAt  DateTime?
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
-  doctor           MerchantProfile         @relation(fields: [doctorMerchantId], references: [id], onDelete: Cascade)
-  patient          User                    @relation("AppointmentPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  doctor            MerchantProfile         @relation(fields: [doctorMerchantId], references: [id], onDelete: Cascade)
+  patient           User                    @relation("AppointmentPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
 
   @@index([doctorMerchantId, startsAt])
   @@index([patientUserId, startsAt])
