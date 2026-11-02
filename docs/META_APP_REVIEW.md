@@ -3,6 +3,24 @@
 Everything needed to submit the Responder app for review once Business Verification is approved.
 Written so it can be pasted into the Meta developer dashboard (App Review → Permissions and features).
 
+## Where things stand (updated 2026-11-02)
+
+Everything below was rebuilt under the owner's own business portfolio **Anas Abdulaziz** after the old portfolio was restricted.
+
+| Item | Value |
+|---|---|
+| Meta app | Dalilacom, ID `2541640469676064`, published (live mode), use cases: Messenger from Meta + Instagram messaging |
+| Facebook Page | منصة دليلكم Dalilacom, ID `1427696977090276`, owned by the portfolio; webhook fields `messages`, `feed` subscribed |
+| Webhook | `https://dalilacom.com/hooks/meta` verified |
+| Domain | dalilacom.com verified in the portfolio |
+| Still open | business verification, `pages_messaging` etc. review, `META_APP_ID` / `META_APP_SECRET` on Render |
+
+Facebook Login (signing customers in to Dalilacom) is a separate Meta app and a separate review; its use case cannot be combined with the messaging ones. The responder only needs the page permissions below.
+
+**Important for the reviewer to be able to test:** until Meta approves the app, Facebook/Instagram linking in Dalilacom is limited to
+admin accounts (`src/lib/metaAccess.ts`). The reviewer's test account is a normal account, so **set `META_PUBLIC_ACCESS=true` on Render
+for the whole review period**, otherwise the "Continue with Facebook" step fails and the review is rejected. Telegram is unaffected.
+
 ## What the app does (one paragraph for the reviewer)
 
 Dalilacom is a business directory and online store for Syria. A shop owner connects their own Facebook Page and
@@ -83,7 +101,8 @@ on screen, keep each step visible for a few seconds.
 
 - [ ] Business Verification approved and the app connected to the verified business.
 - [ ] App icon (1024x1024), category, privacy URL, terms URL and data-deletion URL filled in (Settings → Basic).
-- [ ] Facebook Login product added with the OAuth redirect above whitelisted; webhooks product with the callback URL and `messages`, `feed` fields (Page) and `messages`, `comments` (Instagram).
+- [ ] `META_PUBLIC_ACCESS=true` set on Render for the review period (see above), set back later only if it should stay closed.
+- [ ] The OAuth redirect above whitelisted under "Facebook Login for Business" in the app dashboard (the new use-case model keeps it there); webhooks product with the callback URL and `messages`, `feed` fields (Page) and `messages`, `comments` (Instagram).
 - [ ] The test Page and Instagram account are linked, and the test users have a role on the app.
 - [ ] `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` set on the live Render service; `META_OAUTH_SCOPES` includes the Instagram permissions once the app has them.
 - [ ] Test the whole flow once on the live site just before recording the video.
