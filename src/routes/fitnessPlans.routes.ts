@@ -21,12 +21,14 @@ const bodySchema = z.object({
   traineeEmail: z.string().trim().email().max(254), kind: z.nativeEnum(FitnessPlanKind),
   title: z.string().trim().min(2).max(100), details: z.array(z.string().trim().min(1).max(240)).min(1).max(80),
   notes: z.string().trim().max(2000).nullable().optional(), startsAt: z.string().datetime().nullable().optional(), endsAt: z.string().datetime().nullable().optional(),
-});
+}).refine((value) => !value.startsAt || !value.endsAt || new Date(value.endsAt) >= new Date(value.startsAt), { message: "تاريخ نهاية الخطة يجب أن يكون بعد بدايتها", path: ["endsAt"] });
 const updateSchema = z.object({
   kind: z.nativeEnum(FitnessPlanKind).optional(),
   title: z.string().trim().min(2).max(100).optional(),
   details: z.array(z.string().trim().min(1).max(240)).min(1).max(80).optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
+  startsAt: z.string().datetime().nullable().optional(),
+  endsAt: z.string().datetime().nullable().optional(),
 });
 
 coach.get("/", route(async (_req, res) => {
@@ -61,10 +63,14 @@ coach.patch("/:id", route(async (req, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   if (!Object.keys(parsed.data).length) return sendError(res, 400, "EMPTY_UPDATE", "عدّل معلومة واحدة على الأقل");
-  const existing = await prisma.fitnessPlan.findFirst({ where: { id: req.params.id, coachMerchantId: res.locals.merchant.id }, select: { id: true, traineeUserId: true } });
+  const existing = await prisma.fitnessPlan.findFirst({ where: { id: req.params.id, coachMerchantId: res.locals.merchant.id }, select: { id: true, traineeUserId: true, startsAt: true, endsAt: true } });
   if (!existing) return sendError(res, 404, "NOT_FOUND", "الخطة غير موجودة");
+  const nextStart = parsed.data.startsAt === undefined ? existing.startsAt : parsed.data.startsAt ? new Date(parsed.data.startsAt) : null;
+  const nextEnd = parsed.data.endsAt === undefined ? existing.endsAt : parsed.data.endsAt ? new Date(parsed.data.endsAt) : null;
+  if (nextStart && nextEnd && nextEnd < nextStart) return sendError(res, 400, "INVALID_PLAN_DATES", "تاريخ نهاية الخطة يجب أن يكون بعد بدايتها");
+  const updateData = { ...parsed.data, startsAt: parsed.data.startsAt === undefined ? undefined : parsed.data.startsAt ? new Date(parsed.data.startsAt) : null, endsAt: parsed.data.endsAt === undefined ? undefined : parsed.data.endsAt ? new Date(parsed.data.endsAt) : null };
   const updated = await prisma.fitnessPlan.update({
-    where: { id: existing.id }, data: parsed.data,
+    where: { id: existing.id }, data: updateData,
     include: { trainee: { select: { id: true, fullName: true, email: true } }, progress: { orderBy: { completedAt: "desc" }, take: 20 } },
   });
   await notify({ userId: existing.traineeUserId, type: "SYSTEM", title: "حدّث مدربك خطتك", body: updated.title, data: { fitnessPlanId: updated.id }, email: false });
