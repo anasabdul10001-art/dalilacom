@@ -715,7 +715,13 @@ data class FitnessPlanDto(
 @kotlinx.serialization.Serializable
 data class FitnessPlanListDto(val items: List<FitnessPlanDto> = emptyList())
 @kotlinx.serialization.Serializable
+data class FitnessTraineeSummaryDto(val trainee: FitnessTraineeDto, val planCount: Int, val latestPlanAt: String)
+@kotlinx.serialization.Serializable
+data class FitnessTraineeListDto(val items: List<FitnessTraineeSummaryDto> = emptyList())
+@kotlinx.serialization.Serializable
 data class FitnessPlanBody(val traineeEmail: String, val kind: String, val title: String, val details: List<String>, val notes: String? = null)
+@kotlinx.serialization.Serializable
+data class FitnessPlanUpdateBody(val kind: String, val title: String, val details: List<String>, val notes: String? = null)
 @kotlinx.serialization.Serializable
 data class FitnessProgressBody(val weightKg: Double? = null, val note: String? = null)
 

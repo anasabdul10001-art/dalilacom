@@ -22,10 +22,30 @@ const bodySchema = z.object({
   title: z.string().trim().min(2).max(100), details: z.array(z.string().trim().min(1).max(240)).min(1).max(80),
   notes: z.string().trim().max(2000).nullable().optional(), startsAt: z.string().datetime().nullable().optional(), endsAt: z.string().datetime().nullable().optional(),
 });
+const updateSchema = z.object({
+  kind: z.nativeEnum(FitnessPlanKind).optional(),
+  title: z.string().trim().min(2).max(100).optional(),
+  details: z.array(z.string().trim().min(1).max(240)).min(1).max(80).optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+});
 
 coach.get("/", route(async (_req, res) => {
   const items = await prisma.fitnessPlan.findMany({ where: { coachMerchantId: res.locals.merchant.id }, include: { trainee: { select: { id: true, fullName: true, email: true } }, progress: { orderBy: { completedAt: "desc" }, take: 20 } }, orderBy: { updatedAt: "desc" }, take: 100 });
   res.json({ items });
+}));
+coach.get("/trainees", route(async (_req, res) => {
+  const plans = await prisma.fitnessPlan.findMany({
+    where: { coachMerchantId: res.locals.merchant.id },
+    select: { traineeUserId: true, updatedAt: true, trainee: { select: { id: true, fullName: true, email: true } } },
+    orderBy: { updatedAt: "desc" }, take: 1000,
+  });
+  const trainees = new Map<string, { trainee: typeof plans[number]["trainee"]; planCount: number; latestPlanAt: Date }>();
+  for (const plan of plans) {
+    const current = trainees.get(plan.traineeUserId);
+    if (current) current.planCount++;
+    else trainees.set(plan.traineeUserId, { trainee: plan.trainee, planCount: 1, latestPlanAt: plan.updatedAt });
+  }
+  res.json({ items: [...trainees.values()] });
 }));
 coach.post("/", route(async (req, res) => {
   const parsed = bodySchema.safeParse(req.body);
@@ -36,6 +56,19 @@ coach.post("/", route(async (req, res) => {
   const item = await prisma.fitnessPlan.create({ data: { ...data, coachMerchantId: res.locals.merchant.id, traineeUserId: trainee.id, startsAt: startsAt ? new Date(startsAt) : null, endsAt: endsAt ? new Date(endsAt) : null }, include: { trainee: { select: { id: true, fullName: true, email: true } } } });
   await notify({ userId: trainee.id, type: "SYSTEM", title: "أرسل لك مدربك خطة جديدة", body: data.title, data: { fitnessPlanId: item.id }, email: false });
   res.status(201).json(item);
+}));
+coach.patch("/:id", route(async (req, res) => {
+  const parsed = updateSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  if (!Object.keys(parsed.data).length) return sendError(res, 400, "EMPTY_UPDATE", "عدّل معلومة واحدة على الأقل");
+  const existing = await prisma.fitnessPlan.findFirst({ where: { id: req.params.id, coachMerchantId: res.locals.merchant.id }, select: { id: true, traineeUserId: true } });
+  if (!existing) return sendError(res, 404, "NOT_FOUND", "الخطة غير موجودة");
+  const updated = await prisma.fitnessPlan.update({
+    where: { id: existing.id }, data: parsed.data,
+    include: { trainee: { select: { id: true, fullName: true, email: true } }, progress: { orderBy: { completedAt: "desc" }, take: 20 } },
+  });
+  await notify({ userId: existing.traineeUserId, type: "SYSTEM", title: "حدّث مدربك خطتك", body: updated.title, data: { fitnessPlanId: updated.id }, email: false });
+  res.json(updated);
 }));
 coach.delete("/:id", route(async (req, res) => {
   const result = await prisma.fitnessPlan.deleteMany({ where: { id: req.params.id, coachMerchantId: res.locals.merchant.id } });

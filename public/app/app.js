@@ -7970,18 +7970,36 @@ bootSocialReturn().then((social) => {
     if (!handled && !bootMerchantLink()) render();
   });
 });
-function openFitnessPlans() { S._fitnessPlans = null; go("fitnessPlans"); loadFitnessPlans(); }
-function loadFitnessPlans() { api("GET", "/fitness-plans/coach").then(({ok,data}) => { S._fitnessPlans = ok ? (data.items || []) : []; render(); }); }
+function openFitnessPlans() { S._fitnessPlans = null; S._fitnessPlanForm = null; S._fitnessPlanTraineeFilter = null; go("fitnessPlans"); loadFitnessPlans(); }
+function loadFitnessPlans() {
+  Promise.all([api("GET", "/fitness-plans/coach"), api("GET", "/fitness-plans/coach/trainees")]).then(([plans, trainees]) => {
+    S._fitnessPlans = plans.ok ? plans.data.items || [] : [];
+    S._fitnessTrainees = trainees.ok ? trainees.data.items || [] : [];
+    render();
+  });
+}
 function screenFitnessPlans() {
   if (!S._fitnessPlans) return backRow() + spinner();
-  const plans = S._fitnessPlans.map(p => '<div class="card" style="padding:14px;margin:10px 0"><b>' + esc(p.title) + '</b><div class="muted">' + esc(p.trainee.fullName) + ' · ' + esc(p.kind === "WORKOUT" ? t("fitness.workout") : t("fitness.nutrition")) + '</div><p>' + (p.details || []).map(esc).join("<br>") + '</p><button class="btn outline" onclick="printFitnessPlan(\'' + esc(p.id) + '\')">📄 ' + esc(t("fitness.exportPdf")) + '</button><button class="link-btn" onclick="deleteFitnessPlan(\'' + esc(p.id) + '\')">' + esc(t("fitness.deletePlan")) + '</button><h4>' + esc(t("fitness.progress")) + '</h4>' + (p.progress || []).map(x => '<div class="muted">' + esc(x.weightKg == null ? "" : x.weightKg + " kg") + ' · ' + esc(x.note || "") + ' · ' + esc(new Date(x.completedAt).toLocaleDateString()) + '</div>').join("") + '</div>').join("");
-  return backRow() + '<h1 class="screen-title">🏋️ ' + esc(t("fitness.plansTitle")) + '</h1><p class="screen-sub">' + esc(t("fitness.plansHelp")) + '</p><div class="card" style="padding:16px"><div class="field"><label>' + esc(t("fitness.traineeEmail")) + '</label><input id="fplan-email" type="email"></div><div class="field"><label>' + esc(t("fitness.planType")) + '</label><select id="fplan-kind"><option value="WORKOUT">' + esc(t("fitness.workout")) + '</option><option value="NUTRITION">' + esc(t("fitness.nutrition")) + '</option></select></div><div class="field"><label>' + esc(t("fitness.planName")) + '</label><input id="fplan-title" maxlength="100"></div><div class="field"><label>' + esc(t("fitness.planItems")) + '</label><textarea id="fplan-details" rows="8" placeholder="' + esc(t("fitness.planItemsHelp")) + '"></textarea></div><div class="field"><label>' + esc(t("fitness.planNotes")) + '</label><textarea id="fplan-notes" rows="3"></textarea></div><button class="btn" onclick="saveFitnessPlan()">' + esc(t("fitness.savePlan")) + '</button></div><h2>' + esc(t("fitness.createdPlans")) + '</h2>' + (plans || '<p class="muted">' + esc(t("fitness.noPlans")) + '</p>');
+  const form = S._fitnessPlanForm || {};
+  const trainees = S._fitnessTrainees || [];
+  const filtered = S._fitnessPlanTraineeFilter ? S._fitnessPlans.filter(p => p.trainee?.id === S._fitnessPlanTraineeFilter) : S._fitnessPlans;
+  const chips = '<div style="display:flex;gap:8px;overflow:auto;margin:8px 0"><button class="chip" onclick="S._fitnessPlanTraineeFilter=null;render()">' + esc(t("fitness.allTrainees")) + ' (' + trainees.length + ')</button>' + trainees.map(summary => '<button class="chip" style="white-space:nowrap" onclick="S._fitnessPlanTraineeFilter=\'' + esc(summary.trainee.id) + '\';render()">' + esc(summary.trainee.fullName) + ' · ' + esc(summary.planCount) + '</button>').join("") + '</div>';
+  const plans = filtered.map(p => '<div class="card" style="padding:14px;margin:10px 0"><b>' + esc(p.title) + '</b><div class="muted">' + esc(p.trainee?.fullName || "") + ' · ' + esc(p.trainee?.email || "") + ' · ' + esc(p.kind === "WORKOUT" ? t("fitness.workout") : t("fitness.nutrition")) + '</div><p>' + (p.details || []).map(esc).join("<br>") + '</p>' + (p.notes ? '<p>' + esc(p.notes) + '</p>' : '') + '<button class="btn outline" onclick="editFitnessPlan(\'' + esc(p.id) + '\')">' + esc(t("fitness.editPlan")) + '</button> <button class="btn outline" onclick="printFitnessPlan(\'' + esc(p.id) + '\')">📄 ' + esc(t("fitness.exportPdf")) + '</button> <button class="link-btn" onclick="deleteFitnessPlan(\'' + esc(p.id) + '\')">' + esc(t("fitness.deletePlan")) + '</button><h4>' + esc(t("fitness.progress")) + '</h4>' + (p.progress || []).map(x => '<div class="muted">' + esc(x.weightKg == null ? "" : x.weightKg + " kg") + ' · ' + esc(x.note || "") + ' · ' + esc(new Date(x.completedAt).toLocaleDateString()) + '</div>').join("") + '</div>').join("");
+  return backRow() + '<h1 class="screen-title">🏋️ ' + esc(t("fitness.plansTitle")) + '</h1><p class="screen-sub">' + esc(t("fitness.plansHelp")) + '</p>' + (form.id ? '<p class="success-banner">' + esc(t("fitness.editPlan")) + ' · ' + esc(form.traineeName || "") + '</p>' : '') + '<div class="card" style="padding:16px">' + (form.id ? '<div class="field"><label>' + esc(t("fitness.traineeEmail")) + '</label><input type="email" value="' + esc(form.traineeEmail || "") + '" readonly></div>' : '<div class="field"><label>' + esc(t("fitness.traineeEmail")) + '</label><input id="fplan-email" type="email" value="' + esc(form.traineeEmail || "") + '"></div>') + '<div class="field"><label>' + esc(t("fitness.planType")) + '</label><select id="fplan-kind"><option value="WORKOUT" ' + ((form.kind || "WORKOUT") === "WORKOUT" ? "selected" : "") + '>' + esc(t("fitness.workout")) + '</option><option value="NUTRITION" ' + (form.kind === "NUTRITION" ? "selected" : "") + '>' + esc(t("fitness.nutrition")) + '</option></select></div><div class="field"><label>' + esc(t("fitness.planName")) + '</label><input id="fplan-title" maxlength="100" value="' + esc(form.title || "") + '"></div><div class="field"><label>' + esc(t("fitness.planItems")) + '</label><textarea id="fplan-details" rows="8" placeholder="' + esc(t("fitness.planItemsHelp")) + '">' + esc(form.details || "") + '</textarea></div><div class="field"><label>' + esc(t("fitness.planNotes")) + '</label><textarea id="fplan-notes" rows="3">' + esc(form.notes || "") + '</textarea></div><button class="btn" onclick="saveFitnessPlan()">' + esc(form.id ? t("fitness.updatePlan") : t("fitness.savePlan")) + '</button>' + (form.id ? ' <button class="btn outline" onclick="cancelFitnessPlanEdit()">' + esc(t("fitness.cancelEditPlan")) + '</button>' : '') + '</div><h2>' + esc(t("fitness.traineesCount", { n: trainees.length })) + '</h2>' + chips + '<h2>' + esc(t("fitness.createdPlans")) + '</h2>' + (plans || '<p class="muted">' + esc(t("fitness.noPlans")) + '</p>');
 }
+function editFitnessPlan(id) {
+  const p = (S._fitnessPlans || []).find(x => x.id === id);
+  if (!p) return;
+  S._fitnessPlanForm = { id: p.id, traineeEmail: p.trainee?.email || "", traineeName: p.trainee?.fullName || "", kind: p.kind, title: p.title, details: (p.details || []).join("\n"), notes: p.notes || "" };
+  render();
+}
+function cancelFitnessPlanEdit() { S._fitnessPlanForm = null; render(); }
 async function saveFitnessPlan() {
-  const body = { traineeEmail: document.getElementById("fplan-email")?.value.trim(), kind: document.getElementById("fplan-kind")?.value, title: document.getElementById("fplan-title")?.value.trim(), details: (document.getElementById("fplan-details")?.value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean), notes: document.getElementById("fplan-notes")?.value.trim() || null };
-  const {ok,data} = await api("POST", "/fitness-plans/coach", body);
+  const form = S._fitnessPlanForm || {};
+  const body = { ...(form.id ? {} : { traineeEmail: document.getElementById("fplan-email")?.value.trim() }), kind: document.getElementById("fplan-kind")?.value, title: document.getElementById("fplan-title")?.value.trim(), details: (document.getElementById("fplan-details")?.value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean), notes: document.getElementById("fplan-notes")?.value.trim() || null };
+  const {ok,data} = await api(form.id ? "PATCH" : "POST", form.id ? "/fitness-plans/coach/" + encodeURIComponent(form.id) : "/fitness-plans/coach", body);
   if (!ok) { toast(errMsg(data, t("fitness.savePlanFailed"))); return; }
-  loadFitnessPlans(); toast(t("fitness.planSaved"));
+  S._fitnessPlanForm = null; loadFitnessPlans(); toast(form.id ? t("fitness.planUpdated") : t("fitness.planSaved"));
 }
 async function deleteFitnessPlan(id) {
   if (!confirm(t("fitness.deleteConfirm"))) return;

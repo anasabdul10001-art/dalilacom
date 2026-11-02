@@ -16,8 +16,14 @@ interface ApiService {
     @GET("fitness-plans/coach")
     suspend fun fitnessCoachPlans(): Response<FitnessPlanListDto>
 
+    @GET("fitness-plans/coach/trainees")
+    suspend fun fitnessCoachTrainees(): Response<FitnessTraineeListDto>
+
     @POST("fitness-plans/coach")
     suspend fun createFitnessPlan(@Body body: FitnessPlanBody): Response<FitnessPlanDto>
+
+    @retrofit2.http.PATCH("fitness-plans/coach/{id}")
+    suspend fun updateFitnessPlan(@Path("id") id: String, @Body body: FitnessPlanUpdateBody): Response<FitnessPlanDto>
 
     @GET("fitness-plans/mine")
     suspend fun myFitnessPlans(): Response<FitnessPlanListDto>
