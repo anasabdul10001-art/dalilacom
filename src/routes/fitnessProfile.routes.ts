@@ -18,6 +18,10 @@ const profileSchema = z.object({
   achievements: textList,
   certifications: textList,
   certificationPhotoIds: z.array(z.string().uuid()).max(12).default([]),
+  paymentAccountName: z.string().trim().max(100).nullable().optional(),
+  syriatelCash: z.string().trim().max(80).nullable().optional(),
+  mtnCash: z.string().trim().max(80).nullable().optional(),
+  shamCash: z.string().trim().max(80).nullable().optional(),
 });
 
 fitnessProfileRouter.use(requireAuth, requireRole(Role.MERCHANT));
@@ -38,7 +42,7 @@ fitnessProfileRouter.get("/me", route(async (req, res) => {
   if (!merchant) return sendError(res, 404, "NOT_FOUND", "صفحة النشاط غير موجودة");
   if (!(await isFitnessProviderCategory(merchant.categoryId))) return sendError(res, 403, "NOT_FITNESS_PROVIDER", "هذا الملف مخصص للمدربين والنوادي الرياضية");
   const profile = await prisma.fitnessProfile.findUnique({ where: { merchantId: merchant.id } });
-  res.json(profile ?? { merchantId: merchant.id, displayName: null, headline: null, yearsExperience: null, specialties: [], achievements: [], certifications: [], certificationPhotoIds: [] });
+  res.json(profile ?? { merchantId: merchant.id, displayName: null, headline: null, yearsExperience: null, specialties: [], achievements: [], certifications: [], certificationPhotoIds: [], paymentAccountName: null, syriatelCash: null, mtnCash: null, shamCash: null });
 }));
 
 fitnessProfileRouter.put("/me", route(async (req, res) => {
@@ -50,7 +54,8 @@ fitnessProfileRouter.put("/me", route(async (req, res) => {
   const photoIds = [...new Set(parsed.data.certificationPhotoIds)];
   if (photoIds.length && await prisma.productPhoto.count({ where: { id: { in: photoIds }, merchantId: merchant.id } }) !== photoIds.length) return sendError(res, 403, "INVALID_CERTIFICATE_PHOTO", "إحدى الصور ليست مرفوعة من حسابك");
   const dedupe = (items: string[]) => [...new Set(items.map((x) => x.trim()).filter(Boolean))];
-  const data = { ...parsed.data, certificationPhotoIds: photoIds, specialties: dedupe(parsed.data.specialties), achievements: dedupe(parsed.data.achievements), certifications: dedupe(parsed.data.certifications) };
+  const cleanPaymentValue = (value: string | null | undefined) => value === undefined ? undefined : value?.trim() || null;
+  const data = { ...parsed.data, paymentAccountName: cleanPaymentValue(parsed.data.paymentAccountName), syriatelCash: cleanPaymentValue(parsed.data.syriatelCash), mtnCash: cleanPaymentValue(parsed.data.mtnCash), shamCash: cleanPaymentValue(parsed.data.shamCash), certificationPhotoIds: photoIds, specialties: dedupe(parsed.data.specialties), achievements: dedupe(parsed.data.achievements), certifications: dedupe(parsed.data.certifications) };
   const profile = await prisma.fitnessProfile.upsert({ where: { merchantId: merchant.id }, create: { merchantId: merchant.id, ...data }, update: data });
   res.json(profile);
 }));

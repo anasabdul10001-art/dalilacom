@@ -36,6 +36,10 @@ fun FitnessProfileScreen(container: AppContainer, onBack: () -> Unit) {
     var achievements by remember { mutableStateOf("") }
     var certifications by remember { mutableStateOf("") }
     var certificatePhotoIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var paymentAccountName by remember { mutableStateOf("") }
+    var syriatelCash by remember { mutableStateOf("") }
+    var mtnCash by remember { mutableStateOf("") }
+    var shamCash by remember { mutableStateOf("") }
     var offers by remember { mutableStateOf<List<com.dalilacom.app.data.network.FitnessOfferDto>>(emptyList()) }
     var offerTitle by remember { mutableStateOf("") }
     var offerDescription by remember { mutableStateOf("") }
@@ -63,6 +67,10 @@ fun FitnessProfileScreen(container: AppContainer, onBack: () -> Unit) {
             achievements = result.achievements.joinToString("\n")
             certifications = result.certifications.joinToString("\n")
             certificatePhotoIds = result.certificationPhotoIds
+            paymentAccountName = result.paymentAccountName.orEmpty()
+            syriatelCash = result.syriatelCash.orEmpty()
+            mtnCash = result.mtnCash.orEmpty()
+            shamCash = result.shamCash.orEmpty()
         }.onFailure { error = it.message }
         loading = false
     }
@@ -89,8 +97,15 @@ fun FitnessProfileScreen(container: AppContainer, onBack: () -> Unit) {
                     TextButton(onClick = { certificatePhotoIds = certificatePhotoIds.filterNot { it == id } }) { Text("حذف") }
                 }
             }
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Text("طرق الدفع واستلام الأجور", style = MaterialTheme.typography.titleLarge)
+            Text("أضف حساباتك ليستطيع المتدرب تحويل الأجرة لك. ستظهر هذه البيانات للزوار في صفحة المدرب، والتحويل يتم خارج التطبيق.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedTextField(paymentAccountName, { paymentAccountName = it.take(100) }, Modifier.fillMaxWidth(), label = { Text("اسم صاحب الحساب") }, singleLine = true)
+            OutlinedTextField(syriatelCash, { syriatelCash = it.take(80) }, Modifier.fillMaxWidth(), label = { Text("رقم سيرياتل كاش") }, singleLine = true)
+            OutlinedTextField(mtnCash, { mtnCash = it.take(80) }, Modifier.fillMaxWidth(), label = { Text("رقم MTN كاش") }, singleLine = true)
+            OutlinedTextField(shamCash, { shamCash = it.take(80) }, Modifier.fillMaxWidth(), label = { Text("حساب شام كاش") }, singleLine = true)
             Button(enabled = !saving, onClick = {
-                val body = FitnessProfileBody(displayName.trim().ifBlank { null }, headline.trim().ifBlank { null }, years.toIntOrNull()?.coerceAtMost(70), specialties.lines().map(String::trim).filter(String::isNotBlank).distinct().take(15), achievements.lines().map(String::trim).filter(String::isNotBlank).distinct().take(15), certifications.lines().map(String::trim).filter(String::isNotBlank).distinct().take(15), certificatePhotoIds)
+                val body = FitnessProfileBody(displayName.trim().ifBlank { null }, headline.trim().ifBlank { null }, years.toIntOrNull()?.coerceAtMost(70), specialties.lines().map(String::trim).filter(String::isNotBlank).distinct().take(15), achievements.lines().map(String::trim).filter(String::isNotBlank).distinct().take(15), certifications.lines().map(String::trim).filter(String::isNotBlank).distinct().take(15), certificatePhotoIds, paymentAccountName.trim().ifBlank { null }, syriatelCash.trim().ifBlank { null }, mtnCash.trim().ifBlank { null }, shamCash.trim().ifBlank { null })
                 scope.launch {
                     saving = true; error = null
                     container.merchantRepository.saveFitnessProfile(body).onSuccess { profile = it; android.widget.Toast.makeText(context, context.getString(R.string.fitness_saved), android.widget.Toast.LENGTH_SHORT).show() }.onFailure { error = it.message }

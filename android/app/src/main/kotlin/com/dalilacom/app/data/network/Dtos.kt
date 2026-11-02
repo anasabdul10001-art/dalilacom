@@ -382,6 +382,10 @@ data class FitnessProfileDto(
     val achievements: List<String> = emptyList(),
     val certifications: List<String> = emptyList(),
     val certificationPhotoIds: List<String> = emptyList(),
+    val paymentAccountName: String? = null,
+    val syriatelCash: String? = null,
+    val mtnCash: String? = null,
+    val shamCash: String? = null,
 )
 
 /** Another place of the same shop, maybe in another city. */
@@ -691,6 +695,10 @@ data class FitnessProfileBody(
     val achievements: List<String>,
     val certifications: List<String>,
     val certificationPhotoIds: List<String> = emptyList(),
+    val paymentAccountName: String? = null,
+    val syriatelCash: String? = null,
+    val mtnCash: String? = null,
+    val shamCash: String? = null,
 )
 
 @Serializable
@@ -710,6 +718,7 @@ data class FitnessCoachDto(val businessName: String, val fitnessProfile: Fitness
 data class FitnessPlanDto(
     val id: String, val kind: String, val title: String, val details: List<String> = emptyList(),
     val notes: String? = null, val trainee: FitnessTraineeDto? = null, val coach: FitnessCoachDto? = null,
+    val startsAt: String? = null, val endsAt: String? = null, val weeklySchedule: Map<String, List<String>>? = null,
     val progress: List<FitnessProgressDto> = emptyList(),
 )
 @kotlinx.serialization.Serializable
@@ -719,11 +728,18 @@ data class FitnessTraineeSummaryDto(val trainee: FitnessTraineeDto, val planCoun
 @kotlinx.serialization.Serializable
 data class FitnessTraineeListDto(val items: List<FitnessTraineeSummaryDto> = emptyList())
 @kotlinx.serialization.Serializable
-data class FitnessPlanBody(val traineeEmail: String, val kind: String, val title: String, val details: List<String>, val notes: String? = null)
+data class FitnessPlanBody(val traineeEmail: String, val kind: String, val title: String, val details: List<String>, val notes: String? = null, val startsAt: String? = null, val endsAt: String? = null, val weeklySchedule: Map<String, List<String>>? = null)
 @kotlinx.serialization.Serializable
-data class FitnessPlanUpdateBody(val kind: String, val title: String, val details: List<String>, val notes: String? = null)
+data class FitnessPlanUpdateBody(val kind: String, val title: String, val details: List<String>, val notes: String? = null, val startsAt: String? = null, val endsAt: String? = null, val weeklySchedule: Map<String, List<String>>? = null)
 @kotlinx.serialization.Serializable
 data class FitnessProgressBody(val weightKg: Double? = null, val note: String? = null)
+
+@kotlinx.serialization.Serializable
+data class FitnessEnrollmentDto(val id: String, val status: String, val startsAt: String? = null, val endsAt: String? = null, val offer: FitnessOfferDto? = null, val merchant: FitnessCoachDto? = null, val user: FitnessTraineeDto? = null)
+@kotlinx.serialization.Serializable
+data class FitnessEnrollmentListDto(val items: List<FitnessEnrollmentDto> = emptyList())
+@kotlinx.serialization.Serializable
+data class FitnessEnrollmentStatusBody(val status: String)
 
 /** The shop's pricing, set once for the whole shop; no defaults, so a cleared rate is sent as null. */
 @Serializable

@@ -9,6 +9,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.DropdownMenuItem
@@ -68,6 +69,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.launch
 import com.dalilacom.app.R
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.ui.i18n.AppStrings
@@ -106,6 +108,17 @@ fun MerchantDetailScreen(
     )
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val role by container.sessionStore.roleFlow.collectAsState(initial = null)
+    val scope = rememberCoroutineScope()
+    var requestedFitnessOffers by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+
+    LaunchedEffect(state.merchant?.id, role) {
+        if (role == "CUSTOMER" && state.merchant?.isFitnessProvider == true) {
+            container.fitnessPlansRepository.myEnrollments().onSuccess { items ->
+                requestedFitnessOffers = items.filter { it.status == "REQUESTED" || it.status == "ACCEPTED" }.mapNotNull { item -> item.offer?.id?.let { it to item.status } }.toMap()
+            }
+        }
+    }
 
     LaunchedEffect(state.message) {
         state.message?.let {
@@ -237,6 +250,13 @@ fun MerchantDetailScreen(
                                     }
                                     if (fp.certificationPhotoIds.isNotEmpty()) Text(stringResource(R.string.fitness_unverified), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
+                                    val paymentMethods = listOf("سيرياتل كاش" to fp.syriatelCash, "MTN كاش" to fp.mtnCash, "شام كاش" to fp.shamCash).filter { !it.second.isNullOrBlank() }
+                                    if (paymentMethods.isNotEmpty()) {
+                                        SectionTitle("💳 طرق الدفع المتاحة")
+                                        Text("التحويل يتم مباشرة إلى المدرب خارج التطبيق.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        fp.paymentAccountName?.takeIf { it.isNotBlank() }?.let { Text("صاحب الحساب: $it", style = MaterialTheme.typography.bodySmall) }
+                                        paymentMethods.forEach { (label, account) -> Text("$label: $account", style = MaterialTheme.typography.bodyMedium) }
+                                    }
                                 }
                                 if (merchant.isFitnessProvider && merchant.fitnessOffers.isNotEmpty()) {
                                     SectionTitle("🎯 باقات التدريب الشهرية")
@@ -244,8 +264,21 @@ fun MerchantDetailScreen(
                                         Text(offer.title, style = MaterialTheme.typography.titleSmall)
                                         Text(offer.durationMonths.toString() + " شهر · " + String.format("%,.2f", offer.priceCents / 100.0) + " " + offer.currency, style = MaterialTheme.typography.bodyMedium)
                                         offer.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                        if (role == "CUSTOMER") {
+                                            Button(enabled = requestedFitnessOffers[offer.id].isNullOrBlank(), onClick = {
+                                                scope.launch {
+                                                    container.fitnessPlansRepository.requestEnrollment(offer.id).onSuccess {
+                                                        requestedFitnessOffers = requestedFitnessOffers + (offer.id to "REQUESTED")
+                                                        Toast.makeText(context, "تم إرسال طلب الانضمام للمدرب", Toast.LENGTH_SHORT).show()
+                                                    }.onFailure { Toast.makeText(context, it.message ?: "تعذّر إرسال الطلب", Toast.LENGTH_LONG).show() }
+                                                }
+                                            }) { Text(when (requestedFitnessOffers[offer.id]) { "REQUESTED" -> "بانتظار رد المدرب"; "ACCEPTED" -> "مقبول"; else -> "طلب الانضمام" }) }
+                                        } else if (role == null) {
+                                            OutlinedButton(onClick = onLogin) { Text("سجّل الدخول لطلب الانضمام") }
+                                        }
                                         Spacer(Modifier.height(8.dp))
                                     }
+                                    Text("الدفع غير مستقطع من التطبيق؛ تواصل مع المدرب للاتفاق عليه.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
                                 }
                                 if (merchant.isFitnessProvider && merchant.discounts.isNotEmpty()) {
