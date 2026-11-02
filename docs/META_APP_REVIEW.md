@@ -21,6 +21,14 @@ Facebook Login (signing customers in to Dalilacom) is a separate Meta app and a 
 admin accounts (`src/lib/metaAccess.ts`). The reviewer's test account is a normal account, so **set `META_PUBLIC_ACCESS=true` on Render
 for the whole review period**, otherwise the "Continue with Facebook" step fails and the review is rejected. Telegram is unaffected.
 
+## Phase 1 scope (decided 2026-11-02): messaging only
+
+The new Meta dashboard keeps permissions under each use case. The Messenger use case offers `pages_show_list`, `pages_manage_metadata`,
+`pages_messaging` and `pages_read_engagement` (all "ready for testing"); `pages_read_user_content` and `pages_manage_engagement` (comment
+replies) are not offered there. So the first review asks only for direct messages: those four Page permissions, plus the Instagram
+messaging permissions the Instagram use case offers. Comment replies come in a second submission once a page-content use case is added.
+For the first video, show only the Messenger and Instagram DM steps (screencast steps 1-4 and 6 without the comment part).
+
 ## What the app does (one paragraph for the reviewer)
 
 Dalilacom is a business directory and online store for Syria. A shop owner connects their own Facebook Page and
