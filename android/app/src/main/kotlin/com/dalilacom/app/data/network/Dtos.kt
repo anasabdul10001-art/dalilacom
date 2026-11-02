@@ -382,6 +382,10 @@ data class FitnessProfileDto(
     val achievements: List<String> = emptyList(),
     val certifications: List<String> = emptyList(),
     val certificationPhotoIds: List<String> = emptyList(),
+    val paymentAccountName: String? = null,
+    val syriatelCash: String? = null,
+    val mtnCash: String? = null,
+    val shamCash: String? = null,
 )
 
 /** Another place of the same shop, maybe in another city. */
@@ -691,6 +695,10 @@ data class FitnessProfileBody(
     val achievements: List<String>,
     val certifications: List<String>,
     val certificationPhotoIds: List<String> = emptyList(),
+    val paymentAccountName: String? = null,
+    val syriatelCash: String? = null,
+    val mtnCash: String? = null,
+    val shamCash: String? = null,
 )
 
 @Serializable

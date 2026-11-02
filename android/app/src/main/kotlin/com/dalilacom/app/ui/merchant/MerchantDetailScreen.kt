@@ -250,6 +250,13 @@ fun MerchantDetailScreen(
                                     }
                                     if (fp.certificationPhotoIds.isNotEmpty()) Text(stringResource(R.string.fitness_unverified), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
+                                    val paymentMethods = listOf("سيرياتل كاش" to fp.syriatelCash, "MTN كاش" to fp.mtnCash, "شام كاش" to fp.shamCash).filter { !it.second.isNullOrBlank() }
+                                    if (paymentMethods.isNotEmpty()) {
+                                        SectionTitle("💳 طرق الدفع المتاحة")
+                                        Text("التحويل يتم مباشرة إلى المدرب خارج التطبيق.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        fp.paymentAccountName?.takeIf { it.isNotBlank() }?.let { Text("صاحب الحساب: $it", style = MaterialTheme.typography.bodySmall) }
+                                        paymentMethods.forEach { (label, account) -> Text("$label: $account", style = MaterialTheme.typography.bodyMedium) }
+                                    }
                                 }
                                 if (merchant.isFitnessProvider && merchant.fitnessOffers.isNotEmpty()) {
                                     SectionTitle("🎯 باقات التدريب الشهرية")

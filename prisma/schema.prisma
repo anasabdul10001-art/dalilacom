@@ -408,6 +408,10 @@ model FitnessProfile {
   achievements          String[]        @default([])
   certifications        String[]        @default([])
   certificationPhotoIds String[]        @default([])
+  paymentAccountName    String?
+  syriatelCash          String?
+  mtnCash               String?
+  shamCash              String?
   updatedAt             DateTime        @updatedAt
   merchant              MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 }
