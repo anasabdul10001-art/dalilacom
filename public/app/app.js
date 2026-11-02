@@ -156,6 +156,7 @@ async function api(method, path, body) {
 function setToken(token, role) {
   S.token = token;
   S.role = role;
+  S._profileServiceActivity = null;
   localStorage.setItem("dlk_token", token);
   localStorage.setItem("dlk_role", role);
   if (S._discover) loadFavIds();
@@ -182,6 +183,7 @@ function clearToken() {
   S._onboarding = null;
   S._mprof = null;
   S._profile = null;
+  S._profileServiceActivity = null;
   loadMarket();
 }
 
@@ -2465,6 +2467,34 @@ async function loadOrders() {
 
 /* ---- Profile tab ---- */
 
+function loadProfileServiceActivity() {
+  if (S._profileServiceActivity || !S.token) return;
+  S._profileServiceActivity = { loading: true };
+  const requests = [api("GET", "/doctor-care"), api("GET", "/appointments/mine"), api("GET", "/fitness-plans/mine")];
+  if (S.role === "MERCHANT") requests.push(api("GET", "/merchant/me"));
+  Promise.all(requests).then(([care, appointments, plans, merchant]) => {
+    const doctorCare = care.ok ? care.data : null;
+    S._profileServiceActivity = {
+      hasMedicalActivity: !!((doctorCare?.requests || []).length || (doctorCare?.doctors || []).length || (appointments.ok && (appointments.data.items || []).length)),
+      isDoctor: !!(doctorCare?.mode === "DOCTOR"),
+      hasTrainingActivity: !!(plans.ok && (plans.data.items || []).length),
+      isFitnessProvider: !!(merchant?.ok && merchant.data.isFitnessProvider),
+      loadedAt: Date.now(),
+    };
+    render();
+  }).catch(() => { S._profileServiceActivity = { hasMedicalActivity: false, isDoctor: false, hasTrainingActivity: false, isFitnessProvider: false, loadedAt: Date.now() }; render(); });
+}
+
+function profileServiceLinksHtml() {
+  if (S._profileServiceActivity && !S._profileServiceActivity.loading && Date.now() - (S._profileServiceActivity.loadedAt || 0) > 30000) S._profileServiceActivity = null;
+  if (!S._profileServiceActivity) loadProfileServiceActivity();
+  const activity = S._profileServiceActivity;
+  if (!activity || activity.loading) return "";
+  if (S.role === "CUSTOMER") return `${activity.hasMedicalActivity ? `<button class="btn outline" style="max-width:280px" onclick="openDoctorCare()">🩺 ${esc(t("care.title"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="openDoctorAppointments()">📅 ${esc(t("appointment.myAppointments"))}</button><div style="height:8px"></div>` : ""}${activity.hasTrainingActivity ? `<button class="btn outline" style="max-width:280px" onclick="openMyFitnessPlans()">🏋️ ${esc(t("fitness.myPlans"))}</button>` : ""}`;
+  if (S.role === "MERCHANT" && activity.isDoctor) return `<button class="btn outline" style="max-width:280px" onclick="openDoctorCare()">🩺 ${esc(t("care.title"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="openDoctorAppointments()">📅 ${esc(t("appointment.myAppointments"))}</button><div style="height:8px"></div>`;
+  return "";
+}
+
 function tabProfile() {
   if (S.role === "MERCHANT" && !S._fitnessAccessChecked) loadFitnessAccess();
   return `
@@ -2482,11 +2512,10 @@ function tabProfile() {
         ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='catalog';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
            <div style="height:8px"></div>
            <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="S._mprof=null;go('merchantProfile')">📍 ${esc(t("profile.mapListing"))}</button>`
-        : S.role === "CUSTOMER" ? `<button class="btn" style="max-width:320px" onclick="go('merchantRegister',{mode:'map'})">📍 ${esc(t("profile.registerMerchant"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.mapActivitySub"))}</p><div style="height:10px"></div><button class="btn outline" style="max-width:320px" onclick="go('merchantRegister',{mode:'store'})">🛍️ ${esc(t("profile.openOnlineStore"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.startSellingSub"))}</p><div style="height:10px"></div><button class="btn outline" style="max-width:320px" onclick="openMyFitnessPlans()">🏋️ ${esc(t("fitness.myPlans"))}</button>` : ""}
+        : S.role === "CUSTOMER" ? `<button class="btn" style="max-width:320px" onclick="go('merchantRegister',{mode:'map'})">📍 ${esc(t("profile.registerMerchant"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.mapActivitySub"))}</p><div style="height:10px"></div><button class="btn outline" style="max-width:320px" onclick="go('merchantRegister',{mode:'store'})">🛍️ ${esc(t("profile.openOnlineStore"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.startSellingSub"))}</p>` : ""}
       <div style="height:10px"></div>
       ${S._fitnessAccess ? `<button class="btn outline" style="max-width:280px" onclick="openFitnessProfile()">🏋️ ${esc(t("fitness.profile"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="openFitnessPlans()">📋 ${esc(t("fitness.plansTitle"))}</button><div style="height:8px"></div>` : ""}
-      <button class="btn outline" style="max-width:280px" onclick="openDoctorCare()">🩺 ${esc(t("care.title"))}</button>
-      <div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="openDoctorAppointments()">📅 ${esc(t("appointment.myAppointments"))}</button>
+      ${profileServiceLinksHtml()}
       <div style="height:14px"></div>
       ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
       <div style="height:10px"></div>
@@ -2641,6 +2670,7 @@ async function bookDoctorAppointment(doctorId) {
   const { ok, data } = await api("POST", `/appointments/doctors/${encodeURIComponent(doctorId)}/book`, { startsAt, kind: S._appointmentUi.kind || "VISIT", shareMedicalFile: S._appointmentUi.shareMedical === true, visitReason: S._appointmentUi.visitReason || "" });
   if (!ok) { toast(errMsg(data, t("appointment.bookFailed"))); loadDoctorSlots(doctorId); return; }
   toast(t("appointment.booked")); S._appointmentUi.selectedStart = null; loadDoctorSlots(doctorId);
+  S._profileServiceActivity = null;
 }
 async function saveDoctorAppointmentSettings() {
   const body = { enabled: document.getElementById("appointment-enabled")?.checked, slotMinutes: Number(document.getElementById("appointment-duration")?.value), advanceDays: Number(document.getElementById("appointment-advance")?.value) };

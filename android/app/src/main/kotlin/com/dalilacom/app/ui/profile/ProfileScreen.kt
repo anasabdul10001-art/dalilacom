@@ -70,6 +70,10 @@ fun ProfileScreen(
     var profile by remember { mutableStateOf<ProfileDto?>(container.profileRepository.cached) }
     var unread by remember { mutableStateOf(0) }
     var fitnessProvider by remember { mutableStateOf(false) }
+    var doctorProvider by remember { mutableStateOf(false) }
+    var hasDoctorConnection by remember { mutableStateOf(false) }
+    var hasDoctorAppointment by remember { mutableStateOf(false) }
+    var hasFitnessPlan by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(role) {
@@ -78,7 +82,15 @@ fun ProfileScreen(
             launch { container.profileRepository.me()?.let { profile = it } }
             launch { account = container.authRepository.me() }
             launch { unread = container.notificationRepository.unreadCount() }
-            if (role == "MERCHANT") launch { fitnessProvider = container.merchantRepository.getMerchantMe()?.isFitnessProvider == true }
+            if (role == "CUSTOMER") {
+                launch { container.doctorCareRepository.load().onSuccess { care -> hasDoctorConnection = care.requests.isNotEmpty() || care.doctors.isNotEmpty() } }
+                launch { container.doctorCareRepository.myAppointments().onSuccess { appointments -> hasDoctorAppointment = appointments.items.isNotEmpty() } }
+                launch { container.fitnessPlansRepository.myPlans().onSuccess { plans -> hasFitnessPlan = plans.isNotEmpty() } }
+            }
+            if (role == "MERCHANT") {
+                launch { fitnessProvider = container.merchantRepository.getMerchantMe()?.isFitnessProvider == true }
+                launch { container.doctorCareRepository.load().onSuccess { care -> doctorProvider = care.mode == "DOCTOR" } }
+            }
         }
     }
 
@@ -95,8 +107,14 @@ fun ProfileScreen(
         }
         TextButton(onClick = onEditProfile) { Text(stringResource(R.string.profile_edit)) }
         TextButton(onClick = onOpenAccount) { Text(stringResource(R.string.profile_account_settings)) }
-        OutlinedButton(onClick = onOpenDoctorCare, modifier = Modifier.fillMaxWidth()) { Text("🩺  " + stringResource(R.string.care_title)) }
-        OutlinedButton(onClick = onOpenAppointments, modifier = Modifier.fillMaxWidth()) { Text("📅  " + stringResource(R.string.appointment_my_title)) }
+        if (role == "CUSTOMER" && (hasDoctorConnection || hasDoctorAppointment)) {
+            OutlinedButton(onClick = onOpenDoctorCare, modifier = Modifier.fillMaxWidth()) { Text("🩺  " + stringResource(R.string.care_title)) }
+            OutlinedButton(onClick = onOpenAppointments, modifier = Modifier.fillMaxWidth()) { Text("📅  " + stringResource(R.string.appointment_my_title)) }
+        }
+        if (role == "MERCHANT" && doctorProvider) {
+            OutlinedButton(onClick = onOpenDoctorCare, modifier = Modifier.fillMaxWidth()) { Text("🩺  " + stringResource(R.string.care_title)) }
+            OutlinedButton(onClick = onOpenAppointments, modifier = Modifier.fillMaxWidth()) { Text("📅  " + stringResource(R.string.appointment_my_title)) }
+        }
         OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
         Spacer(Modifier.height(12.dp))
         if (role == "MERCHANT") {
@@ -118,7 +136,7 @@ fun ProfileScreen(
             OutlinedButton(onClick = onOpenOnlineStore, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_open_online_store)) }
             Text(stringResource(R.string.profile_start_selling_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 5.dp))
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text("🏋️  خططي الرياضية والغذائية") }
+            if (hasFitnessPlan) OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text("🏋️  خططي الرياضية والغذائية") }
         }
         Spacer(Modifier.height(24.dp))
 
