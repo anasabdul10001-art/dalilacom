@@ -130,9 +130,14 @@ model User {
 
   landmarkClaims LandmarkClaim[]
 
-  marketer         Marketer?         @relation("MarketerUser")
-  marketerRequests MarketerRequest[]
-  referredBy       Marketer?         @relation("ReferredBy", fields: [referredById], references: [id])
+  marketer               Marketer?                 @relation("MarketerUser")
+  marketerRequests       MarketerRequest[]
+  referredBy             Marketer?                 @relation("ReferredBy", fields: [referredById], references: [id])
+  doctorPatientLinks     DoctorPatientConnection[] @relation("DoctorPatient")
+  authoredPatientRecords DoctorPatientRecord[]     @relation("PatientRecordAuthor")
+  doctorAppointments     DoctorAppointment[]       @relation("AppointmentPatient")
+  fitnessPlans          FitnessPlan[]             @relation("FitnessTrainee")
+  fitnessProgress       FitnessProgress[]         @relation("FitnessProgressAuthor")
 }
 
 // Only a SHA-256 hash of the raw token is ever stored — the raw value exists only in the
@@ -342,34 +347,34 @@ model Category {
 
 // A merchant's business profile (section 3)
 model MerchantProfile {
-  id              String                 @id @default(uuid())
-  userId          String                 @unique
-  businessName    String
-  usdRateSyp      Int? // the shop's own rate: how many lira one dollar is worth to it (set in its account)
+  id                 String                 @id @default(uuid())
+  userId             String                 @unique
+  businessName       String
+  usdRateSyp         Int? // the shop's own rate: how many lira one dollar is worth to it (set in its account)
   priceCurrency      String? // SYP | USD: the money the shop writes ALL its prices in (one setting for the whole shop); null = the market currency
-  showBothCurrencies Boolean @default(false) // show shoppers the price in lira and in dollars (needs usdRateSyp)
-  categoryId      String
-  address         String?
-  latitude        Float?
-  longitude       Float?
-  phone           String?
-  whatsapp        String?
-  approvalStatus  MerchantApprovalStatus @default(PENDING) // manual admin approval (section 63)
+  showBothCurrencies Boolean                @default(false) // show shoppers the price in lira and in dollars (needs usdRateSyp)
+  categoryId         String
+  address            String?
+  latitude           Float?
+  longitude          Float?
+  phone              String?
+  whatsapp           String?
+  approvalStatus     MerchantApprovalStatus @default(PENDING) // manual admin approval (section 63)
   // The merchant plan the super admin assigned to this shop: its monthlyBroadcastLimit is how many announcements the shop
   // may send per month. No plan = the platform default (settings.broadcasts.merchantDefaultMonthly).
-  planId          String?
-  planEndsAt      DateTime? // when the store plan the shop chose ends (null = no end date, e.g. assigned by the admin)
-  rejectionReason String?
-  reviewNote      String? // why the AI sent it to the admin instead of approving it
-  reviewSource    String? // RULES | AI | ADMIN: who decided last
+  planId             String?
+  planEndsAt         DateTime? // when the store plan the shop chose ends (null = no end date, e.g. assigned by the admin)
+  rejectionReason    String?
+  reviewNote         String? // why the AI sent it to the admin instead of approving it
+  reviewSource       String? // RULES | AI | ADMIN: who decided last
   // {"sat":[{"open":"09:00","close":"22:00"}], ...} — validated in routes; evaluated in the platform timezone
-  openingHours    Json?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  openingHours       Json?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
-  user                 User                  @relation(fields: [userId], references: [id])
-  category             Category              @relation(fields: [categoryId], references: [id])
-  plan                 ServicePlan?          @relation(fields: [planId], references: [id])
+  user                 User                      @relation(fields: [userId], references: [id])
+  category             Category                  @relation(fields: [categoryId], references: [id])
+  plan                 ServicePlan?              @relation(fields: [planId], references: [id])
   favoritedBy          FavoriteMerchant[]
   discounts            Discount[]
   shippingMethods      ShippingMethod[]
@@ -380,8 +385,179 @@ model MerchantProfile {
   orders               Order[]
   affiliates           MerchantAffiliate[]
   branches             ShopBranch[]
+  doctorPatients       DoctorPatientConnection[]
+  appointmentSettings  DoctorAppointmentSetting?
+  appointments         DoctorAppointment[]
+  fitnessProfile       FitnessProfile?
+  fitnessPlans         FitnessPlan[]
+  fitnessOffers        FitnessOffer[]
 
   @@index([categoryId])
+}
+
+// Public coaching profile details; the account avatar is reused as the coach's photo.
+model FitnessProfile {
+  id               String   @id @default(uuid())
+  merchantId       String   @unique
+  displayName      String?
+  headline         String?
+  yearsExperience  Int?
+  specialties      String[] @default([])
+  achievements     String[] @default([])
+  certifications   String[] @default([])
+  certificationPhotoIds String[] @default([])
+  updatedAt        DateTime @updatedAt
+  merchant         MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+}
+
+model FitnessOffer {
+  id              String   @id @default(uuid())
+  merchantId      String
+  title           String
+  description     String?  @db.Text
+  durationMonths  Int      @default(1)
+  priceCents      Int
+  currency        String   @default("USD")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  merchant        MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, isActive])
+}
+
+enum FitnessPlanKind {
+  WORKOUT
+  NUTRITION
+}
+
+// Plans are private to their coach and the assigned trainee.
+model FitnessPlan {
+  id             String          @id @default(uuid())
+  coachMerchantId String
+  traineeUserId   String
+  kind            FitnessPlanKind
+  title           String
+  details         Json
+  notes           String?         @db.Text
+  startsAt        DateTime?
+  endsAt          DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  coach           MerchantProfile @relation(fields: [coachMerchantId], references: [id], onDelete: Cascade)
+  trainee         User            @relation("FitnessTrainee", fields: [traineeUserId], references: [id], onDelete: Cascade)
+  progress        FitnessProgress[]
+
+  @@index([coachMerchantId, createdAt])
+  @@index([traineeUserId, createdAt])
+}
+
+model FitnessProgress {
+  id          String      @id @default(uuid())
+  planId      String
+  userId      String
+  weightKg    Float?
+  note        String?     @db.Text
+  completedAt DateTime    @default(now())
+  plan        FitnessPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user        User        @relation("FitnessProgressAuthor", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([planId, completedAt])
+}
+
+enum DoctorPatientStatus {
+  PENDING
+  ACTIVE
+  DECLINED
+  REVOKED
+}
+
+enum DoctorPatientRecordKind {
+  VISIT
+  DIAGNOSIS
+  MEDICATION
+  INSTRUCTIONS
+  FOLLOW_UP
+}
+
+// A patient must explicitly accept a doctor's request before any clinical notes are shared.
+model DoctorPatientConnection {
+  id               String              @id @default(uuid())
+  doctorMerchantId String
+  patientUserId    String
+  status           DoctorPatientStatus @default(PENDING)
+  requestedAt      DateTime            @default(now())
+  consentedAt      DateTime?
+  revokedAt        DateTime?
+  updatedAt        DateTime            @updatedAt
+
+  doctor  MerchantProfile       @relation(fields: [doctorMerchantId], references: [id], onDelete: Cascade)
+  patient User                  @relation("DoctorPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
+  records DoctorPatientRecord[]
+
+  @@unique([doctorMerchantId, patientUserId])
+  @@index([patientUserId, status])
+  @@index([doctorMerchantId, status])
+}
+
+// The medical text is encrypted before it reaches the database. Only the doctor on the active
+// connection and the patient themselves can read it through the API.
+model DoctorPatientRecord {
+  id           String                  @id @default(uuid())
+  connectionId String
+  authorUserId String
+  kind         DoctorPatientRecordKind
+  contentEnc   String                  @db.Text
+  createdAt    DateTime                @default(now())
+
+  connection DoctorPatientConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  author     User                    @relation("PatientRecordAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId, createdAt])
+}
+
+enum DoctorAppointmentStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum DoctorAppointmentKind {
+  VISIT
+  FOLLOW_UP
+}
+
+model DoctorAppointmentSetting {
+  id                 String   @id @default(uuid())
+  doctorMerchantId   String   @unique
+  enabled            Boolean  @default(false)
+  slotMinutes        Int      @default(30)
+  advanceDays        Int      @default(30)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  doctor             MerchantProfile @relation(fields: [doctorMerchantId], references: [id], onDelete: Cascade)
+}
+
+// Booking is separate from the optional doctor-patient medical record consent.
+model DoctorAppointment {
+  id               String                  @id @default(uuid())
+  doctorMerchantId String
+  patientUserId    String
+  startsAt         DateTime
+  endsAt           DateTime
+  kind             DoctorAppointmentKind   @default(VISIT)
+  complaintEnc     String?                 @db.Text
+  status           DoctorAppointmentStatus @default(CONFIRMED)
+  reminder24hSentAt DateTime?
+  reminder1hSentAt  DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  doctor           MerchantProfile         @relation(fields: [doctorMerchantId], references: [id], onDelete: Cascade)
+  patient          User                    @relation("AppointmentPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
+
+  @@index([doctorMerchantId, startsAt])
+  @@index([patientUserId, startsAt])
 }
 
 // One more place of the same shop (a second branch, maybe in another city). The shop page, its products and its

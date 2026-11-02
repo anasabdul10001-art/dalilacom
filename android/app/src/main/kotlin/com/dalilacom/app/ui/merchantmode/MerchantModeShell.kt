@@ -161,6 +161,7 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
             when (selectedTab) {
                 MerchantTab.Home -> MerchantHome(
                     steps = onboarding,
+                    isFitnessProvider = me?.isFitnessProvider == true,
                     onLocation = { rootNavController.navigate("merchantProfile") },
                     onHours = { rootNavController.navigate("merchantHours") },
                     onDiscount = { rootNavController.navigate("discounts") },
@@ -168,6 +169,8 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
                     onOrders = { selectedTab = MerchantTab.Orders },
                     onAds = { selectedTab = MerchantTab.Promo },
                     onShop = { rootNavController.navigate("merchantProfile") },
+                    onFitnessProfile = { rootNavController.navigate("fitnessProfile") },
+                    onFitnessPlans = { rootNavController.navigate("fitnessPlans") },
                 )
                 MerchantTab.Redeem -> RedeemScreen(factory, onOpenHistory = { rootNavController.navigate("discountHistory/shop") }, onExportReceipt = { ref ->
                     scope.launch { DocumentPrinter.export(context, container.tokenStore, "/invoices/discount/$ref", AppStrings.get(R.string.s_153612e1)) }
@@ -206,8 +209,10 @@ fun MerchantModeShell(rootNavController: NavHostController, container: AppContai
 @Composable
 private fun MerchantHome(
     steps: OnboardingDto?,
+    isFitnessProvider: Boolean,
     onLocation: () -> Unit, onHours: () -> Unit, onDiscount: () -> Unit, onProduct: () -> Unit,
     onOrders: () -> Unit, onAds: () -> Unit, onShop: () -> Unit,
+    onFitnessProfile: () -> Unit, onFitnessPlans: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
         if (steps == null) {
@@ -274,7 +279,10 @@ private fun MerchantHome(
             Triple("📍", R.string.ms_q_shop, onShop),
             Triple("📣", R.string.ms_q_ads, onAds),
             Triple("🧾", R.string.ms_q_orders, onOrders),
-        )
+        ) + if (isFitnessProvider) listOf(
+            Triple("🏋️", R.string.fitness_profile, onFitnessProfile),
+            Triple("📋", R.string.fitness_plans_title, onFitnessPlans),
+        ) else emptyList()
         quick.chunked(2).forEach { pair ->
             Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 pair.forEach { (icon, label, action) ->

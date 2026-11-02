@@ -26,6 +26,7 @@ data class RouteTarget(val id: String, val name: String, val latitude: Double, v
 /** Simple hand-rolled DI container — one instance shared across the app via MainActivity. */
 class AppContainer(context: Context) {
     val pendingRoute = kotlinx.coroutines.flow.MutableStateFlow<RouteTarget?>(null)
+    val pendingDoctorBooking = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 
     val tokenStore = TokenStore(context.applicationContext)
     val sessionStore = SessionStore(context.applicationContext)
@@ -51,6 +52,8 @@ class AppContainer(context: Context) {
     val merchantRepository = MerchantRepository(api, sessionStore)
     val responderRepository = ResponderRepository(api)
     val placesRepository = PlacesRepository(api)
+    val doctorCareRepository = com.dalilacom.app.data.repository.DoctorCareRepository(api)
+    val fitnessPlansRepository = com.dalilacom.app.data.repository.FitnessPlansRepository(api)
     val profileRepository = ProfileRepository(api)
     val notificationRepository = NotificationRepository(api, context.applicationContext)
     val broadcastRepository = BroadcastRepository(api)
