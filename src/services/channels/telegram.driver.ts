@@ -47,6 +47,6 @@ export const telegramDriver: ChannelDriverImpl = {
     const setBody = (await set.json()) as { ok?: boolean; description?: string };
     if (!setBody.ok) throw new Error(setBody.description ?? "Telegram rejected the webhook");
     const me = (await (await fetch(`${api}/getMe`)).json()) as { result?: { username?: string } };
-    return { externalAccountId: me.result?.username };
+    return { externalAccountId: me.result?.username, accountName: me.result?.username ? `@${me.result.username}` : undefined };
   },
 };

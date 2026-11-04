@@ -67,9 +67,17 @@ export function metaRedirectUri(): string {
   return `${(process.env.PUBLIC_BASE_URL ?? "").replace(/\/+$/, "")}/responder/meta/oauth/callback`;
 }
 
-export function metaScopes(): string[] {
+/**
+ * Comment replies. The Meta app already has these two, but they are not part of the first App Review, so only an admin
+ * (a role holder on the Meta app, who can use them without approval) is asked for them: the owner can build and test the
+ * comment feature end to end now, and every other merchant keeps the messaging permissions only.
+ */
+const COMMENT_SCOPES = ["pages_manage_engagement", "pages_read_user_content"];
+
+export function metaScopes(role?: string): string[] {
   const override = process.env.META_OAUTH_SCOPES?.split(/[,\s]+/).filter(Boolean);
-  return override && override.length > 0 ? override : DEFAULT_SCOPES;
+  if (override && override.length > 0) return override;
+  return role === "ADMIN" ? [...DEFAULT_SCOPES, ...COMMENT_SCOPES] : DEFAULT_SCOPES;
 }
 
 /** Where the browser sends the merchant back to at the end. The Android app registers this scheme. */
@@ -133,7 +141,7 @@ export function verifyPickerToken(sessionId: string, pageId: string, driver: Cha
 
 /* ---------------- Facebook itself ---------------- */
 
-export function metaDialogUrl(userId: string, state: string = signState(userId)): string {
+export function metaDialogUrl(userId: string, state: string = signState(userId), role?: string): string {
   const params = new URLSearchParams({
     client_id: metaAppId() ?? "",
     redirect_uri: metaRedirectUri(),
@@ -144,7 +152,7 @@ export function metaDialogUrl(userId: string, state: string = signState(userId))
   // scope list: META_LOGIN_CONFIG_ID plus META_LOGIN_USE_CONFIG=true switches to it. Off by default: the configuration
   // dialog answered "App not active" for this app while the plain scope dialog worked.
   if (process.env.META_LOGIN_CONFIG_ID && process.env.META_LOGIN_USE_CONFIG === "true") params.set("config_id", process.env.META_LOGIN_CONFIG_ID);
-  else params.set("scope", metaScopes().join(","));
+  else params.set("scope", metaScopes(role).join(","));
   return `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${params.toString()}`;
 }
 
@@ -267,8 +275,11 @@ export async function connectFromSession(opts: {
   const ctx = { credentials, hookToken, channelConfig: channel.config as Record<string, any> };
 
   let externalAccountId: string | undefined;
+  let accountName: string | undefined;
   try {
-    externalAccountId = (await driver.register?.(ctx))?.externalAccountId;
+    const registered = await driver.register?.(ctx);
+    externalAccountId = registered?.externalAccountId;
+    accountName = registered?.accountName;
   } catch (err) {
     throw new MetaOAuthError("CHANNEL_CONNECT_FAILED", err instanceof Error ? err.message : "تعذّر ربط الصفحة", 400);
   }
@@ -287,6 +298,7 @@ export async function connectFromSession(opts: {
       channelId: channel.id,
       credentialsEnc: encryptJson(credentials),
       externalAccountId,
+      accountName: accountName ?? (opts.driver === "INSTAGRAM" ? (page.instagramUsername ? `@${page.instagramUsername}` : page.name) : page.name) ?? null,
       hookToken,
     },
   });

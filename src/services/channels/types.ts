@@ -22,11 +22,13 @@ export interface ChannelDriverImpl {
   parseIncoming(body: any, headers: Record<string, string | string[] | undefined>, ctx: DriverContext): IncomingMessage | null;
   sendReply(text: string, conversationRef: string, ctx: DriverContext): Promise<void>;
   /** Called when a user connects: registers the webhook with the platform where needed. */
-  register?(ctx: DriverContext): Promise<{ externalAccountId?: string }>;
+  register?(ctx: DriverContext): Promise<{ externalAccountId?: string; accountName?: string }>;
   /** Validates the credentials a user must supply, or returns an error message. */
   validateCredentials(creds: Record<string, string>): string | null;
   /** Recent posts of the connected account, so a rule can be limited to specific ones. */
   listPosts?(ctx: DriverContext): Promise<PostSummary[]>;
+  /** What the connected account says about itself (about, address, hours, recent posts): the only facts an AI reply may use. */
+  describe?(ctx: DriverContext): Promise<string>;
 }
 
 export interface DriverContext {

@@ -42,6 +42,7 @@ data class ConnectionDto(
     val id: String,
     val channel: String,
     val externalAccountId: String? = null,
+    val accountName: String? = null,
     val isActive: Boolean,
     val hookUrl: String? = null,
     val driver: String = "",

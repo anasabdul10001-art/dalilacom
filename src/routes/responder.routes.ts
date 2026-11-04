@@ -150,6 +150,7 @@ responderRouter.get("/connections", requireAuth, route(async (req, res) => {
       id: c.id,
       channel: c.channel.name,
       externalAccountId: c.externalAccountId,
+      accountName: c.accountName,
       isActive: c.isActive,
       driver: c.channel.driver,
       supportsPosts: c.channel.driver === "FACEBOOK" || c.channel.driver === "INSTAGRAM",
@@ -179,8 +180,11 @@ responderRouter.post("/connections", requireAuth, route(async (req, res) => {
   const hookToken = crypto.randomBytes(24).toString("hex");
   const ctx = { credentials: parsed.data.credentials, hookToken, channelConfig: channel.config as Record<string, any> };
   let externalAccountId: string | undefined;
+  let accountName: string | undefined;
   try {
-    externalAccountId = (await driver.register?.(ctx))?.externalAccountId;
+    const registered = await driver.register?.(ctx);
+    externalAccountId = registered?.externalAccountId;
+    accountName = registered?.accountName;
   } catch (err) {
     return sendError(res, 400, "CHANNEL_CONNECT_FAILED", err instanceof Error ? err.message : "تعذّر ربط القناة");
   }
@@ -198,6 +202,7 @@ responderRouter.post("/connections", requireAuth, route(async (req, res) => {
       channelId: channel.id,
       credentialsEnc: encryptJson(parsed.data.credentials),
       externalAccountId,
+      accountName,
       hookToken,
     },
   });

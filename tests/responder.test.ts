@@ -198,20 +198,18 @@ describe("Answering customers", () => {
     expect((await request(app).post(`/responder/inbox/${waiting[1].id}/send`).set(stranger.auth).send({ reply: "hi" })).status).toBe(404);
   });
 
-  it("settles a complaint from the shop's own knowledge when it can, and hands over to a person when it cannot", async () => {
+  it("settles a complaint from what the owner wrote about the business when it can, and hands over to a person when it cannot", async () => {
     const owner = await running("respcomplaintai", "MERCHANT");
-    const category = await prisma.category.upsert({ where: { slug: "resp-test-cat" }, update: {}, create: { name: "Responder Test", slug: "resp-test-cat" } });
-    const shop = await prisma.merchantProfile.create({ data: { userId: owner.id, businessName: "متجر الشكاوى", categoryId: category.id, approvalStatus: "APPROVED", address: "شارع الاختبار", phone: "0999" } });
-    await prisma.product.create({ data: { merchantId: shop.id, name: "قهوة", priceCents: 500, stock: 3 } });
+    await request(app).patch("/responder/profile").set(owner.auth).send({ businessDescription: "محلنا بشارع الاختبار ودوامنا حتى 9" });
     process.env.GROQ_API_KEY = "test-groq-key";
 
-    // 1) the shop's information settles it: answered, marked sent, and the owner still hears about it
+    // 1) the owner's description settles it: answered, marked sent, and the owner still hears about it
     aiAnswer = JSON.stringify({ reply: "نعتذر! محلنا بشارع الاختبار ودوامنا حتى 9", handoff: false });
     await customerSays(owner.hook, "عندي شكوى: وين محلكم؟", "c-1");
     expect(sentReplies.at(-1)!.body.text).toBe("نعتذر! محلنا بشارع الاختبار ودوامنا حتى 9");
     expect((await inbox(owner, "SENT")).body[0]).toMatchObject({ reason: "complaint", intent: "complaint", status: "SENT" });
     const call = aiCalls.filter((c) => c.system.startsWith("A customer sent a complaint")).at(-1)!;
-    expect(call.system).toContain("Address: شارع الاختبار");
+    expect(call.system).toContain("شارع الاختبار"); // from the owner's description, not from a Dalilacom shop
     expect(call.system).toContain("Never promise a refund");
     expect((await notices(owner.id)).some((n) => n.title.includes("تم الرد عليها"))).toBe(true);
 
@@ -246,7 +244,7 @@ describe("Answering customers", () => {
 });
 
 describe("When no rule matches: the fallback", () => {
-  it("sends a fixed text, or lets the AI answer from the shop's real products and the conversation so far", async () => {
+  it("sends a fixed text, or lets the AI answer from what the owner wrote, never from the Dalilacom store, and the conversation so far", async () => {
     const owner = await running("respfallback", "MERCHANT");
     const category = await prisma.category.upsert({ where: { slug: "resp-test-cat" }, update: {}, create: { name: "Responder Test", slug: "resp-test-cat" } });
     const shop = await prisma.merchantProfile.create({ data: { userId: owner.id, businessName: "متجر الاختبار", categoryId: category.id, approvalStatus: "APPROVED", address: "شارع الاختبار" } });
@@ -258,15 +256,15 @@ describe("When no rule matches: the fallback", () => {
     await customerSays(owner.hook, "مرحبا", "chat-fb");
     expect(sentReplies.at(-1)!.body.text).toBe("أهلًا سامر، رح نرد عليك قريبًا");
 
-    // AI fallback: facts come from the shop, not from the model's imagination
+    // AI fallback: facts come from the owner's description (and the connected page), never from the Dalilacom store
     process.env.GROQ_API_KEY = "test-groq-key";
     aiAnswer = "الشوكولا الفاخرة بـ 12.50";
     await request(app).patch("/responder/profile").set(owner.auth).send({ fallbackMode: "AI", businessDescription: "محل شوكولا" });
     await customerSays(owner.hook, "بكم الشوكولا؟", "chat-ai");
     expect(sentReplies.at(-1)!.body.text).toBe("الشوكولا الفاخرة بـ 12.50");
     const first = aiCalls.filter((c) => !c.system.startsWith("Classify")).at(-1)!;
-    expect(first.system).toContain("Product: شوكولا فاخرة — 12.50 — in stock");
-    expect(first.system).toContain("Address: شارع الاختبار");
+    expect(first.system).not.toContain("شوكولا فاخرة"); // the responder is separate from the Dalilacom store
+    expect(first.system).not.toContain("شارع الاختبار");
     expect(first.system).toContain("About the business: محل شوكولا");
     expect(first.user).toBe("بكم الشوكولا؟"); // nothing earlier in this conversation
 

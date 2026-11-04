@@ -1,6 +1,5 @@
 import { ChannelConnection, ResponderStatus, ResponderSubscription, Role, SocialChannel } from "@prisma/client";
 import { prisma } from "../prisma";
-import { liveDiscountWhere } from "../lib/discounts";
 import { decryptJson } from "./crypto.service";
 import { drivers } from "./channels";
 import { IncomingMessage } from "./channels/types";
@@ -134,22 +133,34 @@ async function consumeAi(userId: string, limit: number): Promise<boolean> {
   return true;
 }
 
-/** Facts the AI may use for a merchant: the shop, its address and the products with their real prices (capped, so it stays small). */
-async function businessInfoFor(userId: string): Promise<string | undefined> {
-  const shop = await prisma.merchantProfile.findUnique({
-    where: { userId },
-    select: { id: true, businessName: true, address: true, phone: true, category: { select: { name: true } }, discounts: { where: liveDiscountWhere(), select: { title: true, percent: true }, take: 10 } },
-  });
-  if (!shop) return undefined;
-  const products = await prisma.product.findMany({ where: { merchantId: shop.id, isActive: true }, orderBy: { createdAt: "desc" }, take: 25, select: { name: true, priceCents: true, stock: true } });
-  const lines = [
-    `Shop: ${shop.businessName}${shop.category ? ` (${shop.category.name})` : ""}`,
-    shop.address ? `Address: ${shop.address}` : "",
-    shop.phone ? `Phone: ${shop.phone}` : "",
-    ...shop.discounts.map((d) => `Offer for members: ${d.title} (${d.percent}% off)`),
-    ...products.map((x) => `Product: ${x.name} — ${(x.priceCents / 100).toFixed(2)} — ${x.stock > 0 ? "in stock" : "out of stock"}`),
-  ].filter(Boolean);
-  return lines.join("\n").slice(0, 2500);
+/**
+ * Facts the AI may use: only what the connected Facebook Page / Instagram account says about itself (about text,
+ * address, hours, its own posts), read through the platform. The responder is a service for those accounts and
+ * never reads anything from the Dalilacom store. Telegram and webhook channels give none, so the AI there relies
+ * on the description the owner wrote in the responder settings alone. Cached a few minutes per connection.
+ */
+const FACTS_TTL = 10 * 60 * 1000;
+const factsCache = new Map<string, { at: number; text: string | undefined }>();
+
+export async function businessInfoFor(connection: ConnectionWithChannel): Promise<string | undefined> {
+  const driver = drivers[connection.channel.driver];
+  if (!driver.describe) return undefined;
+  const cached = factsCache.get(connection.id);
+  if (cached && Date.now() - cached.at < FACTS_TTL) return cached.text;
+  let text: string | undefined;
+  try {
+    text = (
+      await driver.describe({
+        credentials: decryptJson(connection.credentialsEnc),
+        hookToken: connection.hookToken,
+        channelConfig: connection.channel.config as Record<string, any>,
+      })
+    ).slice(0, 3500) || undefined;
+  } catch {
+    return undefined; // do not cache a failure: the next message tries again
+  }
+  factsCache.set(connection.id, { at: Date.now(), text });
+  return text;
 }
 
 /** The last few turns of this conversation (within a day), oldest first. */
@@ -206,7 +217,7 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
         message: msg.text,
         businessDescription: sub.businessDescription,
         tone: sub.tone,
-        businessInfo: await businessInfoFor(userId),
+        businessInfo: await businessInfoFor(connection),
         history: await historyFor(connection.id, msg.conversationRef),
       });
     }
@@ -238,7 +249,7 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
       businessDescription: sub.businessDescription,
       tone: sub.tone,
       instructions,
-      businessInfo: await businessInfoFor(userId),
+      businessInfo: await businessInfoFor(connection),
       history: await historyFor(connection.id, msg.conversationRef),
     });
   };

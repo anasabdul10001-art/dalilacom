@@ -272,7 +272,7 @@ private fun ChannelsTab(
         Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             Column(Modifier.padding(12.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("${connection.channel}${connection.externalAccountId?.let { " — $it" } ?: ""}")
+                    Text("${connection.channel}${(connection.accountName ?: connection.externalAccountId)?.let { " — $it" } ?: ""}")
                     Switch(checked = connection.isActive, onCheckedChange = { viewModel.toggleConnection(connection.id, it) })
                 }
                 connection.hookUrl?.let { Text(AppStrings.get(R.string.fmt_hook_url, it), style = MaterialTheme.typography.bodySmall) }

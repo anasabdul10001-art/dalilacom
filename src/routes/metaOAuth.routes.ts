@@ -60,7 +60,7 @@ metaOAuthRouter.get("/oauth/status", requireAuth, route(async (req, res) => {
     available: metaOAuthConfigured() && metaOpenFor(req.user!.role),
     responderRunning: await responderRunning(req.user!.id),
     redirectUri: metaRedirectUri(),
-    scopes: metaScopes(),
+    scopes: metaScopes(req.user!.role),
     deepLink: appDeepLink(),
   });
 }));
@@ -82,27 +82,28 @@ metaOAuthRouter.get("/oauth/start", requireAuth, route(async (req, res) => {
   }
   const state = signState(req.user!.id, req.query.platform === "web");
   res.json({
-    url: metaDialogUrl(req.user!.id, state),
+    url: metaDialogUrl(req.user!.id, state, req.user!.role),
     // Phones with the Facebook app installed hand a facebook.com link opened from another app to the Facebook app, whose
     // in-app page cannot show this dialog. This link stays on our own domain and then moves on by script (no tap), which
     // keeps the dialog in the browser.
     launchUrl: `${new URL(metaRedirectUri()).origin}/responder/meta/oauth/go?state=${encodeURIComponent(state)}`,
     redirectUri: metaRedirectUri(),
-    scopes: metaScopes(),
+    scopes: metaScopes(req.user!.role),
     expiresInMinutes: 15,
   });
 }));
 
 /** The app opens this in the phone's browser; the signed state proves who started it. */
-metaOAuthRouter.get("/oauth/go", (req, res) => {
+metaOAuthRouter.get("/oauth/go", route(async (req, res) => {
   const state = typeof req.query.state === "string" ? req.query.state : undefined;
   const userId = verifyState(state);
   if (!userId || !metaOAuthConfigured()) {
     return res.status(400).send(page("تعذّر إكمال الربط", "<p>رابط البدء غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.</p>"));
   }
-  const target = metaDialogUrl(userId, state);
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  const target = metaDialogUrl(userId, state, user?.role);
   res.redirect(302, target);
-});
+}));
 
 /* ---------------- step 2: Facebook sends the merchant's browser back here ---------------- */
 

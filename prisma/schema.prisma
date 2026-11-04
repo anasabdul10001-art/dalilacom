@@ -960,6 +960,7 @@ model ChannelConnection {
   channelId         String
   credentialsEnc    String // AES-256-GCM encrypted JSON (bot token, outbound URL/secret, ...)
   externalAccountId String?
+  accountName       String? // the Page / account name as the platform shows it, so people see a name, not just an id
   hookToken         String   @unique
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())

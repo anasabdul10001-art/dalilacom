@@ -68,10 +68,10 @@ export const facebookDriver: ChannelDriverImpl = {
 
   async register(ctx) {
     const { pageId, pageAccessToken } = ctx.credentials;
-    const page = await graph<{ id: string }>(`${pageId}?fields=id,name`, pageAccessToken);
+    const page = await graph<{ id: string; name?: string }>(`${pageId}?fields=id,name`, pageAccessToken);
     if (page.id !== pageId) throw new Error("الـpageId ما بيطابق الـtoken");
     await subscribePage(pageId, pageAccessToken);
-    return { externalAccountId: pageId };
+    return { externalAccountId: pageId, accountName: page.name };
   },
 
   async listPosts(ctx): Promise<PostSummary[]> {
@@ -87,6 +87,29 @@ export const facebookDriver: ChannelDriverImpl = {
       image: p.full_picture,
     }));
   },
+
+  /** Everything the Page itself states: its about text, address, contact details, hours and what it posted. */
+  async describe(ctx): Promise<string> {
+    const { pageId, pageAccessToken } = ctx.credentials;
+    const page = await graph<any>(
+      `${pageId}?fields=name,about,description,category,phone,website,emails,single_line_address,hours,price_range`,
+      pageAccessToken,
+    ).catch(() => ({}));
+    const hours = page.hours ? clip(JSON.stringify(page.hours), 300) : "";
+    const lines = [
+      page.name ? `Page: ${clip(page.name, 120)}${page.category ? ` (${clip(page.category, 80)})` : ""}` : "",
+      page.about ? `About: ${clip(page.about)}` : "",
+      page.description ? `Description: ${clip(page.description, 800)}` : "",
+      page.single_line_address ? `Address: ${clip(page.single_line_address, 200)}` : "",
+      page.phone ? `Phone: ${clip(page.phone, 40)}` : "",
+      page.website ? `Website: ${clip(page.website, 200)}` : "",
+      Array.isArray(page.emails) && page.emails.length ? `Email: ${clip(page.emails[0], 120)}` : "",
+      page.price_range ? `Price range: ${clip(page.price_range, 40)}` : "",
+      hours ? `Opening hours: ${hours}` : "",
+      ...postLines(await facebookDriver.listPosts!(ctx).catch(() => [])),
+    ].filter(Boolean);
+    return lines.join("\n");
+  },
 };
 
 export const instagramDriver: ChannelDriverImpl = {
@@ -96,10 +119,10 @@ export const instagramDriver: ChannelDriverImpl = {
 
   async register(ctx) {
     const { pageId, instagramAccountId, pageAccessToken } = ctx.credentials;
-    const account = await graph<{ id: string }>(`${instagramAccountId}?fields=id,username`, pageAccessToken);
+    const account = await graph<{ id: string; username?: string }>(`${instagramAccountId}?fields=id,username`, pageAccessToken);
     if (account.id !== instagramAccountId) throw new Error("حساب إنستغرام ما بيطابق الـtoken");
     await subscribePage(pageId, pageAccessToken);
-    return { externalAccountId: instagramAccountId };
+    return { externalAccountId: instagramAccountId, accountName: account.username ? `@${account.username}` : undefined };
   },
 
   async listPosts(ctx): Promise<PostSummary[]> {
@@ -115,7 +138,31 @@ export const instagramDriver: ChannelDriverImpl = {
       image: m.thumbnail_url ?? m.media_url,
     }));
   },
+
+  /** The account's own bio and what it posted; nothing from outside Instagram. */
+  async describe(ctx): Promise<string> {
+    const { instagramAccountId, pageAccessToken } = ctx.credentials;
+    const account = await graph<any>(`${instagramAccountId}?fields=name,username,biography,website`, pageAccessToken).catch(() => ({}));
+    const lines = [
+      account.name || account.username ? `Account: ${clip(account.name || account.username, 120)}${account.username ? ` (@${clip(account.username, 60)})` : ""}` : "",
+      account.biography ? `Bio: ${clip(account.biography, 600)}` : "",
+      account.website ? `Website: ${clip(account.website, 200)}` : "",
+      ...postLines(await instagramDriver.listPosts!(ctx).catch(() => [])),
+    ].filter(Boolean);
+    return lines.join("\n");
+  },
 };
+
+
+/** Keeps one line per fact short, so a long post cannot crowd the others out of the prompt. */
+const clip = (v: unknown, n = 400): string => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+
+function postLines(posts: PostSummary[], limit = 12): string[] {
+  return posts
+    .filter((p) => p.text && !p.text.startsWith("("))
+    .slice(0, limit)
+    .map((p) => `Post${p.createdAt ? ` (${p.createdAt.slice(0, 10)})` : ""}: ${clip(p.text)}`);
+}
 
 /** Meta signs every webhook body with the app secret — anything unsigned or mis-signed is rejected. */
 export function verifyMetaSignature(rawBody: Buffer | undefined, header: string | undefined, appSecret: string): boolean {
