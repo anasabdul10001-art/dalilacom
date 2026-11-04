@@ -1,7 +1,7 @@
 # Meta App Review video: shot list and on-screen captions
 
 Target length: 3 to 4 minutes. One continuous recording. English everywhere (site, Facebook, captions).
-Permissions shown: `pages_show_list`, `pages_manage_metadata`, `pages_messaging`, `pages_read_engagement`.
+Permissions shown: `pages_show_list`, `pages_manage_metadata`, `pages_messaging` (three; posts and comments come in the second review).
 
 ## Before recording (about 10 minutes)
 
@@ -9,9 +9,8 @@ Permissions shown: `pages_show_list`, `pages_manage_metadata`, `pages_messaging`
 2. Remove the old consent so the full permission screen appears: facebook.com/settings?tab=business_tools, press **Remove** on the app **Dalilacom** (not "Dalilacom Responder").
 3. Use a **private window** (Ctrl+Shift+N) so Chrome autofill shows nothing from earlier tests. Close every other tab.
 4. dalilacom.com/app/ in English: Account menu, Language, English. Sign in as the merchant (Anas Abdulaziz). The Auto-responder must have no channel, no rule, and an empty Inbox (already cleaned).
-5. Publish one short post on the Page "متجر الأمل التجريبي" (for the "Load my posts" step), for example: "Stainless steel water bottle, 5 dollars."
-6. Customer: a **different** Facebook account (for example Nermeen Sa) on a phone or second browser, ready on m.me/1449090131622653. Never the merchant's own account.
-7. Windows screen recorder (Win+Alt+R). Record the browser window only. No passwords on screen.
+5. Customer: a **different** Facebook account (for example Nermeen Sa) on a phone or second browser, ready on m.me/1449090131622653. Never the merchant's own account.
+6. Windows screen recorder (Win+Alt+R). Record the browser window only. No passwords on screen.
 
 ## Scenes (caption in quotes: type it as a text overlay or read it)
 
@@ -20,10 +19,9 @@ Permissions shown: `pages_show_list`, `pages_manage_metadata`, `pages_messaging`
 | 0:00 | Open dalilacom.com/app/, show you are signed in | "Dalilacom is a business directory. Shop owners can connect their own Facebook Page to an auto-responder." |
 | 0:15 | Auto-responder, tab **Channels** | "The merchant opens Channels." |
 | 0:20 | Press **Connect with a Facebook account (easiest)** | "The merchant logs in with Facebook." |
-| 0:30 | Facebook dialog: choose **Only current Pages**, tick the shop Page, Continue. **Stop 5 seconds on the review screen** showing the four permissions | "The merchant chooses which Page to share. Dalilacom asks for four permissions: list the Pages (pages_show_list), read the Page's posts (pages_read_engagement), subscribe the Page to our webhook (pages_manage_metadata), and read and answer its messages (pages_messaging)." |
+| 0:30 | Facebook dialog: choose **Only current Pages**, tick the shop Page, Continue. **Stop 5 seconds on the review screen** showing the three permissions | "The merchant chooses which Page to share. Dalilacom asks for three permissions: list the Pages (pages_show_list), subscribe the Page to our webhook (pages_manage_metadata), and read and answer its messages (pages_messaging)." |
 | 1:00 | Press Save and Done. The page "Connected" appears, then **My connections** shows the Page name and Running | "The Page is connected. We store only a Page token, encrypted." |
 | 1:15 | Tab **Rules**, create: name `Price question`, keyword `price`, reply `Our prices start at 5 dollars.` Press **Add rule** | "The merchant writes a rule: when a customer writes 'price', answer with this text." |
-| 1:40 | In the same form: choose the connection, press **Load my posts**, show the post card, tick it, then clear it. Do not save a second rule | "The merchant can also limit a rule to one post (pages_read_engagement reads the Page's posts)." |
 | 1:55 | Switch to the customer (other account): open the Page chat and send `price` | "A customer writes to the Page on Messenger." |
 | 2:15 | Show the automatic reply arriving in the customer's Messenger | "The reply is sent in the same Messenger conversation (pages_messaging)." |
 | 2:30 | Back on dalilacom.com, tab **Inbox** | "The merchant sees every conversation in the Inbox: the customer's message and the reply sent." |

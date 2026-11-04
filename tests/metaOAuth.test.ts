@@ -122,6 +122,7 @@ describe("Facebook Login: starting the flow", () => {
       expect(plain.url.searchParams.get("config_id")).toBeNull();
       expect(plain.url.searchParams.get("scope")).toContain("pages_messaging");
       expect(plain.url.searchParams.get("scope")).not.toContain("pages_read_user_content");
+      expect(plain.url.searchParams.get("scope")).not.toContain("pages_read_engagement");
 
       process.env.META_LOGIN_USE_CONFIG = "true";
       const configured = await startState(token);

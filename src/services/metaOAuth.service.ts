@@ -21,15 +21,15 @@ const SESSION_TTL_MINUTES = 15;
 const STATE_TTL_MINUTES = 15;
 
 /**
- * Messaging only for now: read the Page, subscribe webhooks and answer direct messages. These are the permissions
- * of the first App Review; asking merchants for anything Meta has not approved yet would only confuse the dialog.
- * The comment ones (pages_manage_engagement next to pages_read_user_content, from the app's "Manage everything on
- * your Page" use case) and the Instagram ones join via META_OAUTH_SCOPES, for the owner's testing now and for
- * everyone once Meta approves them.
+ * Messaging only for now: list the Pages, subscribe webhooks and answer direct messages. These three are the
+ * permissions of the first App Review; asking merchants for anything Meta has not approved yet would only confuse
+ * the dialog. Reading a Page's posts (pages_read_engagement) and answering comments (pages_manage_engagement next to
+ * pages_read_user_content, from the app's "Manage everything on your Page" use case) belong to the second phase, and
+ * so do the Instagram ones: they join via META_OAUTH_SCOPES, for the owner's testing now (admins get them below) and
+ * for everyone once Meta approves them.
  */
 const DEFAULT_SCOPES = [
   "pages_show_list",
-  "pages_read_engagement",
   "pages_manage_metadata",
   "pages_messaging",
 ];
@@ -72,7 +72,7 @@ export function metaRedirectUri(): string {
  * (a role holder on the Meta app, who can use them without approval) is asked for them: the owner can build and test the
  * comment feature end to end now, and every other merchant keeps the messaging permissions only.
  */
-const COMMENT_SCOPES = ["pages_manage_engagement", "pages_read_user_content"];
+const COMMENT_SCOPES = ["pages_read_engagement", "pages_manage_engagement", "pages_read_user_content"];
 
 export function metaScopes(role?: string): string[] {
   const override = process.env.META_OAUTH_SCOPES?.split(/[,\s]+/).filter(Boolean);
