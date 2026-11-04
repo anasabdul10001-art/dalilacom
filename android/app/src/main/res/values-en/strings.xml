@@ -428,6 +428,7 @@
     <string name="fmt_renew_price">Renew subscription — %1$s %2$s</string>
     <string name="fmt_hook_url">Receiving link: %1$s</string>
     <string name="fmt_connect_ig">Connect Instagram (@%1$s)</string>
+    <string name="open_post">Open the post</string>
     <string name="fmt_posts_selected">📌 %1$d posts selected</string>
     <string name="fmt_keywords">Keywords: %1$s</string>
     <string name="fmt_limited_posts">📌 limited to %1$d posts</string>

@@ -311,6 +311,7 @@ PHRASES.en = {
   "الحسومات": "Discounts",
   "الذكاء الاصطناعي غير متاح": "AI is not available",
   "الربط بحسابات ميتا بيحتاج موافقة منهم — لسا مو متاح.": "Connecting Meta accounts needs their approval — not available yet.",
+  "فتح المنشور": "Open the post",
   "ربط فيسبوك وإنستغرام رح يتاح بعد ما توافق Meta على التطبيق — فيك تستعمل تيليغرام بالوقت الحالي": "Linking Facebook and Instagram will open once Meta approves the app — you can use Telegram for now",
   "السعر": "Price",
   "الشكاوى ما بتنرد آليًا أبدًا — بتنتظر ردك بصندوق الوارد.": "Complaints are never answered automatically — they wait for your reply in the inbox.",

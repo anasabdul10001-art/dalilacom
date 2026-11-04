@@ -7726,9 +7726,14 @@ function respRules() {
         <button class="btn small outline" style="width:auto;margin-top:6px" onclick="respLoadPosts()">تحميل منشوراتي</button>
         ${r.postsError ? `<p class="muted" style="color:#b71c1c">${esc(r.postsError)}</p>` : ""}
         ${posts.map((p) => `
-          <label class="row" style="gap:8px;align-items:flex-start;margin-top:8px;font-size:13px">
-            <input type="checkbox" style="width:auto" ${picked.includes(p.id) ? "checked" : ""} onchange="respTogglePost('${esc(p.id)}')" />
-            <span>${esc((p.text || "").slice(0, 90))}<br><span class="muted">${String(p.createdAt || "").slice(0, 10)}</span></span>
+          <label class="card" style="display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:10px;font-size:13px;cursor:pointer;${picked.includes(p.id) ? "outline:2px solid var(--primary,#ba2a34)" : ""}">
+            <input type="checkbox" style="width:auto;margin-top:4px" ${picked.includes(p.id) ? "checked" : ""} onchange="respTogglePost('${esc(p.id)}')" />
+            ${/^https:\/\//.test(p.image || "") ? `<img src="${esc(p.image)}" alt="" loading="lazy" style="width:84px;height:84px;object-fit:cover;border-radius:8px;flex:none" />` : ""}
+            <span style="flex:1;min-width:0">
+              <span style="display:block;white-space:pre-wrap;word-break:break-word">${esc(p.text || "")}</span>
+              <span class="muted" style="display:block;margin-top:4px">${esc(String(p.createdAt || "").slice(0, 16).replace("T", " "))}</span>
+              ${/^https:\/\//.test(p.url || "") ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">فتح المنشور</a>` : ""}
+            </span>
           </label>`).join("")}
         ${picked.length ? `<p class="muted">📌 ${picked.length} منشور محدد — القاعدة بتردّ على التعليقات عليهم بس.</p>` : ""}
       </div>` : ""}

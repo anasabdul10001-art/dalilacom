@@ -11,6 +11,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -385,15 +389,35 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
             }
         }
         if (state.postsLoading) CircularProgressIndicator()
+        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
         state.posts.forEach { post ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(checked = post.id in state.selectedPostIds, onCheckedChange = { viewModel.togglePost(post.id) })
-                Column(Modifier.weight(1f)) {
-                    Text(post.text.take(90), style = MaterialTheme.typography.bodyMedium, maxLines = 2)
-                    post.createdAt?.take(10)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Checkbox(checked = post.id in state.selectedPostIds, onCheckedChange = { viewModel.togglePost(post.id) })
+                    post.image?.takeIf { it.startsWith("https://") }?.let {
+                        coil.compose.AsyncImage(
+                            model = it,
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.size(84.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(post.text, style = MaterialTheme.typography.bodyMedium)
+                        post.createdAt?.take(16)?.replace("T", " ")?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
+                        post.url?.takeIf { it.startsWith("https://") }?.let { link ->
+                            Text(
+                                AppStrings.get(R.string.open_post),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 4.dp).clickable { uriHandler.openUri(link) },
+                            )
+                        }
+                    }
                 }
             }
         }
