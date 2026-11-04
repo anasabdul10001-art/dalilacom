@@ -21,18 +21,16 @@ const SESSION_TTL_MINUTES = 15;
 const STATE_TTL_MINUTES = 15;
 
 /**
- * Matches what the drivers actually do: read the Page, subscribe webhooks, answer DMs and comments.
+ * First review phase: read the Page, subscribe webhooks and answer direct messages.
  * Only permissions the Meta app really has: Facebook refuses the whole dialog ("Invalid Scopes") for the app's own
- * developers when one is missing. The Instagram ones join (via META_OAUTH_SCOPES) once the app has them.
- * pages_manage_engagement (replying to comments) needs pages_read_user_content next to it.
+ * developers when one is missing. The comment ones (pages_manage_engagement needs pages_read_user_content next to it)
+ * and the Instagram ones join via META_OAUTH_SCOPES once the app has them.
  */
 const DEFAULT_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_manage_metadata",
   "pages_messaging",
-  "pages_manage_engagement",
-  "pages_read_user_content",
 ];
 
 export interface MetaPage {
