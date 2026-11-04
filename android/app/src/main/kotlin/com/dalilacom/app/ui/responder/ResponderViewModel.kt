@@ -132,6 +132,23 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         }
     }
 
+    /** Saves changes to an existing rule; the form that creates a rule is reused for this. */
+    fun updateRule(id: String, name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String, onDone: () -> Unit) {
+        val list = keywords.split(",", AppStrings.get(R.string.s_2e1a34c3)).map { it.trim() }.filter { it.isNotEmpty() }
+        if (name.isBlank() || list.isEmpty()) {
+            _uiState.update { it.copy(error = AppStrings.get(R.string.s_56be3fdb), info = null) }
+            return
+        }
+        val postIds = _uiState.value.selectedPostIds.toList()
+        act(AppStrings.get(R.string.s_14737605)) {
+            repository.updateRule(id, CreateRuleRequest(name.trim(), list, mode, replyTemplate.trim(), aiInstructions.trim(), postIds))
+                .also { if (it.isSuccess) { clearPostPicker(); onDone() } }
+        }
+    }
+
+    /** Puts the posts a saved rule is limited to back into the picker, so editing keeps them. */
+    fun selectPosts(ids: List<String>) = _uiState.update { it.copy(selectedPostIds = ids.toSet()) }
+
     fun toggleRule(id: String, active: Boolean) = act(null) { repository.toggleRule(id, active) }
 
     /** Loads the recent posts of a Facebook/Instagram connection so a rule can be limited to some of them. */

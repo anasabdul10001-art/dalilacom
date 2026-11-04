@@ -360,8 +360,9 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
     var mode by remember { mutableStateOf("FIXED") }
     var template by remember { mutableStateOf("") }
     var instructions by remember { mutableStateOf("") }
+    var editingId by remember { mutableStateOf<String?>(null) }
 
-    Text(AppStrings.get(R.string.s_c9fbbd3c), style = MaterialTheme.typography.titleMedium)
+    Text(if (editingId != null) stringResource(R.string.rule_editing) else AppStrings.get(R.string.s_c9fbbd3c), style = MaterialTheme.typography.titleMedium)
     OutlinedTextField(name, { name = it }, label = { Text(AppStrings.get(R.string.s_5ffc2bb8)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Hint(stringResource(R.string.ph_rule_name)) })
     OutlinedTextField(keywords, { keywords = it }, label = { Text(AppStrings.get(R.string.s_d82b4deb)) }, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_rule_keys)) })
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
@@ -427,13 +428,28 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
     }
 
     Spacer(Modifier.height(8.dp))
-    Button(
-        onClick = {
-            viewModel.addRule(name, keywords, mode, template, instructions)
-            name = ""; keywords = ""; template = ""; instructions = ""
-        },
-        enabled = !busy,
-    ) { Text(AppStrings.get(R.string.s_7f9255f4)) }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            onClick = {
+                val id = editingId
+                if (id != null) {
+                    viewModel.updateRule(id, name, keywords, mode, template, instructions) {
+                        editingId = null; name = ""; keywords = ""; template = ""; instructions = ""
+                    }
+                } else {
+                    viewModel.addRule(name, keywords, mode, template, instructions)
+                    name = ""; keywords = ""; template = ""; instructions = ""
+                }
+            },
+            enabled = !busy,
+        ) { Text(if (editingId != null) stringResource(R.string.rule_save_changes) else AppStrings.get(R.string.s_7f9255f4)) }
+        if (editingId != null) {
+            TextButton(onClick = {
+                editingId = null; name = ""; keywords = ""; template = ""; instructions = ""
+                viewModel.selectPosts(emptyList())
+            }) { Text(stringResource(R.string.rule_cancel_edit)) }
+        }
+    }
 
     Spacer(Modifier.height(16.dp))
     Text(AppStrings.get(R.string.s_b045d443), style = MaterialTheme.typography.titleMedium)
@@ -448,7 +464,18 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
                 Text(AppStrings.get(R.string.fmt_keywords, rule.keywords.joinToString(AppStrings.get(R.string.list_separator))), style = MaterialTheme.typography.bodySmall)
                 if (rule.postIds.isNotEmpty()) Text(AppStrings.get(R.string.fmt_limited_posts, rule.postIds.size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 Text(if (rule.mode == "AI") AppStrings.get(R.string.s_ec6d9289) else AppStrings.get(R.string.fmt_fixed_reply, rule.replyTemplate.orEmpty()), style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { viewModel.deleteRule(rule.id) }) { Text(AppStrings.get(R.string.s_2d2bbdc2), color = MaterialTheme.colorScheme.error) }
+                Row {
+                    TextButton(onClick = {
+                        editingId = rule.id
+                        name = rule.name
+                        keywords = rule.keywords.joinToString(", ")
+                        mode = rule.mode
+                        template = rule.replyTemplate.orEmpty()
+                        instructions = rule.aiInstructions.orEmpty()
+                        viewModel.selectPosts(rule.postIds)
+                    }) { Text(stringResource(R.string.rule_edit)) }
+                    TextButton(onClick = { viewModel.deleteRule(rule.id) }) { Text(AppStrings.get(R.string.s_2d2bbdc2), color = MaterialTheme.colorScheme.error) }
+                }
             }
         }
     }

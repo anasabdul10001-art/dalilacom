@@ -7707,11 +7707,12 @@ function respRules() {
         ${x.replyTemplate ? `<p class="muted">الرد: ${esc(x.replyTemplate)}</p>` : ""}
         <div class="row" style="margin-top:8px;gap:6px">
           <button class="btn small outline" style="width:auto" onclick="respRuleToggle('${x.id}', ${!x.isActive})">${x.isActive ? "إيقاف" : "تشغيل"}</button>
+          <button class="btn small outline" style="width:auto" onclick="respRuleEdit('${x.id}')">تعديل</button>
           <button class="btn small danger" style="width:auto" onclick="respRuleDelete('${x.id}')">حذف</button>
         </div>
       </div>`).join("")}
     <div class="card">
-      <div class="section-title" style="margin-top:0">قاعدة جديدة</div>
+      <div class="section-title" style="margin-top:0">${r.editingRuleId ? "تعديل القاعدة" : "قاعدة جديدة"}</div>
       <div class="field"><label>اسم القاعدة</label><input id="ru-name" placeholder="مثال: سؤال عن السعر" value="${esc(d.name || "")}" /></div>
       <div class="field"><label>كلمات مفتاحية (مفصولة بفاصلة)</label><input id="ru-keys" placeholder="سعر، كم، price" value="${esc(d.keys || "")}" /></div>
       <div class="field"><label>نوع الرد</label>
@@ -7738,7 +7739,8 @@ function respRules() {
         ${picked.length ? `<p class="muted">📌 ${picked.length} منشور محدد — القاعدة بتردّ على التعليقات عليهم بس.</p>` : ""}
       </div>` : ""}
       <p class="muted" style="margin-bottom:8px">الشكاوى ما بتنرد آليًا أبدًا — بتنتظر ردك بصندوق الوارد.</p>
-      <button class="btn" onclick="respAddRule()">إضافة القاعدة</button>
+      <button class="btn" onclick="respAddRule()">${r.editingRuleId ? "حفظ التعديل" : "إضافة القاعدة"}</button>
+      ${r.editingRuleId ? `<button class="btn outline" style="margin-top:6px" onclick="respRuleEditCancel()">إلغاء</button>` : ""}
     </div>`;
 }
 
@@ -7747,10 +7749,28 @@ async function respAddRule() {
   const body = { name: qs("ru-name").value.trim(), keywords, mode: qs("ru-mode").value, replyTemplate: qs("ru-reply").value.trim(), aiInstructions: qs("ru-ai").value.trim(), channelId: qs("ru-channel").value || null, postIds: S._resp.selectedPosts || [] };
   if (!body.name || keywords.length === 0) { S.error = "اكتب اسم القاعدة وكلمة مفتاحية وحدة عالأقل"; return render(); }
   S.error = null;
-  const { ok, data } = await api("POST", "/responder/rules", body);
+  const editing = S._resp.editingRuleId;
+  const { ok, data } = editing ? await api("PATCH", "/responder/rules/" + editing, body) : await api("POST", "/responder/rules", body);
   if (!ok) { S.error = errMsg(data, "تعذّر الحفظ"); return render(); }
-  S._resp.ruleDraft = null; S._resp.posts = []; S._resp.selectedPosts = [];
+  S._resp.ruleDraft = null; S._resp.posts = []; S._resp.selectedPosts = []; S._resp.editingRuleId = null;
   loadResponder();
+}
+
+/** Loads a saved rule into the form so it can be changed (the same form that creates one). */
+function respRuleEdit(id) {
+  const x = (S._resp.rules || []).find((r) => r.id === id);
+  if (!x) return;
+  S._resp.editingRuleId = id;
+  S._resp.ruleDraft = { name: x.name, keys: (x.keywords || []).join("، "), mode: x.mode, reply: x.replyTemplate || "", ai: x.aiInstructions || "" };
+  S._resp.selectedPosts = x.postIds || [];
+  S._resp.posts = [];
+  S.error = null;
+  render();
+  const f = qs("ru-name"); if (f) f.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+function respRuleEditCancel() {
+  S._resp.editingRuleId = null; S._resp.ruleDraft = null; S._resp.selectedPosts = []; S._resp.posts = [];
+  render();
 }
 
 // The rule form is rebuilt on every render, so its fields are snapshotted into state first.

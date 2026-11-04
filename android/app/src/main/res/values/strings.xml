@@ -432,6 +432,10 @@
     <string name="fmt_renew_price">جدّد الاشتراك — %1$s %2$s</string>
     <string name="fmt_hook_url">رابط الاستقبال: %1$s</string>
     <string name="fmt_connect_ig">ربط إنستغرام (@%1$s)</string>
+    <string name="rule_edit">تعديل</string>
+    <string name="rule_editing">تعديل القاعدة</string>
+    <string name="rule_save_changes">حفظ التعديل</string>
+    <string name="rule_cancel_edit">إلغاء</string>
     <string name="open_post">فتح المنشور</string>
     <string name="fmt_posts_selected">📌 %1$d منشور محدد</string>
     <string name="fmt_keywords">الكلمات: %1$s</string>
