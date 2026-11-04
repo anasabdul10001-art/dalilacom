@@ -7730,7 +7730,7 @@ function respRules() {
       <div class="field"><label>نص الرد (استخدم {name} لاسم الزبون)</label><input id="ru-reply" placeholder="مثال: أهلًا {name}، سعر المنتج 25" value="${esc(d.reply || "")}" /></div>
       <div class="field"><label>تعليمات للذكاء الاصطناعي (اختياري)</label><input id="ru-ai" placeholder="مثال: جاوب عن المواعيد والأسعار باختصار" value="${esc(d.ai || "")}" /></div>
       <div class="field"><label>القناة</label>
-        <select id="ru-channel"><option value="">كل القنوات</option>${r.channels.filter((c) => c.connectable).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+        <select id="ru-channel"><option value="">كل القنوات</option>${r.channels.filter((c) => c.connectable).map((c) => `<option value="${c.id}" ${d.channel === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
       ${socialConns.length ? `
       <div class="field"><label>منشورات محددة (فيسبوك / إنستغرام) — اتركها فاضية لتنطبق على كل شي</label>
         <select id="ru-conn">${socialConns.map((c) => `<option value="${c.id}" ${d.conn === c.id ? "selected" : ""}>${esc(c.channel)}${c.accountName || c.externalAccountId ? " — " + esc(c.accountName || c.externalAccountId) : ""}</option>`).join("")}</select>
@@ -7786,9 +7786,12 @@ function respRuleEditCancel() {
 // The rule form is rebuilt on every render, so its fields are snapshotted into state first.
 function snapshotRuleDraft() {
   const d = {};
-  [["name", "ru-name"], ["keys", "ru-keys"], ["mode", "ru-mode"], ["reply", "ru-reply"], ["ai", "ru-ai"], ["conn", "ru-conn"]].forEach(([k, id]) => { const el = qs(id); if (el) d[k] = el.value; });
+  [["name", "ru-name"], ["keys", "ru-keys"], ["mode", "ru-mode"], ["reply", "ru-reply"], ["ai", "ru-ai"], ["conn", "ru-conn"], ["channel", "ru-channel"]].forEach(([k, id]) => { const el = qs(id); if (el) d[k] = el.value; });
   S._resp.ruleDraft = d;
 }
+// Whatever is typed in the rule form is kept as it is typed, so a redraw of the page (the responder reloads in the background) cannot wipe it.
+document.addEventListener("input", (e) => { if (e.target && /^ru-/.test(e.target.id || "") && S._resp) snapshotRuleDraft(); });
+document.addEventListener("change", (e) => { if (e.target && /^ru-/.test(e.target.id || "") && S._resp) snapshotRuleDraft(); });
 async function respLoadPosts() {
   snapshotRuleDraft();
   const connId = qs("ru-conn") && qs("ru-conn").value;
