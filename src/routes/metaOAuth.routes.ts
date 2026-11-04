@@ -126,17 +126,20 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
   if (!code) return res.status(400).send(page("تعذّر إكمال الربط", "<p>ما وصلنا كود التفويض من فيسبوك.</p>"));
 
   let pages: MetaPage[];
+  let skipped: { id: string; name: string }[] = [];
   try {
-    pages = await exchangeCodeForPages(code);
+    ({ pages, skipped } = await exchangeCodeForPages(code));
   } catch (err) {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الاتصال بفيسبوك";
     return res.status(502).send(page("تعذّر إكمال الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, back({ ok: "0" })));
   }
 
   if (pages.length === 0) {
-    return res
-      .status(400)
-      .send(page("ما لقينا صفحات", "<p>حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك.</p>", back({ ok: "0" })));
+    const names = skipped.map((p) => escapeHtml(p.name.slice(0, 80))).join("، ");
+    const detail = skipped.length > 0
+      ? `<p>لقينا ${names ? `«${names}»` : "صفحة"} بس فيسبوك ما سلّمنا صلاحية الإدارة عليها. هذا بيصير غالبًا لما تكون الصفحة ضمن حافظة أعمال وما لك عليها وصول مباشر كمدير صفحة. أضف نفسك مدير صفحة مباشرة من إعدادات الصفحة (وصول فيسبوك الكامل) وجرّب من جديد.</p>`
+      : "<p>حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك.</p>";
+    return res.status(400).send(page("ما لقينا صفحات", detail, back({ ok: "0" })));
   }
 
   const sessionId = await createSession(userId, pages);

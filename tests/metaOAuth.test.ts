@@ -205,6 +205,15 @@ describe("Facebook Login: the callback", () => {
     expect(res.text).toContain("ما لقينا صفحات");
   });
 
+  it("names a Page that Facebook lists without a token instead of dropping it silently", async () => {
+    pagesForAccounts = [{ id: PAGE_A, name: "منصة دليلكم" }];
+    const { state } = await startState(token);
+    const res = await request(app).get("/responder/meta/oauth/callback").query({ state, code: "c" });
+    expect(res.status).toBe(400);
+    expect(res.text).toContain("منصة دليلكم");
+    expect(res.text).toContain("صلاحية الإدارة");
+  });
+
   it("connects the only Page straight away, subscribes it, and stores the token encrypted", async () => {
     pagesForAccounts = [{ id: PAGE_A, name: "متجر الأمل", access_token: PAGE_TOKEN }];
     calls.length = 0;

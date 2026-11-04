@@ -160,7 +160,7 @@ async function graphGet<T>(path: string, params: Record<string, string>): Promis
  * Page tokens obtained from a long-lived user token do not expire on their own, which is what makes
  * this connection durable.
  */
-export async function exchangeCodeForPages(code: string): Promise<MetaPage[]> {
+export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaPage[]; skipped: { id: string; name: string }[] }> {
   const appId = metaAppId();
   const appSecret = metaAppSecret();
   if (!appId || !appSecret) throw new MetaOAuthError("META_NOT_CONFIGURED", "تطبيق Meta غير مضبوط", 503);
@@ -187,7 +187,12 @@ export async function exchangeCodeForPages(code: string): Promise<MetaPage[]> {
     access_token: userToken,
   });
 
-  return (accounts.data ?? [])
+  const all = accounts.data ?? [];
+  // A Page that Facebook lists without a token (typically one the person reaches only through a business portfolio, not
+  // as a direct Page admin) cannot be connected; say so instead of silently dropping it.
+  const skipped = all.filter((p) => p?.id && !p?.access_token).map((p) => ({ id: String(p.id), name: String(p.name ?? "") }));
+  if (skipped.length > 0) console.warn("[meta-oauth] pages listed without an access token:", skipped.map((p) => p.id).join(","));
+  const pages = all
     .filter((p) => p?.id && p?.access_token)
     .map((p) => ({
       id: String(p.id),
@@ -196,6 +201,7 @@ export async function exchangeCodeForPages(code: string): Promise<MetaPage[]> {
       instagramAccountId: p.instagram_business_account?.id ? String(p.instagram_business_account.id) : undefined,
       instagramUsername: p.instagram_business_account?.username ? String(p.instagram_business_account.username) : undefined,
     }));
+  return { pages, skipped };
 }
 
 /* ---------------- sessions: from "just logged in" to "one Page connected" ---------------- */
