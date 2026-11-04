@@ -436,6 +436,10 @@
     <string name="rule_editing">تعديل القاعدة</string>
     <string name="rule_save_changes">حفظ التعديل</string>
     <string name="rule_cancel_edit">إلغاء</string>
+    <string name="conn_deleted">تم حذف القناة</string>
+    <string name="conn_delete">حذف</string>
+    <string name="conn_delete_title">حذف القناة؟</string>
+    <string name="conn_delete_body">بتنحذف محادثاتها المسجّلة وبيوقف الرد عليها.</string>
     <string name="open_post">فتح المنشور</string>
     <string name="fmt_posts_selected">📌 %1$d منشور محدد</string>
     <string name="fmt_keywords">الكلمات: %1$s</string>

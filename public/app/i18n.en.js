@@ -315,6 +315,7 @@ PHRASES.en = {
   "تعديل": "Edit",
   "تعديل القاعدة": "Edit rule",
   "حفظ التعديل": "Save changes",
+  "بدك تحذف هالقناة؟ بتنحذف محادثاتها المسجّلة وبيوقف الرد عليها.": "Delete this channel? Its recorded conversations will be deleted and replies will stop.",
   "ربط فيسبوك وإنستغرام رح يتاح بعد ما توافق Meta على التطبيق — فيك تستعمل تيليغرام بالوقت الحالي": "Linking Facebook and Instagram will open once Meta approves the app — you can use Telegram for now",
   "السعر": "Price",
   "الشكاوى ما بتنرد آليًا أبدًا — بتنتظر ردك بصندوق الوارد.": "Complaints are never answered automatically — they wait for your reply in the inbox.",

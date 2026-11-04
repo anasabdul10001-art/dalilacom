@@ -27,6 +27,8 @@ export interface ChannelDriverImpl {
   validateCredentials(creds: Record<string, string>): string | null;
   /** Recent posts of the connected account, so a rule can be limited to specific ones. */
   listPosts?(ctx: DriverContext): Promise<PostSummary[]>;
+  /** Called when a connection is deleted: stops the platform from sending this account's events to us. Best effort. */
+  unregister?(ctx: DriverContext): Promise<void>;
   /** What the connected account says about itself (about, address, hours, recent posts): the only facts an AI reply may use. */
   describe?(ctx: DriverContext): Promise<string>;
 }

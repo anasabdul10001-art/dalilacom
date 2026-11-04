@@ -268,6 +268,16 @@ private fun ChannelsTab(
     Spacer(Modifier.height(16.dp))
     Text(AppStrings.get(R.string.s_1be55892), style = MaterialTheme.typography.titleMedium)
     if (connections.isEmpty()) Text(AppStrings.get(R.string.s_57833160), color = MaterialTheme.colorScheme.outline)
+    var confirmDeleteId by remember { mutableStateOf<String?>(null) }
+    confirmDeleteId?.let { id ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmDeleteId = null },
+            title = { Text(stringResource(R.string.conn_delete_title)) },
+            text = { Text(stringResource(R.string.conn_delete_body)) },
+            confirmButton = { TextButton(onClick = { viewModel.deleteConnection(id); confirmDeleteId = null }) { Text(stringResource(R.string.conn_delete), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { confirmDeleteId = null }) { Text(stringResource(R.string.rule_cancel_edit)) } },
+        )
+    }
     connections.forEach { connection ->
         Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             Column(Modifier.padding(12.dp)) {
@@ -276,6 +286,7 @@ private fun ChannelsTab(
                     Switch(checked = connection.isActive, onCheckedChange = { viewModel.toggleConnection(connection.id, it) })
                 }
                 connection.hookUrl?.let { Text(AppStrings.get(R.string.fmt_hook_url, it), style = MaterialTheme.typography.bodySmall) }
+                TextButton(onClick = { confirmDeleteId = connection.id }) { Text(stringResource(R.string.conn_delete), color = MaterialTheme.colorScheme.error) }
             }
         }
     }

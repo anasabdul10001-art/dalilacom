@@ -218,6 +218,27 @@ responderRouter.patch("/connections/:id", requireAuth, route(async (req, res) =>
   res.json({ id: updated.id, isActive: updated.isActive });
 }));
 
+// Deleting a connection also deletes the conversations recorded through it, and stops the platform sending its events.
+responderRouter.delete("/connections/:id", requireAuth, route(async (req, res) => {
+  const existing = await prisma.channelConnection.findUnique({ where: { id: req.params.id }, include: { channel: true } });
+  if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Connection not found");
+  const driver = drivers[existing.channel.driver];
+  try {
+    await driver.unregister?.({
+      credentials: decryptJson(existing.credentialsEnc),
+      hookToken: existing.hookToken,
+      channelConfig: existing.channel.config as Record<string, any>,
+    });
+  } catch {
+    // the platform may already have forgotten the account: the connection goes anyway
+  }
+  await prisma.$transaction([
+    prisma.responderInteraction.deleteMany({ where: { connectionId: existing.id } }),
+    prisma.channelConnection.delete({ where: { id: existing.id } }),
+  ]);
+  res.json({ deleted: true });
+}));
+
 // Recent posts of a connected Facebook/Instagram account, so a rule can be limited to specific ones.
 responderRouter.get("/connections/:id/posts", requireAuth, route(async (req, res) => {
   const connection = await prisma.channelConnection.findUnique({ where: { id: req.params.id }, include: { channel: true } });

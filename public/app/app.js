@@ -7668,7 +7668,10 @@ function respChannels() {
         ${c.accountName ? `<p style="margin:2px 0;font-weight:600">${esc(c.accountName)}</p>` : ""}
         ${c.externalAccountId ? `<p class="muted">${c.accountName ? "ID: " : "@"}${esc(c.externalAccountId)}</p>` : ""}
         ${c.hookUrl ? `<div class="field"><label>رابط استقبال الرسائل (الصقه بالمنصة)</label><input readonly value="${esc(c.hookUrl)}" onclick="this.select()" /></div>` : ""}
-        <button class="btn small outline" onclick="respToggleConn('${c.id}', ${!c.isActive})">${c.isActive ? "إيقاف" : "تشغيل"}</button>
+        <div class="row" style="gap:6px">
+          <button class="btn small outline" style="width:auto" onclick="respToggleConn('${c.id}', ${!c.isActive})">${c.isActive ? "إيقاف" : "تشغيل"}</button>
+          <button class="btn small danger" style="width:auto" onclick="respDeleteConn('${c.id}')">حذف</button>
+        </div>
       </div>`).join("")}`;
 }
 
@@ -7686,6 +7689,12 @@ async function respConnect(channelId, keys) {
   S.error = null;
   const { ok, data } = await api("POST", "/responder/connections", { channelId, credentials });
   if (!ok) { S.error = errMsg(data, "تعذّر الربط"); return render(); }
+  loadResponder();
+}
+async function respDeleteConn(id) {
+  if (!confirm("بدك تحذف هالقناة؟ بتنحذف محادثاتها المسجّلة وبيوقف الرد عليها.")) return;
+  const { ok, data } = await api("DELETE", "/responder/connections/" + id);
+  if (!ok) { S.error = errMsg(data, "تعذّر الحذف"); return render(); }
   loadResponder();
 }
 async function respToggleConn(id, isActive) {

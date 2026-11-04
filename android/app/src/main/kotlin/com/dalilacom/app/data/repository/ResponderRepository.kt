@@ -47,6 +47,7 @@ class ResponderRepository(private val api: ApiService) {
     suspend fun toggleRule(id: String, active: Boolean) =
         call(AppStrings.get(R.string.s_fd98f999)) { api.toggleResponderRule(id, ToggleRequest(active)) }
     suspend fun updateRule(id: String, request: CreateRuleRequest) = call(AppStrings.get(R.string.s_471a369e)) { api.updateResponderRule(id, request) }
+    suspend fun deleteConnection(id: String) = call(AppStrings.get(R.string.s_47228890)) { api.deleteResponderConnection(id) }
     suspend fun deleteRule(id: String) = call(AppStrings.get(R.string.s_47228890)) { api.deleteResponderRule(id) }
 
     suspend fun inbox() = call(AppStrings.get(R.string.s_fdc54283)) { api.getResponderInbox() }

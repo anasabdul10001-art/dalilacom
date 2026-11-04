@@ -53,3 +53,28 @@ describe("What the AI may say: only what the connected Page says about itself", 
     expect(await businessInfoFor(connection)).toBeUndefined();
   });
 });
+
+describe("Deleting a connection", () => {
+  it("stops the platform sending the page's events, removes the connection and its conversations, and is private to the owner", async () => {
+    const calls: { url: string; method: string }[] = [];
+    vi.stubGlobal("fetch", async (url: string, init?: any) => {
+      calls.push({ url: String(url), method: init?.method ?? "GET" });
+      return new Response(JSON.stringify({ success: true }));
+    });
+    const connection = await facebookConnection();
+    await prisma.responderInteraction.create({ data: { userId: connection.userId, connectionId: connection.id, conversationRef: "dm:1", authorName: "x", message: "hi", status: "SENT" } });
+    const owner = await prisma.user.findUniqueOrThrow({ where: { id: connection.userId } });
+    const { token } = (await request(app).post("/auth/login").send({ email: owner.email, password: "correct-horse-battery-staple" })).body;
+    const auth = { Authorization: `Bearer ${token}` };
+
+    const stranger = await account("pagefactsstranger");
+    const strangerToken = (await request(app).post("/auth/login").send({ email: stranger.email, password: "correct-horse-battery-staple" })).body.token;
+    expect((await request(app).delete(`/responder/connections/${connection.id}`).set({ Authorization: `Bearer ${strangerToken}` })).status).toBe(404);
+
+    const res = await request(app).delete(`/responder/connections/${connection.id}`).set(auth);
+    expect(res.status).toBe(200);
+    expect(calls.some((c) => c.method === "DELETE" && c.url.includes("/555/subscribed_apps"))).toBe(true);
+    expect(await prisma.channelConnection.count({ where: { id: connection.id } })).toBe(0);
+    expect(await prisma.responderInteraction.count({ where: { connectionId: connection.id } })).toBe(0);
+  });
+});

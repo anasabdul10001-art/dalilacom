@@ -19,7 +19,7 @@ export const metaPendingDriver: ChannelDriverImpl = {
 
 const GRAPH = `https://graph.facebook.com/${process.env.META_GRAPH_VERSION ?? "v21.0"}`;
 
-async function graph<T = any>(path: string, token: string, init?: { method?: "GET" | "POST"; body?: unknown }): Promise<T> {
+async function graph<T = any>(path: string, token: string, init?: { method?: "GET" | "POST" | "DELETE"; body?: unknown }): Promise<T> {
   const res = await fetch(`${GRAPH}/${path}`, {
     method: init?.method ?? "GET",
     // The token travels in a header, never in the URL, so it can't end up in access logs.
@@ -61,6 +61,11 @@ async function subscribePage(pageId: string, token: string) {
   await graph(`${pageId}/subscribed_apps`, token, { method: "POST", body: { subscribed_fields: ["feed", "messages"] } }).catch(() => undefined);
 }
 
+/** Stops Facebook from delivering this Page's messages and comments to our app. Best effort: the connection is deleted regardless. */
+async function unsubscribePage(pageId: string, token: string) {
+  await graph(`${pageId}/subscribed_apps`, token, { method: "DELETE" }).catch(() => undefined);
+}
+
 export const facebookDriver: ChannelDriverImpl = {
   validateCredentials: validateMetaCredentials(false),
   parseIncoming: () => null, // Meta posts to the single app-level /hooks/meta endpoint, parsed by parseMetaWebhook()
@@ -86,6 +91,10 @@ export const facebookDriver: ChannelDriverImpl = {
       url: p.permalink_url,
       image: p.full_picture,
     }));
+  },
+
+  async unregister(ctx) {
+    await unsubscribePage(ctx.credentials.pageId, ctx.credentials.pageAccessToken);
   },
 
   /** Everything the Page itself states: its about text, address, contact details, hours and what it posted. */
@@ -137,6 +146,10 @@ export const instagramDriver: ChannelDriverImpl = {
       url: m.permalink,
       image: m.thumbnail_url ?? m.media_url,
     }));
+  },
+
+  async unregister(ctx) {
+    await unsubscribePage(ctx.credentials.pageId, ctx.credentials.pageAccessToken);
   },
 
   /** The account's own bio and what it posted; nothing from outside Instagram. */

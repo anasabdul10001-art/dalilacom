@@ -117,6 +117,8 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
     fun connect(channelId: String, credentials: Map<String, String>) =
         act(AppStrings.get(R.string.s_0224de46)) { repository.connect(channelId, credentials) }
 
+    fun deleteConnection(id: String) = act(AppStrings.get(R.string.conn_deleted)) { repository.deleteConnection(id) }
+
     fun toggleConnection(id: String, active: Boolean) = act(null) { repository.toggleConnection(id, active) }
 
     fun addRule(name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String) {

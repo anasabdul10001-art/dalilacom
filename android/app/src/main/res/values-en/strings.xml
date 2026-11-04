@@ -432,6 +432,10 @@
     <string name="rule_editing">Edit rule</string>
     <string name="rule_save_changes">Save changes</string>
     <string name="rule_cancel_edit">Cancel</string>
+    <string name="conn_deleted">Channel deleted</string>
+    <string name="conn_delete">Delete</string>
+    <string name="conn_delete_title">Delete this channel?</string>
+    <string name="conn_delete_body">Its recorded conversations will be deleted and replies will stop.</string>
     <string name="open_post">Open the post</string>
     <string name="fmt_posts_selected">📌 %1$d posts selected</string>
     <string name="fmt_keywords">Keywords: %1$s</string>

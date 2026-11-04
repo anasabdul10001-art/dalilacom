@@ -644,6 +644,9 @@ interface ApiService {
     @PATCH("responder/rules/{id}")
     suspend fun updateResponderRule(@Path("id") id: String, @Body body: CreateRuleRequest): Response<kotlinx.serialization.json.JsonElement>
 
+    @DELETE("responder/connections/{id}")
+    suspend fun deleteResponderConnection(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
     @DELETE("responder/rules/{id}")
     suspend fun deleteResponderRule(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
 
