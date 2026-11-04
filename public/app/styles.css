@@ -1504,7 +1504,8 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .rfab, .map-fab.card-fab, .map-fab.disc-fab { display: grid; place-items: center; color: var(--primary, #c8283a); }
 .rfab { width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--surface); box-shadow: 0 4px 14px rgba(0, 0, 0, .3); cursor: pointer; padding: 0; }
 .rfab:active, .map-fab.card-fab:active, .map-fab.disc-fab:active { transform: scale(.94); }
-.fab-stack { position: fixed; inset-inline-start: 12px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 500; display: flex; flex-direction: column; gap: 10px; }
+.fab-stack { position: fixed; inset-inline-start: 12px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 500; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: max-content; pointer-events: none; } /* the box can be wider than its two buttons: only the buttons take taps, never the page area around them */
+.fab-stack > * { pointer-events: auto; }
 @media (min-width: 900px) { .fab-stack { bottom: 24px; inset-inline-start: 96px; } } /* the rail is 84px wide: the buttons sit beside it, not under it */
 .mfab-pop { position: fixed; z-index: 502; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; pointer-events: none; }
 .mfab-pop > * { pointer-events: auto; }
