@@ -21,19 +21,17 @@ const SESSION_TTL_MINUTES = 15;
 const STATE_TTL_MINUTES = 15;
 
 /**
- * Read the Page, subscribe webhooks, answer direct messages and comments.
- * Only permissions the Meta app really has: Facebook refuses the whole dialog ("Invalid Scopes") for the app's own
- * developers when one is missing. The comment ones come from the app's "Manage everything on your Page" use case
- * (pages_manage_engagement needs pages_read_user_content next to it). The Instagram ones join via META_OAUTH_SCOPES
- * once the app has them.
+ * Messaging only for now: read the Page, subscribe webhooks and answer direct messages. These are the permissions
+ * of the first App Review; asking merchants for anything Meta has not approved yet would only confuse the dialog.
+ * The comment ones (pages_manage_engagement next to pages_read_user_content, from the app's "Manage everything on
+ * your Page" use case) and the Instagram ones join via META_OAUTH_SCOPES, for the owner's testing now and for
+ * everyone once Meta approves them.
  */
 const DEFAULT_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_manage_metadata",
   "pages_messaging",
-  "pages_manage_engagement",
-  "pages_read_user_content",
 ];
 
 export interface MetaPage {
