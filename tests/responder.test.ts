@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import request from "supertest";
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
 import { app } from "../src/server";
@@ -47,12 +49,12 @@ afterAll(async () => {
 });
 
 const password = "correct-horse-battery-staple";
-async function account(prefix: string, role: "CUSTOMER" | "MERCHANT" = "CUSTOMER") {
+async function account(prefix: string, role: "CUSTOMER" | "MERCHANT" | "ADMIN" = "CUSTOMER") {
   const email = uniqueEmail(prefix);
   await request(app).post("/auth/register").send({ email, password, fullName: `Responder ${prefix}` });
   const user = await prisma.user.update({ where: { email }, data: { role } });
   const login = await request(app).post("/auth/login").send({ email, password });
-  return { id: user.id, auth: { Authorization: `Bearer ${login.body.token}` } };
+  return { id: user.id, email, auth: { Authorization: `Bearer ${login.body.token}` } };
 }
 const credit = (userId: string, amount: number) => prisma.$transaction((tx) => adjustBalance(tx, userId, amount, "TOPUP", "test-credit"));
 const activate = (u: { auth: Record<string, string> }) => request(app).post("/responder/activate").set(u.auth);
@@ -70,6 +72,13 @@ async function running(prefix: string, role: "CUSTOMER" | "MERCHANT" = "CUSTOMER
   expect(connected.status).toBe(201);
   const connection = await prisma.channelConnection.findUniqueOrThrow({ where: { id: connected.body.id } });
   return { ...owner, channelId: channel.id, connectionId: connection.id, hook: `/hooks/${connection.hookToken}` };
+}
+async function responderPlan(name: string, options: { trialDays?: number; includesAi?: boolean; aiReplyLimit?: number } = {}) {
+  return prisma.servicePlan.create({ data: {
+    service: "RESPONDER_BASIC", name, durationDays: 30, trialDays: options.trialDays ?? 0,
+    priceCents: 0, currency: "USD", priceCredits: 0, includesAi: options.includesAi ?? false,
+    aiReplyLimit: options.aiReplyLimit ?? 0, removesBadge: false, isActive: true,
+  } });
 }
 const customerSays = (hook: string, text: string, conversationRef = "chat-1", authorName = "سامر") =>
   request(app).post(hook).set("x-webhook-secret", SECRET).send({ conversationRef, authorName, text });
@@ -121,13 +130,11 @@ describe("Starting and paying for the responder", () => {
     expect((await prisma.wallet.findUniqueOrThrow({ where: { userId: owner.id } })).balance).toBe(settings.responder.priceCustomer);
   });
 
-  it("only a running subscription can connect a channel, and the channel's credentials are validated", async () => {
+  it("lets an account configure a channel before choosing a plan, and validates the channel's credentials", async () => {
     const owner = await account("respconnect");
     const channel = await webhookChannel();
     const early = await request(app).post("/responder/connections").set(owner.auth).send({ channelId: channel.id, credentials: { secret: SECRET, replyUrl: REPLY_URL } });
-    expect(early.status).toBe(403);
-
-    await activate(owner);
+    expect(early.status).toBe(201);
     const weak = await request(app).post("/responder/connections").set(owner.auth).send({ channelId: channel.id, credentials: { secret: "short", replyUrl: REPLY_URL } });
     expect(weak.status).toBe(400);
     const insecure = await request(app).post("/responder/connections").set(owner.auth).send({ channelId: channel.id, credentials: { secret: SECRET, replyUrl: "http://plain.example.test" } });
@@ -198,46 +205,50 @@ describe("Answering customers", () => {
     expect((await request(app).post(`/responder/inbox/${waiting[1].id}/send`).set(stranger.auth).send({ reply: "hi" })).status).toBe(404);
   });
 
-  it("settles a complaint from what the owner wrote about the business when it can, and hands over to a person when it cannot", async () => {
+  it("lets an AI plan answer a keyword-detected complaint with AI and preserves its handoff decision", async () => {
     const owner = await running("respcomplaintai", "MERCHANT");
-    await request(app).patch("/responder/profile").set(owner.auth).send({ businessDescription: "محلنا بشارع الاختبار ودوامنا حتى 9" });
     process.env.GROQ_API_KEY = "test-groq-key";
-
-    // 1) the owner's description settles it: answered, marked sent, and the owner still hears about it
-    aiAnswer = JSON.stringify({ reply: "نعتذر! محلنا بشارع الاختبار ودوامنا حتى 9", handoff: false });
+    aiAnswer = JSON.stringify({ reply: "نعتذر منك. راجعت طلبك وسيتواصل معك الفريق.", handoff: true });
+    await request(app).patch("/responder/profile").set(owner.auth).send({ businessDescription: "محلنا بشارع الاختبار ودوامنا حتى 9" });
     await customerSays(owner.hook, "عندي شكوى: وين محلكم؟", "c-1");
-    expect(sentReplies.at(-1)!.body.text).toBe("نعتذر! محلنا بشارع الاختبار ودوامنا حتى 9");
-    expect((await inbox(owner, "SENT")).body[0]).toMatchObject({ reason: "complaint", intent: "complaint", status: "SENT" });
-    const call = aiCalls.filter((c) => c.system.startsWith("A customer sent a complaint")).at(-1)!;
-    expect(call.system).toContain("شارع الاختبار"); // from the owner's description, not from a Dalilacom shop
-    expect(call.system).toContain("Never promise a refund");
-    expect((await notices(owner.id)).some((n) => n.title.includes("تم الرد عليها"))).toBe(true);
-
-    // 2) it cannot be settled: the AI says a person will follow up, and the message waits in the inbox
-    aiAnswer = JSON.stringify({ reply: "نعتذر منك، رح يتواصل معك أحد من فريقنا قريبًا", handoff: true });
-    await customerSays(owner.hook, "شكوى: طلبي ما وصل وبدي حقي", "c-2");
-    expect(sentReplies.at(-1)!.body.text).toBe("نعتذر منك، رح يتواصل معك أحد من فريقنا قريبًا");
-    expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ reason: "complaint", reply: "نعتذر منك، رح يتواصل معك أحد من فريقنا قريبًا" });
+    expect(sentReplies.at(-1)!.body.text).toContain("راجعت طلبك");
+    expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ reason: "complaint", intent: "complaint", status: "NEEDS_REVIEW" });
+    expect(aiCalls).toHaveLength(1);
     expect((await notices(owner.id)).some((n) => n.title.includes("بانتظار ردّك"))).toBe(true);
 
-    // 3) an answer that is not what was asked for (no JSON) is never sent as written: the holding message goes instead
-    aiAnswer = "أكيد رح نعوضك بمبلغ كبير!";
+    aiAnswer = JSON.stringify({ reply: "نعتذر منك، تم حل المشكلة.", handoff: false });
+    await customerSays(owner.hook, "شكوى: طلبي ما وصل وبدي حقي", "c-2");
+    expect(sentReplies.at(-1)!.body.text).toContain("تم حل المشكلة");
+    expect((await inbox(owner, "SENT")).body[0]).toMatchObject({ intent: "complaint", status: "SENT", reason: "complaint" });
     await customerSays(owner.hook, "شكوى كبيرة", "c-3");
-    expect(sentReplies.at(-1)!.body.text).toContain("رح يتواصل معك قريبًا");
-    expect(sentReplies.at(-1)!.body.text).not.toContain("نعوضك");
+    expect(aiCalls).toHaveLength(3);
   });
 
-  it("does nothing while the subscription is not running, and says a failed send needs a person", async () => {
+  it("uses only the fixed complaint holding message and review queue on a basic-only plan", async () => {
+    const owner = await running("respcomplaintbasic", "MERCHANT");
+    await prisma.responderEntitlement.updateMany({ where: { userId: owner.id }, data: { status: "EXPIRED" } });
+    const plan = await responderPlan("خطة أساسية للشكاوى", { includesAi: false });
+    await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: plan.id, status: "ACTIVE", source: "GRANT", periodEnd: new Date(Date.now() + 86400000 * 3) } });
+    process.env.GROQ_API_KEY = "test-groq-key";
+    aiAnswer = JSON.stringify({ reply: "هذا الرد لا يجب أن يظهر", handoff: false });
+    await customerSays(owner.hook, "عندي شكوى: وين محلكم؟", "basic-c-1");
+    expect(sentReplies.at(-1)!.body.text).toContain("وصلت رسالتك لفريقنا");
+    expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ reason: "complaint", intent: "complaint", status: "NEEDS_REVIEW" });
+    expect(aiCalls).toHaveLength(0);
+  });
+
+  it("does nothing without an active plan, then says a failed send needs a person", async () => {
     const owner = await running("respfail");
+    const plan = await responderPlan("خطة استعادة الاختبار");
     await rule(owner, {});
     await prisma.responderSubscription.update({ where: { userId: owner.id }, data: { status: "EXPIRED", periodEnd: new Date(Date.now() - 1000) } });
     await customerSays(owner.hook, "السعر؟");
     expect(sentReplies).toHaveLength(0);
-    expect((await inbox(owner, "SKIPPED")).body[0]).toMatchObject({ reason: "subscription_inactive" });
+    expect((await inbox(owner, "SKIPPED")).body[0]).toMatchObject({ reason: "basic_plan_required" });
 
-    await prisma.responderSubscription.update({ where: { userId: owner.id }, data: { status: "TRIAL", trialEndsAt: new Date(Date.now() + 86400000 * 3) } });
+    await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: plan.id, status: "ACTIVE", source: "GRANT", periodEnd: new Date(Date.now() + 86400000 * 3) } });
     vi.stubGlobal("fetch", async () => new Response("{}", { status: 500 })); // the other platform is down
-    await customerSays(owner.hook, "السعر؟", "chat-5");
+    await customerSays(owner.hook, "سعر؟", "chat-5");
     expect((await inbox(owner, "FAILED")).body[0]).toMatchObject({ status: "FAILED" });
     expect((await notices(owner.id)).some((n) => n.title.includes("تعذّر إرسال"))).toBe(true);
   });
@@ -289,24 +300,114 @@ describe("When no rule matches: the fallback", () => {
     expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ reason: "ai_unavailable" });
   });
 
-  it("counts only the replies the AI writes against the monthly limit (the quick classification is free)", async () => {
+  it("counts only the replies the AI writes against the monthly limit and skips separate intent classification", async () => {
     const owner = await running("respquota");
     const before = await getSettings();
     process.env.GROQ_API_KEY = "test-groq-key";
     aiAnswer = "رد من الذكاء";
     try {
       await saveSettings({ responder: { ...before.responder, monthlyAiReplyLimit: 1 } });
+      await prisma.servicePlan.update({ where: { id: "00000000-0000-4000-8000-000000000001" }, data: { aiReplyLimit: 1 } });
       await rule(owner, { keywords: ["سؤال"], mode: "AI", replyTemplate: "رد ثابت" });
       await customerSays(owner.hook, "عندي سؤال", "q1");
       expect(sentReplies.at(-1)!.body.text).toBe("رد من الذكاء");
       expect((await prisma.responderSubscription.findUniqueOrThrow({ where: { userId: owner.id } })).aiRepliesUsed).toBe(1); // one reply, though two AI calls ran
-      expect(aiCalls.some((c) => c.system.startsWith("Classify"))).toBe(true);
+      expect(aiCalls.some((c) => c.system.startsWith("Classify"))).toBe(false);
 
       await customerSays(owner.hook, "عندي سؤال ثاني", "q2");
       expect(sentReplies.at(-1)!.body.text).toBe("رد ثابت"); // the limit is reached: the template answers
     } finally {
       await saveSettings({ responder: before.responder });
+      await prisma.servicePlan.update({ where: { id: "00000000-0000-4000-8000-000000000001" }, data: { aiReplyLimit: before.responder.monthlyAiReplyLimit } });
     }
+  });
+});
+
+describe("Plan access, permanent fixed replies and admin grants", () => {
+  it("requires an active plan, sends fixed replies without AI on a no-AI plan, and respects the owner's switch", async () => {
+    const owner = await account("respbasic");
+    const channel = await webhookChannel();
+    const connected = await request(app).post("/responder/connections").set(owner.auth).send({ channelId: channel.id, credentials: { secret: SECRET, replyUrl: REPLY_URL } });
+    expect(connected.status).toBe(201);
+    const conn = await prisma.channelConnection.findUniqueOrThrow({ where: { id: connected.body.id } });
+    const hook = `/hooks/${conn.hookToken}`;
+    await rule(owner, { keywords: ["سعر"], mode: "FIXED", replyTemplate: "السعر 20" });
+
+    await customerSays(hook, "السعر؟", "no-plan-1");
+    await customerSays(hook, "السعر؟", "no-plan-2");
+    expect((await inbox(owner, "SKIPPED")).body[0]).toMatchObject({ reason: "basic_plan_required" });
+    expect((await notices(owner.id)).filter((notice) => notice.data?.reason === "basic_plan_required")).toHaveLength(1);
+    expect(sentReplies).toHaveLength(0);
+
+    const plan = await responderPlan("ردود ثابتة", { trialDays: 0 });
+    const periodEnd = new Date(Date.now() + 30 * 86400000);
+    await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: plan.id, status: "ACTIVE", source: "PAID", periodEnd } });
+    await customerSays(hook, "السعر؟", "fixed-1");
+    expect(sentReplies.at(-1)!.body.text).toBe("السعر 20");
+    expect(aiCalls).toHaveLength(0);
+
+    await rule(owner, { keywords: ["توصيل"], mode: "AI", replyTemplate: "التوصيل متاح" });
+    await customerSays(hook, "في توصيل؟", "ai-rule-basic");
+    expect(sentReplies.at(-1)!.body.text).toBe("التوصيل متاح");
+    await rule(owner, { keywords: ["تغطية"], mode: "AI", replyTemplate: "" });
+    await customerSays(hook, "في تغطية؟", "ai-rule-no-template");
+    expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ reason: "ai_requires_plan" });
+
+    await request(app).patch("/responder/profile").set(owner.auth).send({ enabled: false });
+    await customerSays(hook, "السعر؟", "disabled-1");
+    expect((await inbox(owner, "SKIPPED")).body[0]).toMatchObject({ reason: "responder_disabled" });
+    expect(sentReplies).toHaveLength(2);
+    expect(aiCalls).toHaveLength(0);
+  });
+
+  it("allows one trial per account and plan, including after that trial expires", async () => {
+    const plan = await responderPlan("تجربة حسب الخطة", { trialDays: 7 });
+    const owner = await account("resptrialplan");
+    const started = await request(app).post(`/responder/plans/${plan.id}/trial`).set(owner.auth);
+    expect(started.status).toBe(201);
+    expect(started.body).toMatchObject({ status: "TRIAL", source: "TRIAL" });
+    expect((await request(app).post(`/responder/plans/${plan.id}/trial`).set(owner.auth)).status).toBe(409);
+
+    await prisma.responderEntitlement.update({ where: { userId_planId: { userId: owner.id, planId: plan.id } }, data: { status: "EXPIRED", trialEndsAt: new Date(Date.now() - 1000) } });
+    expect((await request(app).post(`/responder/plans/${plan.id}/trial`).set(owner.auth)).status).toBe(409);
+    const other = await account("resptrialplanother");
+    expect((await request(app).post(`/responder/plans/${plan.id}/trial`).set(other.auth)).status).toBe(201);
+  });
+
+  it("lets only an admin grant or extend access without charging the account", async () => {
+    const admin = await account("respsuperadmin", "ADMIN");
+    const owner = await account("respgrantuser");
+    const plan = await responderPlan("منحة اختبار");
+    expect((await request(app).post("/admin/responder/grant").set(owner.auth).send({ userEmail: admin.email, planId: plan.id, days: 10 })).status).toBe(403);
+
+    const walletBefore = await prisma.wallet.findUnique({ where: { userId: owner.id } });
+    const grant = () => request(app).post("/admin/responder/grant").set(admin.auth).send({ userEmail: owner.email, planId: plan.id, days: 10 });
+    const first = await grant();
+    expect(first.status).toBe(201);
+    expect(first.body.entitlement).toMatchObject({ status: "ACTIVE", source: "GRANT" });
+    const firstEnd = new Date(first.body.entitlement.periodEnd).getTime();
+    const second = await grant();
+    expect(second.status).toBe(201);
+    expect(new Date(second.body.entitlement.periodEnd).getTime()).toBe(firstEnd + 10 * 86400000);
+    expect(await prisma.wallet.findUnique({ where: { userId: owner.id } })).toEqual(walletBefore);
+  });
+
+  it("backfills old active subscriptions to the internal plan idempotently and leaves OFF accounts without a plan", async () => {
+    const active = await account("respmigrationactive");
+    const off = await account("respmigrationoff");
+    const endsAt = new Date(Date.now() + 5 * 86400000);
+    await prisma.responderSubscription.create({ data: { userId: active.id, status: "TRIAL", trialEndsAt: endsAt } });
+    await prisma.responderSubscription.create({ data: { userId: off.id, status: "OFF" } });
+    const migration = fs.readFileSync(path.resolve(process.cwd(), "prisma/migrations/20261112130000_responder_entitlements_backfill/migration.sql"), "utf8");
+    const backfill = migration.slice(migration.indexOf('INSERT INTO "ResponderEntitlement"'));
+    await prisma.$executeRawUnsafe(backfill);
+    await prisma.$executeRawUnsafe(backfill);
+
+    const migrated = await prisma.responderEntitlement.findUniqueOrThrow({ where: { userId_planId: { userId: active.id, planId: "00000000-0000-4000-8000-000000000001" } } });
+    expect(migrated).toMatchObject({ status: "TRIAL", source: "TRIAL", trialEndsAt: endsAt });
+    expect(await prisma.responderEntitlement.count({ where: { userId: off.id } })).toBe(0);
+    const legacyPlan = await prisma.servicePlan.findUniqueOrThrow({ where: { id: "00000000-0000-4000-8000-000000000001" } });
+    expect(legacyPlan).toMatchObject({ service: "RESPONDER_BASIC", isActive: false });
   });
 });
 

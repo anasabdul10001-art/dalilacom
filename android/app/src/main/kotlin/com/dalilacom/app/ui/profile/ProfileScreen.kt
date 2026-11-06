@@ -124,7 +124,7 @@ fun ProfileScreen(
         if (role == "MERCHANT") {
             if (fitnessProvider) {
                 OutlinedButton(onClick = onOpenFitnessProfile, modifier = Modifier.fillMaxWidth()) { Text("🏋️  " + stringResource(R.string.fitness_profile)) }
-                OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text("📋  خطط المتدربين") }
+                OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.fit_auto_c2ed8d0d)) }
             }
             Button(onClick = onOpenMerchantMode, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_merchant_mode)) }
             Spacer(Modifier.height(8.dp))
@@ -140,7 +140,7 @@ fun ProfileScreen(
             OutlinedButton(onClick = onOpenOnlineStore, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_open_online_store)) }
             Text(stringResource(R.string.profile_start_selling_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 5.dp))
             Spacer(Modifier.height(8.dp))
-            if (hasFitnessPlan) OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text("🏋️  خططي الرياضية والغذائية") }
+            if (hasFitnessPlan) OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.fit_auto_d141a0e3)) }
         }
         Spacer(Modifier.height(24.dp))
 

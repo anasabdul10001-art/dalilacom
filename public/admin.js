@@ -1614,8 +1614,9 @@ const SERVICE_LABEL = {
   MERCHANT_ACCOUNT: 'باقة النشاط',
   RESPONDER_CUSTOMER: 'المجيب الآلي — زبون',
   RESPONDER_MERCHANT: 'المجيب الآلي — نشاط',
+  RESPONDER_BASIC: 'المجيب الآلي — خطة موحّدة',
 };
-const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT'];
+const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_BASIC', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT'];
 let planCountries = [];
 
 function escHtml(s) {
@@ -1842,6 +1843,23 @@ async function loadResponderAdmin() {
   document.getElementById('rs-wallets').value = data.payment.localWallets.map(w => [w.key, w.label, w.accountNumber, w.instructions || ''].join('|')).join('\n');
   loadChannels();
   loadSubs();
+  loadResponderGrantPlans();
+}
+async function loadResponderGrantPlans() {
+  const { ok, data } = await api('GET', '/admin/responder/grant-plans');
+  if (!ok) return;
+  const select = document.getElementById('rg-plan');
+  select.innerHTML = '<option value="">— اختر خطة —</option>' + data.map(p => `<option value="${p.id}">${esc(p.name)}${p.includesAi ? ' · ذكاء اصطناعي' : ' · ردود ثابتة'}${p.isActive ? '' : ' · خطة قديمة'}</option>`).join('');
+}
+async function grantResponderPlan() {
+  const msg = document.getElementById('rg-msg');
+  const days = Number(document.getElementById('rg-days').value);
+  const body = { userEmail: document.getElementById('rg-email').value.trim(), planId: document.getElementById('rg-plan').value, days };
+  if (!body.userEmail || !body.planId || !Number.isInteger(days) || days <= 0) { msg.textContent = '❌ اكتب البريد واختر الخطة وحدد الأيام'; return; }
+  msg.textContent = 'جارٍ تفعيل الخطة…';
+  const { ok, data } = await api('POST', '/admin/responder/grant', body);
+  msg.textContent = ok ? `✅ تم منح ${data.plan.name} للحساب ${data.user.email}` : '❌ ' + errText(data, 'تعذّر منح الخطة');
+  if (ok) loadSubs();
 }
 async function saveResponderSettings() {
   const num = (id) => Number(document.getElementById(id).value);

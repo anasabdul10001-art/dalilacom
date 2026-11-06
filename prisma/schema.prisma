@@ -107,6 +107,7 @@ model User {
   walletTransactions    WalletTransaction[]
   topUpRequests         TopUpRequest[]
   responderSubscription ResponderSubscription?
+  responderEntitlements ResponderEntitlement[]
   channelConnections    ChannelConnection[]
   responderRules        ResponderRule[]
   responderInteractions ResponderInteraction[]
@@ -213,6 +214,7 @@ enum ServiceKind {
   MEMBERSHIP // the customer's digital membership card (section 19/24)
   RESPONDER_CUSTOMER // auto-responder subscription, customer price
   RESPONDER_MERCHANT // auto-responder subscription, merchant price
+  RESPONDER_BASIC // unified auto-responder plans, available to every account
   MERCHANT_ACCOUNT // a merchant plan (tiers carry their own broadcast quota)
 }
 
@@ -235,15 +237,19 @@ model ServicePlan {
   // Merchant plans only: how many follower broadcasts this plan allows per period (section 37/76).
   // Null means "not applicable" for that kind of service.
   monthlyBroadcastLimit Int?
+  includesAi            Boolean     @default(false)
+  aiReplyLimit          Int         @default(0)
+  removesBadge          Boolean     @default(false)
   sortOrder             Int         @default(0) // display order on the pricing page (lower first)
   isActive              Boolean     @default(true)
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
-  memberships Membership[]
-  merchants   MerchantProfile[]
-  features    PlanFeature[]
-  prices      PlanPrice[]
+  memberships           Membership[]
+  merchants             MerchantProfile[]
+  features              PlanFeature[]
+  prices                PlanPrice[]
+  responderEntitlements ResponderEntitlement[]
 
   @@index([service, isActive])
 }
@@ -979,10 +985,24 @@ enum ResponderStatus {
   OFF
 }
 
+enum ResponderEntitlementStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+}
+
+enum ResponderEntitlementSource {
+  TRIAL
+  PAID
+  GRANT
+}
+
 model ResponderSubscription {
   id                  String          @id @default(uuid())
   userId              String          @unique
   status              ResponderStatus @default(OFF)
+  enabled             Boolean         @default(true)
+  basicPlanNoticeAt   DateTime?
   trialUsed           Boolean         @default(false)
   trialEndsAt         DateTime?
   periodEnd           DateTime?
@@ -999,6 +1019,26 @@ model ResponderSubscription {
   createdAt           DateTime        @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+// One current entitlement per account and plan. Keeps a trial from being repeated for the same plan.
+model ResponderEntitlement {
+  id          String                     @id @default(uuid())
+  userId      String
+  planId      String
+  status      ResponderEntitlementStatus
+  source      ResponderEntitlementSource
+  trialEndsAt DateTime?
+  periodEnd   DateTime?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan ServicePlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, planId])
+  @@index([userId, status, periodEnd])
+  @@index([planId, status])
 }
 
 enum ResponderMode {

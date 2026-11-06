@@ -34,6 +34,7 @@ import { invalidateProductCategories } from "../services/productCategory.service
 import { decideProduct } from "../services/productModeration.service";
 import { createMarketer, decideMarketerRequest, listMarketerRequests, listMarketers, updateMarketer } from "../services/referral.service";
 import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion } from "../services/categorySuggestion.service";
+import { grantResponderEntitlement, RESPONDER_LEGACY_PLAN_ID, RESPONDER_SERVICES } from "../services/responder.service";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole(Role.ADMIN));
@@ -722,6 +723,33 @@ adminRouter.get("/responder/subscriptions", route(async (_req, res) => {
       take: 200,
     }),
   );
+}));
+
+adminRouter.get("/responder/grant-plans", route(async (_req, res) => {
+  res.json(await prisma.servicePlan.findMany({
+    where: { service: { in: RESPONDER_SERVICES }, OR: [{ isActive: true }, { id: RESPONDER_LEGACY_PLAN_ID }] },
+    select: { id: true, name: true, service: true, durationDays: true, includesAi: true, isActive: true },
+    orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
+  }));
+}));
+
+adminRouter.post("/responder/grant", route(async (req, res) => {
+  const parsed = z.object({ userEmail: z.string().email().transform((value) => value.trim().toLowerCase()), planId: z.string().uuid(), days: z.number().int().positive().max(3650) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const [user, plan] = await Promise.all([
+    prisma.user.findUnique({ where: { email: parsed.data.userEmail }, select: { id: true, email: true, fullName: true } }),
+    prisma.servicePlan.findUnique({ where: { id: parsed.data.planId }, select: { id: true, name: true, service: true, isActive: true } }),
+  ]);
+  if (!user) return sendError(res, 404, "NOT_FOUND", "ما لقينا حساب بهذا البريد الإلكتروني");
+  if (!plan || !RESPONDER_SERVICES.includes(plan.service) || (!plan.isActive && plan.id !== RESPONDER_LEGACY_PLAN_ID)) return sendError(res, 404, "NOT_FOUND", "الخطة غير متاحة");
+  const entitlement = await grantResponderEntitlement(user.id, plan.id, parsed.data.days);
+  await prisma.responderSubscription.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, status: "ACTIVE", periodEnd: entitlement.periodEnd },
+    update: { status: "ACTIVE", periodEnd: entitlement.periodEnd, expiryNoticeFor: null },
+  });
+  await notify({ userId: user.id, type: "SYSTEM", title: "تم تفعيل المجيب الآلي لك", body: `تم منحك خطة «${plan.name}» لمدة ${parsed.data.days} يومًا.`, data: { kind: "RESPONDER", reason: "grant" }, email: false });
+  res.status(201).json({ user: { id: user.id, email: user.email, fullName: user.fullName }, plan, entitlement });
 }));
 
 /* ---------------- AI provider check (booleans + counters only — no keys, no message text) ---------------- */

@@ -316,7 +316,6 @@ private fun FacebookCard(state: ResponderUiState, viewModel: ResponderViewModel)
                         AppStrings.get(R.string.s_a3836012),
                     color = MaterialTheme.colorScheme.error,
                 )
-                !status.responderRunning -> Text(AppStrings.get(R.string.s_cd1c71a4), color = MaterialTheme.colorScheme.error)
                 else -> {
                     Button(
                         onClick = { viewModel.startMetaOAuth() },

@@ -11,7 +11,7 @@ import { decryptJson, encryptJson } from "../services/crypto.service";
 import { drivers } from "../services/channels";
 import { getSettings } from "../services/settings.service";
 import { InsufficientBalanceError } from "../services/wallet.service";
-import { activate, AlreadyRunningError, getSubscription, isRunning, maybeNotifyEnding, pay, sendThroughConnection } from "../services/responder.service";
+import { activate, AlreadyRunningError, getActiveResponderEntitlements, getSubscription, maybeNotifyEnding, pay, RESPONDER_SERVICES, ResponderPlanNotFoundError, ResponderTrialUnavailableError, sendThroughConnection, startResponderTrial } from "../services/responder.service";
 import { metaOAuthRouter } from "./metaOAuth.routes";
 import { isMetaDriver, META_NOT_OPEN_MESSAGE, metaOpenFor } from "../lib/metaAccess";
 
@@ -50,12 +50,16 @@ responderRouter.get("/status", requireAuth, route(async (req, res) => {
     getSettings(),
     prisma.wallet.findUnique({ where: { userId: req.user!.id } }),
   ]);
+  const entitlements = await getActiveResponderEntitlements(req.user!.id);
   // Looking at the service is a natural moment to warn that it is about to end (once per ending).
   await maybeNotifyEnding(sub).catch(() => null);
   const price = req.user!.role === "MERCHANT" ? settings.responder.priceMerchant : settings.responder.priceCustomer;
   res.json({
     status: sub.status,
-    running: isRunning(sub.status),
+    running: sub.enabled && entitlements.length > 0,
+    enabled: sub.enabled,
+    hasActivePlan: entitlements.length > 0,
+    activePlans: entitlements.map(({ plan, status, source, trialEndsAt, periodEnd }) => ({ id: plan.id, name: plan.name, includesAi: plan.includesAi, aiReplyLimit: plan.aiReplyLimit, status, source, trialEndsAt, periodEnd })),
     trialAvailable: !sub.trialUsed && settings.responder.trialDays > 0,
     trialDays: settings.responder.trialDays,
     trialEndsAt: sub.trialEndsAt,
@@ -71,6 +75,32 @@ responderRouter.get("/status", requireAuth, route(async (req, res) => {
     fallbackMode: sub.fallbackMode,
     fallbackReply: sub.fallbackReply,
   });
+}));
+
+// A single list for every account type. The user explicitly chooses a plan before a plan's trial begins.
+responderRouter.get("/plans", requireAuth, route(async (_req, res) => {
+  const plans = await prisma.servicePlan.findMany({
+    where: { service: { in: RESPONDER_SERVICES }, isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { priceCents: "asc" }],
+    include: { features: { orderBy: { sortOrder: "asc" } } },
+  });
+  res.json(plans);
+}));
+
+responderRouter.post("/plans/:id/trial", requireAuth, route(async (req, res) => {
+  try {
+    const entitlement = await startResponderTrial(req.user!.id, req.params.id);
+    await prisma.responderSubscription.upsert({
+      where: { userId: req.user!.id },
+      update: {},
+      create: { userId: req.user!.id, status: "TRIAL", trialEndsAt: entitlement.trialEndsAt },
+    });
+    res.status(201).json(entitlement);
+  } catch (err) {
+    if (err instanceof ResponderPlanNotFoundError) return sendError(res, 404, "NOT_FOUND", "الخطة غير موجودة أو غير متاحة");
+    if (err instanceof ResponderTrialUnavailableError) return sendError(res, 409, "TRIAL_USED", "التجربة لهذه الخطة غير متاحة أو استُخدمت سابقًا");
+    throw err;
+  }
 }));
 
 responderRouter.post("/activate", requireAuth, route(async (req, res) => {
@@ -98,6 +128,7 @@ const profileSchema = z.object({
   tone: z.string().max(200).optional(),
   fallbackMode: z.enum(["OFF", "AI", "TEMPLATE"]).optional(),
   fallbackReply: z.string().max(1000).optional(),
+  enabled: z.boolean().optional(),
 });
 
 responderRouter.patch("/profile", requireAuth, route(async (req, res) => {
@@ -110,7 +141,7 @@ responderRouter.patch("/profile", requireAuth, route(async (req, res) => {
   const reply = merged.fallbackReply ?? current.fallbackReply;
   if (mode === "TEMPLATE" && !reply?.trim()) return sendError(res, 400, "BAD_REQUEST", "اكتب نص الرد الاحتياطي");
   const sub = await prisma.responderSubscription.update({ where: { userId: req.user!.id }, data: merged });
-  res.json({ businessDescription: sub.businessDescription, tone: sub.tone, fallbackMode: sub.fallbackMode, fallbackReply: sub.fallbackReply });
+  res.json({ businessDescription: sub.businessDescription, tone: sub.tone, fallbackMode: sub.fallbackMode, fallbackReply: sub.fallbackReply, enabled: sub.enabled });
 }));
 
 // The last 30 days at a glance: what was answered, what waits for a person, what failed.
@@ -169,9 +200,6 @@ responderRouter.post("/connections", requireAuth, route(async (req, res) => {
   const channel = await prisma.socialChannel.findUnique({ where: { id: parsed.data.channelId } });
   if (!channel || !channel.isEnabled) return sendError(res, 404, "NOT_FOUND", "القناة غير متاحة");
   if (isMetaDriver(channel.driver) && !metaOpenFor(req.user!.role)) return sendError(res, 403, "META_NOT_OPEN", META_NOT_OPEN_MESSAGE);
-
-  const sub = await getSubscription(req.user!.id);
-  if (!isRunning(sub.status)) return sendError(res, 403, "FORBIDDEN", "فعّل المجيب الآلي أول (تجربة أو اشتراك)");
 
   const driver = drivers[channel.driver];
   const invalid = driver.validateCredentials(parsed.data.credentials);
@@ -338,7 +366,8 @@ responderRouter.post("/inbox/:id/send", requireAuth, route(async (req, res) => {
     return sendError(res, 409, "CONFLICT", "هالرسالة مو بانتظار رد");
   }
   const sub = await getSubscription(req.user!.id);
-  if (!isRunning(sub.status)) return sendError(res, 403, "FORBIDDEN", "الاشتراك منتهي — جدّده أول");
+  if (!sub.enabled) return sendError(res, 403, "FORBIDDEN", "المجيب الآلي متوقف من إعداداتك");
+  if (!(await getActiveResponderEntitlements(req.user!.id)).length) return sendError(res, 403, "BASIC_PLAN_REQUIRED", "لازم يكون عندك خطة فعّالة لترد على الرسائل");
 
   try {
     await sendThroughConnection(item.connection, parsed.data.reply, item.conversationRef);

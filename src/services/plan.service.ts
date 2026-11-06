@@ -184,14 +184,17 @@ export async function listPlansForAdmin() {
 }
 
 export class PlanInUseError extends Error {
-  constructor(public memberships: number) {
+  constructor(public memberships: number, public responderEntitlements: number) {
     super("PLAN_IN_USE");
   }
 }
 
 export async function deletePlan(id: string): Promise<void> {
-  const memberships = await prisma.membership.count({ where: { planId: id } });
-  if (memberships > 0) throw new PlanInUseError(memberships);
+  const [memberships, responderEntitlements] = await Promise.all([
+    prisma.membership.count({ where: { planId: id } }),
+    prisma.responderEntitlement.count({ where: { planId: id } }),
+  ]);
+  if (memberships > 0 || responderEntitlements > 0) throw new PlanInUseError(memberships, responderEntitlements);
   await prisma.servicePlan.delete({ where: { id } });
 }
 

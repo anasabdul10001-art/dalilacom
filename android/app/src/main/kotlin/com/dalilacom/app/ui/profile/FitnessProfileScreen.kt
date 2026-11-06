@@ -51,7 +51,7 @@ fun FitnessProfileScreen(container: AppContainer, onBack: () -> Unit) {
             val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.dalilacom.app.ui.common.ImageUtil.maxJpeg(context, uri) } ?: return@launch
             container.merchantRepository.uploadFitnessCertificate(bytes).onSuccess { photo ->
                 if (certificatePhotoIds.size < 12) certificatePhotoIds = certificatePhotoIds + photo.id
-                else android.widget.Toast.makeText(context, "الحد الأعلى 12 صورة", android.widget.Toast.LENGTH_SHORT).show()
+                else android.widget.Toast.makeText(context, context.getString(R.string.fit_auto_817bd7c2), android.widget.Toast.LENGTH_SHORT).show()
             }.onFailure { error = it.message }
         }
     }
@@ -88,22 +88,22 @@ fun FitnessProfileScreen(container: AppContainer, onBack: () -> Unit) {
             OutlinedTextField(specialties, { specialties = it }, label = { Text(stringResource(R.string.fitness_specialties)) }, supportingText = { Text(stringResource(R.string.fitness_list_help)) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
             OutlinedTextField(achievements, { achievements = it }, label = { Text(stringResource(R.string.fitness_achievements)) }, supportingText = { Text(stringResource(R.string.fitness_list_help)) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
             OutlinedTextField(certifications, { certifications = it }, label = { Text(stringResource(R.string.fitness_certifications)) }, supportingText = { Text(stringResource(R.string.fitness_certification_note)) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-            Text("صور الشهادات والإنجازات", style = MaterialTheme.typography.titleSmall)
-            Text("تظهر هذه الصور للزوار، لكنها لا تعني أن دليلكم تحقق من صحة الشهادة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick = picker.openGallery, enabled = certificatePhotoIds.size < 12, modifier = Modifier.fillMaxWidth()) { Text("📷 إضافة صورة شهادة أو إنجاز") }
+            Text(stringResource(R.string.fit_auto_77aa4468), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.fit_auto_712ba737), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick = picker.openGallery, enabled = certificatePhotoIds.size < 12, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.fit_auto_1b963ebd)) }
             certificatePhotoIds.forEachIndexed { index, id ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("📜 صورة رقم " + (index + 1))
-                    TextButton(onClick = { certificatePhotoIds = certificatePhotoIds.filterNot { it == id } }) { Text("حذف") }
+                    Text(stringResource(R.string.fit_auto_4b431162) + (index + 1))
+                    TextButton(onClick = { certificatePhotoIds = certificatePhotoIds.filterNot { it == id } }) { Text(stringResource(R.string.fit_auto_3b9854e1)) }
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("طرق الدفع واستلام الأجور", style = MaterialTheme.typography.titleLarge)
-            Text("أضف حساباتك ليستطيع المتدرب تحويل الأجرة لك. ستظهر هذه البيانات للزوار في صفحة المدرب، والتحويل يتم خارج التطبيق.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedTextField(paymentAccountName, { paymentAccountName = it.take(100) }, Modifier.fillMaxWidth(), label = { Text("اسم صاحب الحساب") }, singleLine = true)
-            OutlinedTextField(syriatelCash, { syriatelCash = it.take(80) }, Modifier.fillMaxWidth(), label = { Text("رقم سيرياتل كاش") }, singleLine = true)
-            OutlinedTextField(mtnCash, { mtnCash = it.take(80) }, Modifier.fillMaxWidth(), label = { Text("رقم MTN كاش") }, singleLine = true)
-            OutlinedTextField(shamCash, { shamCash = it.take(80) }, Modifier.fillMaxWidth(), label = { Text("حساب شام كاش") }, singleLine = true)
+            Text(stringResource(R.string.fit_auto_1a8b3258), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.fit_auto_6cbcb21f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedTextField(paymentAccountName, { paymentAccountName = it.take(100) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.fit_auto_909db8ed)) }, singleLine = true)
+            OutlinedTextField(syriatelCash, { syriatelCash = it.take(80) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.fit_auto_6ff1570f)) }, singleLine = true)
+            OutlinedTextField(mtnCash, { mtnCash = it.take(80) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.fit_auto_9bb5492f)) }, singleLine = true)
+            OutlinedTextField(shamCash, { shamCash = it.take(80) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.fit_auto_04e0bcce)) }, singleLine = true)
             Button(enabled = !saving, onClick = {
                 val body = FitnessProfileBody(displayName.trim().ifBlank { null }, headline.trim().ifBlank { null }, years.toIntOrNull()?.coerceAtMost(70), specialties.lines().map(String::trim).filter(String::isNotBlank).distinct().take(15), achievements.lines().map(String::trim).filter(String::isNotBlank).distinct().take(15), certifications.lines().map(String::trim).filter(String::isNotBlank).distinct().take(15), certificatePhotoIds, paymentAccountName.trim().ifBlank { null }, syriatelCash.trim().ifBlank { null }, mtnCash.trim().ifBlank { null }, shamCash.trim().ifBlank { null })
                 scope.launch {
@@ -113,24 +113,24 @@ fun FitnessProfileScreen(container: AppContainer, onBack: () -> Unit) {
                 }
             }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(if (saving) R.string.fitness_saving else R.string.fitness_save)) }
             HorizontalDivider(Modifier.padding(vertical = 12.dp))
-            Text("باقات التدريب الشهرية", style = MaterialTheme.typography.titleLarge)
-            Text("أضف سعرًا ومدة واضحة ليشاهد الزوار الباقات في ملفك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.fit_auto_043d5776), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.fit_auto_b2007fb0), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             offers.forEach { offer ->
                 ElevatedCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp)) {
                         Text(offer.title, style = MaterialTheme.typography.titleMedium)
-                        Text(offer.durationMonths.toString() + " شهر · " + String.format("%,.2f", offer.priceCents / 100.0) + " " + offer.currency)
+                        Text(offer.durationMonths.toString() + stringResource(R.string.fit_auto_4a0b14c3) + String.format("%,.2f", offer.priceCents / 100.0) + " " + offer.currency)
                         offer.description?.let { Text(it) }
                         TextButton(onClick = {
                             scope.launch { container.merchantRepository.deleteFitnessOffer(offer.id).onSuccess { offers = offers.filterNot { it.id == offer.id } }.onFailure { error = it.message } }
-                        }) { Text("حذف الباقة") }
+                        }) { Text(stringResource(R.string.fit_auto_9e1fb97e)) }
                     }
                 }
             }
-            OutlinedTextField(offerTitle, { offerTitle = it.take(100) }, Modifier.fillMaxWidth(), label = { Text("اسم الباقة") }, singleLine = true)
-            OutlinedTextField(offerDescription, { offerDescription = it.take(1000) }, Modifier.fillMaxWidth(), label = { Text("ماذا تتضمن؟") }, minLines = 2)
-            OutlinedTextField(offerMonths, { offerMonths = it.filter(Char::isDigit).take(2) }, Modifier.fillMaxWidth(), label = { Text("المدة بالأشهر") }, singleLine = true)
-            OutlinedTextField(offerPrice, { offerPrice = it.filter { c -> c.isDigit() || c == '.' } }, Modifier.fillMaxWidth(), label = { Text("السعر") }, singleLine = true)
+            OutlinedTextField(offerTitle, { offerTitle = it.take(100) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.fit_auto_b6b55b3a)) }, singleLine = true)
+            OutlinedTextField(offerDescription, { offerDescription = it.take(1000) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.fit_auto_650b87df)) }, minLines = 2)
+            OutlinedTextField(offerMonths, { offerMonths = it.filter(Char::isDigit).take(2) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.fit_auto_ae92351c)) }, singleLine = true)
+            OutlinedTextField(offerPrice, { offerPrice = it.filter { c -> c.isDigit() || c == '.' } }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.fit_auto_fa59c355)) }, singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("USD", "SYP", "EUR", "TRY").forEach { code -> FilterChip(selected = offerCurrency == code, onClick = { offerCurrency = code }, label = { Text(code) }) }
             }
@@ -142,7 +142,7 @@ fun FitnessProfileScreen(container: AppContainer, onBack: () -> Unit) {
                         .onFailure { error = it.message }
                     saving = false
                 }
-            }, modifier = Modifier.fillMaxWidth()) { Text("إضافة الباقة") }
+            }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.fit_auto_72908aa4)) }
         }
     }
 }

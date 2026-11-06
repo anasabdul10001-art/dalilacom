@@ -265,6 +265,12 @@ DICT.en = {
 // To add a language, copy this file (e.g. i18n.de.js), translate the values, keep the keys, and load it in index.html.
 // PHRASES = whole texts; PATTERNS = texts with numbers or names inside (regex -> replacement or function).
 PHRASES.en = {
+  "ما انقبل الطلب:": "The request was not accepted:",
+  "راجع البيانات وحاول مرة ثانية": "Review the information and try again",
+  "وصل طلب فتح متجرك، وهو قيد المراجعة.": "Your shop application was received and is under review.",
+  "وصل طلب إضافة نشاطك على الخريطة، وهو قيد المراجعة.": "Your request to add your business to the map was received and is under review.",
+  "خطة التمرين": "Workout plan",
+  "الخطة الغذائية": "Nutrition plan",
   "اقتراحات العناوين من © OpenStreetMap contributors": "Address suggestions from © OpenStreetMap contributors",
   "تعذّر التأكيد": "Could not confirm",
   "% من كل عملية": "% of each transaction",

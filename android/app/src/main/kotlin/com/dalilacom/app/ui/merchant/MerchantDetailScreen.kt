@@ -246,39 +246,39 @@ fun MerchantDetailScreen(
                                         Text(stringResource(R.string.fitness_unverified), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                     fp.certificationPhotoIds.forEach { photoId ->
-                                        coil.compose.AsyncImage(model = com.dalilacom.app.data.network.absoluteUrl("/store/photos/" + photoId), contentDescription = "صورة شهادة أو إنجاز", contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(12.dp)).padding(vertical = 5.dp))
+                                        coil.compose.AsyncImage(model = com.dalilacom.app.data.network.absoluteUrl("/store/photos/" + photoId), contentDescription = stringResource(R.string.fit_auto_fd107e2a), contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(12.dp)).padding(vertical = 5.dp))
                                     }
                                     if (fp.certificationPhotoIds.isNotEmpty()) Text(stringResource(R.string.fitness_unverified), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
-                                    val paymentMethods = listOf("سيرياتل كاش" to fp.syriatelCash, "MTN كاش" to fp.mtnCash, "شام كاش" to fp.shamCash).filter { !it.second.isNullOrBlank() }
+                                    val paymentMethods = listOf(stringResource(R.string.fit_auto_31d9b741) to fp.syriatelCash, stringResource(R.string.fit_auto_d79941c7) to fp.mtnCash, stringResource(R.string.fit_auto_098683e9) to fp.shamCash).filter { !it.second.isNullOrBlank() }
                                     if (paymentMethods.isNotEmpty()) {
-                                        SectionTitle("💳 طرق الدفع المتاحة")
-                                        Text("التحويل يتم مباشرة إلى المدرب خارج التطبيق.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        fp.paymentAccountName?.takeIf { it.isNotBlank() }?.let { Text("صاحب الحساب: $it", style = MaterialTheme.typography.bodySmall) }
+                                        SectionTitle(stringResource(R.string.fit_auto_13595e7a))
+                                        Text(stringResource(R.string.fit_auto_5b0421bf), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        fp.paymentAccountName?.takeIf { it.isNotBlank() }?.let { Text(stringResource(R.string.fit_auto_7a73da43, it), style = MaterialTheme.typography.bodySmall) }
                                         paymentMethods.forEach { (label, account) -> Text("$label: $account", style = MaterialTheme.typography.bodyMedium) }
                                     }
                                 }
                                 if (merchant.isFitnessProvider && merchant.fitnessOffers.isNotEmpty()) {
-                                    SectionTitle("🎯 باقات التدريب الشهرية")
+                                    SectionTitle(stringResource(R.string.fit_auto_27503bf2))
                                     merchant.fitnessOffers.forEach { offer ->
                                         Text(offer.title, style = MaterialTheme.typography.titleSmall)
-                                        Text(offer.durationMonths.toString() + " شهر · " + String.format("%,.2f", offer.priceCents / 100.0) + " " + offer.currency, style = MaterialTheme.typography.bodyMedium)
+                                        Text(offer.durationMonths.toString() + stringResource(R.string.fit_auto_4a0b14c3) + String.format("%,.2f", offer.priceCents / 100.0) + " " + offer.currency, style = MaterialTheme.typography.bodyMedium)
                                         offer.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                         if (role == "CUSTOMER") {
                                             Button(enabled = requestedFitnessOffers[offer.id].isNullOrBlank(), onClick = {
                                                 scope.launch {
                                                     container.fitnessPlansRepository.requestEnrollment(offer.id).onSuccess {
                                                         requestedFitnessOffers = requestedFitnessOffers + (offer.id to "REQUESTED")
-                                                        Toast.makeText(context, "تم إرسال طلب الانضمام للمدرب", Toast.LENGTH_SHORT).show()
-                                                    }.onFailure { Toast.makeText(context, it.message ?: "تعذّر إرسال الطلب", Toast.LENGTH_LONG).show() }
+                                                        Toast.makeText(context, context.getString(R.string.fit_auto_8e0d8542), Toast.LENGTH_SHORT).show()
+                                                    }.onFailure { Toast.makeText(context, it.message ?: context.getString(R.string.fit_auto_aa2fb742), Toast.LENGTH_LONG).show() }
                                                 }
-                                            }) { Text(when (requestedFitnessOffers[offer.id]) { "REQUESTED" -> "بانتظار رد المدرب"; "ACCEPTED" -> "مقبول"; else -> "طلب الانضمام" }) }
+                                            }) { Text(when (requestedFitnessOffers[offer.id]) { "REQUESTED" -> stringResource(R.string.fit_auto_0c38fd67); "ACCEPTED" -> stringResource(R.string.fit_auto_19837e3e); else -> stringResource(R.string.fit_auto_58d8f68d) }) }
                                         } else if (role == null) {
-                                            OutlinedButton(onClick = onLogin) { Text("سجّل الدخول لطلب الانضمام") }
+                                            OutlinedButton(onClick = onLogin) { Text(stringResource(R.string.fit_auto_1eaa192f)) }
                                         }
                                         Spacer(Modifier.height(8.dp))
                                     }
-                                    Text("الدفع غير مستقطع من التطبيق؛ تواصل مع المدرب للاتفاق عليه.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(R.string.fit_auto_514b56ff), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
                                 }
                                 if (merchant.isFitnessProvider && merchant.discounts.isNotEmpty()) {

@@ -1,17 +1,65 @@
-import { ChannelConnection, ResponderStatus, ResponderSubscription, Role, SocialChannel } from "@prisma/client";
+import { ChannelConnection, ResponderStatus, ResponderSubscription, Role, ServiceKind, SocialChannel } from "@prisma/client";
 import { prisma } from "../prisma";
 import { decryptJson } from "./crypto.service";
 import { drivers } from "./channels";
 import { IncomingMessage } from "./channels/types";
-import { aiAvailable, answerComplaint, classifyIntent, generateReply } from "./ai.service";
+import { aiAvailable, answerComplaint, generateReply } from "./ai.service";
 import { adjustBalance } from "./wallet.service";
 import { getSettings } from "./settings.service";
 import { notify } from "./notification.service";
 
 const DAY = 24 * 60 * 60 * 1000;
+export const RESPONDER_LEGACY_PLAN_ID = "00000000-0000-4000-8000-000000000001";
+export const RESPONDER_SERVICES: ServiceKind[] = ["RESPONDER_BASIC", "RESPONDER_CUSTOMER", "RESPONDER_MERCHANT"];
 
 export function isRunning(status: ResponderStatus) {
   return status === "TRIAL" || status === "ACTIVE";
+}
+
+/** Mark expired plan periods and return the account's currently valid responder plans. */
+export async function getActiveResponderEntitlements(userId: string) {
+  const now = new Date();
+  await prisma.responderEntitlement.updateMany({
+    where: {
+      userId,
+      OR: [
+        { status: "TRIAL", OR: [{ trialEndsAt: null }, { trialEndsAt: { lte: now } }] },
+        { status: "ACTIVE", OR: [{ periodEnd: null }, { periodEnd: { lte: now } }] },
+      ],
+    },
+    data: { status: "EXPIRED" },
+  });
+  return prisma.responderEntitlement.findMany({
+    where: { userId, OR: [{ status: "TRIAL", trialEndsAt: { gt: now } }, { status: "ACTIVE", periodEnd: { gt: now } }] },
+    include: { plan: true },
+  });
+}
+
+/** Extend one plan without charging. Only the super-admin grant action calls this helper. */
+export async function grantResponderEntitlement(userId: string, planId: string, days: number) {
+  const existing = await prisma.responderEntitlement.findUnique({ where: { userId_planId: { userId, planId } } });
+  const now = Date.now();
+  const currentEnd = existing?.status === "ACTIVE" ? existing.periodEnd?.getTime() ?? now : existing?.status === "TRIAL" ? existing.trialEndsAt?.getTime() ?? now : now;
+  const periodEnd = new Date(Math.max(now, currentEnd) + days * DAY);
+  return prisma.responderEntitlement.upsert({
+    where: { userId_planId: { userId, planId } },
+    create: { userId, planId, status: "ACTIVE", source: "GRANT", periodEnd },
+    update: { status: "ACTIVE", source: "GRANT", trialEndsAt: null, periodEnd },
+  });
+}
+
+export class ResponderTrialUnavailableError extends Error {}
+export class ResponderPlanNotFoundError extends Error {}
+
+/** Starts one plan's trial once per account. An expired entitlement also counts as the trial having been used. */
+export async function startResponderTrial(userId: string, planId: string) {
+  const plan = await prisma.servicePlan.findUnique({ where: { id: planId } });
+  if (!plan || !RESPONDER_SERVICES.includes(plan.service) || !plan.isActive) throw new ResponderPlanNotFoundError();
+  if (plan.trialDays <= 0) throw new ResponderTrialUnavailableError();
+  const previous = await prisma.responderEntitlement.findUnique({ where: { userId_planId: { userId, planId } }, select: { id: true } });
+  if (previous) throw new ResponderTrialUnavailableError();
+  const trialEndsAt = new Date(Date.now() + plan.trialDays * DAY);
+  return prisma.responderEntitlement.create({ data: { userId, planId, status: "TRIAL", source: "TRIAL", trialEndsAt } });
 }
 
 /** Expiry is evaluated at the moment of use (no cron): an out-of-date TRIAL/ACTIVE row flips to EXPIRED here. */
@@ -24,8 +72,17 @@ export async function getSubscription(userId: string): Promise<ResponderSubscrip
   if (expired) {
     const was = sub.status;
     sub = await prisma.responderSubscription.update({ where: { userId }, data: { status: "EXPIRED" } });
+    await prisma.responderEntitlement.updateMany({
+      where: { userId, planId: RESPONDER_LEGACY_PLAN_ID, status: was === "TRIAL" ? "TRIAL" : "ACTIVE" },
+      data: { status: "EXPIRED" },
+    });
     // the flip happens once, so the notice does too
     await tell(userId, was === "TRIAL" ? "انتهت تجربة المجيب الآلي" : "انتهى اشتراك المجيب الآلي", "توقّف الرد التلقائي على زبائنك. فعّل أو جدّد الاشتراك ليرجع يشتغل.", { reason: "expired" });
+  } else if (sub.status === "EXPIRED") {
+    await prisma.responderEntitlement.updateMany({
+      where: { userId, planId: RESPONDER_LEGACY_PLAN_ID, status: { in: ["TRIAL", "ACTIVE"] } },
+      data: { status: "EXPIRED" },
+    });
   }
   return sub;
 }
@@ -67,9 +124,15 @@ export async function activate(userId: string, role: Role): Promise<ActivationRe
   if (isRunning(sub.status)) throw new AlreadyRunningError();
 
   if (!sub.trialUsed && settings.responder.trialDays > 0) {
+    const trialEndsAt = new Date(Date.now() + settings.responder.trialDays * DAY);
     const updated = await prisma.responderSubscription.update({
       where: { userId },
-      data: { status: "TRIAL", trialUsed: true, trialEndsAt: new Date(Date.now() + settings.responder.trialDays * DAY) },
+      data: { status: "TRIAL", trialUsed: true, trialEndsAt },
+    });
+    await prisma.responderEntitlement.upsert({
+      where: { userId_planId: { userId, planId: RESPONDER_LEGACY_PLAN_ID } },
+      create: { userId, planId: RESPONDER_LEGACY_PLAN_ID, status: "TRIAL", source: "TRIAL", trialEndsAt },
+      update: { status: "TRIAL", source: "TRIAL", trialEndsAt, periodEnd: null },
     });
     return { kind: "TRIAL_STARTED", sub: updated };
   }
@@ -95,6 +158,11 @@ export async function pay(userId: string, role: Role): Promise<ActivationResult>
         aiPeriodStart: new Date(now),
       },
     });
+    await tx.responderEntitlement.upsert({
+      where: { userId_planId: { userId, planId: RESPONDER_LEGACY_PLAN_ID } },
+      create: { userId, planId: RESPONDER_LEGACY_PLAN_ID, status: "ACTIVE", source: "PAID", periodEnd: sub.periodEnd },
+      update: { status: "ACTIVE", source: "PAID", trialEndsAt: null, periodEnd: sub.periodEnd },
+    });
     return { kind: "PAID" as const, sub, charged: price };
   });
 }
@@ -110,14 +178,6 @@ const COMPLAINT_WORDS = [
 function looksLikeComplaint(text: string) {
   const t = text.toLowerCase();
   return COMPLAINT_WORDS.some((w) => t.includes(w));
-}
-
-/** Is there AI quota left this period? (Read-only: only the replies the AI writes are counted, not the quick classification.) */
-async function aiQuotaLeft(userId: string, limit: number): Promise<boolean> {
-  const sub = await prisma.responderSubscription.findUnique({ where: { userId } });
-  if (!sub) return false;
-  const periodStale = !sub.aiPeriodStart || Date.now() - sub.aiPeriodStart.getTime() > 30 * DAY;
-  return periodStale || sub.aiRepliesUsed < limit;
 }
 
 async function consumeAi(userId: string, limit: number): Promise<boolean> {
@@ -202,48 +262,55 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
   }
 
   const sub = await getSubscription(userId);
-  if (!isRunning(sub.status)) return record({ status: "SKIPPED", reason: "subscription_inactive" });
+  if (!sub.enabled) return record({ status: "SKIPPED", reason: "responder_disabled" });
+  const entitlements = await getActiveResponderEntitlements(userId);
+  if (!entitlements.length) {
+    const now = new Date();
+    const notice = await prisma.responderSubscription.updateMany({
+      where: { userId, OR: [{ basicPlanNoticeAt: null }, { basicPlanNoticeAt: { lte: new Date(now.getTime() - 30 * DAY) } }] },
+      data: { basicPlanNoticeAt: now },
+    });
+    if (notice.count) await tell(userId, "المجيب الآلي يحتاج خطة فعّالة", "اختر خطة للمجيب الآلي ليعود للرد على الرسائل. قنواتك وقواعدك محفوظة.", { reason: "basic_plan_required" });
+    return record({ status: "SKIPPED", reason: "basic_plan_required" });
+  }
+  const aiEntitlements = entitlements.filter((entitlement) => entitlement.plan.includesAi);
+  const hasAiPlan = aiEntitlements.length > 0;
+  const aiLimit = hasAiPlan ? Math.max(...aiEntitlements.map((entitlement) => entitlement.plan.aiReplyLimit || 0)) : 0;
 
-  const settings = await getSettings();
-  const limit = settings.responder.monthlyAiReplyLimit;
-  let intent: string | null = looksLikeComplaint(msg.text) ? "complaint" : null;
-  if (!intent && aiAvailable() && (await aiQuotaLeft(userId, limit))) intent = await classifyIntent(msg.text);
-  // A complaint is answered from what the shop knows; when that does not settle it, the customer is told that a real
-  // person will contact them soon and the message waits in the inbox. The owner is told either way.
+  const intent: string | null = looksLikeComplaint(msg.text) ? "complaint" : null;
+  // Basic plans use a fixed holding reply. AI plans keep their complaint-specific AI answer.
   if (intent === "complaint") {
-    let answer = null as Awaited<ReturnType<typeof answerComplaint>>;
-    if (aiAvailable() && (await consumeAi(userId, limit))) {
-      answer = await answerComplaint({
-        message: msg.text,
-        businessDescription: sub.businessDescription,
-        tone: sub.tone,
-        businessInfo: await businessInfoFor(connection),
-        history: await historyFor(connection.id, msg.conversationRef),
-      });
-    }
-    const complaintReply = answer?.reply ?? COMPLAINT_HOLDING_REPLY;
-    const needsPerson = !answer || answer.handoff;
     try {
-      await sendThroughConnection(connection, complaintReply, msg.conversationRef);
-      return record({ status: needsPerson ? "NEEDS_REVIEW" : "SENT", intent, reply: complaintReply, reason: "complaint" });
+      let answer: Awaited<ReturnType<typeof answerComplaint>> = null;
+      if (hasAiPlan && aiAvailable() && (await consumeAi(userId, aiLimit))) {
+        answer = await answerComplaint({
+          message: msg.text,
+          businessDescription: sub.businessDescription,
+          tone: sub.tone,
+          businessInfo: await businessInfoFor(connection),
+          history: await historyFor(connection.id, msg.conversationRef),
+        });
+      }
+      const reply = answer?.reply ?? COMPLAINT_HOLDING_REPLY;
+      await sendThroughConnection(connection, reply, msg.conversationRef);
+      return record({ status: answer?.handoff === false ? "SENT" : "NEEDS_REVIEW", intent, reply, reason: "complaint" });
     } catch (err) {
-      return record({ status: "FAILED", intent, reply: complaintReply, reason: err instanceof Error ? err.message : "send_failed" });
+      return record({ status: "FAILED", intent, reply: COMPLAINT_HOLDING_REPLY, reason: err instanceof Error ? err.message : "send_failed" });
     }
   }
 
-  const lower = msg.text.toLowerCase();
   const rules = await prisma.responderRule.findMany({ where: { userId, isActive: true }, orderBy: { createdAt: "asc" } });
   const rule = rules.find(
     (r) =>
       (!r.channelId || r.channelId === connection.channelId) &&
       // A rule limited to specific posts only ever answers comments on those posts (never DMs or other posts).
       (r.postIds.length === 0 || (!!msg.postId && r.postIds.includes(msg.postId))) &&
-      r.keywords.some((k) => k.trim() && lower.includes(k.trim().toLowerCase())),
+      r.keywords.some((k) => k.trim() && msg.text.toLowerCase().includes(k.trim().toLowerCase())),
   );
 
   // The AI answers with what the shop really has and what was said before in this conversation.
   const writeWithAi = async (instructions: string): Promise<string | null> => {
-    if (!aiAvailable() || !(await consumeAi(userId, limit))) return null;
+    if (!hasAiPlan || !aiAvailable() || !(await consumeAi(userId, aiLimit))) return null;
     return generateReply({
       message: msg.text,
       businessDescription: sub.businessDescription,
@@ -258,14 +325,15 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
   let reply: string | null = null;
   let heldBack = "empty_template";
   if (rule) {
-    if (rule.mode === "AI") reply = await writeWithAi(rule.aiInstructions);
+    if (rule.mode === "AI" && hasAiPlan) reply = await writeWithAi(rule.aiInstructions);
     if (!reply && rule.replyTemplate) reply = personalise(rule.replyTemplate);
-    if (!reply && rule.mode === "AI") heldBack = "ai_unavailable";
+    if (!reply && rule.mode === "AI") heldBack = hasAiPlan ? "ai_unavailable" : "ai_requires_plan";
   } else if (sub.fallbackMode === "TEMPLATE" && sub.fallbackReply?.trim()) {
     reply = personalise(sub.fallbackReply);
   } else if (sub.fallbackMode === "AI") {
-    reply = await writeWithAi("No rule matched this message: answer it only from the business information, briefly. If it is not covered, say the team will follow up.");
-    if (!reply) heldBack = "ai_unavailable";
+    if (hasAiPlan) reply = await writeWithAi("No rule matched this message: answer it only from the business information, briefly. If it is not covered, say the team will follow up.");
+    else if (sub.fallbackReply?.trim()) reply = personalise(sub.fallbackReply);
+    if (!reply) heldBack = hasAiPlan ? "ai_unavailable" : "ai_requires_plan";
   } else {
     return record({ status: "SKIPPED", intent, reason: "no_matching_rule" });
   }

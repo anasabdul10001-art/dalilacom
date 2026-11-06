@@ -498,6 +498,7 @@
             <select id="np-service">
               <option value="MEMBERSHIP">عضوية الزبون (بطاقة الحسم)</option>
               <option value="MERCHANT_ACCOUNT">باقة النشاط</option>
+              <option value="RESPONDER_BASIC">المجيب الآلي (متاح لكل الحسابات)</option>
             </select></div>
           <div><label>الاسم</label><input id="np-name" placeholder="Monthly" /></div>
         </div>
@@ -558,6 +559,17 @@
         <input placeholder="مثال: 15000" id="rs-syp" type="number" min="0" step="1" />
         <button style="margin-top:12px" onclick="saveResponderSettings()">حفظ الإعدادات</button>
         <span id="rs-msg" class="muted" style="margin-right:10px"></span>
+      </div>
+      <div class="card">
+        <h3>منح أو تمديد خطة لحساب</h3>
+        <p class="muted">اكتب بريد الحساب، اختر إحدى خطط المجيب، وحدد عدد الأيام. المنحة لا تخصم رصيدًا من الحساب.</p>
+        <div class="row">
+          <div><label>بريد الحساب</label><input id="rg-email" type="email" placeholder="name@example.com" /></div>
+          <div><label>الخطة</label><select id="rg-plan"><option value="">— اختر خطة —</option></select></div>
+          <div><label>عدد الأيام</label><input id="rg-days" type="number" min="1" max="3650" /></div>
+        </div>
+        <button style="margin-top:12px" onclick="grantResponderPlan()">منح / تمديد</button>
+        <span id="rg-msg" class="muted" style="margin-right:10px"></span>
       </div>
       <div class="card">
         <h3>القنوات (وسائل التواصل)</h3>

@@ -143,7 +143,6 @@ data class PostDto(
 @Serializable
 data class MetaOAuthStatusDto(
     val available: Boolean = false,
-    val responderRunning: Boolean = false,
     val redirectUri: String = "",
     val scopes: List<String> = emptyList(),
     val deepLink: String = "",

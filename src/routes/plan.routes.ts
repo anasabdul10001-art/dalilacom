@@ -99,7 +99,8 @@ planRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), route(async (req
     res.json({ deleted: true });
   } catch (err) {
     if (err instanceof PlanInUseError) {
-      return sendError(res, 409, "PLAN_IN_USE", `ما بنقدر نحذف باقة عندها ${err.memberships} عضوية — عطّلها بدل الحذف`);
+      const useCount = err.memberships + err.responderEntitlements;
+      return sendError(res, 409, "PLAN_IN_USE", `ما بنقدر نحذف باقة مستخدمة من ${useCount} حساب أو اشتراك — عطّلها بدل الحذف`);
     }
     throw err;
   }
