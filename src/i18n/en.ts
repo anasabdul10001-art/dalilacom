@@ -17,6 +17,8 @@ export const en: LanguagePack = {
     "كل نوع إشعار مرة واحدة بس": "Each notification type only once",
     "كل بلد مرة وحدة بس": "Each country only once",
     "الباقة غير موجودة": "Plan not found",
+    "سعر هذه الخطة غير مكتمل، تواصل مع الدعم": "The price for this plan is incomplete. Please contact support.",
+    "تاريخ نهاية العرض لازم يكون بعد تاريخ بدايته": "The offer end date must be after its start date.",
     "أرسل الصورة بصيغة JPEG أو PNG أو WebP": "Send the image as JPEG, PNG or WebP",
     "الملف ليس صورة صالحة (JPEG أو PNG أو WebP)": "The file isn't a valid image (JPEG, PNG or WebP)",
     "ما لقينا طريق بين النقطتين": "We couldn't find a route between the two points",

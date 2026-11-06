@@ -250,6 +250,7 @@ model ServicePlan {
   merchants             MerchantProfile[]
   features              PlanFeature[]
   prices                PlanPrice[]
+  offers                PlanOffer[]
   responderEntitlements ResponderEntitlement[]
 
   @@index([service, isActive])
@@ -285,6 +286,24 @@ model PlanPrice {
 
   @@unique([planId, countryId])
   @@index([countryId])
+}
+
+// Optional promotion attached to a plan: customer pays for a number of plan periods and receives extra days.
+model PlanOffer {
+  id                   String    @id @default(uuid())
+  planId               String
+  paidPeriods          Int
+  bonusDays            Int
+  text                 String
+  startsAt             DateTime?
+  endsAt               DateTime?
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  plan ServicePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId, isActive])
 }
 
 // The VAT/sales-tax rate applied to a country's invoices (section 58/64). Stored in basis points so

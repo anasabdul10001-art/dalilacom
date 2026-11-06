@@ -1692,6 +1692,29 @@ function addPriceRow(planId) {
   document.getElementById('pp-' + planId).insertAdjacentHTML('beforeend', priceRowHtml());
 }
 
+function offerDateInput(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function offerRowHtml(offer = {}) {
+  return `<div class="offer-row row" data-offer-id="${escHtml(offer.id || '')}" style="align-items:flex-end;margin:8px 0;padding:8px;border:1px solid #ddd;border-radius:8px">
+    <div><label>عدد الفترات المدفوعة</label><input class="of-periods" type="number" min="1" value="${offer.paidPeriods ?? 1}" /></div>
+    <div><label>أيام إضافية مجانية</label><input class="of-days" type="number" min="0" value="${offer.bonusDays ?? 0}" /></div>
+    <div style="flex:2"><label>نص العرض</label><input class="of-text" maxlength="200" value="${escHtml(offer.text || '')}" /></div>
+    <div><label>يبدأ (اختياري)</label><input class="of-start" type="datetime-local" value="${offerDateInput(offer.startsAt)}" /></div>
+    <div><label>ينتهي (اختياري)</label><input class="of-end" type="datetime-local" value="${offerDateInput(offer.endsAt)}" /></div>
+    <div style="flex:0 0 auto"><label>فعّال</label><input class="of-active" type="checkbox" style="width:auto" ${offer.isActive === false ? '' : 'checked'} /></div>
+    <div style="flex:0 0 auto"><button class="small danger" onclick="removePlanOffer(this)">✕</button></div>
+  </div>`;
+}
+
+function addPlanOfferRow(planId) {
+  document.getElementById('offers-' + planId).insertAdjacentHTML('beforeend', offerRowHtml());
+}
+
 function planCardHtml(p) {
   const isMerchant = p.service === 'MERCHANT_ACCOUNT';
   const features = (p.features || []).map(f => (f.included ? '✔ ' : '✘ ') + f.text).join('\n');
@@ -1724,8 +1747,11 @@ function planCardHtml(p) {
     <label>أسعار خاصة بالبلدان (الباقة بتنباع بسعرها الأساسي لأي بلد ما إلو سطر هون)</label>
     <div id="pp-${p.id}">${(p.prices || []).map(priceRowHtml).join('')}</div>
     <button class="small secondary" onclick="addPriceRow('${p.id}')">+ إضافة بلد</button>
+    <label style="margin-top:12px">عروض المدة (سعر الفترات المدفوعة، مع أيام إضافية مجانًا)</label>
+    <div id="offers-${p.id}">${(p.offers || []).map(offerRowHtml).join('')}</div>
+    <button class="small secondary" onclick="addPlanOfferRow('${p.id}')">+ إضافة عرض</button>
     <div style="margin-top:14px">
-      <button onclick="savePlanFull('${p.id}')">💾 حفظ الباقة</button>
+      <button onclick="savePlanFull('${p.id}')">💾 حفظ الباقة والعروض</button>
       <button class="secondary" onclick="togglePlanActive('${p.id}', ${p.isActive})">${p.isActive ? 'تعطيل' : 'تفعيل'}</button>
       <button class="danger" onclick="removePlan('${p.id}')">🗑️ حذف</button>
     </div>
@@ -1820,7 +1846,42 @@ async function savePlanFull(id) {
   if (!f.ok) { alert(errText(f.data, 'تعذّر حفظ المواصفات')); return; }
   const p = await api('PUT', `/plans/${id}/prices`, { prices });
   if (!p.ok) { alert(errText(p.data, 'تعذّر حفظ أسعار البلدان')); return; }
+  const offers = await savePlanOffers(id);
+  if (!offers) return;
   loadPlans();
+}
+
+function removePlanOffer(button) {
+  const row = button.closest('.offer-row');
+  if (row.dataset.offerId && !confirm('حذف هذا العرض؟')) return;
+  if (row.dataset.offerId) row.dataset.delete = 'true';
+  else row.remove();
+  if (row.dataset.delete) row.style.display = 'none';
+}
+
+async function savePlanOffers(planId) {
+  const rows = [...document.querySelectorAll(`#offers-${planId} .offer-row`)];
+  for (const row of rows) {
+    const id = row.dataset.offerId;
+    if (row.dataset.delete === 'true') {
+      const deleted = await api('DELETE', `/plans/offers/${id}`);
+      if (!deleted.ok) { alert(errText(deleted.data, 'تعذّر حذف العرض')); return false; }
+      continue;
+    }
+    const text = row.querySelector('.of-text').value.trim();
+    if (!text) { alert('اكتب اسم أو وصف العرض'); return false; }
+    const payload = {
+      paidPeriods: parseInt(row.querySelector('.of-periods').value, 10),
+      bonusDays: parseInt(row.querySelector('.of-days').value, 10), text,
+      startsAt: row.querySelector('.of-start').value ? new Date(row.querySelector('.of-start').value).toISOString() : null,
+      endsAt: row.querySelector('.of-end').value ? new Date(row.querySelector('.of-end').value).toISOString() : null,
+      isActive: row.querySelector('.of-active').checked,
+    };
+    if (!Number.isInteger(payload.paidPeriods) || payload.paidPeriods < 1 || !Number.isInteger(payload.bonusDays) || payload.bonusDays < 0) { alert('تحقق من عدد الفترات والأيام'); return false; }
+    const saved = id ? await api('PATCH', `/plans/offers/${id}`, payload) : await api('POST', `/plans/${planId}/offers`, payload);
+    if (!saved.ok) { alert(errText(saved.data, 'تعذّر حفظ العرض')); return false; }
+  }
+  return true;
 }
 
 async function togglePlanActive(id, current) {

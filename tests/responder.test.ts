@@ -431,6 +431,22 @@ describe("Plan access, permanent fixed replies and admin grants", () => {
     expect((await request(app).post(`/responder/plans/${plan.id}/trial`).set(other.auth)).status).toBe(201);
   });
 
+  it("charges the unified catalogue price and applies an active paid-period offer", async () => {
+    const plan = await prisma.servicePlan.create({ data: {
+      service: "RESPONDER_BASIC", name: "خطة شراء الاختبار", durationDays: 30, trialDays: 0,
+      priceCents: 500, currency: "USD", priceCredits: 250, includesAi: true, aiReplyLimit: 10, isActive: true,
+    } });
+    const offer = await prisma.planOffer.create({ data: { planId: plan.id, paidPeriods: 2, bonusDays: 5, text: "ادفع فترتين وخذ خمسة أيام" } });
+    const owner = await account("respcatalogpurchase");
+    await credit(owner.id, 500);
+    const before = Date.now();
+    const purchased = await request(app).post(`/responder/plans/${plan.id}/purchase`).set(owner.auth).send({ offerId: offer.id });
+    expect(purchased.status).toBe(201);
+    expect(purchased.body).toMatchObject({ kind: "PAID", charged: 500, paidPeriods: 2, bonusDays: 5 });
+    expect(new Date(purchased.body.entitlement.periodEnd).getTime()).toBeGreaterThanOrEqual(before + 65 * 86400000);
+    expect((await prisma.wallet.findUniqueOrThrow({ where: { userId: owner.id } })).balance).toBe(0);
+  });
+
   it("lets only an admin grant or extend access without charging the account", async () => {
     const admin = await account("respsuperadmin", "ADMIN");
     const owner = await account("respgrantuser");

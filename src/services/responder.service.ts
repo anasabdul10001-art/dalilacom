@@ -8,10 +8,12 @@ import { adjustBalance } from "./wallet.service";
 import { getSettings } from "./settings.service";
 import { notify } from "./notification.service";
 import { normalizeText } from "./category.service";
+import { creditsChargeFor } from "./plan.service";
 
 const DAY = 24 * 60 * 60 * 1000;
 export const RESPONDER_LEGACY_PLAN_ID = "00000000-0000-4000-8000-000000000001";
 export const RESPONDER_SERVICES: ServiceKind[] = ["RESPONDER_BASIC", "RESPONDER_CUSTOMER", "RESPONDER_MERCHANT"];
+export const RESPONDER_PLAN_SERVICE: ServiceKind = "RESPONDER_BASIC";
 
 export function isRunning(status: ResponderStatus) {
   return status === "TRIAL" || status === "ACTIVE";
@@ -51,16 +53,56 @@ export async function grantResponderEntitlement(userId: string, planId: string, 
 
 export class ResponderTrialUnavailableError extends Error {}
 export class ResponderPlanNotFoundError extends Error {}
+export class ResponderPlanPriceUnsetError extends Error {}
 
 /** Starts one plan's trial once per account. An expired entitlement also counts as the trial having been used. */
 export async function startResponderTrial(userId: string, planId: string) {
   const plan = await prisma.servicePlan.findUnique({ where: { id: planId } });
-  if (!plan || !RESPONDER_SERVICES.includes(plan.service) || !plan.isActive) throw new ResponderPlanNotFoundError();
+  if (!plan || plan.service !== RESPONDER_PLAN_SERVICE || !plan.isActive) throw new ResponderPlanNotFoundError();
   if (plan.trialDays <= 0) throw new ResponderTrialUnavailableError();
   const previous = await prisma.responderEntitlement.findUnique({ where: { userId_planId: { userId, planId } }, select: { id: true } });
   if (previous) throw new ResponderTrialUnavailableError();
   const trialEndsAt = new Date(Date.now() + plan.trialDays * DAY);
   return prisma.responderEntitlement.create({ data: { userId, planId, status: "TRIAL", source: "TRIAL", trialEndsAt } });
+}
+
+/** Charges the selected unified catalogue plan and extends its own entitlement period. */
+export async function purchaseResponderPlan(userId: string, planId: string, countryCode: string | null, offerId?: string) {
+  const plan = await prisma.servicePlan.findUnique({ where: { id: planId } });
+  if (!plan || plan.service !== RESPONDER_PLAN_SERVICE || !plan.isActive) throw new ResponderPlanNotFoundError();
+  const now = new Date();
+  const offer = offerId ? await prisma.planOffer.findFirst({ where: { id: offerId, planId, isActive: true, AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: now } }] }, { OR: [{ endsAt: null }, { endsAt: { gt: now } }] }] } }) : null;
+  if (offerId && !offer) throw new ResponderPlanNotFoundError();
+  const onePeriodPrice = await creditsChargeFor(plan, countryCode);
+  if (onePeriodPrice === null) throw new ResponderPlanPriceUnsetError();
+  const paidPeriods = offer?.paidPeriods ?? 1;
+  const price = onePeriodPrice * paidPeriods;
+  const durationDays = plan.durationDays * paidPeriods + (offer?.bonusDays ?? 0);
+  return prisma.$transaction(async (tx) => {
+    if (price > 0) await adjustBalance(tx, userId, -price, "SUBSCRIPTION", `auto-responder:${plan.id}`);
+    const now = Date.now();
+    const previous = await tx.responderEntitlement.findUnique({ where: { userId_planId: { userId, planId } } });
+    const currentEnd = previous?.status === "ACTIVE" ? previous.periodEnd?.getTime() ?? now : now;
+    const periodEnd = new Date(Math.max(now, currentEnd) + durationDays * DAY);
+    const entitlement = await tx.responderEntitlement.upsert({
+      where: { userId_planId: { userId, planId } },
+      create: { userId, planId, status: "ACTIVE", source: "PAID", periodEnd },
+      update: { status: "ACTIVE", source: "PAID", trialEndsAt: null, periodEnd },
+    });
+    const current = await tx.responderSubscription.upsert({ where: { userId }, update: {}, create: { userId } });
+    await tx.responderSubscription.update({
+      where: { userId },
+      data: {
+        status: "ACTIVE",
+        periodEnd,
+        aiRepliesUsed: 0,
+        aiPeriodStart: new Date(now),
+        aiQuotaNotice80At: null,
+        aiQuotaNotice100At: null,
+      },
+    });
+    return { kind: "PAID" as const, entitlement, charged: price, paidPeriods, bonusDays: offer?.bonusDays ?? 0, previousStatus: current.status };
+  });
 }
 
 /** Expiry is evaluated at the moment of use (no cron): an out-of-date TRIAL/ACTIVE row flips to EXPIRED here. */

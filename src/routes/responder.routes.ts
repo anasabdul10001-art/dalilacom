@@ -11,7 +11,8 @@ import { decryptJson, encryptJson } from "../services/crypto.service";
 import { drivers } from "../services/channels";
 import { getSettings } from "../services/settings.service";
 import { InsufficientBalanceError } from "../services/wallet.service";
-import { activate, AlreadyRunningError, getActiveResponderEntitlements, getSubscription, maybeNotifyEnding, pay, RESPONDER_SERVICES, ResponderPlanNotFoundError, ResponderTrialUnavailableError, sendThroughConnection, startResponderTrial } from "../services/responder.service";
+import { activate, AlreadyRunningError, getActiveResponderEntitlements, getSubscription, maybeNotifyEnding, pay, purchaseResponderPlan, RESPONDER_PLAN_SERVICE, ResponderPlanNotFoundError, ResponderPlanPriceUnsetError, ResponderTrialUnavailableError, sendThroughConnection, startResponderTrial } from "../services/responder.service";
+import { getCatalog } from "../services/plan.service";
 import { metaOAuthRouter } from "./metaOAuth.routes";
 import { isMetaDriver, META_NOT_OPEN_MESSAGE, metaOpenFor } from "../lib/metaAccess";
 
@@ -78,13 +79,26 @@ responderRouter.get("/status", requireAuth, route(async (req, res) => {
 }));
 
 // A single list for every account type. The user explicitly chooses a plan before a plan's trial begins.
-responderRouter.get("/plans", requireAuth, route(async (_req, res) => {
-  const plans = await prisma.servicePlan.findMany({
-    where: { service: { in: RESPONDER_SERVICES }, isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { priceCents: "asc" }],
-    include: { features: { orderBy: { sortOrder: "asc" } } },
-  });
-  res.json(plans);
+responderRouter.get("/plans", requireAuth, route(async (req, res) => {
+  const account = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { countryCode: true } });
+  const catalog = await getCatalog(account?.countryCode ?? null, resolveLanguage(req));
+  const plans = catalog.services.find((service) => service.service === RESPONDER_PLAN_SERVICE)?.plans ?? [];
+  const offers = await prisma.planOffer.findMany({ where: { planId: { in: plans.map((plan) => plan.id) }, isActive: true, AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: new Date() } }] }, { OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }] } });
+  res.json(plans.map((plan) => ({ ...plan, offers: offers.filter((offer) => offer.planId === plan.id) })));
+}));
+
+responderRouter.post("/plans/:id/purchase", requireAuth, route(async (req, res) => {
+  try {
+    const account = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { countryCode: true } });
+    const parsed = z.object({ offerId: z.string().uuid().optional() }).safeParse(req.body ?? {});
+    if (!parsed.success) return sendValidationError(res, parsed.error);
+    res.status(201).json(await purchaseResponderPlan(req.user!.id, req.params.id, account?.countryCode ?? null, parsed.data.offerId));
+  } catch (err) {
+    if (err instanceof ResponderPlanNotFoundError) return sendError(res, 404, "NOT_FOUND", "الخطة غير موجودة أو غير متاحة");
+    if (err instanceof ResponderPlanPriceUnsetError) return sendError(res, 409, "PRICE_NOT_SET", "سعر هذه الخطة غير مكتمل، تواصل مع الدعم");
+    if (err instanceof InsufficientBalanceError) return insufficient(res, err);
+    throw err;
+  }
 }));
 
 responderRouter.post("/plans/:id/trial", requireAuth, route(async (req, res) => {

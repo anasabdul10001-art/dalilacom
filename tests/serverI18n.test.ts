@@ -113,7 +113,8 @@ describe("The server answers in the language the client asks for", () => {
     const catalog = await request(app).get("/plans/catalog").query({ lang: "en" });
     expect(catalog.body.creditName).toBe("Dalilacom Credits");
     const names = catalog.body.services.flatMap((s: { plans: { name: string }[] }) => s.plans.map((p) => p.name));
-    expect(names).toContain("Auto-responder — customers");
+    expect(names).toContain("Auto-responder — Monthly");
+    expect(names).toContain("Auto-responder — Yearly");
 
     const user = await account("channels");
     const channels = await request(app).get("/responder/channels").query({ lang: "en" }).set(user.auth);
