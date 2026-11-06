@@ -39,6 +39,7 @@ export interface PlatformSettings {
     trialDays: number;
     monthlyAiReplyLimit: number;
   };
+  responderBadge: { enabled: boolean; text: string };
   payment: {
     usdtTrc20Address: string;
     localWallets: LocalWallet[];
@@ -77,6 +78,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   creditName: "دليلكم كوين",
   creditsPerUsd: 100,
   responder: { priceCustomer: 500, priceMerchant: 1000, periodDays: 30, trialDays: 7, monthlyAiReplyLimit: 500 },
+  responderBadge: { enabled: true, text: "⚡ بواسطة دليلكم" },
   payment: { usdtTrc20Address: "", localWallets: [], sypPerUsd: 0 },
   broadcasts: { merchantDefaultMonthly: 10, maxRadiusKm: 50, merchantMaxAudience: 2000, pricePerAnnouncement: 0 },
   discountNotify: { mode: "CITY", radiusKm: 10, alsoFollowers: true },
@@ -114,6 +116,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     creditName: stored.creditName ?? DEFAULT_SETTINGS.creditName,
     creditsPerUsd: stored.creditsPerUsd ?? DEFAULT_SETTINGS.creditsPerUsd,
     responder: { ...DEFAULT_SETTINGS.responder, ...(stored.responder ?? {}) },
+    responderBadge: { ...DEFAULT_SETTINGS.responderBadge, ...(stored.responderBadge ?? {}) },
     payment: { ...DEFAULT_SETTINGS.payment, ...(stored.payment ?? {}) },
     broadcasts: { ...DEFAULT_SETTINGS.broadcasts, ...(stored.broadcasts ?? {}) },
     ads: { ...DEFAULT_SETTINGS.ads, ...(stored.ads ?? {}) },
@@ -130,6 +133,7 @@ export async function saveSettings(patch: Partial<PlatformSettings>) {
     creditName: patch.creditName ?? current.creditName,
     creditsPerUsd: patch.creditsPerUsd ?? current.creditsPerUsd,
     responder: { ...current.responder, ...(patch.responder ?? {}) },
+    responderBadge: { ...current.responderBadge, ...(patch.responderBadge ?? {}) },
     payment: { ...current.payment, ...(patch.payment ?? {}) },
     broadcasts: { ...current.broadcasts, ...(patch.broadcasts ?? {}) },
     ads: { ...current.ads, ...(patch.ads ?? {}) },

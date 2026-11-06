@@ -218,6 +218,7 @@ const settingsSchema = z.object({
     })
     .partial()
     .optional(),
+  responderBadge: z.object({ enabled: z.boolean(), text: z.string().trim().min(1).max(80) }).partial().optional(),
   discountNotify: z
     .object({
       mode: z.enum(["OFF", "CITY", "CITY_MEMBERS", "MEMBERS", "FOLLOWERS", "RADIUS", "COUNTRY", "EVERYONE"]),

@@ -555,6 +555,10 @@
         <label>المحافظ المحلية — سطر لكل محفظة: KEY|الاسم|رقم الحساب|تعليمات</label>
         <textarea id="rs-wallets" rows="4" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:inherit" placeholder="SHAM_CASH|شام كاش|0999xxxxxx|حوّل وابعت رقم العملية"></textarea>
         <p class="muted" style="margin:6px 0 0">المحفظة اللي مفتاحها <b>SHAM_CASH</b> بتصير تلقائية (بيتحقق السيرفر من الحوالة وبينزّل الرصيد فورًا) لما تحط عنوان ومفتاح الخدمة بإعدادات السيرفر. وبدونهم بتضل بانتظار موافقتك. رقم العملية بينقبل مرة وحدة فقط.</p>
+        <h3 style="margin-top:18px">علامة دليلكم على الردود</h3>
+        <label><input id="rs-badge-enabled" type="checkbox" checked /> إظهار العلامة للخطط التي لا تزيلها</label>
+        <label>النص الذي يظهر في نهاية الرد</label>
+        <input id="rs-badge-text" maxlength="80" placeholder="⚡ بواسطة دليلكم" />
         <label>كم ليرة سورية = 1 دولار (لتحويل حوالات الليرة لرصيد؛ صفر = الليرة بتنراجع يدويًا)</label>
         <input placeholder="مثال: 15000" id="rs-syp" type="number" min="0" step="1" />
         <button style="margin-top:12px" onclick="saveResponderSettings()">حفظ الإعدادات</button>

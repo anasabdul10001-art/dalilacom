@@ -1038,6 +1038,7 @@ model ResponderSubscription {
   fallbackReply       String?
   // The end date (trial end or period end) the owner was last warned about, so each ending is announced once.
   expiryNoticeFor     DateTime?
+  weeklyReportSentAt  DateTime?
   createdAt           DateTime        @default(now())
 
   user User @relation(fields: [userId], references: [id])

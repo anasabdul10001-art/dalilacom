@@ -1938,6 +1938,8 @@ async function loadResponderAdmin() {
   document.getElementById('rs-period').value = data.responder.periodDays;
   document.getElementById('rs-trial').value = data.responder.trialDays;
   document.getElementById('rs-ai-limit').value = data.responder.monthlyAiReplyLimit;
+  document.getElementById('rs-badge-enabled').checked = data.responderBadge.enabled;
+  document.getElementById('rs-badge-text').value = data.responderBadge.text;
   document.getElementById('rs-usdt').value = data.payment.usdtTrc20Address;
   document.getElementById('rs-syp').value = data.payment.sypPerUsd || 0;
   document.getElementById('rs-wallets').value = data.payment.localWallets.map(w => [w.key, w.label, w.accountNumber, w.instructions || ''].join('|')).join('\n');
@@ -1971,6 +1973,7 @@ async function saveResponderSettings() {
     creditName: document.getElementById('rs-credit-name').value.trim(),
     creditsPerUsd: num('rs-credits-usd'),
     responder: { priceCustomer: num('rs-price-customer'), priceMerchant: num('rs-price-merchant'), periodDays: num('rs-period'), trialDays: num('rs-trial'), monthlyAiReplyLimit: num('rs-ai-limit') },
+    responderBadge: { enabled: document.getElementById('rs-badge-enabled').checked, text: document.getElementById('rs-badge-text').value.trim() },
     payment: { usdtTrc20Address: document.getElementById('rs-usdt').value.trim(), localWallets: wallets, sypPerUsd: num('rs-syp') || 0 },
   });
   const msg = document.getElementById('rs-msg');

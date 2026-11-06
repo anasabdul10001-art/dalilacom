@@ -358,6 +358,17 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
   const aiEntitlements = entitlements.filter((entitlement) => entitlement.plan.includesAi);
   const hasAiPlan = aiEntitlements.length > 0;
   const aiLimit = hasAiPlan ? Math.max(...aiEntitlements.map((entitlement) => entitlement.plan.aiReplyLimit || 0)) : 0;
+  const settings = await getSettings();
+  const badgeText = settings.responderBadge.enabled && !entitlements.some((entitlement) => entitlement.plan.removesBadge)
+    ? settings.responderBadge.text.trim()
+    : "";
+  const withBadge = (text: string) => {
+    if (!badgeText) return text;
+    const candidate = `${text.trimEnd()}\n${badgeText}`;
+    const driver = connection.channel.driver;
+    const limit = driver === "TELEGRAM" ? 4096 : 1000;
+    return Array.from(candidate).length <= limit ? candidate : text;
+  };
 
   const intent: string | null = looksLikeComplaint(msg.text) ? "complaint" : null;
   // Complaints are checked first. The free plan uses a holding reply; an AI plan handles
@@ -376,7 +387,7 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
           onUsage: (usage) => recordAiCall(userId, usage),
         });
       }
-      const reply = answer?.reply ?? COMPLAINT_HOLDING_REPLY;
+      const reply = withBadge(answer?.reply ?? COMPLAINT_HOLDING_REPLY);
       await sendThroughConnection(connection, reply, msg.conversationRef);
       return record({ status: "NEEDS_REVIEW", intent, reply, reason: "complaint" });
     } catch (err) {
@@ -417,7 +428,7 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
       const answer = await writeWithAi(rule.aiInstructions);
       if (answer?.complaint) {
         replyIntent = "complaint";
-        reply = answer.reply;
+        reply = withBadge(answer.reply);
         try { await sendThroughConnection(connection, reply, msg.conversationRef); }
         catch (err) { return record({ status: "FAILED", intent: replyIntent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking }); }
         return record({ status: "NEEDS_REVIEW", intent: replyIntent, reply, reason: "complaint", ...matchTracking });
@@ -433,7 +444,7 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
       const answer = await writeWithAi("Answer briefly using only the business information. If it is not covered, say the team will follow up.");
       if (answer?.complaint) {
         replyIntent = "complaint";
-        reply = answer.reply;
+        reply = withBadge(answer.reply);
         try { await sendThroughConnection(connection, reply, msg.conversationRef); }
         catch (err) { return record({ status: "FAILED", intent: replyIntent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking }); }
         return record({ status: "NEEDS_REVIEW", intent: replyIntent, reply, reason: "complaint", ...matchTracking });
@@ -446,6 +457,7 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
     return record({ status: "SKIPPED", intent, reason: "no_matching_rule", ...matchTracking });
   }
   if (!reply) return record({ status: "NEEDS_REVIEW", intent: replyIntent, reason: heldBack, ...matchTracking });
+  reply = withBadge(reply);
 
   try {
     await sendThroughConnection(connection, reply, msg.conversationRef);

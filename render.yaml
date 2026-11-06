@@ -220,6 +220,59 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
 
+  # Weekly basic-plan responder summary. Uses dalilacom-prod's live database and mail settings.
+  - type: cron
+    name: dalilacom-weekly-responder-report
+    runtime: node
+    plan: starter
+    branch: production
+    schedule: "0 9 * * 1"
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node dist/jobs/responderWeeklyReport.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: DATABASE_URL
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: FIREBASE_SERVICE_ACCOUNT_JSON
+      - key: SMTP_HOST
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_HOST
+      - key: SMTP_PORT
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_PORT
+      - key: SMTP_SECURE
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_SECURE
+      - key: SMTP_USER
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_USER
+      - key: SMTP_PASS
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_PASS
+      - key: SMTP_FROM
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_FROM
+
 databases:
   - name: dalilacom-db
     plan: free

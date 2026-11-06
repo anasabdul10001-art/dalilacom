@@ -106,7 +106,17 @@ responderRouter.post("/plans/:id/trial", requireAuth, route(async (req, res) => 
     const entitlement = await startResponderTrial(req.user!.id, req.params.id);
     await prisma.responderSubscription.upsert({
       where: { userId: req.user!.id },
-      update: {},
+        update: {
+          status: "TRIAL",
+          trialUsed: true,
+          trialEndsAt: entitlement.trialEndsAt,
+          periodEnd: null,
+          expiryNoticeFor: null,
+          aiRepliesUsed: 0,
+          aiPeriodStart: new Date(),
+          aiQuotaNotice80At: null,
+          aiQuotaNotice100At: null,
+        },
       create: { userId: req.user!.id, status: "TRIAL", trialEndsAt: entitlement.trialEndsAt },
     });
     res.status(201).json(entitlement);

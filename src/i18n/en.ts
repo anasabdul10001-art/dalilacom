@@ -446,6 +446,7 @@ export const en: LanguagePack = {
     "التجربة لهذه الخطة غير متاحة أو استُخدمت سابقًا": "A trial for this plan isn't available or has already been used",
     "المجيب الآلي متوقف من إعداداتك": "The auto-responder is turned off in your settings",
     "لازم يكون عندك خطة فعّالة لترد على الرسائل": "You need an active plan to reply to messages",
+    "ملخص المجيب الآلي لهذا الأسبوع": "Your auto-responder weekly summary",
     "تذكير: لديك موعد غدًا": "Reminder: you have an appointment tomorrow",
     "تذكير: لديك موعد بعد أقل من ساعة": "Reminder: your appointment is in less than an hour",
     "تذكير بموعدك غدًا": "Reminder about your appointment tomorrow",
@@ -453,6 +454,7 @@ export const en: LanguagePack = {
     "متجرك جاهز ✅": "Your shop is ready ✅",
   },
   patterns: [
+    [/^هالأسبوع وصلك (\d+) رسالة ما لقت رد ثابت\. الذكاء الاصطناعي كان ممكن يرد عليها\.$/, (m) => `This week, ${m[1]} messages arrived without a matching fixed reply. AI could have replied to them.`],
     [/^«(.+)» صار على دليلكم وبيظهر للزبائن\.$/, '"$1" is now on Dalilacom and visible to customers.'],
     [/^«(.+)»: (.+)\. بتقدر تعدّل معلوماتك وتجرّب من جديد\.$/s, '"$1": $2. You can edit your details and try again.'],
     [/^بخصوص طلبك للمطالبة بـ «(.+)»: (.+)$/s, 'About your request to claim "$1": $2'],

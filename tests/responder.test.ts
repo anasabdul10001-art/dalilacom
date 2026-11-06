@@ -8,6 +8,7 @@ import { prisma } from "../src/prisma";
 import { resetAiProviderState } from "../src/services/ai.service";
 import { adjustBalance } from "../src/services/wallet.service";
 import { getSettings, saveSettings } from "../src/services/settings.service";
+import { sendWeeklyResponderReports } from "../src/services/responderWeeklyReport.service";
 import { uniqueEmail } from "./helpers";
 
 const REPLY_URL = "https://reply.example.test/send";
@@ -73,11 +74,11 @@ async function running(prefix: string, role: "CUSTOMER" | "MERCHANT" = "CUSTOMER
   const connection = await prisma.channelConnection.findUniqueOrThrow({ where: { id: connected.body.id } });
   return { ...owner, channelId: channel.id, connectionId: connection.id, hook: `/hooks/${connection.hookToken}` };
 }
-async function responderPlan(name: string, options: { trialDays?: number; includesAi?: boolean; aiReplyLimit?: number } = {}) {
+async function responderPlan(name: string, options: { trialDays?: number; includesAi?: boolean; aiReplyLimit?: number; removesBadge?: boolean } = {}) {
   return prisma.servicePlan.create({ data: {
     service: "RESPONDER_BASIC", name, durationDays: 30, trialDays: options.trialDays ?? 0,
     priceCents: 0, currency: "USD", priceCredits: 0, includesAi: options.includesAi ?? false,
-    aiReplyLimit: options.aiReplyLimit ?? 0, removesBadge: false, isActive: true,
+    aiReplyLimit: options.aiReplyLimit ?? 0, removesBadge: options.removesBadge ?? false, isActive: true,
   } });
 }
 const customerSays = (hook: string, text: string, conversationRef = "chat-1", authorName = "سامر") =>
@@ -88,6 +89,15 @@ const inbox = (owner: { auth: Record<string, string> }, status?: string) => requ
 const notices = (userId: string) => prisma.notification.findMany({ where: { userId, type: "SYSTEM" }, orderBy: { createdAt: "asc" } });
 
 describe("Starting and paying for the responder", () => {
+  it("starts the selected plan's trial in the account status after the account already had a subscription row", async () => {
+    const owner = await account("respselectedtrial");
+    await request(app).get("/responder/status").set(owner.auth); // creates the legacy-compatible OFF row
+    const plan = await responderPlan("تجربة تختارها", { trialDays: 7 });
+    const started = await request(app).post(`/responder/plans/${plan.id}/trial`).set(owner.auth);
+    expect(started.status).toBe(201);
+    expect((await request(app).get("/responder/status").set(owner.auth)).body).toMatchObject({ status: "TRIAL", running: true });
+  });
+
   it("opens with the one-time free trial, refuses a second start, and stops answering when the trial runs out", async () => {
     const owner = await account("resptrial");
     const status = await request(app).get("/responder/status").set(owner.auth);
@@ -148,6 +158,53 @@ describe("Starting and paying for the responder", () => {
 });
 
 describe("Answering customers", () => {
+  it("adds the admin-controlled brand mark only when the active plan keeps it", async () => {
+    const owner = await running("respbadge");
+    await prisma.responderEntitlement.updateMany({ where: { userId: owner.id }, data: { status: "EXPIRED" } });
+    const basic = await responderPlan("أساسية مع علامة");
+    await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: basic.id, status: "ACTIVE", source: "GRANT", periodEnd: new Date(Date.now() + 86400000) } });
+    const before = await getSettings();
+    try {
+      await saveSettings({ responderBadge: { enabled: true, text: "⚡ بواسطة دليلكم" } });
+      await rule(owner, { keywords: ["سعر"], replyTemplate: "السعر 10" });
+      await customerSays(owner.hook, "السعر؟", "badge-on");
+      expect(sentReplies.at(-1)?.body.text).toBe("السعر 10\n⚡ بواسطة دليلكم");
+
+      await saveSettings({ responderBadge: { enabled: false } });
+      await customerSays(owner.hook, "السعر؟", "badge-off");
+      expect(sentReplies.at(-1)?.body.text).toBe("السعر 10");
+
+      await saveSettings({ responderBadge: { enabled: true } });
+      const paid = await responderPlan("مدفوعة تزيل العلامة", { removesBadge: true });
+      await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: paid.id, status: "ACTIVE", source: "GRANT", periodEnd: new Date(Date.now() + 86400000) } });
+      await customerSays(owner.hook, "السعر؟", "badge-paid");
+      expect(sentReplies.at(-1)?.body.text).toBe("السعر 10");
+    } finally {
+      await saveSettings({ responderBadge: before.responderBadge });
+    }
+  });
+
+  it("sends the weekly no-fixed-reply summary once and excludes accounts that also have AI", async () => {
+    const basicOwner = await running("respweeklybasic");
+    const aiOwner = await running("respweeklyai");
+    for (const owner of [basicOwner, aiOwner]) {
+      await prisma.responderEntitlement.updateMany({ where: { userId: owner.id }, data: { status: "EXPIRED" } });
+      const plan = await responderPlan(`أساسية أسبوعية ${owner.id}`);
+      await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: plan.id, status: "ACTIVE", source: "GRANT", periodEnd: new Date(Date.now() + 86400000 * 8) } });
+      await prisma.responderInteraction.create({ data: { userId: owner.id, connectionId: owner.connectionId, conversationRef: "weekly", authorName: "ضيف", message: "مرحبا", status: "SKIPPED", noMatchingRule: true } });
+    }
+    const aiPlan = await responderPlan("ذكاء أسبوعي", { includesAi: true, aiReplyLimit: 10 });
+    await prisma.responderEntitlement.create({ data: { userId: aiOwner.id, planId: aiPlan.id, status: "ACTIVE", source: "GRANT", periodEnd: new Date(Date.now() + 86400000 * 8) } });
+
+    const now = new Date();
+    expect(await sendWeeklyResponderReports(now)).toMatchObject({ eligible: 1, sent: 1 });
+    expect(await sendWeeklyResponderReports(new Date(now.getTime() + 1000))).toMatchObject({ eligible: 0, sent: 0 });
+    const report = await prisma.notification.findFirstOrThrow({ where: { userId: basicOwner.id, data: { path: ["reason"], equals: "weekly_report" } } });
+    expect(report.body).toContain("1 رسالة ما لقت رد ثابت");
+    expect(report.body).toContain("كان ممكن يرد عليها");
+    expect(await prisma.notification.count({ where: { userId: aiOwner.id, data: { path: ["reason"], equals: "weekly_report" } } })).toBe(0);
+  });
+
   it("answers a matching message with the rule's text (name filled in), records it, and ignores one with no rule", async () => {
     const owner = await running("respfixed");
     expect((await rule(owner, {})).status).toBe(201);
@@ -400,12 +457,12 @@ describe("Plan access, permanent fixed replies and admin grants", () => {
     const periodEnd = new Date(Date.now() + 30 * 86400000);
     await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: plan.id, status: "ACTIVE", source: "PAID", periodEnd } });
     await customerSays(hook, "السعر؟", "fixed-1");
-    expect(sentReplies.at(-1)!.body.text).toBe("السعر 20");
+    expect(sentReplies.at(-1)!.body.text).toBe("السعر 20\n⚡ بواسطة دليلكم");
     expect(aiCalls).toHaveLength(0);
 
     await rule(owner, { keywords: ["توصيل"], mode: "AI", replyTemplate: "التوصيل متاح" });
     await customerSays(hook, "في توصيل؟", "ai-rule-basic");
-    expect(sentReplies.at(-1)!.body.text).toBe("التوصيل متاح");
+    expect(sentReplies.at(-1)!.body.text).toBe("التوصيل متاح\n⚡ بواسطة دليلكم");
     await rule(owner, { keywords: ["تغطية"], mode: "AI", replyTemplate: "" });
     await customerSays(hook, "في تغطية؟", "ai-rule-no-template");
     expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ reason: "ai_requires_plan" });
