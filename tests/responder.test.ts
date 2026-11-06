@@ -162,6 +162,17 @@ describe("Answering customers", () => {
     expect(await notices(owner.id)).toHaveLength(0); // a message nobody needs to act on does not ring
   });
 
+  it("normalizes Arabic spelling and picks the highest-priority matching rule", async () => {
+    const owner = await running("resppriority");
+    await rule(owner, { name: "الأقدم", keywords: ["السعر", "price", "Preis"], replyTemplate: "قديم", priority: 1 });
+    const winning = await rule(owner, { name: "الأعلى", keywords: ["سعر"], replyTemplate: "الأفضل", priority: 10 });
+    expect((await customerSays(owner.hook, "السَّعْرُ؟")).status).toBe(200);
+    expect(sentReplies.at(-1)?.body.text).toBe("الأفضل");
+    expect((await prisma.responderInteraction.findFirstOrThrow({ where: { userId: owner.id }, orderBy: { createdAt: "desc" } })).matchedRuleId).toBe(winning.body.id);
+    await customerSays(owner.hook, "PREIS bitte", "de");
+    expect(sentReplies.at(-1)?.body.text).toBe("قديم");
+  });
+
   it("a wrong secret or an unknown hook answers nothing, and a switched-off rule stays silent until it is switched on", async () => {
     const owner = await running("respguard");
     await rule(owner, {});
@@ -203,6 +214,15 @@ describe("Answering customers", () => {
     expect((await request(app).post(`/responder/inbox/${waiting[0].id}/send`).set(owner.auth).send({ reply: "again" })).status).toBe(409); // no longer waiting
     const stranger = await account("respstranger");
     expect((await request(app).post(`/responder/inbox/${waiting[1].id}/send`).set(stranger.auth).send({ reply: "hi" })).status).toBe(404);
+  });
+
+  it("recognizes normalized complaints in Arabic, English, and German", async () => {
+    const owner = await running("respcomplaintwords");
+    await customerSays(owner.hook, "خِدْمَتُكم سيئة", "ar");
+    await customerSays(owner.hook, "This is a terrible service", "en");
+    await customerSays(owner.hook, "Beschwerde wegen Betrug", "de");
+    expect(sentReplies).toHaveLength(3);
+    expect((await inbox(owner, "NEEDS_REVIEW")).body).toHaveLength(3);
   });
 
   it("lets an AI plan answer a keyword-detected complaint with AI and preserves its handoff decision", async () => {
@@ -434,7 +454,7 @@ describe("Warnings, stats and the owner's settings", () => {
     await customerSays(owner.hook, "السعر؟", "a");
     await customerSays(owner.hook, "شكوى", "b");
     await customerSays(owner.hook, "مرحبا", "c");
-    expect((await request(app).get("/responder/stats").set(owner.auth)).body).toEqual({ days: 30, sent: 1, needsReview: 1, failed: 0, skipped: 1 });
+    expect((await request(app).get("/responder/stats").set(owner.auth)).body).toMatchObject({ days: 30, sent: 1, needsReview: 1, failed: 0, skipped: 1, unmatchedCount: 1, topRules: [{ name: "rule", count: 1 }], unmatchedSamples: [{ message: "مرحبا" }] });
 
     const other = await account("respother");
     expect((await request(app).get("/responder/stats").set(other.auth)).body).toMatchObject({ sent: 0, needsReview: 0 });

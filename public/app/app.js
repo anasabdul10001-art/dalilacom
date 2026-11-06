@@ -7590,7 +7590,10 @@ function respOverview() {
       ${st.trialAvailable ? `<p class="muted">${esc(t("intro.afterContinue"))}</p>` : ""}
     </div>` : "";
   const sx = S._resp.stats;
-  const stats = sx && st.running ? `<p class="muted" style="margin:4px 0 0">آخر 30 يوم: أُرسل ${sx.sent} · بانتظار ردّك ${sx.needsReview} · فشل ${sx.failed}</p>` : "";
+  const stats = sx && st.running ? `<p class="muted" style="margin:4px 0 0">${esc(t("responder.last30", { sent: sx.sent, review: sx.needsReview, failed: sx.failed }))}</p>
+    <p class="muted">${esc(t("responder.unmatched", { n: sx.unmatchedCount || 0 }))}</p>
+    ${(sx.topRules || []).length ? `<p class="muted">${esc(t("responder.topRules"))}: ${sx.topRules.map((x) => `${esc(x.name)} (${x.count})`).join(" · ")}</p>` : ""}
+    ${(sx.unmatchedSamples || []).length ? `<details><summary>${esc(t("responder.unmatchedSamples"))}</summary>${sx.unmatchedSamples.map((x) => `<p class="muted">${esc(x.message)}</p>`).join("")}</details>` : ""}` : "";
   return `
     ${welcome}
     <div class="card">
@@ -7712,7 +7715,7 @@ function respRules() {
     ${errorBanner()}
     ${r.rules.map((x) => `
       <div class="card">
-        <div class="title-line"><strong>${esc(x.name)}</strong><span class="badge ${x.mode === "AI" ? "info" : "neutral"}">${x.mode === "AI" ? "ذكاء اصطناعي" : "رد ثابت"}</span></div>
+        <div class="title-line"><strong>${esc(x.name)}</strong><span class="badge neutral">${esc(t("responder.priority", { n: Number(x.priority || 0) }))}</span><span class="badge ${x.mode === "AI" ? "info" : "neutral"}">${x.mode === "AI" ? "ذكاء اصطناعي" : "رد ثابت"}</span></div>
         <p class="muted">كلمات: ${x.keywords.map(esc).join("، ")}${x.postIds && x.postIds.length ? ` · 📌 محصورة بـ ${x.postIds.length} منشور` : ""}</p>
         ${x.replyTemplate ? `<p class="muted">الرد: ${esc(x.replyTemplate)}</p>` : ""}
         <div class="row" style="margin-top:8px;gap:6px">
@@ -7725,6 +7728,7 @@ function respRules() {
       <div class="section-title" style="margin-top:0">${r.editingRuleId ? "تعديل القاعدة" : "قاعدة جديدة"}</div>
       <div class="field"><label>اسم القاعدة</label><input id="ru-name" placeholder="مثال: سؤال عن السعر" value="${esc(d.name || "")}" /></div>
       <div class="field"><label>كلمات مفتاحية (مفصولة بفاصلة)</label><input id="ru-keys" placeholder="سعر، كم، price" value="${esc(d.keys || "")}" /></div>
+      <div class="field"><label>${esc(t("responder.priorityHelp"))}</label><input id="ru-priority" type="number" min="-1000" max="1000" step="1" value="${esc(d.priority ?? 0)}" /></div>
       <div class="field"><label>نوع الرد</label>
         <select id="ru-mode"><option value="FIXED" ${d.mode !== "AI" ? "selected" : ""}>رد ثابت</option><option value="AI" ${d.mode === "AI" ? "selected" : ""}>ذكاء اصطناعي</option></select></div>
       <div class="field"><label>نص الرد (استخدم {name} لاسم الزبون)</label><input id="ru-reply" placeholder="مثال: أهلًا {name}، سعر المنتج 25" value="${esc(d.reply || "")}" /></div>
@@ -7756,7 +7760,7 @@ function respRules() {
 
 async function respAddRule() {
   const keywords = qs("ru-keys").value.split(/[,،]/).map((k) => k.trim()).filter(Boolean);
-  const body = { name: qs("ru-name").value.trim(), keywords, mode: qs("ru-mode").value, replyTemplate: qs("ru-reply").value.trim(), aiInstructions: qs("ru-ai").value.trim(), channelId: qs("ru-channel").value || null, postIds: S._resp.selectedPosts || [] };
+  const body = { name: qs("ru-name").value.trim(), keywords, priority: Number(qs("ru-priority").value || 0), mode: qs("ru-mode").value, replyTemplate: qs("ru-reply").value.trim(), aiInstructions: qs("ru-ai").value.trim(), channelId: qs("ru-channel").value || null, postIds: S._resp.selectedPosts || [] };
   if (!body.name || keywords.length === 0) { S.error = "اكتب اسم القاعدة وكلمة مفتاحية وحدة عالأقل"; return render(); }
   S.error = null;
   const editing = S._resp.editingRuleId;
@@ -7771,7 +7775,7 @@ function respRuleEdit(id) {
   const x = (S._resp.rules || []).find((r) => r.id === id);
   if (!x) return;
   S._resp.editingRuleId = id;
-  S._resp.ruleDraft = { name: x.name, keys: (x.keywords || []).join("، "), mode: x.mode, reply: x.replyTemplate || "", ai: x.aiInstructions || "" };
+  S._resp.ruleDraft = { name: x.name, keys: (x.keywords || []).join("، "), priority: x.priority || 0, mode: x.mode, reply: x.replyTemplate || "", ai: x.aiInstructions || "" };
   S._resp.selectedPosts = x.postIds || [];
   S._resp.posts = [];
   S.error = null;
@@ -7786,7 +7790,7 @@ function respRuleEditCancel() {
 // The rule form is rebuilt on every render, so its fields are snapshotted into state first.
 function snapshotRuleDraft() {
   const d = {};
-  [["name", "ru-name"], ["keys", "ru-keys"], ["mode", "ru-mode"], ["reply", "ru-reply"], ["ai", "ru-ai"], ["conn", "ru-conn"], ["channel", "ru-channel"]].forEach(([k, id]) => { const el = qs(id); if (el) d[k] = el.value; });
+  [["name", "ru-name"], ["keys", "ru-keys"], ["priority", "ru-priority"], ["mode", "ru-mode"], ["reply", "ru-reply"], ["ai", "ru-ai"], ["conn", "ru-conn"], ["channel", "ru-channel"]].forEach(([k, id]) => { const el = qs(id); if (el) d[k] = el.value; });
   S._resp.ruleDraft = d;
 }
 // Whatever is typed in the rule form is kept as it is typed, so a redraw of the page (the responder reloads in the background) cannot wipe it.

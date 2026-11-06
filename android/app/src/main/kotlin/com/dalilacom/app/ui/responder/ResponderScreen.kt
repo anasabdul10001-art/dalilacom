@@ -174,6 +174,14 @@ private fun OverviewTab(
             Text(AppStrings.get(R.string.fmt_price_every, status.price, status.creditName, status.periodDays))
             if (status.aiReplyLimit > 0) Text(AppStrings.get(R.string.fmt_ai_replies, status.aiRepliesUsed, status.aiReplyLimit))
             if (stats != null && status.running) Text(AppStrings.get(R.string.fmt_responder_stats, stats.sent, stats.needsReview, stats.failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (stats != null && status.running) {
+                Text(AppStrings.get(R.string.responder_unmatched_count, stats.unmatchedCount), style = MaterialTheme.typography.bodySmall)
+                stats.topRules.forEach { Text(AppStrings.get(R.string.responder_rule_usage, it.name, it.count), style = MaterialTheme.typography.bodySmall) }
+                if (stats.unmatchedSamples.isNotEmpty()) {
+                    Text(AppStrings.get(R.string.responder_unmatched_samples), style = MaterialTheme.typography.labelMedium)
+                    stats.unmatchedSamples.forEach { Text("• ${it.message}", style = MaterialTheme.typography.bodySmall, maxLines = 2) }
+                }
+            }
             Spacer(Modifier.height(12.dp))
             val label = when {
                 !status.running && status.status != "EXPIRED" && status.trialAvailable -> AppStrings.get(R.string.intro_continue)
@@ -370,11 +378,13 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
     var mode by remember { mutableStateOf("FIXED") }
     var template by remember { mutableStateOf("") }
     var instructions by remember { mutableStateOf("") }
+    var priority by remember { mutableStateOf("0") }
     var editingId by remember { mutableStateOf<String?>(null) }
 
     Text(if (editingId != null) stringResource(R.string.rule_editing) else AppStrings.get(R.string.s_c9fbbd3c), style = MaterialTheme.typography.titleMedium)
     OutlinedTextField(name, { name = it }, label = { Text(AppStrings.get(R.string.s_5ffc2bb8)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Hint(stringResource(R.string.ph_rule_name)) })
     OutlinedTextField(keywords, { keywords = it }, label = { Text(AppStrings.get(R.string.s_d82b4deb)) }, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_rule_keys)) })
+    OutlinedTextField(priority, { priority = it.filter { c -> c == '-' || c.isDigit() }.take(5) }, label = { Text(AppStrings.get(R.string.responder_priority)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Hint(AppStrings.get(R.string.responder_priority_help)) })
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
         FilterChip(selected = mode == "FIXED", onClick = { mode = "FIXED" }, label = { Text(AppStrings.get(R.string.s_38ceca24)) })
         FilterChip(selected = mode == "AI", onClick = { mode = "AI" }, label = { Text(AppStrings.get(R.string.s_ec6d9289)) })
@@ -443,12 +453,12 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
             onClick = {
                 val id = editingId
                 if (id != null) {
-                    viewModel.updateRule(id, name, keywords, mode, template, instructions) {
-                        editingId = null; name = ""; keywords = ""; template = ""; instructions = ""
+                    viewModel.updateRule(id, name, keywords, mode, template, instructions, priority.toIntOrNull() ?: 0) {
+                        editingId = null; name = ""; keywords = ""; template = ""; instructions = ""; priority = "0"
                     }
                 } else {
-                    viewModel.addRule(name, keywords, mode, template, instructions)
-                    name = ""; keywords = ""; template = ""; instructions = ""
+                    viewModel.addRule(name, keywords, mode, template, instructions, priority.toIntOrNull() ?: 0)
+                    name = ""; keywords = ""; template = ""; instructions = ""; priority = "0"
                 }
             },
             enabled = !busy,
@@ -472,6 +482,7 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
                     Switch(checked = rule.isActive, onCheckedChange = { viewModel.toggleRule(rule.id, it) })
                 }
                 Text(AppStrings.get(R.string.fmt_keywords, rule.keywords.joinToString(AppStrings.get(R.string.list_separator))), style = MaterialTheme.typography.bodySmall)
+                Text(AppStrings.get(R.string.responder_priority_value, rule.priority), style = MaterialTheme.typography.bodySmall)
                 if (rule.postIds.isNotEmpty()) Text(AppStrings.get(R.string.fmt_limited_posts, rule.postIds.size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 Text(if (rule.mode == "AI") AppStrings.get(R.string.s_ec6d9289) else AppStrings.get(R.string.fmt_fixed_reply, rule.replyTemplate.orEmpty()), style = MaterialTheme.typography.bodySmall)
                 Row {
@@ -482,6 +493,7 @@ private fun RulesTab(state: ResponderUiState, viewModel: ResponderViewModel) {
                         mode = rule.mode
                         template = rule.replyTemplate.orEmpty()
                         instructions = rule.aiInstructions.orEmpty()
+                        priority = rule.priority.toString()
                         viewModel.selectPosts(rule.postIds)
                     }) { Text(stringResource(R.string.rule_edit)) }
                     TextButton(onClick = { viewModel.deleteRule(rule.id) }) { Text(AppStrings.get(R.string.s_2d2bbdc2), color = MaterialTheme.colorScheme.error) }

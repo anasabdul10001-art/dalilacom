@@ -147,9 +147,16 @@ responderRouter.patch("/profile", requireAuth, route(async (req, res) => {
 // The last 30 days at a glance: what was answered, what waits for a person, what failed.
 responderRouter.get("/stats", requireAuth, route(async (req, res) => {
   const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
-  const groups = await prisma.responderInteraction.groupBy({ by: ["status"], where: { userId: req.user!.id, createdAt: { gte: since } }, _count: { _all: true } });
+  const where = { userId: req.user!.id, createdAt: { gte: since } };
+  const [groups, usage, unmatchedCount, unmatchedSamples] = await Promise.all([
+    prisma.responderInteraction.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    prisma.responderInteraction.groupBy({ by: ["matchedRuleId"], where: { ...where, matchedRuleId: { not: null } }, _count: { _all: true }, orderBy: { _count: { matchedRuleId: "desc" } }, take: 5 }),
+    prisma.responderInteraction.count({ where: { ...where, noMatchingRule: true } }),
+    prisma.responderInteraction.findMany({ where: { ...where, noMatchingRule: true }, orderBy: { createdAt: "desc" }, take: 5, select: { message: true, createdAt: true } }),
+  ]);
   const count = (status: string) => groups.find((g) => g.status === status)?._count._all ?? 0;
-  res.json({ days: 30, sent: count("SENT"), needsReview: count("NEEDS_REVIEW"), failed: count("FAILED"), skipped: count("SKIPPED") });
+  const rules = await prisma.responderRule.findMany({ where: { id: { in: usage.map((x) => x.matchedRuleId!).filter(Boolean) }, userId: req.user!.id }, select: { id: true, name: true } });
+  res.json({ days: 30, sent: count("SENT"), needsReview: count("NEEDS_REVIEW"), failed: count("FAILED"), skipped: count("SKIPPED"), topRules: usage.map((x) => ({ id: x.matchedRuleId, name: rules.find((r) => r.id === x.matchedRuleId)?.name ?? "Deleted rule", count: x._count._all })), unmatchedCount, unmatchedSamples });
 }));
 
 /* ---------------- channels & connections ---------------- */
@@ -296,11 +303,12 @@ const ruleSchema = z.object({
   aiInstructions: z.string().max(1000).default(""),
   channelId: z.string().uuid().nullable().optional(),
   postIds: z.array(z.string().min(1).max(100)).max(30).default([]),
+  priority: z.number().int().min(-1000).max(1000).default(0),
   isActive: z.boolean().default(true),
 });
 
 responderRouter.get("/rules", requireAuth, route(async (req, res) => {
-  res.json(await prisma.responderRule.findMany({ where: { userId: req.user!.id }, orderBy: { createdAt: "asc" } }));
+  res.json(await prisma.responderRule.findMany({ where: { userId: req.user!.id }, orderBy: [{ priority: "desc" }, { createdAt: "asc" }] }));
 }));
 
 responderRouter.post("/rules", requireAuth, route(async (req, res) => {

@@ -7,6 +7,7 @@ import { aiAvailable, answerComplaint, generateReply } from "./ai.service";
 import { adjustBalance } from "./wallet.service";
 import { getSettings } from "./settings.service";
 import { notify } from "./notification.service";
+import { normalizeText } from "./category.service";
 
 const DAY = 24 * 60 * 60 * 1000;
 export const RESPONDER_LEGACY_PLAN_ID = "00000000-0000-4000-8000-000000000001";
@@ -171,13 +172,14 @@ export async function pay(userId: string, role: Role): Promise<ActivationResult>
 const COMPLAINT_HOLDING_REPLY = "نعتذر منك على هالإزعاج 🙏 وصلت رسالتك لفريقنا، وحدا من الفريق رح يتواصل معك قريبًا.";
 
 const COMPLAINT_WORDS = [
-  "شكوى", "شكوي", "سيء", "سيئ", "مشكلة", "زفت", "نصب", "احتيال", "استرجاع",
-  "complaint", "terrible", "worst", "refund", "scam", "broken",
+  "شكوى", "شكوي", "سيء", "سيئ", "سيئة", "مشكلة", "مشاكل", "زفت", "نصب", "احتيال", "استرجاع", "ظلم", "ما عجبني", "ماعجبني", "ما وصل", "ماوصل", "تأخر", "تأخير", "خدمة سيئة", "غالي كتير",
+  "complaint", "complain", "terrible", "worst", "refund", "scam", "broken", "not working", "disappointed", "bad service",
+  "beschwerde", "schlecht", "kaputt", "rückerstattung", "betrug", "nicht angekommen",
 ];
 
 function looksLikeComplaint(text: string) {
-  const t = text.toLowerCase();
-  return COMPLAINT_WORDS.some((w) => t.includes(w));
+  const t = normalizeText(text);
+  return COMPLAINT_WORDS.some((w) => t.includes(normalizeText(w)));
 }
 
 async function consumeAi(userId: string, limit: number): Promise<boolean> {
@@ -235,7 +237,7 @@ async function historyFor(connectionId: string, conversationRef: string): Promis
 }
 
 type ConnectionWithChannel = ChannelConnection & { channel: SocialChannel };
-type Outcome = { status: "SENT" | "NEEDS_REVIEW" | "FAILED" | "SKIPPED"; intent?: string | null; reply?: string | null; reason?: string };
+type Outcome = { status: "SENT" | "NEEDS_REVIEW" | "FAILED" | "SKIPPED"; intent?: string | null; reply?: string | null; reason?: string; matchedRuleId?: string | null; noMatchingRule?: boolean };
 
 export async function handleIncoming(connection: ConnectionWithChannel, msg: IncomingMessage) {
   const userId = connection.userId;
@@ -299,14 +301,16 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
     }
   }
 
-  const rules = await prisma.responderRule.findMany({ where: { userId, isActive: true }, orderBy: { createdAt: "asc" } });
+  const rules = await prisma.responderRule.findMany({ where: { userId, isActive: true }, orderBy: [{ priority: "desc" }, { createdAt: "asc" }] });
+  const normalizedMessage = normalizeText(msg.text);
   const rule = rules.find(
     (r) =>
       (!r.channelId || r.channelId === connection.channelId) &&
       // A rule limited to specific posts only ever answers comments on those posts (never DMs or other posts).
       (r.postIds.length === 0 || (!!msg.postId && r.postIds.includes(msg.postId))) &&
-      r.keywords.some((k) => k.trim() && msg.text.toLowerCase().includes(k.trim().toLowerCase())),
+      r.keywords.some((k) => { const keyword = normalizeText(k); return keyword && normalizedMessage.includes(keyword); }),
   );
+  const matchTracking = rule ? { matchedRuleId: rule.id } : { noMatchingRule: true };
 
   // The AI answers with what the shop really has and what was said before in this conversation.
   const writeWithAi = async (instructions: string): Promise<string | null> => {
@@ -335,15 +339,15 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
     else if (sub.fallbackReply?.trim()) reply = personalise(sub.fallbackReply);
     if (!reply) heldBack = hasAiPlan ? "ai_unavailable" : "ai_requires_plan";
   } else {
-    return record({ status: "SKIPPED", intent, reason: "no_matching_rule" });
+    return record({ status: "SKIPPED", intent, reason: "no_matching_rule", ...matchTracking });
   }
-  if (!reply) return record({ status: "NEEDS_REVIEW", intent, reason: heldBack });
+  if (!reply) return record({ status: "NEEDS_REVIEW", intent, reason: heldBack, ...matchTracking });
 
   try {
     await sendThroughConnection(connection, reply, msg.conversationRef);
-    return record({ status: "SENT", intent, reply });
+    return record({ status: "SENT", intent, reply, ...matchTracking });
   } catch (err) {
-    return record({ status: "FAILED", intent, reply, reason: err instanceof Error ? err.message : "send_failed" });
+    return record({ status: "FAILED", intent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking });
   }
 }
 

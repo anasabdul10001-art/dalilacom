@@ -1056,6 +1056,7 @@ model ResponderRule {
   aiInstructions String        @default("")
   channelId      String? // null = applies to every connected channel
   postIds        String[]      @default([]) // empty = any message/post; otherwise only comments on these posts (Facebook/Instagram)
+  priority       Int           @default(0)
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
 
@@ -1085,6 +1086,8 @@ model ResponderInteraction {
   reason          String?
   postId          String? // the Facebook/Instagram post a comment was made on
   externalId      String? // the platform's own id for this message/comment — makes webhook redelivery idempotent
+  matchedRuleId   String?
+  noMatchingRule  Boolean           @default(false)
   createdAt       DateTime          @default(now())
 
   user       User              @relation(fields: [userId], references: [id])
@@ -1092,6 +1095,8 @@ model ResponderInteraction {
 
   @@unique([connectionId, externalId])
   @@index([userId, createdAt])
+  @@index([userId, matchedRuleId, createdAt])
+  @@index([userId, noMatchingRule, createdAt])
 }
 
 // ---------------------------------------------------------------------------

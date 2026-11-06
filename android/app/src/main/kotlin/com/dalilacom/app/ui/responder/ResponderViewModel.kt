@@ -121,7 +121,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
 
     fun toggleConnection(id: String, active: Boolean) = act(null) { repository.toggleConnection(id, active) }
 
-    fun addRule(name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String) {
+    fun addRule(name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String, priority: Int = 0) {
         val list = keywords.split(",", AppStrings.get(R.string.s_2e1a34c3)).map { it.trim() }.filter { it.isNotEmpty() }
         if (name.isBlank() || list.isEmpty()) {
             _uiState.update { it.copy(error = AppStrings.get(R.string.s_56be3fdb), info = null) }
@@ -129,13 +129,13 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         }
         val postIds = _uiState.value.selectedPostIds.toList()
         act(AppStrings.get(R.string.s_14737605)) {
-            repository.createRule(CreateRuleRequest(name.trim(), list, mode, replyTemplate.trim(), aiInstructions.trim(), postIds))
+            repository.createRule(CreateRuleRequest(name.trim(), list, mode, replyTemplate.trim(), aiInstructions.trim(), postIds, priority))
                 .also { if (it.isSuccess) clearPostPicker() }
         }
     }
 
     /** Saves changes to an existing rule; the form that creates a rule is reused for this. */
-    fun updateRule(id: String, name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String, onDone: () -> Unit) {
+    fun updateRule(id: String, name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String, priority: Int = 0, onDone: () -> Unit) {
         val list = keywords.split(",", AppStrings.get(R.string.s_2e1a34c3)).map { it.trim() }.filter { it.isNotEmpty() }
         if (name.isBlank() || list.isEmpty()) {
             _uiState.update { it.copy(error = AppStrings.get(R.string.s_56be3fdb), info = null) }
@@ -143,7 +143,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         }
         val postIds = _uiState.value.selectedPostIds.toList()
         act(AppStrings.get(R.string.s_14737605)) {
-            repository.updateRule(id, CreateRuleRequest(name.trim(), list, mode, replyTemplate.trim(), aiInstructions.trim(), postIds))
+            repository.updateRule(id, CreateRuleRequest(name.trim(), list, mode, replyTemplate.trim(), aiInstructions.trim(), postIds, priority))
                 .also { if (it.isSuccess) { clearPostPicker(); onDone() } }
         }
     }

@@ -23,7 +23,13 @@ data class ResponderStatusDto(
 )
 
 @Serializable
-data class ResponderStatsDto(val days: Int = 30, val sent: Int = 0, val needsReview: Int = 0, val failed: Int = 0, val skipped: Int = 0)
+data class ResponderRuleUsageDto(val id: String? = null, val name: String = "", val count: Int = 0)
+
+@Serializable
+data class ResponderUnmatchedSampleDto(val message: String = "", val createdAt: String? = null)
+
+@Serializable
+data class ResponderStatsDto(val days: Int = 30, val sent: Int = 0, val needsReview: Int = 0, val failed: Int = 0, val skipped: Int = 0, val topRules: List<ResponderRuleUsageDto> = emptyList(), val unmatchedCount: Int = 0, val unmatchedSamples: List<ResponderUnmatchedSampleDto> = emptyList())
 
 @Serializable
 data class ChannelFieldDto(val key: String, val label: String, val secret: Boolean = false)
@@ -67,6 +73,7 @@ data class RuleDto(
     val replyTemplate: String = "",
     val aiInstructions: String = "",
     val postIds: List<String> = emptyList(),
+    val priority: Int = 0,
     val isActive: Boolean = true,
 )
 
@@ -78,6 +85,7 @@ data class CreateRuleRequest(
     val replyTemplate: String,
     val aiInstructions: String,
     val postIds: List<String> = emptyList(),
+    val priority: Int = 0,
 )
 
 @Serializable
