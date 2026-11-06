@@ -20,6 +20,34 @@ data class ResponderStatusDto(
     val tone: String? = null,
     val fallbackMode: String = "OFF",
     val fallbackReply: String? = null,
+    val activePlans: List<ResponderActivePlanDto> = emptyList(),
+)
+
+@Serializable
+data class ResponderActivePlanDto(val id: String, val name: String, val includesAi: Boolean = false, val aiReplyLimit: Int = 0, val status: String = "ACTIVE")
+
+@Serializable
+data class ResponderPlanOfferDto(val id: String, val paidPeriods: Int, val bonusDays: Int = 0, val text: String, val endsAt: String? = null)
+
+@Serializable
+data class ResponderPlanPurchaseDto(val offerId: String? = null)
+
+@Serializable
+data class ResponderPlanDto(
+    val id: String,
+    val service: String,
+    val name: String,
+    val description: String? = null,
+    val durationDays: Int,
+    val trialDays: Int = 0,
+    val trialAvailable: Boolean = false,
+    val priceCredits: Int? = null,
+    val priceFrom: String = "default",
+    val features: List<PlanFeatureDto> = emptyList(),
+    val includesAi: Boolean = false,
+    val aiReplyLimit: Int = 0,
+    val removesBadge: Boolean = false,
+    val offers: List<ResponderPlanOfferDto> = emptyList(),
 )
 
 @Serializable

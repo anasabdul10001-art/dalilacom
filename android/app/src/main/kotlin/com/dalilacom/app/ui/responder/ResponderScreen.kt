@@ -44,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -52,8 +51,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.data.network.InboxItemDto
 import com.dalilacom.app.data.network.MetaPageDto
 import com.dalilacom.app.data.network.ResponderStatusDto
+import com.dalilacom.app.data.network.ResponderPlanDto
+import com.dalilacom.app.data.network.CatalogPlanDto
+import com.dalilacom.app.ui.pricing.PlanCard
 import com.dalilacom.app.ui.ViewModelFactory
-import com.dalilacom.app.ui.pricing.ServiceWelcome
 
 private val TAB_TITLES get() = listOf(AppStrings.get(R.string.s_90a91c96), AppStrings.get(R.string.s_53655660), AppStrings.get(R.string.s_b642dd5a), AppStrings.get(R.string.s_a3e7dfc4))
 
@@ -84,7 +85,6 @@ fun ResponderScreen(
 ) {
     val viewModel: ResponderViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
     // The browser handed the flow back: either it already connected a Page, or it wants the app to pick one.
     LaunchedEffect(metaOk, metaConnectionId) {
@@ -132,7 +132,7 @@ fun ResponderScreen(
             if (state.error != null || state.info != null) Spacer(Modifier.height(10.dp))
 
             when (state.tab) {
-                0 -> OverviewTab(state.status, state.stats, state.isBusy, onActivate = viewModel::activateOrRenew, onSaveProfile = viewModel::saveProfile)
+                0 -> OverviewTab(state.status, state.stats, state.plans, state.isBusy, onChoosePlan = viewModel::choosePlan, onSaveProfile = viewModel::saveProfile)
                 1 -> ChannelsTab(state, viewModel)
                 2 -> RulesTab(state, viewModel)
                 else -> InboxTab(state.inbox, state.isBusy, onSend = viewModel::sendReply)
@@ -145,24 +145,29 @@ fun ResponderScreen(
 private fun OverviewTab(
     status: ResponderStatusDto?,
     stats: com.dalilacom.app.data.network.ResponderStatsDto?,
+    plans: List<ResponderPlanDto>,
     busy: Boolean,
-    onActivate: () -> Unit,
+    onChoosePlan: (ResponderPlanDto, String?) -> Unit,
     onSaveProfile: (String, String, String, String) -> Unit,
 ) {
     if (status == null) {
         Text(AppStrings.get(R.string.s_8c818f60))
         return
     }
-    // First visit: the service's own welcome — the free period and the price after it — before the status.
-    val firstVisit = !status.running && status.status != "EXPIRED"
-    if (firstVisit) {
-        ServiceWelcome(
-            title = AppStrings.get(R.string.intro_responder_title),
-            body = AppStrings.get(R.string.intro_responder_body),
-            trialDays = if (status.trialAvailable) status.trialDays else 0,
-            price = "${status.price} ${status.creditName}",
-            periodDays = status.periodDays,
-        )
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(AppStrings.get(R.string.intro_responder_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(6.dp))
+            Text(AppStrings.get(R.string.intro_responder_body), style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+    Spacer(Modifier.height(12.dp))
+    if (!status.running) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text(AppStrings.get(R.string.responder_no_active_plan), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         Spacer(Modifier.height(12.dp))
     }
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -171,7 +176,6 @@ private fun OverviewTab(
             val until = (if (status.status == "TRIAL") status.trialEndsAt else status.periodEnd)?.take(10)
             if (until != null && status.running) Text(AppStrings.get(R.string.fmt_ends_on, until))
             Text(AppStrings.get(R.string.fmt_your_balance, status.balance, status.creditName))
-            Text(AppStrings.get(R.string.fmt_price_every, status.price, status.creditName, status.periodDays))
             if (status.aiReplyLimit > 0) Text(AppStrings.get(R.string.fmt_ai_replies, status.aiRepliesUsed, status.aiReplyLimit))
             if (stats != null && status.running) Text(AppStrings.get(R.string.fmt_responder_stats, stats.sent, stats.needsReview, stats.failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (stats != null && status.running) {
@@ -182,13 +186,40 @@ private fun OverviewTab(
                     stats.unmatchedSamples.forEach { Text("• ${it.message}", style = MaterialTheme.typography.bodySmall, maxLines = 2) }
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            val label = when {
-                !status.running && status.status != "EXPIRED" && status.trialAvailable -> AppStrings.get(R.string.intro_continue)
-                !status.running && status.status != "EXPIRED" -> AppStrings.get(R.string.fmt_subscribe_price, status.price, status.creditName)
-                else -> AppStrings.get(R.string.fmt_renew_price, status.price, status.creditName)
+        }
+    }
+
+    Spacer(Modifier.height(16.dp))
+    Text(AppStrings.get(R.string.responder_plans_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+    Spacer(Modifier.height(8.dp))
+    if (plans.isEmpty()) {
+        Text(AppStrings.get(R.string.pricing_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+        plans.forEach { plan ->
+            val active = status.activePlans.any { it.id == plan.id }
+            val action = when {
+                active -> null
+                plan.priceCredits == null -> null
+                plan.trialAvailable -> AppStrings.get(R.string.responder_plan_trial)
+                else -> AppStrings.get(R.string.pricing_subscribe)
             }
-            Button(onClick = onActivate, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(label) }
+            if (active) Text(AppStrings.get(R.string.responder_plan_current), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 4.dp))
+            PlanCard(
+                plan = CatalogPlanDto(
+                    id = plan.id, service = plan.service, name = plan.name, description = plan.description,
+                    durationDays = plan.durationDays, trialDays = if (plan.trialAvailable) plan.trialDays else 0, priceCredits = plan.priceCredits,
+                    priceFrom = plan.priceFrom, features = plan.features, source = "catalog",
+                ),
+                creditName = status.creditName,
+                actionLabel = action,
+                busy = busy,
+                onAction = { onChoosePlan(plan, null) },
+            )
+            plan.offers.forEach { offer ->
+                Text("${offer.text} · ${AppStrings.get(R.string.responder_offer_bonus_days, offer.bonusDays)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                OutlinedButton(onClick = { onChoosePlan(plan, offer.id) }, enabled = !busy && plan.priceCredits != null, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.responder_buy_offer)) }
+            }
+            Spacer(Modifier.height(10.dp))
         }
     }
 

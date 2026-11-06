@@ -222,6 +222,14 @@
     <string name="intro_continue">متابعة</string>
     <string name="intro_responder_title">أهلًا بك في المجيب الآلي 👋</string>
     <string name="intro_responder_body">رد ذكي على رسائل زبائنك على قنواتك، حتى وأنت مشغول.</string>
+    <string name="responder_plans_title">خطط المجيب الآلي</string>
+    <string name="responder_no_active_plan">ما عندك خطة فعّالة حاليًا. اختر خطة من الخيارات التالية حتى يبدأ المجيب بالعمل.</string>
+    <string name="responder_plan_current">خطتك الحالية</string>
+    <string name="responder_plan_trial">ابدأ التجربة</string>
+    <string name="responder_plan_selected">تم اختيار الخطة وتفعيلها ✅</string>
+    <string name="responder_trial_started">بدأت تجربتك للخطة ✅</string>
+    <string name="responder_offer_bonus_days">%1$d يومًا إضافيًا</string>
+    <string name="responder_buy_offer">الاشتراك بهذا العرض</string>
     <string name="card_trial_left">فترتك المجانية تنتهي بعد %1$d يوم</string>
     <string name="card_ends_soon">بطاقتك تنتهي بعد %1$d يوم</string>
     <string name="card_expired">انتهت صلاحية بطاقتك</string>

@@ -12,6 +12,7 @@ import com.dalilacom.app.data.network.MetaOAuthStatusDto
 import com.dalilacom.app.data.network.MetaPageDto
 import com.dalilacom.app.data.network.PostDto
 import com.dalilacom.app.data.network.ResponderStatusDto
+import com.dalilacom.app.data.network.ResponderPlanDto
 import com.dalilacom.app.data.network.RuleDto
 import com.dalilacom.app.data.repository.ResponderRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,7 @@ data class ResponderUiState(
     val info: String? = null,
     val needsTopUp: Boolean = false,
     val status: ResponderStatusDto? = null,
+    val plans: List<ResponderPlanDto> = emptyList(),
     val stats: com.dalilacom.app.data.network.ResponderStatsDto? = null,
     val channels: List<ChannelDto> = emptyList(),
     val connections: List<ConnectionDto> = emptyList(),
@@ -61,6 +63,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val status = repository.status()
+            val plans = repository.plans().getOrNull().orEmpty()
             val channels = repository.channels().getOrNull().orEmpty()
             val connections = repository.connections().getOrNull().orEmpty()
             val rules = repository.rules().getOrNull().orEmpty()
@@ -71,6 +74,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
                 it.copy(
                     isLoading = false,
                     status = status.getOrNull() ?: it.status,
+                    plans = plans,
                     stats = stats ?: it.stats,
                     error = status.exceptionOrNull()?.message,
                     channels = channels,
@@ -108,6 +112,13 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         val isFirstActivation = !status.running && status.status != "EXPIRED"
         act(if (isFirstActivation) AppStrings.get(R.string.s_fd85c447) else AppStrings.get(R.string.s_937c3091)) {
             if (isFirstActivation) repository.activate() else repository.renew()
+        }
+    }
+
+    fun choosePlan(plan: ResponderPlanDto, offerId: String?) {
+        if (plan.priceCredits == null || _uiState.value.isBusy) return
+        act(AppStrings.get(if (plan.trialAvailable && offerId == null) R.string.responder_trial_started else R.string.responder_plan_selected)) {
+            if (plan.trialAvailable && offerId == null) repository.startPlanTrial(plan.id) else repository.purchasePlan(plan.id, offerId)
         }
     }
 

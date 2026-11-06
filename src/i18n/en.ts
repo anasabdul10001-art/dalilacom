@@ -447,6 +447,7 @@ export const en: LanguagePack = {
     "المجيب الآلي متوقف من إعداداتك": "The auto-responder is turned off in your settings",
     "لازم يكون عندك خطة فعّالة لترد على الرسائل": "You need an active plan to reply to messages",
     "ملخص المجيب الآلي لهذا الأسبوع": "Your auto-responder weekly summary",
+    "اختر خطة للمجيب الآلي": "Choose an auto-responder plan",
     "تذكير: لديك موعد غدًا": "Reminder: you have an appointment tomorrow",
     "تذكير: لديك موعد بعد أقل من ساعة": "Reminder: your appointment is in less than an hour",
     "تذكير بموعدك غدًا": "Reminder about your appointment tomorrow",

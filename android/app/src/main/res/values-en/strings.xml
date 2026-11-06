@@ -218,6 +218,14 @@
     <string name="intro_continue">Continue</string>
     <string name="intro_responder_title">Welcome to the auto-responder 👋</string>
     <string name="intro_responder_body">Smart replies to messages from your customers on your channels, even when you are busy.</string>
+    <string name="responder_plans_title">Auto-responder plans</string>
+    <string name="responder_no_active_plan">You don\'t have an active plan. Choose one below to start the auto-responder.</string>
+    <string name="responder_plan_current">Your current plan</string>
+    <string name="responder_plan_trial">Start free trial</string>
+    <string name="responder_plan_selected">Plan selected and activated ✅</string>
+    <string name="responder_trial_started">Your plan trial has started ✅</string>
+    <string name="responder_offer_bonus_days">%1$d extra days</string>
+    <string name="responder_buy_offer">Choose this offer</string>
     <string name="card_trial_left">Your free period ends in %1$d days</string>
     <string name="card_ends_soon">Your card ends in %1$d days</string>
     <string name="card_expired">Your card has expired</string>

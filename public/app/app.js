@@ -7557,13 +7557,13 @@ function screenResponder() {
 }
 
 async function loadResponder() {
-  const [st, ch, cn, ru, ib, sx] = await Promise.all([
+  const [st, ch, cn, ru, ib, sx, plans] = await Promise.all([
     api("GET", "/responder/status"), api("GET", "/responder/channels"), api("GET", "/responder/connections"),
-    api("GET", "/responder/rules"), api("GET", "/responder/inbox"), api("GET", "/responder/stats"),
+    api("GET", "/responder/rules"), api("GET", "/responder/inbox"), api("GET", "/responder/stats"), api("GET", "/responder/plans"),
   ]);
   const tab = (S._resp && S._resp.tab) || "overview";
   const keep = S._resp || {};
-  S._resp = { loading: false, tab, notice: keep.notice, ruleDraft: keep.ruleDraft, posts: keep.posts, selectedPosts: keep.selectedPosts, postsError: keep.postsError, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [], stats: sx.ok ? sx.data : null };
+  S._resp = { loading: false, tab, notice: keep.notice, needsTopUp: keep.needsTopUp, ruleDraft: keep.ruleDraft, posts: keep.posts, selectedPosts: keep.selectedPosts, postsError: keep.postsError, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [], stats: sx.ok ? sx.data : null, plans: plans.ok ? plans.data : [] };
   render();
 }
 
@@ -7580,22 +7580,24 @@ function respOverview() {
   if (!st) return `<div class="error-banner">تعذّر تحميل الحالة</div>`;
   const daysLeft = (d) => Math.max(0, Math.ceil((new Date(d) - Date.now()) / 86400000));
   const endInfo = st.status === "TRIAL" ? `تنتهي التجربة بعد ${daysLeft(st.trialEndsAt)} يوم` : st.status === "ACTIVE" ? `الاشتراك ساري لحد ${String(st.periodEnd).slice(0, 10)}` : "";
-  const firstVisit = !st.running && st.status !== "EXPIRED";
-  const price = `${st.price} ${st.creditName}`;
-  const welcome = firstVisit ? `
-    <div class="card intro-card">
-      <h2>${esc(t("intro.responder.title"))}</h2>
-      <p>${esc(t("intro.responder.body"))}</p>
-      <p><strong>${esc(st.trialAvailable ? t("intro.trial", { n: st.trialDays, price, days: st.periodDays }) : t("intro.noTrial", { price, days: st.periodDays }))}</strong></p>
-      ${st.trialAvailable ? `<p class="muted">${esc(t("intro.afterContinue"))}</p>` : ""}
-    </div>` : "";
+  const plans = S._resp.plans || [];
+  const activePlanIds = new Set((st.activePlans || []).map((plan) => plan.id));
+  const planCards = plans.length ? plans.map((plan) => {
+    const active = activePlanIds.has(plan.id);
+    const action = !active && plan.priceCredits !== null
+      ? { fn: "respChoosePlan", label: plan.trialAvailable ? t("responder.planTrial") : t("pricing.subscribe") }
+      : null;
+    return `<div>${active ? `<span class="badge success">${esc(t("responder.planCurrent"))}</span>` : `<span class="badge ${plan.includesAi ? "info" : "neutral"}">${esc(plan.includesAi ? t("responder.aiIncluded") : t("responder.fixedIncluded"))}</span>`}
+      ${planCardHtml({ ...plan, trialDays: plan.trialAvailable ? plan.trialDays : 0 }, st.creditName, action)}
+      ${plan.offers?.map((offer) => `<p class="muted">${esc(offer.text)} · ${esc(t("responder.offerBonusDays", { n: offer.bonusDays }))}</p><button class="btn small outline" ${S.busy ? "disabled" : ""} onclick="respChoosePlan('${plan.id}', '${offer.id}')">${esc(t("responder.buyOffer"))}</button>`).join("") || ""}
+      ${!active && plan.priceCredits === null ? `<p class="muted">${esc(t("pricing.notPriced"))}</p>` : ""}</div>`;
+  }).join("") : `<div class="empty-state">${esc(t("pricing.empty"))}</div>`;
   const sx = S._resp.stats;
   const stats = sx && st.running ? `<p class="muted" style="margin:4px 0 0">${esc(t("responder.last30", { sent: sx.sent, review: sx.needsReview, failed: sx.failed }))}</p>
     <p class="muted">${esc(t("responder.unmatched", { n: sx.unmatchedCount || 0 }))}</p>
     ${(sx.topRules || []).length ? `<p class="muted">${esc(t("responder.topRules"))}: ${sx.topRules.map((x) => `${esc(x.name)} (${x.count})`).join(" · ")}</p>` : ""}
     ${(sx.unmatchedSamples || []).length ? `<details><summary>${esc(t("responder.unmatchedSamples"))}</summary>${sx.unmatchedSamples.map((x) => `<p class="muted">${esc(x.message)}</p>`).join("")}</details>` : ""}` : "";
   return `
-    ${welcome}
     <div class="card">
       <div class="title-line"><strong>حالة الخدمة</strong>${respStatusBadge(st.status)}</div>
       ${stats}
@@ -7603,13 +7605,14 @@ function respOverview() {
       ${st.status === "EXPIRED" ? `<div class="error-banner">خلصت المدة — الردود الآلية موقوفة. ادفع لتكمل الخدمة.</div>` : ""}
       <p class="muted">رصيدك: <b>${st.balance}</b> ${esc(st.creditName)} · ردود AI هالفترة: ${st.aiRepliesUsed}/${st.aiReplyLimit}</p>
       ${errorBanner()}
-      ${!st.running && st.trialAvailable ? `<button class="btn" onclick="respActivate()">${esc(t("intro.continue"))}</button>` : ""}
-      ${!st.running && !st.trialAvailable ? `<button class="btn" onclick="respActivate()">فعّل مقابل ${st.price} ${esc(st.creditName)} / ${st.periodDays} يوم</button>` : ""}
-      ${st.running && st.status === "ACTIVE" ? `<button class="btn outline" onclick="respRenew()">جدّد ${st.periodDays} يوم إضافي (${st.price} ${esc(st.creditName)})</button>` : ""}
-      ${st.status === "TRIAL" ? `<button class="btn outline" onclick="respRenew()">اشترك من هلق (${st.price} ${esc(st.creditName)})</button>` : ""}
+      ${S._resp.notice ? `<p class="badge success">${esc(S._resp.notice)}</p>` : ""}
       <div style="height:8px"></div>
       <button class="btn secondary" onclick="go('wallet')">💰 اشحن رصيدك</button>
+      ${S._resp.needsTopUp ? `<button class="btn" onclick="go('wallet')">${esc(t("responder.topUp"))}</button>` : ""}
     </div>
+    <div class="section-title">${esc(t("responder.plansTitle"))}</div>
+    ${st.running ? "" : `<div class="card intro-card"><h2>${esc(t("intro.responder.title"))}</h2><p>${esc(t("intro.responder.body"))}</p><p>${esc(t("responder.choosePlanHint"))}</p></div>`}
+    ${planCards}
     <div class="card">
       <div class="section-title" style="margin-top:0">عن نشاطك (بيساعد الذكاء الاصطناعي يرد صح)</div>
       <div class="field"><label>وصف النشاط</label><input id="rp-desc" placeholder="مثال: مطعم مأكولات شرقية، دوام من 10 صباحًا حتى 11 مساءً" value="${esc(st.businessDescription || "")}" /></div>
@@ -7623,6 +7626,27 @@ function respOverview() {
       ${st.fallbackMode === "TEMPLATE" ? `<div class="field"><label>نص الرد الاحتياطي ({name} = اسم الزبون)</label><textarea id="rp-fbtext" placeholder="مثال: شكرًا لتواصلك! بنرد عليك بأقرب وقت." rows="3">${esc(st.fallbackReply || "")}</textarea></div>` : ""}
       <button class="btn small" onclick="respSaveProfile()">حفظ</button>
     </div>`;
+}
+
+async function respChoosePlan(id, offerId) {
+  const plan = (S._resp?.plans || []).find((item) => item.id === id);
+  if (!plan || plan.priceCredits === null || S.busy) return;
+  S.error = null;
+  S.busy = true;
+  render();
+  const useTrial = plan.trialAvailable && !offerId;
+  const endpoint = useTrial ? `/responder/plans/${id}/trial` : `/responder/plans/${id}/purchase`;
+  const { ok, data } = await api("POST", endpoint, offerId ? { offerId } : {});
+  S.busy = false;
+  if (!ok) {
+    S.error = errMsg(data, t("pricing.failed"));
+    S._resp.needsTopUp = !!(data?.needed || data?.error?.details?.needed);
+    return render();
+  }
+  S._resp.notice = useTrial ? t("responder.trialStarted") : t("pricing.subscribed");
+  S._resp.loading = true;
+  render();
+  await loadResponder();
 }
 
 async function respActivate() {
@@ -8014,6 +8038,21 @@ function bootMetaReturn() {
   return true;
 }
 
+function bootResponderPlansLink() {
+  const q = new URLSearchParams(location.search);
+  if (q.get("responder") !== "plans") return false;
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  S.stack = [];
+  if (!S.token) {
+    S._afterLogin = { screen: "responder", params: {} };
+    go("login");
+    return true;
+  }
+  S._resp = null;
+  go("responder");
+  return true;
+}
+
 loadMarket();
 captureJoin();
 loadSocialLinks();
@@ -8023,6 +8062,7 @@ bootSocialReturn().then((social) => {
   setTimeout(ensureCity, 1200); // first use: ask for the city once
   if (social) return;
   if (bootMetaReturn()) return;
+  if (bootResponderPlansLink()) return;
   bootReferralCapture().then((handled) => {
     if (!handled && !bootMerchantLink()) render();
   });

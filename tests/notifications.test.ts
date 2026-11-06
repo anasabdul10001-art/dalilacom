@@ -4,6 +4,7 @@ import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
 import { emailService } from "../src/services/email.service";
+import { notify } from "../src/services/notification.service";
 import { uniqueEmail } from "./helpers";
 
 const sendSpy = vi.spyOn(emailService, "send").mockResolvedValue();
@@ -61,6 +62,30 @@ function inbox(bearer: string, type?: string) {
 }
 
 describe("Notification preferences (section 87)", () => {
+  it("includes a direct plan-choice button in the weekly responder report email", async () => {
+    const user = await account("notifrespupgrade", "Responder Upgrade User");
+    const record = await prisma.user.findUniqueOrThrow({ where: { email: user.email } });
+    const priorBase = process.env.PUBLIC_BASE_URL;
+    process.env.PUBLIC_BASE_URL = "https://dalilacom.example.test";
+    sendSpy.mockClear();
+    try {
+      await notify({
+        userId: record.id,
+        type: "SYSTEM",
+        title: "ملخص المجيب الآلي لهذا الأسبوع",
+        body: "هالأسبوع وصلك 3 رسالة ما لقت رد ثابت. الذكاء الاصطناعي كان ممكن يرد عليها.",
+        data: { kind: "RESPONDER", reason: "weekly_report", action: "upgrade" },
+      });
+      expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({
+        text: expect.stringContaining("https://dalilacom.example.test/app/?responder=plans"),
+        html: expect.stringContaining("https://dalilacom.example.test/app/?responder=plans"),
+      }));
+    } finally {
+      if (priorBase === undefined) delete process.env.PUBLIC_BASE_URL;
+      else process.env.PUBLIC_BASE_URL = priorBase;
+    }
+  });
+
   it("defaults every type to FULL and stores what the user changes", async () => {
     const user = await account("notifpref", "Pref User");
 

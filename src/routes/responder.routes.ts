@@ -83,8 +83,19 @@ responderRouter.get("/plans", requireAuth, route(async (req, res) => {
   const account = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { countryCode: true } });
   const catalog = await getCatalog(account?.countryCode ?? null, resolveLanguage(req));
   const plans = catalog.services.find((service) => service.service === RESPONDER_PLAN_SERVICE)?.plans ?? [];
+  const [planDetails, existingTrials] = await Promise.all([
+    prisma.servicePlan.findMany({ where: { id: { in: plans.map((plan) => plan.id) } }, select: { id: true, includesAi: true, aiReplyLimit: true, removesBadge: true } }),
+    prisma.responderEntitlement.findMany({ where: { userId: req.user!.id, planId: { in: plans.map((plan) => plan.id) } }, select: { planId: true } }),
+  ]);
+  const detailsById = new Map(planDetails.map((plan) => [plan.id, plan]));
+  const usedTrials = new Set(existingTrials.map((entitlement) => entitlement.planId));
   const offers = await prisma.planOffer.findMany({ where: { planId: { in: plans.map((plan) => plan.id) }, isActive: true, AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: new Date() } }] }, { OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }] } });
-  res.json(plans.map((plan) => ({ ...plan, offers: offers.filter((offer) => offer.planId === plan.id) })));
+  res.json(plans.map((plan) => ({
+    ...plan,
+    ...detailsById.get(plan.id),
+    trialAvailable: plan.trialDays > 0 && !usedTrials.has(plan.id),
+    offers: offers.filter((offer) => offer.planId === plan.id),
+  })));
 }));
 
 responderRouter.post("/plans/:id/purchase", requireAuth, route(async (req, res) => {

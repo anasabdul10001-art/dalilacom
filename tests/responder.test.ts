@@ -477,10 +477,14 @@ describe("Plan access, permanent fixed replies and admin grants", () => {
   it("allows one trial per account and plan, including after that trial expires", async () => {
     const plan = await responderPlan("تجربة حسب الخطة", { trialDays: 7 });
     const owner = await account("resptrialplan");
+    const before = await request(app).get("/responder/plans").set(owner.auth);
+    expect(before.body).toContainEqual(expect.objectContaining({ id: plan.id, trialAvailable: true, trialDays: 7 }));
     const started = await request(app).post(`/responder/plans/${plan.id}/trial`).set(owner.auth);
     expect(started.status).toBe(201);
     expect(started.body).toMatchObject({ status: "TRIAL", source: "TRIAL" });
     expect((await request(app).post(`/responder/plans/${plan.id}/trial`).set(owner.auth)).status).toBe(409);
+    const after = await request(app).get("/responder/plans").set(owner.auth);
+    expect(after.body).toContainEqual(expect.objectContaining({ id: plan.id, trialAvailable: false }));
 
     await prisma.responderEntitlement.update({ where: { userId_planId: { userId: owner.id, planId: plan.id } }, data: { status: "EXPIRED", trialEndsAt: new Date(Date.now() - 1000) } });
     expect((await request(app).post(`/responder/plans/${plan.id}/trial`).set(owner.auth)).status).toBe(409);

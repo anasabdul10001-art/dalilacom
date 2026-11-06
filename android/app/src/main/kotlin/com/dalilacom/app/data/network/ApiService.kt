@@ -608,6 +608,15 @@ interface ApiService {
     @GET("responder/status")
     suspend fun getResponderStatus(): Response<ResponderStatusDto>
 
+    @GET("responder/plans")
+    suspend fun getResponderPlans(): Response<List<ResponderPlanDto>>
+
+    @POST("responder/plans/{id}/trial")
+    suspend fun startResponderPlanTrial(@Path("id") id: String): Response<kotlinx.serialization.json.JsonElement>
+
+    @POST("responder/plans/{id}/purchase")
+    suspend fun purchaseResponderPlan(@Path("id") id: String, @Body body: ResponderPlanPurchaseDto): Response<kotlinx.serialization.json.JsonElement>
+
     @POST("responder/activate")
     suspend fun activateResponder(): Response<kotlinx.serialization.json.JsonElement>
 

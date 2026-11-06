@@ -160,6 +160,6 @@ export function emailChangedHtml(lang: string, newEmail: string): string {
 }
 
 /** A notification the app wrote for the person: the title and text are already in their language. */
-export function notificationEmailHtml(lang: string, title: string, body: string | undefined): string {
-  return renderBrandedEmail({ social: socialLinksSnapshot(), lang, heading: title, paragraphs: body ? [body] : [] });
+export function notificationEmailHtml(lang: string, title: string, body: string | undefined, action?: { label: string; url: string }): string {
+  return renderBrandedEmail({ social: socialLinksSnapshot(), lang, heading: title, paragraphs: body ? [body] : [], button: action });
 }
