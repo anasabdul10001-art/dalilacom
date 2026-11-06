@@ -34,7 +34,7 @@ beforeEach(() => {
       aiCalls.push({ system: body.messages[0].content, user: body.messages[1].content });
       const isClassify = String(body.messages[0].content).startsWith("Classify");
       const content = isClassify ? "inquiry" : aiAnswer;
-      return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: content ? 200 : 500 });
+      return new Response(JSON.stringify({ choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 5 } }), { status: content ? 200 : 500 });
     }
     throw new Error(`unexpected fetch ${target}`);
   });
@@ -173,6 +173,32 @@ describe("Answering customers", () => {
     expect(sentReplies.at(-1)?.body.text).toBe("قديم");
   });
 
+  it("uses a matching fixed rule before the AI even when the account has an AI plan", async () => {
+    const owner = await running("respfixedfirst");
+    const plan = await responderPlan("خطة ذكاء للاختبار", { includesAi: true, aiReplyLimit: 10 });
+    await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: plan.id, status: "ACTIVE", source: "GRANT", periodEnd: new Date(Date.now() + 86400000) } });
+    process.env.GROQ_API_KEY = "test-groq-key";
+    aiAnswer = JSON.stringify({ reply: "رد الذكاء", complaint: false, handoff: false });
+    await rule(owner, { keywords: ["سعر"], mode: "FIXED", replyTemplate: "رد ثابت" });
+    await customerSays(owner.hook, "السعر؟");
+    expect(sentReplies.at(-1)?.body.text).toBe("رد ثابت");
+    expect(aiCalls).toHaveLength(0);
+  });
+
+  it("routes an indirect AI-detected complaint to the review inbox from the same reply request", async () => {
+    const owner = await running("respindirectcomplaint");
+    const plan = await responderPlan("خطة اكتشاف الشكوى", { includesAi: true, aiReplyLimit: 10 });
+    await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: plan.id, status: "ACTIVE", source: "GRANT", periodEnd: new Date(Date.now() + 86400000) } });
+    await request(app).patch("/responder/profile").set(owner.auth).send({ fallbackMode: "AI" });
+    process.env.GROQ_API_KEY = "test-groq-key";
+    aiAnswer = JSON.stringify({ reply: "نعتذر، وصلتنا ملاحظتك وسيتابع معك الفريق.", complaint: true, handoff: true });
+    await customerSays(owner.hook, "الطلب وصلني بحالة سيئة", "indirect");
+    expect(aiCalls).toHaveLength(1);
+    expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ intent: "complaint", reason: "complaint", reply: expect.stringContaining("نعتذر") });
+    expect((await notices(owner.id)).some((n) => n.title.includes("شكوى"))).toBe(true);
+    expect(await prisma.responderAiCall.count({ where: { userId: owner.id } })).toBe(1);
+  });
+
   it("a wrong secret or an unknown hook answers nothing, and a switched-off rule stays silent until it is switched on", async () => {
     const owner = await running("respguard");
     await rule(owner, {});
@@ -228,7 +254,7 @@ describe("Answering customers", () => {
   it("lets an AI plan answer a keyword-detected complaint with AI and preserves its handoff decision", async () => {
     const owner = await running("respcomplaintai", "MERCHANT");
     process.env.GROQ_API_KEY = "test-groq-key";
-    aiAnswer = JSON.stringify({ reply: "نعتذر منك. راجعت طلبك وسيتواصل معك الفريق.", handoff: true });
+    aiAnswer = JSON.stringify({ reply: "نعتذر منك. راجعت طلبك وسيتواصل معك الفريق.", complaint: true, handoff: true });
     await request(app).patch("/responder/profile").set(owner.auth).send({ businessDescription: "محلنا بشارع الاختبار ودوامنا حتى 9" });
     await customerSays(owner.hook, "عندي شكوى: وين محلكم؟", "c-1");
     expect(sentReplies.at(-1)!.body.text).toContain("راجعت طلبك");
@@ -236,10 +262,10 @@ describe("Answering customers", () => {
     expect(aiCalls).toHaveLength(1);
     expect((await notices(owner.id)).some((n) => n.title.includes("بانتظار ردّك"))).toBe(true);
 
-    aiAnswer = JSON.stringify({ reply: "نعتذر منك، تم حل المشكلة.", handoff: false });
+    aiAnswer = JSON.stringify({ reply: "نعتذر منك، تم حل المشكلة.", complaint: true, handoff: false });
     await customerSays(owner.hook, "شكوى: طلبي ما وصل وبدي حقي", "c-2");
     expect(sentReplies.at(-1)!.body.text).toContain("تم حل المشكلة");
-    expect((await inbox(owner, "SENT")).body[0]).toMatchObject({ intent: "complaint", status: "SENT", reason: "complaint" });
+    expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ intent: "complaint", status: "NEEDS_REVIEW", reason: "complaint" });
     await customerSays(owner.hook, "شكوى كبيرة", "c-3");
     expect(aiCalls).toHaveLength(3);
   });
@@ -289,7 +315,7 @@ describe("When no rule matches: the fallback", () => {
 
     // AI fallback: facts come from the owner's description (and the connected page), never from the Dalilacom store
     process.env.GROQ_API_KEY = "test-groq-key";
-    aiAnswer = "الشوكولا الفاخرة بـ 12.50";
+    aiAnswer = JSON.stringify({ reply: "الشوكولا الفاخرة بـ 12.50", complaint: false, handoff: false });
     await request(app).patch("/responder/profile").set(owner.auth).send({ fallbackMode: "AI", businessDescription: "محل شوكولا" });
     await customerSays(owner.hook, "بكم الشوكولا؟", "chat-ai");
     expect(sentReplies.at(-1)!.body.text).toBe("الشوكولا الفاخرة بـ 12.50");
@@ -297,14 +323,14 @@ describe("When no rule matches: the fallback", () => {
     expect(first.system).not.toContain("شوكولا فاخرة"); // the responder is separate from the Dalilacom store
     expect(first.system).not.toContain("شارع الاختبار");
     expect(first.system).toContain("About the business: محل شوكولا");
-    expect(first.user).toBe("بكم الشوكولا؟"); // nothing earlier in this conversation
+    expect(JSON.parse(first.user).message).toBe("بكم الشوكولا؟"); // nothing earlier in this conversation
 
-    aiAnswer = "نعم، موجودة";
+    aiAnswer = JSON.stringify({ reply: "نعم، موجودة", complaint: false, handoff: false });
     await customerSays(owner.hook, "وهل هي متوفرة؟", "chat-ai");
     const second = aiCalls.filter((c) => !c.system.startsWith("Classify")).at(-1)!;
-    expect(second.user).toContain("Customer: بكم الشوكولا؟");
-    expect(second.user).toContain("You: الشوكولا الفاخرة بـ 12.50");
-    expect(second.user).toContain("وهل هي متوفرة؟");
+    expect(JSON.stringify(JSON.parse(second.user).conversation)).toContain("Customer: بكم الشوكولا؟");
+    expect(JSON.stringify(JSON.parse(second.user).conversation)).toContain("You: الشوكولا الفاخرة بـ 12.50");
+    expect(JSON.parse(second.user).message).toContain("وهل هي متوفرة؟");
   });
 
   it("with the AI down, a rule in AI mode falls back to its template, and without one waits for a person", async () => {
@@ -324,20 +350,31 @@ describe("When no rule matches: the fallback", () => {
     const owner = await running("respquota");
     const before = await getSettings();
     process.env.GROQ_API_KEY = "test-groq-key";
-    aiAnswer = "رد من الذكاء";
+    aiAnswer = JSON.stringify({ reply: "رد من الذكاء", complaint: false, handoff: false });
     try {
-      await saveSettings({ responder: { ...before.responder, monthlyAiReplyLimit: 1 } });
+      await saveSettings({ responder: { ...before.responder, monthlyAiReplyLimit: 1 }, aiModelPrices: [{ provider: "groq", model: "llama-3.3-70b-versatile", inputUsdPerMillion: 1, outputUsdPerMillion: 2 }] });
       await prisma.servicePlan.update({ where: { id: "00000000-0000-4000-8000-000000000001" }, data: { aiReplyLimit: 1 } });
       await rule(owner, { keywords: ["سؤال"], mode: "AI", replyTemplate: "رد ثابت" });
       await customerSays(owner.hook, "عندي سؤال", "q1");
       expect(sentReplies.at(-1)!.body.text).toBe("رد من الذكاء");
-      expect((await prisma.responderSubscription.findUniqueOrThrow({ where: { userId: owner.id } })).aiRepliesUsed).toBe(1); // one reply, though two AI calls ran
-      expect(aiCalls.some((c) => c.system.startsWith("Classify"))).toBe(false);
+      expect((await prisma.responderSubscription.findUniqueOrThrow({ where: { userId: owner.id } })).aiRepliesUsed).toBe(1);
+      expect(await prisma.responderAiCall.count({ where: { userId: owner.id } })).toBe(1);
+      expect(aiCalls).toHaveLength(1); // one request writes the answer and checks for a complaint
+      const logged = await prisma.responderAiCall.findFirstOrThrow({ where: { userId: owner.id } });
+      expect(logged).toMatchObject({ provider: "groq", model: "llama-3.3-70b-versatile", promptTokens: 10, completionTokens: 5 });
+      expect(logged.estimatedCostUsd?.toString()).toBe("0.00002");
+      expect((await notices(owner.id)).filter((n) => n.data?.reason === "ai_quota_80")).toHaveLength(1);
+      expect((await notices(owner.id)).filter((n) => n.data?.reason === "ai_quota_100")).toHaveLength(1);
+      const admin = await account("respaicostadmin", "ADMIN");
+      const usageReport = await request(app).get("/admin/responder-ai-usage").set(admin.auth);
+      expect(usageReport.status).toBe(200);
+      expect(usageReport.body.accounts).toContainEqual(expect.objectContaining({ user: expect.objectContaining({ email: owner.email }), calls: 1, promptTokens: 10, completionTokens: 5, estimatedCostUsd: "0.00002" }));
 
       await customerSays(owner.hook, "عندي سؤال ثاني", "q2");
       expect(sentReplies.at(-1)!.body.text).toBe("رد ثابت"); // the limit is reached: the template answers
+      expect((await notices(owner.id)).filter((n) => n.data?.reason === "ai_quota_100")).toHaveLength(1);
     } finally {
-      await saveSettings({ responder: before.responder });
+      await saveSettings({ responder: before.responder, aiModelPrices: before.aiModelPrices });
       await prisma.servicePlan.update({ where: { id: "00000000-0000-4000-8000-000000000001" }, data: { aiReplyLimit: before.responder.monthlyAiReplyLimit } });
     }
   });

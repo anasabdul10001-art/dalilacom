@@ -3,7 +3,7 @@ import { prisma } from "../prisma";
 import { decryptJson } from "./crypto.service";
 import { drivers } from "./channels";
 import { IncomingMessage } from "./channels/types";
-import { aiAvailable, answerComplaint, generateReply } from "./ai.service";
+import { aiAvailable, generateResponderReply, type AiCallUsage } from "./ai.service";
 import { adjustBalance } from "./wallet.service";
 import { getSettings } from "./settings.service";
 import { notify } from "./notification.service";
@@ -157,6 +157,8 @@ export async function pay(userId: string, role: Role): Promise<ActivationResult>
         periodEnd: new Date(base + settings.responder.periodDays * DAY),
         aiRepliesUsed: 0,
         aiPeriodStart: new Date(now),
+        aiQuotaNotice80At: null,
+        aiQuotaNotice100At: null,
       },
     });
     await tx.responderEntitlement.upsert({
@@ -183,16 +185,52 @@ function looksLikeComplaint(text: string) {
 }
 
 async function consumeAi(userId: string, limit: number): Promise<boolean> {
+  if (limit <= 0) return false;
   const sub = await prisma.responderSubscription.findUnique({ where: { userId } });
   if (!sub) return false;
   const periodStale = !sub.aiPeriodStart || Date.now() - sub.aiPeriodStart.getTime() > 30 * DAY;
   if (periodStale) {
-    await prisma.responderSubscription.update({ where: { userId }, data: { aiRepliesUsed: 1, aiPeriodStart: new Date() } });
+    const reset = await prisma.responderSubscription.updateMany({
+      where: { userId, aiPeriodStart: sub.aiPeriodStart, aiRepliesUsed: sub.aiRepliesUsed },
+      data: { aiRepliesUsed: 1, aiPeriodStart: new Date(), aiQuotaNotice80At: null, aiQuotaNotice100At: null },
+    });
+    if (!reset.count) return consumeAi(userId, limit);
+    await notifyQuota(userId, 1, limit);
     return true;
   }
-  if (sub.aiRepliesUsed >= limit) return false;
-  await prisma.responderSubscription.update({ where: { userId }, data: { aiRepliesUsed: { increment: 1 } } });
+  const claimed = await prisma.responderSubscription.updateMany({ where: { userId, aiPeriodStart: sub.aiPeriodStart, aiRepliesUsed: { lt: limit } }, data: { aiRepliesUsed: { increment: 1 } } });
+  if (!claimed.count) {
+    const latest = await prisma.responderSubscription.findUnique({ where: { userId } });
+    if (latest?.aiPeriodStart && Date.now() - latest.aiPeriodStart.getTime() > 30 * DAY) return consumeAi(userId, limit);
+    await notifyQuota(userId, latest?.aiRepliesUsed ?? limit, limit);
+    return false;
+  }
+  const updated = await prisma.responderSubscription.findUniqueOrThrow({ where: { userId } });
+  await notifyQuota(userId, updated.aiRepliesUsed, limit);
   return true;
+}
+
+async function notifyQuota(userId: string, used: number, limit: number) {
+  if (limit <= 0) return;
+  const checks = [
+    { threshold: Math.max(1, Math.ceil(limit * 0.8)), field: "aiQuotaNotice80At" as const, percent: 80 },
+    { threshold: limit, field: "aiQuotaNotice100At" as const, percent: 100 },
+  ];
+  for (const item of checks) {
+    if (used < item.threshold) continue;
+    const claimed = await prisma.responderSubscription.updateMany({ where: { userId, [item.field]: null }, data: { [item.field]: new Date() } });
+    if (claimed.count) await tell(userId, item.percent === 80 ? "استهلكت 80٪ من ردود الذكاء الاصطناعي" : "اكتملت حصة الذكاء الاصطناعي", item.percent === 80 ? `استخدمت ${used} من ${limit} رد. بعد انتهاء الحصة يستمر المجيب بالقواعد والردود الثابتة.` : `استخدمت كامل الحصة (${limit} رد). سيكمل المجيب بالقواعد والردود الثابتة حتى بداية الفترة التالية.`, { reason: `ai_quota_${item.percent}` }).catch(() => null);
+  }
+}
+
+async function recordAiCall(userId: string, usage: AiCallUsage) {
+  const settings = await getSettings();
+  const rate = settings.aiModelPrices.find((item) => item.provider === usage.provider && item.model === usage.model);
+  const hasTokens = usage.promptTokens !== null && usage.completionTokens !== null;
+  const estimatedCostUsd = rate && typeof rate.inputUsdPerMillion === "number" && typeof rate.outputUsdPerMillion === "number" && hasTokens
+    ? (usage.promptTokens! * rate.inputUsdPerMillion + usage.completionTokens! * rate.outputUsdPerMillion) / 1_000_000
+    : null;
+  await prisma.responderAiCall.create({ data: { userId, ...usage, estimatedCostUsd } }).catch(() => null);
 }
 
 /**
@@ -280,22 +318,25 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
   const aiLimit = hasAiPlan ? Math.max(...aiEntitlements.map((entitlement) => entitlement.plan.aiReplyLimit || 0)) : 0;
 
   const intent: string | null = looksLikeComplaint(msg.text) ? "complaint" : null;
-  // Basic plans use a fixed holding reply. AI plans keep their complaint-specific AI answer.
+  // Complaints are checked first. The free plan uses a holding reply; an AI plan handles
+  // the apology and indirect-complaint decision with the same single call used to write it.
   if (intent === "complaint") {
     try {
-      let answer: Awaited<ReturnType<typeof answerComplaint>> = null;
+      let answer: Awaited<ReturnType<typeof generateResponderReply>> = null;
       if (hasAiPlan && aiAvailable() && (await consumeAi(userId, aiLimit))) {
-        answer = await answerComplaint({
+        answer = await generateResponderReply({
           message: msg.text,
           businessDescription: sub.businessDescription,
           tone: sub.tone,
           businessInfo: await businessInfoFor(connection),
           history: await historyFor(connection.id, msg.conversationRef),
+          forceComplaint: true,
+          onUsage: (usage) => recordAiCall(userId, usage),
         });
       }
       const reply = answer?.reply ?? COMPLAINT_HOLDING_REPLY;
       await sendThroughConnection(connection, reply, msg.conversationRef);
-      return record({ status: answer?.handoff === false ? "SENT" : "NEEDS_REVIEW", intent, reply, reason: "complaint" });
+      return record({ status: "NEEDS_REVIEW", intent, reply, reason: "complaint" });
     } catch (err) {
       return record({ status: "FAILED", intent, reply: COMPLAINT_HOLDING_REPLY, reason: err instanceof Error ? err.message : "send_failed" });
     }
@@ -303,51 +344,72 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
 
   const rules = await prisma.responderRule.findMany({ where: { userId, isActive: true }, orderBy: [{ priority: "desc" }, { createdAt: "asc" }] });
   const normalizedMessage = normalizeText(msg.text);
-  const rule = rules.find(
-    (r) =>
+  const matches = (r: (typeof rules)[number]) =>
       (!r.channelId || r.channelId === connection.channelId) &&
       // A rule limited to specific posts only ever answers comments on those posts (never DMs or other posts).
       (r.postIds.length === 0 || (!!msg.postId && r.postIds.includes(msg.postId))) &&
-      r.keywords.some((k) => { const keyword = normalizeText(k); return keyword && normalizedMessage.includes(keyword); }),
-  );
+      r.keywords.some((k) => { const keyword = normalizeText(k); return keyword && normalizedMessage.includes(keyword); });
+  const rule = rules.find((r) => r.mode === "FIXED" && matches(r)) ?? rules.find(matches);
   const matchTracking = rule ? { matchedRuleId: rule.id } : { noMatchingRule: true };
 
-  // The AI answers with what the shop really has and what was said before in this conversation.
-  const writeWithAi = async (instructions: string): Promise<string | null> => {
+  const writeWithAi = async (instructions: string): Promise<Awaited<ReturnType<typeof generateResponderReply>>> => {
     if (!hasAiPlan || !aiAvailable() || !(await consumeAi(userId, aiLimit))) return null;
-    return generateReply({
+    const answer = await generateResponderReply({
       message: msg.text,
       businessDescription: sub.businessDescription,
       tone: sub.tone,
       instructions,
       businessInfo: await businessInfoFor(connection),
       history: await historyFor(connection.id, msg.conversationRef),
+      onUsage: (usage) => recordAiCall(userId, usage),
     });
+    return answer;
   };
   const personalise = (template: string) => template.replaceAll("{name}", msg.authorName);
 
   let reply: string | null = null;
-  let heldBack = "empty_template";
+  let replyIntent = intent;
+  let heldBack = hasAiPlan ? "ai_unavailable" : "ai_requires_plan";
   if (rule) {
-    if (rule.mode === "AI" && hasAiPlan) reply = await writeWithAi(rule.aiInstructions);
+    if (rule.mode === "AI" && hasAiPlan) {
+      const answer = await writeWithAi(rule.aiInstructions);
+      if (answer?.complaint) {
+        replyIntent = "complaint";
+        reply = answer.reply;
+        try { await sendThroughConnection(connection, reply, msg.conversationRef); }
+        catch (err) { return record({ status: "FAILED", intent: replyIntent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking }); }
+        return record({ status: "NEEDS_REVIEW", intent: replyIntent, reply, reason: "complaint", ...matchTracking });
+      }
+      reply = answer?.reply ?? null;
+    }
     if (!reply && rule.replyTemplate) reply = personalise(rule.replyTemplate);
-    if (!reply && rule.mode === "AI") heldBack = hasAiPlan ? "ai_unavailable" : "ai_requires_plan";
+    if (!reply && rule.mode === "AI" && hasAiPlan && sub.aiRepliesUsed >= aiLimit) heldBack = "ai_quota_exhausted";
   } else if (sub.fallbackMode === "TEMPLATE" && sub.fallbackReply?.trim()) {
     reply = personalise(sub.fallbackReply);
   } else if (sub.fallbackMode === "AI") {
-    if (hasAiPlan) reply = await writeWithAi("No rule matched this message: answer it only from the business information, briefly. If it is not covered, say the team will follow up.");
-    else if (sub.fallbackReply?.trim()) reply = personalise(sub.fallbackReply);
-    if (!reply) heldBack = hasAiPlan ? "ai_unavailable" : "ai_requires_plan";
+    if (hasAiPlan) {
+      const answer = await writeWithAi("Answer briefly using only the business information. If it is not covered, say the team will follow up.");
+      if (answer?.complaint) {
+        replyIntent = "complaint";
+        reply = answer.reply;
+        try { await sendThroughConnection(connection, reply, msg.conversationRef); }
+        catch (err) { return record({ status: "FAILED", intent: replyIntent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking }); }
+        return record({ status: "NEEDS_REVIEW", intent: replyIntent, reply, reason: "complaint", ...matchTracking });
+      }
+      reply = answer?.reply ?? null;
+    }
+    if (!reply && sub.fallbackReply?.trim()) reply = personalise(sub.fallbackReply);
+    if (!reply && hasAiPlan && sub.aiRepliesUsed >= aiLimit) heldBack = "ai_quota_exhausted";
   } else {
     return record({ status: "SKIPPED", intent, reason: "no_matching_rule", ...matchTracking });
   }
-  if (!reply) return record({ status: "NEEDS_REVIEW", intent, reason: heldBack, ...matchTracking });
+  if (!reply) return record({ status: "NEEDS_REVIEW", intent: replyIntent, reason: heldBack, ...matchTracking });
 
   try {
     await sendThroughConnection(connection, reply, msg.conversationRef);
-    return record({ status: "SENT", intent, reply, ...matchTracking });
+    return record({ status: "SENT", intent: replyIntent, reply, ...matchTracking });
   } catch (err) {
-    return record({ status: "FAILED", intent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking });
+    return record({ status: "FAILED", intent: replyIntent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking });
   }
 }
 

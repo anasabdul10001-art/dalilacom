@@ -27,6 +27,7 @@ export interface AiPackage {
   uses: number;
   credits: number;
 }
+export interface AiModelPrice { provider: string; model: string; inputUsdPerMillion: number | null; outputUsdPerMillion: number | null }
 
 export interface PlatformSettings {
   creditName: string;
@@ -62,6 +63,8 @@ export interface PlatformSettings {
   discountNotify: { mode: "OFF" | "CITY" | "CITY_MEMBERS" | "MEMBERS" | "FOLLOWERS" | "RADIUS" | "COUNTRY" | "EVERYONE"; radiusKm: number; alsoFollowers: boolean };
   /** The AI for shops (descriptions from photos, photo editing): free uses per month, then a price in wallet credits. */
   ai: { freePerMonth: number; creditsPerUse: number; packages: AiPackage[] };
+  /** Admin entered costs for a million input/output tokens; unknown rates are stored as unknown, never guessed. */
+  aiModelPrices: AiModelPrice[];
   /**
    * What marketers earn (0 = nothing until the owner sets it). A marketer gets `marketerPercent` of what the people he
    * brought spend and `marketerSignupCredits` for each of them who verifies the account; a marketing manager gets
@@ -101,6 +104,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
       { id: "pro", name: "الباقة الاحترافية", days: 30, uses: 400, credits: 4000 },
     ],
   },
+  aiModelPrices: [],
 };
 
 export async function getSettings(): Promise<PlatformSettings> {
@@ -115,6 +119,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     ads: { ...DEFAULT_SETTINGS.ads, ...(stored.ads ?? {}) },
     discountNotify: { ...DEFAULT_SETTINGS.discountNotify, ...(stored.discountNotify ?? {}) },
     ai: { ...DEFAULT_SETTINGS.ai, ...(stored.ai ?? {}) },
+    aiModelPrices: stored.aiModelPrices ?? DEFAULT_SETTINGS.aiModelPrices,
     referral: { ...DEFAULT_SETTINGS.referral, ...(stored.referral ?? {}) },
   };
 }
@@ -130,6 +135,7 @@ export async function saveSettings(patch: Partial<PlatformSettings>) {
     ads: { ...current.ads, ...(patch.ads ?? {}) },
     discountNotify: { ...current.discountNotify, ...(patch.discountNotify ?? {}) },
     ai: { ...current.ai, ...(patch.ai ?? {}) },
+    aiModelPrices: patch.aiModelPrices ?? current.aiModelPrices,
     referral: { ...current.referral, ...(patch.referral ?? {}) },
   };
   for (const [key, value] of Object.entries(next)) {

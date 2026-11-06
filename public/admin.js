@@ -1410,6 +1410,7 @@ async function demoStore(method) {
 
 // ---- AI provider status ----
 let aiPacks = [];
+let aiModelPrices = [];
 
 function renderAiPacks() {
   document.getElementById('ai-packs').innerHTML = aiPacks.map((p, i) => `
@@ -1442,6 +1443,43 @@ async function loadAiQuota() {
   document.getElementById('ai-price').value = data.ai.creditsPerUse;
   aiPacks = (data.ai.packages || []).map((p) => ({ ...p }));
   renderAiPacks();
+  aiModelPrices = (data.aiModelPrices || []).map((p) => ({ ...p }));
+  renderAiModelPrices();
+}
+
+function renderAiModelPrices() {
+  const body = document.getElementById('ai-model-prices');
+  if (!body) return;
+  body.innerHTML = aiModelPrices.map((p, i) => `<tr>
+    <td><input value="${esc(p.provider)}" placeholder="groq / openai" oninput="aiModelPrices[${i}].provider=this.value"></td>
+    <td><input value="${esc(p.model)}" placeholder="اسم النموذج" oninput="aiModelPrices[${i}].model=this.value"></td>
+    <td><input type="number" min="0" step="0.000001" value="${p.inputUsdPerMillion ?? ''}" oninput="aiModelPrices[${i}].inputUsdPerMillion=this.value===''?null:Number(this.value)"></td>
+    <td><input type="number" min="0" step="0.000001" value="${p.outputUsdPerMillion ?? ''}" oninput="aiModelPrices[${i}].outputUsdPerMillion=this.value===''?null:Number(this.value)"></td>
+    <td><button class="small danger" onclick="aiModelPrices.splice(${i},1);renderAiModelPrices()">✕</button></td>
+  </tr>`).join('');
+}
+
+function addAiModelPrice() {
+  aiModelPrices.push({ provider: '', model: '', inputUsdPerMillion: null, outputUsdPerMillion: null });
+  renderAiModelPrices();
+}
+
+async function saveAiModelPrices() {
+  const msg = document.getElementById('ai-model-price-msg');
+  if (aiModelPrices.some(p => !p.provider.trim() || !p.model.trim() || !(p.inputUsdPerMillion === null || Number.isFinite(p.inputUsdPerMillion)) || !(p.outputUsdPerMillion === null || Number.isFinite(p.outputUsdPerMillion)))) { msg.textContent = 'تأكد من تعبئة اسم المزوّد والنموذج والأسعار'; return; }
+  msg.textContent = 'عم نحفظ...';
+  const { ok } = await api('PUT', '/admin/settings', { aiModelPrices: aiModelPrices.map(p => ({ ...p, provider: p.provider.trim(), model: p.model.trim() })) });
+  msg.textContent = ok ? 'انحفظت الأسعار ✓' : 'تعذّر الحفظ';
+  if (ok) loadResponderAiUsage();
+}
+
+async function loadResponderAiUsage() {
+  const { ok, data } = await api('GET', '/admin/responder-ai-usage');
+  if (!ok) return;
+  const body = document.getElementById('responder-ai-usage-body');
+  if (!body) return;
+  body.innerHTML = (data.accounts || []).map(row => `<tr><td>${esc(row.user?.fullName || '—')}<br><small>${esc(row.user?.email || '')}</small></td><td>${row.calls}</td><td>${row.promptTokens}</td><td>${row.completionTokens}</td><td>${row.estimatedCostUsd ?? 'غير معروفة'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">ما في استخدام مسجل هذا الشهر</td></tr>';
+  document.getElementById('responder-ai-usage-note').textContent = `الفترة: ${data.month}`;
 }
 
 async function saveAiQuota() {
@@ -1457,6 +1495,7 @@ async function saveAiQuota() {
 
 async function loadAiStatus() {
   loadAiQuota();
+  loadResponderAiUsage();
   const { ok, data } = await api('GET', '/admin/ai-status');
   if (!ok) { logout(); return; }
   document.getElementById('ai-vision').textContent = data.vision ? 'شغّال ✓' : 'مطفأ — ضيف مفتاح Gemini على Render';

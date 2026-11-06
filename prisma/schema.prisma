@@ -111,6 +111,7 @@ model User {
   channelConnections    ChannelConnection[]
   responderRules        ResponderRule[]
   responderInteractions ResponderInteraction[]
+  responderAiCalls      ResponderAiCall[]
 
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
@@ -1008,6 +1009,8 @@ model ResponderSubscription {
   periodEnd           DateTime?
   aiRepliesUsed       Int             @default(0)
   aiPeriodStart       DateTime?
+  aiQuotaNotice80At   DateTime?
+  aiQuotaNotice100At  DateTime?
   businessDescription String?
   tone                String?
   // What to do with a message no rule matches: nothing (OFF), let the AI answer from the business information, or send a
@@ -1019,6 +1022,22 @@ model ResponderSubscription {
   createdAt           DateTime        @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model ResponderAiCall {
+  id               String   @id @default(uuid())
+  userId           String
+  provider         String
+  model            String
+  promptTokens     Int?
+  completionTokens Int?
+  estimatedCostUsd Decimal? @db.Decimal(16, 10)
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([createdAt, provider, model])
 }
 
 // One current entitlement per account and plan. Keeps a trial from being repeated for the same plan.

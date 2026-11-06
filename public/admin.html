@@ -806,6 +806,14 @@
         <span id="ai-quota-msg" class="muted" style="margin-right:10px"></span>
       </div>
       <div class="card">
+        <h3>تكلفة نماذج الذكاء الاصطناعي</h3>
+        <p class="muted">اكتب تكلفة مليون وحدة نصية إدخال ومليون وحدة نصية جواب بالدولار حسب فاتورة كل مزوّد. إذا تركت السعر فارغًا، نسجل وحدات النص لكن نترك التكلفة «غير معروفة» بدل التخمين.</p>
+        <table><thead><tr><th>المزوّد</th><th>اسم النموذج كما يظهر في السجل</th><th>مليون كلمة إدخال ($)</th><th>مليون كلمة جواب ($)</th><th></th></tr></thead><tbody id="ai-model-prices"></tbody></table>
+        <button class="small" style="margin-top:8px" onclick="addAiModelPrice()">+ أضف سعر نموذج</button>
+        <button class="small" style="margin-top:8px" onclick="saveAiModelPrices()">حفظ أسعار النماذج</button>
+        <span id="ai-model-price-msg" class="muted" style="margin-right:10px"></span>
+      </div>
+      <div class="card">
         <h3>الجلسة الحالية</h3>
         <p class="muted">أرقام الخدمة الشغّالة هلق بالضبط — تتصفّر مع كل نشر أو نوم للخطة المجانية.</p>
         <table style="margin-top:12px">
@@ -823,6 +831,12 @@
           <tbody id="ai-totals-body"></tbody>
         </table>
         <p class="muted" style="margin-top:14px" id="ai-totals-note"></p>
+      </div>
+      <div class="card">
+        <h3>استخدام المجيب الآلي هذا الشهر</h3>
+        <p class="muted">عدد استدعاءات الذكاء الاصطناعي ووحدات النص والتكلفة التقديرية لكل حساب. السعر يظهر فقط للنماذج التي أدخلت أسعارها أعلاه.</p>
+        <table><thead><tr><th>الحساب</th><th>الاستدعاءات</th><th>وحدات الإدخال</th><th>وحدات الجواب</th><th>التكلفة التقديرية ($)</th></tr></thead><tbody id="responder-ai-usage-body"></tbody></table>
+        <p id="responder-ai-usage-note" class="muted"></p>
       </div>
     </div>
 

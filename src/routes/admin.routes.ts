@@ -271,6 +271,7 @@ const settingsSchema = z.object({
     })
     .partial()
     .optional(),
+  aiModelPrices: z.array(z.object({ provider: z.string().trim().min(1).max(40), model: z.string().trim().min(1).max(120), inputUsdPerMillion: z.number().nonnegative().max(100000).nullable(), outputUsdPerMillion: z.number().nonnegative().max(100000).nullable() })).max(100).optional(),
   payment: z
     .object({
       usdtTrc20Address: z.string().trim().regex(/^(T[1-9A-HJ-NP-Za-km-z]{33})?$/, "عنوان TRON غير صالح").optional(),
@@ -340,6 +341,14 @@ adminRouter.post("/category-suggestions/:id/reject", route(async (req, res) => {
 
 adminRouter.get("/settings", route(async (_req, res) => {
   res.json(await getSettings());
+}));
+
+adminRouter.get("/responder-ai-usage", route(async (_req, res) => {
+  const now = new Date();
+  const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const groups = await prisma.responderAiCall.groupBy({ by: ["userId"], where: { createdAt: { gte: since } }, _count: { _all: true }, _sum: { promptTokens: true, completionTokens: true, estimatedCostUsd: true }, orderBy: { _count: { userId: "desc" } } });
+  const users = await prisma.user.findMany({ where: { id: { in: groups.map((g) => g.userId) } }, select: { id: true, fullName: true, email: true } });
+  res.json({ month: since.toISOString().slice(0, 7), accounts: groups.map((g) => ({ user: users.find((u) => u.id === g.userId), calls: g._count._all, promptTokens: g._sum.promptTokens ?? 0, completionTokens: g._sum.completionTokens ?? 0, estimatedCostUsd: g._sum.estimatedCostUsd?.toString() ?? null })) });
 }));
 
 adminRouter.put("/settings", route(async (req, res) => {
