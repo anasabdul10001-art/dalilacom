@@ -205,6 +205,25 @@ describe("Answering customers", () => {
     expect(await prisma.notification.count({ where: { userId: aiOwner.id, data: { path: ["reason"], equals: "weekly_report" } } })).toBe(0);
   });
 
+  it("sends one daily no-fixed-reply alert and skips the weekly summary when it is not due", async () => {
+    const owner = await running("respdailyreport");
+    await prisma.responderEntitlement.updateMany({ where: { userId: owner.id }, data: { status: "EXPIRED" } });
+    const plan = await responderPlan(`أساسية يومية ${owner.id}`);
+    await prisma.responderEntitlement.create({ data: { userId: owner.id, planId: plan.id, status: "ACTIVE", source: "GRANT", periodEnd: new Date(Date.now() + 86400000 * 8) } });
+
+    const now = new Date();
+    await prisma.responderSubscription.update({ where: { userId: owner.id }, data: { dailyReportSentAt: null, weeklyReportSentAt: new Date(now.getTime() - 3 * 86400000) } });
+    await prisma.responderInteraction.create({
+      data: { userId: owner.id, connectionId: owner.connectionId, conversationRef: "daily", authorName: "ضيف", message: "مرحبا", status: "SKIPPED", noMatchingRule: true, createdAt: new Date(now.getTime() - 3600000) },
+    });
+
+    expect(await sendWeeklyResponderReports(now)).toMatchObject({ eligible: 1, sent: 1, dailySent: 1, weeklySent: 0 });
+    expect(await sendWeeklyResponderReports(new Date(now.getTime() + 1000))).toMatchObject({ eligible: 0, sent: 0, dailySent: 0, weeklySent: 0 });
+    const report = await prisma.notification.findFirstOrThrow({ where: { userId: owner.id, data: { path: ["reason"], equals: "daily_report" } } });
+    expect(report.body).toContain("آخر 24 ساعة وصلك 1 رسالة");
+    expect(await prisma.notification.count({ where: { userId: owner.id, data: { path: ["reason"], equals: "weekly_report" } } })).toBe(0);
+  });
+
   it("answers a matching message with the rule's text (name filled in), records it, and ignores one with no rule", async () => {
     const owner = await running("respfixed");
     expect((await rule(owner, {})).status).toBe(201);

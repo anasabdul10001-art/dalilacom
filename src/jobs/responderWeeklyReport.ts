@@ -3,7 +3,7 @@ import { sendWeeklyResponderReports } from "../services/responderWeeklyReport.se
 
 async function main() {
   const result = await sendWeeklyResponderReports();
-  console.info(`Weekly responder report completed: ${result.sent} sent from ${result.eligible} eligible accounts.`);
+  console.info(`Responder reports completed: ${result.dailySent} daily and ${result.weeklySent} weekly sent from ${result.eligible} eligible accounts.`);
 }
 
 main()

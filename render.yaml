@@ -220,13 +220,13 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
 
-  # Weekly basic-plan responder summary. Uses dalilacom-prod's live database and mail settings.
+  # Daily basic-plan responder alerts and weekly summaries. Uses dalilacom-prod's live settings.
   - type: cron
     name: dalilacom-weekly-responder-report
     runtime: node
     plan: starter
     branch: production
-    schedule: "0 9 * * 1"
+    schedule: "0 9 * * *"
     buildCommand: npm install --include=dev && npm run build
     startCommand: node dist/jobs/responderWeeklyReport.js
     envVars:
