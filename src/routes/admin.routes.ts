@@ -819,10 +819,11 @@ adminRouter.delete("/product-categories/:id", route(async (req, res) => {
 /* ---------------- products waiting to be looked at ---------------- */
 
 const PRODUCTS_PAGE = 50;
-const adminProduct = (p: Prisma.ProductGetPayload<{ include: { merchant: { select: { businessName: true; phone: true } } } }>) => ({
+const adminProduct = (p: Prisma.ProductGetPayload<{ include: { merchant: { select: { businessName: true; phone: true } }; productCategory: { select: { id: true; name: true } } } }>) => ({
   id: p.id, name: p.name, description: p.description, priceCents: p.priceCents, stock: p.stock, isActive: p.isActive, condition: p.condition,
   specs: Array.isArray(p.specs) ? p.specs : [], images: p.images.length ? p.images : p.imageUrl ? [p.imageUrl] : [],
   moderation: p.moderation, note: p.moderationNote, createdAt: p.createdAt, updatedAt: p.updatedAt, shop: p.merchant.businessName, phone: p.merchant.phone,
+  productCategoryId: p.productCategoryId, productCategory: p.productCategory?.name ?? null,
 });
 
 // Every product, whatever its state: waiting, accepted or refused (or all), searchable, 50 to a page
@@ -830,24 +831,77 @@ adminRouter.get("/products", route(async (req, res) => {
   const parsed = z.object({
     status: z.enum(["PENDING", "REJECTED", "APPROVED", "ALL"]).catch("PENDING"),
     q: z.string().trim().max(80).optional(),
+    createdFrom: z.string().date().optional(),
+    createdTo: z.string().date().optional(),
+    condition: z.enum(["NEW", "USED", "UNSPECIFIED", "ANY"]).catch("ANY"),
+    visibility: z.enum(["VISIBLE", "HIDDEN", "ANY"]).catch("ANY"),
+    stock: z.enum(["AVAILABLE", "EMPTY", "ANY"]).catch("ANY"),
+    categoryId: z.string().trim().max(80).optional(),
+    order: z.enum(["NEWEST", "OLDEST"]).catch("NEWEST"),
     page: z.coerce.number().int().min(1).max(100000).catch(1),
   }).parse(req.query);
+  const from = parsed.createdFrom ? new Date(`${parsed.createdFrom}T00:00:00.000Z`) : undefined;
+  const to = parsed.createdTo ? new Date(`${parsed.createdTo}T00:00:00.000Z`) : undefined;
+  if (from && to && from > to) return sendError(res, 400, "INVALID_DATE_RANGE", "Start date must be before end date");
   const where: Prisma.ProductWhereInput = {
     ...(parsed.status === "ALL" ? {} : { moderation: parsed.status }),
-    ...(parsed.q ? { OR: [{ name: { contains: parsed.q, mode: "insensitive" } }, { description: { contains: parsed.q, mode: "insensitive" } }, { merchant: { businessName: { contains: parsed.q, mode: "insensitive" } } }] } : {}),
+    ...(parsed.q ? { OR: [{ name: { contains: parsed.q, mode: "insensitive" } }, { description: { contains: parsed.q, mode: "insensitive" } }, { merchant: { businessName: { contains: parsed.q, mode: "insensitive" } } }, { merchant: { phone: { contains: parsed.q } } }] } : {}),
+    ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: new Date(to.getTime() + 86400000) } : {}) } } : {}),
+    ...(parsed.condition === "UNSPECIFIED" ? { condition: null } : parsed.condition !== "ANY" ? { condition: parsed.condition } : {}),
+    ...(parsed.visibility === "VISIBLE" ? { isActive: true } : parsed.visibility === "HIDDEN" ? { isActive: false } : {}),
+    ...(parsed.stock === "AVAILABLE" ? { stock: { gt: 0 } } : parsed.stock === "EMPTY" ? { stock: 0 } : {}),
+    ...(parsed.categoryId ? { productCategoryId: parsed.categoryId } : {}),
   };
   const [total, rows] = await Promise.all([
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
-      orderBy: [{ updatedAt: parsed.status === "PENDING" ? "asc" : "desc" }, { id: "asc" }],
+      orderBy: [{ createdAt: parsed.order === "OLDEST" ? "asc" : "desc" }, { id: "asc" }],
       skip: (parsed.page - 1) * PRODUCTS_PAGE,
       take: PRODUCTS_PAGE,
-      include: { merchant: { select: { businessName: true, phone: true } } },
+      include: { merchant: { select: { businessName: true, phone: true } }, productCategory: { select: { id: true, name: true } } },
     }),
   ]);
   res.set({ "X-Total-Count": String(total), "X-Page-Size": String(PRODUCTS_PAGE) });
   res.json(rows.map(adminProduct));
+}));
+
+// Keep sales and promotion history intact: products referenced by orders, ads or affiliate activity cannot be hard-deleted.
+adminRouter.post("/products/bulk-delete", route(async (req, res) => {
+  const parsed = z.object({ ids: z.array(z.string().min(1)).min(1).max(100) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const ids = [...new Set(parsed.data.ids)];
+  const [orders, ads, referrals] = await Promise.all([
+    prisma.orderItem.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ["productId"] }),
+    prisma.adBooking.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ["productId"] }),
+    prisma.affiliateReferral.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ["productId"] }),
+  ]);
+  const protectedIds = new Set([...orders, ...ads, ...referrals].map(x => x.productId));
+  const deletable = ids.filter(id => !protectedIds.has(id));
+  const deleted = deletable.length ? await prisma.$transaction(async tx => {
+    await tx.cartItem.deleteMany({ where: { productId: { in: deletable } } });
+    await tx.productReview.deleteMany({ where: { productId: { in: deletable } } });
+    return tx.product.deleteMany({ where: { id: { in: deletable } } });
+  }) : { count: 0 };
+  res.json({ deleted: deleted.count, protected: protectedIds.size });
+}));
+
+adminRouter.delete("/products/:id", route(async (req, res) => {
+  const result = await prisma.$transaction(async tx => {
+    const product = await tx.product.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!product) return "missing" as const;
+    const [orders, ads, referrals] = await Promise.all([
+      tx.orderItem.count({ where: { productId: product.id } }), tx.adBooking.count({ where: { productId: product.id } }), tx.affiliateReferral.count({ where: { productId: product.id } }),
+    ]);
+    if (orders || ads || referrals) return "protected" as const;
+    await tx.cartItem.deleteMany({ where: { productId: product.id } });
+    await tx.productReview.deleteMany({ where: { productId: product.id } });
+    await tx.product.delete({ where: { id: product.id } });
+    return "deleted" as const;
+  });
+  if (result === "missing") return sendError(res, 404, "NOT_FOUND", "Product not found");
+  if (result === "protected") return sendError(res, 409, "PRODUCT_HAS_HISTORY", "This product has sales or promotion history and cannot be deleted. Hide it instead.");
+  res.json({ ok: true });
 }));
 
 // The admin fixes what a product says (a wrong word, a price, the stock) or hides it, without sending it back through the review
@@ -868,7 +922,7 @@ adminRouter.patch("/products/:id", route(async (req, res) => {
   const updated = await prisma.product.update({
     where: { id: req.params.id },
     data: { ...rest, ...(description !== undefined ? { description: description || null } : {}), ...(specs !== undefined ? { specs } : {}) },
-    include: { merchant: { select: { businessName: true, phone: true } } },
+    include: { merchant: { select: { businessName: true, phone: true } }, productCategory: { select: { id: true, name: true } } },
   });
   res.json(adminProduct(updated));
 }));

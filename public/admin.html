@@ -237,7 +237,7 @@
       <div class="nav-group"><div class="nav-title">العمل اليومي</div>
         <div class="nav-item" data-section="merchants" onclick="showSection('merchants')"><span class="ni">🏪</span><span class="nt">أصحاب الأنشطة</span></div>
         <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()"><span class="ni">🏷️</span><span class="nt">الحسومات</span><span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
-        <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()"><span class="ni">🛡️</span><span class="nt">مراجعة المنتجات</span><span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
+        <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()"><span class="ni">🛍️</span><span class="nt">إدارة المنتجات</span><span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
         <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()"><span class="ni">📢</span><span class="nt">إعلانات المتجر</span><span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
         <div class="nav-item" data-section="topups" onclick="showSection('topups')"><span class="ni">💰</span><span class="nt">طلبات الإيداع</span></div>
         <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()"><span class="ni">💡</span><span class="nt">اقتراحات المهن</span><span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
@@ -870,7 +870,7 @@
 
     <!-- PRODUCTS WAITING FOR REVIEW -->
     <div class="section" id="section-prodreview" style="display:none">
-      <h2>مراجعة المنتجات</h2>
+      <h2>إدارة المنتجات ومراجعتها</h2>
       <p class="subtitle">الذكاء الاصطناعي بيقرأ كل منتج جديد قبل ما يظهر. المنتج الواضح الغير لائق بينرفض لحاله، والعادي بيظهر، واللي ما تأكد منه (أو لما ما يجاوب الذكاء الاصطناعي) بيجي لهون لتقرر إنت.</p>
       <div class="filters">
         <button class="active" data-pstatus="PENDING" onclick="loadProductReview('PENDING')">بانتظار القرار</button>
@@ -878,9 +878,24 @@
         <button data-pstatus="APPROVED" onclick="loadProductReview('APPROVED')">مقبولة</button>
         <button data-pstatus="ALL" onclick="loadProductReview('ALL')">الكل</button>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-        <input id="prev-q" placeholder="اسم المنتج أو المحل" style="flex:1;min-width:220px;max-width:380px" onkeydown="if(event.key==='Enter') loadProductReview(prevStatus, 1)">
-        <button onclick="loadProductReview(prevStatus, 1)">🔍 بحث</button>
+      <div class="card" style="margin:10px 0">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+          <label>بحث بالمنتج أو المحل أو الهاتف<br><input id="prev-q" placeholder="اكتب كلمة البحث" style="min-width:210px" onkeydown="if(event.key==='Enter') loadProductReview(prevStatus, 1)"></label>
+          <label>من تاريخ<br><input id="prev-from" type="date"></label>
+          <label>إلى تاريخ<br><input id="prev-to" type="date"></label>
+          <label>حالة المنتج<br><select id="prev-condition"><option value="ANY">الكل</option><option value="NEW">جديد</option><option value="USED">مستعمل</option><option value="UNSPECIFIED">غير محدد</option></select></label>
+          <label>الظهور<br><select id="prev-visibility"><option value="ANY">الكل</option><option value="VISIBLE">ظاهر</option><option value="HIDDEN">مخفي</option></select></label>
+          <label>المخزون<br><select id="prev-stock"><option value="ANY">الكل</option><option value="AVAILABLE">متوفر</option><option value="EMPTY">نفد</option></select></label>
+          <label>الترتيب<br><select id="prev-order"><option value="NEWEST">الأحدث أولاً</option><option value="OLDEST">الأقدم أولاً</option></select></label>
+          <button onclick="loadProductReview(prevStatus, 1)">🔍 تطبيق البحث</button>
+          <button class="secondary" onclick="resetProductFilters()">مسح الفلاتر</button>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
+          <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="prev-select-page" onchange="toggleProductPageSelection(this.checked)"> تحديد منتجات هذه الصفحة</label>
+          <button class="danger" id="prev-bulk-delete" onclick="deleteSelectedProducts()" disabled>حذف المحدد</button>
+          <span id="prev-selection-count" class="muted">ما في منتجات محددة</span>
+          <span id="prev-results-count" class="muted"></span>
+        </div>
       </div>
       <div id="prev-list"></div>
       <div id="prev-pager" style="margin:10px 0"></div>

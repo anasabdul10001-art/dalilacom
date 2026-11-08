@@ -994,11 +994,56 @@ async function deletePcat(id) {
 }
 
 // ---- Products waiting for review ----
-let prevStatus = 'PENDING';
+let prevStatus = 'ALL';
 
 let prevPage = 1;
 const PROD_STATE = { PENDING: ['بانتظار القرار', 'PENDING'], APPROVED: ['مقبول', 'APPROVED'], REJECTED: ['مرفوض', 'REJECTED'] };
 let prevItems = {};
+const selectedProductIds = new Set();
+
+function resetProductFilters() {
+  ['prev-q', 'prev-from', 'prev-to'].forEach(id => { document.getElementById(id).value = ''; });
+  ['prev-condition', 'prev-visibility', 'prev-stock'].forEach(id => { document.getElementById(id).value = 'ANY'; });
+  document.getElementById('prev-order').value = 'NEWEST';
+  loadProductReview(prevStatus, 1);
+}
+
+function toggleProductPageSelection(checked) {
+  Object.keys(prevItems).forEach(id => checked ? selectedProductIds.add(id) : selectedProductIds.delete(id));
+  document.querySelectorAll('[data-product-select]').forEach(el => { el.checked = checked; });
+  updateProductSelectionUi();
+}
+
+function updateProductSelectionUi() {
+  document.getElementById('prev-selection-count').textContent = selectedProductIds.size ? `محدد ${selectedProductIds.size} منتج` : 'ما في منتجات محددة';
+  document.getElementById('prev-bulk-delete').disabled = !selectedProductIds.size;
+  const pageIds = Object.keys(prevItems);
+  const allChecked = pageIds.length > 0 && pageIds.every(id => selectedProductIds.has(id));
+  document.getElementById('prev-select-page').checked = allChecked;
+  document.querySelectorAll('[data-product-select]').forEach(el => { el.checked = selectedProductIds.has(el.value); });
+}
+
+async function deleteSelectedProducts() {
+  const ids = [...selectedProductIds];
+  if (!ids.length || !confirm(`حذف ${ids.length} منتج محدد؟ المنتجات التي لها طلبات أو سجل ترويج لن تُحذف.`)) return;
+  let deleted = 0, protectedCount = 0;
+  for (let i = 0; i < ids.length; i += 100) {
+    const { ok, data } = await api('POST', '/admin/products/bulk-delete', { ids: ids.slice(i, i + 100) });
+    if (!ok) { alert(`حُذف ${deleted} حتى الآن. ${errText(data, 'تعذّر إكمال الحذف')}`); loadProductReview(prevStatus, prevPage); return; }
+    deleted += data.deleted; protectedCount += data.protected;
+  }
+  ids.forEach(id => selectedProductIds.delete(id));
+  alert(`تم حذف ${deleted} منتج.${protectedCount ? ` تعذّر حذف ${protectedCount} منتجات لارتباطها بطلبات أو سجل ترويج؛ يمكنك إخفاؤها.` : ''}`);
+  loadProductReview(prevStatus, prevPage);
+}
+
+async function deleteProduct(id) {
+  if (!confirm('متأكد بدك تحذف هذا المنتج؟ إذا عليه طلب أو سجل ترويج، رح نمنع الحذف ونخليك تخفيه بدل ذلك.')) return;
+  const { ok, data } = await api('DELETE', '/admin/products/' + id);
+  if (!ok) { alert(errText(data, 'تعذّر حذف المنتج')); return; }
+  selectedProductIds.delete(id);
+  loadProductReview(prevStatus, prevPage);
+}
 
 async function loadProductReview(status, page) {
   prevStatus = status || prevStatus;
@@ -1008,29 +1053,34 @@ async function loadProductReview(status, page) {
   const q = (document.getElementById('prev-q').value || '').trim();
   const params = new URLSearchParams({ status: prevStatus, page: prevPage });
   if (q) params.set('q', q);
+  const filters = { createdFrom: 'prev-from', createdTo: 'prev-to', condition: 'prev-condition', visibility: 'prev-visibility', stock: 'prev-stock', order: 'prev-order' };
+  Object.entries(filters).forEach(([key, id]) => { const val = document.getElementById(id).value; if (val && !['ANY'].includes(val)) params.set(key, val); });
   const res = await fetch('/admin/products?' + params.toString(), { headers: { Authorization: 'Bearer ' + state.token } });
   const data = await res.json().catch(() => []);
   if (!res.ok) { box.innerHTML = '<div class="card muted">تعذّر التحميل</div>'; return; }
   const total = Number(res.headers.get('X-Total-Count')) || data.length;
+  document.getElementById('prev-results-count').textContent = `النتائج: ${total}`;
   prevItems = {};
   data.forEach(p => { prevItems[p.id] = p; });
   box.innerHTML = data.length ? data.map(p => `<div class="card" id="pcard-${p.id}">
     <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <label title="تحديد المنتج"><input type="checkbox" value="${p.id}" data-product-select onchange="this.checked ? selectedProductIds.add(this.value) : selectedProductIds.delete(this.value); updateProductSelectionUi()"></label>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${p.images.slice(0, 4).map(u => `<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>`).join('') || '<span class="muted">بدون صورة</span>'}</div>
       <div style="flex:1;min-width:220px">
         <b style="font-size:16px">${esc(p.name)}</b> <span class="badge ${PROD_STATE[p.moderation][1]}">${PROD_STATE[p.moderation][0]}</span>${p.isActive ? '' : ' <span class="badge inactive">مخفي</span>'}
-        <div class="muted">${esc(p.shop)}${p.phone ? ' · ' + esc(p.phone) : ''} · السعر ${money(p.priceCents)} · المخزون ${p.stock}</div>
+        <div class="muted">${esc(p.shop)}${p.phone ? ' · ' + esc(p.phone) : ''} · السعر ${money(p.priceCents)} · المخزون ${p.stock} · ${p.condition === 'NEW' ? 'جديد' : p.condition === 'USED' ? 'مستعمل' : 'الحالة غير محددة'} · ${p.productCategory ? esc(p.productCategory) + ' · ' : ''}أضيف ${new Date(p.createdAt).toLocaleDateString('ar')}</div>
         <p style="margin:6px 0">${esc(p.description || '')}</p>
         ${p.specs.length ? `<p class="muted">${p.specs.map(s => esc(s.label) + ': ' + esc(s.value)).join(' · ')}</p>` : ''}
         ${p.note ? `<p class="muted">ملاحظة الذكاء الاصطناعي / الإدارة: ${esc(p.note)}</p>` : ''}
         <div style="margin-top:8px">
           ${p.moderation !== 'APPROVED' ? `<button class="small" onclick="decideProduct('${p.id}','approve')">✅ قبول</button> ` : ''}${p.moderation !== 'REJECTED' ? `<button class="small danger" onclick="decideProduct('${p.id}','reject')">❌ رفض</button> ` : ''}
-          <button class="small secondary" onclick="editProduct('${p.id}')">✏️ تعديل</button>
+          <button class="small secondary" onclick="editProduct('${p.id}')">✏️ تعديل</button> <button class="small danger" onclick="deleteProduct('${p.id}')">🗑️ حذف</button>
         </div>
         <div id="pedit-${p.id}"></div>
       </div>
     </div></div>`).join('') : '<div class="card muted">ما في منتجات</div>';
   document.getElementById('prev-pager').innerHTML = pagerHtml('prevGo', prevPage, total);
+  updateProductSelectionUi();
   refreshProductReviewBadge();
 }
 function prevGo(p) { loadProductReview(prevStatus, p); }
