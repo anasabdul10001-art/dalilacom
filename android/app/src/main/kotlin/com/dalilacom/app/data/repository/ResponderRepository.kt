@@ -7,6 +7,7 @@ import com.dalilacom.app.data.network.CreateRuleRequest
 import com.dalilacom.app.data.network.ConnectRequest
 import com.dalilacom.app.data.network.MetaOAuthCompleteRequest
 import com.dalilacom.app.data.network.ProfileRequest
+import com.dalilacom.app.data.network.ResponderPlanPurchaseDto
 import com.dalilacom.app.data.network.SendReplyRequest
 import com.dalilacom.app.data.network.ToggleRequest
 import com.dalilacom.app.data.network.TopUpRequestBody
@@ -26,6 +27,9 @@ class ResponderRepository(private val api: ApiService) {
     }
 
     suspend fun status() = call(AppStrings.get(R.string.s_221bae78)) { api.getResponderStatus() }
+    suspend fun plans() = call(AppStrings.get(R.string.s_221bae78)) { api.getResponderPlans() }
+    suspend fun startPlanTrial(id: String) = call(AppStrings.get(R.string.s_da0717d9)) { api.startResponderPlanTrial(id) }
+    suspend fun purchasePlan(id: String, offerId: String? = null) = call(AppStrings.get(R.string.s_da0717d9)) { api.purchaseResponderPlan(id, ResponderPlanPurchaseDto(offerId)) }
     suspend fun activate() = call(AppStrings.get(R.string.s_da0717d9)) { api.activateResponder() }
     suspend fun renew() = call(AppStrings.get(R.string.s_daaa4ebe)) { api.renewResponder() }
     suspend fun saveProfile(description: String, tone: String, fallbackMode: String, fallbackReply: String) =
@@ -46,6 +50,8 @@ class ResponderRepository(private val api: ApiService) {
     suspend fun createRule(request: CreateRuleRequest) = call(AppStrings.get(R.string.s_471a369e)) { api.createResponderRule(request) }
     suspend fun toggleRule(id: String, active: Boolean) =
         call(AppStrings.get(R.string.s_fd98f999)) { api.toggleResponderRule(id, ToggleRequest(active)) }
+    suspend fun updateRule(id: String, request: CreateRuleRequest) = call(AppStrings.get(R.string.s_471a369e)) { api.updateResponderRule(id, request) }
+    suspend fun deleteConnection(id: String) = call(AppStrings.get(R.string.s_47228890)) { api.deleteResponderConnection(id) }
     suspend fun deleteRule(id: String) = call(AppStrings.get(R.string.s_47228890)) { api.deleteResponderRule(id) }
 
     suspend fun inbox() = call(AppStrings.get(R.string.s_fdc54283)) { api.getResponderInbox() }

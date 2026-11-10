@@ -4,7 +4,7 @@ import { ChannelDriver } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
-import { getSubscription, isRunning } from "../services/responder.service";
+import { META_NOT_OPEN_MESSAGE, metaOpenFor } from "../lib/metaAccess";
 import {
   appDeepLink,
   connectFromSession,
@@ -30,12 +30,6 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 }
 
-/** Same gate as the manual connect flow: the auto-responder has to be running to attach a Page. */
-async function responderRunning(userId: string): Promise<boolean> {
-  const sub = await getSubscription(userId);
-  return isRunning(sub.status);
-}
-
 function page(title: string, body: string, deepLink?: string, autoRedirect = true): string {
   const link = deepLink
     ? `<p><a class="btn"${autoRedirect ? ' data-auto-redirect="true"' : ""} href="${escapeHtml(deepLink)}">${autoRedirect ? "ارجع إلى تطبيق دليلكم" : "افتح تطبيق دليلكم لاختيار الصفحة"}</a></p>`
@@ -56,10 +50,10 @@ h2{color:#BA2A34;margin:0 0 8px}p{line-height:1.7;color:#444}
 
 metaOAuthRouter.get("/oauth/status", requireAuth, route(async (req, res) => {
   res.json({
-    available: metaOAuthConfigured(),
-    responderRunning: await responderRunning(req.user!.id),
+    available: metaOAuthConfigured() && metaOpenFor(req.user!.role),
+    // Connecting a channel only configures it; the account chooses and activates a plan separately.
     redirectUri: metaRedirectUri(),
-    scopes: metaScopes(),
+    scopes: metaScopes(req.user!.role),
     deepLink: appDeepLink(),
   });
 }));
@@ -67,6 +61,7 @@ metaOAuthRouter.get("/oauth/status", requireAuth, route(async (req, res) => {
 /* ---------------- step 1: the app opens this URL in a browser / Custom Tab ---------------- */
 
 metaOAuthRouter.get("/oauth/start", requireAuth, route(async (req, res) => {
+  if (!metaOpenFor(req.user!.role)) return sendError(res, 403, "META_NOT_OPEN", META_NOT_OPEN_MESSAGE);
   if (!metaOAuthConfigured()) {
     return sendError(
       res,
@@ -75,32 +70,30 @@ metaOAuthRouter.get("/oauth/start", requireAuth, route(async (req, res) => {
       "ربط فيسبوك مو مفعّل بعد — بدو تطبيق Meta Developer (META_APP_ID و META_APP_SECRET) وموافقة على الصلاحيات.",
     );
   }
-  if (!(await responderRunning(req.user!.id))) {
-    return sendError(res, 403, "FORBIDDEN", "فعّل المجيب الآلي أول (تجربة أو اشتراك)");
-  }
   const state = signState(req.user!.id, req.query.platform === "web");
   res.json({
-    url: metaDialogUrl(req.user!.id, state),
+    url: metaDialogUrl(req.user!.id, state, req.user!.role),
     // Phones with the Facebook app installed hand a facebook.com link opened from another app to the Facebook app, whose
     // in-app page cannot show this dialog. This link stays on our own domain and then moves on by script (no tap), which
     // keeps the dialog in the browser.
     launchUrl: `${new URL(metaRedirectUri()).origin}/responder/meta/oauth/go?state=${encodeURIComponent(state)}`,
     redirectUri: metaRedirectUri(),
-    scopes: metaScopes(),
+    scopes: metaScopes(req.user!.role),
     expiresInMinutes: 15,
   });
 }));
 
 /** The app opens this in the phone's browser; the signed state proves who started it. */
-metaOAuthRouter.get("/oauth/go", (req, res) => {
+metaOAuthRouter.get("/oauth/go", route(async (req, res) => {
   const state = typeof req.query.state === "string" ? req.query.state : undefined;
   const userId = verifyState(state);
   if (!userId || !metaOAuthConfigured()) {
     return res.status(400).send(page("تعذّر إكمال الربط", "<p>رابط البدء غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.</p>"));
   }
-  const target = metaDialogUrl(userId, state);
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  const target = metaDialogUrl(userId, state, user?.role);
   res.redirect(302, target);
-});
+}));
 
 /* ---------------- step 2: Facebook sends the merchant's browser back here ---------------- */
 
@@ -124,17 +117,20 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
   if (!code) return res.status(400).send(page("تعذّر إكمال الربط", "<p>ما وصلنا كود التفويض من فيسبوك.</p>"));
 
   let pages: MetaPage[];
+  let skipped: { id: string; name: string }[] = [];
   try {
-    pages = await exchangeCodeForPages(code);
+    ({ pages, skipped } = await exchangeCodeForPages(code));
   } catch (err) {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الاتصال بفيسبوك";
     return res.status(502).send(page("تعذّر إكمال الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, back({ ok: "0" })));
   }
 
   if (pages.length === 0) {
-    return res
-      .status(400)
-      .send(page("ما لقينا صفحات", "<p>حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك.</p>", back({ ok: "0" })));
+    const names = skipped.map((p) => escapeHtml(p.name.slice(0, 80))).join("، ");
+    const detail = skipped.length > 0
+      ? `<p>لقينا ${names ? `«${names}»` : "صفحة"} بس فيسبوك ما سلّمنا صلاحية الإدارة عليها. هذا بيصير غالبًا لما تكون الصفحة ضمن حافظة أعمال وما لك عليها وصول مباشر كمدير صفحة. أضف نفسك مدير صفحة مباشرة من إعدادات الصفحة (وصول فيسبوك الكامل) وجرّب من جديد.</p>`
+      : "<p>حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك.</p>";
+    return res.status(400).send(page("ما لقينا صفحات", detail, back({ ok: "0" })));
   }
 
   const sessionId = await createSession(userId, pages);
@@ -194,10 +190,6 @@ metaOAuthRouter.get("/oauth/pick", route(async (req, res) => {
   if (!owner) {
     return res.status(400).send(page("انتهت صلاحية الربط", "<p>ارجع للتطبيق وابدأ الربط من جديد.</p>"));
   }
-  if (!(await responderRunning(owner))) {
-    return res.status(403).send(page("المجيب الآلي موقّف", "<p>فعّل المجيب الآلي من التطبيق ثم أعد المحاولة.</p>"));
-  }
-
   try {
     const connection = await connectFromSession({ userId: owner, sessionId, pageId, driver });
     return res.send(page("تم الربط ✅", "<p>صار المجيب الآلي مربوطًا. ارجع للتطبيق لتشوف القناة.</p>", appDeepLink({ ok: "1", connectionId: connection.id }, web)));
@@ -238,10 +230,6 @@ metaOAuthRouter.post("/oauth/complete", requireAuth, route(async (req, res) => {
   const pageId = typeof req.body?.pageId === "string" ? req.body.pageId : "";
   const driver: ChannelDriver = req.body?.driver === "INSTAGRAM" ? "INSTAGRAM" : "FACEBOOK";
   if (!sessionId || !pageId) return sendError(res, 400, "BAD_REQUEST", "sessionId و pageId مطلوبين");
-
-  if (!(await responderRunning(req.user!.id))) {
-    return sendError(res, 403, "FORBIDDEN", "فعّل المجيب الآلي أول (تجربة أو اشتراك)");
-  }
 
   try {
     const connection = await connectFromSession({ userId: req.user!.id, sessionId, pageId, driver });

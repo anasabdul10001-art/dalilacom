@@ -8,10 +8,8 @@ import { translateText } from "../i18n";
  * The pricing catalogue (sections 24/60/64).
  *
  * `ServicePlan` is the single source of truth for every sellable service: membership plans, merchant
- * plans and any future add-on. Two deliberate exceptions live here instead of in the table:
+ * plans and any future add-on.
  *
- * - The auto-responder prices still come from `PlatformSetting` (where the responder flow reads them),
- *   so the catalogue *renders* them as read-only entries rather than duplicating them and drifting.
  * - A country price override (`PlanPrice`) is an exception, not a copy: a plan with no row for the
  *   customer's country falls back to the plan's own `priceCredits`.
  */
@@ -37,8 +35,7 @@ export interface CatalogPlan {
   currency: string;
   monthlyBroadcastLimit: number | null;
   features: CatalogFeature[];
-  /** "settings" = read-only entry derived from the auto-responder settings, not the catalogue table. */
-  source: "catalog" | "settings";
+  source: "catalog";
   editable: boolean;
   paypalAvailable: boolean;
 }
@@ -57,7 +54,7 @@ export interface Catalog {
 }
 
 /** Every service the pricing page can list, in display order. */
-const SERVICE_ORDER: ServiceKind[] = ["MEMBERSHIP", "MERCHANT_ACCOUNT", "RESPONDER_CUSTOMER", "RESPONDER_MERCHANT", "ACCOUNTING"];
+const SERVICE_ORDER: ServiceKind[] = ["MEMBERSHIP", "MERCHANT_ACCOUNT", "RESPONDER_BASIC", "ACCOUNTING"];
 
 /** A plan row plus its country overrides, exactly as the catalogue query returns it. */
 type PlanWithPrices = Prisma.ServicePlanGetPayload<{ include: { prices: true } }>;
@@ -129,37 +126,8 @@ export async function getCatalog(countryCode: string | null, lang: string = DEFA
     };
   });
 
-  // The auto-responder still lives in the settings (its purchase flow reads them), so it is rendered
-  // here read-only from that single source instead of being copied into the catalogue.
-  const responder = settings.responder;
-  const responderFeature: CatalogFeature[] =
-    responder.monthlyAiReplyLimit > 0
-      ? [{ text: translateText(`${responder.monthlyAiReplyLimit} رد ذكاء اصطناعي شهريًا`, lang), included: true }]
-      : [];
-  const fromSettings = (service: ServiceKind, priceCredits: number, name: string): CatalogPlan => ({
-    id: `settings:${service}`,
-    service,
-    name,
-    description: null,
-    durationDays: responder.periodDays,
-    trialDays: responder.trialDays,
-    priceCredits,
-    basePriceCredits: priceCredits,
-    priceFrom: "default",
-    cashAmountCents: 0,
-    currency: "EUR",
-    monthlyBroadcastLimit: null,
-    features: responderFeature,
-    source: "settings",
-    editable: false,
-    paypalAvailable: false,
-  });
+  const all = fromCatalog;
 
-  const all = [
-    ...fromCatalog,
-    fromSettings("RESPONDER_CUSTOMER", responder.priceCustomer, translateText("المجيب الآلي — زبون", lang)),
-    fromSettings("RESPONDER_MERCHANT", responder.priceMerchant, translateText("المجيب الآلي — نشاط", lang)),
-  ];
 
   const services: CatalogService[] = SERVICE_ORDER.map((service) => ({
     service,
@@ -181,20 +149,24 @@ export async function listPlansForAdmin() {
     include: {
       features: { orderBy: { sortOrder: "asc" } },
       prices: { include: { country: { select: { isoCode2: true, name: true, currencyCode: true } } }, orderBy: { countryId: "asc" } },
+      offers: { orderBy: { createdAt: "desc" } },
       _count: { select: { memberships: true } },
     },
   });
 }
 
 export class PlanInUseError extends Error {
-  constructor(public memberships: number) {
+  constructor(public memberships: number, public responderEntitlements: number) {
     super("PLAN_IN_USE");
   }
 }
 
 export async function deletePlan(id: string): Promise<void> {
-  const memberships = await prisma.membership.count({ where: { planId: id } });
-  if (memberships > 0) throw new PlanInUseError(memberships);
+  const [memberships, responderEntitlements] = await Promise.all([
+    prisma.membership.count({ where: { planId: id } }),
+    prisma.responderEntitlement.count({ where: { planId: id } }),
+  ]);
+  if (memberships > 0 || responderEntitlements > 0) throw new PlanInUseError(memberships, responderEntitlements);
   await prisma.servicePlan.delete({ where: { id } });
 }
 

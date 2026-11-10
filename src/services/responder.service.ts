@@ -1,18 +1,108 @@
-import { ChannelConnection, ResponderStatus, ResponderSubscription, Role, SocialChannel } from "@prisma/client";
+import { ChannelConnection, ResponderStatus, ResponderSubscription, Role, ServiceKind, SocialChannel } from "@prisma/client";
 import { prisma } from "../prisma";
-import { liveDiscountWhere } from "../lib/discounts";
 import { decryptJson } from "./crypto.service";
 import { drivers } from "./channels";
 import { IncomingMessage } from "./channels/types";
-import { aiAvailable, answerComplaint, classifyIntent, generateReply } from "./ai.service";
+import { aiAvailable, generateResponderReply, type AiCallUsage } from "./ai.service";
 import { adjustBalance } from "./wallet.service";
 import { getSettings } from "./settings.service";
 import { notify } from "./notification.service";
+import { normalizeText } from "./category.service";
+import { creditsChargeFor } from "./plan.service";
 
 const DAY = 24 * 60 * 60 * 1000;
+export const RESPONDER_LEGACY_PLAN_ID = "00000000-0000-4000-8000-000000000001";
+export const RESPONDER_SERVICES: ServiceKind[] = ["RESPONDER_BASIC", "RESPONDER_CUSTOMER", "RESPONDER_MERCHANT"];
+export const RESPONDER_PLAN_SERVICE: ServiceKind = "RESPONDER_BASIC";
 
 export function isRunning(status: ResponderStatus) {
   return status === "TRIAL" || status === "ACTIVE";
+}
+
+/** Mark expired plan periods and return the account's currently valid responder plans. */
+export async function getActiveResponderEntitlements(userId: string) {
+  const now = new Date();
+  await prisma.responderEntitlement.updateMany({
+    where: {
+      userId,
+      OR: [
+        { status: "TRIAL", OR: [{ trialEndsAt: null }, { trialEndsAt: { lte: now } }] },
+        { status: "ACTIVE", OR: [{ periodEnd: null }, { periodEnd: { lte: now } }] },
+      ],
+    },
+    data: { status: "EXPIRED" },
+  });
+  return prisma.responderEntitlement.findMany({
+    where: { userId, OR: [{ status: "TRIAL", trialEndsAt: { gt: now } }, { status: "ACTIVE", periodEnd: { gt: now } }] },
+    include: { plan: true },
+  });
+}
+
+/** Extend one plan without charging. Only the super-admin grant action calls this helper. */
+export async function grantResponderEntitlement(userId: string, planId: string, days: number) {
+  const existing = await prisma.responderEntitlement.findUnique({ where: { userId_planId: { userId, planId } } });
+  const now = Date.now();
+  const currentEnd = existing?.status === "ACTIVE" ? existing.periodEnd?.getTime() ?? now : existing?.status === "TRIAL" ? existing.trialEndsAt?.getTime() ?? now : now;
+  const periodEnd = new Date(Math.max(now, currentEnd) + days * DAY);
+  return prisma.responderEntitlement.upsert({
+    where: { userId_planId: { userId, planId } },
+    create: { userId, planId, status: "ACTIVE", source: "GRANT", periodEnd },
+    update: { status: "ACTIVE", source: "GRANT", trialEndsAt: null, periodEnd },
+  });
+}
+
+export class ResponderTrialUnavailableError extends Error {}
+export class ResponderPlanNotFoundError extends Error {}
+export class ResponderPlanPriceUnsetError extends Error {}
+
+/** Starts one plan's trial once per account. An expired entitlement also counts as the trial having been used. */
+export async function startResponderTrial(userId: string, planId: string) {
+  const plan = await prisma.servicePlan.findUnique({ where: { id: planId } });
+  if (!plan || plan.service !== RESPONDER_PLAN_SERVICE || !plan.isActive) throw new ResponderPlanNotFoundError();
+  if (plan.trialDays <= 0) throw new ResponderTrialUnavailableError();
+  const previous = await prisma.responderEntitlement.findUnique({ where: { userId_planId: { userId, planId } }, select: { id: true } });
+  if (previous) throw new ResponderTrialUnavailableError();
+  const trialEndsAt = new Date(Date.now() + plan.trialDays * DAY);
+  return prisma.responderEntitlement.create({ data: { userId, planId, status: "TRIAL", source: "TRIAL", trialEndsAt } });
+}
+
+/** Charges the selected unified catalogue plan and extends its own entitlement period. */
+export async function purchaseResponderPlan(userId: string, planId: string, countryCode: string | null, offerId?: string) {
+  const plan = await prisma.servicePlan.findUnique({ where: { id: planId } });
+  if (!plan || plan.service !== RESPONDER_PLAN_SERVICE || !plan.isActive) throw new ResponderPlanNotFoundError();
+  const now = new Date();
+  const offer = offerId ? await prisma.planOffer.findFirst({ where: { id: offerId, planId, isActive: true, AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: now } }] }, { OR: [{ endsAt: null }, { endsAt: { gt: now } }] }] } }) : null;
+  if (offerId && !offer) throw new ResponderPlanNotFoundError();
+  const onePeriodPrice = await creditsChargeFor(plan, countryCode);
+  if (onePeriodPrice === null) throw new ResponderPlanPriceUnsetError();
+  const paidPeriods = offer?.paidPeriods ?? 1;
+  const price = onePeriodPrice * paidPeriods;
+  const durationDays = plan.durationDays * paidPeriods + (offer?.bonusDays ?? 0);
+  return prisma.$transaction(async (tx) => {
+    if (price > 0) await adjustBalance(tx, userId, -price, "SUBSCRIPTION", `auto-responder:${plan.id}`);
+    const now = Date.now();
+    const previous = await tx.responderEntitlement.findUnique({ where: { userId_planId: { userId, planId } } });
+    const currentEnd = previous?.status === "ACTIVE" ? previous.periodEnd?.getTime() ?? now : now;
+    const periodEnd = new Date(Math.max(now, currentEnd) + durationDays * DAY);
+    const entitlement = await tx.responderEntitlement.upsert({
+      where: { userId_planId: { userId, planId } },
+      create: { userId, planId, status: "ACTIVE", source: "PAID", periodEnd },
+      update: { status: "ACTIVE", source: "PAID", trialEndsAt: null, periodEnd },
+    });
+    const current = await tx.responderSubscription.upsert({ where: { userId }, update: {}, create: { userId } });
+    await tx.responderSubscription.update({
+      where: { userId },
+      data: {
+        status: "ACTIVE",
+        periodEnd,
+        aiRepliesUsed: 0,
+        aiPeriodStart: new Date(now),
+        aiQuotaNotice80At: null,
+        aiQuotaNotice100At: null,
+      },
+    });
+    return { kind: "PAID" as const, entitlement, charged: price, paidPeriods, bonusDays: offer?.bonusDays ?? 0, previousStatus: current.status };
+  });
 }
 
 /** Expiry is evaluated at the moment of use (no cron): an out-of-date TRIAL/ACTIVE row flips to EXPIRED here. */
@@ -25,8 +115,17 @@ export async function getSubscription(userId: string): Promise<ResponderSubscrip
   if (expired) {
     const was = sub.status;
     sub = await prisma.responderSubscription.update({ where: { userId }, data: { status: "EXPIRED" } });
+    await prisma.responderEntitlement.updateMany({
+      where: { userId, planId: RESPONDER_LEGACY_PLAN_ID, status: was === "TRIAL" ? "TRIAL" : "ACTIVE" },
+      data: { status: "EXPIRED" },
+    });
     // the flip happens once, so the notice does too
     await tell(userId, was === "TRIAL" ? "انتهت تجربة المجيب الآلي" : "انتهى اشتراك المجيب الآلي", "توقّف الرد التلقائي على زبائنك. فعّل أو جدّد الاشتراك ليرجع يشتغل.", { reason: "expired" });
+  } else if (sub.status === "EXPIRED") {
+    await prisma.responderEntitlement.updateMany({
+      where: { userId, planId: RESPONDER_LEGACY_PLAN_ID, status: { in: ["TRIAL", "ACTIVE"] } },
+      data: { status: "EXPIRED" },
+    });
   }
   return sub;
 }
@@ -68,9 +167,15 @@ export async function activate(userId: string, role: Role): Promise<ActivationRe
   if (isRunning(sub.status)) throw new AlreadyRunningError();
 
   if (!sub.trialUsed && settings.responder.trialDays > 0) {
+    const trialEndsAt = new Date(Date.now() + settings.responder.trialDays * DAY);
     const updated = await prisma.responderSubscription.update({
       where: { userId },
-      data: { status: "TRIAL", trialUsed: true, trialEndsAt: new Date(Date.now() + settings.responder.trialDays * DAY) },
+      data: { status: "TRIAL", trialUsed: true, trialEndsAt },
+    });
+    await prisma.responderEntitlement.upsert({
+      where: { userId_planId: { userId, planId: RESPONDER_LEGACY_PLAN_ID } },
+      create: { userId, planId: RESPONDER_LEGACY_PLAN_ID, status: "TRIAL", source: "TRIAL", trialEndsAt },
+      update: { status: "TRIAL", source: "TRIAL", trialEndsAt, periodEnd: null },
     });
     return { kind: "TRIAL_STARTED", sub: updated };
   }
@@ -94,7 +199,14 @@ export async function pay(userId: string, role: Role): Promise<ActivationResult>
         periodEnd: new Date(base + settings.responder.periodDays * DAY),
         aiRepliesUsed: 0,
         aiPeriodStart: new Date(now),
+        aiQuotaNotice80At: null,
+        aiQuotaNotice100At: null,
       },
+    });
+    await tx.responderEntitlement.upsert({
+      where: { userId_planId: { userId, planId: RESPONDER_LEGACY_PLAN_ID } },
+      create: { userId, planId: RESPONDER_LEGACY_PLAN_ID, status: "ACTIVE", source: "PAID", periodEnd: sub.periodEnd },
+      update: { status: "ACTIVE", source: "PAID", trialEndsAt: null, periodEnd: sub.periodEnd },
     });
     return { kind: "PAID" as const, sub, charged: price };
   });
@@ -104,52 +216,93 @@ export async function pay(userId: string, role: Role): Promise<ActivationResult>
 const COMPLAINT_HOLDING_REPLY = "نعتذر منك على هالإزعاج 🙏 وصلت رسالتك لفريقنا، وحدا من الفريق رح يتواصل معك قريبًا.";
 
 const COMPLAINT_WORDS = [
-  "شكوى", "شكوي", "سيء", "سيئ", "مشكلة", "زفت", "نصب", "احتيال", "استرجاع",
-  "complaint", "terrible", "worst", "refund", "scam", "broken",
+  "شكوى", "شكوي", "سيء", "سيئ", "سيئة", "مشكلة", "مشاكل", "زفت", "نصب", "احتيال", "استرجاع", "ظلم", "ما عجبني", "ماعجبني", "ما وصل", "ماوصل", "تأخر", "تأخير", "خدمة سيئة", "غالي كتير",
+  "complaint", "complain", "terrible", "worst", "refund", "scam", "broken", "not working", "disappointed", "bad service",
+  "beschwerde", "schlecht", "kaputt", "rückerstattung", "betrug", "nicht angekommen",
 ];
 
 function looksLikeComplaint(text: string) {
-  const t = text.toLowerCase();
-  return COMPLAINT_WORDS.some((w) => t.includes(w));
-}
-
-/** Is there AI quota left this period? (Read-only: only the replies the AI writes are counted, not the quick classification.) */
-async function aiQuotaLeft(userId: string, limit: number): Promise<boolean> {
-  const sub = await prisma.responderSubscription.findUnique({ where: { userId } });
-  if (!sub) return false;
-  const periodStale = !sub.aiPeriodStart || Date.now() - sub.aiPeriodStart.getTime() > 30 * DAY;
-  return periodStale || sub.aiRepliesUsed < limit;
+  const t = normalizeText(text);
+  return COMPLAINT_WORDS.some((w) => t.includes(normalizeText(w)));
 }
 
 async function consumeAi(userId: string, limit: number): Promise<boolean> {
+  if (limit <= 0) return false;
   const sub = await prisma.responderSubscription.findUnique({ where: { userId } });
   if (!sub) return false;
   const periodStale = !sub.aiPeriodStart || Date.now() - sub.aiPeriodStart.getTime() > 30 * DAY;
   if (periodStale) {
-    await prisma.responderSubscription.update({ where: { userId }, data: { aiRepliesUsed: 1, aiPeriodStart: new Date() } });
+    const reset = await prisma.responderSubscription.updateMany({
+      where: { userId, aiPeriodStart: sub.aiPeriodStart, aiRepliesUsed: sub.aiRepliesUsed },
+      data: { aiRepliesUsed: 1, aiPeriodStart: new Date(), aiQuotaNotice80At: null, aiQuotaNotice100At: null },
+    });
+    if (!reset.count) return consumeAi(userId, limit);
+    await notifyQuota(userId, 1, limit);
     return true;
   }
-  if (sub.aiRepliesUsed >= limit) return false;
-  await prisma.responderSubscription.update({ where: { userId }, data: { aiRepliesUsed: { increment: 1 } } });
+  const claimed = await prisma.responderSubscription.updateMany({ where: { userId, aiPeriodStart: sub.aiPeriodStart, aiRepliesUsed: { lt: limit } }, data: { aiRepliesUsed: { increment: 1 } } });
+  if (!claimed.count) {
+    const latest = await prisma.responderSubscription.findUnique({ where: { userId } });
+    if (latest?.aiPeriodStart && Date.now() - latest.aiPeriodStart.getTime() > 30 * DAY) return consumeAi(userId, limit);
+    await notifyQuota(userId, latest?.aiRepliesUsed ?? limit, limit);
+    return false;
+  }
+  const updated = await prisma.responderSubscription.findUniqueOrThrow({ where: { userId } });
+  await notifyQuota(userId, updated.aiRepliesUsed, limit);
   return true;
 }
 
-/** Facts the AI may use for a merchant: the shop, its address and the products with their real prices (capped, so it stays small). */
-async function businessInfoFor(userId: string): Promise<string | undefined> {
-  const shop = await prisma.merchantProfile.findUnique({
-    where: { userId },
-    select: { id: true, businessName: true, address: true, phone: true, category: { select: { name: true } }, discounts: { where: liveDiscountWhere(), select: { title: true, percent: true }, take: 10 } },
-  });
-  if (!shop) return undefined;
-  const products = await prisma.product.findMany({ where: { merchantId: shop.id, isActive: true }, orderBy: { createdAt: "desc" }, take: 25, select: { name: true, priceCents: true, stock: true } });
-  const lines = [
-    `Shop: ${shop.businessName}${shop.category ? ` (${shop.category.name})` : ""}`,
-    shop.address ? `Address: ${shop.address}` : "",
-    shop.phone ? `Phone: ${shop.phone}` : "",
-    ...shop.discounts.map((d) => `Offer for members: ${d.title} (${d.percent}% off)`),
-    ...products.map((x) => `Product: ${x.name} — ${(x.priceCents / 100).toFixed(2)} — ${x.stock > 0 ? "in stock" : "out of stock"}`),
-  ].filter(Boolean);
-  return lines.join("\n").slice(0, 2500);
+async function notifyQuota(userId: string, used: number, limit: number) {
+  if (limit <= 0) return;
+  const checks = [
+    { threshold: Math.max(1, Math.ceil(limit * 0.8)), field: "aiQuotaNotice80At" as const, percent: 80 },
+    { threshold: limit, field: "aiQuotaNotice100At" as const, percent: 100 },
+  ];
+  for (const item of checks) {
+    if (used < item.threshold) continue;
+    const claimed = await prisma.responderSubscription.updateMany({ where: { userId, [item.field]: null }, data: { [item.field]: new Date() } });
+    if (claimed.count) await tell(userId, item.percent === 80 ? "استهلكت 80٪ من ردود الذكاء الاصطناعي" : "اكتملت حصة الذكاء الاصطناعي", item.percent === 80 ? `استخدمت ${used} من ${limit} رد. بعد انتهاء الحصة يستمر المجيب بالقواعد والردود الثابتة.` : `استخدمت كامل الحصة (${limit} رد). سيكمل المجيب بالقواعد والردود الثابتة حتى بداية الفترة التالية.`, { reason: `ai_quota_${item.percent}` }).catch(() => null);
+  }
+}
+
+async function recordAiCall(userId: string, usage: AiCallUsage) {
+  const settings = await getSettings();
+  const rate = settings.aiModelPrices.find((item) => item.provider === usage.provider && item.model === usage.model);
+  const hasTokens = usage.promptTokens !== null && usage.completionTokens !== null;
+  const estimatedCostUsd = rate && typeof rate.inputUsdPerMillion === "number" && typeof rate.outputUsdPerMillion === "number" && hasTokens
+    ? (usage.promptTokens! * rate.inputUsdPerMillion + usage.completionTokens! * rate.outputUsdPerMillion) / 1_000_000
+    : null;
+  await prisma.responderAiCall.create({ data: { userId, ...usage, estimatedCostUsd } }).catch(() => null);
+}
+
+/**
+ * Facts the AI may use: only what the connected Facebook Page / Instagram account says about itself (about text,
+ * address, hours, its own posts), read through the platform. The responder is a service for those accounts and
+ * never reads anything from the Dalilacom store. Telegram and webhook channels give none, so the AI there relies
+ * on the description the owner wrote in the responder settings alone. Cached a few minutes per connection.
+ */
+const FACTS_TTL = 10 * 60 * 1000;
+const factsCache = new Map<string, { at: number; text: string | undefined }>();
+
+export async function businessInfoFor(connection: ConnectionWithChannel): Promise<string | undefined> {
+  const driver = drivers[connection.channel.driver];
+  if (!driver.describe) return undefined;
+  const cached = factsCache.get(connection.id);
+  if (cached && Date.now() - cached.at < FACTS_TTL) return cached.text;
+  let text: string | undefined;
+  try {
+    text = (
+      await driver.describe({
+        credentials: decryptJson(connection.credentialsEnc),
+        hookToken: connection.hookToken,
+        channelConfig: connection.channel.config as Record<string, any>,
+      })
+    ).slice(0, 3500) || undefined;
+  } catch {
+    return undefined; // do not cache a failure: the next message tries again
+  }
+  factsCache.set(connection.id, { at: Date.now(), text });
+  return text;
 }
 
 /** The last few turns of this conversation (within a day), oldest first. */
@@ -164,7 +317,7 @@ async function historyFor(connectionId: string, conversationRef: string): Promis
 }
 
 type ConnectionWithChannel = ChannelConnection & { channel: SocialChannel };
-type Outcome = { status: "SENT" | "NEEDS_REVIEW" | "FAILED" | "SKIPPED"; intent?: string | null; reply?: string | null; reason?: string };
+type Outcome = { status: "SENT" | "NEEDS_REVIEW" | "FAILED" | "SKIPPED"; intent?: string | null; reply?: string | null; reason?: string; matchedRuleId?: string | null; noMatchingRule?: boolean };
 
 export async function handleIncoming(connection: ConnectionWithChannel, msg: IncomingMessage) {
   const userId = connection.userId;
@@ -191,80 +344,126 @@ export async function handleIncoming(connection: ConnectionWithChannel, msg: Inc
   }
 
   const sub = await getSubscription(userId);
-  if (!isRunning(sub.status)) return record({ status: "SKIPPED", reason: "subscription_inactive" });
-
+  if (!sub.enabled) return record({ status: "SKIPPED", reason: "responder_disabled" });
+  const entitlements = await getActiveResponderEntitlements(userId);
+  if (!entitlements.length) {
+    const now = new Date();
+    const notice = await prisma.responderSubscription.updateMany({
+      where: { userId, OR: [{ basicPlanNoticeAt: null }, { basicPlanNoticeAt: { lte: new Date(now.getTime() - 30 * DAY) } }] },
+      data: { basicPlanNoticeAt: now },
+    });
+    if (notice.count) await tell(userId, "المجيب الآلي يحتاج خطة فعّالة", "اختر خطة للمجيب الآلي ليعود للرد على الرسائل. قنواتك وقواعدك محفوظة.", { reason: "basic_plan_required" });
+    return record({ status: "SKIPPED", reason: "basic_plan_required" });
+  }
+  const aiEntitlements = entitlements.filter((entitlement) => entitlement.plan.includesAi);
+  const hasAiPlan = aiEntitlements.length > 0;
+  const aiLimit = hasAiPlan ? Math.max(...aiEntitlements.map((entitlement) => entitlement.plan.aiReplyLimit || 0)) : 0;
   const settings = await getSettings();
-  const limit = settings.responder.monthlyAiReplyLimit;
-  let intent: string | null = looksLikeComplaint(msg.text) ? "complaint" : null;
-  if (!intent && aiAvailable() && (await aiQuotaLeft(userId, limit))) intent = await classifyIntent(msg.text);
-  // A complaint is answered from what the shop knows; when that does not settle it, the customer is told that a real
-  // person will contact them soon and the message waits in the inbox. The owner is told either way.
+  const badgeText = settings.responderBadge.enabled && !entitlements.some((entitlement) => entitlement.plan.removesBadge)
+    ? settings.responderBadge.text.trim()
+    : "";
+  const withBadge = (text: string) => {
+    if (!badgeText) return text;
+    const candidate = `${text.trimEnd()}\n${badgeText}`;
+    const driver = connection.channel.driver;
+    const limit = driver === "TELEGRAM" ? 4096 : 1000;
+    return Array.from(candidate).length <= limit ? candidate : text;
+  };
+
+  const intent: string | null = looksLikeComplaint(msg.text) ? "complaint" : null;
+  // Complaints are checked first. The free plan uses a holding reply; an AI plan handles
+  // the apology and indirect-complaint decision with the same single call used to write it.
   if (intent === "complaint") {
-    let answer = null as Awaited<ReturnType<typeof answerComplaint>>;
-    if (aiAvailable() && (await consumeAi(userId, limit))) {
-      answer = await answerComplaint({
-        message: msg.text,
-        businessDescription: sub.businessDescription,
-        tone: sub.tone,
-        businessInfo: await businessInfoFor(userId),
-        history: await historyFor(connection.id, msg.conversationRef),
-      });
-    }
-    const complaintReply = answer?.reply ?? COMPLAINT_HOLDING_REPLY;
-    const needsPerson = !answer || answer.handoff;
     try {
-      await sendThroughConnection(connection, complaintReply, msg.conversationRef);
-      return record({ status: needsPerson ? "NEEDS_REVIEW" : "SENT", intent, reply: complaintReply, reason: "complaint" });
+      let answer: Awaited<ReturnType<typeof generateResponderReply>> = null;
+      if (hasAiPlan && aiAvailable() && (await consumeAi(userId, aiLimit))) {
+        answer = await generateResponderReply({
+          message: msg.text,
+          businessDescription: sub.businessDescription,
+          tone: sub.tone,
+          businessInfo: await businessInfoFor(connection),
+          history: await historyFor(connection.id, msg.conversationRef),
+          forceComplaint: true,
+          onUsage: (usage) => recordAiCall(userId, usage),
+        });
+      }
+      const reply = withBadge(answer?.reply ?? COMPLAINT_HOLDING_REPLY);
+      await sendThroughConnection(connection, reply, msg.conversationRef);
+      return record({ status: "NEEDS_REVIEW", intent, reply, reason: "complaint" });
     } catch (err) {
-      return record({ status: "FAILED", intent, reply: complaintReply, reason: err instanceof Error ? err.message : "send_failed" });
+      return record({ status: "FAILED", intent, reply: COMPLAINT_HOLDING_REPLY, reason: err instanceof Error ? err.message : "send_failed" });
     }
   }
 
-  const lower = msg.text.toLowerCase();
-  const rules = await prisma.responderRule.findMany({ where: { userId, isActive: true }, orderBy: { createdAt: "asc" } });
-  const rule = rules.find(
-    (r) =>
+  const rules = await prisma.responderRule.findMany({ where: { userId, isActive: true }, orderBy: [{ priority: "desc" }, { createdAt: "asc" }] });
+  const normalizedMessage = normalizeText(msg.text);
+  const matches = (r: (typeof rules)[number]) =>
       (!r.channelId || r.channelId === connection.channelId) &&
       // A rule limited to specific posts only ever answers comments on those posts (never DMs or other posts).
       (r.postIds.length === 0 || (!!msg.postId && r.postIds.includes(msg.postId))) &&
-      r.keywords.some((k) => k.trim() && lower.includes(k.trim().toLowerCase())),
-  );
+      r.keywords.some((k) => { const keyword = normalizeText(k); return keyword && normalizedMessage.includes(keyword); });
+  const rule = rules.find((r) => r.mode === "FIXED" && matches(r)) ?? rules.find(matches);
+  const matchTracking = rule ? { matchedRuleId: rule.id } : { noMatchingRule: true };
 
-  // The AI answers with what the shop really has and what was said before in this conversation.
-  const writeWithAi = async (instructions: string): Promise<string | null> => {
-    if (!aiAvailable() || !(await consumeAi(userId, limit))) return null;
-    return generateReply({
+  const writeWithAi = async (instructions: string): Promise<Awaited<ReturnType<typeof generateResponderReply>>> => {
+    if (!hasAiPlan || !aiAvailable() || !(await consumeAi(userId, aiLimit))) return null;
+    const answer = await generateResponderReply({
       message: msg.text,
       businessDescription: sub.businessDescription,
       tone: sub.tone,
       instructions,
-      businessInfo: await businessInfoFor(userId),
+      businessInfo: await businessInfoFor(connection),
       history: await historyFor(connection.id, msg.conversationRef),
+      onUsage: (usage) => recordAiCall(userId, usage),
     });
+    return answer;
   };
   const personalise = (template: string) => template.replaceAll("{name}", msg.authorName);
 
   let reply: string | null = null;
-  let heldBack = "empty_template";
+  let replyIntent = intent;
+  let heldBack = hasAiPlan ? "ai_unavailable" : "ai_requires_plan";
   if (rule) {
-    if (rule.mode === "AI") reply = await writeWithAi(rule.aiInstructions);
+    if (rule.mode === "AI" && hasAiPlan) {
+      const answer = await writeWithAi(rule.aiInstructions);
+      if (answer?.complaint) {
+        replyIntent = "complaint";
+        reply = withBadge(answer.reply);
+        try { await sendThroughConnection(connection, reply, msg.conversationRef); }
+        catch (err) { return record({ status: "FAILED", intent: replyIntent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking }); }
+        return record({ status: "NEEDS_REVIEW", intent: replyIntent, reply, reason: "complaint", ...matchTracking });
+      }
+      reply = answer?.reply ?? null;
+    }
     if (!reply && rule.replyTemplate) reply = personalise(rule.replyTemplate);
-    if (!reply && rule.mode === "AI") heldBack = "ai_unavailable";
+    if (!reply && rule.mode === "AI" && hasAiPlan && sub.aiRepliesUsed >= aiLimit) heldBack = "ai_quota_exhausted";
   } else if (sub.fallbackMode === "TEMPLATE" && sub.fallbackReply?.trim()) {
     reply = personalise(sub.fallbackReply);
   } else if (sub.fallbackMode === "AI") {
-    reply = await writeWithAi("No rule matched this message: answer it only from the business information, briefly. If it is not covered, say the team will follow up.");
-    if (!reply) heldBack = "ai_unavailable";
+    if (hasAiPlan) {
+      const answer = await writeWithAi("Answer briefly using only the business information. If it is not covered, say the team will follow up.");
+      if (answer?.complaint) {
+        replyIntent = "complaint";
+        reply = withBadge(answer.reply);
+        try { await sendThroughConnection(connection, reply, msg.conversationRef); }
+        catch (err) { return record({ status: "FAILED", intent: replyIntent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking }); }
+        return record({ status: "NEEDS_REVIEW", intent: replyIntent, reply, reason: "complaint", ...matchTracking });
+      }
+      reply = answer?.reply ?? null;
+    }
+    if (!reply && sub.fallbackReply?.trim()) reply = personalise(sub.fallbackReply);
+    if (!reply && hasAiPlan && sub.aiRepliesUsed >= aiLimit) heldBack = "ai_quota_exhausted";
   } else {
-    return record({ status: "SKIPPED", intent, reason: "no_matching_rule" });
+    return record({ status: "SKIPPED", intent, reason: "no_matching_rule", ...matchTracking });
   }
-  if (!reply) return record({ status: "NEEDS_REVIEW", intent, reason: heldBack });
+  if (!reply) return record({ status: "NEEDS_REVIEW", intent: replyIntent, reason: heldBack, ...matchTracking });
+  reply = withBadge(reply);
 
   try {
     await sendThroughConnection(connection, reply, msg.conversationRef);
-    return record({ status: "SENT", intent, reply });
+    return record({ status: "SENT", intent: replyIntent, reply, ...matchTracking });
   } catch (err) {
-    return record({ status: "FAILED", intent, reply, reason: err instanceof Error ? err.message : "send_failed" });
+    return record({ status: "FAILED", intent: replyIntent, reply, reason: err instanceof Error ? err.message : "send_failed", ...matchTracking });
   }
 }
 

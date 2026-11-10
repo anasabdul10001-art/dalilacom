@@ -12,6 +12,7 @@ import com.dalilacom.app.data.network.MetaOAuthStatusDto
 import com.dalilacom.app.data.network.MetaPageDto
 import com.dalilacom.app.data.network.PostDto
 import com.dalilacom.app.data.network.ResponderStatusDto
+import com.dalilacom.app.data.network.ResponderPlanDto
 import com.dalilacom.app.data.network.RuleDto
 import com.dalilacom.app.data.repository.ResponderRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,7 @@ data class ResponderUiState(
     val info: String? = null,
     val needsTopUp: Boolean = false,
     val status: ResponderStatusDto? = null,
+    val plans: List<ResponderPlanDto> = emptyList(),
     val stats: com.dalilacom.app.data.network.ResponderStatsDto? = null,
     val channels: List<ChannelDto> = emptyList(),
     val connections: List<ConnectionDto> = emptyList(),
@@ -61,6 +63,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val status = repository.status()
+            val plans = repository.plans().getOrNull().orEmpty()
             val channels = repository.channels().getOrNull().orEmpty()
             val connections = repository.connections().getOrNull().orEmpty()
             val rules = repository.rules().getOrNull().orEmpty()
@@ -71,6 +74,7 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
                 it.copy(
                     isLoading = false,
                     status = status.getOrNull() ?: it.status,
+                    plans = plans,
                     stats = stats ?: it.stats,
                     error = status.exceptionOrNull()?.message,
                     channels = channels,
@@ -111,15 +115,24 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         }
     }
 
+    fun choosePlan(plan: ResponderPlanDto, offerId: String?) {
+        if (plan.priceCredits == null || _uiState.value.isBusy) return
+        act(AppStrings.get(if (plan.trialAvailable && offerId == null) R.string.responder_trial_started else R.string.responder_plan_selected)) {
+            if (plan.trialAvailable && offerId == null) repository.startPlanTrial(plan.id) else repository.purchasePlan(plan.id, offerId)
+        }
+    }
+
     fun saveProfile(description: String, tone: String, fallbackMode: String, fallbackReply: String) =
         act(AppStrings.get(R.string.s_a1ec84ae)) { repository.saveProfile(description.trim(), tone.trim(), fallbackMode, fallbackReply.trim()) }
 
     fun connect(channelId: String, credentials: Map<String, String>) =
         act(AppStrings.get(R.string.s_0224de46)) { repository.connect(channelId, credentials) }
 
+    fun deleteConnection(id: String) = act(AppStrings.get(R.string.conn_deleted)) { repository.deleteConnection(id) }
+
     fun toggleConnection(id: String, active: Boolean) = act(null) { repository.toggleConnection(id, active) }
 
-    fun addRule(name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String) {
+    fun addRule(name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String, priority: Int = 0) {
         val list = keywords.split(",", AppStrings.get(R.string.s_2e1a34c3)).map { it.trim() }.filter { it.isNotEmpty() }
         if (name.isBlank() || list.isEmpty()) {
             _uiState.update { it.copy(error = AppStrings.get(R.string.s_56be3fdb), info = null) }
@@ -127,10 +140,27 @@ class ResponderViewModel(private val repository: ResponderRepository) : ViewMode
         }
         val postIds = _uiState.value.selectedPostIds.toList()
         act(AppStrings.get(R.string.s_14737605)) {
-            repository.createRule(CreateRuleRequest(name.trim(), list, mode, replyTemplate.trim(), aiInstructions.trim(), postIds))
+            repository.createRule(CreateRuleRequest(name.trim(), list, mode, replyTemplate.trim(), aiInstructions.trim(), postIds, priority))
                 .also { if (it.isSuccess) clearPostPicker() }
         }
     }
+
+    /** Saves changes to an existing rule; the form that creates a rule is reused for this. */
+    fun updateRule(id: String, name: String, keywords: String, mode: String, replyTemplate: String, aiInstructions: String, priority: Int = 0, onDone: () -> Unit) {
+        val list = keywords.split(",", AppStrings.get(R.string.s_2e1a34c3)).map { it.trim() }.filter { it.isNotEmpty() }
+        if (name.isBlank() || list.isEmpty()) {
+            _uiState.update { it.copy(error = AppStrings.get(R.string.s_56be3fdb), info = null) }
+            return
+        }
+        val postIds = _uiState.value.selectedPostIds.toList()
+        act(AppStrings.get(R.string.s_14737605)) {
+            repository.updateRule(id, CreateRuleRequest(name.trim(), list, mode, replyTemplate.trim(), aiInstructions.trim(), postIds, priority))
+                .also { if (it.isSuccess) { clearPostPicker(); onDone() } }
+        }
+    }
+
+    /** Puts the posts a saved rule is limited to back into the picker, so editing keeps them. */
+    fun selectPosts(ids: List<String>) = _uiState.update { it.copy(selectedPostIds = ids.toSet()) }
 
     fun toggleRule(id: String, active: Boolean) = act(null) { repository.toggleRule(id, active) }
 

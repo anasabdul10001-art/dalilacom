@@ -26,6 +26,11 @@ import { storeRouter } from "./routes/store.routes";
 import { adsRouter } from "./routes/ads.routes";
 import { reviewsRouter } from "./routes/reviews.routes";
 import { favoritesRouter } from "./routes/favorites.routes";
+import { doctorCareRouter } from "./routes/doctorCare.routes";
+import { doctorAppointmentsRouter } from "./routes/doctorAppointments.routes";
+import { fitnessProfileRouter } from "./routes/fitnessProfile.routes";
+import { fitnessPlansRouter } from "./routes/fitnessPlans.routes";
+import { fitnessEnrollmentsRouter } from "./routes/fitnessEnrollments.routes";
 import { renderSharePage, renderSitemap, searchIndexingOn } from "./lib/shareMeta";
 import { routeRouter } from "./routes/route.routes";
 import { profileRouter } from "./routes/profile.routes";
@@ -48,6 +53,8 @@ import { renewAllDueAiPackages } from "./services/aiQuota.service";
 import { marketplaceRouter } from "./routes/marketplace.routes";
 import { accountingRouter } from "./routes/accounting.routes";
 import { billingRouter } from "./routes/billing.routes";
+import { sendDueDoctorAppointmentReminders } from "./services/doctorAppointmentReminder.service";
+
 
 const app = express();
 app.set("trust proxy", 1); // Render sits behind a proxy — needed for correct req.ip / X-Forwarded-For
@@ -207,6 +214,11 @@ app.use("/billing", billingRouter);
 app.use("/ads", adsRouter);
 app.use("/reviews", reviewsRouter);
 app.use("/favorites", favoritesRouter);
+app.use("/doctor-care", doctorCareRouter);
+app.use("/appointments", doctorAppointmentsRouter);
+app.use("/fitness-profile", fitnessProfileRouter);
+app.use("/fitness-plans", fitnessPlansRouter);
+app.use("/fitness-enrollments", fitnessEnrollmentsRouter);
 app.use("/route", routeRouter);
 app.use("/profile", profileRouter);
 app.use("/invoices", invoiceRouter);
@@ -248,6 +260,9 @@ if (process.env.NODE_ENV !== "test") {
   const sweep = () => renewAllDueAiPackages().catch((err) => console.error("AI package renewal failed:", err instanceof Error ? err.message : err));
   setTimeout(sweep, 30_000).unref();
   setInterval(sweep, 60 * 60 * 1000).unref();
+  const appointmentReminderSweep = () => sendDueDoctorAppointmentReminders().catch((err) => console.error("Appointment reminder failed:", err instanceof Error ? err.message : err));
+  setTimeout(appointmentReminderSweep, 20_000).unref();
+  setInterval(appointmentReminderSweep, 5 * 60 * 1000).unref();
 }
 
 export { app };

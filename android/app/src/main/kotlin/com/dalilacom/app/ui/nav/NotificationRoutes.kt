@@ -22,6 +22,7 @@ object NotificationRoutes {
         val product = id("productId")?.let { "product/$it" }
         val shop = id("merchantId")?.let { "merchant/$it" }
         return when (type) {
+            "doctor_appointment" -> id("appointmentId")?.let { "doctorAppointments" } ?: INBOX
             "ORDER_PLACED", "ORDER_STATUS" -> when {
                 merchantSide -> "merchantMode"
                 else -> id("orderId")?.let { "order/$it" } ?: INBOX
@@ -33,6 +34,7 @@ object NotificationRoutes {
             "NEW_PRODUCT" -> product ?: shop ?: INBOX
             // the auto-responder tells its owner about messages that wait, and about its own ending
             "SYSTEM" -> when {
+                data["type"] == "doctor_appointment" -> id("appointmentId")?.let { "doctorAppointments" } ?: INBOX
                 data["kind"] == "RESPONDER" -> "responder"
                 // an announcement waiting for review goes to the admin's queue; the verdict on a shop's own announcement, to the shop
                 data["kind"] == "BROADCAST_REVIEW" -> if (data["audience"] == "ADMIN") "adminReview" else "merchantMode"

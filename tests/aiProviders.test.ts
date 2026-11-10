@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll, afterEach, beforeEach, vi } from "vites
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
-import { aiAvailable, aiProviderStatus, aiUsage, classifyIntent, generateReply, resetAiProviderState, testProvider } from "../src/services/ai.service";
+import { aiAvailable, aiProviderStatus, aiUsage, classifyIntent, generateReply, generateResponderReply, resetAiProviderState, testProvider } from "../src/services/ai.service";
 import { uniqueEmail } from "./helpers";
 
 const KEYS = ["GROQ_API_KEY", "CEREBRAS_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY", "NVIDIA_API_KEY", "SAMBANOVA_API_KEY", "TOGETHER_API_KEY", "HUGGINGFACE_API_KEY", "DEEPSEEK_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"];
@@ -57,7 +57,7 @@ function stubProviders(script: Record<string, Reply>) {
       ok,
       status: reply.status,
       headers: { get: (name: string) => reply.headers?.[name.toLowerCase()] ?? null },
-      json: async () => (provider === "anthropic" ? { content: [{ type: "text", text: content }] } : { choices: [{ message: { content } }] }),
+      json: async () => (provider === "anthropic" ? { content: [{ type: "text", text: content }], usage: { input_tokens: 12, output_tokens: 7 } } : { choices: [{ message: { content } }], usage: { prompt_tokens: 12, completion_tokens: 7 } }),
     };
   });
   return calls;
@@ -146,6 +146,13 @@ describe("Talking to each provider", () => {
     withKeys("CEREBRAS");
     stubProviders({ cerebras: { status: 200, text: "We open at nine." } });
     expect(await generateReply({ message: "when do you open?" })).toBe("We open at nine.");
+  });
+
+  it("returns one reply with complaint detection and provider token usage", async () => {
+    withKeys("GROQ");
+    stubProviders({ groq: { status: 200, text: JSON.stringify({ reply: "وصلت رسالتك", complaint: true, handoff: true }) } });
+    const result = await generateResponderReply({ message: "my delivery never came" });
+    expect(result).toMatchObject({ reply: "وصلت رسالتك", complaint: true, handoff: true, provider: "groq", model: "llama-3.3-70b-versatile", promptTokens: 12, completionTokens: 7 });
   });
 });
 

@@ -34,3 +34,12 @@ describe("the Impressum (legal notice, section 65 / German DDG)", () => {
     expect((await request(app).get("/terms.html")).text).toContain("Lamarconnect");
   });
 });
+
+describe("Meta domain verification", () => {
+  it("the home page carries the facebook-domain-verification tag inside <head>", async () => {
+    const res = await request(app).get("/");
+    expect(res.status).toBe(200);
+    const head = res.text.slice(0, res.text.indexOf("</head>"));
+    expect(head).toContain('<meta name="facebook-domain-verification" content="4szxovzxhdc9fwu57gzs83pv4dx1c3" />');
+  });
+});

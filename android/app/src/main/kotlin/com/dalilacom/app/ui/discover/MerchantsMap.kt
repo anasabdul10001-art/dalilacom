@@ -299,6 +299,7 @@ fun MerchantsMap(
     route: List<List<Double>>? = null,
     routeWalking: Boolean = false,
     radiusKm: Double? = null,
+    radiusCenter: Pair<Double, Double>? = userLocation,
     radiusFitTick: Int = 0,
     /** A trip is going on: the camera follows [userLocation] and the position is drawn as an arrow when the [userBearing] is known. */
     navigating: Boolean = false,
@@ -359,6 +360,7 @@ fun MerchantsMap(
     val latestRoute by rememberUpdatedState(route)
     val latestWalking by rememberUpdatedState(routeWalking)
     val latestRadius by rememberUpdatedState(radiusKm)
+    val latestRadiusCenter by rememberUpdatedState(radiusCenter ?: userLocation)
     val latestNavigating by rememberUpdatedState(navigating)
     val latestBearing by rememberUpdatedState(userBearing)
     val latestOnPanned by rememberUpdatedState(onUserPanned)
@@ -380,7 +382,7 @@ fun MerchantsMap(
         )
         // The chosen distance, as a circle around the user.
         val radius = latestRadius
-        val here = latestUser
+        val here = latestRadiusCenter
         if (radius != null && here != null) {
             map.overlays.add(
                 Polygon(map).apply {
@@ -632,7 +634,7 @@ fun MerchantsMap(
     // A distance chip was tapped: frame that circle (or everything, for "any distance").
     LaunchedEffect(radiusFitTick) {
         if (radiusFitTick == 0 || latestRoute != null) return@LaunchedEffect
-        val here = latestUser ?: return@LaunchedEffect
+        val here = latestRadiusCenter ?: return@LaunchedEffect
         val center = GeoPoint(here.first, here.second)
         val points = latestRadius?.let { Polygon.pointsAsCircle(center, it * 1000.0) }
             ?: (latestMerchants.map { GeoPoint(it.latitude!!, it.longitude!!) } + center)

@@ -79,7 +79,15 @@ export async function notify(input: NotifyInput): Promise<NotifyResult> {
   let emailed = false;
   try {
     if (recipient?.email && input.email !== false) {
-      await emailService.send({ to: recipient.email, subject: title, text: body ?? title, html: notificationEmailHtml(lang, title, body ?? undefined) });
+      const data = input.data && typeof input.data === "object" && !Array.isArray(input.data) ? input.data as Record<string, unknown> : {};
+      const isResponderUpgrade = data.kind === "RESPONDER" && data.action === "upgrade";
+      const action = isResponderUpgrade ? { label: "اختر خطة للمجيب الآلي", url: `${(process.env.PUBLIC_BASE_URL || "https://dalilacom.com").replace(/\/+$/, "")}/app/?responder=plans` } : undefined;
+      await emailService.send({
+        to: recipient.email,
+        subject: title,
+        text: `${body ?? title}${action ? `\n\n${action.label}: ${action.url}` : ""}`,
+        html: notificationEmailHtml(lang, title, body ?? undefined, action),
+      });
       emailed = true;
     }
   } catch {

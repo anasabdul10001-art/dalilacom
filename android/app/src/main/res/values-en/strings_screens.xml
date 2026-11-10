@@ -113,7 +113,7 @@
     <string name="s_70a771db" formatted="false">Couldn\'t confirm the discount</string>
     <string name="s_7121fbcc" formatted="false">Facebook connected ✅</string>
     <string name="s_746ec1bd" formatted="false">The member price must be lower than the regular price</string>
-    <string name="s_749f9cfe" formatted="false">Register as a business</string>
+    <string name="s_749f9cfe" formatted="false">Add your business to the map</string>
     <string name="s_760c65a1" formatted="false">Phone</string>
     <string name="s_77eb6cfd" formatted="false">About you or your shop (shown to customers and on invoices)</string>
     <string name="s_79e32d1f" formatted="false">⏳ Your request is waiting for admin approval — your shop won\'t appear on the map before that.</string>
@@ -202,7 +202,7 @@
     <string name="s_bc12337c" formatted="false">Couldn\'t load the connections</string>
     <string name="s_bdb567d9" formatted="false">Couldn\'t cancel the order</string>
     <string name="s_beb6f577" formatted="false">The code is invalid or expired</string>
-    <string name="s_c03965c6" formatted="false">Your account becomes a business account after admin approval, then your shop appears on the map</string>
+    <string name="s_c03965c6" formatted="false">Use this for a shop, clinic, office or any place people should find on the map. Choose its type and add its address. Opening an online shop is a separate option.</string>
     <string name="s_c2cbfa91" formatted="false">📄 Export invoice (PDF)</string>
     <string name="s_c31663d5" formatted="false">My wallet</string>
     <string name="s_c33c7465" formatted="false">You have no rules yet</string>
@@ -284,4 +284,94 @@
     <string name="s_fdc54283" formatted="false">Couldn\'t load the inbox</string>
     <string name="s_fe29f439" formatted="false">Recent transactions</string>
     <string name="s_fe79250b" formatted="false">Verify</string>
+    <string name="fit_auto_fd107e2a" formatted="false">Certificate or achievement photo</string>
+    <string name="fit_auto_31d9b741" formatted="false">Syriatel Cash</string>
+    <string name="fit_auto_d79941c7" formatted="false">MTN Cash</string>
+    <string name="fit_auto_098683e9" formatted="false">Sham Cash</string>
+    <string name="fit_auto_13595e7a" formatted="false">💳 Available payment methods</string>
+    <string name="fit_auto_5b0421bf" formatted="false">Payment is made directly to the coach outside the app.</string>
+    <string name="fit_auto_7a73da43" formatted="false">Account holder: %1$s</string>
+    <string name="fit_auto_27503bf2" formatted="false">🎯 Monthly training packages</string>
+    <string name="fit_auto_4a0b14c3" formatted="false"> month · </string>
+    <string name="fit_auto_8e0d8542" formatted="false">Your request to join was sent to the coach</string>
+    <string name="fit_auto_aa2fb742" formatted="false">Couldn\'t send the request</string>
+    <string name="fit_auto_0c38fd67" formatted="false">Waiting for the coach\'s reply</string>
+    <string name="fit_auto_19837e3e" formatted="false">Accepted</string>
+    <string name="fit_auto_58d8f68d" formatted="false">Request to join</string>
+    <string name="fit_auto_1eaa192f" formatted="false">Sign in to request to join</string>
+    <string name="fit_auto_514b56ff" formatted="false">Payment isn\'t collected in the app; contact the coach to arrange it.</string>
+    <string name="fit_auto_11e83767" formatted="false">Back</string>
+    <string name="fit_auto_f7175997" formatted="false">Trainees and their plans</string>
+    <string name="fit_auto_cd78b295" formatted="false">My fitness and nutrition plans</string>
+    <string name="fit_auto_ec4ef902" formatted="false">Plans are private between the coach and trainee.</string>
+    <string name="fit_auto_0d1a0f67" formatted="false">Edit plan · %1$s</string>
+    <string name="fit_auto_7ce78f07" formatted="false">Registered trainee email</string>
+    <string name="fit_auto_5e657e68" formatted="false">Workout</string>
+    <string name="fit_auto_2a48b04e" formatted="false">Nutrition</string>
+    <string name="fit_auto_384df087" formatted="false">Plan name</string>
+    <string name="fit_auto_6a2e4995" formatted="false">Details, one exercise or meal per line</string>
+    <string name="fit_auto_3c4208fe" formatted="false">Notes</string>
+    <string name="fit_auto_7625f9c4" formatted="false">Plan start date (YYYY-MM-DD, optional)</string>
+    <string name="fit_auto_44a5a9a7" formatted="false">Plan end date (YYYY-MM-DD, optional)</string>
+    <string name="fit_auto_61ec5484" formatted="false">Weekly schedule (optional)</string>
+    <string name="fit_auto_70cbbabf" formatted="false">Monday</string>
+    <string name="fit_auto_b38d7fc2" formatted="false">Tuesday</string>
+    <string name="fit_auto_2e5bdec0" formatted="false">Wednesday</string>
+    <string name="fit_auto_a6828d5b" formatted="false">Thursday</string>
+    <string name="fit_auto_66e535ba" formatted="false">Friday</string>
+    <string name="fit_auto_3cf0f7a6" formatted="false">Saturday</string>
+    <string name="fit_auto_86aad79c" formatted="false">Sunday</string>
+    <string name="fit_auto_715af372" formatted="false"> · exercises or meals, one item per line</string>
+    <string name="fit_auto_0da9f8a8" formatted="false">Saving…</string>
+    <string name="fit_auto_ea76b8bc" formatted="false">Save changes</string>
+    <string name="fit_auto_e1b96d0a" formatted="false">Send plan</string>
+    <string name="fit_auto_c5f60175" formatted="false">Cancel editing</string>
+    <string name="fit_auto_c66cd2de" formatted="false">Trainees (%1$d)</string>
+    <string name="fit_auto_6d08f196" formatted="false">All</string>
+    <string name="fit_auto_eec3db7f" formatted="false">Workout plan</string>
+    <string name="fit_auto_ed87a68b" formatted="false">Nutrition plan</string>
+    <string name="fit_auto_49215294" formatted="false">Starts: %1$s</string>
+    <string name="fit_auto_bf43e2f7" formatted="false">Ends: %1$s</string>
+    <string name="fit_auto_6b100af3" formatted="false">📄 Save plan as PDF</string>
+    <string name="fit_auto_4eb10593" formatted="false">Edit plan</string>
+    <string name="fit_auto_df38da5b" formatted="false"> kg · </string>
+    <string name="fit_auto_943bdb85" formatted="false">Weight in kilograms</string>
+    <string name="fit_auto_1d47217e" formatted="false">Progress note</string>
+    <string name="fit_auto_6a2fcb7c" formatted="false">Record progress</string>
+    <string name="fit_auto_35db8764" formatted="false">Trainee progress</string>
+    <string name="fit_auto_d7644cdb" formatted="false">There are no plans to show right now.</string>
+    <string name="fit_auto_80861134" formatted="false">Package join requests</string>
+    <string name="fit_auto_458c9253" formatted="false">My training packages</string>
+    <string name="fit_auto_dff8acbb" formatted="false">There are no requests or training packages yet.</string>
+    <string name="fit_auto_4f4865b2" formatted="false">Status: </string>
+    <string name="fit_auto_ab579793" formatted="false">Declined</string>
+    <string name="fit_auto_f5eb0776" formatted="false">Cancelled</string>
+    <string name="fit_auto_28cbdf83" formatted="false">Ended</string>
+    <string name="fit_auto_c5a1a374" formatted="false">Period: %1$s – %2$s</string>
+    <string name="fit_auto_d7e02c92" formatted="false">Accept</string>
+    <string name="fit_auto_b7dee974" formatted="false">Decline</string>
+    <string name="fit_auto_dfdf1a42" formatted="false">End subscription</string>
+    <string name="fit_auto_e06a23ff" formatted="false">Cancel request</string>
+    <string name="fit_auto_817bd7c2" formatted="false">Up to 12 photos</string>
+    <string name="fit_auto_77aa4468" formatted="false">Certificates and achievements</string>
+    <string name="fit_auto_712ba737" formatted="false">Visitors can see these photos. Dalilacom has not verified the certificates.</string>
+    <string name="fit_auto_1b963ebd" formatted="false">📷 Add a certificate or achievement photo</string>
+    <string name="fit_auto_4b431162" formatted="false">📜 Photo number </string>
+    <string name="fit_auto_3b9854e1" formatted="false">Delete</string>
+    <string name="fit_auto_1a8b3258" formatted="false">Payment methods and receiving fees</string>
+    <string name="fit_auto_6cbcb21f" formatted="false">Add your payment details so trainees can pay you. Visitors will see them on your coach page; payment happens outside the app.</string>
+    <string name="fit_auto_909db8ed" formatted="false">Account holder name</string>
+    <string name="fit_auto_6ff1570f" formatted="false">Syriatel Cash number</string>
+    <string name="fit_auto_9bb5492f" formatted="false">MTN Cash number</string>
+    <string name="fit_auto_04e0bcce" formatted="false">Sham Cash account</string>
+    <string name="fit_auto_043d5776" formatted="false">Monthly training packages</string>
+    <string name="fit_auto_b2007fb0" formatted="false">Add a clear price and duration so visitors can see your packages.</string>
+    <string name="fit_auto_9e1fb97e" formatted="false">Delete package</string>
+    <string name="fit_auto_650b87df" formatted="false">What\'s included?</string>
+    <string name="fit_auto_ae92351c" formatted="false">Duration in months</string>
+    <string name="fit_auto_fa59c355" formatted="false">Price</string>
+    <string name="fit_auto_72908aa4" formatted="false">Add package</string>
+    <string name="fit_auto_c2ed8d0d" formatted="false">📋  Trainee plans</string>
+    <string name="fit_auto_d141a0e3" formatted="false">🏋️  My fitness and nutrition plans</string>
+    <string name="fit_auto_b6b55b3a" formatted="false">Package name</string>
 </resources>

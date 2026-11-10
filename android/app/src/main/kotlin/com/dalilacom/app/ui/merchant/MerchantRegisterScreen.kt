@@ -44,7 +44,7 @@ import com.dalilacom.app.data.network.AddressSuggestionDto
 import kotlinx.coroutines.delay
 
 @Composable
-fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, onBack: () -> Unit, onClaimLandmark: (String) -> Unit = {}) {
+fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, onBack: () -> Unit, onClaimLandmark: (String) -> Unit = {}, storeOnly: Boolean = false) {
     val viewModel: MerchantRegisterViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
@@ -73,9 +73,9 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
     }
 
     val context = androidx.compose.ui.platform.LocalContext.current
-    val shopApproved = stringResource(R.string.shop_approved)
+    val shopApproved = stringResource(if (storeOnly) R.string.merchant_store_registration_approved else R.string.merchant_map_registration_approved)
     val shopRejected = stringResource(R.string.shop_rejected)
-    val shopPending = stringResource(R.string.shop_pending)
+    val shopPending = stringResource(if (storeOnly) R.string.merchant_store_registration_pending else R.string.shop_pending)
     LaunchedEffect(state.result) {
         val result = state.result ?: return@LaunchedEffect
         // what the automatic review decided: live, refused (with the reason), or waiting for an admin
@@ -125,8 +125,8 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
         TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_69c86923)) }
-        Text(AppStrings.get(R.string.s_749f9cfe), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-        Text(AppStrings.get(R.string.s_c03965c6), style = MaterialTheme.typography.bodyMedium)
+        Text(if (storeOnly) stringResource(R.string.merchant_store_only_title) else AppStrings.get(R.string.s_749f9cfe), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+        Text(if (storeOnly) stringResource(R.string.merchant_store_only_intro) else AppStrings.get(R.string.s_c03965c6), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(20.dp))
 
         Text(stringResource(R.string.mp_sec_name), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
@@ -166,7 +166,9 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
 
         Text(stringResource(R.string.mp_sec_contact), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(6.dp))
-        OutlinedTextField(
+        if (storeOnly) {
+            Text(stringResource(R.string.merchant_store_only_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+        } else OutlinedTextField(
             value = address,
             onValueChange = { address = it },
             label = { Text(AppStrings.get(R.string.s_ddb9dbdc)) },
@@ -193,12 +195,14 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
                 }
             }
         }
-        Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.mp_sec_map), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(6.dp))
-        if (online) {
+        if (!storeOnly) {
+            Spacer(Modifier.height(16.dp))
+            Text(stringResource(R.string.mp_sec_map), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(6.dp))
+        }
+        if (!storeOnly && online) {
             Text(stringResource(R.string.cat_online_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-        } else {
+        } else if (!storeOnly) {
             LocationPicker(value = location, onChange = { picked ->
                 location = picked
                 scope.launch {
@@ -232,8 +236,8 @@ fun MerchantRegisterScreen(factory: ViewModelFactory, onRegistered: () -> Unit, 
         } else {
             Button(
                 onClick = {
-                    if (!online && location == null && address.isBlank()) { localError = addressNeeded }
-                    else { localError = null; viewModel.register(businessName.trim(), selectedCategoryId, address.trim(), phone.trim(), whatsapp, if (online) null else location, suggestion) }
+                    if (!storeOnly && !online && location == null && address.isBlank()) { localError = addressNeeded }
+                    else { localError = null; viewModel.register(businessName.trim(), selectedCategoryId, if (storeOnly) "" else address.trim(), phone.trim(), whatsapp, if (storeOnly || online) null else location, suggestion, storeOnly = storeOnly) }
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(AppStrings.get(R.string.s_41066d88)) }

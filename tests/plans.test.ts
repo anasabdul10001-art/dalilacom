@@ -54,7 +54,7 @@ async function catalogEntry(query: string, planId: string) {
 }
 
 describe("The pricing catalogue (sections 24/60/64)", () => {
-  it("lists every service in one call, with the auto-responder rendered from the settings it lives in", async () => {
+  it("lists the responder once as editable monthly and annual catalogue plans", async () => {
     const res = await request(app).get("/plans/catalog");
 
     expect(res.status).toBe(200);
@@ -62,15 +62,16 @@ describe("The pricing catalogue (sections 24/60/64)", () => {
     expect(res.body.creditsPerUsd).toBeGreaterThan(0);
 
     const services = res.body.services.map((s: { service: string }) => s.service);
-    // The responder prices are single-sourced in PlatformSetting, so they are rendered read-only here.
-    expect(services).toContain("RESPONDER_CUSTOMER");
-    expect(services).toContain("RESPONDER_MERCHANT");
+    expect(services).toContain("RESPONDER_BASIC");
+    expect(services).not.toContain("RESPONDER_CUSTOMER");
+    expect(services).not.toContain("RESPONDER_MERCHANT");
 
-    const responder = res.body.services.find((s: { service: string }) => s.service === "RESPONDER_CUSTOMER").plans[0];
-    expect(responder.source).toBe("settings");
-    expect(responder.editable).toBe(false);
-    expect(responder.priceCredits).toBeGreaterThan(0);
-    expect(responder.source === "settings" && responder.features.length >= 0).toBe(true);
+    const responder = res.body.services.find((s: { service: string }) => s.service === "RESPONDER_BASIC").plans
+      .filter((p: any) => ["00000000-0000-4000-8000-000000000101", "00000000-0000-4000-8000-000000000102"].includes(p.id));
+    expect(responder).toHaveLength(2);
+    expect(responder.every((p: any) => p.source === "catalog" && p.editable)).toBe(true);
+    expect(responder.map((p: any) => p.cashAmountCents).sort((a: number, b: number) => a - b)).toEqual([500, 4800]);
+    expect(responder.every((p: any) => p.priceCredits > 0 && p.features.length > 0)).toBe(true);
   });
 
   it("prices a plan per country and falls back to the plan's own price everywhere else", async () => {
@@ -100,6 +101,20 @@ describe("The pricing catalogue (sections 24/60/64)", () => {
     expect(entry).toMatchObject({ priceCredits: 800, priceFrom: "country" });
     expect(signedIn.body.countryCode).toBe("DE");
     expect(sy.id).toBeTruthy();
+  });
+
+  it("lets the admin create a plan offer and exposes it in the editable plan list", async () => {
+    const auth = await admin();
+    const p = await prisma.servicePlan.create({ data: {
+      service: "RESPONDER_BASIC", name: "خطة العروض", durationDays: 30, priceCents: 500,
+      currency: "USD", priceCredits: 500, isActive: true,
+    } });
+    const created = await request(app).post(`/plans/${p.id}/offers`).set("Authorization", auth.bearer)
+      .send({ paidPeriods: 2, bonusDays: 10, text: "ادفع شهرين وخذ 10 أيام", isActive: true });
+    expect(created.status).toBe(201);
+    const list = await request(app).get("/plans/admin").set("Authorization", auth.bearer);
+    expect(list.status).toBe(200);
+    expect(list.body.find((item: any) => item.id === p.id).offers).toContainEqual(expect.objectContaining({ id: created.body.id, paidPeriods: 2, bonusDays: 10 }));
   });
 
   it("lets an admin build a merchant plan with specifications and a quota, and shows it on the page", async () => {

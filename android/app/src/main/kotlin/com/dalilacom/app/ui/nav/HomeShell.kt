@@ -220,7 +220,10 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         container = container,
                         onLoggedOut = { rootNavController.navigate("home") { popUpTo(0) } },
                         onRegisterMerchant = { rootNavController.navigate("merchantRegister") },
-                        onOpenMerchantMode = { rootNavController.navigate("merchantMode") },
+                        onOpenOnlineStore = { rootNavController.navigate("merchantRegister/store") },
+                        onOpenMapListing = { rootNavController.navigate("merchantProfile") },
+                        onOpenMarketingTeam = { rootNavController.navigate("marketingTeam") },
+                        onOpenMerchantMode = { rootNavController.navigate("merchantMode/shop") },
                         onOpenStore = { rootNavController.navigate("storePlans") },
                         onEditProfile = { rootNavController.navigate("profileEdit") },
                         onOpenAccount = { rootNavController.navigate("accountSettings") },
@@ -233,6 +236,11 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onOpenMarketing = { rootNavController.navigate("marketing") },
                         onOpenHistory = { rootNavController.navigate("discountHistory/mine") },
                         onOpenMarketplace = { rootNavController.navigate("marketplace") },
+onOpenDoctorCare = { rootNavController.navigate("doctorCare") },
+                        onOpenAppointments = { rootNavController.navigate("myAppointments") },
+                        onOpenFitnessProfile = { rootNavController.navigate("fitnessProfile") },
+                        onOpenFitnessPlans = { rootNavController.navigate("fitnessPlans") },
+
                     )
             }
         }

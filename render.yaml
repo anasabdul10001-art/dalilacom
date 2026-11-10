@@ -144,6 +144,9 @@ services:
         sync: false
       - key: PUBLIC_BASE_URL
         value: "https://dalilacom.com"
+      # Public pages and approved shops are ready to appear in Google.
+      - key: SEARCH_INDEXING
+        value: "on"
       # The developer test console is only for the owner: it is served on the testing address, not here.
       - key: HIDE_DEV_CONSOLE
         value: "true"
@@ -244,6 +247,59 @@ services:
         sync: false
       - key: PAYPAL_API_BASE
         value: https://api-m.paypal.com
+
+  # Daily basic-plan responder alerts and weekly summaries. Uses dalilacom-prod's live settings.
+  - type: cron
+    name: dalilacom-weekly-responder-report
+    runtime: node
+    plan: starter
+    branch: production
+    schedule: "0 9 * * *"
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node dist/jobs/responderWeeklyReport.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: DATABASE_URL
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: FIREBASE_SERVICE_ACCOUNT_JSON
+      - key: SMTP_HOST
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_HOST
+      - key: SMTP_PORT
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_PORT
+      - key: SMTP_SECURE
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_SECURE
+      - key: SMTP_USER
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_USER
+      - key: SMTP_PASS
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_PASS
+      - key: SMTP_FROM
+        fromService:
+          type: web
+          name: dalilacom-prod
+          envVarKey: SMTP_FROM
 
 databases:
   - name: dalilacom-db

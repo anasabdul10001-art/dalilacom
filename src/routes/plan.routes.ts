@@ -101,7 +101,8 @@ planRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), route(async (req
     res.json({ deleted: true });
   } catch (err) {
     if (err instanceof PlanInUseError) {
-      return sendError(res, 409, "PLAN_IN_USE", `ما بنقدر نحذف باقة عندها ${err.memberships} عضوية — عطّلها بدل الحذف`);
+      const useCount = err.memberships + err.responderEntitlements;
+      return sendError(res, 409, "PLAN_IN_USE", `ما بنقدر نحذف باقة مستخدمة من ${useCount} حساب أو اشتراك — عطّلها بدل الحذف`);
     }
     throw err;
   }
@@ -140,6 +141,48 @@ planRouter.put("/:id/prices", requireAuth, requireRole(Role.ADMIN), route(async 
   const duplicates = new Set(parsed.data.prices.map((p) => p.countryId)).size !== parsed.data.prices.length;
   if (duplicates) return sendError(res, 400, "BAD_REQUEST", "كل بلد مرة وحدة بس");
   res.json(await replacePrices(existing.id, parsed.data.prices));
+}));
+
+const offerBody = z.object({
+  paidPeriods: z.number().int().positive().max(100),
+  bonusDays: z.number().int().nonnegative().max(3650),
+  text: z.string().min(1).max(200),
+  startsAt: z.string().datetime().nullable().optional(),
+  endsAt: z.string().datetime().nullable().optional(),
+  isActive: z.boolean().default(true),
+});
+
+planRouter.post("/:id/offers", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
+  const parsed = offerBody.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const plan = await prisma.servicePlan.findUnique({ where: { id: req.params.id }, select: { id: true } });
+  if (!plan) return sendError(res, 404, "NOT_FOUND", "الباقة غير موجودة");
+  const data = { ...parsed.data, startsAt: parsed.data.startsAt ? new Date(parsed.data.startsAt) : null, endsAt: parsed.data.endsAt ? new Date(parsed.data.endsAt) : null };
+  if (data.startsAt && data.endsAt && data.endsAt <= data.startsAt) return sendError(res, 400, "BAD_REQUEST", "تاريخ نهاية العرض لازم يكون بعد تاريخ بدايته");
+  res.status(201).json(await prisma.planOffer.create({ data: { ...data, planId: plan.id } }));
+}));
+
+planRouter.patch("/offers/:offerId", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
+  const parsed = offerBody.partial().safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const existing = await prisma.planOffer.findUnique({ where: { id: req.params.offerId } });
+  if (!existing) return sendError(res, 404, "NOT_FOUND", "العرض غير موجود");
+  const data = {
+    ...parsed.data,
+    ...(parsed.data.startsAt !== undefined ? { startsAt: parsed.data.startsAt ? new Date(parsed.data.startsAt) : null } : {}),
+    ...(parsed.data.endsAt !== undefined ? { endsAt: parsed.data.endsAt ? new Date(parsed.data.endsAt) : null } : {}),
+  };
+  const startsAt = data.startsAt === undefined ? existing.startsAt : data.startsAt;
+  const endsAt = data.endsAt === undefined ? existing.endsAt : data.endsAt;
+  if (startsAt && endsAt && endsAt <= startsAt) return sendError(res, 400, "BAD_REQUEST", "تاريخ نهاية العرض لازم يكون بعد تاريخ بدايته");
+  res.json(await prisma.planOffer.update({ where: { id: existing.id }, data }));
+}));
+
+planRouter.delete("/offers/:offerId", requireAuth, requireRole(Role.ADMIN), route(async (req, res) => {
+  const existing = await prisma.planOffer.findUnique({ where: { id: req.params.offerId }, select: { id: true } });
+  if (!existing) return sendError(res, 404, "NOT_FOUND", "العرض غير موجود");
+  await prisma.planOffer.delete({ where: { id: existing.id } });
+  res.json({ deleted: true });
 }));
 
 planRouter.get("/tax-rates", requireAuth, requireRole(Role.ADMIN), route(async (_req, res) => {

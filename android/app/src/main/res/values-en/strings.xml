@@ -41,6 +41,13 @@
     <string name="search_placeholder">Search for a place or service...</string>
     <string name="search_recent">Recent searches</string>
     <string name="search_clear">Clear</string>
+    <string name="location_title">Choose a search location</string>
+    <string name="location_search_hint">Enter a city or area</string>
+    <string name="location_my_location">My current location</string>
+    <string name="location_pick_hint">Choose a place from search or use your current location</string>
+    <string name="location_selected_pin">Selected map location</string>
+    <string name="location_radius">Search radius</string>
+    <string name="location_show_results">Show nearby places</string>
     <string name="login_pill">Sign in</string>
     <string name="filter_all">All</string>
     <string name="filter_open_now">🕒 Open now</string>
@@ -119,8 +126,42 @@
 
     <string name="profile_title">My account</string>
     <string name="profile_edit">✏️ Edit my profile</string>
-    <string name="profile_merchant_mode">Business mode</string>
-    <string name="profile_register_merchant">Register as a business</string>
+    <string name="profile_merchant_mode">Manage my shop</string>
+    <string name="profile_register_merchant">Add your business to the map</string>
+    <string name="profile_start_selling_sub">The online shop is separate. Add products and choose a plan.</string>
+    <string name="profile_map_activity_sub">Add your business name, type and address so people can find it on the map.</string>
+    <string name="profile_open_online_store">Open your online shop</string>
+    <string name="profile_map_listing">My business details on the map</string>
+    <string name="profile_marketing_team">Marketing team for my shop</string>
+    <string name="affiliate_team_title">Marketing team for my shop</string>
+    <string name="affiliate_team_intro">Add marketers to your shop, set commission for each person, and track referred customers and commissions.</string>
+    <string name="affiliate_team_add_title">Add a marketer</string>
+    <string name="affiliate_team_email">Email registered to the marketer on Dalilacom</string>
+    <string name="affiliate_team_percent">Percentage</string>
+    <string name="affiliate_team_fixed">Fixed amount</string>
+    <string name="affiliate_team_commission">Commission value</string>
+    <string name="affiliate_team_add">Add to team</string>
+    <string name="affiliate_team_saving">Saving…</string>
+    <string name="affiliate_team_list_title">Team members (%1$d)</string>
+    <string name="affiliate_team_empty">No marketers yet. Enter the email of someone with a Dalilacom account.</string>
+    <string name="affiliate_team_person_commission">Commission: %1$s</string>
+    <string name="affiliate_team_person_stats">Referred customers: %1$d · Total commissions: %2$.2f</string>
+    <string name="affiliate_team_disable">Deactivate marketer</string>
+    <string name="affiliate_team_enable">Activate marketer</string>
+    <string name="affiliate_team_added">Marketer added to your team.</string>
+    <string name="affiliate_team_invalid_email">Enter a valid email address.</string>
+    <string name="affiliate_team_invalid_commission">Enter a commission greater than zero.</string>
+    <string name="affiliate_team_invalid_percent">The percentage cannot exceed 100 percent.</string>
+    <string name="affiliate_team_load_error">Could not load your marketing team.</string>
+    <string name="affiliate_team_add_error">Could not add the marketer.</string>
+    <string name="affiliate_team_update_error">Could not update the marketer.</string>
+    <string name="affiliate_team_network_error">Connection failed. Check your internet and try again.</string>
+    <string name="merchant_store_only_note">Opening a shop and adding your business to the map are separate. This step only opens your shop.</string>
+    <string name="merchant_store_only_title">Open your online shop</string>
+    <string name="merchant_store_only_intro">Any account can open a shop, sell new or used products, and choose an available plan. You do not need to add a map address here; you can list your business and location separately.</string>
+    <string name="merchant_store_registration_pending">Your shop request is under review.</string>
+    <string name="merchant_store_registration_approved">✅ Your shop account is ready. Choose a plan and add products.</string>
+    <string name="merchant_map_registration_approved">✅ Your business was added to the map.</string>
     <string name="profile_favorites">♥ Saved places</string>
     <string name="profile_responder">Auto-responder</string>
     <string name="profile_wallet">My wallet</string>
@@ -149,8 +190,8 @@
     <string name="guest_profile_title">Open your account</string>
     <string name="guest_profile_sub">The map and the directory are open to everyone. You only need an account for a discount card or to list your shop.</string>
     <string name="guest_profile_p1">Get the discount card</string>
-    <string name="guest_profile_p2">List your shop and add your products and offers</string>
-    <string name="guest_profile_p3">Open your online store and put your business on the map</string>
+    <string name="guest_profile_p2">Add your business to the map or open an online shop</string>
+    <string name="guest_profile_p3">These are separate options. Shops are available to regular users and merchants.</string>
 
     <string name="browse_title">Browse categories</string>
     <string name="browse_all">All %1$s</string>
@@ -205,6 +246,14 @@
     <string name="intro_continue">Continue</string>
     <string name="intro_responder_title">Welcome to the auto-responder 👋</string>
     <string name="intro_responder_body">Smart replies to messages from your customers on your channels, even when you are busy.</string>
+    <string name="responder_plans_title">Auto-responder plans</string>
+    <string name="responder_no_active_plan">You don\'t have an active plan. Choose one below to start the auto-responder.</string>
+    <string name="responder_plan_current">Your current plan</string>
+    <string name="responder_plan_trial">Start free trial</string>
+    <string name="responder_plan_selected">Plan selected and activated ✅</string>
+    <string name="responder_trial_started">Your plan trial has started ✅</string>
+    <string name="responder_offer_bonus_days">%1$d extra days</string>
+    <string name="responder_buy_offer">Choose this offer</string>
     <string name="card_trial_left">Your free period ends in %1$d days</string>
     <string name="card_ends_soon">Your card ends in %1$d days</string>
     <string name="card_expired">Your card has expired</string>
@@ -415,6 +464,15 @@
     <string name="fmt_renew_price">Renew subscription — %1$s %2$s</string>
     <string name="fmt_hook_url">Receiving link: %1$s</string>
     <string name="fmt_connect_ig">Connect Instagram (@%1$s)</string>
+    <string name="rule_edit">Edit</string>
+    <string name="rule_editing">Edit rule</string>
+    <string name="rule_save_changes">Save changes</string>
+    <string name="rule_cancel_edit">Cancel</string>
+    <string name="conn_deleted">Channel deleted</string>
+    <string name="conn_delete">Delete</string>
+    <string name="conn_delete_title">Delete this channel?</string>
+    <string name="conn_delete_body">Its recorded conversations will be deleted and replies will stop.</string>
+    <string name="open_post">Open the post</string>
     <string name="fmt_posts_selected">📌 %1$d posts selected</string>
     <string name="fmt_keywords">Keywords: %1$s</string>
     <string name="fmt_limited_posts">📌 limited to %1$d posts</string>
@@ -431,6 +489,7 @@
     <string name="store_results_for">Results for “%1$s”</string>
     <string name="store_search">Search products or shops</string>
     <string name="store_hero_title">Shop every store in your city</string>
+    <string name="store_start_selling">Have products to sell?</string>
     <string name="store_hero_sub">Thousands of products in one place, with special prices for Dalilacom members</string>
     <string name="store_deals">Member deals</string>
     <string name="store_best">Best sellers</string>
@@ -1083,7 +1142,7 @@
     <string name="loc_done">Your location is saved ✓</string>
     <string name="loc_failed">Could not save the location</string>
     <string name="lm_not_same">No, it is a different place — continue registering</string>
-    <string name="shop_approved">✅ Your business was approved and is on the map</string>
+    <string name="shop_approved">✅ Your shop is open. Choose a plan and add your products.</string>
     <string name="shop_rejected">Your business was not accepted:</string>
     <string name="shop_pending">We got your request and it is being reviewed, we will tell you the result</string>
     <string name="ads_img_label">Picture of the ad (optional)</string>
@@ -1164,4 +1223,12 @@
     <string name="plans_days">days</string>
     <string name="plans_trial_days">trial days</string>
     <string name="billing_paypal">Pay with PayPal</string>
+<string name="care_title">My medical file and patient care</string><string name="care_back">Back</string><string name="care_privacy">Your medical information is private. A doctor cannot see it before you agree, and you can revoke access at any time.</string><string name="care_patients">My patients</string><string name="care_approval_needed">You can request patient links after your doctor profile is approved by the team.</string><string name="care_patient_email">Patient\'s Dalilacom account email</string><string name="care_send_request">Send consent request</string><string name="care_open_record">Open follow-up record</string><string name="care_requests">Doctor requests</string><string name="care_request_explain">This doctor asks to share a private follow-up file with you. They cannot see your information until you agree.</string><string name="care_accept">Accept</string><string name="care_decline">Decline</string><string name="care_my_doctors">My doctors</string><string name="care_revoke">Revoke access</string><string name="care_records">Follow-up record</string><string name="care_add_update">Add patient update</string><string name="care_type">Update type</string><string name="care_short_title">Short title</string><string name="care_details">Details or doctor\'s instructions</string><string name="care_save">Save and notify patient</string><string name="care_status_active">Connected with patient\'s consent</string><string name="care_status_pending">Waiting for patient\'s consent</string><string name="care_status_revoked">Access revoked</string><string name="care_status_declined">Declined</string><string name="care_kind_visit">Visit</string><string name="care_kind_diagnosis">Diagnosis</string><string name="care_kind_medication">Medication</string><string name="care_kind_instructions">Instructions</string><string name="care_kind_followup">Follow-up</string>
+    <string name="appointment_book">Book an appointment</string><string name="appointment_my_title">My appointments and bookings</string><string name="appointment_duration">Appointment length: %1$d minutes</string><string name="appointment_choose_time">Available times</string><string name="appointment_no_slots">There are no available times on this day.</string><string name="appointment_confirm_booking">Confirm appointment</string><string name="appointment_no_record_needed">You can book even if you do not already have a follow-up file with this doctor.</string><string name="appointment_my_bookings">Appointments I booked</string><string name="appointment_empty">There are no appointments right now.</string><string name="appointment_clinic_bookings">My clinic bookings</string><string name="appointment_hours_required">Set clinic hours first.</string><string name="appointment_set_hours">Set office hours</string><string name="appointment_enable_help">The times shown to people follow the clinic hours you have saved.</string><string name="appointment_enable">Let users book appointments</string><string name="appointment_slot_length">Appointment length (minutes)</string><string name="appointment_advance_label">Show appointments up to %1$d days ahead</string><string name="appointment_save_settings">Save booking settings</string><string name="appointment_settings_saved">Appointment settings saved</string><string name="appointment_status_confirmed">Confirmed</string><string name="appointment_status_cancelled">Cancelled</string><string name="appointment_status_completed">Completed</string><string name="appointment_status_no_show">No-show</string><string name="appointment_cancel">Cancel appointment</string>
+    <string name="appointment_booked">Your appointment is confirmed and the doctor was notified</string>
+    <string name="appointment_share_info">When you confirm, the doctor will see your name, email, and phone number if it is saved on your account.</string>
+    <string name="appointment_kind">Appointment type</string><string name="appointment_visit">Visit</string><string name="appointment_follow_up">Follow-up</string><string name="appointment_share_medical">I agree to share my medical file with this doctor</string><string name="appointment_share_medical_help">If you agree, the doctor can see the reason you enter and your latest recorded diagnosis. You can book without sharing your file.</string><string name="appointment_visit_reason">Reason for visit or symptoms (optional)</string><string name="appointment_no_diagnosis">No diagnosis has been recorded yet.</string><string name="appointment_no_medical_share">The patient has not agreed to share their medical file.</string><string name="appointment_diagnosis">Latest diagnosis</string><string name="appointment_trainer_bookings">Training bookings</string>
+    <string name="fitness_profile">My fitness profile</string><string name="fitness_profile_subtitle">Introduce your experience, specialties, and certificates. Your account photo is used as your profile photo.</string><string name="fitness_display_name">Coach or gym name</string><string name="fitness_headline">Short introduction</string><string name="fitness_years">Years of experience</string><string name="fitness_years_value">%1$d years of experience</string><string name="fitness_specialties">Specialties</string><string name="fitness_achievements">Achievements</string><string name="fitness_certifications">Certificates</string><string name="fitness_list_help">Enter one item on each line</string><string name="fitness_certification_note">Enter the certificate name and issuing organization. Upload certificate or achievement photos. Their display does not mean Dalilacom verified them.</string><string name="fitness_unverified">These certificates were added by the profile owner and have not been reviewed by Dalilacom.</string><string name="fitness_current_offers">Current training offers</string><string name="fitness_save">Save fitness profile</string><string name="fitness_saving">Saving…</string><string name="fitness_saved">Fitness profile saved</string>
+<string name="fitness_offer_failed">Could not save the training package</string><string name="fitness_plans_title">Trainee plans</string>    <string name="responder_priority">Rule priority</string><string name="responder_priority_help">Higher numbers are checked first</string><string name="responder_priority_value">Priority: %1$d</string><string name="responder_unmatched_count">Messages without a rule: %1$d</string><string name="responder_rule_usage">%1$s: %2$d times</string><string name="responder_unmatched_samples">Examples of messages without a rule</string>
+
 </resources>

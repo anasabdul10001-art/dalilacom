@@ -1000,11 +1000,56 @@ async function deletePcat(id) {
 }
 
 // ---- Products waiting for review ----
-let prevStatus = 'PENDING';
+let prevStatus = 'ALL';
 
 let prevPage = 1;
 const PROD_STATE = { PENDING: ['بانتظار القرار', 'PENDING'], APPROVED: ['مقبول', 'APPROVED'], REJECTED: ['مرفوض', 'REJECTED'] };
 let prevItems = {};
+const selectedProductIds = new Set();
+
+function resetProductFilters() {
+  ['prev-q', 'prev-from', 'prev-to'].forEach(id => { document.getElementById(id).value = ''; });
+  ['prev-condition', 'prev-visibility', 'prev-stock'].forEach(id => { document.getElementById(id).value = 'ANY'; });
+  document.getElementById('prev-order').value = 'NEWEST';
+  loadProductReview(prevStatus, 1);
+}
+
+function toggleProductPageSelection(checked) {
+  Object.keys(prevItems).forEach(id => checked ? selectedProductIds.add(id) : selectedProductIds.delete(id));
+  document.querySelectorAll('[data-product-select]').forEach(el => { el.checked = checked; });
+  updateProductSelectionUi();
+}
+
+function updateProductSelectionUi() {
+  document.getElementById('prev-selection-count').textContent = selectedProductIds.size ? `محدد ${selectedProductIds.size} منتج` : 'ما في منتجات محددة';
+  document.getElementById('prev-bulk-delete').disabled = !selectedProductIds.size;
+  const pageIds = Object.keys(prevItems);
+  const allChecked = pageIds.length > 0 && pageIds.every(id => selectedProductIds.has(id));
+  document.getElementById('prev-select-page').checked = allChecked;
+  document.querySelectorAll('[data-product-select]').forEach(el => { el.checked = selectedProductIds.has(el.value); });
+}
+
+async function deleteSelectedProducts() {
+  const ids = [...selectedProductIds];
+  if (!ids.length || !confirm(`حذف ${ids.length} منتج محدد؟ المنتجات التي لها طلبات أو سجل ترويج لن تُحذف.`)) return;
+  let deleted = 0, protectedCount = 0;
+  for (let i = 0; i < ids.length; i += 100) {
+    const { ok, data } = await api('POST', '/admin/products/bulk-delete', { ids: ids.slice(i, i + 100) });
+    if (!ok) { alert(`حُذف ${deleted} حتى الآن. ${errText(data, 'تعذّر إكمال الحذف')}`); loadProductReview(prevStatus, prevPage); return; }
+    deleted += data.deleted; protectedCount += data.protected;
+  }
+  ids.forEach(id => selectedProductIds.delete(id));
+  alert(`تم حذف ${deleted} منتج.${protectedCount ? ` تعذّر حذف ${protectedCount} منتجات لارتباطها بطلبات أو سجل ترويج؛ يمكنك إخفاؤها.` : ''}`);
+  loadProductReview(prevStatus, prevPage);
+}
+
+async function deleteProduct(id) {
+  if (!confirm('متأكد بدك تحذف هذا المنتج؟ إذا عليه طلب أو سجل ترويج، رح نمنع الحذف ونخليك تخفيه بدل ذلك.')) return;
+  const { ok, data } = await api('DELETE', '/admin/products/' + id);
+  if (!ok) { alert(errText(data, 'تعذّر حذف المنتج')); return; }
+  selectedProductIds.delete(id);
+  loadProductReview(prevStatus, prevPage);
+}
 
 async function loadProductReview(status, page) {
   prevStatus = status || prevStatus;
@@ -1014,29 +1059,34 @@ async function loadProductReview(status, page) {
   const q = (document.getElementById('prev-q').value || '').trim();
   const params = new URLSearchParams({ status: prevStatus, page: prevPage });
   if (q) params.set('q', q);
+  const filters = { createdFrom: 'prev-from', createdTo: 'prev-to', condition: 'prev-condition', visibility: 'prev-visibility', stock: 'prev-stock', order: 'prev-order' };
+  Object.entries(filters).forEach(([key, id]) => { const val = document.getElementById(id).value; if (val && !['ANY'].includes(val)) params.set(key, val); });
   const res = await fetch('/admin/products?' + params.toString(), { headers: { Authorization: 'Bearer ' + state.token } });
   const data = await res.json().catch(() => []);
   if (!res.ok) { box.innerHTML = '<div class="card muted">تعذّر التحميل</div>'; return; }
   const total = Number(res.headers.get('X-Total-Count')) || data.length;
+  document.getElementById('prev-results-count').textContent = `النتائج: ${total}`;
   prevItems = {};
   data.forEach(p => { prevItems[p.id] = p; });
   box.innerHTML = data.length ? data.map(p => `<div class="card" id="pcard-${p.id}">
     <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <label title="تحديد المنتج"><input type="checkbox" value="${p.id}" data-product-select onchange="this.checked ? selectedProductIds.add(this.value) : selectedProductIds.delete(this.value); updateProductSelectionUi()"></label>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${p.images.slice(0, 4).map(u => `<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>`).join('') || '<span class="muted">بدون صورة</span>'}</div>
       <div style="flex:1;min-width:220px">
         <b style="font-size:16px">${esc(p.name)}</b> <span class="badge ${PROD_STATE[p.moderation][1]}">${PROD_STATE[p.moderation][0]}</span>${p.isActive ? '' : ' <span class="badge inactive">مخفي</span>'}
-        <div class="muted">${esc(p.shop)}${p.phone ? ' · ' + esc(p.phone) : ''} · السعر ${money(p.priceCents)} · المخزون ${p.stock}</div>
+        <div class="muted">${esc(p.shop)}${p.phone ? ' · ' + esc(p.phone) : ''} · السعر ${money(p.priceCents)} · المخزون ${p.stock} · ${p.condition === 'NEW' ? 'جديد' : p.condition === 'USED' ? 'مستعمل' : 'الحالة غير محددة'} · ${p.productCategory ? esc(p.productCategory) + ' · ' : ''}أضيف ${new Date(p.createdAt).toLocaleDateString('ar')}</div>
         <p style="margin:6px 0">${esc(p.description || '')}</p>
         ${p.specs.length ? `<p class="muted">${p.specs.map(s => esc(s.label) + ': ' + esc(s.value)).join(' · ')}</p>` : ''}
         ${p.note ? `<p class="muted">ملاحظة الذكاء الاصطناعي / الإدارة: ${esc(p.note)}</p>` : ''}
         <div style="margin-top:8px">
           ${p.moderation !== 'APPROVED' ? `<button class="small" onclick="decideProduct('${p.id}','approve')">✅ قبول</button> ` : ''}${p.moderation !== 'REJECTED' ? `<button class="small danger" onclick="decideProduct('${p.id}','reject')">❌ رفض</button> ` : ''}
-          <button class="small secondary" onclick="editProduct('${p.id}')">✏️ تعديل</button>
+          <button class="small secondary" onclick="editProduct('${p.id}')">✏️ تعديل</button> <button class="small danger" onclick="deleteProduct('${p.id}')">🗑️ حذف</button>
         </div>
         <div id="pedit-${p.id}"></div>
       </div>
     </div></div>`).join('') : '<div class="card muted">ما في منتجات</div>';
   document.getElementById('prev-pager').innerHTML = pagerHtml('prevGo', prevPage, total);
+  updateProductSelectionUi();
   refreshProductReviewBadge();
 }
 function prevGo(p) { loadProductReview(prevStatus, p); }
@@ -1438,6 +1488,7 @@ async function demoStore(method) {
 
 // ---- AI provider status ----
 let aiPacks = [];
+let aiModelPrices = [];
 
 function renderAiPacks() {
   document.getElementById('ai-packs').innerHTML = aiPacks.map((p, i) => `
@@ -1470,6 +1521,43 @@ async function loadAiQuota() {
   document.getElementById('ai-price').value = data.ai.creditsPerUse;
   aiPacks = (data.ai.packages || []).map((p) => ({ ...p }));
   renderAiPacks();
+  aiModelPrices = (data.aiModelPrices || []).map((p) => ({ ...p }));
+  renderAiModelPrices();
+}
+
+function renderAiModelPrices() {
+  const body = document.getElementById('ai-model-prices');
+  if (!body) return;
+  body.innerHTML = aiModelPrices.map((p, i) => `<tr>
+    <td><input value="${esc(p.provider)}" placeholder="groq / openai" oninput="aiModelPrices[${i}].provider=this.value"></td>
+    <td><input value="${esc(p.model)}" placeholder="اسم النموذج" oninput="aiModelPrices[${i}].model=this.value"></td>
+    <td><input type="number" min="0" step="0.000001" value="${p.inputUsdPerMillion ?? ''}" oninput="aiModelPrices[${i}].inputUsdPerMillion=this.value===''?null:Number(this.value)"></td>
+    <td><input type="number" min="0" step="0.000001" value="${p.outputUsdPerMillion ?? ''}" oninput="aiModelPrices[${i}].outputUsdPerMillion=this.value===''?null:Number(this.value)"></td>
+    <td><button class="small danger" onclick="aiModelPrices.splice(${i},1);renderAiModelPrices()">✕</button></td>
+  </tr>`).join('');
+}
+
+function addAiModelPrice() {
+  aiModelPrices.push({ provider: '', model: '', inputUsdPerMillion: null, outputUsdPerMillion: null });
+  renderAiModelPrices();
+}
+
+async function saveAiModelPrices() {
+  const msg = document.getElementById('ai-model-price-msg');
+  if (aiModelPrices.some(p => !p.provider.trim() || !p.model.trim() || !(p.inputUsdPerMillion === null || Number.isFinite(p.inputUsdPerMillion)) || !(p.outputUsdPerMillion === null || Number.isFinite(p.outputUsdPerMillion)))) { msg.textContent = 'تأكد من تعبئة اسم المزوّد والنموذج والأسعار'; return; }
+  msg.textContent = 'عم نحفظ...';
+  const { ok } = await api('PUT', '/admin/settings', { aiModelPrices: aiModelPrices.map(p => ({ ...p, provider: p.provider.trim(), model: p.model.trim() })) });
+  msg.textContent = ok ? 'انحفظت الأسعار ✓' : 'تعذّر الحفظ';
+  if (ok) loadResponderAiUsage();
+}
+
+async function loadResponderAiUsage() {
+  const { ok, data } = await api('GET', '/admin/responder-ai-usage');
+  if (!ok) return;
+  const body = document.getElementById('responder-ai-usage-body');
+  if (!body) return;
+  body.innerHTML = (data.accounts || []).map(row => `<tr><td>${esc(row.user?.fullName || '—')}<br><small>${esc(row.user?.email || '')}</small></td><td>${row.calls}</td><td>${row.promptTokens}</td><td>${row.completionTokens}</td><td>${row.estimatedCostUsd ?? 'غير معروفة'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">ما في استخدام مسجل هذا الشهر</td></tr>';
+  document.getElementById('responder-ai-usage-note').textContent = `الفترة: ${data.month}`;
 }
 
 async function saveAiQuota() {
@@ -1485,6 +1573,7 @@ async function saveAiQuota() {
 
 async function loadAiStatus() {
   loadAiQuota();
+  loadResponderAiUsage();
   const { ok, data } = await api('GET', '/admin/ai-status');
   if (!ok) { logout(); return; }
   document.getElementById('ai-vision').textContent = data.vision ? 'شغّال ✓' : 'مطفأ — ضيف مفتاح Gemini على Render';
@@ -1645,6 +1734,10 @@ const SERVICE_LABEL = {
   ACCOUNTING: 'المحاسبة',
 };
 const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT', 'ACCOUNTING'];
+RESPONDER_BASIC: 'المجيب الآلي — خطة موحّدة',
+};
+const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_BASIC', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT'];
+
 let planCountries = [];
 
 function escHtml(s) {
@@ -1682,6 +1775,29 @@ function addPriceRow(planId) {
   document.getElementById('pp-' + planId).insertAdjacentHTML('beforeend', priceRowHtml());
 }
 
+function offerDateInput(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function offerRowHtml(offer = {}) {
+  return `<div class="offer-row row" data-offer-id="${escHtml(offer.id || '')}" style="align-items:flex-end;margin:8px 0;padding:8px;border:1px solid #ddd;border-radius:8px">
+    <div><label>عدد الفترات المدفوعة</label><input class="of-periods" type="number" min="1" value="${offer.paidPeriods ?? 1}" /></div>
+    <div><label>أيام إضافية مجانية</label><input class="of-days" type="number" min="0" value="${offer.bonusDays ?? 0}" /></div>
+    <div style="flex:2"><label>نص العرض</label><input class="of-text" maxlength="200" value="${escHtml(offer.text || '')}" /></div>
+    <div><label>يبدأ (اختياري)</label><input class="of-start" type="datetime-local" value="${offerDateInput(offer.startsAt)}" /></div>
+    <div><label>ينتهي (اختياري)</label><input class="of-end" type="datetime-local" value="${offerDateInput(offer.endsAt)}" /></div>
+    <div style="flex:0 0 auto"><label>فعّال</label><input class="of-active" type="checkbox" style="width:auto" ${offer.isActive === false ? '' : 'checked'} /></div>
+    <div style="flex:0 0 auto"><button class="small danger" onclick="removePlanOffer(this)">✕</button></div>
+  </div>`;
+}
+
+function addPlanOfferRow(planId) {
+  document.getElementById('offers-' + planId).insertAdjacentHTML('beforeend', offerRowHtml());
+}
+
 function planCardHtml(p) {
   const isMerchant = p.service === 'MERCHANT_ACCOUNT';
   const features = (p.features || []).map(f => (f.included ? '✔ ' : '✘ ') + f.text).join('\n');
@@ -1715,8 +1831,11 @@ function planCardHtml(p) {
     <label>أسعار خاصة بالبلدان (الباقة بتنباع بسعرها الأساسي لأي بلد ما إلو سطر هون)</label>
     <div id="pp-${p.id}">${(p.prices || []).map(priceRowHtml).join('')}</div>
     <button class="small secondary" onclick="addPriceRow('${p.id}')">+ إضافة بلد</button>
+    <label style="margin-top:12px">عروض المدة (سعر الفترات المدفوعة، مع أيام إضافية مجانًا)</label>
+    <div id="offers-${p.id}">${(p.offers || []).map(offerRowHtml).join('')}</div>
+    <button class="small secondary" onclick="addPlanOfferRow('${p.id}')">+ إضافة عرض</button>
     <div style="margin-top:14px">
-      <button onclick="savePlanFull('${p.id}')">💾 حفظ الباقة</button>
+      <button onclick="savePlanFull('${p.id}')">💾 حفظ الباقة والعروض</button>
       <button class="secondary" onclick="togglePlanActive('${p.id}', ${p.isActive})">${p.isActive ? 'تعطيل' : 'تفعيل'}</button>
       <button class="danger" onclick="removePlan('${p.id}')">🗑️ حذف</button>
     </div>
@@ -1812,7 +1931,42 @@ async function savePlanFull(id) {
   if (!f.ok) { alert(errText(f.data, 'تعذّر حفظ المواصفات')); return; }
   const p = await api('PUT', `/plans/${id}/prices`, { prices });
   if (!p.ok) { alert(errText(p.data, 'تعذّر حفظ أسعار البلدان')); return; }
+  const offers = await savePlanOffers(id);
+  if (!offers) return;
   loadPlans();
+}
+
+function removePlanOffer(button) {
+  const row = button.closest('.offer-row');
+  if (row.dataset.offerId && !confirm('حذف هذا العرض؟')) return;
+  if (row.dataset.offerId) row.dataset.delete = 'true';
+  else row.remove();
+  if (row.dataset.delete) row.style.display = 'none';
+}
+
+async function savePlanOffers(planId) {
+  const rows = [...document.querySelectorAll(`#offers-${planId} .offer-row`)];
+  for (const row of rows) {
+    const id = row.dataset.offerId;
+    if (row.dataset.delete === 'true') {
+      const deleted = await api('DELETE', `/plans/offers/${id}`);
+      if (!deleted.ok) { alert(errText(deleted.data, 'تعذّر حذف العرض')); return false; }
+      continue;
+    }
+    const text = row.querySelector('.of-text').value.trim();
+    if (!text) { alert('اكتب اسم أو وصف العرض'); return false; }
+    const payload = {
+      paidPeriods: parseInt(row.querySelector('.of-periods').value, 10),
+      bonusDays: parseInt(row.querySelector('.of-days').value, 10), text,
+      startsAt: row.querySelector('.of-start').value ? new Date(row.querySelector('.of-start').value).toISOString() : null,
+      endsAt: row.querySelector('.of-end').value ? new Date(row.querySelector('.of-end').value).toISOString() : null,
+      isActive: row.querySelector('.of-active').checked,
+    };
+    if (!Number.isInteger(payload.paidPeriods) || payload.paidPeriods < 1 || !Number.isInteger(payload.bonusDays) || payload.bonusDays < 0) { alert('تحقق من عدد الفترات والأيام'); return false; }
+    const saved = id ? await api('PATCH', `/plans/offers/${id}`, payload) : await api('POST', `/plans/${planId}/offers`, payload);
+    if (!saved.ok) { alert(errText(saved.data, 'تعذّر حفظ العرض')); return false; }
+  }
+  return true;
 }
 
 async function togglePlanActive(id, current) {
@@ -1869,11 +2023,30 @@ async function loadResponderAdmin() {
   document.getElementById('rs-period').value = data.responder.periodDays;
   document.getElementById('rs-trial').value = data.responder.trialDays;
   document.getElementById('rs-ai-limit').value = data.responder.monthlyAiReplyLimit;
+  document.getElementById('rs-badge-enabled').checked = data.responderBadge.enabled;
+  document.getElementById('rs-badge-text').value = data.responderBadge.text;
   document.getElementById('rs-usdt').value = data.payment.usdtTrc20Address;
   document.getElementById('rs-syp').value = data.payment.sypPerUsd || 0;
   document.getElementById('rs-wallets').value = data.payment.localWallets.map(w => [w.key, w.label, w.accountNumber, w.instructions || ''].join('|')).join('\n');
   loadChannels();
   loadSubs();
+  loadResponderGrantPlans();
+}
+async function loadResponderGrantPlans() {
+  const { ok, data } = await api('GET', '/admin/responder/grant-plans');
+  if (!ok) return;
+  const select = document.getElementById('rg-plan');
+  select.innerHTML = '<option value="">— اختر خطة —</option>' + data.map(p => `<option value="${p.id}">${esc(p.name)}${p.includesAi ? ' · ذكاء اصطناعي' : ' · ردود ثابتة'}${p.isActive ? '' : ' · خطة قديمة'}</option>`).join('');
+}
+async function grantResponderPlan() {
+  const msg = document.getElementById('rg-msg');
+  const days = Number(document.getElementById('rg-days').value);
+  const body = { userEmail: document.getElementById('rg-email').value.trim(), planId: document.getElementById('rg-plan').value, days };
+  if (!body.userEmail || !body.planId || !Number.isInteger(days) || days <= 0) { msg.textContent = '❌ اكتب البريد واختر الخطة وحدد الأيام'; return; }
+  msg.textContent = 'جارٍ تفعيل الخطة…';
+  const { ok, data } = await api('POST', '/admin/responder/grant', body);
+  msg.textContent = ok ? `✅ تم منح ${data.plan.name} للحساب ${data.user.email}` : '❌ ' + errText(data, 'تعذّر منح الخطة');
+  if (ok) loadSubs();
 }
 async function saveResponderSettings() {
   const num = (id) => Number(document.getElementById(id).value);
@@ -1885,6 +2058,7 @@ async function saveResponderSettings() {
     creditName: document.getElementById('rs-credit-name').value.trim(),
     creditsPerUsd: num('rs-credits-usd'),
     responder: { priceCustomer: num('rs-price-customer'), priceMerchant: num('rs-price-merchant'), periodDays: num('rs-period'), trialDays: num('rs-trial'), monthlyAiReplyLimit: num('rs-ai-limit') },
+    responderBadge: { enabled: document.getElementById('rs-badge-enabled').checked, text: document.getElementById('rs-badge-text').value.trim() },
     payment: { usdtTrc20Address: document.getElementById('rs-usdt').value.trim(), localWallets: wallets, sypPerUsd: num('rs-syp') || 0 },
   });
   const msg = document.getElementById('rs-msg');

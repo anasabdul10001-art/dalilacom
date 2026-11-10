@@ -86,7 +86,7 @@ describe("Facebook Login: starting the flow", () => {
     const res = await request(app).get("/responder/meta/oauth/status").set("Authorization", token);
     expect(res.status).toBe(200);
     expect(res.body.available).toBe(true);
-    expect(res.body.responderRunning).toBe(true);
+    expect(res.body).not.toHaveProperty("responderRunning");
     expect(res.body.redirectUri).toBe("http://localhost:4000/responder/meta/oauth/callback");
     expect(res.body.scopes).toContain("pages_manage_metadata");
     expect(res.body.scopes).toContain("pages_messaging");
@@ -120,7 +120,9 @@ describe("Facebook Login: starting the flow", () => {
     try {
       const plain = await startState(token);
       expect(plain.url.searchParams.get("config_id")).toBeNull();
-      expect(plain.url.searchParams.get("scope")).toContain("pages_read_user_content");
+      expect(plain.url.searchParams.get("scope")).toContain("pages_messaging");
+      expect(plain.url.searchParams.get("scope")).not.toContain("pages_read_user_content");
+      expect(plain.url.searchParams.get("scope")).not.toContain("pages_read_engagement");
 
       process.env.META_LOGIN_USE_CONFIG = "true";
       const configured = await startState(token);
@@ -149,13 +151,14 @@ describe("Facebook Login: starting the flow", () => {
     expect(res.status).toBe(401);
   });
 
-  it("refuses to start for a merchant whose auto-responder is not running", async () => {
+  it("allows a signed-in merchant to link Meta before choosing a responder plan", async () => {
     const email = uniqueEmail("noresponder");
     const password = "correct-horse-battery-staple";
     await request(app).post("/auth/register").send({ email, password, fullName: "No Responder" });
     const login = await request(app).post("/auth/login").send({ email, password });
     const res = await request(app).get("/responder/meta/oauth/start").set("Authorization", `Bearer ${login.body.token}`);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(new URL(res.body.url).origin).toBe("https://www.facebook.com");
   });
 
   it("answers META_NOT_CONFIGURED when no Meta app is set up, instead of pretending", async () => {
@@ -202,6 +205,15 @@ describe("Facebook Login: the callback", () => {
     const res = await request(app).get("/responder/meta/oauth/callback").query({ state, code: "c" });
     expect(res.status).toBe(400);
     expect(res.text).toContain("ما لقينا صفحات");
+  });
+
+  it("names a Page that Facebook lists without a token instead of dropping it silently", async () => {
+    pagesForAccounts = [{ id: PAGE_A, name: "منصة دليلكم" }];
+    const { state } = await startState(token);
+    const res = await request(app).get("/responder/meta/oauth/callback").query({ state, code: "c" });
+    expect(res.status).toBe(400);
+    expect(res.text).toContain("منصة دليلكم");
+    expect(res.text).toContain("صلاحية الإدارة");
   });
 
   it("connects the only Page straight away, subscribes it, and stores the token encrypted", async () => {

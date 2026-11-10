@@ -156,6 +156,7 @@ async function api(method, path, body) {
 function setToken(token, role) {
   S.token = token;
   S.role = role;
+  S._profileServiceActivity = null;
   localStorage.setItem("dlk_token", token);
   localStorage.setItem("dlk_role", role);
   if (S._discover) loadFavIds();
@@ -182,6 +183,7 @@ function clearToken() {
   S._onboarding = null;
   S._mprof = null;
   S._profile = null;
+  S._profileServiceActivity = null;
   loadMarket();
 }
 
@@ -213,7 +215,7 @@ function back() {
 }
 
 /** Not open yet: the buttons stay, a tap only says it is coming (flip these when the Meta app and the auto-responder are ready). */
-const SOON = { facebookLogin: true, responder: true };
+const SOON = { facebookLogin: true, responder: false };
 
 function reset(screen) {
   stopQrLoop();
@@ -222,6 +224,19 @@ function reset(screen) {
   S.params = {};
   S.error = null;
   render();
+}
+
+function resumeAfterAuthentication() {
+  const next = S._afterLogin;
+  if (!next) return false;
+  S._afterLogin = null;
+  S.stack = [];
+  S.screen = next.screen;
+  S.params = next.params || {};
+  S._appointmentUi = { loading: true, doctorId: S.params.doctorId };
+  render();
+  if (S.params.doctorId) loadDoctorSlots(S.params.doctorId); else loadAppointmentDashboard();
+  return true;
 }
 
 function setHomeTab(tab) {
@@ -258,7 +273,7 @@ function root() {
 
 /* ---- the round floating buttons: the member card for everyone, the discount button for shops ---- */
 
-const FAB_HIDDEN = ["login", "register", "merchantRegister", "forgot", "socialEmail"];
+const FAB_HIDDEN = ["login", "register", "merchantRegister", "locationSearch", "forgot", "socialEmail"];
 const FAB_STORE = ["store", "productDetail"]; // the shop's discount button is not shown on the store screens
 const FAB_CARD_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.6"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/></svg>`;
 const FAB_TAG_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>`;
@@ -509,7 +524,7 @@ async function render() {
   document.body.classList.toggle("navigating", !!(S._route && S._route.phase === "navigating"));
   const active = document.activeElement;
   // the map search box keeps its own element through every redraw: a new one lost the caret (Arabic letters came out reversed), the undo history and the typing in progress
-  const keepQ = active && (active.id === "disc-q" || active.id === "mr-name") ? active : null;
+  const keepQ = active && (active.id === "disc-q" || active.id === "mr-name" || active.id === "loc-search-q") ? active : null;
   const caret = keepQ ? [keepQ.selectionStart, keepQ.selectionEnd] : null;
   const chipsAt = el.querySelector(".float-chips") ? el.querySelector(".float-chips").scrollLeft : null; // the row of filters stays where the person scrolled it
   el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml() + cityGateHtml();
@@ -527,6 +542,7 @@ async function render() {
       try { const n = keepQ.value.length; keepQ.setSelectionRange(Math.min(caret[0], n), Math.min(caret[1], n)); } catch (e) {}
     }
   }
+  if (S.screen === "locationSearch") renderLocationSearchMap();
 }
 
 function statusBadge(status) {
@@ -652,6 +668,7 @@ function renderScreen() {
     case "productDetail": return screenProductDetail();
     case "orderDetail": return screenOrderDetail();
     case "merchantRegister": return screenMerchantRegister();
+    case "locationSearch": return screenLocationSearch();
     case "merchantMode": return screenMerchantModeShell();
     case "shippingMethods": return screenShipping();
     case "merchantBranches": return screenBranches();
@@ -678,6 +695,11 @@ function renderScreen() {
     case "merchantHours": return screenMerchantHours();
     case "merchantProfile": return screenMerchantProfile();
     case "profileEdit": return screenProfileEdit();
+    case "doctorCare": return screenDoctorCare();
+    case "doctorAppointments": return screenDoctorAppointments();
+    case "fitnessProfile": return screenFitnessProfile();
+    case "fitnessPlans": return screenFitnessPlans();
+    case "myFitnessPlans": return screenMyFitnessPlans();
     case "account": return screenAccount();
     case "forgot": return screenForgot();
     case "socialEmail": return screenSocialEmail();
@@ -743,7 +765,7 @@ async function bootSocialReturn() {
     const { ok, data } = await api("POST", "/auth/social/exchange", { ticket });
     if (ok) {
       setToken(data.token, data.user.role);
-      reset("home");
+      if (!resumeAfterAuthentication()) reset("home");
       return true;
     }
   }
@@ -773,7 +795,7 @@ async function doSocialEmail() {
   S.busy = true; S.error = null; render();
   const { ok, data } = await api("POST", "/auth/social/complete", { pending: S.params.pending, email });
   S.busy = false;
-  if (ok) { setToken(data.token, data.user.role); reset("home"); return; }
+  if (ok) { setToken(data.token, data.user.role); if (!resumeAfterAuthentication()) reset("home"); return; }
   const code = data && data.error && data.error.code;
   S.error = code === "EMAIL_IN_USE" ? "هذا الإيميل مسجّل عندنا. سجّل دخول بكلمة السر أول، أو استخدم إيميل غيره." : code === "BAD_STATE" ? "انتهت صلاحية الدخول. ابدأ من جديد." : errMsg(data, "تعذّر إنشاء الحساب");
   render();
@@ -842,7 +864,7 @@ async function doLogin() {
   S.busy = false;
   if (ok) {
     setToken(data.token, data.user.role);
-    reset("home");
+    if (!resumeAfterAuthentication()) reset("home");
   } else {
     S.error = "الإيميل أو كلمة السر غير صحيحين، تأكد وجرّب من جديد";
     render();
@@ -980,6 +1002,7 @@ async function doRegister() {
   if (ok) {
     forgetJoin();
     setToken(data.token, data.user.role);
+    if (resumeAfterAuthentication()) return;
     const wantsMerchant = S.params.intent === "MERCHANT";
     reset("home");
     if (wantsMerchant) go("merchantRegister");
@@ -1204,7 +1227,7 @@ function discoverState() {
     S._discover = {
       loading: true, query: "", categoryId: "", categories: [], merchants: [],
       openNow: false, discountsOnly: false, radiusKm: null,
-      userLoc: null, locError: null, locAsked: false,
+      userLoc: null, searchCenter: null, searchLabel: "", locError: null, locAsked: false,
       favIds: [], suggest: null, showSuggest: false, areaDirty: false, bounds: null, browse: null,
     };
     loadCategories().then(() => searchMerchants());
@@ -1213,15 +1236,137 @@ function discoverState() {
   return S._discover;
 }
 
+function openLocationSearch() {
+  const d = discoverState();
+  S._locationSearch = {
+    query: "", suggestions: [], center: d.searchCenter || d.userLoc || null,
+    label: d.searchLabel || (d.userLoc ? t("location.myLocation") : ""), radiusKm: d.radiusKm || 10,
+  };
+  go("locationSearch");
+}
+
+function screenLocationSearch() {
+  const p = S._locationSearch || (S._locationSearch = { query: "", suggestions: [], center: null, label: "", radiusKm: 10 });
+  return `<div class="location-search-page">
+    <div id="location-search-map" class="location-search-map"></div>
+    <div class="location-search-panel">
+      <div class="location-search-title"><button class="loc-back" onclick="back()">‹</button><b>${esc(t("location.title"))}</b></div>
+      <div class="location-search-field"><span>⌕</span><input id="loc-search-q" autocomplete="off" placeholder="${esc(t("location.placeholder"))}" value="${esc(p.query)}" oninput="locationSearchTyped(this.value)" onkeydown="if(event.key==='Enter'){locationPickFirst()}" /><button onclick="useLocationSearchMyLocation()" title="${esc(t("location.myLocation"))}">📍</button></div>
+      ${p.suggestions.length ? `<div class="location-search-suggestions">${p.suggestions.map((x,i)=>`<button onclick="chooseSearchLocation(${i})"><b>📍 ${esc(x.label)}</b>${x.city?`<small>${esc(x.city)}</small>`:""}</button>`).join("")}</div>` : ""}
+      ${p.label ? `<div class="location-current">${esc(p.label)}</div>` : `<div class="location-current">${esc(t("location.choosePlace"))}</div>`}
+      <label class="location-radius-label"><span>${esc(t("location.radius"))}</span><b>${p.radiusKm} ${esc(t("unit.km"))}</b></label>
+      <input class="location-radius-slider" type="range" min="1" max="100" step="1" value="${p.radiusKm}" oninput="setLocationSearchRadius(this.value)" />
+      <div class="location-radius-ends"><span>1 ${esc(t("unit.km"))}</span><span>100 ${esc(t("unit.km"))}</span></div>
+      <button class="btn location-search-apply" onclick="applyLocationSearch()">${esc(t("location.showResults"))}</button>
+    </div>
+  </div>`;
+}
+
+let locationSearchTimer = null;
+function locationSearchTyped(value) {
+  const p = S._locationSearch;
+  if (!p) return;
+  p.query = value;
+  if (locationSearchTimer) clearTimeout(locationSearchTimer);
+  if (value.trim().length < 3) { p.suggestions = []; return render(); }
+  locationSearchTimer = setTimeout(async () => {
+    const query = p.query.trim();
+    const { ok, data } = await api("GET", "/geo/suggest?q=" + encodeURIComponent(query));
+    if (S.screen !== "locationSearch" || p.query.trim() !== query) return;
+    p.suggestions = ok && Array.isArray(data) ? data.slice(0, 6) : [];
+    render();
+  }, 450);
+  render();
+}
+function locationPickFirst() { if (S._locationSearch?.suggestions?.length) chooseSearchLocation(0); }
+function chooseSearchLocation(index) {
+  const p = S._locationSearch, place = p && p.suggestions[index];
+  if (!place) return;
+  p.center = { lat: Number(place.latitude), lng: Number(place.longitude) };
+  p.label = place.label || place.address || "";
+  p.query = p.label;
+  p.suggestions = [];
+  render();
+}
+function setLocationSearchRadius(value) {
+  if (!S._locationSearch) return;
+  S._locationSearch.radiusKm = Math.max(1, Math.min(100, Number(value) || 1));
+  const label = document.querySelector(".location-radius-label b");
+  if (label) label.textContent = S._locationSearch.radiusKm + " " + t("unit.km");
+  syncLocationSearchCircle();
+}
+function useLocationSearchMyLocation() {
+  const p = S._locationSearch;
+  if (!navigator.geolocation) return toast(t("loc.unavailable"));
+  navigator.geolocation.getCurrentPosition((pos) => {
+    p.center = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    p.label = t("location.myLocation"); p.query = ""; p.suggestions = [];
+    render();
+  }, (err) => toast(locErrorText(err.code)), { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 });
+}
+function applyLocationSearch() {
+  const p = S._locationSearch;
+  if (!p || !p.center) return toast(t("location.choosePlace"));
+  const d = discoverState();
+  d.searchCenter = p.center; d.searchLabel = p.label; d.radiusKm = p.radiusKm;
+  d.bounds = null; d.areaDirty = false; d.selectedId = null;
+  S._radiusFit = true; S._radiusDrawn = "";
+  back();
+  searchMerchants();
+}
+
+function renderLocationSearchMap() {
+  const slot = document.getElementById("location-search-map");
+  if (!slot || typeof L === "undefined") return;
+  if (!S._locSearchMap) {
+    const mapEl = document.createElement("div");
+    mapEl.style.cssText = "position:absolute;inset:0;width:100%;height:100%";
+    slot.appendChild(mapEl);
+    S._locSearchMapEl = mapEl;
+    const map = L.map(mapEl, { attributionControl: false, zoomControl: true }).setView([DAMASCUS.lat, DAMASCUS.lng], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+    L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
+    S._locSearchMap = map;
+    map.on("click", (e) => {
+      const p = S._locationSearch;
+      if (!p) return;
+      p.center = { lat: e.latlng.lat, lng: e.latlng.lng }; p.label = t("location.mapPin");
+      syncLocationSearchCircle();
+      const label = document.querySelector(".location-current"); if (label) label.textContent = p.label;
+    });
+  } else if (S._locSearchMapEl.parentElement !== slot) slot.appendChild(S._locSearchMapEl);
+  S._locSearchMap.invalidateSize();
+  syncLocationSearchCircle();
+}
+function syncLocationSearchCircle() {
+  const p = S._locationSearch, map = S._locSearchMap;
+  if (!p || !map) return;
+  if (S._locSearchCircle) map.removeLayer(S._locSearchCircle);
+  if (S._locSearchMarker) map.removeLayer(S._locSearchMarker);
+  if (!p.center) return;
+  S._locSearchCircle = L.circle([p.center.lat, p.center.lng], { radius: p.radiusKm * 1000, color: "#347a28", weight: 2, fillColor: "#397d2e", fillOpacity: 0.16 }).addTo(map);
+  S._locSearchMarker = L.marker([p.center.lat, p.center.lng], { draggable: true }).addTo(map);
+  S._locSearchMarker.on("dragend", () => {
+    const ll = S._locSearchMarker.getLatLng(); p.center = { lat: ll.lat, lng: ll.lng }; p.label = t("location.mapPin"); syncLocationSearchCircle();
+    const label = document.querySelector(".location-current"); if (label) label.textContent = p.label;
+  });
+  const key = `${p.center.lat},${p.center.lng},${p.radiusKm}`;
+  if (S._locSearchViewKey !== key) {
+    S._locSearchViewKey = key;
+    map.fitBounds(S._locSearchCircle.getBounds(), { padding: [36, 36], maxZoom: 14, animate: false });
+  }
+}
+
 // Filters, distance and ordering are applied client-side so toggling a chip never refetches.
 function visibleMerchants(d) {
+  const center = d.searchCenter || d.userLoc;
   let list = d.merchants.map((m) =>
-    d.userLoc && m.latitude != null && m.longitude != null
-      ? { ...m, distanceKm: haversineKm(d.userLoc.lat, d.userLoc.lng, m.latitude, m.longitude) }
+    center && m.latitude != null && m.longitude != null
+      ? { ...m, distanceKm: haversineKm(center.lat, center.lng, m.latitude, m.longitude) }
       : m);
   if (d.openNow) list = list.filter((m) => m.openStatus && m.openStatus.isOpen);
   if (d.discountsOnly) list = list.filter((m) => (m.discounts || []).length > 0);
-  if (d.radiusKm && d.userLoc) list = list.filter((m) => m.distanceKm != null && m.distanceKm <= d.radiusKm);
+  if (d.radiusKm && center) list = list.filter((m) => m.distanceKm != null && m.distanceKm <= d.radiusKm);
   return list.sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9) || a.businessName.localeCompare(b.businessName));
 }
 
@@ -1434,6 +1579,7 @@ function tabDiscover() {
             <input id="disc-q" placeholder="${esc(t("search.placeholder"))}" value="${esc(d.query)}" autocomplete="off"
               oninput="onDiscoverQuery(this.value)" onfocus="onDiscoverFocus()" onblur="onDiscoverBlur()" onkeydown="if(event.key==='Enter'){onDiscoverSubmit()}" />
             ${d.query ? `<button class="clear-x" onmousedown="onDiscoverClear()">✕</button>` : ""}
+            <button class="location-search-btn" onclick="openLocationSearch()" title="${esc(t("location.title"))}">📍</button>
             ${S.token ? "" : `<button class="login-pill" onclick="go('login')">${esc(t("login.pill"))}</button>`}
           </div>
           ${suggestHtml(d)}
@@ -1461,15 +1607,15 @@ function tabDiscover() {
       <div class="sheet ${S._sheet === "min" ? "is-min" : ""}" id="sheet">
         <div class="sheet-handle" onpointerdown="sheetDragStart(event)" onclick="sheetToggle()"><span></span></div>
         <div class="sheet-head" onpointerdown="sheetDragStart(event)" onclick="sheetHeadTap(event)">
-          <strong class="t-full">${esc(deals ? t("deals.sheetTitle") : d.userLoc ? t("sheet.nearby") : t("sheet.directory"))}</strong>
+          <strong class="t-full">${esc(deals ? t("deals.sheetTitle") : (d.searchCenter || d.userLoc) ? t("sheet.nearby") : t("sheet.directory"))}</strong>
           <strong class="t-min">${esc(t("sheet.directory"))}</strong>
           <span class="badge info sheet-count">${esc(t("sheet.count", { n: sheetList.length }))}</span>
           <button class="sheet-collapse" onclick="sheetCollapse(event)" aria-label="${esc(t("sheet.collapse"))}" title="${esc(t("sheet.collapse"))}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
-        ${(d.userLoc || d.bounds || deals) ? `<div class="sheet-chips">
+        ${(d.searchCenter || d.userLoc || d.bounds || deals) ? `<div class="sheet-chips">
           ${d.bounds ? `<button class="chip active" onclick="clearSearchArea()">${esc(t("area.clear"))}</button>` : ""}
           ${deals && !d.userLoc ? `<button class="chip" onclick="requestDiscoverLocation(true)">📍 ${esc(t("deals.locate"))}</button>` : ""}
-          ${d.userLoc ? (deals ? [null, 1, 3, 5, 10, 25] : [null, 2, 5, 10, 25]).map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${esc(r ? t("radius.km", { n: r }) : t("radius.any"))}</button>`).join("") : ""}
+          ${(d.searchCenter || d.userLoc) ? (deals ? [null, 1, 3, 5, 10, 25] : [null, 2, 5, 10, 25]).map((r) => `<button class="chip ${d.radiusKm === r ? "active" : ""}" onclick="setDiscoverRadius(${r})">${esc(r ? t("radius.km", { n: r }) : t("radius.any"))}</button>`).join("") : ""}
         </div>` : ""}
         <div class="sheet-list">
           ${picked.length ? `<button class="show-all" onclick="clearSelectedMerchant()">↩ ${esc(t("sheet.showAll", { n: list.length }))}</button>` : ""}
@@ -2043,11 +2189,12 @@ function renderDiscoverMap() {
 function syncRadiusLayer() {
   const d = S._discover;
   const map = S._map;
-  const key = d.radiusKm && d.userLoc ? `${d.radiusKm}|${d.userLoc.lat}|${d.userLoc.lng}` : "";
+  const center = d.searchCenter || d.userLoc;
+  const key = d.radiusKm && center ? `${d.radiusKm}|${center.lat}|${center.lng}` : "";
   if (key !== S._radiusDrawn) {
     S._radiusDrawn = key;
     if (S._radiusLayer) { map.removeLayer(S._radiusLayer); S._radiusLayer = null; }
-    if (key) S._radiusLayer = L.circle([d.userLoc.lat, d.userLoc.lng], { radius: d.radiusKm * 1000, color: "#ba2a34", weight: 2, dashArray: "6 6", fillColor: "#ba2a34", fillOpacity: 0.06, interactive: false }).addTo(map);
+    if (key) S._radiusLayer = L.circle([center.lat, center.lng], { radius: d.radiusKm * 1000, color: "#ba2a34", weight: 2, dashArray: "6 6", fillColor: "#ba2a34", fillOpacity: 0.06, interactive: false }).addTo(map);
   }
   if (!S._radiusFit) return;
   S._radiusFit = false;
@@ -2055,10 +2202,10 @@ function syncRadiusLayer() {
   const pad = { paddingTopLeft: [20, 150], paddingBottomRight: [20, sheetPx + 20], animate: false };
   if (S._radiusLayer) {
     moveMap(() => map.fitBounds(S._radiusLayer.getBounds(), pad));
-  } else if (d.userLoc) {
+  } else if (center) {
     // "Any distance": frame the user together with every place on the map.
     const pts = (S._visible || []).flatMap(merchantMapPoints).map((m) => [m.latitude, m.longitude]);
-    pts.push([d.userLoc.lat, d.userLoc.lng]);
+    pts.push([center.lat, center.lng]);
     moveMap(() => map.fitBounds(L.latLngBounds(pts), { ...pad, maxZoom: 15 }));
   }
 }
@@ -2073,6 +2220,9 @@ function syncMapMarkers() {
   S._userLayer.clearLayers();
   if (d.userLoc) {
     L.circleMarker([d.userLoc.lat, d.userLoc.lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#1e6fe0", fillOpacity: 1 }).addTo(S._userLayer).bindPopup("موقعك");
+  }
+  if (d.searchCenter && (!d.userLoc || d.searchCenter.lat !== d.userLoc.lat || d.searchCenter.lng !== d.userLoc.lng)) {
+    L.circleMarker([d.searchCenter.lat, d.searchCenter.lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#397d2e", fillOpacity: 1 }).addTo(S._userLayer).bindPopup(esc(d.searchLabel || t("location.title")));
   }
 
   const key = located.map((m) => `${m.id}:${m._mapPlaceId}`).join(",") + "|" + (d.selectedId || "");
@@ -2515,8 +2665,42 @@ async function printAccountingReport() {
 
 /* ---- Profile tab ---- */
 
+function loadProfileServiceActivity() {
+  if (S._profileServiceActivity || !S.token) return;
+  S._profileServiceActivity = { loading: true };
+  const requests = [api("GET", "/doctor-care"), api("GET", "/appointments/mine"), api("GET", "/fitness-plans/mine")];
+  if (S.role === "CUSTOMER") requests.push(api("GET", "/fitness-enrollments/mine"));
+  if (S.role === "MERCHANT") requests.push(api("GET", "/merchant/me"));
+  Promise.all(requests).then(results => {
+    const [care, appointments, plans] = results;
+    const enrollmentData = S.role === "CUSTOMER" ? results[3] : null;
+    const merchant = S.role === "MERCHANT" ? results[3] : null;
+    const doctorCare = care.ok ? care.data : null;
+    S._profileServiceActivity = {
+      hasMedicalActivity: !!((doctorCare?.requests || []).length || (doctorCare?.doctors || []).length || (appointments.ok && (appointments.data.items || []).length)),
+      isDoctor: !!(doctorCare?.mode === "DOCTOR"),
+      hasTrainingActivity: !!((plans.ok && (plans.data.items || []).length) || (enrollmentData?.ok && (enrollmentData.data.items || []).length)),
+      isFitnessProvider: !!(merchant?.ok && merchant.data.isFitnessProvider),
+      loadedAt: Date.now(),
+    };
+    render();
+  }).catch(() => { S._profileServiceActivity = { hasMedicalActivity: false, isDoctor: false, hasTrainingActivity: false, isFitnessProvider: false, loadedAt: Date.now() }; render(); });
+}
+
+function profileServiceLinksHtml() {
+  if (S._profileServiceActivity && !S._profileServiceActivity.loading && Date.now() - (S._profileServiceActivity.loadedAt || 0) > 30000) S._profileServiceActivity = null;
+  if (!S._profileServiceActivity) loadProfileServiceActivity();
+  const activity = S._profileServiceActivity;
+  if (!activity || activity.loading) return "";
+  if (S.role === "CUSTOMER") return `${activity.hasMedicalActivity ? `<button class="btn outline" style="max-width:280px" onclick="openDoctorCare()">🩺 ${esc(t("care.title"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="openDoctorAppointments()">📅 ${esc(t("appointment.myAppointments"))}</button><div style="height:8px"></div>` : ""}${activity.hasTrainingActivity ? `<button class="btn outline" style="max-width:280px" onclick="openMyFitnessPlans()">🏋️ ${esc(t("fitness.myPlans"))}</button>` : ""}`;
+  if (S.role === "MERCHANT" && activity.isDoctor) return `<button class="btn outline" style="max-width:280px" onclick="openDoctorCare()">🩺 ${esc(t("care.title"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="openDoctorAppointments()">📅 ${esc(t("appointment.myAppointments"))}</button><div style="height:8px"></div>`;
+  return "";
+}
+
 function tabProfile() {
   if (!S._sellerPays) { S._sellerPays = { loading: true, methods: [] }; loadSellerPaymentMethods(); }
+if (S.role === "MERCHANT" && !S._fitnessAccessChecked) loadFitnessAccess();
+
   return `
     <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:50px">
       ${(() => {
@@ -2527,13 +2711,17 @@ function tabProfile() {
           ${p.bio ? `<p class="muted" style="margin:0 0 6px;max-width:260px">${esc(p.bio)}</p>` : ""}
           <button class="link-btn" onclick="go('profileEdit')">${esc(t("profile.edit"))}</button>`;
       })()}
+      <div style="height:10px"></div>
+      ${S.role === "MERCHANT"
+        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='catalog';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
+           <div style="height:8px"></div>
+           <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="S._mprof=null;go('merchantProfile')">📍 ${esc(t("profile.mapListing"))}</button>`
+        : S.role === "CUSTOMER" ? `<button class="btn" style="max-width:320px" onclick="go('merchantRegister',{mode:'map'})">📍 ${esc(t("profile.registerMerchant"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.mapActivitySub"))}</p><div style="height:10px"></div><button class="btn outline" style="max-width:320px" onclick="go('merchantRegister',{mode:'store'})">🛍️ ${esc(t("profile.openOnlineStore"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.startSellingSub"))}</p>` : ""}
+      <div style="height:10px"></div>
+      ${S._fitnessAccess ? `<button class="btn outline" style="max-width:280px" onclick="openFitnessProfile()">🏋️ ${esc(t("fitness.profile"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="openFitnessPlans()">📋 ${esc(t("fitness.plansTitle"))}</button><div style="height:8px"></div>` : ""}
+      ${profileServiceLinksHtml()}
       <div style="height:14px"></div>
       ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
-      ${S.role === "MERCHANT"
-        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='home';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
-           <div style="height:8px"></div>
-           <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button>`
-        : `<button class="btn outline" style="max-width:240px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`}
       <div style="height:10px"></div>
       <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
       <p class="muted" style="margin:0 0 10px">${esc(t("profile.shareLocationSub"))}</p>
@@ -2550,8 +2738,7 @@ function tabProfile() {
       <div style="height:10px"></div>
       ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
       <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('affiliateMine')">${esc(t("profile.affiliates"))}</button>
-      <div style="height:10px"></div>
+      ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:280px" onclick="openMyMarketingTeam()">🤝 ${esc(t("profile.affiliates"))}</button><div style="height:10px"></div>` : ""}
       ${(() => { if (S._refMe == null) { loadRefMe(); return ""; } return `<button class="btn outline" style="max-width:240px" onclick="go('marketing')">📣 ${esc(t(S._refMe.isMarketer ? "ref.title" : "ref.become"))}</button><div style="height:10px"></div>`; })()}
       <div style="height:10px"></div>
       ${S.role === "ADMIN" ? `<button class="btn" style="max-width:240px" onclick="S._adr=null;go('adminReview')">📣 ${esc(t("adr.title"))}</button><div style="height:10px"></div>` : ""}
@@ -2599,6 +2786,152 @@ async function saveSellerPaymentMethods() {
   S._sellerPays = { loading: false, methods: ok ? data.methods : S._sellerPays.methods, error: ok ? "" : errMsg(data, "تعذّر الحفظ") };
   if (!ok) S.error = S._sellerPays.error; else toast("تم حفظ وسائل الاستلام");
   render();
+}
+function openDoctorCare() { S._doctorCare = null; S._careSelected = null; S._careRecords = null; go("doctorCare"); }
+async function loadDoctorCare() {
+  const { ok, data } = await api("GET", "/doctor-care");
+  S._doctorCare = ok ? data : { error: errMsg(data, t("care.loadFailed")) };
+  render();
+}
+async function loadCareRecords(id) {
+  S._careSelected = id;
+  S._careRecords = null;
+  render();
+  const { ok, data } = await api("GET", `/doctor-care/connections/${encodeURIComponent(id)}/records`);
+  S._careRecords = ok ? data.items || [] : [];
+  if (!ok) toast(errMsg(data, t("care.loadFailed")));
+  render();
+}
+function screenDoctorCare() {
+  const d = S._doctorCare;
+  if (!d) { loadDoctorCare(); return spinner(); }
+  if (d.error) return `<div class="screen-pad"><button class="link-btn" onclick="back()">← ${esc(t("common.back"))}</button><p class="error-banner">${esc(d.error)}</p></div>`;
+  const selected = S._careSelected;
+  const connection = d.mode === "DOCTOR" ? (d.patients || []).find(x => x.id === selected) : (d.doctors || []).find(x => x.id === selected);
+  const records = S._careRecords || [];
+  const statusText = (s) => ({ PENDING: t("care.pending"), ACTIVE: t("care.active"), REVOKED: t("care.revoked"), DECLINED: t("care.declined") }[s] || s);
+  return `<div class="screen-pad" style="max-width:760px;margin:auto;padding:20px">
+    <button class="link-btn" onclick="back()">← ${esc(t("common.back"))}</button>
+    <h1 class="screen-title">🩺 ${esc(t("care.title"))}</h1>
+    <p class="muted">${esc(t("care.privacy"))}</p>
+    ${d.mode === "DOCTOR" ? `<h2>${esc(t("care.myPatients"))}</h2>
+      ${!d.doctor.approved ? `<p class="error-banner">${esc(t("care.needApproval"))}</p>` : `<form onsubmit="event.preventDefault();requestPatient()" class="card" style="padding:16px"><label>${esc(t("care.patientEmail"))}</label><input id="care-email" type="email" autocomplete="email" required placeholder="name@example.com"><button class="btn" style="margin-top:10px">${esc(t("care.sendRequest"))}</button></form>`}
+      ${(d.patients || []).map(p => `<div class="card" style="padding:14px;margin:10px 0"><b>${esc(p.patient.fullName)}</b><div class="muted">${esc(p.patient.email)} · ${esc(statusText(p.status))}</div>${p.status === "ACTIVE" ? `<button class="btn outline" onclick="loadCareRecords('${esc(p.id)}')">${esc(t("care.openRecord"))}</button>` : ""}</div>`).join("") || `<p class="muted">${esc(t("care.emptyPatients"))}</p>`}`
+      : `<h2>${esc(t("care.requests"))}</h2>
+      ${(d.requests || []).map(x => `<div class="card" style="padding:14px;margin:10px 0"><b>${esc(x.doctor.businessName)}</b><p>${esc(t("care.requestExplain"))}</p><button class="btn" onclick="answerCareRequest('${esc(x.id)}',true)">${esc(t("care.accept"))}</button> <button class="btn outline" onclick="answerCareRequest('${esc(x.id)}',false)">${esc(t("care.decline"))}</button></div>`).join("") || `<p class="muted">${esc(t("care.noRequests"))}</p>`}
+      <h2>${esc(t("care.myDoctors"))}</h2>
+      ${(d.doctors || []).map(x => `<div class="card" style="padding:14px;margin:10px 0"><b>${esc(x.doctor.businessName)}</b><div class="muted">${esc(statusText(x.status))}</div>${x.status !== "PENDING" ? `<button class="btn outline" onclick="loadCareRecords('${esc(x.id)}')">${esc(t("care.openRecord"))}</button>` : ""}${x.status === "ACTIVE" ? ` <button class="link-btn" onclick="revokeCare('${esc(x.id)}')">${esc(t("care.revoke"))}</button>` : ""}</div>`).join("") || `<p class="muted">${esc(t("care.noDoctors"))}</p>`}`}
+    ${connection && (connection.status === "ACTIVE" || (d.mode === "PATIENT" && connection.status === "REVOKED")) ? `<section style="margin-top:20px"><h2>${esc(t("care.records"))}</h2>${records.map(r => `<article class="card" style="padding:14px;margin:10px 0"><b>${esc(t("care.kind." + r.kind))}: ${esc(r.title)}</b><div class="muted">${esc(new Date(r.createdAt).toLocaleString())} · ${esc(r.authorName || "")}</div><p style="white-space:pre-wrap">${esc(r.body)}</p></article>`).join("") || `<p class="muted">${esc(t("care.noRecords"))}</p>`}${d.mode === "DOCTOR" ? `<form onsubmit="event.preventDefault();addCareRecord('${esc(connection.id)}')" class="card" style="padding:14px"><label>${esc(t("care.kindLabel"))}</label><select id="care-kind"><option value="VISIT">${esc(t("care.kind.VISIT"))}</option><option value="DIAGNOSIS">${esc(t("care.kind.DIAGNOSIS"))}</option><option value="MEDICATION">${esc(t("care.kind.MEDICATION"))}</option><option value="INSTRUCTIONS">${esc(t("care.kind.INSTRUCTIONS"))}</option><option value="FOLLOW_UP">${esc(t("care.kind.FOLLOW_UP"))}</option></select><input id="care-record-title" required minlength="2" maxlength="100" placeholder="${esc(t("care.recordTitle"))}"><textarea id="care-record-body" required minlength="2" maxlength="4000" placeholder="${esc(t("care.recordBody"))}"></textarea><button class="btn">${esc(t("care.saveRecord"))}</button></form>` : ""}</section>` : ""}
+  </div>`;
+}
+async function requestPatient() {
+  const email = document.getElementById("care-email")?.value?.trim();
+  const { ok, data } = await api("POST", "/doctor-care/requests", { email });
+  if (!ok) return toast(errMsg(data, t("care.actionFailed")));
+  toast(t("care.requestSent")); loadDoctorCare();
+}
+async function answerCareRequest(id, accept) {
+  const { ok, data } = await api("POST", `/doctor-care/requests/${encodeURIComponent(id)}/respond`, { accept });
+  if (!ok) return toast(errMsg(data, t("care.actionFailed")));
+  S._careSelected = null; loadDoctorCare();
+}
+async function revokeCare(id) {
+  if (!confirm(t("care.revokeConfirm"))) return;
+  const { ok, data } = await api("POST", `/doctor-care/connections/${encodeURIComponent(id)}/revoke`, {});
+  if (!ok) return toast(errMsg(data, t("care.actionFailed")));
+  S._careSelected = null; loadDoctorCare();
+}
+async function addCareRecord(id) {
+  const kind = document.getElementById("care-kind")?.value;
+  const title = document.getElementById("care-record-title")?.value?.trim();
+  const body = document.getElementById("care-record-body")?.value?.trim();
+  const { ok, data } = await api("POST", `/doctor-care/connections/${encodeURIComponent(id)}/records`, { kind, title, body });
+  if (!ok) return toast(errMsg(data, t("care.actionFailed")));
+  toast(t("care.saved")); loadCareRecords(id);
+}
+
+function openDoctorAppointments(doctorId) {
+  S._appointmentUi = { doctorId: doctorId || null, loading: true };
+  go("doctorAppointments", doctorId ? { doctorId } : {});
+  if (doctorId) loadDoctorSlots(doctorId); else loadAppointmentDashboard();
+}
+async function loadDoctorSlots(doctorId) {
+  const { ok, data } = await api("GET", `/appointments/doctors/${encodeURIComponent(doctorId)}/slots?days=31`);
+  S._appointmentUi = { ...(S._appointmentUi || {}), loading: false, schedule: ok ? data : null, error: ok ? null : errMsg(data, t("appointment.loadFailed")) };
+  render();
+}
+async function loadAppointmentDashboard() {
+  const [mine, care, merchant] = await Promise.all([api("GET", "/appointments/mine"), api("GET", "/doctor-care"), api("GET", "/merchant/me")]);
+  const isDoctor = care.ok && care.data.mode === "DOCTOR";
+  const isFitness = merchant.ok && merchant.data.isFitnessProvider;
+  const dashboard = { loading: false, mine: mine.ok ? mine.data.items || [] : [], doctorMode: isDoctor || isFitness, isFitness, approved: (isDoctor && care.data.doctor.approved) || (isFitness && merchant.data.approvalStatus === "APPROVED") };
+  if (dashboard.approved) {
+    const [settings, appointments] = await Promise.all([api("GET", "/appointments/settings"), api("GET", "/appointments/doctor/mine")]);
+    dashboard.settings = settings.ok ? settings.data : null;
+    dashboard.doctorAppointments = appointments.ok ? appointments.data.items || [] : [];
+  }
+  S._appointmentUi = dashboard; render();
+}
+function screenDoctorAppointments() {
+  const ui = S._appointmentUi;
+  const doctorId = S.params.doctorId;
+  if (!ui || ui.loading) return `<div class="screen-pad">${backRow()}${spinner()}</div>`;
+  if (doctorId) {
+    const schedule = ui.schedule;
+    if (!schedule) return `<div class="screen-pad">${backRow()}<p class="error-banner">${esc(ui.error || t("appointment.loadFailed"))}</p></div>`;
+    const days = schedule.days || [];
+    const selectedDate = ui.selectedDate || days.find(d => d.slots.length)?.date;
+    const day = days.find(d => d.date === selectedDate);
+    return `<div class="screen-pad" style="max-width:760px;margin:auto;padding:20px">${backRow()}<h1>${esc(t("appointment.title"))}</h1><h2>${esc(schedule.doctor.name)}</h2>${schedule.doctor.address ? `<p>📍 ${esc(schedule.doctor.address)}</p>` : ""}<p class="muted">${esc(t("appointment.duration", { n: schedule.slotMinutes || 30 }))}</p>
+      ${days.length ? `<label>${esc(t("appointment.chooseDay"))}</label><select onchange="S._appointmentUi.selectedDate=this.value;S._appointmentUi.selectedStart=null;render()">${days.map(d => `<option value="${esc(d.date)}" ${d.date === selectedDate ? "selected" : ""}>${esc(new Date(d.date + "T12:00:00").toLocaleDateString())}${d.slots.length ? ` · ${d.slots.length} ${esc(t("appointment.available"))}` : ` · ${esc(t("appointment.none"))}`}</option>`).join("")}</select>
+      <label>${esc(t("appointment.kind"))}</label><select id="appointment-kind" onchange="S._appointmentUi.kind=this.value"><option value="VISIT" ${ui.kind !== "FOLLOW_UP" ? "selected" : ""}>${esc(t("appointment.visit"))}</option><option value="FOLLOW_UP" ${ui.kind === "FOLLOW_UP" ? "selected" : ""}>${esc(t("appointment.followUp"))}</option></select>
+      <label style="display:block;margin-top:12px"><input id="appointment-share-medical" type="checkbox" ${ui.shareMedical ? "checked" : ""} onchange="S._appointmentUi.shareMedical=this.checked"> ${esc(t("appointment.shareMedical"))}</label><p class="muted">${esc(t("appointment.shareMedicalHelp"))}</p><label>${esc(t("appointment.visitReason"))}</label><textarea maxlength="1000" oninput="S._appointmentUi.visitReason=this.value">${esc(ui.visitReason || "")}</textarea>
+      <h3>${esc(t("appointment.chooseTime"))}</h3>${day?.slots.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${day.slots.map(s => `<button class="btn ${ui.selectedStart === s.startsAt ? "" : "outline"}" onclick="S._appointmentUi.selectedStart='${esc(s.startsAt)}';render()">${esc(s.time)}</button>`).join("")}</div><button class="btn" style="margin-top:16px" ${!ui.selectedStart ? "disabled" : ""} onclick="bookDoctorAppointment('${esc(doctorId)}')">${esc(t("appointment.book"))}</button>` : `<p class="muted">${esc(t("appointment.dayFull"))}</p>`}` : `<p class="muted">${esc(t("appointment.noAvailability"))}</p>`}
+      <p class="muted">${esc(t("appointment.noRecordNeeded"))}</p><p class="muted">${esc(t("appointment.shareInfo"))}</p></div>`;
+  }
+  const status = (s) => ({ CONFIRMED: t("appointment.confirmed"), CANCELLED: t("appointment.cancelled"), COMPLETED: t("appointment.completed"), NO_SHOW: t("appointment.noShow") }[s] || s);
+  const card = (x, doctorSide) => `<div class="card" style="padding:14px;margin:8px 0"><b>${esc(doctorSide ? x.patient.fullName : x.doctor.businessName)}</b><div class="muted">${esc(new Date(x.startsAt).toLocaleString())} · ${esc(status(x.status))} · ${esc(t(x.kind === "FOLLOW_UP" ? "appointment.followUp" : "appointment.visit"))}</div>${doctorSide ? `<div class="muted">${esc(x.patient.email)}${x.patient.phone ? " · " + esc(x.patient.phone) : ""}</div>${x.medicalFileShared ? `${x.visitReason ? `<div><b>${esc(t("appointment.visitReason"))}:</b> ${esc(x.visitReason)}</div>` : ""}${x.latestDiagnosis ? `<div class="card" style="padding:10px;margin-top:8px"><b>${esc(t("appointment.diagnosis"))}: ${esc(x.latestDiagnosis.title || "")}</b><div>${esc(x.latestDiagnosis.body || "")}</div></div>` : `<div class="muted">${esc(t("appointment.noDiagnosis"))}</div>`}` : `<div class="muted">${esc(t("appointment.noMedicalShare"))}</div>`}` : x.doctor.address ? `<div class="muted">${esc(x.doctor.address)}</div>` : ""}${x.status === "CONFIRMED" && new Date(x.startsAt) > new Date() ? `<button class="link-btn" onclick="cancelDoctorAppointment('${esc(x.id)}')">${esc(t("appointment.cancel"))}</button>` : ""}</div>`;
+  let doctorPanel = "";
+  if (ui.doctorMode) {
+    if (!ui.approved) doctorPanel = `<h2>${esc(t("appointment.doctorBookings"))}</h2><p class="muted">${esc(t("care.needApproval"))}</p>`;
+    else {
+      const hoursNotice = ui.settings?.hasHours ? "" : `<p class="error-banner">${esc(t("appointment.hoursNeeded"))} <button class="link-btn" onclick="S._merchantHours=null;go('merchantHours')">${esc(t("appointment.setHours"))}</button></p>`;
+      const durations = [10, 15, 20, 30, 45, 60].map(n => `<option value="${n}" ${Number(ui.settings?.slotMinutes || 30) === n ? "selected" : ""}>${n} ${esc(t("appointment.minutes"))}</option>`).join("");
+      const upcoming = (ui.doctorAppointments || []).map(x => card(x, true)).join("") || `<p class="muted">${esc(t("appointment.noBookings"))}</p>`;
+      doctorPanel = `<h2>${esc(t(ui.isFitness ? "appointment.trainerBookings" : "appointment.doctorBookings"))}</h2>${hoursNotice}<form class="card" style="padding:14px" onsubmit="event.preventDefault();saveDoctorAppointmentSettings()"><label><input id="appointment-enabled" type="checkbox" ${ui.settings?.enabled ? "checked" : ""}> ${esc(t("appointment.enable"))}</label><label>${esc(t("appointment.slotDuration"))}</label><select id="appointment-duration">${durations}</select><label>${esc(t("appointment.advanceDays"))}</label><input id="appointment-advance" type="number" min="7" max="90" value="${Number(ui.settings?.advanceDays || 30)}"><button class="btn">${esc(t("appointment.saveSettings"))}</button></form>${upcoming}`;
+    }
+  }
+  return `<div class="screen-pad" style="max-width:760px;margin:auto;padding:20px">${backRow()}<h1>${esc(t("appointment.myAppointments"))}</h1><h2>${esc(t("appointment.myBookings"))}</h2>${ui.mine.length ? ui.mine.map(x => card(x, false)).join("") : `<p class="muted">${esc(t("appointment.noBookings"))}</p>`}${doctorPanel}</div>`;
+}
+async function bookDoctorAppointment(doctorId) {
+  const startsAt = S._appointmentUi?.selectedStart;
+  if (!startsAt) return;
+  if (!S.token) { S._afterLogin = { screen: "doctorAppointments", params: { doctorId } }; toast(t("appointment.loginRequired")); return go("login"); }
+  const { ok, data } = await api("POST", `/appointments/doctors/${encodeURIComponent(doctorId)}/book`, { startsAt, kind: S._appointmentUi.kind || "VISIT", shareMedicalFile: S._appointmentUi.shareMedical === true, visitReason: S._appointmentUi.visitReason || "" });
+  if (!ok) { toast(errMsg(data, t("appointment.bookFailed"))); loadDoctorSlots(doctorId); return; }
+  toast(t("appointment.booked")); S._appointmentUi.selectedStart = null; loadDoctorSlots(doctorId);
+  S._profileServiceActivity = null;
+}
+async function saveDoctorAppointmentSettings() {
+  const body = { enabled: document.getElementById("appointment-enabled")?.checked, slotMinutes: Number(document.getElementById("appointment-duration")?.value), advanceDays: Number(document.getElementById("appointment-advance")?.value) };
+  const { ok, data } = await api("PUT", "/appointments/settings", body);
+  if (!ok) return toast(errMsg(data, t("appointment.saveFailed")));
+  toast(t("appointment.settingsSaved")); loadAppointmentDashboard();
+}
+async function cancelDoctorAppointment(id) {
+  if (!confirm(t("appointment.cancelConfirm"))) return;
+  const { ok, data } = await api("POST", `/appointments/${encodeURIComponent(id)}/cancel`, {});
+  if (!ok) return toast(errMsg(data, t("appointment.cancelFailed")));
+  toast(t("appointment.cancelled")); loadAppointmentDashboard();
+}
+
+function openMyMarketingTeam() {
+  if (S.role !== "MERCHANT") return toast(t("profile.merchantOnlyTeam"));
+  S.merchantTab = "catalog";
+  S._catalog = null;
+  S._openMarketingTeam = true;
+  go("merchantMode");
+
 }
 
 /* ================= MARKETING: my referral link, the people I brought, what I earned ================= */
@@ -3006,7 +3339,8 @@ function screenMerchantDetail() {
         <div class="shop-id">
           ${avatarHtml(x.avatarUrl, x.businessName, "big")}
           <div class="shop-id-text">
-            <h1>${esc(x.businessName)} <span class="shop-verified" title="${esc(t("shop.verified"))}">✓</span></h1>
+            <h1>${esc(x.isFitnessProvider ? (x.fitnessProfile?.displayName || x.businessName) : x.businessName)} <span class="shop-verified" title="${esc(t("shop.verified"))}">✓</span></h1>
+            ${x.isFitnessProvider && x.fitnessProfile?.displayName && x.fitnessProfile.displayName !== x.businessName ? `<small>${esc(x.businessName)}</small>` : ""}
             <p>${esc(catName(x.category))}${x.distanceKm != null ? " · " + x.distanceKm.toFixed(1) + " " + esc(t("unit.km")) : ""}</p>
             <div class="shop-stats">
               ${votes ? `<span><b class="star">★ ${avg.toFixed(1)}</b> (${votes})</span>` : ""}
@@ -3023,8 +3357,11 @@ function screenMerchantDetail() {
         ${phone ? `<a href="tel:${esc(phone)}"><span>📞</span>${esc(t("place.call"))}</a>` : ""}
         ${wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span>💬</span>${esc(t("place.whatsapp"))}</a>` : ""}
         ${hasCoords ? `<button onclick="startRoute('${x.id}')"><span>🧭</span>${esc(t("place.directions"))}</button>` : ""}
+        ${x.appointmentBookingEnabled ? `<button onclick="openDoctorAppointments('${esc(x.id)}')"><span>📅</span>${esc(t("appointment.book"))}</button>` : ""}
         <button onclick="shareMerchant()"><span>📤</span>${esc(t("place.share"))}</button>
       </div>
+      ${x.isFitnessProvider && x.fitnessProfile ? `<section class="card" style="padding:16px;margin:14px 0"><h2>${esc(x.fitnessProfile.displayName || x.businessName)}</h2>${x.fitnessProfile.headline ? `<p>${esc(x.fitnessProfile.headline)}</p>` : ""}${x.fitnessProfile.yearsExperience != null ? `<p class="muted">${esc(t("fitness.yearsValue", { n: x.fitnessProfile.yearsExperience }))}</p>` : ""}${(x.fitnessProfile.specialties || []).length ? `<h3>${esc(t("fitness.specialties"))}</h3><div>${x.fitnessProfile.specialties.map(s => `<span class="chip">${esc(s)}</span>`).join(" ")}</div>` : ""}${(x.fitnessProfile.achievements || []).length ? `<h3>${esc(t("fitness.achievements"))}</h3><ul>${x.fitnessProfile.achievements.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}${(x.fitnessProfile.certifications || []).length ? `<h3>${esc(t("fitness.certifications"))}</h3><ul>${x.fitnessProfile.certifications.map(c => `<li>${esc(c)}</li>`).join("")}</ul><small class="muted">${esc(t("fitness.certificationPublicNote"))}</small>` : ""}${(x.discounts || []).length ? `<h3>${esc(t("fitness.currentOffers"))}</h3>${x.discounts.map(d => `<div class="card" style="padding:10px;margin:6px 0"><b>${esc(d.percent)}% · ${esc(d.title)}</b>${d.description ? `<div>${esc(d.description)}</div>` : ""}${d.endDate ? `<small class="muted">${esc(t("fitness.offerEnds"))} ${esc(new Date(d.endDate).toLocaleDateString())}</small>` : ""}</div>`).join("")}` : ""}</section>` : ""}
+      ${x.isFitnessProvider && x.fitnessProfile ? ('<section class="card" style="padding:16px;margin:12px 0"><h3>' + esc(t("fitness.certificatePhotos")) + '</h3><small class="muted">' + esc(t("fitness.certificationPublicNote")) + '</small>' + (x.fitnessProfile.certificationPhotoIds || []).map(function(id){return '<img src="/store/photos/' + encodeURIComponent(id) + '" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:8px;margin:4px">';}).join("") + '<h3>' + esc(t("fitness.monthlyOffers")) + '</h3>' + (x.fitnessOffers || []).map(function(o){return '<div class="card" style="padding:12px;margin:8px 0"><b>' + esc(o.title) + '</b><div>' + esc(o.durationMonths) + ' ' + esc(t("fitness.months")) + ' · ' + esc((o.priceCents/100).toLocaleString()) + ' ' + esc(o.currency) + '</div>' + (o.description ? '<p>' + esc(o.description) + '</p>' : '') + (S.role === "CUSTOMER" ? '<button class="btn" ' + ((S._fitnessRequestedOfferIds || {})[o.id] ? 'disabled' : '') + ' onclick="requestFitnessOffer(\'' + esc(o.id) + '\')">' + esc(({ REQUESTED: t("fitness.statusRequested"), ACCEPTED: t("fitness.statusAccepted") })[(S._fitnessRequestedOfferIds || {})[o.id]] || t("fitness.requestJoin")) + '</button>' : (!S.token ? '<button class="btn outline" onclick="go(\'login\')">' + esc(t("fitness.requestJoin")) + '</button>' : '')) + '</div>';}).join("") + fitnessPaymentHtml(x.fitnessProfile) + '</section>') : ''}
       <div class="store-tabs">
         ${[["home", t("shop.tabHome")], ["all", t("shop.tabAll")], ["offers", t("shop.tabOffers") + ((x.discounts || []).length ? ` (${x.discounts.length})` : "")], ["reviews", t("rv.title") + (votes ? ` (${votes})` : "")], ["about", t("shop.tabAbout")]].map(([id, label]) => `<button class="${m.tab === id ? "on" : ""}" onclick="S._merchantDetail.tab='${id}';render()">${esc(label)}</button>`).join("")}
       </div>
@@ -3143,13 +3480,14 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 }
 
 async function loadMerchantDetail(id, initialTab = "home") {
-  const [mRes, pRes, rvRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/store/products?limit=60&merchantId=" + id), api("GET", "/reviews/shops/" + id + "?limit=10")]);
+  const [mRes, pRes, rvRes, enrollmentRes] = await Promise.all([api("GET", "/merchant/" + id), api("GET", "/store/products?limit=60&merchantId=" + id), api("GET", "/reviews/shops/" + id + "?limit=10"), S.role === "CUSTOMER" && S.token ? api("GET", "/fitness-enrollments/mine") : Promise.resolve({ ok: false })]);
   const merchant = mRes.ok ? mRes.data : null;
   const loc = S._discover && S._discover.userLoc;
   // /merchant/:id doesn't compute distance; derive it from the location the map view already asked for.
   if (merchant && loc && merchant.latitude != null && merchant.longitude != null) {
     merchant.distanceKm = haversineKm(loc.lat, loc.lng, merchant.latitude, merchant.longitude);
   }
+  if (enrollmentRes?.ok) S._fitnessRequestedOfferIds = Object.fromEntries((enrollmentRes.data.items || []).filter(e => ["REQUESTED", "ACCEPTED"].includes(e.status)).map(e => [e.offer?.id, e.status]));
   S._merchantDetail = { id, loading: false, merchant, products: pRes.ok ? pRes.data.items : [], reviews: rvRes.ok ? rvRes.data : null, tab: initialTab, q: "", sort: "popular" };
   render();
 }
@@ -3630,7 +3968,7 @@ function screenAdBook() {
     return `${backRow()}
       <h1 class="screen-title">${esc(t("ads.bookTitle"))}</h1>
       <p class="screen-sub">${esc(t("ads.needShop"))}</p>
-      <button class="btn" style="max-width:260px" onclick="go('merchantRegister')">${esc(t("profile.registerMerchant"))}</button>`;
+      <button class="btn" style="max-width:260px" onclick="go('merchantRegister',{mode:'store'})">${esc(t("profile.openOnlineStore"))}</button>`;
   }
   if (a.done) {
     return `${backRow()}
@@ -4538,6 +4876,7 @@ function screenStore() {
         ${sections.map((x) => `<button class="${st.section === x.id ? "on" : ""}" onclick="storePickSection('${x.id}')">${esc(storeSecName(x))}</button>`).join("")}
       </div>
       ${storeScopeBar(st)}
+      ${S.token && S.role === "CUSTOMER" ? `<section class="store-seller-cta"><div><b>🛍️ ${esc(t("merchant.storeFrontCta"))}</b><small>${esc(t("merchant.storeFrontSub"))}</small></div><button onclick="go('merchantRegister',{mode:'store'})">${esc(t("profile.openOnlineStore"))} ←</button></section>` : ""}
       ${errorBanner()}
       ${body}
     </div>`;
@@ -4696,26 +5035,26 @@ async function cancelOrder() {
 /* ================= MERCHANT REGISTER ================= */
 
 function screenMerchantRegister() {
-  if (!S._merchReg) { S._merchReg = { categories: [] }; pickReset(null, null); api("GET", "/categories?lang=" + LANG).then((r) => { S._merchReg.categories = r.ok ? r.data : []; render(); }); }
+  const mode = S.params.mode === "store" ? "store" : "map";
+  if (!S._merchReg || S._merchReg.mode !== mode) { S._merchReg = { categories: [], mode }; pickReset(null, null); api("GET", "/categories?lang=" + LANG).then((r) => { if (S._merchReg && S._merchReg.mode === mode) { S._merchReg.categories = r.ok ? r.data : []; render(); } }); }
   const m = S._merchReg;
   return `
     ${backRow()}
-    <h1 class="screen-title">سجّل كصاحب نشاط</h1>
-    <p class="screen-sub">بيصير حسابك صاحب نشاط بعد موافقة الإدارة، وبعدها بيظهر محلك على الخريطة</p>
+    <h1 class="screen-title">${esc(t(mode === "store" ? "merchant.storeTitle" : "merchant.mapTitle"))}</h1>
+    <p class="screen-sub">${esc(t(mode === "store" ? "merchant.storeIntro" : "merchant.mapIntro"))}</p>
     <div class="section-title">${esc(t("mp.secName"))}</div>
-    <div class="field"><label>اسم المحل</label><input id="mr-name" placeholder="مثال: مطعم الياسمين" value="${esc(m.name || "")}" oninput="mrNameTyped(this.value)" /></div>
-    <div class="section-title">${esc(t("mp.secProfession"))}</div>
+    <div class="field"><label>${esc(t(mode === "store" ? "merchant.storeName" : "merchant.mapName"))}</label><input id="mr-name" placeholder="${esc(t("merchant.startNamePlaceholder"))}" value="${esc(m.name || "")}" oninput="mrNameTyped(this.value)" /></div>
+    <div class="section-title">${esc(t("merchant.startType"))}</div>
     ${mrGuessHtml(m)}
     ${categoryPickerHtml(m.categories, m.selectedCat, "selectMerchCategory")}
     <div class="section-title">${esc(t("mp.secContact"))}</div>
-    <div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" oninput="addressTyped('mr',this.value)" /><div id="addr-suggest-mr">${addressSuggestionHtml("mr")}</div></div>
-    ${catIsOnline(m.categories, m.selectedCat) ? `<div class="info-banner">${esc(t("cat.onlineNote"))}</div>` : pickerHtml()}
+    ${mode === "store" ? `<div class="info-banner">${esc(t("merchant.storeNoMap"))}</div>` : `<div class="field"><label>${esc(t("mp.address"))}</label><input id="mr-address" placeholder="${esc(t("mp.addressPh"))}" value="${esc(m.address || "")}" oninput="addressTyped('mr',this.value)" /><div id="addr-suggest-mr">${addressSuggestionHtml("mr")}</div></div>${pickerHtml(t("merchant.mapPin"))}`}
     <div class="row">
       <div class="field"><label>الهاتف (اختياري)</label><input id="mr-phone" placeholder="+963 9xx xxx xxx" value="${esc(m.phone || "")}" /></div>
       <div class="field"><label>واتساب (اختياري)</label><input id="mr-whatsapp" placeholder="مثال: 963912345678" value="${esc(m.whatsapp || "")}" /></div>
     </div>
     ${errorBanner()}
-    <button class="btn" ${S.busy ? "disabled" : ""} onclick="submitMerchantRegister()">سجّل</button>
+    <button class="btn" ${S.busy ? "disabled" : ""} onclick="submitMerchantRegister()">${esc(t("merchant.startSubmit"))}</button>
   `;
 }
 
@@ -4774,20 +5113,21 @@ async function submitMerchantRegister() {
   const businessName = qs("mr-name").value.trim();
   const categoryId = S._merchReg.selectedCat;
   if (!businessName || !categoryId) { S.error = "عبّي اسم المحل واختر تصنيف"; return render(); }
-  const address = qs("mr-address").value.trim();
+  const mode = S._merchReg.mode || "map";
+  const address = qs("mr-address") ? qs("mr-address").value.trim() : "";
   const phone = qs("mr-phone").value.trim();
   const whatsapp = (qs("mr-whatsapp").value || "").replace(/\D/g, "");
   const online = catIsOnline(S._merchReg.categories, categoryId);
-  const pin = !online && S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
-  if (!online && !pin.latitude && !address) { S.error = t("addr.need"); return render(); } // a place that is not pinned must be written down
+  const pin = mode !== "store" && !online && S._pick && S._pick.lat != null ? { latitude: S._pick.lat, longitude: S._pick.lng } : {};
+  if (mode !== "store" && !online && !pin.latitude && !address) { S.error = t("addr.need"); return render(); } // map listings need a pin or written address
   const proposed = S._catSugOpen && (S._catSug || "").trim().length >= 2 ? { suggestedCategory: S._catSug.trim() } : {};
-  if (!online && !S._lmSimilarOk && (pin.latitude || address)) {
+  if (mode !== "store" && !online && !S._lmSimilarOk && (pin.latitude || address)) {
     const similar = await lmCheckSimilar(businessName, pin.latitude, pin.longitude, address);
     if (similar.length) { S._lmSimilar = { items: similar }; return render(); }
   }
   S._lmSimilarOk = false;
   S.busy = true; render();
-  const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined, whatsapp: whatsapp || undefined, ...pin, ...proposed });
+  const { ok, data } = await api("POST", "/merchant/register", { businessName, categoryId, address: address || undefined, phone: phone || undefined, whatsapp: whatsapp || undefined, storeOnly: S._merchReg.mode === "store", ...pin, ...proposed });
   S.busy = false;
   if (ok) {
     S.role = "MERCHANT";
@@ -4795,8 +5135,9 @@ async function submitMerchantRegister() {
     S._merchReg = null;
     S._catSug = ""; S._catSugOpen = false;
     S._onboarding = null;
-    back();
-    toast(data.approvalStatus === "APPROVED" ? "✅ انقبل نشاطك وصار على الخريطة" : data.approvalStatus === "REJECTED" ? tr("ما انقبل نشاطك:") + " " + (data.reason || tr("غير مناسب للنشر")) : "وصلنا طلبك وهو قيد المراجعة، بنخبرك بالنتيجة");
+    S.merchantTab = "catalog"; S._catalog = null; S._mstat = null;
+    reset("merchantMode");
+    toast(data.approvalStatus === "APPROVED" ? (mode === "store" ? "✅ حساب متجرك جاهز. اختار الباقة وأضف منتجاتك." : "✅ تم تسجيل نشاطك، وصار ظاهر على الخريطة.") : data.approvalStatus === "REJECTED" ? tr("ما انقبل الطلب:") + " " + (data.reason || tr("راجع البيانات وحاول مرة ثانية")) : (mode === "store" ? "وصل طلب فتح متجرك، وهو قيد المراجعة." : "وصل طلب إضافة نشاطك على الخريطة، وهو قيد المراجعة."));
   } else {
     S.error = errMsg(data, "تعذّر تسجيل حساب النشاط");
     render();
@@ -5029,9 +5370,91 @@ async function saveMerchantProfile() {
 }
 
 
+/* ---- trainer and sports-club profile ---- */
+function loadFitnessAccess() {
+  S._fitnessAccessChecked = true;
+  api("GET", "/merchant/me").then(({ ok, data }) => { S._fitnessAccess = !!(ok && data.isFitnessProvider); render(); });
+}
+function fitnessPaymentHtml(profile) {
+  const rows = [["fitness.syriatelCash", profile?.syriatelCash], ["fitness.mtnCash", profile?.mtnCash], ["fitness.shamCash", profile?.shamCash]].filter(([, value]) => String(value || "").trim());
+  if (!rows.length) return "";
+  return '<h3>' + esc(t("fitness.paymentMethods")) + '</h3><small class="muted">' + esc(t("fitness.paymentDetailsPublic")) + '</small>' + (profile.paymentAccountName ? '<p><b>' + esc(t("fitness.paymentAccountName")) + ':</b> ' + esc(profile.paymentAccountName) + '</p>' : '') + rows.map(([key, value]) => '<div class="card" style="padding:10px;margin:6px 0"><b>' + esc(t(key)) + '</b><div dir="ltr" style="text-align:right">' + esc(value) + '</div></div>').join("");
+}
+function openFitnessProfile() { S._fitnessProfile = null; go("fitnessProfile"); }
+async function loadFitnessProfile() {
+  const [{ ok, data }, offers] = await Promise.all([api("GET", "/fitness-profile/me"), api("GET", "/fitness-profile/offers/me")]);
+  S._fitnessOffers = offers.ok ? offers.data.items || [] : [];
+  if (!offers.ok) { S._fitnessOfferMessage = errMsg(offers.data, t("fitness.offersLoadFailed")); S._fitnessOfferMessageKind = "error"; }
+  else { S._fitnessOfferMessage = ""; S._fitnessOfferMessageKind = ""; }
+  S._fitnessProfile = ok ? { ...data, loading: false, msg: t("fitness.loaded") } : { loading: false, error: errMsg(data, t("fitness.loadFailed")) };
+  render();
+}
+function screenFitnessProfile() {
+  const p = S._fitnessProfile;
+  if (!p || p.loading !== false) { if (!p) { S._fitnessProfile = { loading: true }; loadFitnessProfile(); } return `${backRow()}${spinner()}`; }
+  if (p.error) return `${backRow()}<p class="error-banner">${esc(p.error)}</p>`;
+  const listText = (items) => (items || []).join("\n");
+  return `${backRow()}<h1 class="screen-title">🏋️ ${esc(t("fitness.profile"))}</h1><p class="screen-sub">${esc(t("fitness.subtitle"))}</p>
+    <div class="card" style="padding:16px"><div class="field"><label>${esc(t("fitness.displayName"))}</label><input id="fp-name" maxlength="80" value="${esc(p.displayName || "")}" /></div>
+    <div class="field"><label>${esc(t("fitness.headline"))}</label><input id="fp-headline" maxlength="160" value="${esc(p.headline || "")}" /></div>
+    <div class="field"><label>${esc(t("fitness.years"))}</label><input id="fp-years" type="number" min="0" max="70" value="${p.yearsExperience ?? ""}" /></div>
+    <div class="field"><label>${esc(t("fitness.specialties"))}</label><textarea id="fp-specialties" rows="3" placeholder="${esc(t("fitness.listHelp"))}">${esc(listText(p.specialties))}</textarea></div>
+    <div class="field"><label>${esc(t("fitness.achievements"))}</label><textarea id="fp-achievements" rows="4" placeholder="${esc(t("fitness.listHelp"))}">${esc(listText(p.achievements))}</textarea></div>
+    <div class="field"><label>${esc(t("fitness.certifications"))}</label><textarea id="fp-certifications" rows="4" placeholder="${esc(t("fitness.listHelp"))}">${esc(listText(p.certifications))}</textarea><small class="muted">${esc(t("fitness.certificationNote"))}</small></div>
+    <div class="field"><label>${esc(t("fitness.certificatePhotos"))}</label><input id="fp-certificate-photo" type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadFitnessCertificate(this.files[0])"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${(p.certificationPhotoIds || []).map(id => `<div style="position:relative"><img src="/store/photos/${encodeURIComponent(id)}" alt="" style="width:96px;height:96px;object-fit:cover;border-radius:8px"><button type="button" class="link-btn" onclick="removeFitnessCertificate('${esc(id)}')">✕</button></div>`).join("")}</div></div>
+    <h3>${esc(t("fitness.paymentDetailsTitle"))}</h3><p class="muted">${esc(t("fitness.paymentDetailsHelp"))}</p>
+    <div class="field"><label>${esc(t("fitness.paymentAccountName"))}</label><input id="fp-payment-name" maxlength="100" value="${esc(p.paymentAccountName || "")}" /></div>
+    <div class="field"><label>${esc(t("fitness.syriatelCash"))}</label><input id="fp-payment-syriatel" maxlength="80" value="${esc(p.syriatelCash || "")}" /></div>
+    <div class="field"><label>${esc(t("fitness.mtnCash"))}</label><input id="fp-payment-mtn" maxlength="80" value="${esc(p.mtnCash || "")}" /></div>
+    <div class="field"><label>${esc(t("fitness.shamCash"))}</label><input id="fp-payment-sham" maxlength="80" value="${esc(p.shamCash || "")}" /></div>
+    <button id="fitness-profile-save" class="btn" onclick="saveFitnessProfile(this)" ${S._fitnessProfileSaving ? "disabled" : ""}>${esc(S._fitnessProfileSaving ? t("fitness.savingNow") : t("fitness.save"))}</button><p id="fitness-profile-save-status" class="fitness-save-status ${p.msgKind === "error" ? "error-banner" : p.msgKind === "success" ? "success-banner" : "muted"}" role="status" aria-live="polite">${esc(p.msg || "")}</p></div>${renderFitnessOffers()}`;
+}
+async function saveFitnessProfile(button) {
+  if (S._fitnessProfileSaving) return;
+  const list = (id) => (document.getElementById(id)?.value || "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+  const years = latinDigits(document.getElementById("fp-years")?.value || "").trim();
+  const yearsNumber = years === "" ? null : Number(years);
+  if (yearsNumber !== null && (!Number.isInteger(yearsNumber) || yearsNumber < 0 || yearsNumber > 70)) {
+    S._fitnessProfile = { ...S._fitnessProfile, msg: t("fitness.invalidYears"), msgKind: "error" };
+    render();
+    return;
+  }
+  const body = { displayName: document.getElementById("fp-name")?.value.trim() || null, headline: document.getElementById("fp-headline")?.value.trim() || null, yearsExperience: yearsNumber, specialties: list("fp-specialties"), achievements: list("fp-achievements"), certifications: list("fp-certifications"), certificationPhotoIds: S._fitnessProfile.certificationPhotoIds || [], paymentAccountName: document.getElementById("fp-payment-name")?.value.trim() || null, syriatelCash: document.getElementById("fp-payment-syriatel")?.value.trim() || null, mtnCash: document.getElementById("fp-payment-mtn")?.value.trim() || null, shamCash: document.getElementById("fp-payment-sham")?.value.trim() || null };
+  S._fitnessProfileSaving = true;
+  S._fitnessProfile = { ...S._fitnessProfile, ...body, loading: false, msg: t("fitness.savingNow"), msgKind: "pending" };
+  const status = document.getElementById("fitness-profile-save-status");
+  const saveButton = button || document.getElementById("fitness-profile-save");
+  if (saveButton) { saveButton.disabled = true; saveButton.textContent = t("fitness.savingNow"); }
+  if (status) { status.className = "fitness-save-status muted"; status.textContent = t("fitness.savingNow"); }
+  try {
+    const result = await api("PUT", "/fitness-profile/me", body);
+    if (!result.ok) {
+      S._fitnessProfile = { ...S._fitnessProfile, ...body, loading: false, msg: errMsg(result.data, t("fitness.saveFailed")), msgKind: "error" };
+      render();
+      return;
+    }
+    const verify = await api("GET", "/fitness-profile/me");
+    if (!verify.ok) {
+      S._fitnessProfile = { ...result.data, ...body, loading: false, msg: t("fitness.saveAcceptedVerifyFailed"), msgKind: "error" };
+      render();
+      return;
+    }
+    S._fitnessProfile = { ...verify.data, loading: false, msg: t("fitness.savedVerified"), msgKind: "success" };
+    render();
+  } catch (_) {
+    S._fitnessProfile = { ...S._fitnessProfile, ...body, loading: false, msg: t("fitness.saveFailed"), msgKind: "error" };
+    render();
+  } finally {
+    S._fitnessProfileSaving = false;
+    const activeButton = document.getElementById("fitness-profile-save");
+    if (activeButton) { activeButton.disabled = false; activeButton.textContent = t("fitness.save"); }
+  }
+}
+
 /* ---- merchant: the home of the shop — what is left to set up (always open) and the quick ways in ---- */
 
 function tabMerchantHome() {
+  if (S.role === "MERCHANT" && !S._fitnessAccessChecked) loadFitnessAccess();
   if (!S._onboarding) S._onboarding = { steps: null, at: 0 };
   const o = S._onboarding;
   if (!o.fetching && Date.now() - o.at > 15000) { o.fetching = true; loadOnboarding(); }
@@ -5043,8 +5466,12 @@ function tabMerchantHome() {
     ["📍", "ms.q.shop", "S._mprof=null;go('merchantProfile')"],
     ["📣", "ms.q.ads", "setMerchantTab('promo')"],
     ["🧾", "ms.q.orders", "setMerchantTab('orders')"],
-  ].map(([ico, key, act]) => `<button class="quick" onclick="${act}"><span class="q-ico">${ico}</span><span>${esc(t(key))}</span></button>`).join("");
-  const quickHtml = `<div class="section-title">${esc(t("ms.quick"))}</div><div class="quick-grid">${quick}</div>`;
+  ];
+  if (S._fitnessAccess) {
+    quick.push(["🏋️", "fitness.profile", "openFitnessProfile()"]);
+    quick.push(["📋", "fitness.plansTitle", "openFitnessPlans()"]);
+  }
+  const quickHtml = `<div class="section-title">${esc(t("ms.quick"))}</div><div class="quick-grid">${quick.map(([ico, key, act]) => `<button class="quick" onclick="${act}"><span class="q-ico">${ico}</span><span>${esc(t(key))}</span></button>`).join("")}</div>`;
   if (!st) return `<div class="setup-card">${spinner()}</div>${quickHtml}`;
   const rows = [
     [st.location, "location", "S._mprof=null;go('merchantProfile')"],
@@ -7147,7 +7574,7 @@ function tabCatalog() {
         </div>
         <details class="manage-subdetails"><summary>💰 ${esc(t("merchant.pricing"))}</summary>${pricingCardHtml(c)}</details>
       </details>
-      <details class="manage-details"><summary>🤝 ${esc(t("merchant.marketers"))}</summary>
+      <details id="manage-marketing-team" class="manage-details" ${S._openMarketingTeam ? "open" : ""}><summary>🤝 ${esc(t("merchant.marketers"))}</summary>
         ${(c.affiliates || []).length ? c.affiliates.map((af) => `<div class="manage-affiliate"><div><b>${esc(af.user.fullName)}</b><small>${esc(af.user.email)} · ${af.commissionType === "PERCENT" ? af.commissionValue + "%" : fmt(af.commissionValue)} ${esc(t("merchant.perSale"))}</small><small>${esc(t("merchant.referred"))}: ${af.referredCount} · ${esc(t("merchant.totalCommission"))}: ${fmt(af.totalCommissionCents)}</small></div><span class="badge ${af.isActive ? "success" : "neutral"}">${af.isActive ? esc(t("merchant.active")) : esc(t("merchant.inactive"))}</span><button class="btn small outline" onclick="toggleCatalogAffiliate('${af.id}',${!af.isActive})">${af.isActive ? esc(t("merchant.disable")) : esc(t("merchant.enable"))}</button></div>`).join("") : `<p class="muted">${esc(t("merchant.noMarketers"))}</p>`}
         <div class="divider"></div><div class="field"><label>${esc(t("merchant.marketerEmail"))}</label><input id="aff-email" placeholder="marketer@example.com" value="${esc(c.affEmail || "")}" /></div>
         <div class="row"><div class="field"><label>${esc(t("merchant.commissionType"))}</label><select id="aff-type"><option value="PERCENT" ${c.affType === "FIXED" ? "" : "selected"}>${esc(t("merchant.percent"))}</option><option value="FIXED" ${c.affType === "FIXED" ? "selected" : ""}>${esc(t("merchant.fixed"))}</option></select></div><div class="field"><label>${esc(t("merchant.value"))}</label><input id="aff-value" placeholder="10" value="${esc(c.affValue || "")}" /></div></div>
@@ -7509,13 +7936,13 @@ function screenResponder() {
 }
 
 async function loadResponder() {
-  const [st, ch, cn, ru, ib, sx] = await Promise.all([
+  const [st, ch, cn, ru, ib, sx, plans] = await Promise.all([
     api("GET", "/responder/status"), api("GET", "/responder/channels"), api("GET", "/responder/connections"),
-    api("GET", "/responder/rules"), api("GET", "/responder/inbox"), api("GET", "/responder/stats"),
+    api("GET", "/responder/rules"), api("GET", "/responder/inbox"), api("GET", "/responder/stats"), api("GET", "/responder/plans"),
   ]);
   const tab = (S._resp && S._resp.tab) || "overview";
   const keep = S._resp || {};
-  S._resp = { loading: false, tab, notice: keep.notice, ruleDraft: keep.ruleDraft, posts: keep.posts, selectedPosts: keep.selectedPosts, postsError: keep.postsError, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [], stats: sx.ok ? sx.data : null };
+  S._resp = { loading: false, tab, notice: keep.notice, needsTopUp: keep.needsTopUp, ruleDraft: keep.ruleDraft, posts: keep.posts, selectedPosts: keep.selectedPosts, postsError: keep.postsError, status: st.ok ? st.data : null, channels: ch.ok ? ch.data : [], connections: cn.ok ? cn.data : [], rules: ru.ok ? ru.data : [], inbox: ib.ok ? ib.data : [], stats: sx.ok ? sx.data : null, plans: plans.ok ? plans.data : [] };
   render();
 }
 
@@ -7532,19 +7959,24 @@ function respOverview() {
   if (!st) return `<div class="error-banner">تعذّر تحميل الحالة</div>`;
   const daysLeft = (d) => Math.max(0, Math.ceil((new Date(d) - Date.now()) / 86400000));
   const endInfo = st.status === "TRIAL" ? `تنتهي التجربة بعد ${daysLeft(st.trialEndsAt)} يوم` : st.status === "ACTIVE" ? `الاشتراك ساري لحد ${String(st.periodEnd).slice(0, 10)}` : "";
-  const firstVisit = !st.running && st.status !== "EXPIRED";
-  const price = `${st.price} ${st.creditName}`;
-  const welcome = firstVisit ? `
-    <div class="card intro-card">
-      <h2>${esc(t("intro.responder.title"))}</h2>
-      <p>${esc(t("intro.responder.body"))}</p>
-      <p><strong>${esc(st.trialAvailable ? t("intro.trial", { n: st.trialDays, price, days: st.periodDays }) : t("intro.noTrial", { price, days: st.periodDays }))}</strong></p>
-      ${st.trialAvailable ? `<p class="muted">${esc(t("intro.afterContinue"))}</p>` : ""}
-    </div>` : "";
+  const plans = S._resp.plans || [];
+  const activePlanIds = new Set((st.activePlans || []).map((plan) => plan.id));
+  const planCards = plans.length ? plans.map((plan) => {
+    const active = activePlanIds.has(plan.id);
+    const action = !active && plan.priceCredits !== null
+      ? { fn: "respChoosePlan", label: plan.trialAvailable ? t("responder.planTrial") : t("pricing.subscribe") }
+      : null;
+    return `<div>${active ? `<span class="badge success">${esc(t("responder.planCurrent"))}</span>` : `<span class="badge ${plan.includesAi ? "info" : "neutral"}">${esc(plan.includesAi ? t("responder.aiIncluded") : t("responder.fixedIncluded"))}</span>`}
+      ${planCardHtml({ ...plan, trialDays: plan.trialAvailable ? plan.trialDays : 0 }, st.creditName, action)}
+      ${plan.offers?.map((offer) => `<p class="muted">${esc(offer.text)} · ${esc(t("responder.offerBonusDays", { n: offer.bonusDays }))}</p><button class="btn small outline" ${S.busy ? "disabled" : ""} onclick="respChoosePlan('${plan.id}', '${offer.id}')">${esc(t("responder.buyOffer"))}</button>`).join("") || ""}
+      ${!active && plan.priceCredits === null ? `<p class="muted">${esc(t("pricing.notPriced"))}</p>` : ""}</div>`;
+  }).join("") : `<div class="empty-state">${esc(t("pricing.empty"))}</div>`;
   const sx = S._resp.stats;
-  const stats = sx && st.running ? `<p class="muted" style="margin:4px 0 0">آخر 30 يوم: أُرسل ${sx.sent} · بانتظار ردّك ${sx.needsReview} · فشل ${sx.failed}</p>` : "";
+  const stats = sx && st.running ? `<p class="muted" style="margin:4px 0 0">${esc(t("responder.last30", { sent: sx.sent, review: sx.needsReview, failed: sx.failed }))}</p>
+    <p class="muted">${esc(t("responder.unmatched", { n: sx.unmatchedCount || 0 }))}</p>
+    ${(sx.topRules || []).length ? `<p class="muted">${esc(t("responder.topRules"))}: ${sx.topRules.map((x) => `${esc(x.name)} (${x.count})`).join(" · ")}</p>` : ""}
+    ${(sx.unmatchedSamples || []).length ? `<details><summary>${esc(t("responder.unmatchedSamples"))}</summary>${sx.unmatchedSamples.map((x) => `<p class="muted">${esc(x.message)}</p>`).join("")}</details>` : ""}` : "";
   return `
-    ${welcome}
     <div class="card">
       <div class="title-line"><strong>حالة الخدمة</strong>${respStatusBadge(st.status)}</div>
       ${stats}
@@ -7552,13 +7984,14 @@ function respOverview() {
       ${st.status === "EXPIRED" ? `<div class="error-banner">خلصت المدة — الردود الآلية موقوفة. ادفع لتكمل الخدمة.</div>` : ""}
       <p class="muted">رصيدك: <b>${st.balance}</b> ${esc(st.creditName)} · ردود AI هالفترة: ${st.aiRepliesUsed}/${st.aiReplyLimit}</p>
       ${errorBanner()}
-      ${!st.running && st.trialAvailable ? `<button class="btn" onclick="respActivate()">${esc(t("intro.continue"))}</button>` : ""}
-      ${!st.running && !st.trialAvailable ? `<button class="btn" onclick="respActivate()">فعّل مقابل ${st.price} ${esc(st.creditName)} / ${st.periodDays} يوم</button>` : ""}
-      ${st.running && st.status === "ACTIVE" ? `<button class="btn outline" onclick="respRenew()">جدّد ${st.periodDays} يوم إضافي (${st.price} ${esc(st.creditName)})</button>` : ""}
-      ${st.status === "TRIAL" ? `<button class="btn outline" onclick="respRenew()">اشترك من هلق (${st.price} ${esc(st.creditName)})</button>` : ""}
+      ${S._resp.notice ? `<p class="badge success">${esc(S._resp.notice)}</p>` : ""}
       <div style="height:8px"></div>
       <button class="btn secondary" onclick="go('wallet')">💰 اشحن رصيدك</button>
+      ${S._resp.needsTopUp ? `<button class="btn" onclick="go('wallet')">${esc(t("responder.topUp"))}</button>` : ""}
     </div>
+    <div class="section-title">${esc(t("responder.plansTitle"))}</div>
+    ${st.running ? "" : `<div class="card intro-card"><h2>${esc(t("intro.responder.title"))}</h2><p>${esc(t("intro.responder.body"))}</p><p>${esc(t("responder.choosePlanHint"))}</p></div>`}
+    ${planCards}
     <div class="card">
       <div class="section-title" style="margin-top:0">عن نشاطك (بيساعد الذكاء الاصطناعي يرد صح)</div>
       <div class="field"><label>وصف النشاط</label><input id="rp-desc" placeholder="مثال: مطعم مأكولات شرقية، دوام من 10 صباحًا حتى 11 مساءً" value="${esc(st.businessDescription || "")}" /></div>
@@ -7572,6 +8005,27 @@ function respOverview() {
       ${st.fallbackMode === "TEMPLATE" ? `<div class="field"><label>نص الرد الاحتياطي ({name} = اسم الزبون)</label><textarea id="rp-fbtext" placeholder="مثال: شكرًا لتواصلك! بنرد عليك بأقرب وقت." rows="3">${esc(st.fallbackReply || "")}</textarea></div>` : ""}
       <button class="btn small" onclick="respSaveProfile()">حفظ</button>
     </div>`;
+}
+
+async function respChoosePlan(id, offerId) {
+  const plan = (S._resp?.plans || []).find((item) => item.id === id);
+  if (!plan || plan.priceCredits === null || S.busy) return;
+  S.error = null;
+  S.busy = true;
+  render();
+  const useTrial = plan.trialAvailable && !offerId;
+  const endpoint = useTrial ? `/responder/plans/${id}/trial` : `/responder/plans/${id}/purchase`;
+  const { ok, data } = await api("POST", endpoint, offerId ? { offerId } : {});
+  S.busy = false;
+  if (!ok) {
+    S.error = errMsg(data, t("pricing.failed"));
+    S._resp.needsTopUp = !!(data?.needed || data?.error?.details?.needed);
+    return render();
+  }
+  S._resp.notice = useTrial ? t("responder.trialStarted") : t("pricing.subscribed");
+  S._resp.loading = true;
+  render();
+  await loadResponder();
 }
 
 async function respActivate() {
@@ -7604,22 +8058,26 @@ function respChannels() {
     ${r.channels.map((c) => `
       <div class="card">
         <div class="title-line"><strong>${esc(c.name)}</strong>${c.connectable ? "" : `<span class="badge neutral">قريبًا</span>`}</div>
-        ${c.driver === "FACEBOOK" || c.driver === "INSTAGRAM" ? `
+        ${(c.driver === "FACEBOOK" || c.driver === "INSTAGRAM") && c.connectable ? `
           <button class="btn" onclick="respMetaLink()">ربط بحساب فيسبوك (الأسهل)</button>
           <p class="muted">بتسجّل دخول بفيسبوك وبتختار صفحتك، ما في داعي لأي أرقام أو رموز.</p>
           <div class="muted" style="margin:8px 0">أو يدويًا:</div>` : ""}
         ${c.connectable ? `
           ${c.fields.map((f) => `<div class="field"><label>${esc(f.label)}</label><input id="cf-${c.id}-${f.key}" ${f.secret ? 'type="password"' : ""} autocomplete="off" /></div>`).join("")}
           <button class="btn small" onclick="respConnect('${c.id}', ${JSON.stringify(c.fields.map((f) => f.key)).replace(/"/g, "&quot;")})">ربط</button>`
-        : `<p class="muted">الربط بحسابات ميتا بيحتاج موافقة منهم — لسا مو متاح.</p>`}
+        : `<p class="muted">${esc(t(c.driver === "FACEBOOK" || c.driver === "INSTAGRAM" ? "ربط فيسبوك وإنستغرام رح يتاح بعد ما توافق Meta على التطبيق — فيك تستعمل تيليغرام بالوقت الحالي" : "الربط بحسابات ميتا بيحتاج موافقة منهم — لسا مو متاح."))}</p>`}
       </div>`).join("")}
     <div class="section-title">اتصالاتي</div>
     ${r.connections.length === 0 ? `<div class="empty-state">ما في قنوات مربوطة</div>` : r.connections.map((c) => `
       <div class="card">
         <div class="title-line"><strong>${esc(c.channel)}</strong><span class="badge ${c.isActive ? "success" : "neutral"}">${c.isActive ? "شغّالة" : "موقوفة"}</span></div>
-        ${c.externalAccountId ? `<p class="muted">@${esc(c.externalAccountId)}</p>` : ""}
+        ${c.accountName ? `<p style="margin:2px 0;font-weight:600">${esc(c.accountName)}</p>` : ""}
+        ${c.externalAccountId ? `<p class="muted">${c.accountName ? "ID: " : "@"}${esc(c.externalAccountId)}</p>` : ""}
         ${c.hookUrl ? `<div class="field"><label>رابط استقبال الرسائل (الصقه بالمنصة)</label><input readonly value="${esc(c.hookUrl)}" onclick="this.select()" /></div>` : ""}
-        <button class="btn small outline" onclick="respToggleConn('${c.id}', ${!c.isActive})">${c.isActive ? "إيقاف" : "تشغيل"}</button>
+        <div class="row" style="gap:6px">
+          <button class="btn small outline" style="width:auto" onclick="respToggleConn('${c.id}', ${!c.isActive})">${c.isActive ? "إيقاف" : "تشغيل"}</button>
+          <button class="btn small danger" style="width:auto" onclick="respDeleteConn('${c.id}')">حذف</button>
+        </div>
       </div>`).join("")}`;
 }
 
@@ -7639,6 +8097,12 @@ async function respConnect(channelId, keys) {
   if (!ok) { S.error = errMsg(data, "تعذّر الربط"); return render(); }
   loadResponder();
 }
+async function respDeleteConn(id) {
+  if (!confirm("بدك تحذف هالقناة؟ بتنحذف محادثاتها المسجّلة وبيوقف الرد عليها.")) return;
+  const { ok, data } = await api("DELETE", "/responder/connections/" + id);
+  if (!ok) { S.error = errMsg(data, "تعذّر الحذف"); return render(); }
+  loadResponder();
+}
 async function respToggleConn(id, isActive) {
   await api("PATCH", "/responder/connections/" + id, { isActive });
   loadResponder();
@@ -7654,58 +8118,87 @@ function respRules() {
     ${errorBanner()}
     ${r.rules.map((x) => `
       <div class="card">
-        <div class="title-line"><strong>${esc(x.name)}</strong><span class="badge ${x.mode === "AI" ? "info" : "neutral"}">${x.mode === "AI" ? "ذكاء اصطناعي" : "رد ثابت"}</span></div>
+        <div class="title-line"><strong>${esc(x.name)}</strong><span class="badge neutral">${esc(t("responder.priority", { n: Number(x.priority || 0) }))}</span><span class="badge ${x.mode === "AI" ? "info" : "neutral"}">${x.mode === "AI" ? "ذكاء اصطناعي" : "رد ثابت"}</span></div>
         <p class="muted">كلمات: ${x.keywords.map(esc).join("، ")}${x.postIds && x.postIds.length ? ` · 📌 محصورة بـ ${x.postIds.length} منشور` : ""}</p>
         ${x.replyTemplate ? `<p class="muted">الرد: ${esc(x.replyTemplate)}</p>` : ""}
         <div class="row" style="margin-top:8px;gap:6px">
           <button class="btn small outline" style="width:auto" onclick="respRuleToggle('${x.id}', ${!x.isActive})">${x.isActive ? "إيقاف" : "تشغيل"}</button>
+          <button class="btn small outline" style="width:auto" onclick="respRuleEdit('${x.id}')">تعديل</button>
           <button class="btn small danger" style="width:auto" onclick="respRuleDelete('${x.id}')">حذف</button>
         </div>
       </div>`).join("")}
     <div class="card">
-      <div class="section-title" style="margin-top:0">قاعدة جديدة</div>
+      <div class="section-title" style="margin-top:0">${r.editingRuleId ? "تعديل القاعدة" : "قاعدة جديدة"}</div>
       <div class="field"><label>اسم القاعدة</label><input id="ru-name" placeholder="مثال: سؤال عن السعر" value="${esc(d.name || "")}" /></div>
       <div class="field"><label>كلمات مفتاحية (مفصولة بفاصلة)</label><input id="ru-keys" placeholder="سعر، كم، price" value="${esc(d.keys || "")}" /></div>
+      <div class="field"><label>${esc(t("responder.priorityHelp"))}</label><input id="ru-priority" type="number" min="-1000" max="1000" step="1" value="${esc(d.priority ?? 0)}" /></div>
       <div class="field"><label>نوع الرد</label>
         <select id="ru-mode"><option value="FIXED" ${d.mode !== "AI" ? "selected" : ""}>رد ثابت</option><option value="AI" ${d.mode === "AI" ? "selected" : ""}>ذكاء اصطناعي</option></select></div>
       <div class="field"><label>نص الرد (استخدم {name} لاسم الزبون)</label><input id="ru-reply" placeholder="مثال: أهلًا {name}، سعر المنتج 25" value="${esc(d.reply || "")}" /></div>
       <div class="field"><label>تعليمات للذكاء الاصطناعي (اختياري)</label><input id="ru-ai" placeholder="مثال: جاوب عن المواعيد والأسعار باختصار" value="${esc(d.ai || "")}" /></div>
       <div class="field"><label>القناة</label>
-        <select id="ru-channel"><option value="">كل القنوات</option>${r.channels.filter((c) => c.connectable).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+        <select id="ru-channel"><option value="">كل القنوات</option>${r.channels.filter((c) => c.connectable).map((c) => `<option value="${c.id}" ${d.channel === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
       ${socialConns.length ? `
       <div class="field"><label>منشورات محددة (فيسبوك / إنستغرام) — اتركها فاضية لتنطبق على كل شي</label>
-        <select id="ru-conn">${socialConns.map((c) => `<option value="${c.id}" ${d.conn === c.id ? "selected" : ""}>${esc(c.channel)}${c.externalAccountId ? " — " + esc(c.externalAccountId) : ""}</option>`).join("")}</select>
+        <select id="ru-conn">${socialConns.map((c) => `<option value="${c.id}" ${d.conn === c.id ? "selected" : ""}>${esc(c.channel)}${c.accountName || c.externalAccountId ? " — " + esc(c.accountName || c.externalAccountId) : ""}</option>`).join("")}</select>
         <button class="btn small outline" style="width:auto;margin-top:6px" onclick="respLoadPosts()">تحميل منشوراتي</button>
         ${r.postsError ? `<p class="muted" style="color:#b71c1c">${esc(r.postsError)}</p>` : ""}
         ${posts.map((p) => `
-          <label class="row" style="gap:8px;align-items:flex-start;margin-top:8px;font-size:13px">
-            <input type="checkbox" style="width:auto" ${picked.includes(p.id) ? "checked" : ""} onchange="respTogglePost('${esc(p.id)}')" />
-            <span>${esc((p.text || "").slice(0, 90))}<br><span class="muted">${String(p.createdAt || "").slice(0, 10)}</span></span>
+          <label class="card" style="display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:10px;font-size:13px;cursor:pointer;${picked.includes(p.id) ? "outline:2px solid var(--primary,#ba2a34)" : ""}">
+            <input type="checkbox" style="width:auto;margin-top:4px" ${picked.includes(p.id) ? "checked" : ""} onchange="respTogglePost('${esc(p.id)}')" />
+            ${/^https:\/\//.test(p.image || "") ? `<img src="${esc(p.image)}" alt="" loading="lazy" style="width:84px;height:84px;object-fit:cover;border-radius:8px;flex:none" />` : ""}
+            <span style="flex:1;min-width:0">
+              <span style="display:block;white-space:pre-wrap;word-break:break-word">${esc(p.text || "")}</span>
+              <span class="muted" style="display:block;margin-top:4px">${esc(String(p.createdAt || "").slice(0, 16).replace("T", " "))}</span>
+              ${/^https:\/\//.test(p.url || "") ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">فتح المنشور</a>` : ""}
+            </span>
           </label>`).join("")}
         ${picked.length ? `<p class="muted">📌 ${picked.length} منشور محدد — القاعدة بتردّ على التعليقات عليهم بس.</p>` : ""}
       </div>` : ""}
       <p class="muted" style="margin-bottom:8px">الشكاوى ما بتنرد آليًا أبدًا — بتنتظر ردك بصندوق الوارد.</p>
-      <button class="btn" onclick="respAddRule()">إضافة القاعدة</button>
+      <button class="btn" onclick="respAddRule()">${r.editingRuleId ? "حفظ التعديل" : "إضافة القاعدة"}</button>
+      ${r.editingRuleId ? `<button class="btn outline" style="margin-top:6px" onclick="respRuleEditCancel()">إلغاء</button>` : ""}
     </div>`;
 }
 
 async function respAddRule() {
   const keywords = qs("ru-keys").value.split(/[,،]/).map((k) => k.trim()).filter(Boolean);
-  const body = { name: qs("ru-name").value.trim(), keywords, mode: qs("ru-mode").value, replyTemplate: qs("ru-reply").value.trim(), aiInstructions: qs("ru-ai").value.trim(), channelId: qs("ru-channel").value || null, postIds: S._resp.selectedPosts || [] };
+  const body = { name: qs("ru-name").value.trim(), keywords, priority: Number(qs("ru-priority").value || 0), mode: qs("ru-mode").value, replyTemplate: qs("ru-reply").value.trim(), aiInstructions: qs("ru-ai").value.trim(), channelId: qs("ru-channel").value || null, postIds: S._resp.selectedPosts || [] };
   if (!body.name || keywords.length === 0) { S.error = "اكتب اسم القاعدة وكلمة مفتاحية وحدة عالأقل"; return render(); }
   S.error = null;
-  const { ok, data } = await api("POST", "/responder/rules", body);
+  const editing = S._resp.editingRuleId;
+  const { ok, data } = editing ? await api("PATCH", "/responder/rules/" + editing, body) : await api("POST", "/responder/rules", body);
   if (!ok) { S.error = errMsg(data, "تعذّر الحفظ"); return render(); }
-  S._resp.ruleDraft = null; S._resp.posts = []; S._resp.selectedPosts = [];
+  S._resp.ruleDraft = null; S._resp.posts = []; S._resp.selectedPosts = []; S._resp.editingRuleId = null;
   loadResponder();
+}
+
+/** Loads a saved rule into the form so it can be changed (the same form that creates one). */
+function respRuleEdit(id) {
+  const x = (S._resp.rules || []).find((r) => r.id === id);
+  if (!x) return;
+  S._resp.editingRuleId = id;
+  S._resp.ruleDraft = { name: x.name, keys: (x.keywords || []).join("، "), priority: x.priority || 0, mode: x.mode, reply: x.replyTemplate || "", ai: x.aiInstructions || "" };
+  S._resp.selectedPosts = x.postIds || [];
+  S._resp.posts = [];
+  S.error = null;
+  render();
+  const f = qs("ru-name"); if (f) f.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+function respRuleEditCancel() {
+  S._resp.editingRuleId = null; S._resp.ruleDraft = null; S._resp.selectedPosts = []; S._resp.posts = [];
+  render();
 }
 
 // The rule form is rebuilt on every render, so its fields are snapshotted into state first.
 function snapshotRuleDraft() {
   const d = {};
-  [["name", "ru-name"], ["keys", "ru-keys"], ["mode", "ru-mode"], ["reply", "ru-reply"], ["ai", "ru-ai"], ["conn", "ru-conn"]].forEach(([k, id]) => { const el = qs(id); if (el) d[k] = el.value; });
+  [["name", "ru-name"], ["keys", "ru-keys"], ["priority", "ru-priority"], ["mode", "ru-mode"], ["reply", "ru-reply"], ["ai", "ru-ai"], ["conn", "ru-conn"], ["channel", "ru-channel"]].forEach(([k, id]) => { const el = qs(id); if (el) d[k] = el.value; });
   S._resp.ruleDraft = d;
 }
+// Whatever is typed in the rule form is kept as it is typed, so a redraw of the page (the responder reloads in the background) cannot wipe it.
+document.addEventListener("input", (e) => { if (e.target && /^ru-/.test(e.target.id || "") && S._resp) snapshotRuleDraft(); });
+document.addEventListener("change", (e) => { if (e.target && /^ru-/.test(e.target.id || "") && S._resp) snapshotRuleDraft(); });
 async function respLoadPosts() {
   snapshotRuleDraft();
   const connId = qs("ru-conn") && qs("ru-conn").value;
@@ -7872,6 +8365,10 @@ function wireUpAfterRender() {
     renderDiscoverMap();
   }
   if (S.screen === "merchantRegister" || S.screen === "merchantProfile" || S.screen === "merchantBranches" || (S.screen === "home" && S.homeTab === "profile" && shareLocationOn())) renderPicker();
+  if (S.screen === "merchantMode" && S._openMarketingTeam) {
+    const team = document.getElementById("manage-marketing-team");
+    if (team) { S._openMarketingTeam = false; requestAnimationFrame(() => team.scrollIntoView({ behavior: "smooth", block: "center" })); }
+  }
   if (S.screen === "store" && S._store && S._store.slides && S._store.slides.length > 1) { if (!S._sliderTimer) storeSliderRestart(); }
   else if (S._sliderTimer) { clearInterval(S._sliderTimer); S._sliderTimer = null; }
 }
@@ -7920,6 +8417,21 @@ function bootMetaReturn() {
   return true;
 }
 
+function bootResponderPlansLink() {
+  const q = new URLSearchParams(location.search);
+  if (q.get("responder") !== "plans") return false;
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  S.stack = [];
+  if (!S.token) {
+    S._afterLogin = { screen: "responder", params: {} };
+    go("login");
+    return true;
+  }
+  S._resp = null;
+  go("responder");
+  return true;
+}
+
 loadMarket();
 captureJoin();
 loadSocialLinks();
@@ -7929,7 +8441,168 @@ bootSocialReturn().then((social) => {
   setTimeout(ensureCity, 1200); // first use: ask for the city once
   if (social) return;
   if (bootMetaReturn()) return;
+  if (bootResponderPlansLink()) return;
   bootReferralCapture().then((handled) => {
     if (!handled && !bootMerchantLink()) render();
   });
 });
+async function requestFitnessOffer(offerId) {
+  if (!S.token) { toast(t("appointment.loginRequired")); return go("login"); }
+  if (S.role !== "CUSTOMER") return toast(t("fitness.requestJoin"));
+  const {ok,data} = await api("POST", "/fitness-enrollments/offers/" + encodeURIComponent(offerId) + "/request", {});
+  if (!ok) return toast(errMsg(data, t("fitness.savePlanFailed")));
+  S._fitnessRequestedOfferIds = { ...(S._fitnessRequestedOfferIds || {}), [offerId]: "REQUESTED" };
+  toast(t("fitness.requestSent")); render();
+}
+function openFitnessPlans() { S._fitnessPlans = null; S._fitnessPlanForm = null; S._fitnessPlanTraineeFilter = null; go("fitnessPlans"); loadFitnessPlans(); }
+function loadFitnessPlans() {
+  Promise.all([api("GET", "/fitness-plans/coach"), api("GET", "/fitness-plans/coach/trainees"), api("GET", "/fitness-enrollments/coach")]).then(([plans, trainees, enrollments]) => {
+    S._fitnessPlans = plans.ok ? plans.data.items || [] : [];
+    S._fitnessTrainees = trainees.ok ? trainees.data.items || [] : [];
+    S._fitnessEnrollments = enrollments.ok ? enrollments.data.items || [] : [];
+    render();
+  });
+}
+function fitnessWeekHtml(schedule) {
+  const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+  return days.filter(day => (schedule?.[day] || []).length).map(day => '<h4>' + esc(t("fitness.day." + day)) + '</h4><ul>' + schedule[day].map(item => '<li>' + esc(item) + '</li>').join("") + '</ul>').join("");
+}
+function screenFitnessPlans() {
+  if (!S._fitnessPlans) return backRow() + spinner();
+  const form = S._fitnessPlanForm || {};
+  const trainees = S._fitnessTrainees || [];
+  const enrollments = S._fitnessEnrollments || [];
+  const filtered = S._fitnessPlanTraineeFilter ? S._fitnessPlans.filter(p => p.trainee?.id === S._fitnessPlanTraineeFilter) : S._fitnessPlans;
+  const chips = '<div style="display:flex;gap:8px;overflow:auto;margin:8px 0"><button class="chip" onclick="S._fitnessPlanTraineeFilter=null;render()">' + esc(t("fitness.allTrainees")) + ' (' + trainees.length + ')</button>' + trainees.map(summary => '<button class="chip" style="white-space:nowrap" onclick="S._fitnessPlanTraineeFilter=\'' + esc(summary.trainee.id) + '\';render()">' + esc(summary.trainee.fullName) + ' · ' + esc(summary.planCount) + '</button>').join("") + '</div>';
+  const planDates = p => [p.startsAt && t("fitness.planStarts", { date: new Date(p.startsAt).toLocaleDateString() }), p.endsAt && t("fitness.planEnds", { date: new Date(p.endsAt).toLocaleDateString() })].filter(Boolean).join(" · ");
+  const plans = filtered.map(p => '<div class="card" style="padding:14px;margin:10px 0"><b>' + esc(p.title) + '</b><div class="muted">' + esc(p.trainee?.fullName || "") + ' · ' + esc(p.trainee?.email || "") + ' · ' + esc(p.kind === "WORKOUT" ? t("fitness.workout") : t("fitness.nutrition")) + '</div>' + (planDates(p) ? '<div class="muted">📅 ' + esc(planDates(p)) + '</div>' : '') + (fitnessWeekHtml(p.weeklySchedule) || '<p>' + (p.details || []).map(esc).join("<br>") + '</p>') + (p.notes ? '<p>' + esc(p.notes) + '</p>' : '') + '<button class="btn outline" onclick="editFitnessPlan(\'' + esc(p.id) + '\')">' + esc(t("fitness.editPlan")) + '</button> <button class="btn outline" onclick="printFitnessPlan(\'' + esc(p.id) + '\')">📄 ' + esc(t("fitness.exportPdf")) + '</button> <button class="link-btn" onclick="deleteFitnessPlan(\'' + esc(p.id) + '\')">' + esc(t("fitness.deletePlan")) + '</button><h4>' + esc(t("fitness.progress")) + '</h4>' + (p.progress || []).map(x => '<div class="muted">' + esc(x.weightKg == null ? "" : x.weightKg + " kg") + ' · ' + esc(x.note || "") + ' · ' + esc(new Date(x.completedAt).toLocaleDateString()) + '</div>').join("") + '</div>').join("");
+  const statusText = status => t(({ REQUESTED: "fitness.statusRequested", ACCEPTED: "fitness.statusAccepted", REJECTED: "fitness.statusRejected", CANCELLED: "fitness.statusCancelled", COMPLETED: "fitness.statusCompleted" })[status] || "fitness.statusRequested");
+  const requestsHtml = enrollments.map(e => '<div class="card" style="padding:12px;margin:8px 0"><b>' + esc(e.offer?.title || "") + '</b><div>' + esc(e.user?.fullName || "") + ' · ' + esc(e.user?.email || "") + '</div><div class="muted">' + esc(statusText(e.status)) + (e.endsAt ? ' · ' + esc(t("fitness.planEnds", { date: new Date(e.endsAt).toLocaleDateString() })) : '') + '</div>' + (e.status === "REQUESTED" ? '<button class="btn" onclick="updateFitnessEnrollment(\'' + esc(e.id) + '\',\'ACCEPTED\')">' + esc(t("fitness.acceptRequest")) + '</button> <button class="btn outline" onclick="updateFitnessEnrollment(\'' + esc(e.id) + '\',\'REJECTED\')">' + esc(t("fitness.rejectRequest")) + '</button>' : '') + (e.status === "ACCEPTED" ? '<button class="btn outline" onclick="updateFitnessEnrollment(\'' + esc(e.id) + '\',\'COMPLETED\')">' + esc(t("fitness.completeEnrollment")) + '</button>' : '') + '</div>').join("");
+  return backRow() + '<h1 class="screen-title">🏋️ ' + esc(t("fitness.plansTitle")) + '</h1><p class="screen-sub">' + esc(t("fitness.plansHelp")) + '</p>' + (form.id ? '<p class="success-banner">' + esc(t("fitness.editPlan")) + ' · ' + esc(form.traineeName || "") + '</p>' : '') + '<div class="card" style="padding:16px">' + (form.id ? '<div class="field"><label>' + esc(t("fitness.traineeEmail")) + '</label><input type="email" value="' + esc(form.traineeEmail || "") + '" readonly></div>' : '<div class="field"><label>' + esc(t("fitness.traineeEmail")) + '</label><input id="fplan-email" type="email" value="' + esc(form.traineeEmail || "") + '"></div>') + '<div class="field"><label>' + esc(t("fitness.planType")) + '</label><select id="fplan-kind"><option value="WORKOUT" ' + ((form.kind || "WORKOUT") === "WORKOUT" ? "selected" : "") + '>' + esc(t("fitness.workout")) + '</option><option value="NUTRITION" ' + (form.kind === "NUTRITION" ? "selected" : "") + '>' + esc(t("fitness.nutrition")) + '</option></select></div><div class="field"><label>' + esc(t("fitness.planName")) + '</label><input id="fplan-title" maxlength="100" value="' + esc(form.title || "") + '"></div><div class="field"><label>' + esc(t("fitness.planItems")) + '</label><textarea id="fplan-details" rows="5" placeholder="' + esc(t("fitness.planItemsHelp")) + '">' + esc(form.details || "") + '</textarea></div><h3>' + esc(t("fitness.weeklySchedule")) + '</h3>' + ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"].map(day => '<div class="field"><label>' + esc(t("fitness.day." + day)) + '</label><textarea id="fplan-day-' + day + '" rows="2" placeholder="' + esc(t("fitness.dayItemsHelp")) + '">' + esc((form.weeklySchedule || {})[day]?.join("\n") || "") + '</textarea></div>').join("") + '<div class="field"><label>' + esc(t("fitness.planNotes")) + '</label><textarea id="fplan-notes" rows="3">' + esc(form.notes || "") + '</textarea></div><div class="field"><label>' + esc(t("fitness.planStartDate")) + '</label><input id="fplan-start" type="date" value="' + esc(form.startsAt || "") + '"></div><div class="field"><label>' + esc(t("fitness.planEndDate")) + '</label><input id="fplan-end" type="date" value="' + esc(form.endsAt || "") + '"></div><button class="btn" onclick="saveFitnessPlan()">' + esc(form.id ? t("fitness.updatePlan") : t("fitness.savePlan")) + '</button>' + (form.id ? ' <button class="btn outline" onclick="cancelFitnessPlanEdit()">' + esc(t("fitness.cancelEditPlan")) + '</button>' : '') + '</div><h2>' + esc(t("fitness.traineesCount", { n: trainees.length })) + '</h2>' + chips + '<h2>' + esc(t("fitness.createdPlans")) + '</h2>' + (plans || '<p class="muted">' + esc(t("fitness.noPlans")) + '</p>') + '<h2>' + esc(t("fitness.coachRequestsTitle")) + '</h2>' + (requestsHtml || '<p class="muted">' + esc(t("fitness.noEnrollments")) + '</p>');
+}
+function editFitnessPlan(id) {
+  const p = (S._fitnessPlans || []).find(x => x.id === id);
+  if (!p) return;
+  S._fitnessPlanForm = { id: p.id, traineeEmail: p.trainee?.email || "", traineeName: p.trainee?.fullName || "", kind: p.kind, title: p.title, details: (p.details || []).join("\n"), notes: p.notes || "", startsAt: p.startsAt?.slice(0, 10) || "", endsAt: p.endsAt?.slice(0, 10) || "", weeklySchedule: p.weeklySchedule || {} };
+  render();
+}
+function cancelFitnessPlanEdit() { S._fitnessPlanForm = null; render(); }
+async function saveFitnessPlan() {
+  const form = S._fitnessPlanForm || {};
+  const startDate = document.getElementById("fplan-start")?.value || "", endDate = document.getElementById("fplan-end")?.value || "";
+  if (startDate && endDate && endDate < startDate) return toast(t("fitness.invalidPlanDates"));
+  const body = { ...(form.id ? {} : { traineeEmail: document.getElementById("fplan-email")?.value.trim() }), kind: document.getElementById("fplan-kind")?.value, title: document.getElementById("fplan-title")?.value.trim(), details: (document.getElementById("fplan-details")?.value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean), notes: document.getElementById("fplan-notes")?.value.trim() || null, startsAt: startDate ? new Date(startDate + "T12:00:00Z").toISOString() : null, endsAt: endDate ? new Date(endDate + "T12:00:00Z").toISOString() : null, weeklySchedule: Object.fromEntries(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"].map(day => [day, (document.getElementById("fplan-day-" + day)?.value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean)]).filter(([, items]) => items.length)) };
+  const {ok,data} = await api(form.id ? "PATCH" : "POST", form.id ? "/fitness-plans/coach/" + encodeURIComponent(form.id) : "/fitness-plans/coach", body);
+  if (!ok) { toast(errMsg(data, t("fitness.savePlanFailed"))); return; }
+  S._fitnessPlanForm = null; loadFitnessPlans(); toast(form.id ? t("fitness.planUpdated") : t("fitness.planSaved"));
+}
+async function updateFitnessEnrollment(id, status) {
+  const {ok,data} = await api("PATCH", "/fitness-enrollments/coach/" + encodeURIComponent(id), {status});
+  if (!ok) return toast(errMsg(data, t("fitness.savePlanFailed")));
+  toast(t("fitness.enrollmentUpdated")); loadFitnessPlans();
+}
+async function deleteFitnessPlan(id) {
+  if (!confirm(t("fitness.deleteConfirm"))) return;
+  const {ok} = await api("DELETE", "/fitness-plans/coach/" + encodeURIComponent(id));
+  if (ok) loadFitnessPlans();
+}
+function printFitnessPlan(id) {
+  const p = (S._fitnessPlans || []).find(x => x.id === id);
+  if (!p) return;
+  const lang = LANG || "ar", rtl = lang === "ar";
+  const title = p.kind === "WORKOUT" ? (rtl ? "خطة التمرين" : "Workout plan") : (rtl ? "الخطة الغذائية" : "Nutrition plan");
+  const name = p.coachName || (S._profile && S._profile.fullName) || t("fitness.profile");
+  const items = p.weeklySchedule && Object.keys(p.weeklySchedule).length ? fitnessWeekHtml(p.weeklySchedule) : "<ol>" + (p.details || []).map(x => "<li>" + esc(x) + "</li>").join("") + "</ol>";
+  const w = window.open("", "_blank");
+  if (!w) { toast(t("fitness.popupBlocked")); return; }
+  w.document.write('<!doctype html><html lang="' + lang + '" dir="' + (rtl ? "rtl" : "ltr") + '"><meta charset="utf-8"><title>' + esc(p.title) + '</title><style>body{font:17px Arial;max-width:760px;margin:32px auto;padding:20px;color:#222}header{display:flex;align-items:center;gap:16px;border-bottom:2px solid #b32332;padding-bottom:16px}header img{width:72px;height:72px;border-radius:50%;object-fit:cover}h1{color:#a21f2d}li{padding:8px 0;white-space:pre-wrap}.muted{color:#666}@media print{button{display:none}}</style><button onclick="window.print()">' + esc(t("fitness.exportPdf")) + '</button><header>' + ((S._profile && S._profile.avatarUrl) ? '<img src="' + esc(S._profile.avatarUrl) + '">' : "") + '<b>' + esc(name) + '</b></header><h1>' + esc(title) + ': ' + esc(p.title) + '</h1><h3>' + esc(p.trainee.fullName) + '</h3>' + items + '<h2>' + esc(t("fitness.planNotes")) + '</h2><p>' + esc(p.notes || "") + '</p><footer>Dalilacom</footer></html>');
+  w.document.close();
+}
+function openMyFitnessPlans() {
+  S._myFitnessPlans = null; S._myFitnessEnrollments = [];
+  go("myFitnessPlans");
+  Promise.all([api("GET", "/fitness-plans/mine"), api("GET", "/fitness-enrollments/mine")]).then(([plans, enrollments]) => {
+    S._myFitnessPlans = plans.ok ? plans.data.items || [] : [];
+    S._myFitnessEnrollments = enrollments.ok ? enrollments.data.items || [] : [];
+    S._fitnessRequestedOfferIds = Object.fromEntries((S._myFitnessEnrollments || []).filter(e => ["REQUESTED", "ACCEPTED"].includes(e.status)).map(e => [e.offerId || e.offer?.id, e.status]));
+    render();
+  });
+}
+function screenMyFitnessPlans() {
+  if (!S._myFitnessPlans) return backRow() + spinner();
+  const items = S._myFitnessPlans.map(p => `<div class="card" style="padding:14px;margin:10px 0"><b>${esc(p.title)}</b><div class="muted">${esc(p.coach.fitnessProfile?.displayName || p.coach.businessName)} · ${esc(p.kind === "WORKOUT" ? t("fitness.workout") : t("fitness.nutrition"))}</div>${p.startsAt ? `<div class="muted">📅 ${esc(t("fitness.planStarts", { date: new Date(p.startsAt).toLocaleDateString() }))}</div>` : ""}${p.endsAt ? `<div class="muted">⏳ ${esc(t("fitness.planEnds", { date: new Date(p.endsAt).toLocaleDateString() }))}</div>` : ""}${fitnessWeekHtml(p.weeklySchedule) || `<ol>${(p.details || []).map(x => `<li>${esc(x)}</li>`).join("")}</ol>`}<p>${esc(p.notes || "")}</p><button class="btn outline" onclick="addFitnessProgress('${esc(p.id)}')">${esc(t("fitness.logProgress"))}</button><input id="fp-weight-${esc(p.id)}" type="number" step="0.1" placeholder="${esc(t("fitness.weightKg"))}"><input id="fp-note-${esc(p.id)}" placeholder="${esc(t("fitness.progressNote"))}"><h4>${esc(t("fitness.progress"))}</h4>${(p.progress || []).map(x => `<div class="muted">${esc(x.weightKg == null ? "" : x.weightKg + " kg")} · ${esc(x.note || "")} · ${esc(new Date(x.completedAt).toLocaleDateString())}</div>`).join("")}</div>`).join("");
+  const statusKey = { REQUESTED: "fitness.statusRequested", ACCEPTED: "fitness.statusAccepted", REJECTED: "fitness.statusRejected", CANCELLED: "fitness.statusCancelled", COMPLETED: "fitness.statusCompleted" };
+  const enrollments = (S._myFitnessEnrollments || []).map(e => `<div class="card" style="padding:12px;margin:8px 0"><b>${esc(e.offer?.title || "")}</b><div>${esc(e.merchant?.fitnessProfile?.displayName || e.merchant?.businessName || "")}</div><div class="muted">${esc(t(statusKey[e.status] || "fitness.statusRequested"))}${e.endsAt ? " · " + esc(t("fitness.planEnds", { date: new Date(e.endsAt).toLocaleDateString() })) : ""}</div>${e.status === "REQUESTED" ? `<button class="link-btn" onclick="cancelFitnessEnrollment('${esc(e.id)}')">${esc(t("fitness.cancelRequest"))}</button>` : ""}${e.status === "ACCEPTED" ? `<p class="muted">${esc(t("fitness.paymentArranged"))}</p>` : ""}</div>`).join("");
+  return backRow() + `<h1 class="screen-title">🏋️ ${esc(t("fitness.myPlans"))}</h1>${items || `<p class="muted">${esc(t("fitness.noPlans"))}</p>`}<h2>${esc(t("fitness.enrollmentsTitle"))}</h2>${enrollments || `<p class="muted">${esc(t("fitness.noEnrollments"))}</p>`}`;
+}
+async function cancelFitnessEnrollment(id) {
+  const {ok,data} = await api("POST", "/fitness-enrollments/mine/" + encodeURIComponent(id) + "/cancel", {});
+  if (!ok) return toast(errMsg(data, t("fitness.savePlanFailed")));
+  openMyFitnessPlans();
+}
+async function addFitnessProgress(id) {
+  const weight = document.getElementById("fp-weight-" + id)?.value;
+  const note = document.getElementById("fp-note-" + id)?.value.trim();
+  const {ok,data} = await api("POST", "/fitness-plans/" + encodeURIComponent(id) + "/progress", {weightKg: weight ? Number(weight) : null, note: note || null});
+  if (!ok) { toast(errMsg(data, t("fitness.progressFailed"))); return; }
+  openMyFitnessPlans();
+}
+async function uploadFitnessCertificate(file) {
+  if (!file) return;
+  const headers = {"Content-Type": file.type};
+  if (S.token) headers.Authorization = "Bearer " + S.token;
+  const r = await fetch("/fitness-profile/photos", {method:"POST", headers, body:file});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { toast(errMsg(data, t("fitness.certificateUploadFailed"))); return; }
+  const ids = S._fitnessProfile.certificationPhotoIds || [];
+  if (ids.length >= 12) { toast(t("fitness.certificateLimit")); return; }
+  S._fitnessProfile.certificationPhotoIds = [...ids, data.id];
+  await saveFitnessProfile();
+}
+async function removeFitnessCertificate(id) {
+  S._fitnessProfile.certificationPhotoIds = (S._fitnessProfile.certificationPhotoIds || []).filter(x => x !== id);
+  await saveFitnessProfile();
+}
+function renderFitnessOffers() {
+  const offers = S._fitnessOffers || [];
+  const cards = offers.length ? offers.map(o => '<div class="card" style="padding:12px;margin:8px 0"><b>' + esc(o.title) + '</b><div>' + esc(o.durationMonths) + ' ' + esc(t("fitness.months")) + ' · ' + esc((o.priceCents / 100).toLocaleString()) + ' ' + esc(o.currency) + '</div>' + (o.description ? '<p>' + esc(o.description) + '</p>' : '') + '<button class="link-btn" onclick="deleteFitnessOffer(\'' + esc(o.id) + '\')">' + esc(t("fitness.deletePlan")) + '</button></div>').join("") : '<p class="muted">' + esc(t("fitness.noOffersYet")) + '</p>';
+  const form = S._fitnessOfferForm || {};
+  const message = S._fitnessOfferMessage || "";
+  return '<h2>' + esc(t("fitness.monthlyOffers")) + '</h2><p class="muted">' + esc(t("fitness.offerHelp")) + '</p>' + cards + '<div class="card" style="padding:14px"><div class="field"><label>' + esc(t("fitness.offerName")) + '</label><input id="fo-title" maxlength="100" value="' + esc(form.title || "") + '"></div><div class="field"><label>' + esc(t("fitness.offerDescription")) + '</label><textarea id="fo-description" rows="2">' + esc(form.description || "") + '</textarea></div><div style="display:flex;gap:8px"><div class="field" style="flex:1"><label>' + esc(t("fitness.offerMonths")) + '</label><input id="fo-months" type="number" min="1" max="24" value="' + esc(form.months || "1") + '"></div><div class="field" style="flex:1"><label>' + esc(t("fitness.offerPrice")) + '</label><input id="fo-price" type="number" min="0" step="0.01" value="' + esc(form.price || "") + '"></div></div><div class="field"><label>' + esc(t("fitness.offerCurrency")) + '</label><select id="fo-currency"><option ' + (form.currency === "USD" || !form.currency ? "selected" : "") + '>USD</option><option ' + (form.currency === "SYP" ? "selected" : "") + '>SYP</option><option ' + (form.currency === "EUR" ? "selected" : "") + '>EUR</option><option ' + (form.currency === "TRY" ? "selected" : "") + '>TRY</option></select></div><button id="fitness-offer-save" class="btn" onclick="saveFitnessOffer(this)" ' + (S._fitnessOfferSaving ? "disabled" : "") + '>' + esc(S._fitnessOfferSaving ? t("fitness.savingNow") : t("fitness.saveOffer")) + '</button><p class="' + (S._fitnessOfferMessageKind === "error" ? "error-banner" : S._fitnessOfferMessageKind === "success" ? "success-banner" : "muted") + '" role="status" aria-live="polite">' + esc(message) + '</p></div>';
+}
+async function saveFitnessOffer(button) {
+  if (S._fitnessOfferSaving) return;
+  const rawTitle = document.getElementById("fo-title")?.value.trim() || "";
+  const rawDescription = document.getElementById("fo-description")?.value.trim() || "";
+  const rawMonths = latinDigits(document.getElementById("fo-months")?.value || "1").trim();
+  const rawPrice = latinDigits(document.getElementById("fo-price")?.value || "0").trim();
+  const months = Number(rawMonths), price = Number(rawPrice);
+  const currency = document.getElementById("fo-currency")?.value || "USD";
+  S._fitnessOfferForm = { title: rawTitle, description: rawDescription, months: rawMonths, price: rawPrice, currency };
+  const invalid = !rawTitle || rawTitle.length < 2 || !Number.isInteger(months) || months < 1 || months > 24 || !Number.isFinite(price) || price < 0 || price > 1000000;
+  if (invalid) {
+    S._fitnessOfferMessage = t("fitness.offerInvalid"); S._fitnessOfferMessageKind = "error"; render(); return;
+  }
+  const body = {title:rawTitle, description:rawDescription || null, durationMonths:months, priceCents:Math.round(price*100), currency};
+  S._fitnessOfferSaving = true; S._fitnessOfferMessage = t("fitness.savingNow"); S._fitnessOfferMessageKind = "pending";
+  if (button) { button.disabled = true; button.textContent = t("fitness.savingNow"); }
+  try {
+    const result = await api("POST", "/fitness-profile/offers", body);
+    if (!result.ok) {
+      S._fitnessOfferMessage = errMsg(result.data, t("fitness.offerSaveFailed")); S._fitnessOfferMessageKind = "error"; render(); return;
+    }
+    S._fitnessOffers = [result.data, ...(S._fitnessOffers || []).filter(o => o.id !== result.data.id)];
+    S._fitnessOfferForm = null; S._fitnessOfferMessage = t("fitness.offerSaved"); S._fitnessOfferMessageKind = "success"; render();
+  } catch (_) {
+    S._fitnessOfferMessage = t("fitness.offerSaveUnknown"); S._fitnessOfferMessageKind = "error"; render();
+  } finally {
+    S._fitnessOfferSaving = false;
+    const activeButton = document.getElementById("fitness-offer-save");
+    if (activeButton) { activeButton.disabled = false; activeButton.textContent = t("fitness.saveOffer"); }
+  }
+}
+async function deleteFitnessOffer(id) {
+  if (!confirm(t("fitness.deleteConfirm"))) return;
+  const {ok} = await api("DELETE", "/fitness-profile/offers/" + encodeURIComponent(id));
+  if (ok) { S._fitnessOffers = (S._fitnessOffers || []).filter(x => x.id !== id); render(); }
+}

@@ -241,7 +241,7 @@
       <div class="nav-group"><div class="nav-title" role="button" tabindex="0" onclick="toggleAdminGroup(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAdminGroup(this)}">العمل اليومي</div>
         <div class="nav-item" data-section="merchants" onclick="showSection('merchants')"><span class="ni">🏪</span><span class="nt">أصحاب الأنشطة</span></div>
         <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()"><span class="ni">🏷️</span><span class="nt">الحسومات</span><span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
-        <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()"><span class="ni">🛡️</span><span class="nt">مراجعة المنتجات</span><span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
+        <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()"><span class="ni">🛍️</span><span class="nt">إدارة المنتجات</span><span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
         <div class="nav-item" data-section="ads" onclick="showSection('ads'); loadAds()"><span class="ni">📢</span><span class="nt">إعلانات المتجر</span><span id="ads-pending-count" class="badge PENDING" style="display:none"></span></div>
         <div class="nav-item" data-section="topups" onclick="showSection('topups')"><span class="ni">💰</span><span class="nt">طلبات الإيداع</span></div>
         <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()"><span class="ni">💡</span><span class="nt">اقتراحات المهن</span><span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
@@ -503,6 +503,8 @@
               <option value="MEMBERSHIP">عضوية الزبون (بطاقة الحسم)</option>
               <option value="MERCHANT_ACCOUNT">باقة النشاط</option>
               <option value="ACCOUNTING">المحاسبة</option>
+<option value="RESPONDER_BASIC">المجيب الآلي (متاح لكل الحسابات)</option>
+
             </select></div>
           <div><label>الاسم</label><input id="np-name" placeholder="Monthly" /></div>
         </div>
@@ -560,10 +562,25 @@
         <label>المحافظ المحلية — سطر لكل محفظة: KEY|الاسم|رقم الحساب|تعليمات</label>
         <textarea id="rs-wallets" rows="4" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:inherit" placeholder="SHAM_CASH|شام كاش|0999xxxxxx|حوّل وابعت رقم العملية"></textarea>
         <p class="muted" style="margin:6px 0 0">المحفظة اللي مفتاحها <b>SHAM_CASH</b> بتصير تلقائية (بيتحقق السيرفر من الحوالة وبينزّل الرصيد فورًا) لما تحط عنوان ومفتاح الخدمة بإعدادات السيرفر. وبدونهم بتضل بانتظار موافقتك. رقم العملية بينقبل مرة وحدة فقط.</p>
+        <h3 style="margin-top:18px">علامة دليلكم على الردود</h3>
+        <label><input id="rs-badge-enabled" type="checkbox" checked /> إظهار العلامة للخطط التي لا تزيلها</label>
+        <label>النص الذي يظهر في نهاية الرد</label>
+        <input id="rs-badge-text" maxlength="80" placeholder="⚡ بواسطة دليلكم" />
         <label>كم ليرة سورية = 1 دولار (لتحويل حوالات الليرة لرصيد؛ صفر = الليرة بتنراجع يدويًا)</label>
         <input placeholder="مثال: 15000" id="rs-syp" type="number" min="0" step="1" />
         <button style="margin-top:12px" onclick="saveResponderSettings()">حفظ الإعدادات</button>
         <span id="rs-msg" class="muted" style="margin-right:10px"></span>
+      </div>
+      <div class="card">
+        <h3>منح أو تمديد خطة لحساب</h3>
+        <p class="muted">اكتب بريد الحساب، اختر إحدى خطط المجيب، وحدد عدد الأيام. المنحة لا تخصم رصيدًا من الحساب.</p>
+        <div class="row">
+          <div><label>بريد الحساب</label><input id="rg-email" type="email" placeholder="name@example.com" /></div>
+          <div><label>الخطة</label><select id="rg-plan"><option value="">— اختر خطة —</option></select></div>
+          <div><label>عدد الأيام</label><input id="rg-days" type="number" min="1" max="3650" /></div>
+        </div>
+        <button style="margin-top:12px" onclick="grantResponderPlan()">منح / تمديد</button>
+        <span id="rg-msg" class="muted" style="margin-right:10px"></span>
       </div>
       <div class="card">
         <h3>القنوات (وسائل التواصل)</h3>
@@ -800,6 +817,14 @@
         <span id="ai-quota-msg" class="muted" style="margin-right:10px"></span>
       </div>
       <div class="card">
+        <h3>تكلفة نماذج الذكاء الاصطناعي</h3>
+        <p class="muted">اكتب تكلفة مليون وحدة نصية إدخال ومليون وحدة نصية جواب بالدولار حسب فاتورة كل مزوّد. إذا تركت السعر فارغًا، نسجل وحدات النص لكن نترك التكلفة «غير معروفة» بدل التخمين.</p>
+        <table><thead><tr><th>المزوّد</th><th>اسم النموذج كما يظهر في السجل</th><th>مليون كلمة إدخال ($)</th><th>مليون كلمة جواب ($)</th><th></th></tr></thead><tbody id="ai-model-prices"></tbody></table>
+        <button class="small" style="margin-top:8px" onclick="addAiModelPrice()">+ أضف سعر نموذج</button>
+        <button class="small" style="margin-top:8px" onclick="saveAiModelPrices()">حفظ أسعار النماذج</button>
+        <span id="ai-model-price-msg" class="muted" style="margin-right:10px"></span>
+      </div>
+      <div class="card">
         <h3>الجلسة الحالية</h3>
         <p class="muted">أرقام الخدمة الشغّالة هلق بالضبط — تتصفّر مع كل نشر أو نوم للخطة المجانية.</p>
         <table style="margin-top:12px">
@@ -817,6 +842,12 @@
           <tbody id="ai-totals-body"></tbody>
         </table>
         <p class="muted" style="margin-top:14px" id="ai-totals-note"></p>
+      </div>
+      <div class="card">
+        <h3>استخدام المجيب الآلي هذا الشهر</h3>
+        <p class="muted">عدد استدعاءات الذكاء الاصطناعي ووحدات النص والتكلفة التقديرية لكل حساب. السعر يظهر فقط للنماذج التي أدخلت أسعارها أعلاه.</p>
+        <table><thead><tr><th>الحساب</th><th>الاستدعاءات</th><th>وحدات الإدخال</th><th>وحدات الجواب</th><th>التكلفة التقديرية ($)</th></tr></thead><tbody id="responder-ai-usage-body"></tbody></table>
+        <p id="responder-ai-usage-note" class="muted"></p>
       </div>
     </div>
 
@@ -857,7 +888,7 @@
 
     <!-- PRODUCTS WAITING FOR REVIEW -->
     <div class="section" id="section-prodreview" style="display:none">
-      <h2>مراجعة المنتجات</h2>
+      <h2>إدارة المنتجات ومراجعتها</h2>
       <p class="subtitle">الذكاء الاصطناعي بيقرأ كل منتج جديد قبل ما يظهر. المنتج الواضح الغير لائق بينرفض لحاله، والعادي بيظهر، واللي ما تأكد منه (أو لما ما يجاوب الذكاء الاصطناعي) بيجي لهون لتقرر إنت.</p>
       <div class="filters">
         <button class="active" data-pstatus="PENDING" onclick="loadProductReview('PENDING')">بانتظار القرار</button>
@@ -865,9 +896,24 @@
         <button data-pstatus="APPROVED" onclick="loadProductReview('APPROVED')">مقبولة</button>
         <button data-pstatus="ALL" onclick="loadProductReview('ALL')">الكل</button>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-        <input id="prev-q" placeholder="اسم المنتج أو المحل" style="flex:1;min-width:220px;max-width:380px" onkeydown="if(event.key==='Enter') loadProductReview(prevStatus, 1)">
-        <button onclick="loadProductReview(prevStatus, 1)">🔍 بحث</button>
+      <div class="card" style="margin:10px 0">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+          <label>بحث بالمنتج أو المحل أو الهاتف<br><input id="prev-q" placeholder="اكتب كلمة البحث" style="min-width:210px" onkeydown="if(event.key==='Enter') loadProductReview(prevStatus, 1)"></label>
+          <label>من تاريخ<br><input id="prev-from" type="date"></label>
+          <label>إلى تاريخ<br><input id="prev-to" type="date"></label>
+          <label>حالة المنتج<br><select id="prev-condition"><option value="ANY">الكل</option><option value="NEW">جديد</option><option value="USED">مستعمل</option><option value="UNSPECIFIED">غير محدد</option></select></label>
+          <label>الظهور<br><select id="prev-visibility"><option value="ANY">الكل</option><option value="VISIBLE">ظاهر</option><option value="HIDDEN">مخفي</option></select></label>
+          <label>المخزون<br><select id="prev-stock"><option value="ANY">الكل</option><option value="AVAILABLE">متوفر</option><option value="EMPTY">نفد</option></select></label>
+          <label>الترتيب<br><select id="prev-order"><option value="NEWEST">الأحدث أولاً</option><option value="OLDEST">الأقدم أولاً</option></select></label>
+          <button onclick="loadProductReview(prevStatus, 1)">🔍 تطبيق البحث</button>
+          <button class="secondary" onclick="resetProductFilters()">مسح الفلاتر</button>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
+          <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="prev-select-page" onchange="toggleProductPageSelection(this.checked)"> تحديد منتجات هذه الصفحة</label>
+          <button class="danger" id="prev-bulk-delete" onclick="deleteSelectedProducts()" disabled>حذف المحدد</button>
+          <span id="prev-selection-count" class="muted">ما في منتجات محددة</span>
+          <span id="prev-results-count" class="muted"></span>
+        </div>
       </div>
       <div id="prev-list"></div>
       <div id="prev-pager" style="margin:10px 0"></div>

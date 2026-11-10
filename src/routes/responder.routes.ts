@@ -11,8 +11,10 @@ import { decryptJson, encryptJson } from "../services/crypto.service";
 import { drivers } from "../services/channels";
 import { getSettings } from "../services/settings.service";
 import { InsufficientBalanceError } from "../services/wallet.service";
-import { activate, AlreadyRunningError, getSubscription, isRunning, maybeNotifyEnding, pay, sendThroughConnection } from "../services/responder.service";
+import { activate, AlreadyRunningError, getActiveResponderEntitlements, getSubscription, maybeNotifyEnding, pay, purchaseResponderPlan, RESPONDER_PLAN_SERVICE, ResponderPlanNotFoundError, ResponderPlanPriceUnsetError, ResponderTrialUnavailableError, sendThroughConnection, startResponderTrial } from "../services/responder.service";
+import { getCatalog } from "../services/plan.service";
 import { metaOAuthRouter } from "./metaOAuth.routes";
+import { isMetaDriver, META_NOT_OPEN_MESSAGE, metaOpenFor } from "../lib/metaAccess";
 
 export const responderRouter = Router();
 
@@ -49,12 +51,16 @@ responderRouter.get("/status", requireAuth, route(async (req, res) => {
     getSettings(),
     prisma.wallet.findUnique({ where: { userId: req.user!.id } }),
   ]);
+  const entitlements = await getActiveResponderEntitlements(req.user!.id);
   // Looking at the service is a natural moment to warn that it is about to end (once per ending).
   await maybeNotifyEnding(sub).catch(() => null);
   const price = req.user!.role === "MERCHANT" ? settings.responder.priceMerchant : settings.responder.priceCustomer;
   res.json({
     status: sub.status,
-    running: isRunning(sub.status),
+    running: sub.enabled && entitlements.length > 0,
+    enabled: sub.enabled,
+    hasActivePlan: entitlements.length > 0,
+    activePlans: entitlements.map(({ plan, status, source, trialEndsAt, periodEnd }) => ({ id: plan.id, name: plan.name, includesAi: plan.includesAi, aiReplyLimit: plan.aiReplyLimit, status, source, trialEndsAt, periodEnd })),
     trialAvailable: !sub.trialUsed && settings.responder.trialDays > 0,
     trialDays: settings.responder.trialDays,
     trialEndsAt: sub.trialEndsAt,
@@ -70,6 +76,66 @@ responderRouter.get("/status", requireAuth, route(async (req, res) => {
     fallbackMode: sub.fallbackMode,
     fallbackReply: sub.fallbackReply,
   });
+}));
+
+// A single list for every account type. The user explicitly chooses a plan before a plan's trial begins.
+responderRouter.get("/plans", requireAuth, route(async (req, res) => {
+  const account = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { countryCode: true } });
+  const catalog = await getCatalog(account?.countryCode ?? null, resolveLanguage(req));
+  const plans = catalog.services.find((service) => service.service === RESPONDER_PLAN_SERVICE)?.plans ?? [];
+  const [planDetails, existingTrials] = await Promise.all([
+    prisma.servicePlan.findMany({ where: { id: { in: plans.map((plan) => plan.id) } }, select: { id: true, includesAi: true, aiReplyLimit: true, removesBadge: true } }),
+    prisma.responderEntitlement.findMany({ where: { userId: req.user!.id, planId: { in: plans.map((plan) => plan.id) } }, select: { planId: true } }),
+  ]);
+  const detailsById = new Map(planDetails.map((plan) => [plan.id, plan]));
+  const usedTrials = new Set(existingTrials.map((entitlement) => entitlement.planId));
+  const offers = await prisma.planOffer.findMany({ where: { planId: { in: plans.map((plan) => plan.id) }, isActive: true, AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: new Date() } }] }, { OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }] } });
+  res.json(plans.map((plan) => ({
+    ...plan,
+    ...detailsById.get(plan.id),
+    trialAvailable: plan.trialDays > 0 && !usedTrials.has(plan.id),
+    offers: offers.filter((offer) => offer.planId === plan.id),
+  })));
+}));
+
+responderRouter.post("/plans/:id/purchase", requireAuth, route(async (req, res) => {
+  try {
+    const account = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { countryCode: true } });
+    const parsed = z.object({ offerId: z.string().uuid().optional() }).safeParse(req.body ?? {});
+    if (!parsed.success) return sendValidationError(res, parsed.error);
+    res.status(201).json(await purchaseResponderPlan(req.user!.id, req.params.id, account?.countryCode ?? null, parsed.data.offerId));
+  } catch (err) {
+    if (err instanceof ResponderPlanNotFoundError) return sendError(res, 404, "NOT_FOUND", "الخطة غير موجودة أو غير متاحة");
+    if (err instanceof ResponderPlanPriceUnsetError) return sendError(res, 409, "PRICE_NOT_SET", "سعر هذه الخطة غير مكتمل، تواصل مع الدعم");
+    if (err instanceof InsufficientBalanceError) return insufficient(res, err);
+    throw err;
+  }
+}));
+
+responderRouter.post("/plans/:id/trial", requireAuth, route(async (req, res) => {
+  try {
+    const entitlement = await startResponderTrial(req.user!.id, req.params.id);
+    await prisma.responderSubscription.upsert({
+      where: { userId: req.user!.id },
+        update: {
+          status: "TRIAL",
+          trialUsed: true,
+          trialEndsAt: entitlement.trialEndsAt,
+          periodEnd: null,
+          expiryNoticeFor: null,
+          aiRepliesUsed: 0,
+          aiPeriodStart: new Date(),
+          aiQuotaNotice80At: null,
+          aiQuotaNotice100At: null,
+        },
+      create: { userId: req.user!.id, status: "TRIAL", trialEndsAt: entitlement.trialEndsAt },
+    });
+    res.status(201).json(entitlement);
+  } catch (err) {
+    if (err instanceof ResponderPlanNotFoundError) return sendError(res, 404, "NOT_FOUND", "الخطة غير موجودة أو غير متاحة");
+    if (err instanceof ResponderTrialUnavailableError) return sendError(res, 409, "TRIAL_USED", "التجربة لهذه الخطة غير متاحة أو استُخدمت سابقًا");
+    throw err;
+  }
 }));
 
 responderRouter.post("/activate", requireAuth, route(async (req, res) => {
@@ -97,6 +163,7 @@ const profileSchema = z.object({
   tone: z.string().max(200).optional(),
   fallbackMode: z.enum(["OFF", "AI", "TEMPLATE"]).optional(),
   fallbackReply: z.string().max(1000).optional(),
+  enabled: z.boolean().optional(),
 });
 
 responderRouter.patch("/profile", requireAuth, route(async (req, res) => {
@@ -109,15 +176,22 @@ responderRouter.patch("/profile", requireAuth, route(async (req, res) => {
   const reply = merged.fallbackReply ?? current.fallbackReply;
   if (mode === "TEMPLATE" && !reply?.trim()) return sendError(res, 400, "BAD_REQUEST", "اكتب نص الرد الاحتياطي");
   const sub = await prisma.responderSubscription.update({ where: { userId: req.user!.id }, data: merged });
-  res.json({ businessDescription: sub.businessDescription, tone: sub.tone, fallbackMode: sub.fallbackMode, fallbackReply: sub.fallbackReply });
+  res.json({ businessDescription: sub.businessDescription, tone: sub.tone, fallbackMode: sub.fallbackMode, fallbackReply: sub.fallbackReply, enabled: sub.enabled });
 }));
 
 // The last 30 days at a glance: what was answered, what waits for a person, what failed.
 responderRouter.get("/stats", requireAuth, route(async (req, res) => {
   const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
-  const groups = await prisma.responderInteraction.groupBy({ by: ["status"], where: { userId: req.user!.id, createdAt: { gte: since } }, _count: { _all: true } });
+  const where = { userId: req.user!.id, createdAt: { gte: since } };
+  const [groups, usage, unmatchedCount, unmatchedSamples] = await Promise.all([
+    prisma.responderInteraction.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    prisma.responderInteraction.groupBy({ by: ["matchedRuleId"], where: { ...where, matchedRuleId: { not: null } }, _count: { _all: true }, orderBy: { _count: { matchedRuleId: "desc" } }, take: 5 }),
+    prisma.responderInteraction.count({ where: { ...where, noMatchingRule: true } }),
+    prisma.responderInteraction.findMany({ where: { ...where, noMatchingRule: true }, orderBy: { createdAt: "desc" }, take: 5, select: { message: true, createdAt: true } }),
+  ]);
   const count = (status: string) => groups.find((g) => g.status === status)?._count._all ?? 0;
-  res.json({ days: 30, sent: count("SENT"), needsReview: count("NEEDS_REVIEW"), failed: count("FAILED"), skipped: count("SKIPPED") });
+  const rules = await prisma.responderRule.findMany({ where: { id: { in: usage.map((x) => x.matchedRuleId!).filter(Boolean) }, userId: req.user!.id }, select: { id: true, name: true } });
+  res.json({ days: 30, sent: count("SENT"), needsReview: count("NEEDS_REVIEW"), failed: count("FAILED"), skipped: count("SKIPPED"), topRules: usage.map((x) => ({ id: x.matchedRuleId, name: rules.find((r) => r.id === x.matchedRuleId)?.name ?? "Deleted rule", count: x._count._all })), unmatchedCount, unmatchedSamples });
 }));
 
 /* ---------------- channels & connections ---------------- */
@@ -130,7 +204,7 @@ responderRouter.get("/channels", requireAuth, route(async (req, res) => {
       id: c.id,
       key: c.key,
       name: translateText(c.name, lang),
-      connectable: c.driver !== "META_PENDING",
+      connectable: c.driver !== "META_PENDING" && (!isMetaDriver(c.driver) || metaOpenFor(req.user!.role)),
       driver: c.driver,
       fields: CREDENTIAL_FIELDS[c.driver].map((f) => ({ ...f, label: translateText(f.label, lang) })),
     })),
@@ -149,6 +223,7 @@ responderRouter.get("/connections", requireAuth, route(async (req, res) => {
       id: c.id,
       channel: c.channel.name,
       externalAccountId: c.externalAccountId,
+      accountName: c.accountName,
       isActive: c.isActive,
       driver: c.channel.driver,
       supportsPosts: c.channel.driver === "FACEBOOK" || c.channel.driver === "INSTAGRAM",
@@ -164,11 +239,9 @@ responderRouter.post("/connections", requireAuth, route(async (req, res) => {
   const parsed = connectSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
-  const sub = await getSubscription(req.user!.id);
-  if (!isRunning(sub.status)) return sendError(res, 403, "FORBIDDEN", "فعّل المجيب الآلي أول (تجربة أو اشتراك)");
-
   const channel = await prisma.socialChannel.findUnique({ where: { id: parsed.data.channelId } });
   if (!channel || !channel.isEnabled) return sendError(res, 404, "NOT_FOUND", "القناة غير متاحة");
+  if (isMetaDriver(channel.driver) && !metaOpenFor(req.user!.role)) return sendError(res, 403, "META_NOT_OPEN", META_NOT_OPEN_MESSAGE);
 
   const driver = drivers[channel.driver];
   const invalid = driver.validateCredentials(parsed.data.credentials);
@@ -177,8 +250,11 @@ responderRouter.post("/connections", requireAuth, route(async (req, res) => {
   const hookToken = crypto.randomBytes(24).toString("hex");
   const ctx = { credentials: parsed.data.credentials, hookToken, channelConfig: channel.config as Record<string, any> };
   let externalAccountId: string | undefined;
+  let accountName: string | undefined;
   try {
-    externalAccountId = (await driver.register?.(ctx))?.externalAccountId;
+    const registered = await driver.register?.(ctx);
+    externalAccountId = registered?.externalAccountId;
+    accountName = registered?.accountName;
   } catch (err) {
     return sendError(res, 400, "CHANNEL_CONNECT_FAILED", err instanceof Error ? err.message : "تعذّر ربط القناة");
   }
@@ -196,6 +272,7 @@ responderRouter.post("/connections", requireAuth, route(async (req, res) => {
       channelId: channel.id,
       credentialsEnc: encryptJson(parsed.data.credentials),
       externalAccountId,
+      accountName,
       hookToken,
     },
   });
@@ -209,6 +286,27 @@ responderRouter.patch("/connections/:id", requireAuth, route(async (req, res) =>
   if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Connection not found");
   const updated = await prisma.channelConnection.update({ where: { id: existing.id }, data: { isActive: parsed.data.isActive } });
   res.json({ id: updated.id, isActive: updated.isActive });
+}));
+
+// Deleting a connection also deletes the conversations recorded through it, and stops the platform sending its events.
+responderRouter.delete("/connections/:id", requireAuth, route(async (req, res) => {
+  const existing = await prisma.channelConnection.findUnique({ where: { id: req.params.id }, include: { channel: true } });
+  if (!existing || existing.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Connection not found");
+  const driver = drivers[existing.channel.driver];
+  try {
+    await driver.unregister?.({
+      credentials: decryptJson(existing.credentialsEnc),
+      hookToken: existing.hookToken,
+      channelConfig: existing.channel.config as Record<string, any>,
+    });
+  } catch {
+    // the platform may already have forgotten the account: the connection goes anyway
+  }
+  await prisma.$transaction([
+    prisma.responderInteraction.deleteMany({ where: { connectionId: existing.id } }),
+    prisma.channelConnection.delete({ where: { id: existing.id } }),
+  ]);
+  res.json({ deleted: true });
 }));
 
 // Recent posts of a connected Facebook/Instagram account, so a rule can be limited to specific ones.
@@ -240,11 +338,12 @@ const ruleSchema = z.object({
   aiInstructions: z.string().max(1000).default(""),
   channelId: z.string().uuid().nullable().optional(),
   postIds: z.array(z.string().min(1).max(100)).max(30).default([]),
+  priority: z.number().int().min(-1000).max(1000).default(0),
   isActive: z.boolean().default(true),
 });
 
 responderRouter.get("/rules", requireAuth, route(async (req, res) => {
-  res.json(await prisma.responderRule.findMany({ where: { userId: req.user!.id }, orderBy: { createdAt: "asc" } }));
+  res.json(await prisma.responderRule.findMany({ where: { userId: req.user!.id }, orderBy: [{ priority: "desc" }, { createdAt: "asc" }] }));
 }));
 
 responderRouter.post("/rules", requireAuth, route(async (req, res) => {
@@ -310,7 +409,8 @@ responderRouter.post("/inbox/:id/send", requireAuth, route(async (req, res) => {
     return sendError(res, 409, "CONFLICT", "هالرسالة مو بانتظار رد");
   }
   const sub = await getSubscription(req.user!.id);
-  if (!isRunning(sub.status)) return sendError(res, 403, "FORBIDDEN", "الاشتراك منتهي — جدّده أول");
+  if (!sub.enabled) return sendError(res, 403, "FORBIDDEN", "المجيب الآلي متوقف من إعداداتك");
+  if (!(await getActiveResponderEntitlements(req.user!.id)).length) return sendError(res, 403, "BASIC_PLAN_REQUIRED", "لازم يكون عندك خطة فعّالة لترد على الرسائل");
 
   try {
     await sendThroughConnection(item.connection, parsed.data.reply, item.conversationRef);

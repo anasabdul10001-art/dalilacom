@@ -20,10 +20,44 @@ data class ResponderStatusDto(
     val tone: String? = null,
     val fallbackMode: String = "OFF",
     val fallbackReply: String? = null,
+    val activePlans: List<ResponderActivePlanDto> = emptyList(),
 )
 
 @Serializable
-data class ResponderStatsDto(val days: Int = 30, val sent: Int = 0, val needsReview: Int = 0, val failed: Int = 0, val skipped: Int = 0)
+data class ResponderActivePlanDto(val id: String, val name: String, val includesAi: Boolean = false, val aiReplyLimit: Int = 0, val status: String = "ACTIVE")
+
+@Serializable
+data class ResponderPlanOfferDto(val id: String, val paidPeriods: Int, val bonusDays: Int = 0, val text: String, val endsAt: String? = null)
+
+@Serializable
+data class ResponderPlanPurchaseDto(val offerId: String? = null)
+
+@Serializable
+data class ResponderPlanDto(
+    val id: String,
+    val service: String,
+    val name: String,
+    val description: String? = null,
+    val durationDays: Int,
+    val trialDays: Int = 0,
+    val trialAvailable: Boolean = false,
+    val priceCredits: Int? = null,
+    val priceFrom: String = "default",
+    val features: List<PlanFeatureDto> = emptyList(),
+    val includesAi: Boolean = false,
+    val aiReplyLimit: Int = 0,
+    val removesBadge: Boolean = false,
+    val offers: List<ResponderPlanOfferDto> = emptyList(),
+)
+
+@Serializable
+data class ResponderRuleUsageDto(val id: String? = null, val name: String = "", val count: Int = 0)
+
+@Serializable
+data class ResponderUnmatchedSampleDto(val message: String = "", val createdAt: String? = null)
+
+@Serializable
+data class ResponderStatsDto(val days: Int = 30, val sent: Int = 0, val needsReview: Int = 0, val failed: Int = 0, val skipped: Int = 0, val topRules: List<ResponderRuleUsageDto> = emptyList(), val unmatchedCount: Int = 0, val unmatchedSamples: List<ResponderUnmatchedSampleDto> = emptyList())
 
 @Serializable
 data class ChannelFieldDto(val key: String, val label: String, val secret: Boolean = false)
@@ -42,6 +76,7 @@ data class ConnectionDto(
     val id: String,
     val channel: String,
     val externalAccountId: String? = null,
+    val accountName: String? = null,
     val isActive: Boolean,
     val hookUrl: String? = null,
     val driver: String = "",
@@ -66,6 +101,7 @@ data class RuleDto(
     val replyTemplate: String = "",
     val aiInstructions: String = "",
     val postIds: List<String> = emptyList(),
+    val priority: Int = 0,
     val isActive: Boolean = true,
 )
 
@@ -77,6 +113,7 @@ data class CreateRuleRequest(
     val replyTemplate: String,
     val aiInstructions: String,
     val postIds: List<String> = emptyList(),
+    val priority: Int = 0,
 )
 
 @Serializable
@@ -142,7 +179,6 @@ data class PostDto(
 @Serializable
 data class MetaOAuthStatusDto(
     val available: Boolean = false,
-    val responderRunning: Boolean = false,
     val redirectUri: String = "",
     val scopes: List<String> = emptyList(),
     val deepLink: String = "",

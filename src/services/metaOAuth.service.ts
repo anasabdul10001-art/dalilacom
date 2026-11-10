@@ -21,18 +21,17 @@ const SESSION_TTL_MINUTES = 15;
 const STATE_TTL_MINUTES = 15;
 
 /**
- * Matches what the drivers actually do: read the Page, subscribe webhooks, answer DMs and comments.
- * Only permissions the Meta app really has: Facebook refuses the whole dialog ("Invalid Scopes") for the app's own
- * developers when one is missing. The Instagram ones join (via META_OAUTH_SCOPES) once the app has them.
- * pages_manage_engagement (replying to comments) needs pages_read_user_content next to it.
+ * Messaging only for now: list the Pages, subscribe webhooks and answer direct messages. These three are the
+ * permissions of the first App Review; asking merchants for anything Meta has not approved yet would only confuse
+ * the dialog. Reading a Page's posts (pages_read_engagement) and answering comments (pages_manage_engagement next to
+ * pages_read_user_content, from the app's "Manage everything on your Page" use case) belong to the second phase, and
+ * so do the Instagram ones: they join via META_OAUTH_SCOPES, for the owner's testing now (admins get them below) and
+ * for everyone once Meta approves them.
  */
 const DEFAULT_SCOPES = [
   "pages_show_list",
-  "pages_read_engagement",
   "pages_manage_metadata",
   "pages_messaging",
-  "pages_manage_engagement",
-  "pages_read_user_content",
 ];
 
 export interface MetaPage {
@@ -68,9 +67,17 @@ export function metaRedirectUri(): string {
   return `${(process.env.PUBLIC_BASE_URL ?? "").replace(/\/+$/, "")}/responder/meta/oauth/callback`;
 }
 
-export function metaScopes(): string[] {
+/**
+ * Comment replies. The Meta app already has these two, but they are not part of the first App Review, so only an admin
+ * (a role holder on the Meta app, who can use them without approval) is asked for them: the owner can build and test the
+ * comment feature end to end now, and every other merchant keeps the messaging permissions only.
+ */
+const COMMENT_SCOPES = ["pages_read_engagement", "pages_manage_engagement", "pages_read_user_content"];
+
+export function metaScopes(role?: string): string[] {
   const override = process.env.META_OAUTH_SCOPES?.split(/[,\s]+/).filter(Boolean);
-  return override && override.length > 0 ? override : DEFAULT_SCOPES;
+  if (override && override.length > 0) return override;
+  return role === "ADMIN" ? [...DEFAULT_SCOPES, ...COMMENT_SCOPES] : DEFAULT_SCOPES;
 }
 
 /** Where the browser sends the merchant back to at the end. The Android app registers this scheme. */
@@ -134,7 +141,7 @@ export function verifyPickerToken(sessionId: string, pageId: string, driver: Cha
 
 /* ---------------- Facebook itself ---------------- */
 
-export function metaDialogUrl(userId: string, state: string = signState(userId)): string {
+export function metaDialogUrl(userId: string, state: string = signState(userId), role?: string): string {
   const params = new URLSearchParams({
     client_id: metaAppId() ?? "",
     redirect_uri: metaRedirectUri(),
@@ -145,7 +152,7 @@ export function metaDialogUrl(userId: string, state: string = signState(userId))
   // scope list: META_LOGIN_CONFIG_ID plus META_LOGIN_USE_CONFIG=true switches to it. Off by default: the configuration
   // dialog answered "App not active" for this app while the plain scope dialog worked.
   if (process.env.META_LOGIN_CONFIG_ID && process.env.META_LOGIN_USE_CONFIG === "true") params.set("config_id", process.env.META_LOGIN_CONFIG_ID);
-  else params.set("scope", metaScopes().join(","));
+  else params.set("scope", metaScopes(role).join(","));
   return `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${params.toString()}`;
 }
 
@@ -162,7 +169,7 @@ async function graphGet<T>(path: string, params: Record<string, string>): Promis
  * Page tokens obtained from a long-lived user token do not expire on their own, which is what makes
  * this connection durable.
  */
-export async function exchangeCodeForPages(code: string): Promise<MetaPage[]> {
+export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaPage[]; skipped: { id: string; name: string }[] }> {
   const appId = metaAppId();
   const appSecret = metaAppSecret();
   if (!appId || !appSecret) throw new MetaOAuthError("META_NOT_CONFIGURED", "تطبيق Meta غير مضبوط", 503);
@@ -189,7 +196,12 @@ export async function exchangeCodeForPages(code: string): Promise<MetaPage[]> {
     access_token: userToken,
   });
 
-  return (accounts.data ?? [])
+  const all = accounts.data ?? [];
+  // A Page that Facebook lists without a token (typically one the person reaches only through a business portfolio, not
+  // as a direct Page admin) cannot be connected; say so instead of silently dropping it.
+  const skipped = all.filter((p) => p?.id && !p?.access_token).map((p) => ({ id: String(p.id), name: String(p.name ?? "") }));
+  if (skipped.length > 0) console.warn("[meta-oauth] pages listed without an access token:", skipped.map((p) => p.id).join(","));
+  const pages = all
     .filter((p) => p?.id && p?.access_token)
     .map((p) => ({
       id: String(p.id),
@@ -198,6 +210,7 @@ export async function exchangeCodeForPages(code: string): Promise<MetaPage[]> {
       instagramAccountId: p.instagram_business_account?.id ? String(p.instagram_business_account.id) : undefined,
       instagramUsername: p.instagram_business_account?.username ? String(p.instagram_business_account.username) : undefined,
     }));
+  return { pages, skipped };
 }
 
 /* ---------------- sessions: from "just logged in" to "one Page connected" ---------------- */
@@ -262,8 +275,11 @@ export async function connectFromSession(opts: {
   const ctx = { credentials, hookToken, channelConfig: channel.config as Record<string, any> };
 
   let externalAccountId: string | undefined;
+  let accountName: string | undefined;
   try {
-    externalAccountId = (await driver.register?.(ctx))?.externalAccountId;
+    const registered = await driver.register?.(ctx);
+    externalAccountId = registered?.externalAccountId;
+    accountName = registered?.accountName;
   } catch (err) {
     throw new MetaOAuthError("CHANNEL_CONNECT_FAILED", err instanceof Error ? err.message : "تعذّر ربط الصفحة", 400);
   }
@@ -282,6 +298,7 @@ export async function connectFromSession(opts: {
       channelId: channel.id,
       credentialsEnc: encryptJson(credentials),
       externalAccountId,
+      accountName: accountName ?? (opts.driver === "INSTAGRAM" ? (page.instagramUsername ? `@${page.instagramUsername}` : page.name) : page.name) ?? null,
       hookToken,
     },
   });

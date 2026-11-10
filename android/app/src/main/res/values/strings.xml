@@ -45,6 +45,13 @@
     <string name="search_placeholder">دوّر على محل أو خدمة...</string>
     <string name="search_recent">عمليات بحث سابقة</string>
     <string name="search_clear">مسح</string>
+    <string name="location_title">اختيار موقع البحث</string>
+    <string name="location_search_hint">اكتب اسم المدينة أو المنطقة</string>
+    <string name="location_my_location">موقعي الحالي</string>
+    <string name="location_pick_hint">اختر موقعك من البحث أو موقعك الحالي</string>
+    <string name="location_selected_pin">الموقع المحدد على الخريطة</string>
+    <string name="location_radius">نصف قطر البحث</string>
+    <string name="location_show_results">اعرض الأماكن القريبة</string>
     <string name="login_pill">دخول</string>
     <string name="filter_all">الكل</string>
     <string name="filter_open_now">🕒 مفتوح الآن</string>
@@ -123,8 +130,42 @@
 
     <string name="profile_title">حسابي</string>
     <string name="profile_edit">✏️ تعديل ملفي الشخصي</string>
-    <string name="profile_merchant_mode">وضع النشاط</string>
-    <string name="profile_register_merchant">سجّل كصاحب نشاط</string>
+    <string name="profile_merchant_mode">إدارة متجري</string>
+    <string name="profile_register_merchant">أضف نشاطك على الخريطة</string>
+    <string name="profile_start_selling_sub">المتجر الإلكتروني خيار مستقل؛ أضف منتجاتك واختر الباقة المناسبة.</string>
+    <string name="profile_map_activity_sub">سجّل اسم نشاطك وتصنيفه وعنوانه ليظهر للناس على الخريطة.</string>
+    <string name="profile_open_online_store">افتح متجرك الإلكتروني</string>
+    <string name="profile_map_listing">بيانات نشاطي على الخريطة</string>
+    <string name="profile_marketing_team">فريق مسوّقي متجري</string>
+    <string name="affiliate_team_title">فريق مسوّقي متجري</string>
+    <string name="affiliate_team_intro">أضف مسوّقين لمتجرك، وحدد عمولة كل شخص، وتابع الزبائن والعمولات.</string>
+    <string name="affiliate_team_add_title">إضافة مسوّق</string>
+    <string name="affiliate_team_email">إيميل المسوّق المسجّل بدليلكم</string>
+    <string name="affiliate_team_percent">نسبة مئوية</string>
+    <string name="affiliate_team_fixed">مبلغ ثابت</string>
+    <string name="affiliate_team_commission">قيمة العمولة</string>
+    <string name="affiliate_team_add">أضف للفريق</string>
+    <string name="affiliate_team_saving">جارٍ الحفظ…</string>
+    <string name="affiliate_team_list_title">أعضاء الفريق (%1$d)</string>
+    <string name="affiliate_team_empty">ما أضفت مسوّقين بعد. أدخل إيميل شخص عنده حساب بدليلكم لتضيفه.</string>
+    <string name="affiliate_team_person_commission">عمولته: %1$s</string>
+    <string name="affiliate_team_person_stats">زبائن أحالهم: %1$d · إجمالي العمولات: %2$.2f</string>
+    <string name="affiliate_team_disable">إيقاف المسوّق</string>
+    <string name="affiliate_team_enable">تفعيل المسوّق</string>
+    <string name="affiliate_team_added">أُضيف المسوّق للفريق.</string>
+    <string name="affiliate_team_invalid_email">اكتب إيميلًا صحيحًا.</string>
+    <string name="affiliate_team_invalid_commission">اكتب قيمة عمولة أكبر من صفر.</string>
+    <string name="affiliate_team_invalid_percent">النسبة ما بتتجاوز 100٪.</string>
+    <string name="affiliate_team_load_error">تعذّر تحميل فريق المسوّقين.</string>
+    <string name="affiliate_team_add_error">تعذّرت إضافة المسوّق.</string>
+    <string name="affiliate_team_update_error">تعذّر تعديل حالة المسوّق.</string>
+    <string name="affiliate_team_network_error">تعذّر الاتصال. تأكد من الإنترنت وحاول مرة ثانية.</string>
+    <string name="merchant_store_only_note">فتح المتجر وإضافة نشاطك على الخريطة خياران منفصلان. هون عم تفتح المتجر فقط.</string>
+    <string name="merchant_store_only_title">افتح متجرك الإلكتروني</string>
+    <string name="merchant_store_only_intro">أي حساب يقدر يفتح متجره ويبيع منتجات جديدة أو مستعملة، ويختار من الباقات المتاحة. ما في داعي تضيف عنوانك على الخريطة بهالخطوة؛ بتقدر تضيف نشاطك وموقعك بشكل منفصل.</string>
+    <string name="merchant_store_registration_pending">وصل طلب فتح متجرك، وهو قيد المراجعة.</string>
+    <string name="merchant_store_registration_approved">✅ حساب متجرك جاهز. اختار الباقة وأضف منتجاتك.</string>
+    <string name="merchant_map_registration_approved">✅ تم تسجيل نشاطك، وصار ظاهر على الخريطة.</string>
     <string name="profile_favorites">♥ أماكني المحفوظة</string>
     <string name="profile_responder">المجيب الآلي</string>
     <string name="profile_wallet">محفظتي</string>
@@ -153,8 +194,8 @@
     <string name="guest_profile_title">افتح حسابك</string>
     <string name="guest_profile_sub">الخريطة ودليل المحلات مفتوحين للكل. الحساب بتحتاجه إذا بدك بطاقة حسم أو تسجّل محلك كصاحب نشاط.</string>
     <string name="guest_profile_p1">احصل على بطاقة الحسم</string>
-    <string name="guest_profile_p2">سجّل محلك كصاحب نشاط وأضف منتجاتك وعروضك</string>
-    <string name="guest_profile_p3">افتح متجرك الإلكتروني وسجّل نشاطك على الخريطة</string>
+    <string name="guest_profile_p2">أضف نشاطك على الخريطة أو افتح متجرك الإلكتروني</string>
+    <string name="guest_profile_p3">كل خيار مستقل؛ والمتجر متاح للمستخدم والتاجر</string>
 
     <string name="browse_title">تصفّح الأقسام</string>
     <string name="browse_all">كل %1$s</string>
@@ -209,6 +250,14 @@
     <string name="intro_continue">متابعة</string>
     <string name="intro_responder_title">أهلًا بك في المجيب الآلي 👋</string>
     <string name="intro_responder_body">رد ذكي على رسائل زبائنك على قنواتك، حتى وأنت مشغول.</string>
+    <string name="responder_plans_title">خطط المجيب الآلي</string>
+    <string name="responder_no_active_plan">ما عندك خطة فعّالة حاليًا. اختر خطة من الخيارات التالية حتى يبدأ المجيب بالعمل.</string>
+    <string name="responder_plan_current">خطتك الحالية</string>
+    <string name="responder_plan_trial">ابدأ التجربة</string>
+    <string name="responder_plan_selected">تم اختيار الخطة وتفعيلها ✅</string>
+    <string name="responder_trial_started">بدأت تجربتك للخطة ✅</string>
+    <string name="responder_offer_bonus_days">%1$d يومًا إضافيًا</string>
+    <string name="responder_buy_offer">الاشتراك بهذا العرض</string>
     <string name="card_trial_left">فترتك المجانية تنتهي بعد %1$d يوم</string>
     <string name="card_ends_soon">بطاقتك تنتهي بعد %1$d يوم</string>
     <string name="card_expired">انتهت صلاحية بطاقتك</string>
@@ -419,6 +468,15 @@
     <string name="fmt_renew_price">جدّد الاشتراك — %1$s %2$s</string>
     <string name="fmt_hook_url">رابط الاستقبال: %1$s</string>
     <string name="fmt_connect_ig">ربط إنستغرام (@%1$s)</string>
+    <string name="rule_edit">تعديل</string>
+    <string name="rule_editing">تعديل القاعدة</string>
+    <string name="rule_save_changes">حفظ التعديل</string>
+    <string name="rule_cancel_edit">إلغاء</string>
+    <string name="conn_deleted">تم حذف القناة</string>
+    <string name="conn_delete">حذف</string>
+    <string name="conn_delete_title">حذف القناة؟</string>
+    <string name="conn_delete_body">بتنحذف محادثاتها المسجّلة وبيوقف الرد عليها.</string>
+    <string name="open_post">فتح المنشور</string>
     <string name="fmt_posts_selected">📌 %1$d منشور محدد</string>
     <string name="fmt_keywords">الكلمات: %1$s</string>
     <string name="fmt_limited_posts">📌 محصورة بـ %1$d منشور</string>
@@ -435,6 +493,7 @@
     <string name="store_results_for">نتائج البحث عن «%1$s»</string>
     <string name="store_search">ابحث عن منتج أو متجر</string>
     <string name="store_hero_title">تسوّق من كل متاجر مدينتك</string>
+    <string name="store_start_selling">عندك منتجات للبيع؟</string>
     <string name="store_hero_sub">آلاف المنتجات بمكان واحد، وأسعار خاصة لأعضاء دليلكم</string>
     <string name="store_deals">عروض الأعضاء</string>
     <string name="store_best">الأكثر مبيعًا</string>
@@ -1087,7 +1146,7 @@
     <string name="loc_done">تم حفظ موقعك ✓</string>
     <string name="loc_failed">تعذّر حفظ الموقع</string>
     <string name="lm_not_same">لا، هذا مكان مختلف — تابع التسجيل</string>
-    <string name="shop_approved">✅ انقبل نشاطك وصار على الخريطة</string>
+    <string name="shop_approved">✅ انفتح متجرك. هلق اختار الباقة وأضف منتجاتك.</string>
     <string name="shop_rejected">ما انقبل نشاطك:</string>
     <string name="shop_pending">وصلنا طلبك وهو قيد المراجعة، بنخبرك بالنتيجة</string>
     <string name="ads_img_label">صورة الإعلان (اختياري)</string>
@@ -1168,4 +1227,12 @@
     <string name="plans_days">يوم</string>
     <string name="plans_trial_days">يوم تجربة</string>
     <string name="billing_paypal">الدفع عبر PayPal</string>
+<string name="care_title">ملفي الطبي ورعاية المرضى</string><string name="care_back">رجوع</string><string name="care_privacy">معلوماتك الطبية خاصة. الطبيب لا يطّلع عليها قبل موافقتك، وتقدر تلغي الربط بأي وقت.</string><string name="care_patients">مرضاي</string><string name="care_approval_needed">بعد اعتماد صفحة الطبيب من الإدارة ستتمكن من طلب ربط المرضى.</string><string name="care_patient_email">بريد المريض المسجّل في دليلكم</string><string name="care_send_request">أرسل طلب موافقة</string><string name="care_open_record">فتح سجل المتابعة</string><string name="care_requests">طلبات الأطباء</string><string name="care_request_explain">هذا الطبيب يطلب مشاركة ملف متابعة خاص معك. لن يرى معلوماتك قبل موافقتك.</string><string name="care_accept">موافقة</string><string name="care_decline">رفض</string><string name="care_my_doctors">أطبائي</string><string name="care_revoke">إلغاء الربط</string><string name="care_records">سجل المتابعة</string><string name="care_add_update">إضافة تحديث للمريض</string><string name="care_type">نوع التحديث</string><string name="care_short_title">عنوان مختصر</string><string name="care_details">التفاصيل أو تعليمات الطبيب</string><string name="care_save">حفظ وإشعار المريض</string><string name="care_status_active">مرتبط بموافقة المريض</string><string name="care_status_pending">بانتظار موافقة المريض</string><string name="care_status_revoked">أُلغي الربط</string><string name="care_status_declined">مرفوض</string><string name="care_kind_visit">زيارة</string><string name="care_kind_diagnosis">تشخيص</string><string name="care_kind_medication">دواء</string><string name="care_kind_instructions">تعليمات</string><string name="care_kind_followup">مراجعة لاحقة</string>
+    <string name="appointment_book">احجز موعدًا</string><string name="appointment_my_title">مواعيدي وحجوزاتي</string><string name="appointment_duration">مدة الموعد: %1$d دقيقة</string><string name="appointment_choose_time">الأوقات المتاحة</string><string name="appointment_no_slots">ما في أوقات متاحة بهذا اليوم.</string><string name="appointment_confirm_booking">تأكيد حجز الموعد</string><string name="appointment_no_record_needed">تقدر تحجز حتى لو ما عندك ملف متابعة سابق عند هذا الطبيب.</string><string name="appointment_my_bookings">المواعيد التي حجزتها</string><string name="appointment_empty">ما في مواعيد حاليًا.</string><string name="appointment_clinic_bookings">حجوزات عيادتي</string><string name="appointment_hours_required">حدد ساعات عمل العيادة أولًا.</string><string name="appointment_set_hours">تحديد ساعات العمل</string><string name="appointment_enable_help">تعتمد الأوقات الظاهرة للناس على ساعات عمل العيادة المحفوظة.</string><string name="appointment_enable">السماح للمستخدمين بحجز موعد</string><string name="appointment_slot_length">مدة كل موعد (دقيقة)</string><string name="appointment_advance_label">إظهار المواعيد حتى %1$d يومًا للأمام</string><string name="appointment_save_settings">حفظ إعدادات الحجز</string><string name="appointment_settings_saved">تم حفظ إعدادات المواعيد</string><string name="appointment_status_confirmed">مؤكد</string><string name="appointment_status_cancelled">ملغى</string><string name="appointment_status_completed">مكتمل</string><string name="appointment_status_no_show">لم يحضر</string><string name="appointment_cancel">إلغاء الموعد</string>
+    <string name="appointment_booked">تم تثبيت موعدك وإشعار الطبيب</string>
+    <string name="appointment_share_info">عند تأكيد الحجز، سيظهر للطبيب اسمك وبريدك ورقم هاتفك إن كان محفوظًا بحسابك.</string>
+    <string name="appointment_kind">نوع الموعد</string><string name="appointment_visit">زيارة</string><string name="appointment_follow_up">مراجعة</string><string name="appointment_share_medical">أوافق على مشاركة ملفي الطبي مع هذا الطبيب</string><string name="appointment_share_medical_help">إذا وافقت، يستطيع الطبيب رؤية سبب الزيارة وأحدث تشخيص مسجل لك. يمكنك حجز الموعد من دون مشاركة ملفك.</string><string name="appointment_visit_reason">سبب الزيارة أو الأعراض (اختياري)</string><string name="appointment_no_diagnosis">لا يوجد تشخيص مسجل بعد.</string><string name="appointment_no_medical_share">لم يوافق المريض على مشاركة ملفه الطبي.</string><string name="appointment_diagnosis">آخر تشخيص</string><string name="appointment_trainer_bookings">حجوزات التدريب</string>
+    <string name="fitness_profile">ملفي الرياضي</string><string name="fitness_profile_subtitle">عرّف الناس بخبرتك واختصاصاتك وشهاداتك. صورتك هي صورة الحساب الموجودة في ملفك الشخصي.</string><string name="fitness_display_name">اسم المدرب أو النادي</string><string name="fitness_headline">نبذة قصيرة</string><string name="fitness_years">سنوات الخبرة</string><string name="fitness_years_value">خبرة %1$d سنة</string><string name="fitness_specialties">الاختصاصات</string><string name="fitness_achievements">الإنجازات</string><string name="fitness_certifications">الشهادات</string><string name="fitness_list_help">اكتب كل معلومة بسطر منفصل</string><string name="fitness_certification_note">اكتب اسم الشهادة والجهة التي منحتها. ارفع صور الشهادات والإنجازات؛ ظهورها لا يعني أن دليلكم تحققت منها.</string><string name="fitness_unverified">الشهادات أضافها صاحب الملف ولم تراجعها دليلكم بعد.</string><string name="fitness_current_offers">عروض التدريب الحالية</string><string name="fitness_save">حفظ الملف الرياضي</string><string name="fitness_saving">جارٍ الحفظ…</string><string name="fitness_saved">انحفظ الملف الرياضي</string>
+<string name="fitness_offer_failed">تعذّر حفظ باقة التدريب</string><string name="fitness_plans_title">خطط المتدربين</string>    <string name="responder_priority">أولوية القاعدة</string><string name="responder_priority_help">الرقم الأعلى يُفحص أولًا</string><string name="responder_priority_value">الأولوية: %1$d</string><string name="responder_unmatched_count">رسائل بلا قاعدة: %1$d</string><string name="responder_rule_usage">%1$s: %2$d مرة</string><string name="responder_unmatched_samples">أمثلة لرسائل بلا قاعدة</string>
+
 </resources>

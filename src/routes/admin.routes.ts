@@ -34,6 +34,7 @@ import { invalidateProductCategories } from "../services/productCategory.service
 import { decideProduct } from "../services/productModeration.service";
 import { createMarketer, decideMarketerRequest, listMarketerRequests, listMarketers, updateMarketer } from "../services/referral.service";
 import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion } from "../services/categorySuggestion.service";
+import { grantResponderEntitlement, RESPONDER_LEGACY_PLAN_ID, RESPONDER_SERVICES } from "../services/responder.service";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole(Role.ADMIN));
@@ -217,6 +218,7 @@ const settingsSchema = z.object({
     })
     .partial()
     .optional(),
+  responderBadge: z.object({ enabled: z.boolean(), text: z.string().trim().min(1).max(80) }).partial().optional(),
   discountNotify: z
     .object({
       mode: z.enum(["OFF", "CITY", "CITY_MEMBERS", "MEMBERS", "FOLLOWERS", "RADIUS", "COUNTRY", "EVERYONE"]),
@@ -274,6 +276,8 @@ const settingsSchema = z.object({
     freeListingsPerMonth: z.number().int().nonnegative().max(100000),
     allowNewProducts: z.boolean(),
   }).partial().optional(),
+aiModelPrices: z.array(z.object({ provider: z.string().trim().min(1).max(40), model: z.string().trim().min(1).max(120), inputUsdPerMillion: z.number().nonnegative().max(100000).nullable(), outputUsdPerMillion: z.number().nonnegative().max(100000).nullable() })).max(100).optional(),
+
   payment: z
     .object({
       usdtTrc20Address: z.string().trim().regex(/^(T[1-9A-HJ-NP-Za-km-z]{33})?$/, "عنوان TRON غير صالح").optional(),
@@ -356,6 +360,14 @@ adminRouter.post("/category-suggestions/:id/reject", route(async (req, res) => {
 
 adminRouter.get("/settings", route(async (_req, res) => {
   res.json(await getSettings());
+}));
+
+adminRouter.get("/responder-ai-usage", route(async (_req, res) => {
+  const now = new Date();
+  const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const groups = await prisma.responderAiCall.groupBy({ by: ["userId"], where: { createdAt: { gte: since } }, _count: { _all: true }, _sum: { promptTokens: true, completionTokens: true, estimatedCostUsd: true }, orderBy: { _count: { userId: "desc" } } });
+  const users = await prisma.user.findMany({ where: { id: { in: groups.map((g) => g.userId) } }, select: { id: true, fullName: true, email: true } });
+  res.json({ month: since.toISOString().slice(0, 7), accounts: groups.map((g) => ({ user: users.find((u) => u.id === g.userId), calls: g._count._all, promptTokens: g._sum.promptTokens ?? 0, completionTokens: g._sum.completionTokens ?? 0, estimatedCostUsd: g._sum.estimatedCostUsd?.toString() ?? null })) });
 }));
 
 adminRouter.put("/settings", route(async (req, res) => {
@@ -741,6 +753,33 @@ adminRouter.get("/responder/subscriptions", route(async (_req, res) => {
   );
 }));
 
+adminRouter.get("/responder/grant-plans", route(async (_req, res) => {
+  res.json(await prisma.servicePlan.findMany({
+    where: { service: { in: RESPONDER_SERVICES }, OR: [{ isActive: true }, { id: RESPONDER_LEGACY_PLAN_ID }] },
+    select: { id: true, name: true, service: true, durationDays: true, includesAi: true, isActive: true },
+    orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
+  }));
+}));
+
+adminRouter.post("/responder/grant", route(async (req, res) => {
+  const parsed = z.object({ userEmail: z.string().email().transform((value) => value.trim().toLowerCase()), planId: z.string().uuid(), days: z.number().int().positive().max(3650) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const [user, plan] = await Promise.all([
+    prisma.user.findUnique({ where: { email: parsed.data.userEmail }, select: { id: true, email: true, fullName: true } }),
+    prisma.servicePlan.findUnique({ where: { id: parsed.data.planId }, select: { id: true, name: true, service: true, isActive: true } }),
+  ]);
+  if (!user) return sendError(res, 404, "NOT_FOUND", "ما لقينا حساب بهذا البريد الإلكتروني");
+  if (!plan || !RESPONDER_SERVICES.includes(plan.service) || (!plan.isActive && plan.id !== RESPONDER_LEGACY_PLAN_ID)) return sendError(res, 404, "NOT_FOUND", "الخطة غير متاحة");
+  const entitlement = await grantResponderEntitlement(user.id, plan.id, parsed.data.days);
+  await prisma.responderSubscription.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, status: "ACTIVE", periodEnd: entitlement.periodEnd },
+    update: { status: "ACTIVE", periodEnd: entitlement.periodEnd, expiryNoticeFor: null },
+  });
+  await notify({ userId: user.id, type: "SYSTEM", title: "تم تفعيل المجيب الآلي لك", body: `تم منحك خطة «${plan.name}» لمدة ${parsed.data.days} يومًا.`, data: { kind: "RESPONDER", reason: "grant" }, email: false });
+  res.status(201).json({ user: { id: user.id, email: user.email, fullName: user.fullName }, plan, entitlement });
+}));
+
 /* ---------------- AI provider check (booleans + counters only — no keys, no message text) ---------------- */
 
 /* ---------------- push notifications: is Firebase set up, and does a message reach this admin's phone? ---------------- */
@@ -798,10 +837,11 @@ adminRouter.delete("/product-categories/:id", route(async (req, res) => {
 /* ---------------- products waiting to be looked at ---------------- */
 
 const PRODUCTS_PAGE = 50;
-const adminProduct = (p: Prisma.ProductGetPayload<{ include: { merchant: { select: { businessName: true; phone: true } } } }>) => ({
+const adminProduct = (p: Prisma.ProductGetPayload<{ include: { merchant: { select: { businessName: true; phone: true } }; productCategory: { select: { id: true; name: true } } } }>) => ({
   id: p.id, name: p.name, description: p.description, priceCents: p.priceCents, stock: p.stock, isActive: p.isActive, condition: p.condition,
   specs: Array.isArray(p.specs) ? p.specs : [], images: p.images.length ? p.images : p.imageUrl ? [p.imageUrl] : [],
   moderation: p.moderation, note: p.moderationNote, createdAt: p.createdAt, updatedAt: p.updatedAt, shop: p.merchant.businessName, phone: p.merchant.phone,
+  productCategoryId: p.productCategoryId, productCategory: p.productCategory?.name ?? null,
 });
 
 // Every product, whatever its state: waiting, accepted or refused (or all), searchable, 50 to a page
@@ -809,24 +849,77 @@ adminRouter.get("/products", route(async (req, res) => {
   const parsed = z.object({
     status: z.enum(["PENDING", "REJECTED", "APPROVED", "ALL"]).catch("PENDING"),
     q: z.string().trim().max(80).optional(),
+    createdFrom: z.string().date().optional(),
+    createdTo: z.string().date().optional(),
+    condition: z.enum(["NEW", "USED", "UNSPECIFIED", "ANY"]).catch("ANY"),
+    visibility: z.enum(["VISIBLE", "HIDDEN", "ANY"]).catch("ANY"),
+    stock: z.enum(["AVAILABLE", "EMPTY", "ANY"]).catch("ANY"),
+    categoryId: z.string().trim().max(80).optional(),
+    order: z.enum(["NEWEST", "OLDEST"]).catch("NEWEST"),
     page: z.coerce.number().int().min(1).max(100000).catch(1),
   }).parse(req.query);
+  const from = parsed.createdFrom ? new Date(`${parsed.createdFrom}T00:00:00.000Z`) : undefined;
+  const to = parsed.createdTo ? new Date(`${parsed.createdTo}T00:00:00.000Z`) : undefined;
+  if (from && to && from > to) return sendError(res, 400, "INVALID_DATE_RANGE", "Start date must be before end date");
   const where: Prisma.ProductWhereInput = {
     ...(parsed.status === "ALL" ? {} : { moderation: parsed.status }),
-    ...(parsed.q ? { OR: [{ name: { contains: parsed.q, mode: "insensitive" } }, { description: { contains: parsed.q, mode: "insensitive" } }, { merchant: { businessName: { contains: parsed.q, mode: "insensitive" } } }] } : {}),
+    ...(parsed.q ? { OR: [{ name: { contains: parsed.q, mode: "insensitive" } }, { description: { contains: parsed.q, mode: "insensitive" } }, { merchant: { businessName: { contains: parsed.q, mode: "insensitive" } } }, { merchant: { phone: { contains: parsed.q } } }] } : {}),
+    ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: new Date(to.getTime() + 86400000) } : {}) } } : {}),
+    ...(parsed.condition === "UNSPECIFIED" ? { condition: null } : parsed.condition !== "ANY" ? { condition: parsed.condition } : {}),
+    ...(parsed.visibility === "VISIBLE" ? { isActive: true } : parsed.visibility === "HIDDEN" ? { isActive: false } : {}),
+    ...(parsed.stock === "AVAILABLE" ? { stock: { gt: 0 } } : parsed.stock === "EMPTY" ? { stock: 0 } : {}),
+    ...(parsed.categoryId ? { productCategoryId: parsed.categoryId } : {}),
   };
   const [total, rows] = await Promise.all([
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
-      orderBy: [{ updatedAt: parsed.status === "PENDING" ? "asc" : "desc" }, { id: "asc" }],
+      orderBy: [{ createdAt: parsed.order === "OLDEST" ? "asc" : "desc" }, { id: "asc" }],
       skip: (parsed.page - 1) * PRODUCTS_PAGE,
       take: PRODUCTS_PAGE,
-      include: { merchant: { select: { businessName: true, phone: true } } },
+      include: { merchant: { select: { businessName: true, phone: true } }, productCategory: { select: { id: true, name: true } } },
     }),
   ]);
   res.set({ "X-Total-Count": String(total), "X-Page-Size": String(PRODUCTS_PAGE) });
   res.json(rows.map(adminProduct));
+}));
+
+// Keep sales and promotion history intact: products referenced by orders, ads or affiliate activity cannot be hard-deleted.
+adminRouter.post("/products/bulk-delete", route(async (req, res) => {
+  const parsed = z.object({ ids: z.array(z.string().min(1)).min(1).max(100) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const ids = [...new Set(parsed.data.ids)];
+  const [orders, ads, referrals] = await Promise.all([
+    prisma.orderItem.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ["productId"] }),
+    prisma.adBooking.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ["productId"] }),
+    prisma.affiliateReferral.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ["productId"] }),
+  ]);
+  const protectedIds = new Set([...orders, ...ads, ...referrals].map(x => x.productId));
+  const deletable = ids.filter(id => !protectedIds.has(id));
+  const deleted = deletable.length ? await prisma.$transaction(async tx => {
+    await tx.cartItem.deleteMany({ where: { productId: { in: deletable } } });
+    await tx.productReview.deleteMany({ where: { productId: { in: deletable } } });
+    return tx.product.deleteMany({ where: { id: { in: deletable } } });
+  }) : { count: 0 };
+  res.json({ deleted: deleted.count, protected: protectedIds.size });
+}));
+
+adminRouter.delete("/products/:id", route(async (req, res) => {
+  const result = await prisma.$transaction(async tx => {
+    const product = await tx.product.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!product) return "missing" as const;
+    const [orders, ads, referrals] = await Promise.all([
+      tx.orderItem.count({ where: { productId: product.id } }), tx.adBooking.count({ where: { productId: product.id } }), tx.affiliateReferral.count({ where: { productId: product.id } }),
+    ]);
+    if (orders || ads || referrals) return "protected" as const;
+    await tx.cartItem.deleteMany({ where: { productId: product.id } });
+    await tx.productReview.deleteMany({ where: { productId: product.id } });
+    await tx.product.delete({ where: { id: product.id } });
+    return "deleted" as const;
+  });
+  if (result === "missing") return sendError(res, 404, "NOT_FOUND", "Product not found");
+  if (result === "protected") return sendError(res, 409, "PRODUCT_HAS_HISTORY", "This product has sales or promotion history and cannot be deleted. Hide it instead.");
+  res.json({ ok: true });
 }));
 
 // The admin fixes what a product says (a wrong word, a price, the stock) or hides it, without sending it back through the review
@@ -847,7 +940,7 @@ adminRouter.patch("/products/:id", route(async (req, res) => {
   const updated = await prisma.product.update({
     where: { id: req.params.id },
     data: { ...rest, ...(description !== undefined ? { description: description || null } : {}), ...(specs !== undefined ? { specs } : {}) },
-    include: { merchant: { select: { businessName: true, phone: true } } },
+    include: { merchant: { select: { businessName: true, phone: true } }, productCategory: { select: { id: true, name: true } } },
   });
   res.json(adminProduct(updated));
 }));

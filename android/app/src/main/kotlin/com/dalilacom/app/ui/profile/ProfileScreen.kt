@@ -50,6 +50,9 @@ fun ProfileScreen(
     onOpenReview: () -> Unit,
     onOpenNotifications: () -> Unit,
     onRegisterMerchant: () -> Unit,
+    onOpenOnlineStore: () -> Unit = {},
+    onOpenMapListing: () -> Unit = {},
+    onOpenMarketingTeam: () -> Unit = {},
     onOpenMerchantMode: () -> Unit,
     onOpenStore: () -> Unit = {},
     onOpenMyAds: () -> Unit = {},
@@ -59,9 +62,14 @@ fun ProfileScreen(
     onOpenMarketing: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onOpenMarketplace: () -> Unit = {},
+onOpenDoctorCare: () -> Unit = {},
+    onOpenAppointments: () -> Unit = {},
+    onOpenFitnessProfile: () -> Unit = {},
+    onOpenFitnessPlans: () -> Unit = {},
+
 ) {
     val scope = rememberCoroutineScope()
-    var role by remember { mutableStateOf<String?>(null) }
+    val role by container.sessionStore.roleFlow.collectAsState(initial = null)
     var account by remember { mutableStateOf<MeResponse?>(null) }
     var profile by remember { mutableStateOf<ProfileDto?>(container.profileRepository.cached) }
     var unread by remember { mutableStateOf(0) }
@@ -69,13 +77,18 @@ fun ProfileScreen(
     val payoutNames = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
     val payoutAccounts = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
     var payoutSaving by remember { mutableStateOf(false) }
+var fitnessProvider by remember { mutableStateOf(false) }
+    var doctorProvider by remember { mutableStateOf(false) }
+    var hasDoctorConnection by remember { mutableStateOf(false) }
+    var hasDoctorAppointment by remember { mutableStateOf(false) }
+    var hasFitnessPlan by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(role) {
         // all four at once, the name and photo first on screen: they used to arrive one request after the other
         kotlinx.coroutines.coroutineScope {
             launch { container.profileRepository.me()?.let { profile = it } }
-            launch { role = container.sessionStore.getRole() }
             launch { account = container.authRepository.me() }
             launch { unread = container.notificationRepository.unreadCount() }
             launch {
@@ -85,6 +98,20 @@ fun ProfileScreen(
                     payoutAccounts[method.provider] = method.accountNumber
                 }
             }
+if (role == "CUSTOMER") {
+                launch { container.doctorCareRepository.load().onSuccess { care -> hasDoctorConnection = care.requests.isNotEmpty() || care.doctors.isNotEmpty() } }
+                launch { container.doctorCareRepository.myAppointments().onSuccess { appointments -> hasDoctorAppointment = appointments.items.isNotEmpty() } }
+                launch {
+                    val plans = container.fitnessPlansRepository.myPlans().getOrDefault(emptyList())
+                    val enrollments = container.fitnessPlansRepository.myEnrollments().getOrDefault(emptyList())
+                    hasFitnessPlan = plans.isNotEmpty() || enrollments.isNotEmpty()
+                }
+            }
+            if (role == "MERCHANT") {
+                launch { fitnessProvider = container.merchantRepository.getMerchantMe()?.isFitnessProvider == true }
+                launch { container.doctorCareRepository.load().onSuccess { care -> doctorProvider = care.mode == "DOCTOR" } }
+            }
+
         }
     }
 
@@ -101,6 +128,14 @@ fun ProfileScreen(
         }
         TextButton(onClick = onEditProfile) { Text(stringResource(R.string.profile_edit)) }
         TextButton(onClick = onOpenAccount) { Text(stringResource(R.string.profile_account_settings)) }
+        if (role == "CUSTOMER" && (hasDoctorConnection || hasDoctorAppointment)) {
+            OutlinedButton(onClick = onOpenDoctorCare, modifier = Modifier.fillMaxWidth()) { Text("🩺  " + stringResource(R.string.care_title)) }
+            OutlinedButton(onClick = onOpenAppointments, modifier = Modifier.fillMaxWidth()) { Text("📅  " + stringResource(R.string.appointment_my_title)) }
+        }
+        if (role == "MERCHANT" && doctorProvider) {
+            OutlinedButton(onClick = onOpenDoctorCare, modifier = Modifier.fillMaxWidth()) { Text("🩺  " + stringResource(R.string.care_title)) }
+            OutlinedButton(onClick = onOpenAppointments, modifier = Modifier.fillMaxWidth()) { Text("📅  " + stringResource(R.string.appointment_my_title)) }
+        }
         OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
         OutlinedButton(onClick = onOpenOrders, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.tab_orders)) }
         Spacer(Modifier.height(12.dp))
@@ -131,6 +166,29 @@ fun ProfileScreen(
                 }, modifier = Modifier.fillMaxWidth()) { Text(if (payoutSaving) "جارٍ الحفظ…" else "حفظ وسائل الاستلام") }
             }
         }
+        Spacer(Modifier.height(12.dp))
+        if (role == "MERCHANT") {
+            if (fitnessProvider) {
+                OutlinedButton(onClick = onOpenFitnessProfile, modifier = Modifier.fillMaxWidth()) { Text("🏋️  " + stringResource(R.string.fitness_profile)) }
+                OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.fit_auto_c2ed8d0d)) }
+            }
+            Button(onClick = onOpenMerchantMode, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_merchant_mode)) }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sp_title)) }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onOpenMapListing, modifier = Modifier.fillMaxWidth()) { Text("📍  " + stringResource(R.string.profile_map_listing)) }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onOpenMarketingTeam, modifier = Modifier.fillMaxWidth()) { Text("🤝  " + stringResource(R.string.profile_marketing_team)) }
+        } else if (role == "CUSTOMER") {
+            Button(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text("📍  " + stringResource(R.string.profile_register_merchant)) }
+            Text(stringResource(R.string.profile_map_activity_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 5.dp))
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = onOpenOnlineStore, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_open_online_store)) }
+            Text(stringResource(R.string.profile_start_selling_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 5.dp))
+            Spacer(Modifier.height(8.dp))
+            if (hasFitnessPlan) OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.fit_auto_d141a0e3)) }
+
+        }
         Spacer(Modifier.height(24.dp))
 
         // Only nag about verifying when the server can actually deliver the email.
@@ -153,13 +211,6 @@ fun ProfileScreen(
         if (role == "ADMIN") {
             Button(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.review_title)) }
             Spacer(Modifier.height(8.dp))
-        }
-        if (role == "MERCHANT") {
-            Button(onClick = onOpenMerchantMode, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_merchant_mode)) }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.sp_title)) }
-        } else {
-            OutlinedButton(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_register_merchant)) }
         }
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = onOpenNotifications, modifier = Modifier.fillMaxWidth()) {
