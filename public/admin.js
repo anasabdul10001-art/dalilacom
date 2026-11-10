@@ -1729,14 +1729,12 @@ async function deleteCategory(id) {
 const SERVICE_LABEL = {
   MEMBERSHIP: 'عضوية الزبون',
   MERCHANT_ACCOUNT: 'باقة النشاط',
-  RESPONDER_CUSTOMER: 'المجيب الآلي — زبون',
-  RESPONDER_MERCHANT: 'المجيب الآلي — نشاط',
+  RESPONDER_BASIC: 'المجيب الآلي — خطة موحّدة',
+  RESPONDER_CUSTOMER: 'المجيب الآلي — زبون (قديم)',
+  RESPONDER_MERCHANT: 'المجيب الآلي — نشاط (قديم)',
   ACCOUNTING: 'المحاسبة',
 };
-const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT', 'ACCOUNTING'];
-RESPONDER_BASIC: 'المجيب الآلي — خطة موحّدة',
-};
-const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_BASIC', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT'];
+const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_BASIC', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT', 'ACCOUNTING'];
 
 let planCountries = [];
 
