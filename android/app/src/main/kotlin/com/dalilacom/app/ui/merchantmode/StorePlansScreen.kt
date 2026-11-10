@@ -65,6 +65,15 @@ fun StorePlansScreen(container: AppContainer, onBack: () -> Unit, onOpenStore: (
             }
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.sp_change), style = MaterialTheme.typography.titleMedium)
+        } else if (d.freeTier != null) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(if (com.dalilacom.app.ui.i18n.AppStrings.language == "en") "Your free store package" else "باقة متجرك المجانية", style = MaterialTheme.typography.titleMedium)
+                    Text(if (com.dalilacom.app.ui.i18n.AppStrings.language == "en") "${d.freeTier.freeListingsPerMonth} products each month · ${if (d.freeTier.allowNewProducts) "used and new" else "used items only"}" else "${d.freeTier.freeListingsPerMonth} منتجات بالشهر · ${if (d.freeTier.allowNewProducts) "مستعمل وجديد" else "مستعمل فقط"}")
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sp_open)) }
+                }
+            }
         } else if (!d.required) {
             Text(stringResource(R.string.sp_no_plans_yet))
             Spacer(Modifier.height(8.dp))

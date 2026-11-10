@@ -7,6 +7,7 @@ import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.OrderDto
 import com.dalilacom.app.data.network.PaymentDto
 import com.dalilacom.app.data.network.UpdateOrderStatusRequest
+import com.dalilacom.app.data.network.TransferReferenceRequest
 import com.dalilacom.app.data.network.safeApiCall
 
 class OrderRepository(private val api: ApiService) {
@@ -45,6 +46,22 @@ class OrderRepository(private val api: ApiService) {
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body)
         else Result.failure(Exception(errorText(response, AppStrings.get(R.string.pay_confirm_failed))))
+    }
+
+    suspend fun submitTransfer(id: String, reference: String): Result<PaymentDto> {
+        val response = safeApiCall { api.submitTransfer(id, TransferReferenceRequest(reference)) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body)
+        else Result.failure(Exception(errorText(response, "تعذّر حفظ رقم التحويل")))
+    }
+
+    suspend fun confirmTransfer(id: String): Result<PaymentDto> {
+        val response = safeApiCall { api.confirmTransfer(id) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body)
+        else Result.failure(Exception(errorText(response, "تعذّر تأكيد التحويل")))
     }
 
     suspend fun cancel(id: String): Result<OrderDto> {

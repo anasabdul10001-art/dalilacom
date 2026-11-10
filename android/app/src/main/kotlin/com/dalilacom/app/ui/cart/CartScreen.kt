@@ -86,6 +86,21 @@ fun CartScreen(factory: ViewModelFactory, onCheckoutSuccess: () -> Unit) {
                         }
                     }
                 }
+                state.payments.forEach { group ->
+                    val shop = state.items.firstOrNull { it.product.merchant.id == group.merchantId }?.product?.merchant?.businessName.orEmpty()
+                    val labels = mapOf("COD" to "الدفع عند الاستلام", "BANK_ALSHAM" to "بنك الشام", "SYRIATEL" to "سيرياتل كاش", "MTN" to "MTN كاش")
+                    Card(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text("💳 طريقة الدفع · $shop", style = MaterialTheme.typography.titleSmall)
+                            group.methods.forEach { method ->
+                                Row(Modifier.fillMaxWidth().clickable { viewModel.pickPayment(group.merchantId, method) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    androidx.compose.material3.RadioButton(selected = state.paymentPicks[group.merchantId] == method, onClick = { viewModel.pickPayment(group.merchantId, method) })
+                                    Text(labels[method] ?: method)
+                                }
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 val shippingCost = viewModel.shippingTotal(state)
                 if (shippingCost > 0) {
@@ -102,7 +117,7 @@ fun CartScreen(factory: ViewModelFactory, onCheckoutSuccess: () -> Unit) {
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                Text("💵 " + stringResource(R.string.pay_cod), style = MaterialTheme.typography.bodySmall)
+                Text("بعد التحويل، أرسل رقم العملية من صفحة الطلب. صاحب المتجر يؤكد الاستلام بعد مراجعة حسابه.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
                 Button(onClick = viewModel::checkout, modifier = Modifier.fillMaxWidth()) {
                     Text(AppStrings.get(R.string.s_9a40a38b))

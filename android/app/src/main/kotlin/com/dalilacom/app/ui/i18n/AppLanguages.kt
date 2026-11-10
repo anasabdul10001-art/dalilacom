@@ -21,6 +21,7 @@ object AppLanguages {
         // <languages> — `npm run i18n:add` appends here
         AppLanguage("ar", "العربية", rtl = true),
         AppLanguage("en", "English", rtl = false),
+        AppLanguage("de", "Deutsch", rtl = false),
         // </languages>
     )
 

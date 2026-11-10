@@ -12,7 +12,7 @@ export async function exportPersonalData(userId: string) {
       isEmailVerified: true, lastLatitude: true, lastLongitude: true, locationUpdatedAt: true, termsAcceptedAt: true, termsVersion: true, locationConsentAt: true, createdAt: true,
     },
   });
-  const [addresses, memberships, orders, walletTransactions, topUps, productReviews, merchantReviews, notifications, favorites, securityEvents, merchant] = await Promise.all([
+  const [addresses, memberships, orders, walletTransactions, topUps, productReviews, merchantReviews, notifications, favorites, securityEvents, merchant, sellerPaymentMethods] = await Promise.all([
     prisma.address.findMany({ where: { userId } }),
     prisma.membership.findMany({
       where: { userId },
@@ -30,11 +30,13 @@ export async function exportPersonalData(userId: string) {
     prisma.favoriteMerchant.findMany({ where: { userId } }),
     prisma.securityEvent.findMany({ where: { userId }, select: { type: true, ip: true, userAgent: true, createdAt: true } }),
     prisma.merchantProfile.findUnique({ where: { userId }, select: { businessName: true, address: true, phone: true, whatsapp: true, latitude: true, longitude: true, approvalStatus: true, createdAt: true } }),
+    prisma.sellerPaymentMethod.findMany({ where: { userId }, select: { provider: true, recipientName: true, accountNumber: true, isEnabled: true, createdAt: true, updatedAt: true } }),
   ]);
   return {
     exportedAt: new Date().toISOString(),
     account: user,
     merchantProfile: merchant,
+    sellerPaymentMethods,
     addresses,
     memberships,
     orders,

@@ -13,19 +13,22 @@ export interface PaymentProvider {
 const providers: Record<PaymentMethod, PaymentProvider> = {
   COD: { method: "COD", available: true },
   ONLINE: { method: "ONLINE", available: false },
+  BANK_ALSHAM: { method: "BANK_ALSHAM", available: false },
+  SYRIATEL: { method: "SYRIATEL", available: false },
+  MTN: { method: "MTN", available: false },
 };
 
 export const availablePaymentMethods = (): PaymentMethod[] => Object.values(providers).filter((p) => p.available).map((p) => p.method);
 export const isMethodAvailable = (method: PaymentMethod) => providers[method].available;
 
-export async function createOrderPayment(tx: Prisma.TransactionClient, orderId: string, method: PaymentMethod, amountCents: number) {
-  return tx.payment.create({ data: { orderId, method, amountCents, status: "PENDING" } });
+export async function createOrderPayment(tx: Prisma.TransactionClient, orderId: string, method: PaymentMethod, amountCents: number, recipient?: { name: string; account: string }) {
+  return tx.payment.create({ data: { orderId, method, amountCents, status: "PENDING", recipientName: recipient?.name, recipientAccount: recipient?.account } });
 }
 
-/** A cancelled order never collects: an unpaid payment fails, a settled one is marked refunded (the money goes back outside the app for cash). */
+/** A cancelled order's pending payment fails. A confirmed transfer is not marked refunded automatically: no money is returned by this app. */
 export async function settleOnCancel(tx: Prisma.TransactionClient, orderId: string) {
   const payment = await tx.payment.findUnique({ where: { orderId } });
   if (!payment) return;
-  const next: PaymentStatus | null = payment.status === "PENDING" ? "FAILED" : payment.status === "PAID_CASH" || payment.status === "PAID_ONLINE" ? "REFUNDED" : null;
+  const next: PaymentStatus | null = payment.status === "PENDING" ? "FAILED" : null;
   if (next) await tx.payment.update({ where: { id: payment.id }, data: { status: next } });
 }

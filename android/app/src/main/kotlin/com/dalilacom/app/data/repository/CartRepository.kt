@@ -51,8 +51,8 @@ class CartRepository(private val api: ApiService) {
         }
     }
 
-    suspend fun checkout(shipping: Map<String, String> = emptyMap()): Result<List<OrderDto>> {
-        val response = safeApiCall { api.checkout(com.dalilacom.app.data.network.CheckoutRequest(shipping)) }
+    suspend fun checkout(shipping: Map<String, String> = emptyMap(), paymentMethods: Map<String, String> = emptyMap()): Result<List<OrderDto>> {
+        val response = safeApiCall { api.checkout(com.dalilacom.app.data.network.CheckoutRequest(shipping, paymentMethods)) }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {

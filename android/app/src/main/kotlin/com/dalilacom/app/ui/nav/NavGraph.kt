@@ -39,6 +39,7 @@ import com.dalilacom.app.ui.merchantmode.MerchantModeShell
 import com.dalilacom.app.ui.merchantmode.ProductEditScreen
 import com.dalilacom.app.ui.notifications.NotificationsScreen
 import com.dalilacom.app.ui.orders.OrderDetailScreen
+import com.dalilacom.app.ui.orders.OrdersScreen
 import com.dalilacom.app.ui.places.FavoritesScreen
 import com.dalilacom.app.ui.places.HoursScreen
 import com.dalilacom.app.ui.pricing.PricingScreen
@@ -47,6 +48,8 @@ import com.dalilacom.app.ui.store.AdBookScreen
 import com.dalilacom.app.ui.store.ProductWizardScreen
 import com.dalilacom.app.ui.store.MyAdsScreen
 import com.dalilacom.app.ui.store.StoreScreen
+import com.dalilacom.app.ui.store.MarketplaceScreen
+import com.dalilacom.app.ui.store.MarketplaceStoreScreen
 import com.dalilacom.app.ui.profile.ProfileEditScreen
 import com.dalilacom.app.ui.responder.ResponderScreen
 import com.dalilacom.app.ui.responder.WalletScreen
@@ -244,6 +247,9 @@ fun DalilacomNavGraph(
                 onOpenStore = { navController.navigate("merchantMode") { popUpTo("home") } },
             )
         }
+        composable("accountingPlans") {
+            com.dalilacom.app.ui.accounting.AccountingPlansScreen(container = container, onBack = { navController.popBackStack() })
+        }
         composable("branches") {
             com.dalilacom.app.ui.merchantmode.BranchesScreen(container = container, onBack = { navController.popBackStack() })
         }
@@ -264,6 +270,10 @@ fun DalilacomNavGraph(
                 onBookAd = { kind -> navController.navigate("adBook?kind=$kind") },
             )
         }
+        composable("marketplace") {
+            MarketplaceScreen(container = container, onBack = { navController.popBackStack() }, onLogin = { navController.navigate("login") }, onOpenStore = { id -> navController.navigate("marketplaceStore/$id") })
+        }
+        composable("marketplaceStore/{storeId}") { entry -> MarketplaceStoreScreen(container = container, storeId = entry.arguments?.getString("storeId").orEmpty(), onBack = { navController.popBackStack() }) }
         composable("productWizard") {
             ProductWizardScreen(container = container, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") }, onOpenShipping = { navController.navigate("shipping") }, onOpenAiPlans = { navController.navigate("aiPlans") }, onBackToShop = { navController.popBackStack("merchantMode", inclusive = false) }, onBackToAccount = { navController.popBackStack("home", inclusive = false) })
         }
@@ -373,6 +383,12 @@ fun DalilacomNavGraph(
         }
         composable("wallet") {
             WalletScreen(factory = factory, onBack = { navController.popBackStack() })
+        }
+        composable("orders") {
+            androidx.compose.foundation.layout.Column {
+                androidx.compose.material3.TextButton(onClick = { navController.popBackStack() }) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.back)) }
+                OrdersScreen(factory = factory, onOrderClick = { id -> navController.navigate("order/$id") })
+            }
         }
         composable("merchantMode") {
             MerchantModeShell(rootNavController = navController, container = container)

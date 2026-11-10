@@ -22,6 +22,7 @@ import { adminDecidedShop, reviewShopQuick } from "../services/shopReview.servic
 import { computeOpenStatus, openingHoursSchema } from "../services/hours.service";
 import { PRICE_CURRENCIES, isPriceCurrency, reapplyShopPricing, shopMoney } from "../lib/pricing";
 import { marketOfUser } from "../services/viewerCountry.service";
+import { getSettings } from "../services/settings.service";
 
 export const merchantRouter = Router();
 
@@ -117,11 +118,14 @@ merchantRouter.get("/me", requireAuth, requireRole(Role.MERCHANT), route(async (
   const categoryRow = await prisma.category.findUnique({ where: { id: merchant.categoryId }, select: { isOnline: true } });
   const suggestion = await prisma.categorySuggestion.findFirst({ where: { merchantId: merchant.id }, orderBy: { createdAt: "desc" }, select: { name: true, status: true, note: true } });
   // What still stands between this merchant and being found on the map — drives the setup checklist.
+  const marketplaceSettings = await getSettings();
+  const freeStoreAvailable = marketplaceSettings.marketplace.freeListingsPerMonth > 0;
+  const configuredPlanRequired = await storePlanRequired();
   res.json({
     ...profile,
     categorySuggestion: suggestion,
     categoryOnline: categoryRow?.isOnline ?? false,
-    storePlan: { required: await storePlanRequired(), active: !(await storePlanRequired()) || hasActiveStorePlan(merchant) },
+    storePlan: { required: configuredPlanRequired && !freeStoreAvailable, active: freeStoreAvailable || !configuredPlanRequired || hasActiveStorePlan(merchant) },
     onboarding: {
       approved: merchant.approvalStatus === "APPROVED",
       location: (merchant.latitude !== null && merchant.longitude !== null) || (categoryRow?.isOnline ?? false), // a shop that works online needs no place
@@ -473,7 +477,9 @@ merchantRouter.put("/shipping-methods", requireAuth, requireRole(Role.MERCHANT),
 merchantRouter.get("/store-plans", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const shop = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id }, include: { user: { select: { countryCode: true } } } });
   if (!shop) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
-  res.json(await storePlansFor(shop, shop.user.countryCode));
+  const [plans, settings] = await Promise.all([storePlansFor(shop, shop.user.countryCode), getSettings()]);
+  const freeListingsPerMonth = settings.marketplace.freeListingsPerMonth;
+  res.json({ ...plans, required: plans.required && freeListingsPerMonth === 0, active: freeListingsPerMonth > 0 || plans.active, freeTier: freeListingsPerMonth > 0 ? { freeListingsPerMonth, allowNewProducts: settings.marketplace.allowNewProducts } : null });
 }));
 
 merchantRouter.post("/store-plans/subscribe", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
@@ -489,7 +495,9 @@ merchantRouter.post("/store-plans/subscribe", requireAuth, requireRole(Role.MERC
     throw err;
   }
   const fresh = await prisma.merchantProfile.findUniqueOrThrow({ where: { id: own.merchant.id } });
-  res.json(await storePlansFor(fresh, owner?.countryCode ?? null));
+  const [plans, settings] = await Promise.all([storePlansFor(fresh, owner?.countryCode ?? null), getSettings()]);
+  const freeListingsPerMonth = settings.marketplace.freeListingsPerMonth;
+  res.json({ ...plans, required: plans.required && freeListingsPerMonth === 0, active: freeListingsPerMonth > 0 || plans.active, freeTier: freeListingsPerMonth > 0 ? { freeListingsPerMonth, allowNewProducts: settings.marketplace.allowNewProducts } : null });
 }));
 
 /* ---------------- the shop's other places (branches) ---------------- */

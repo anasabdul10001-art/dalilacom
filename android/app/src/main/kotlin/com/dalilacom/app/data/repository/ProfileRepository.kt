@@ -6,6 +6,8 @@ import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.DeleteAccountRequest
 import com.dalilacom.app.data.network.LocationRequest
 import com.dalilacom.app.data.network.ProfileDto
+import com.dalilacom.app.data.network.SellerPaymentMethodDto
+import com.dalilacom.app.data.network.SellerPaymentMethodsRequest
 import com.dalilacom.app.data.network.UpdateProfileRequest
 import com.dalilacom.app.data.network.errorText
 import com.dalilacom.app.data.network.safeApiCall
@@ -14,6 +16,17 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 /** The signed-in account's own profile: name, description and photo. */
 class ProfileRepository(private val api: ApiService) {
+
+    suspend fun sellerPaymentMethods(): List<SellerPaymentMethodDto> =
+        safeApiCall { api.getSellerPaymentMethods() }?.takeIf { it.isSuccessful }?.body()?.methods.orEmpty()
+
+    suspend fun saveSellerPaymentMethods(methods: List<SellerPaymentMethodDto>): Result<List<SellerPaymentMethodDto>> {
+        val response = safeApiCall { api.saveSellerPaymentMethods(SellerPaymentMethodsRequest(methods)) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body.methods)
+        else Result.failure(Exception(errorText(response, "تعذّر حفظ وسائل استلام المصاري")))
+    }
 
     /** The profile as last seen: the profile screen draws it at once while the fresh one is on its way (no empty name and photo for a moment). */
     @Volatile

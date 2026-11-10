@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material3.Switch
+import androidx.compose.material3.OutlinedTextField
 
 @Composable
 fun ProfileScreen(
@@ -54,14 +55,20 @@ fun ProfileScreen(
     onOpenMyAds: () -> Unit = {},
     onOpenWallet: () -> Unit,
     onOpenFavorites: () -> Unit = {},
+    onOpenOrders: () -> Unit = {},
     onOpenMarketing: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
+    onOpenMarketplace: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     var role by remember { mutableStateOf<String?>(null) }
     var account by remember { mutableStateOf<MeResponse?>(null) }
     var profile by remember { mutableStateOf<ProfileDto?>(container.profileRepository.cached) }
     var unread by remember { mutableStateOf(0) }
+    val payoutEnabled = remember { androidx.compose.runtime.mutableStateMapOf<String, Boolean>() }
+    val payoutNames = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
+    val payoutAccounts = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
+    var payoutSaving by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -71,6 +78,13 @@ fun ProfileScreen(
             launch { role = container.sessionStore.getRole() }
             launch { account = container.authRepository.me() }
             launch { unread = container.notificationRepository.unreadCount() }
+            launch {
+                container.profileRepository.sellerPaymentMethods().forEach { method ->
+                    payoutEnabled[method.provider] = method.isEnabled
+                    payoutNames[method.provider] = method.recipientName
+                    payoutAccounts[method.provider] = method.accountNumber
+                }
+            }
         }
     }
 
@@ -88,6 +102,35 @@ fun ProfileScreen(
         TextButton(onClick = onEditProfile) { Text(stringResource(R.string.profile_edit)) }
         TextButton(onClick = onOpenAccount) { Text(stringResource(R.string.profile_account_settings)) }
         OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
+        OutlinedButton(onClick = onOpenOrders, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.tab_orders)) }
+        Spacer(Modifier.height(12.dp))
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text("كيف تستلم مصاري مبيعاتك؟", style = MaterialTheme.typography.titleMedium)
+                Text("اختَر الوسائل المتاحة عندك. لن تظهر للزبون إلا عند طلب منتج منك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                listOf("BANK_ALSHAM" to "بنك الشام", "SYRIATEL" to "سيرياتل كاش", "MTN" to "MTN كاش").forEach { (provider, label) ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, Modifier.weight(1f))
+                        Switch(checked = payoutEnabled[provider] ?: false, onCheckedChange = { payoutEnabled[provider] = it })
+                    }
+                    OutlinedTextField(value = payoutNames[provider].orEmpty(), onValueChange = { payoutNames[provider] = it }, label = { Text("الاسم المسجل") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = payoutAccounts[provider].orEmpty(), onValueChange = { payoutAccounts[provider] = it }, label = { Text("رقم الحساب أو المحفظة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(enabled = !payoutSaving, onClick = {
+                    scope.launch {
+                        payoutSaving = true
+                        val methods = listOf("BANK_ALSHAM", "SYRIATEL", "MTN").filter { payoutEnabled[it] == true }.map { provider ->
+                            com.dalilacom.app.data.network.SellerPaymentMethodDto(provider = provider, recipientName = payoutNames[provider].orEmpty(), accountNumber = payoutAccounts[provider].orEmpty(), isEnabled = true)
+                        }
+                        container.profileRepository.saveSellerPaymentMethods(methods)
+                            .onFailure { Toast.makeText(context, it.message ?: "تعذّر الحفظ", Toast.LENGTH_LONG).show() }
+                            .onSuccess { Toast.makeText(context, "تم حفظ وسائل الاستلام", Toast.LENGTH_SHORT).show() }
+                        payoutSaving = false
+                    }
+                }, modifier = Modifier.fillMaxWidth()) { Text(if (payoutSaving) "جارٍ الحفظ…" else "حفظ وسائل الاستلام") }
+            }
+        }
         Spacer(Modifier.height(24.dp))
 
         // Only nag about verifying when the server can actually deliver the email.
@@ -177,6 +220,8 @@ fun ProfileScreen(
         if (role == "MERCHANT") {
             OutlinedButton(onClick = onOpenMyAds, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_my_ads)) }
         }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onOpenMarketplace, modifier = Modifier.fillMaxWidth()) { Text("🛒 " + if (com.dalilacom.app.ui.i18n.AppStrings.language == "en") "Community market" else "سوق المستخدمين") }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onOpenWallet, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_wallet)) }
         Spacer(Modifier.height(8.dp))

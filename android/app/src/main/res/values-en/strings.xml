@@ -7,7 +7,35 @@
     <string name="tab_store">Store</string>
     <string name="tab_cart">Cart</string>
     <string name="tab_orders">Orders</string>
+    <string name="tab_accounting">Accounting</string>
     <string name="tab_account">Account</string>
+    <string name="accounting_title">Accounting</string>
+    <string name="accounting_summary">Transaction summary</string>
+    <string name="accounting_add_entry">Add income or expense</string>
+    <string name="accounting_income">Income</string>
+    <string name="accounting_expense">Expense</string>
+    <string name="accounting_category">Category</string>
+    <string name="accounting_description">Details</string>
+    <string name="accounting_amount">Amount</string>
+    <string name="accounting_save">Save transaction</string>
+    <string name="accounting_inventory">Inventory</string>
+    <string name="accounting_barcode">Barcode number</string>
+    <string name="accounting_scan">Scan</string>
+    <string name="accounting_product_name">Product name</string>
+    <string name="accounting_cost">Purchase cost</string>
+    <string name="accounting_set_cost">Edit purchase cost</string>
+    <string name="accounting_product_details">%1$s · Quantity: %2$d · Cost: %3$s · Sale: %4$s %5$s</string>
+    <string name="accounting_price">Sale price</string>
+    <string name="accounting_quantity">Current quantity</string>
+    <string name="accounting_add_product">Add product</string>
+    <string name="accounting_empty_stock">No inventory items yet.</string>
+    <string name="accounting_sell_one">Sell one</string>
+    <string name="accounting_footer">Online store sales are recorded when an order is delivered.</string>
+    <string name="accounting_totals_line">%1$s · Income %2$s · Expenses %3$s · Net %4$s</string>
+    <string name="accounting_stock_summary">%1$d products · %2$d units</string>
+    <string name="accounting_scan_prompt">Point the camera at the barcode</string>
+    <string name="accounting_missing_entry">Enter a category, details, and amount</string>
+    <string name="accounting_missing_name">Enter the product name</string>
     <string name="back">‹ Back</string>
 
     <string name="search_placeholder">Search for a place or service...</string>
@@ -1116,4 +1144,24 @@
     <string name="deals_shop_name">Shop name</string><string name="deals_product_name">Product or deal name</string><string name="deals_area">Area or neighborhood</string>
     <string name="deals_all_professions">All professions and shops</string><string name="deals_all_categories">All categories</string><string name="deals_nearest">Nearest to me</string><string name="deals_biggest">Biggest discount</string><string name="deals_clear">Clear filters</string>
     <string name="deals_loading">Loading deals…</string><string name="deals_count">%1$d deals</string><string name="deals_filter_empty">No deals match. Try changing the filters.</string><string name="deals_all_distances">All deals are shown, no matter the distance.</string>
+    <string name="accounting_invoice_photo">Scan an invoice with AI</string>
+    <string name="accounting_invoice_help">Choose an invoice photo, review the extracted details, then confirm the expense.</string>
+    <string name="accounting_invoice_choose">Choose invoice photo</string>
+    <string name="accounting_invoice_review">Review before saving</string>
+    <string name="accounting_invoice_confirm">Confirm expense</string>
+    <string name="accounting_invoice_read_failed">Could not read the invoice. Try a clearer photo.</string>
+    <string name="accounting_invoice_manual_amount">Enter the invoice description and amount.</string>
+    <string name="accounting_invoice_saved">Invoice expense saved.</string>
+    <string name="accounting_plan_required">Accounting requires an active plan or free trial.</string>
+    <string name="billing_refresh_status">Refresh subscription status</string>
+    <string name="accounting_open_plans">View accounting plans</string>
+    <string name="billing_title">Dalilacom services and plans</string>
+    <string name="billing_loading">Loading plans…</string>
+    <string name="billing_start_trial">Start free trial</string>
+    <string name="billing_subscribe">Subscribe now</string>
+    <string name="billing_activated">Plan activated.</string>
+    <string name="billing_failed">Could not complete the request.</string>
+    <string name="plans_days">days</string>
+    <string name="plans_trial_days">trial days</string>
+    <string name="billing_paypal">Pay with PayPal</string>
 </resources>

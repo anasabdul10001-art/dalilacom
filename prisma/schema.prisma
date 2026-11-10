@@ -43,6 +43,15 @@ enum OrderStatus {
 enum PaymentMethod {
   COD
   ONLINE
+  BANK_ALSHAM
+  SYRIATEL
+  MTN
+}
+
+enum SellerPaymentProvider {
+  BANK_ALSHAM
+  SYRIATEL
+  MTN
 }
 
 enum PaymentStatus {
@@ -95,13 +104,18 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  memberships     Membership[]
-  merchantProfile MerchantProfile?
-  avatar          UserAvatar?
-  cart            Cart?
-  orders          Order[]
-  affiliateOf     MerchantAffiliate[] // merchants I market for
-  referredAs      AffiliateReferral[] // merchants that credit a specific affiliate for my purchases
+  memberships             Membership[]
+  merchantProfile         MerchantProfile?
+  marketplaceListings     MarketplaceListing[]
+  sellerPaymentMethods    SellerPaymentMethod[]
+  marketplaceSubscription MarketplaceSubscription?
+  marketplacePhotos       MarketplacePhoto[]
+  marketplaceStore        MarketplaceStore?
+  avatar                  UserAvatar?
+  cart                    Cart?
+  orders                  Order[]
+  affiliateOf             MerchantAffiliate[] // merchants I market for
+  referredAs              AffiliateReferral[] // merchants that credit a specific affiliate for my purchases
 
   wallet                Wallet?
   walletTransactions    WalletTransaction[]
@@ -110,6 +124,11 @@ model User {
   channelConnections    ChannelConnection[]
   responderRules        ResponderRule[]
   responderInteractions ResponderInteraction[]
+  accountingProducts   AccountingProduct[]
+  accountingEntries    AccountingEntry[]
+  accountingMovements  AccountingStockMovement[]
+  accountingInvoiceDrafts AccountingInvoiceDraft[]
+  platformSubscriptions PlatformSubscription[]
 
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
@@ -208,6 +227,83 @@ enum ServiceKind {
   RESPONDER_CUSTOMER // auto-responder subscription, customer price
   RESPONDER_MERCHANT // auto-responder subscription, merchant price
   MERCHANT_ACCOUNT // a merchant plan (tiers carry their own broadcast quota)
+  ACCOUNTING // accounting app subscription
+}
+
+enum MarketplaceListingStatus {
+  PENDING_REVIEW
+  ACTIVE
+  SOLD
+  HIDDEN
+  REJECTED
+}
+
+/// A private seller's classified listing. Kept separate from Product because Product belongs to a merchant shop.
+model MarketplaceStore {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings MarketplaceListing[]
+}
+
+/// A product sold through a user's personal storefront. Any account role can own this kind of store.
+model MarketplaceListing {
+  id           String                   @id @default(uuid())
+  userId       String
+  storeId      String
+  title        String
+  description  String?
+  priceCents   Int
+  currency     String                   @default("SYP")
+  category     String?
+  condition    ProductCondition         @default(USED)
+  imageUrl     String?
+  cityId       String?
+  contactPhone String?
+  status       MarketplaceListingStatus @default(PENDING_REVIEW)
+  reviewNote   String?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store MarketplaceStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([storeId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([condition, status, createdAt])
+}
+
+/// A private seller may use the same MERCHANT_ACCOUNT price packages without becoming a merchant.
+model MarketplaceSubscription {
+  userId    String   @id
+  planId    String
+  endsAt    DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan ServicePlan @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+}
+
+/// Pictures uploaded by private sellers; kept separate from merchant-owned product photos.
+model MarketplacePhoto {
+  id        String   @id @default(uuid())
+  userId    String
+  mime      String
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 // One service plan a customer or merchant can subscribe to. This is the single source of truth for
@@ -226,6 +322,7 @@ model ServicePlan {
   // priceCents > 0 means the admin has not priced it in credits yet, and subscribing is refused rather
   // than converting currencies with a rate nobody set (sections 24/60/64).
   priceCredits          Int?
+  paypalPlanId          String? // configured in the PayPal dashboard for recurring purchases
   // Merchant plans only: how many follower broadcasts this plan allows per period (section 37/76).
   // Null means "not applicable" for that kind of service.
   monthlyBroadcastLimit Int?
@@ -234,10 +331,12 @@ model ServicePlan {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
-  memberships Membership[]
-  merchants   MerchantProfile[]
-  features    PlanFeature[]
-  prices      PlanPrice[]
+  memberships              Membership[]
+  merchants                MerchantProfile[]
+  marketplaceSubscriptions MarketplaceSubscription[]
+  platformSubscriptions PlatformSubscription[]
+  features                 PlanFeature[]
+  prices                   PlanPrice[]
 
   @@index([service, isActive])
 }
@@ -265,6 +364,7 @@ model PlanPrice {
   priceCredits    Int
   cashAmountCents Int?
   currencyCode    String? // defaults to the country's currency when empty
+  paypalPlanId    String? // country-specific PayPal recurring plan if its price differs from the base plan
   isActive        Boolean @default(true)
 
   plan    ServicePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
@@ -272,6 +372,37 @@ model PlanPrice {
 
   @@unique([planId, countryId])
   @@index([countryId])
+}
+
+enum ExternalSubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  FAILED
+}
+
+/// A single cross-service record for card or SEPA subscriptions handled by the payment gateway.
+model PlatformSubscription {
+  id                       String                    @id @default(uuid())
+  userId                   String
+  planId                   String
+  provider                 String
+  providerCheckoutId       String?                   @unique
+  providerSubscriptionId   String?                   @unique
+  latestInvoiceId          String?                   @unique
+  status                   ExternalSubscriptionStatus @default(PENDING)
+  amountCents              Int
+  currency                 String
+  currentPeriodEnd         DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan ServicePlan @relation(fields: [planId], references: [id])
+
+  @@index([userId, status])
+  @@index([planId, status])
 }
 
 // The VAT/sales-tax rate applied to a country's invoices (section 58/64). Stored in basis points so
@@ -342,30 +473,30 @@ model Category {
 
 // A merchant's business profile (section 3)
 model MerchantProfile {
-  id              String                 @id @default(uuid())
-  userId          String                 @unique
-  businessName    String
-  usdRateSyp      Int? // the shop's own rate: how many lira one dollar is worth to it (set in its account)
+  id                 String                 @id @default(uuid())
+  userId             String                 @unique
+  businessName       String
+  usdRateSyp         Int? // the shop's own rate: how many lira one dollar is worth to it (set in its account)
   priceCurrency      String? // SYP | USD: the money the shop writes ALL its prices in (one setting for the whole shop); null = the market currency
-  showBothCurrencies Boolean @default(false) // show shoppers the price in lira and in dollars (needs usdRateSyp)
-  categoryId      String
-  address         String?
-  latitude        Float?
-  longitude       Float?
-  phone           String?
-  whatsapp        String?
-  approvalStatus  MerchantApprovalStatus @default(PENDING) // manual admin approval (section 63)
+  showBothCurrencies Boolean                @default(false) // show shoppers the price in lira and in dollars (needs usdRateSyp)
+  categoryId         String
+  address            String?
+  latitude           Float?
+  longitude          Float?
+  phone              String?
+  whatsapp           String?
+  approvalStatus     MerchantApprovalStatus @default(PENDING) // manual admin approval (section 63)
   // The merchant plan the super admin assigned to this shop: its monthlyBroadcastLimit is how many announcements the shop
   // may send per month. No plan = the platform default (settings.broadcasts.merchantDefaultMonthly).
-  planId          String?
-  planEndsAt      DateTime? // when the store plan the shop chose ends (null = no end date, e.g. assigned by the admin)
-  rejectionReason String?
-  reviewNote      String? // why the AI sent it to the admin instead of approving it
-  reviewSource    String? // RULES | AI | ADMIN: who decided last
+  planId             String?
+  planEndsAt         DateTime? // when the store plan the shop chose ends (null = no end date, e.g. assigned by the admin)
+  rejectionReason    String?
+  reviewNote         String? // why the AI sent it to the admin instead of approving it
+  reviewSource       String? // RULES | AI | ADMIN: who decided last
   // {"sat":[{"open":"09:00","close":"22:00"}], ...} — validated in routes; evaluated in the platform timezone
-  openingHours    Json?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  openingHours       Json?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
   user                 User                  @relation(fields: [userId], references: [id])
   category             Category              @relation(fields: [categoryId], references: [id])
@@ -416,6 +547,7 @@ model Product {
   name                    String
   description             String?
   priceCents              Int
+  costPriceCents          Int               @default(0)
   memberDiscountEnabled   Boolean           @default(false)
   memberPriceCents        Int? // set by the merchant when memberDiscountEnabled (section 5 example: €100 -> €85)
   // Syria prices in lira or dollar, one choice for the whole shop (MerchantProfile.priceCurrency). priceCents / memberPriceCents
@@ -426,6 +558,7 @@ model Product {
   enteredMemberPriceCents Int?
   stock                   Int               @default(0)
   sku                     String?
+  barcode                 String?
   isActive                Boolean           @default(true) // merchant-controlled visibility, independent of stock (section 59.1)
   // The online store: a picture (a generated one is drawn from `icon` when there is no photo), the section it is
   // listed under, and the figures a shopper looks at.
@@ -448,10 +581,109 @@ model Product {
   affiliateReferrals AffiliateReferral[]
   adBookings         AdBooking[]
   productCategory    ProductCategory?    @relation(fields: [productCategoryId], references: [id])
+  accountingMovements AccountingStockMovement[]
 
   @@index([merchantId])
   @@index([storeSection])
   @@index([productCategoryId])
+}
+
+enum AccountingEntryType {
+  INCOME
+  EXPENSE
+}
+
+enum AccountingStockAction {
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+}
+
+// The personal/business bookkeeping area is separate from the public store catalog, while allowing
+// a product to be linked to a store item later. Each ordinary account can use it independently.
+model AccountingProduct {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String
+  barcode        String?
+  sku            String?
+  unit           String   @default("قطعة")
+  costCents      Int      @default(0)
+  salePriceCents Int      @default(0)
+  quantity       Int      @default(0)
+  lowStockAt     Int      @default(0)
+  currency       String   @default("EUR")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user     User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements AccountingStockMovement[]
+
+  @@unique([userId, barcode])
+  @@index([userId, name])
+  @@index([userId, sku])
+}
+
+model AccountingEntry {
+  id            String              @id @default(uuid())
+  userId        String
+  type          AccountingEntryType
+  category      String
+  description   String
+  amountCents   Int
+  currency      String              @default("EUR")
+  occurredAt    DateTime            @default(now())
+  source        String              @default("MANUAL") // MANUAL, ORDER, COMMISSION, DELIVERY, INVOICE
+  sourceKey     String?
+  receiptName   String?
+  receiptMime   String?
+  receiptData   Bytes?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoiceDraft AccountingInvoiceDraft?
+
+  @@unique([userId, sourceKey])
+  @@index([userId, occurredAt])
+  @@index([userId, type, occurredAt])
+}
+
+model AccountingInvoiceDraft {
+  id          String   @id @default(uuid())
+  userId      String
+  mime        String
+  data        Bytes
+  extracted   Json?
+  entryId     String?  @unique
+  createdAt   DateTime @default(now())
+  confirmedAt DateTime?
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry AccountingEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
+
+model AccountingStockMovement {
+  id          String               @id @default(uuid())
+  userId      String
+  productId   String?
+  storeProductId String?
+  action      AccountingStockAction
+  quantity    Int
+  unitCostCents Int?
+  note        String?
+  occurredAt  DateTime             @default(now())
+  createdAt   DateTime             @default(now())
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product AccountingProduct? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeProduct Product? @relation(fields: [storeProductId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt])
+  @@index([productId, occurredAt])
+  @@index([storeProductId, occurredAt])
 }
 
 // One active cart per customer (section 6)
@@ -507,20 +739,39 @@ model Order {
 
 // One payment per (sub-)order: what the customer owes and how far it has been settled.
 model Payment {
-  id            String        @id @default(uuid())
-  orderId       String        @unique
-  method        PaymentMethod
-  status        PaymentStatus @default(PENDING)
-  amountCents   Int
-  reference     String? // the gateway's transaction id, when there is one
-  paidAt        DateTime?
-  confirmedById String? // the user (merchant or staff) who confirmed a cash payment
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id               String        @id @default(uuid())
+  orderId          String        @unique
+  method           PaymentMethod
+  status           PaymentStatus @default(PENDING)
+  amountCents      Int
+  reference        String? // the gateway's transaction id, when there is one
+  recipientName    String?
+  recipientAccount String?
+  paidAt           DateTime?
+  confirmedById    String? // the user (merchant or staff) who confirmed a cash payment
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   order Order @relation(fields: [orderId], references: [id])
 
   @@index([status])
+}
+
+// Private payment details entered by any account owner for receiving marketplace orders.
+model SellerPaymentMethod {
+  id            String                @id @default(uuid())
+  userId        String
+  provider      SellerPaymentProvider
+  recipientName String
+  accountNumber String
+  isEnabled     Boolean               @default(true)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId, isEnabled])
 }
 
 model OrderItem {

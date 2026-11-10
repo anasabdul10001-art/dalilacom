@@ -37,6 +37,15 @@ data class UpdateProfileRequest(
     val vatNumber: String? = null,
 )
 
+@Serializable
+data class SellerPaymentMethodDto(val id: String = "", val provider: String, val recipientName: String, val accountNumber: String, val isEnabled: Boolean = true)
+@Serializable
+data class SellerPaymentMethodsResponse(val methods: List<SellerPaymentMethodDto> = emptyList())
+@Serializable
+data class SellerPaymentMethodsRequest(val methods: List<SellerPaymentMethodDto> = emptyList())
+@Serializable
+data class TransferReferenceRequest(val reference: String)
+
 // `confirm` has no default on purpose: defaults are not sent, and the server insists on an explicit true.
 @Serializable
 data class DeleteAccountRequest(val confirm: Boolean, val password: String? = null)
@@ -464,12 +473,15 @@ data class ShippingPutRequest(val methods: List<ShippingItemRequest>)
 @Serializable
 data class CartShippingDto(val merchantId: String, val methods: List<ShippingMethodDto> = emptyList())
 
+@Serializable
+data class CartPaymentDto(val merchantId: String, val methods: List<String> = emptyList())
+
 /** The shipping method chosen for each shop, by shop id. */
 @Serializable
-data class CheckoutRequest(val shipping: Map<String, String> = emptyMap())
+data class CheckoutRequest(val shipping: Map<String, String> = emptyMap(), val paymentMethods: Map<String, String> = emptyMap())
 
 @Serializable
-data class CartViewDto(val items: List<CartItemDto> = emptyList(), val shipping: List<CartShippingDto> = emptyList(), val totalCents: Int = 0)
+data class CartViewDto(val items: List<CartItemDto> = emptyList(), val shipping: List<CartShippingDto> = emptyList(), val payments: List<CartPaymentDto> = emptyList(), val totalCents: Int = 0)
 
 @Serializable
 data class AddCartItemRequest(val productId: String, val quantity: Int = 1)
@@ -493,6 +505,9 @@ data class PaymentDto(
     val status: String,
     val amountCents: Int,
     val paidAt: String? = null,
+    val recipientName: String? = null,
+    val recipientAccount: String? = null,
+    val reference: String? = null,
 )
 
 @Serializable
@@ -1088,6 +1103,21 @@ data class StorePlanDto(
 @Serializable
 data class CurrentStorePlanDto(val id: String, val name: String, val endsAt: String? = null)
 
+@Serializable data class FreeStoreTierDto(val freeListingsPerMonth: Int = 0, val allowNewProducts: Boolean = false)
+
+@Serializable data class MarketplaceSettingsDto(val allowNewProducts: Boolean = false, val freeListingsPerMonth: Int = 3)
+@Serializable data class MarketplaceListingDto(val id: String, val title: String, val description: String? = null, val priceCents: Int, val currency: String = "SYP", val condition: String = "USED", val status: String, val reviewNote: String? = null, val imageUrl: String? = null, val contactPhone: String? = null, val sellerName: String? = null, val storeId: String? = null)
+@Serializable data class MarketplaceListingsDto(val listings: List<MarketplaceListingDto> = emptyList())
+@Serializable data class MarketplaceStoreDto(val id: String, val name: String, val description: String? = null)
+@Serializable data class MarketplaceStoreResponseDto(val store: MarketplaceStoreDto? = null)
+@Serializable data class MarketplaceStoreDetailDto(val store: MarketplaceStoreDto, val listings: List<MarketplaceListingDto> = emptyList())
+@Serializable data class MarketplaceQuotaDto(val used: Int = 0, val freeLimit: Int = 3, val remaining: Int = 3, val paid: Boolean = false)
+@Serializable data class MarketplacePlanDto(val id: String, val name: String, val durationDays: Int = 30, val priceCredits: Int? = null)
+@Serializable data class MyMarketplaceDto(val store: MarketplaceStoreDto? = null, val listings: List<MarketplaceListingDto> = emptyList(), val quota: MarketplaceQuotaDto = MarketplaceQuotaDto(), val plans: List<MarketplacePlanDto> = emptyList())
+@Serializable data class CreateMarketplaceListingRequest(val title: String, val description: String? = null, val priceCents: Int, val currency: String, val condition: String = "USED", val category: String? = null, val contactPhone: String? = null, val imageUrl: String? = null)
+@Serializable data class MarketplaceCreateResponseDto(val listing: MarketplaceListingDto, val quota: MarketplaceQuotaDto)
+@Serializable data class MarketplaceSubscriptionResponseDto(val quota: MarketplaceQuotaDto)
+
 @Serializable
 data class StorePlansDto(
     val creditName: String = "",
@@ -1095,6 +1125,7 @@ data class StorePlansDto(
     val active: Boolean = true,
     val current: CurrentStorePlanDto? = null,
     val plans: List<StorePlanDto> = emptyList(),
+    val freeTier: FreeStoreTierDto? = null,
 )
 
 /** The store's advertising calendar: per day, how many spaces are free and whether the chosen length fits starting that day. */
@@ -1158,3 +1189,22 @@ data class TxSummaryDto(val count: Int = 0, val billCents: Int = 0, val discount
 
 @Serializable
 data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val items: List<DiscountTxDto> = emptyList())
+
+@Serializable data class AccountingCurrencyTotalDto(val currency: String = "EUR", val incomeCents: Int = 0, val expensesCents: Int = 0, val netCents: Int = 0)
+@Serializable data class AccountingInventoryDto(val products: Int = 0, val units: Int = 0, val outOfStock: Int = 0)
+@Serializable data class AccountingEntryDto(val id: String = "", val type: String = "", val category: String = "", val description: String = "", val amountCents: Int = 0, val currency: String = "EUR", val occurredAt: String = "", val source: String = "MANUAL", val hasReceipt: Boolean = false)
+@Serializable data class AccountingSummaryDto(val totals: List<AccountingCurrencyTotalDto> = emptyList(), val inventory: AccountingInventoryDto = AccountingInventoryDto(), val recent: List<AccountingEntryDto> = emptyList())
+@Serializable data class AccountingProductDto(val id: String, val name: String, val barcode: String? = null, val sku: String? = null, val unit: String = "قطعة", val costCents: Int = 0, val salePriceCents: Int = 0, val quantity: Int = 0, val lowStockAt: Int = 0, val currency: String = "EUR")
+@Serializable data class AccountingProductRequest(val name: String, val barcode: String? = null, val sku: String? = null, val unit: String = "قطعة", val costCents: Int = 0, val salePriceCents: Int = 0, val quantity: Int = 0, val lowStockAt: Int = 0, val currency: String = "EUR")
+@Serializable data class AccountingEntryRequest(val type: String, val category: String, val description: String, val amountCents: Int, val currency: String = "EUR")
+@Serializable data class AccountingSellRequest(val quantity: Int, val unitPriceCents: Int? = null, val note: String? = null)
+@Serializable data class AccountingSellResponseDto(val product: AccountingProductDto? = null, val incomeCents: Int = 0, val costCents: Int = 0, val netCents: Int = 0)
+@Serializable data class AccountingStockRequest(val action: String, val quantity: Int, val unitCostCents: Int? = null, val note: String? = null)
+@Serializable data class AccountingInvoiceExtractedDto(val supplier: String? = null, val description: String? = null, val date: String? = null, val totalCents: Int? = null, val currency: String? = null)
+@Serializable data class AccountingInvoiceDraftDto(val id: String, val extracted: AccountingInvoiceExtractedDto? = null, val needsReview: Boolean = true)
+@Serializable data class AccountingInvoiceConfirmRequest(val category: String = "مشتريات", val description: String? = null, val amountCents: Int? = null, val currency: String? = null)
+@Serializable data class PlanCatalogDto(val creditName: String = "", val services: List<PlanServiceDto> = emptyList())
+@Serializable data class PlanServiceDto(val service: String = "", val plans: List<ServicePlanDto> = emptyList())
+@Serializable data class ServicePlanDto(val id: String = "", val service: String = "", val name: String = "", val description: String? = null, val durationDays: Int = 30, val trialDays: Int = 0, val priceCredits: Int? = null, val cashAmountCents: Int = 0, val currency: String = "EUR", val features: List<PlanFeatureDto> = emptyList(), val source: String = "catalog", val paypalAvailable: Boolean = false)
+@Serializable data class BillingCheckoutDto(val checkoutUrl: String = "", val provider: String = "")
+@Serializable data class BillingRequest(val planId: String, val provider: String = "STRIPE")

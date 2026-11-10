@@ -9,6 +9,7 @@ export const SUPPORTED_LANGUAGES = [
   // <languages> — `npm run i18n:add` appends here
   { code: "ar", name: "العربية", dir: "rtl" },
   { code: "en", name: "English", dir: "ltr" },
+  { code: "de", name: "Deutsch", dir: "ltr" },
   // </languages>
 ] as const;
 

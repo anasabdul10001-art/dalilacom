@@ -28,6 +28,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.dalilacom.app.data.AppContainer
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import com.dalilacom.app.ui.common.DocumentPrinter
@@ -39,6 +42,7 @@ import com.dalilacom.app.ui.common.orderStatusLabel
 
 @Composable
 fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Unit) {
+    var transferReference by androidx.compose.runtime.remember(orderId) { androidx.compose.runtime.mutableStateOf("") }
     val viewModel: OrderDetailViewModel = viewModel(
         factory = viewModelFactory {
             initializer { OrderDetailViewModel(container.orderRepository, container.reviewsRepository, orderId) }
@@ -87,6 +91,23 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
                     Text(formatCents(order.totalCents), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 com.dalilacom.app.ui.common.PaymentLine(order)
+                val payment = order.payment
+                if (payment != null && payment.method in listOf("BANK_ALSHAM", "SYRIATEL", "MTN")) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("طريقة الدفع: " + when (payment.method) { "BANK_ALSHAM" -> "بنك الشام"; "SYRIATEL" -> "سيرياتل كاش"; else -> "MTN كاش" }, style = MaterialTheme.typography.titleSmall)
+                    payment.recipientName?.let { Text("المستلم: $it") }
+                    payment.recipientAccount?.let { Text("رقم التحويل: $it", style = MaterialTheme.typography.bodyLarge) }
+                    payment.reference?.let { Text("رقم العملية المرسل: $it") }
+                    if (payment.status == "PENDING" && order.customer == null) {
+                        if (payment.reference.isNullOrBlank()) {
+                            OutlinedTextField(value = transferReference, onValueChange = { transferReference = it }, label = { Text("رقم العملية بعد التحويل") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            Button(onClick = { viewModel.submitTransfer(transferReference.trim()) }, enabled = transferReference.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text("أرسلت التحويل") }
+                        } else Text("بانتظار صاحب المتجر لتأكيد وصول التحويل.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (payment.status == "PENDING" && order.customer != null && !payment.reference.isNullOrBlank()) {
+                        Button(onClick = { viewModel.confirmTransfer() }, modifier = Modifier.fillMaxWidth()) { Text("تأكيد وصول التحويل") }
+                    }
+                }
                 if (order.customer != null) com.dalilacom.app.ui.common.ConfirmCashButton(order) { viewModel.confirmCash() }
                 if (order.memberDiscountCents > 0) {
                     Text(AppStrings.get(R.string.fmt_saved, formatCents(order.memberDiscountCents)), style = MaterialTheme.typography.bodySmall)

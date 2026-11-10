@@ -408,7 +408,7 @@ function logoSrc(kind, tone) {
 /** The essential pages (about, privacy, terms, returns, shipping): small links at the bottom of the main screens. */
 function legalLinksHtml() {
   const L = [["about", "legal.about"], ["impressum", "legal.impressum"], ["privacy", "legal.privacy"], ["terms", "legal.terms"], ["refund", "legal.refund"], ["shipping", "legal.shipping"]];
-  return `<nav class="legal-links" aria-label="legal">${L.map(([p, k]) => `<a href="/${p}.html" target="_blank" rel="noopener">${esc(t(k))}</a>`).join("")}</nav>`;
+  return '<nav class="legal-links" aria-label="legal"><a href="/services" target="_blank" rel="noopener">' + esc(t("services.overview")) + '</a>' + L.map(([p, k]) => '<a href="/' + p + '.html" target="_blank" rel="noopener">' + esc(t(k)) + '</a>').join("") + '</nav>';
 }
 
 /** Small round icons to our pages (the ones switched on in the admin panel), with the line that other pages with the name are not ours. */
@@ -574,7 +574,8 @@ const ORDER_ACTION_LABEL = {
 function payLineHtml(payment) {
   if (!payment) return "";
   const done = payment.status === "PAID_CASH" || payment.status === "PAID_ONLINE";
-  return `<p class="muted">💵 ${esc(t("pay.cod"))} · <b class="${done ? "ok" : ""}">${esc(t("pay." + payment.status))}</b></p>`;
+  const labels = { COD: "الدفع عند الاستلام", BANK_ALSHAM: "بنك الشام", SYRIATEL: "سيرياتل كاش", MTN: "MTN كاش", ONLINE: "دفع إلكتروني" };
+  return `<p class="muted">💳 ${esc(labels[payment.method] || payment.method)} · <b class="${done ? "ok" : ""}">${esc(t("pay." + payment.status))}</b></p>${payment.recipientAccount ? `<p class="muted">حوّل إلى ${esc(payment.recipientName || "")} · ${esc(payment.recipientAccount)}${payment.reference ? `<br>رقم العملية: ${esc(payment.reference)}` : ""}</p>` : ""}`;
 }
 
 /** The shop's button once the order is on its way: the cash was handed over. */
@@ -590,6 +591,30 @@ async function confirmCash(id) {
   toast(t("pay.cashConfirmed"));
   S._mOrders = null; S._orderDetail = null;
   render();
+}
+
+function confirmTransferButton(ord) {
+  const p = ord.payment;
+  if (!(ord.customer || ord.user) || !p || !["BANK_ALSHAM", "SYRIATEL", "MTN"].includes(p.method) || p.status !== "PENDING" || !p.reference) return "";
+  return `<button class="btn outline" style="margin-top:8px" onclick="confirmTransfer('${ord.id}')">تأكيد وصول التحويل</button>`;
+}
+async function confirmTransfer(id) {
+  const { ok, data } = await api("POST", `/orders/${id}/payment/confirm-transfer`);
+  if (!ok) return toast(errMsg(data, "تعذّر التأكيد"));
+  toast("تم تأكيد وصول التحويل"); S._mOrders = null; S._orderDetail = null; render();
+}
+function transferReferenceForm(ord) {
+  const p = ord.payment;
+  if (!p || !["BANK_ALSHAM", "SYRIATEL", "MTN"].includes(p.method) || p.status !== "PENDING" || ord.customer) return "";
+  if (p.reference) return `<p class="muted">رقم التحويل الذي أرسلته: ${esc(p.reference)}. بانتظار تأكيد صاحب المتجر.</p>`;
+  return `<div class="field"><label>رقم العملية بعد التحويل</label><input id="transfer-reference" maxlength="100" placeholder="اكتب رقم العملية الظاهر في تطبيقك" /></div><button class="btn outline" onclick="submitTransfer('${ord.id}')">أرسلت التحويل</button>`;
+}
+async function submitTransfer(id) {
+  const reference = qs("transfer-reference")?.value?.trim();
+  if (!reference || reference.length < 3) return toast("أدخل رقم العملية أولاً");
+  const { ok, data } = await api("POST", `/orders/${id}/payment/submit-transfer`, { reference });
+  if (!ok) return toast(errMsg(data, "تعذّر حفظ رقم العملية"));
+  await loadOrderDetail(id);
 }
 
 function orderBadge(status) {
@@ -608,6 +633,7 @@ const ICON = {
   store: '<svg viewBox="0 0 24 24"><path d="M4 9 5.5 4h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9"/><path d="M5.5 11.5V20h13v-8.5"/><path d="M10 20v-4.5h4V20"/></svg>',
   cart: '<svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.2 11h10.4L20 8H6.2"/></svg>',
   orders: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M8 9h8M8 13h8"/></svg>',
+  calculator: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8v3H8zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>',
   user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.3"/><path d="M5 20c1.3-3.6 4-5.4 7-5.4s5.7 1.8 7 5.4"/></svg>',
   scan: '<svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M4 12h16" stroke-dasharray="2.5 2.5"/></svg>',
   box: '<svg viewBox="0 0 24 24"><path d="M3.5 7 12 3l8.5 4-8.5 4-8.5-4Z"/><path d="M3.5 7v10L12 21l8.5-4V7"/><path d="M12 11v10"/></svg>',
@@ -639,6 +665,10 @@ function renderScreen() {
     case "wallet": return screenWallet();
     case "responder": return screenResponder();
     case "favorites": return screenFavorites();
+    case "marketplace": return screenMarketplace();
+    case "marketplaceStore": return screenMarketplaceStore();
+    case "accounting": return screenAccounting();
+    case "allPlans": return screenAllPlans();
     case "store": return screenStore();
     case "productWizard": return screenProductWizard();
     case "discounts": return screenDiscounts();
@@ -999,18 +1029,19 @@ const HOME_TABS = [
   { id: "deals", label: "tab.deals", icon: "tag" },
   { id: "responder", label: "tab.responder", icon: "bot", hero: true },
   { id: "cart", label: "tab.cart", icon: "cart" },
-  { id: "orders", label: "tab.orders", icon: "orders" },
+  { id: "accounting", label: "tab.accounting", icon: "calculator" },
   { id: "profile", label: "tab.account", icon: "user" },
 ];
 
 function screenHomeShell() {
-  const needsAccount = ["card", "cart", "orders", "profile"].includes(S.homeTab) && !S.token;
+  const needsAccount = ["card", "cart", "orders", "accounting", "profile"].includes(S.homeTab) && !S.token;
   const body = needsAccount ? guestPrompt(S.homeTab) : {
     card: tabCard,
     deals: tabDeals,
     discover: tabDiscover,
     cart: tabCart,
     orders: tabOrders,
+    accounting: screenAccounting,
     profile: tabProfile,
   }[S.homeTab]();
   return `
@@ -2193,10 +2224,11 @@ function tabCart() {
     ${items.length === 0 ? `<div class="empty-state">سلتك فاضية</div>` : items.map(cartItemHtml).join("")}
     ${items.length > 0 ? `
       ${(c.shipping || []).filter((x) => x.methods.length).map((x) => shipChoiceHtml(x, items)).join("")}
+      ${(c.payments || []).map((x) => payChoiceHtml(x, items)).join("")}
       <div class="divider"></div>
       ${shipTotal(c) > 0 ? `<div class="title-line"><span>${esc(t("ship.title"))}</span><span class="price">${fmt(shipTotal(c))}</span></div>` : ""}
       <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(c.totalCents + shipTotal(c))}</span></div>
-      <p class="muted">💵 ${esc(t("pay.cod"))}</p>
+      <p class="muted">بعد التحويل، أدخل رقم العملية في تفاصيل الطلب ليؤكد صاحب المتجر وصول المبلغ.</p>
       <div style="height:10px"></div>
       <button class="btn" onclick="doCheckout()">إتمام الطلب</button>
     ` : ""}
@@ -2214,6 +2246,14 @@ function pickShip(merchantId, methodId) {
   S._shipPick = S._shipPick || {};
   S._shipPick[merchantId] = methodId;
   render();
+}
+
+const PAYMENT_LABELS = { COD: "الدفع عند الاستلام", BANK_ALSHAM: "بنك الشام", SYRIATEL: "سيرياتل كاش", MTN: "MTN كاش" };
+function pickPayment(merchantId, method) { S._paymentPick = S._paymentPick || {}; S._paymentPick[merchantId] = method; render(); }
+function payChoiceHtml(x, items) {
+  const shop = (items.find((i) => i.product.merchant.id === x.merchantId) || { product: { merchant: { businessName: "" } } }).product.merchant.businessName;
+  const choices = x.methods || ["COD"], picked = (S._paymentPick || {})[x.merchantId] || "COD";
+  return `<div class="card"><div class="section-title" style="margin-top:0">💳 طريقة الدفع · ${esc(shop)}</div>${choices.map((m) => `<label class="ship-opt ${picked === m ? "on" : ""}"><input type="radio" name="pay-${x.merchantId}" ${picked === m ? "checked" : ""} onchange="pickPayment('${x.merchantId}','${m}')"><span>${esc(PAYMENT_LABELS[m] || m)}</span></label>`).join("")}</div>`;
 }
 
 function shipChoiceHtml(x, items) {
@@ -2249,10 +2289,12 @@ function cartItemHtml(i) {
 
 async function loadCart() {
   const { ok, data } = await api("GET", "/cart");
-  S._cart = { loading: false, items: ok ? data.items : [], shipping: ok ? data.shipping || [] : [], totalCents: ok ? data.totalCents : 0 };
+  S._cart = { loading: false, items: ok ? data.items : [], shipping: ok ? data.shipping || [] : [], payments: ok ? data.payments || [] : [], totalCents: ok ? data.totalCents : 0 };
   // a shop with a single method needs no choosing
   S._shipPick = S._shipPick || {};
   (S._cart.shipping || []).forEach((x) => { if (x.methods.length === 1) S._shipPick[x.merchantId] = x.methods[0].id; });
+  S._paymentPick = S._paymentPick || {};
+  (S._cart.payments || []).forEach((x) => { if (!x.methods.includes(S._paymentPick[x.merchantId])) S._paymentPick[x.merchantId] = "COD"; });
   render();
 }
 
@@ -2277,7 +2319,9 @@ async function doCheckout() {
   const shipping = {};
   ((S._cart && S._cart.shipping) || []).forEach((x) => { if (pick[x.merchantId]) shipping[x.merchantId] = pick[x.merchantId]; });
   S.busy = true; render();
-  const { ok, data } = await api("POST", "/cart/checkout", { shipping, paymentMethod: "COD" });
+  const paymentMethods = {};
+  ((S._cart && S._cart.payments) || []).forEach((x) => { paymentMethods[x.merchantId] = (S._paymentPick || {})[x.merchantId] || "COD"; });
+  const { ok, data } = await api("POST", "/cart/checkout", { shipping, paymentMethods });
   S.busy = false;
   if (ok) {
     S._cart = null;
@@ -2315,9 +2359,164 @@ async function loadOrders() {
   render();
 }
 
+/* ---- Accountant: money movement and stock for any signed-in account ---- */
+function screenAccounting() {
+  if (!S.token) return guestPrompt("accounting");
+  if (!S._accounting || S._accounting.loading) {
+    if (!S._accounting) { S._accounting = { loading: true }; loadAccounting(); }
+    return `<h1 class="screen-title">${esc(t("accounting.title"))}</h1>${spinner()}`;
+  }
+  const a = S._accounting;
+  if (a.requiresPlan) return `
+    <h1 class="screen-title">${esc(t("accounting.title"))}</h1>
+    <div class="card empty-state"><p>${esc(t("accounting.planRequired"))}</p>
+      <button class="btn" onclick="S._allPlans=null;go('allPlans')">${esc(t("plans.title"))}</button>
+    </div>`;
+  const totals = a.summary?.totals || [];
+  return `
+    <h1 class="screen-title">${esc(t("accounting.title"))}</h1>
+    <p class="muted" style="text-align:center">${esc(t("accounting.subtitle"))}</p>
+    <div class="card"><div class="section-title">${esc(t("accounting.month"))}</div>
+      ${totals.length ? totals.map(x => `<div class="title-line"><span>${esc(x.currency)}</span><span>${esc(t("accounting.income"))}: ${fmt(x.incomeCents,x.currency)} · ${esc(t("accounting.expenses"))}: ${fmt(x.expensesCents,x.currency)} · <b>${esc(t("accounting.net"))}: ${fmt(x.netCents,x.currency)}</b></span></div>`).join("") : `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
+      <p class="muted">${esc(t("accounting.inventory"))}: ${a.summary?.inventory?.products || 0} ${esc(t("accounting.products"))} · ${esc(t("accounting.units"))}: ${a.summary?.inventory?.units || 0}</p>
+      <button class="btn outline" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button>
+      <button class="btn outline" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button>
+    </div>
+    <div class="card"><div class="section-title">${esc(t("accounting.addEntry"))}</div>
+      <div class="field"><label>${esc(t("accounting.entryType"))}</label><select id="acc-type"><option value="INCOME">${esc(t("accounting.income"))}</option><option value="EXPENSE">${esc(t("accounting.expenses"))}</option></select></div>
+      <div class="field"><label>${esc(t("accounting.category"))}</label><input id="acc-category" placeholder="${esc(t("accounting.categoryHint"))}" /></div>
+      <div class="field"><label>${esc(t("accounting.description"))}</label><input id="acc-description" /></div>
+      <div class="field"><label>${esc(t("accounting.amount"))}</label><input id="acc-amount" type="number" min="0.01" step="0.01" inputmode="decimal" /></div>
+      <button class="btn" onclick="accountingAddEntry()">${esc(t("accounting.save"))}</button>
+    </div>
+    <div class="card"><div class="section-title">${esc(t("accounting.invoicePhoto"))}</div>
+      <p class="muted">${esc(t("accounting.invoicePhotoHelp"))}</p>
+      <div class="field"><input type="file" accept="image/jpeg,image/png,image/webp" onchange="accountingScanInvoice(this)" /></div>
+      ${a.invoiceDraft ? `<div class="badge warning">${esc(t("accounting.reviewBeforeSave"))}</div>
+        <div class="field"><label>${esc(t("accounting.description"))}</label><input id="acc-invoice-description" value="${esc([a.invoiceDraft.extracted?.supplier,a.invoiceDraft.extracted?.description].filter(Boolean).join(" — "))}" /></div>
+        <div class="field"><label>${esc(t("accounting.amount"))}</label><input id="acc-invoice-amount" type="number" min="0.01" step="0.01" value="${a.invoiceDraft.extracted?.totalCents ? (a.invoiceDraft.extracted.totalCents/100).toFixed(2) : ""}" /></div>
+        <div class="field"><label>${esc(t("accounting.category"))}</label><input id="acc-invoice-category" value="${esc(t("accounting.purchases"))}" /></div>
+        <button class="btn" onclick="accountingConfirmInvoice()">${esc(t("accounting.confirmInvoice"))}</button>` : ""}
+    </div>
+    <div class="card"><div class="section-title">${esc(t("accounting.inventory"))} (${a.products?.length || 0})</div>
+      <div class="field"><label>${esc(t("accounting.searchBarcode"))}</label><div style="display:flex;gap:8px"><input id="acc-barcode" autocomplete="off"/><button class="btn outline" onclick="accountingScan()">${esc(t("accounting.scan"))}</button></div></div>
+      <div id="acc-scanner" hidden><video id="acc-video" playsinline style="width:100%;max-height:220px"></video><button class="btn outline" onclick="accountingStopScan()">${esc(t("accounting.stopScan"))}</button></div>
+      <div class="field"><label>${esc(t("accounting.product"))}</label><input id="acc-product-name" /></div>
+      <div class="field"><label>${esc(t("accounting.salePrice"))}</label><input id="acc-sale-price" type="number" min="0" step="0.01" /></div>
+      <div class="field"><label>${esc(t("accounting.costPrice"))}</label><input id="acc-cost-price" type="number" min="0" step="0.01" /></div>
+      <div class="field"><label>${esc(t("accounting.quantity"))}</label><input id="acc-quantity" type="number" min="0" step="1" value="0" /></div>
+      <button class="btn" onclick="accountingAddProduct()">${esc(t("accounting.addProduct"))}</button>
+      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button></div></div>`).join("")}
+    </div>
+    <div class="card"><div class="section-title">${esc(t("accounting.recent"))}</div>
+      ${(a.summary?.recent || []).map(e => `<div class="title-line"><span><b>${esc(e.description)}</b><div class="muted">${esc(e.category)} · ${new Date(e.occurredAt).toLocaleDateString()}</div></span><strong>${e.type === "EXPENSE" ? "−" : "+"}${fmt(e.amountCents,e.currency)}</strong></div>`).join("") || `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
+    </div>${errorBanner()}`;
+}
+async function loadAccounting() {
+  const [summary, products] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products")]);
+  const requiresPlan = summary.status === 402 || products.status === 402;
+  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
+  render();
+}
+function accountingCents(id) { return Math.round(Number(qs(id)?.value || 0) * 100); }
+async function accountingAddEntry() {
+  const body = { type: qs("acc-type").value, category: qs("acc-category").value.trim(), description: qs("acc-description").value.trim(), amountCents: accountingCents("acc-amount"), currency: S.currency || "EUR" };
+  const { ok, data } = await api("POST", "/accounting/entries", body);
+  if (!ok) return toast(errMsg(data, "ما قدرنا نحفظ الحركة"));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingAddProduct() {
+  const body = { name: qs("acc-product-name").value.trim(), barcode: qs("acc-barcode").value.trim() || null, salePriceCents: accountingCents("acc-sale-price"), costCents: accountingCents("acc-cost-price"), quantity: Number(qs("acc-quantity").value || 0), currency: S.currency || "EUR" };
+  const { ok, data } = await api("POST", "/accounting/products", body);
+  if (!ok) return toast(errMsg(data, "ما قدرنا نضيف المنتج"));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingScanInvoice(input) {
+  const file = input?.files?.[0]; if (!file) return;
+  try {
+    const response = await fetch("/accounting/invoices/scan", { method: "POST", headers: { Authorization: "Bearer " + S.token, "Content-Type": file.type }, body: file });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return toast(errMsg(data, t("accounting.invoiceScanFailed")));
+    S._accounting.invoiceDraft = data; render();
+  } catch (_) { toast(t("accounting.invoiceScanFailed")); }
+}
+async function accountingConfirmInvoice() {
+  const draft = S._accounting?.invoiceDraft; if (!draft?.id) return;
+  const body = { description: qs("acc-invoice-description").value.trim(), amountCents: accountingCents("acc-invoice-amount"), category: qs("acc-invoice-category").value.trim(), currency: draft.extracted?.currency || S.currency || "EUR", ...(draft.extracted?.date ? { occurredAt: new Date(`${draft.extracted.date}T12:00:00`).toISOString() } : {}) };
+  const { ok, data } = await api("POST", `/accounting/invoices/${draft.id}/confirm`, body);
+  if (!ok) return toast(errMsg(data, t("accounting.invoiceSaveFailed")));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingSell(id) {
+  const product = (S._accounting?.products || []).find(p => p.id === id);
+  const quantity = Number(prompt(t("accounting.sellQuantity"), "1"));
+  if (!quantity) return;
+  const { ok, data } = await api("POST", `/accounting/products/${id}/sell`, { quantity });
+  if (!ok) return toast(errMsg(data, "ما قدرنا نسجل البيع"));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingAdjustStock(id, isIn) {
+  const quantity = Number(prompt(t(isIn ? "accounting.addQuantity" : "accounting.removeQuantity"), "1"));
+  if (!quantity) return;
+  const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: isIn ? "STOCK_IN" : "STOCK_OUT", quantity, note: isIn ? "إدخال يدوي" : "إخراج يدوي" });
+  if (!ok) return toast(errMsg(data, "ما قدرنا نعدّل الجرد"));
+  S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingSetCost(id) {
+  const product = (S._accounting?.products || []).find(p => p.id === id); if (!product) return;
+  const raw = prompt(t("accounting.costPrice"), (product.costCents / 100).toFixed(2)); if (raw === null) return;
+  const amount = Number(raw.replace(",", ".")); if (!Number.isFinite(amount) || amount < 0) return toast(t("accounting.invalidAmount"));
+  const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: "ADJUSTMENT", quantity: product.quantity, unitCostCents: Math.round(amount * 100), note: "تحديث تكلفة الشراء" });
+  if (!ok) return toast(errMsg(data, "ما قدرنا نحدّث تكلفة المنتج"));
+  S._accounting = { loading: true }; await loadAccounting();
+}
+let accountingStream = null;
+async function accountingScan() {
+  if (!("BarcodeDetector" in window) || !navigator.mediaDevices?.getUserMedia) return toast(t("accounting.scannerUnavailable"));
+  try {
+    const scanner = document.getElementById("acc-scanner");
+    const video = document.getElementById("acc-video");
+    scanner.hidden = false;
+    accountingStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    video.srcObject = accountingStream; await video.play();
+    const detector = new BarcodeDetector();
+    const scan = async () => {
+      if (!accountingStream) return;
+      const found = await detector.detect(video);
+      if (found.length) { qs("acc-barcode").value = found[0].rawValue; accountingStopScan(); await accountingLookupBarcode(); return; }
+      requestAnimationFrame(scan);
+    };
+    scan();
+  } catch (_) { accountingStopScan(); toast(t("accounting.scannerUnavailable")); }
+}
+function accountingStopScan() { if (accountingStream) accountingStream.getTracks().forEach(t => t.stop()); accountingStream = null; if (qs("acc-scanner")) qs("acc-scanner").hidden = true; }
+async function accountingLookupBarcode() {
+  const code = qs("acc-barcode")?.value?.trim(); if (!code) return;
+  const { ok, data } = await api("GET", `/accounting/products/barcode/${encodeURIComponent(code)}`);
+  if (ok) { qs("acc-product-name").value = data.name; qs("acc-sale-price").value = (data.salePriceCents / 100).toFixed(2); qs("acc-cost-price").value = (data.costCents / 100).toFixed(2); qs("acc-quantity").value = "0"; }
+  else toast(errMsg(data, t("accounting.newBarcode")));
+}
+async function downloadAccounting() {
+  try {
+    const response = await fetch("/accounting/export.csv", { headers: { Authorization: "Bearer " + S.token } });
+    if (!response.ok) throw new Error();
+    const url = URL.createObjectURL(await response.blob()); const a = document.createElement("a"); a.href = url; a.download = "dalilacom-accounting.csv"; a.click(); URL.revokeObjectURL(url);
+  } catch (_) { toast(t("accounting.exportFailed")); }
+}
+async function printAccountingReport() {
+  const { ok, data } = await api("GET", "/accounting/entries");
+  if (!ok) return toast(errMsg(data, t("accounting.exportFailed")));
+  const rows = (data || []).map(e => `<tr><td>${esc(new Date(e.occurredAt).toLocaleDateString())}</td><td>${esc(e.type === "INCOME" ? t("accounting.income") : t("accounting.expenses"))}</td><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${esc(fmt(e.amountCents, e.currency))}</td></tr>`).join("");
+  const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
+  if (!win) return toast(t("accounting.allowPrint"));
+  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(t("accounting.title"))}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h1{color:#ba2a34}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:start}th{background:#f7f3f3}@media print{button{display:none}}</style><h1>${esc(t("accounting.title"))}</h1><p>${esc(new Date().toLocaleDateString())}</p><table><thead><tr><th>${esc(t("accounting.date"))}</th><th>${esc(t("accounting.entryType"))}</th><th>${esc(t("accounting.category"))}</th><th>${esc(t("accounting.description"))}</th><th>${esc(t("accounting.amount"))}</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print()<\/script></html>`);
+  win.document.close();
+}
+
 /* ---- Profile tab ---- */
 
 function tabProfile() {
+  if (!S._sellerPays) { S._sellerPays = { loading: true, methods: [] }; loadSellerPaymentMethods(); }
   return `
     <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:50px">
       ${(() => {
@@ -2341,7 +2540,13 @@ function tabProfile() {
       ${shareLocationOn() ? myLocationHtml() : ""}
       <button class="btn outline" style="max-width:240px" onclick="S._acct=null;go('account')">${esc(t("profile.account"))}</button>
       <div style="height:10px"></div>
+      ${sellerPayoutSettingsHtml()}
+      <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('favorites')">♥ ${esc(t("profile.favorites"))}</button>
+      <div style="height:10px"></div>
+      <button class="btn outline" style="max-width:240px" onclick="setHomeTab('orders')">📦 ${esc(t("tab.orders"))}</button>
+      <div style="height:10px"></div>
+      <button class="btn outline" style="max-width:240px" onclick="S._market=null;go('marketplace')">🛒 سوق المنتجات المستعملة</button>
       <div style="height:10px"></div>
       ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
       <div style="height:10px"></div>
@@ -2353,6 +2558,8 @@ function tabProfile() {
       <button class="btn outline" style="max-width:240px" onclick="openDiscountHistory('mine')">🧾 ${esc(t("dh.titleMine"))}</button>
       <div style="height:10px"></div>
       <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
+      <div style="height:10px"></div>
+      <button class="btn outline" style="max-width:240px" onclick="S._allPlans=null;go('allPlans')">${esc(t("plans.title"))}</button>
       <div style="height:14px"></div>
       ${followUsHtml(true)}
       <button class="btn outline" style="max-width:240px" onclick="downloadMyData()">⬇️ ${esc(t("profile.exportData"))}</button>
@@ -2363,6 +2570,35 @@ function tabProfile() {
       ${legalLinksHtml()}
     </div>
   `;
+}
+
+const PAYOUT_OPTIONS = [["BANK_ALSHAM", "بنك الشام"], ["SYRIATEL", "سيرياتل كاش"], ["MTN", "MTN كاش"]];
+function sellerPayoutSettingsHtml() {
+  const state = S._sellerPays || { loading: true, methods: [] };
+  if (state.loading) return `<div class="card" style="width:min(100%,420px)">جاري تحميل وسائل استلام المصاري…</div>`;
+  const byProvider = Object.fromEntries((state.methods || []).map((method) => [method.provider, method]));
+  return `<div class="card" style="width:min(100%,420px);text-align:right"><div class="section-title" style="margin-top:0">كيف تستلم مصاري مبيعاتك؟</div><p class="muted">اختَر الوسائل التي عندك. لن تظهر للزبون إلا بعد أن يطلب منك منتجاً.</p>${PAYOUT_OPTIONS.map(([provider, label]) => { const method = byProvider[provider] || {}; return `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="payout-on-${provider}" ${method.isEnabled ? "checked" : ""}><strong>${label}</strong></label><div class="field"><label>الاسم المسجل</label><input id="payout-name-${provider}" value="${esc(method.recipientName || "")}" placeholder="الاسم كما يظهر بالحساب" /></div><div class="field"><label>رقم الحساب أو المحفظة</label><input id="payout-account-${provider}" value="${esc(method.accountNumber || "")}" placeholder="رقم المحفظة أو الحساب" /></div>`; }).join("")}<button class="btn" ${state.saving ? "disabled" : ""} onclick="saveSellerPaymentMethods()">${state.saving ? "جارٍ الحفظ…" : "حفظ وسائل الاستلام"}</button></div>`;
+}
+async function loadSellerPaymentMethods() {
+  const { ok, data } = await api("GET", "/profile/payment-methods");
+  S._sellerPays = { loading: false, methods: ok ? data.methods : [], error: ok ? "" : errMsg(data, "تعذّر تحميل وسائل الاستلام") };
+  render();
+}
+async function saveSellerPaymentMethods() {
+  const methods = PAYOUT_OPTIONS.flatMap(([provider]) => {
+    const enabled = qs(`payout-on-${provider}`)?.checked;
+    const recipientName = qs(`payout-name-${provider}`)?.value.trim() || "";
+    const accountNumber = qs(`payout-account-${provider}`)?.value.trim() || "";
+    if (!enabled && !recipientName && !accountNumber) return [];
+    if (!recipientName || !accountNumber) { S.error = "أكمل الاسم ورقم الحساب لكل وسيلة اخترتها"; return null; }
+    return [{ provider, recipientName, accountNumber, isEnabled: enabled }];
+  });
+  if (methods.some((entry) => entry === null)) return render();
+  S._sellerPays.saving = true; render();
+  const { ok, data } = await api("PUT", "/profile/payment-methods", { methods });
+  S._sellerPays = { loading: false, methods: ok ? data.methods : S._sellerPays.methods, error: ok ? "" : errMsg(data, "تعذّر الحفظ") };
+  if (!ok) S.error = S._sellerPays.error; else toast("تم حفظ وسائل الاستلام");
+  render();
 }
 
 /* ================= MARKETING: my referral link, the people I brought, what I earned ================= */
@@ -4160,6 +4396,94 @@ function storeSection(title, items, kind) {
     </section>`;
 }
 
+function screenMarketplace() {
+  if (!S._market) { S._market = { loading: true, settings: {}, listings: [] }; loadMarketplace(); }
+  const m = S._market;
+  if (m.loading) return `<h1 class="screen-title">سوق المنتجات</h1>${spinner()}`;
+  const mine = m.mine || [];
+  const quota = m.quota || { used: 0, freeLimit: 0, remaining: 0, paid: false };
+  const products = m.listings || [];
+  const statusText = { PENDING_REVIEW: 'بانتظار مراجعة الإدارة', ACTIVE: 'منشور', SOLD: 'مُباع', HIDDEN: 'مخفي', REJECTED: 'مرفوض بعد مراجعة الذكاء الاصطناعي' };
+  return `<button class="link-btn" onclick="back()">← رجوع</button><h1 class="screen-title">سوق المنتجات</h1>
+    <p class="muted">بيع وشراء المنتجات بين مستخدمي دليلكم. الإعلانات تظهر بعد مراجعتها.</p>
+    <div class="card"><input id="mp-search" placeholder="ابحث عن منتج" value="${esc(m.q || '')}" onkeydown="if(event.key==='Enter')searchMarketplace()"><button class="btn" onclick="searchMarketplace()">بحث</button></div>
+    ${S.token && !m.store ? `<div class="card"><h3>افتح متجرك الخاص</h3><p class="muted">بعد إنشاء متجرك بتقدر تضيف المنتجات وتشارك صفحة متجرك مع الناس.</p><input id="mp-store-name" maxlength="70" placeholder="اسم المتجر"><textarea id="mp-store-description" maxlength="500" placeholder="وصف المتجر (اختياري)"></textarea><button class="btn" onclick="saveMyMarketplaceStore()">إنشاء المتجر</button><p id="mp-store-msg" class="muted"></p></div>` : ''}
+    ${S.token && m.store ? `<div class="card"><h3>متجري: ${esc(m.store.name)}</h3><p>${esc(m.store.description || '')}</p><button class="btn outline" onclick="go('marketplaceStore',{storeId:'${esc(m.store.id)}'})">عرض متجري للناس</button></div><div class="card"><h3>منتج جديد بمتجري</h3><p class="muted">المجاني المتبقي هذا الشهر: ${quota.remaining} من ${quota.freeLimit}${quota.paid ? ' · عندك باقة فعالة' : ''}</p>
+      ${quota.remaining <= 0 && !quota.paid ? `<p>استهلكت إعلاناتك المجانية. اختر باقة للمتابعة:</p>${(m.plans || []).map(p => `<button class="btn outline" onclick="buyMarketplacePlan('${esc(p.id)}')">${esc(p.name)} · ${p.priceCredits == null ? 'السعر غير محدد' : p.priceCredits + ' رصيد'}</button>`).join('')}` : ''}
+      <input id="mp-title" maxlength="80" placeholder="اسم المنتج"><textarea id="mp-description" maxlength="1000" placeholder="وصف مختصر"></textarea>
+      <input id="mp-price" type="number" min="0.01" step="0.01" placeholder="السعر"><select id="mp-condition"><option value="USED">مستعمل</option>${m.settings.allowNewProducts || quota.paid ? '<option value="NEW">جديد</option>' : ''}</select>
+      <input id="mp-category" maxlength="60" placeholder="التصنيف (اختياري)"><input id="mp-phone" maxlength="30" placeholder="رقم للتواصل (اختياري)"><label>صورة المنتج (اختياري) <input id="mp-photo" type="file" accept="image/jpeg,image/png,image/webp"></label>
+      <button class="btn" onclick="createMarketplaceListing()">إضافة المنتج</button><p id="mp-form-msg" class="muted"></p></div>
+      <div class="card"><h3>إعلاناتي</h3>${mine.length ? mine.map(x => `<p><b>${esc(x.title)}</b> · ${esc(statusText[x.status] || x.status)}${x.reviewNote ? `<br><small class="muted">السبب: ${esc(x.reviewNote)}</small>` : ''} ${x.status === 'ACTIVE' ? `<button class="small" onclick="setMarketplaceStatus('${esc(x.id)}','SOLD')">تم البيع</button>` : ''}</p>`).join('') : '<p class="muted">ما عندك إعلانات بعد</p>'}</div>` : `<div class="card">سجّل دخولك لتضيف إعلانك. <button class="btn" onclick="go('login')">تسجيل الدخول</button></div>`}
+    <h2>متاجر المستخدمين</h2>${products.length ? products.map(x => `<article class="card">${x.imageUrl ? `<img src="${esc(x.imageUrl)}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px">` : ''}<h3>${esc(x.title)}</h3><p>${esc(x.description || '')}</p><b>${fmt(x.priceCents, x.currency)}</b><p class="muted">${x.condition === 'USED' ? 'مستعمل' : 'جديد'} · <button class="link-btn" onclick="go('marketplaceStore',{storeId:'${esc(x.storeId)}'})">متجر ${esc(x.sellerName || '')}</button>${x.contactPhone ? ` · للتواصل: ${esc(x.contactPhone)}` : ''}</p></article>`).join('') : '<div class="empty-state">ما في منتجات منشورة حالياً</div>'}`;
+}
+
+async function loadMarketplace(q) {
+  const s = await api('GET', '/marketplace/settings');
+  const l = await api('GET', '/marketplace/listings' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  let own = { data: {} };
+  if (S.token) own = await api('GET', '/marketplace/mine');
+  S._market = { loading: false, settings: s.ok ? s.data : {}, listings: l.ok ? l.data.listings : [], q: q || '', mine: own.data.listings || [], store: own.data.store || null, quota: own.data.quota, plans: own.data.plans || [] };
+  render();
+}
+
+async function saveMyMarketplaceStore() {
+  const msg = document.getElementById('mp-store-msg');
+  const name = document.getElementById('mp-store-name').value.trim();
+  if (name.length < 2) { msg.textContent = 'اكتب اسماً للمتجر (حرفين على الأقل).'; return; }
+  const { ok, data } = await api('PUT', '/marketplace/my-store', { name, description: document.getElementById('mp-store-description').value.trim() || undefined });
+  if (!ok) { msg.textContent = errMsg(data, 'تعذّر إنشاء المتجر'); return; }
+  await loadMarketplace(S._market?.q || '');
+}
+
+function screenMarketplaceStore() {
+  if (!S._marketStore) { S._marketStore = { loading: true }; loadMarketplaceStore(S.params.storeId); }
+  const d = S._marketStore;
+  if (d.loading) return spinner();
+  if (!d.store) return `<button class="link-btn" onclick="back()">← رجوع</button><div class="empty-state">المتجر غير موجود</div>`;
+  return `<button class="link-btn" onclick="back()">← رجوع</button><h1 class="screen-title">${esc(d.store.name)}</h1><p class="muted">${esc(d.store.description || '')}</p>${d.listings.length ? d.listings.map(x => `<article class="card">${x.imageUrl ? `<img src="${esc(x.imageUrl)}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px">` : ''}<h3>${esc(x.title)}</h3><p>${esc(x.description || '')}</p><b>${fmt(x.priceCents, x.currency)}</b><p class="muted">${x.condition === 'USED' ? 'مستعمل' : 'جديد'}${x.contactPhone ? ` · للتواصل: ${esc(x.contactPhone)}` : ''}</p></article>`).join('') : '<div class="empty-state">المتجر لسه ما فيه منتجات منشورة</div>'}`;
+}
+
+async function loadMarketplaceStore(id) {
+  const { ok, data } = await api('GET', '/marketplace/stores/' + encodeURIComponent(id));
+  S._marketStore = { loading: false, store: ok ? data.store : null, listings: ok ? data.listings : [] };
+  render();
+}
+
+function searchMarketplace() { loadMarketplace(document.getElementById('mp-search')?.value || ''); }
+
+async function createMarketplaceListing() {
+  const msg = document.getElementById('mp-form-msg');
+  const title = document.getElementById('mp-title').value.trim();
+  const price = Number(latinDigits(document.getElementById('mp-price').value));
+  if (title.length < 2 || !(price > 0)) { msg.textContent = 'اكتب اسم المنتج وسعراً صحيحاً.'; return; }
+  let imageUrl;
+  const file = document.getElementById('mp-photo').files?.[0];
+  if (file) {
+    const headers = { 'Content-Type': file.type, 'Authorization': 'Bearer ' + S.token };
+    const upload = await fetch('/marketplace/photos', { method: 'POST', headers, body: file });
+    const photo = await upload.json().catch(() => ({}));
+    if (!upload.ok) { msg.textContent = 'تعذّر رفع الصورة.'; return; }
+    imageUrl = photo.url;
+  }
+  const { ok, data } = await api('POST', '/marketplace/listings', { title, description: document.getElementById('mp-description').value.trim(), priceCents: Math.round(price * 100), currency: S.currency || 'EUR', condition: document.getElementById('mp-condition').value, category: document.getElementById('mp-category').value.trim() || undefined, contactPhone: document.getElementById('mp-phone').value.trim() || undefined, imageUrl });
+  if (!ok) { msg.textContent = errMsg(data, 'تعذّر إرسال الإعلان'); return; }
+  await loadMarketplace(S._market?.q || '');
+  toast('وصل إعلانك للإدارة للمراجعة');
+}
+
+async function setMarketplaceStatus(id, status) {
+  const { ok, data } = await api('PATCH', '/marketplace/listings/' + id, { status });
+  if (!ok) return toast(errMsg(data, 'تعذّر تحديث الإعلان'));
+  loadMarketplace(S._market?.q || '');
+}
+
+async function buyMarketplacePlan(planId) {
+  const { ok, data } = await api('POST', '/marketplace/subscribe', { planId });
+  if (!ok) return toast(errMsg(data, 'تعذّر شراء الباقة'));
+  loadMarketplace(S._market?.q || '');
+}
+
 function screenStore() {
   const st = storeState();
   const home = st.home;
@@ -4335,7 +4659,9 @@ function screenOrderDetail() {
     <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(ord.totalCents)}</span></div>
     ${ord.memberDiscountCents > 0 ? `<p class="muted">وفّرت ${fmt(ord.memberDiscountCents)} بسعر أعضاء دليلكم</p>` : ""}
     ${payLineHtml(ord.payment)}
+    ${transferReferenceForm(ord)}
     ${ord.customer ? confirmCashButton(ord, false) : ""}
+    ${confirmTransferButton(ord)}
     ${ord.status === "DELIVERED" && ord.rated ? `
       <div class="section-title">${esc(t("rv.rateTitle"))}</div>
       <div class="rv-rate-list">
@@ -5882,6 +6208,57 @@ function screenPricing() {
   return header + group.plans.map((plan) => planCardHtml(plan, credit, plan.source === "catalog" && plan.priceCredits !== null ? { fn: "subscribeFromPricing", label: t("pricing.renew") } : null)).join("") + errorBanner();
 }
 
+function screenAllPlans() {
+  if (!S._allPlans) { S._allPlans = { loading: true }; loadAllPlans(); }
+  const state = S._allPlans;
+  const head = `${backRow()}<h1 class="screen-title">${esc(t("plans.title"))}</h1><p class="screen-sub">${esc(t("plans.subtitle"))}</p>`;
+  if (state.loading) return head + spinner();
+  if (!state.catalog) return head + `<div class="empty-state">${esc(t("plans.failed"))}</div>`;
+  const groups = (state.catalog.services || []).map(group => `<section class="card"><h2 class="section-title">${esc(t(`service.${group.service}`))}</h2>${group.plans.map(p => `<article class="card" style="margin:10px 0"><h3>${esc(p.name)}</h3><p class="muted">${esc(p.description || "")}</p><strong>${p.cashAmountCents === 0 ? esc(t("plans.free")) : esc(fmt(p.cashAmountCents, p.currency))}</strong><p class="muted">${p.durationDays} ${esc(t("plans.days"))}${p.trialDays ? ` · ${p.trialDays} ${esc(t("plans.trialDays"))}` : ""}</p><ul>${(p.features || []).map(f => `<li>${esc(f.text)}</li>`).join("")}</ul>${p.trialDays ? `<button class="btn" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',${p.cashAmountCents === 0},${p.trialDays})">${esc(t("plans.startTrial"))}</button>` : p.cashAmountCents === 0 ? `<button class="btn" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',true,0)">${esc(t("plans.subscribe"))}</button>` : `<button class="btn" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',false,0,'STRIPE')">${esc(t("plans.payCard"))}</button>${p.paypalAvailable ? ` <button class="btn outline" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',false,0,'PAYPAL')">${esc(t("plans.payPaypal"))}</button>` : ""}`}</article>`).join("")}</section>`).join("");
+  const active = (state.subscriptions || []).map(sub => `<div class="title-line"><span><b>${esc(sub.plan?.name || t("plans.title"))}</b><div class="muted">${esc(sub.status)} · ${sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString() : ""}</div></span>${sub.status === "ACTIVE" ? `<button class="btn small outline" onclick="cancelPlatformSubscription('${esc(sub.id)}')">${esc(t("plans.cancel"))}</button>` : ""}</div>`).join("");
+  return head + (active ? `<section class="card"><h2 class="section-title">${esc(t("plans.mySubscriptions"))}</h2>${active}</section>` : "") + groups + errorBanner();
+}
+
+async function loadAllPlans() {
+  const [catalog, mine] = await Promise.all([api("GET", "/plans/catalog"), S.token ? api("GET", "/billing/mine") : Promise.resolve({ ok: true, data: [] })]);
+  S._allPlans = { loading: false, catalog: catalog.ok ? catalog.data : null, subscriptions: mine.ok ? mine.data : [] };
+  render();
+}
+
+async function cancelPlatformSubscription(id) {
+  if (!window.confirm(t("plans.cancelConfirm"))) return;
+  const { ok, data } = await api("POST", `/billing/${encodeURIComponent(id)}/cancel`, {});
+  if (!ok) { S.error = errMsg(data, t("plans.failed")); return render(); }
+  toast(t("plans.cancelled")); S._allPlans = null; loadAllPlans();
+}
+
+async function startServicePlan(planId, service, source, isFree, trialDays, provider = "STRIPE") {
+  if (!S.token) return go("login");
+  if (source === "settings") {
+    const { ok, data } = await api("POST", "/responder/activate", {});
+    if (!ok) { S.error = errMsg(data, t("plans.failed")); return render(); }
+    toast(t("plans.started")); S._allPlans = null; return render();
+  }
+  if (trialDays > 0 && service !== "MEMBERSHIP") {
+    const { ok, data } = await api("POST", "/billing/trial", { planId });
+    if (!ok) { S.error = errMsg(data, t("plans.failed")); return render(); }
+    toast(t("plans.started")); S._allPlans = null; loadAllPlans(); return;
+  }
+  if (service === "MEMBERSHIP" && (isFree || trialDays > 0)) {
+    const { ok, data } = await api("POST", "/membership/subscribe", { planId });
+    if (ok) { toast(t("plans.started")); S._card = null; S._cardLoaded = null; S._allPlans = null; return render(); }
+    S.error = errMsg(data, t("plans.failed")); return render();
+  }
+  if (isFree) {
+    const { ok, data } = await api("POST", "/billing/activate-free", { planId });
+    if (ok) { toast(t("plans.started")); S._allPlans = null; return render(); }
+    S.error = errMsg(data, t("plans.failed")); return render();
+  }
+  const { ok, data } = await api("POST", "/billing/checkout", { planId, provider });
+  if (!ok) { S.error = errMsg(data, t("plans.paymentSetup")); return render(); }
+  location.assign(data.checkoutUrl);
+}
+
 async function loadPricing() {
   const { ok, data } = await api("GET", "/plans/catalog");
   S._pricing = { loading: false, catalog: ok ? data : null };
@@ -5989,7 +6366,7 @@ function screenStorePlans() {
   const current = d.current && d.active
     ? `<div class="card"><strong>${esc(t("sp.current", { name: d.current.name }))}</strong>${d.current.endsAt ? `<p class="muted" style="margin:4px 0 0">${esc(t("sp.until", { date: day(d.current.endsAt) }))} · ${countdownHtml(d.current.endsAt)}</p>` : ""}<div style="height:10px"></div>${open}</div>`
     : "";
-  const intro = !d.required ? `<div class="card"><p>${esc(t("sp.noPlansYet"))}</p>${open}</div>` : !d.active ? `<p class="screen-sub">${esc(t("sp.choose"))}</p>` : `<div class="section-title">${esc(t("sp.change"))}</div>`;
+  const intro = d.freeTier ? `<div class="card"><strong>${LANG === "en" ? "Your free store package" : "باقة متجرك المجانية"}</strong><p class="muted">${d.freeTier.freeListingsPerMonth} ${LANG === "en" ? "products each month" : "منتجات بالشهر"} · ${d.freeTier.allowNewProducts ? (LANG === "en" ? "used and new" : "مستعمل وجديد") : (LANG === "en" ? "used items only" : "مستعمل فقط")}</p>${open}</div><div class="section-title">${esc(t("sp.change"))}</div>` : !d.required ? `<div class="card"><p>${esc(t("sp.noPlansYet"))}</p>${open}</div>` : !d.active ? `<p class="screen-sub">${esc(t("sp.choose"))}</p>` : `<div class="section-title">${esc(t("sp.change"))}</div>`;
   const plans = d.plans.map((p) => `
     <div class="card plan-card">
       <div class="title-line"><strong>${esc(p.name)}</strong><span class="price">${esc(price(p))}</span></div>
@@ -6695,6 +7072,7 @@ function tabMerchantOrders() {
         <p class="muted">${esc(ord.user ? ord.user.fullName : "")}${ord.customerRating && ord.customerRating.ratingCount ? ` · <span class="star">★ ${ord.customerRating.rating.toFixed(1)}</span> (${ord.customerRating.ratingCount})` : ""}</p>
         <p class="price">${fmt(ord.totalCents)}</p>
         ${payLineHtml(ord.payment)}
+        ${confirmTransferButton(ord)}
         ${confirmCashButton(ord, true)}
         ${ord.status === "DELIVERED" && ord.user ? `<button class="btn small outline" style="width:auto;margin-top:6px" onclick="openReview('customer','${ord.user.id}','${esc(ord.user.fullName).replace(/'/g, "&#39;")}',0,'')">⭐ ${esc(ord.ratedCustomer ? t("rv.edit") : t("rv.rateCustomer"))}</button>` : ""}
         ${(next.length || canCancel) ? `<div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">

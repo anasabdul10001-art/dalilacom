@@ -62,6 +62,8 @@ export interface PlatformSettings {
   discountNotify: { mode: "OFF" | "CITY" | "CITY_MEMBERS" | "MEMBERS" | "FOLLOWERS" | "RADIUS" | "COUNTRY" | "EVERYONE"; radiusKm: number; alsoFollowers: boolean };
   /** The AI for shops (descriptions from photos, photo editing): free uses per month, then a price in wallet credits. */
   ai: { freePerMonth: number; creditsPerUse: number; packages: AiPackage[] };
+  /** Marketplace: free monthly listing count and whether the free tier can include new products. */
+  marketplace: { freeListingsPerMonth: number; allowNewProducts: boolean };
   /**
    * What marketers earn (0 = nothing until the owner sets it). A marketer gets `marketerPercent` of what the people he
    * brought spend and `marketerSignupCredits` for each of them who verifies the account; a marketing manager gets
@@ -101,6 +103,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
       { id: "pro", name: "الباقة الاحترافية", days: 30, uses: 400, credits: 4000 },
     ],
   },
+  marketplace: { freeListingsPerMonth: 3, allowNewProducts: false },
 };
 
 export async function getSettings(): Promise<PlatformSettings> {
@@ -115,6 +118,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     ads: { ...DEFAULT_SETTINGS.ads, ...(stored.ads ?? {}) },
     discountNotify: { ...DEFAULT_SETTINGS.discountNotify, ...(stored.discountNotify ?? {}) },
     ai: { ...DEFAULT_SETTINGS.ai, ...(stored.ai ?? {}) },
+    marketplace: { ...DEFAULT_SETTINGS.marketplace, ...(stored.marketplace ?? {}) },
     referral: { ...DEFAULT_SETTINGS.referral, ...(stored.referral ?? {}) },
   };
 }
@@ -130,6 +134,7 @@ export async function saveSettings(patch: Partial<PlatformSettings>) {
     ads: { ...current.ads, ...(patch.ads ?? {}) },
     discountNotify: { ...current.discountNotify, ...(patch.discountNotify ?? {}) },
     ai: { ...current.ai, ...(patch.ai ?? {}) },
+    marketplace: { ...current.marketplace, ...(patch.marketplace ?? {}) },
     referral: { ...current.referral, ...(patch.referral ?? {}) },
   };
   for (const [key, value] of Object.entries(next)) {

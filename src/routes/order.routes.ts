@@ -7,6 +7,7 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { notify } from "../services/notification.service";
 import { availablePaymentMethods, settleOnCancel } from "../services/payment.service";
+import { recordDeliveredOrder } from "../services/accounting.service";
 
 /** Customer-facing wording for each order state (section 13: "تغيير حالة الطلب"). */
 const STATUS_MESSAGE: Record<OrderStatus, string> = {
@@ -148,6 +149,8 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), route(
     });
   });
 
+  if (status === "DELIVERED") await recordDeliveredOrder(order.id).catch((err) => console.error("Could not sync delivered order to accounting", err));
+
   // After the transaction, best-effort (section 13): the status change is what matters, the
   // notification must never be able to roll it back.
   await notify({
@@ -196,6 +199,33 @@ orderRouter.post("/:id/cancel", requireAuth, route(async (req, res) => {
   }
 
   res.json(updated);
+}));
+
+const transferReferenceSchema = z.object({ reference: z.string().trim().min(3).max(100) });
+
+// The customer records the transaction number after sending money in their banking/wallet app.
+orderRouter.post("/:id/payment/submit-transfer", requireAuth, route(async (req, res) => {
+  const parsed = transferReferenceSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { payment: true } });
+  if (!order || order.userId !== req.user!.id || !order.payment) return sendError(res, 404, "NOT_FOUND", "Order not found");
+  if (!["BANK_ALSHAM", "SYRIATEL", "MTN"].includes(order.payment.method) || order.payment.status !== "PENDING" || order.status === "CANCELLED") {
+    return sendError(res, 409, "CONFLICT", "هذا الطلب لا ينتظر تأكيد تحويل");
+  }
+  const payment = await prisma.payment.update({ where: { id: order.payment.id }, data: { reference: parsed.data.reference } });
+  res.json(payment);
+}));
+
+// The seller confirms only after checking the incoming transfer in their own account.
+orderRouter.post("/:id/payment/confirm-transfer", requireAuth, route(async (req, res) => {
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { payment: true } });
+  if (!merchant || !order || order.merchantId !== merchant.id || !order.payment) return sendError(res, 404, "NOT_FOUND", "Order not found");
+  if (!["BANK_ALSHAM", "SYRIATEL", "MTN"].includes(order.payment.method) || order.payment.status !== "PENDING" || !order.payment.reference || order.status === "CANCELLED") {
+    return sendError(res, 409, "CONFLICT", "لم يرسل الزبون رقم التحويل بعد أو أن الدفع غير معلّق");
+  }
+  const payment = await prisma.payment.update({ where: { id: order.payment.id }, data: { status: "PAID_ONLINE", paidAt: new Date(), confirmedById: req.user!.id } });
+  res.json(payment);
 }));
 
 // Merchant: the cash for a pay-on-delivery order arrived (section 54: manual confirmation). Only once the order is on its way or delivered.

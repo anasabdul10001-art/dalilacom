@@ -11,7 +11,35 @@
     <string name="tab_store">المتجر</string>
     <string name="tab_cart">السلة</string>
     <string name="tab_orders">طلباتي</string>
+    <string name="tab_accounting">المحاسب</string>
     <string name="tab_account">حسابي</string>
+    <string name="accounting_title">المحاسب</string>
+    <string name="accounting_summary">ملخص الحركات</string>
+    <string name="accounting_add_entry">إضافة دخل أو مصروف</string>
+    <string name="accounting_income">دخل</string>
+    <string name="accounting_expense">مصروف</string>
+    <string name="accounting_category">التصنيف</string>
+    <string name="accounting_description">التفاصيل</string>
+    <string name="accounting_amount">المبلغ</string>
+    <string name="accounting_save">حفظ الحركة</string>
+    <string name="accounting_inventory">جرد البضاعة</string>
+    <string name="accounting_barcode">رقم الباركود</string>
+    <string name="accounting_scan">مسح</string>
+    <string name="accounting_product_name">اسم المنتج</string>
+    <string name="accounting_cost">تكلفة الشراء</string>
+    <string name="accounting_set_cost">تعديل تكلفة الشراء</string>
+    <string name="accounting_product_details">%1$s · الكمية: %2$d · تكلفة الشراء: %3$s · سعر البيع: %4$s %5$s</string>
+    <string name="accounting_price">سعر البيع</string>
+    <string name="accounting_quantity">الكمية الحالية</string>
+    <string name="accounting_add_product">إضافة المنتج</string>
+    <string name="accounting_empty_stock">ما في منتجات بالجرد بعد.</string>
+    <string name="accounting_sell_one">بيع قطعة</string>
+    <string name="accounting_footer">مبيعات المتجر تُضاف تلقائيًا بعد تسليم الطلب.</string>
+    <string name="accounting_totals_line">%1$s · الدخل %2$s · المصاريف %3$s · الصافي %4$s</string>
+    <string name="accounting_stock_summary">%1$d منتجات · %2$d قطعة</string>
+    <string name="accounting_scan_prompt">وجّه الكاميرا نحو الباركود</string>
+    <string name="accounting_missing_entry">اكتب التصنيف والتفاصيل والمبلغ</string>
+    <string name="accounting_missing_name">اكتب اسم المنتج</string>
     <string name="back">‹ رجوع</string>
 
     <string name="search_placeholder">دوّر على محل أو خدمة...</string>
@@ -1120,4 +1148,24 @@
     <string name="deals_shop_name">اسم المحل</string><string name="deals_product_name">اسم المنتج أو العرض</string><string name="deals_area">المنطقة أو الحي</string>
     <string name="deals_all_professions">كل المهن والمحلات</string><string name="deals_all_categories">كل الأصناف</string><string name="deals_nearest">الأقرب إليّ</string><string name="deals_biggest">أعلى تخفيض</string><string name="deals_clear">مسح الفلاتر</string>
     <string name="deals_loading">جاري تحميل العروض…</string><string name="deals_count">%1$d عرض</string><string name="deals_filter_empty">ما لقينا عروض بهالاختيارات. جرّب تغيّر الفلاتر.</string><string name="deals_all_distances">كل العروض ظاهرة مهما كانت بعيدة.</string>
+    <string name="accounting_invoice_photo">إدخال فاتورة بالذكاء الاصطناعي</string>
+    <string name="accounting_invoice_help">اختر صورة فاتورة. راجع البيانات التي قرأها النظام ثم أكد تسجيل المصروف.</string>
+    <string name="accounting_invoice_choose">اختيار صورة فاتورة</string>
+    <string name="accounting_invoice_review">راجع البيانات قبل الحفظ</string>
+    <string name="accounting_invoice_confirm">تأكيد تسجيل المصروف</string>
+    <string name="accounting_invoice_read_failed">تعذرت قراءة الفاتورة. جرّب صورة أوضح.</string>
+    <string name="accounting_invoice_manual_amount">أدخل وصف الفاتورة والمبلغ يدويًا.</string>
+    <string name="accounting_invoice_saved">تم حفظ المصروف من الفاتورة.</string>
+    <string name="accounting_plan_required">المحاسبة تحتاج باقة فعّالة أو فترة تجربة مجانية.</string>
+    <string name="billing_refresh_status">تحديث حالة الاشتراك</string>
+    <string name="accounting_open_plans">عرض باقات المحاسبة</string>
+    <string name="billing_title">باقات وخدمات دليلكم</string>
+    <string name="billing_loading">جاري تحميل الباقات…</string>
+    <string name="billing_start_trial">ابدأ التجربة المجانية</string>
+    <string name="billing_subscribe">اشترك الآن</string>
+    <string name="billing_activated">تم تفعيل الباقة.</string>
+    <string name="billing_failed">تعذر تنفيذ الطلب.</string>
+    <string name="plans_days">يوم</string>
+    <string name="plans_trial_days">يوم تجربة</string>
+    <string name="billing_paypal">الدفع عبر PayPal</string>
 </resources>

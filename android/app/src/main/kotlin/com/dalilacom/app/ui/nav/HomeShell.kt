@@ -68,6 +68,7 @@ import com.dalilacom.app.data.RouteTarget
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.foundation.clickable
 import com.dalilacom.app.ui.orders.OrdersScreen
+import com.dalilacom.app.ui.accounting.AccountingScreen
 import com.dalilacom.app.ui.profile.ProfileScreen
 import com.dalilacom.app.ui.theme.DeepRed
 import com.dalilacom.app.ui.theme.PrimaryRed
@@ -82,7 +83,7 @@ private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) 
     /** Not a page of this shell: the middle button opens the auto-responder screen. */
     Responder(R.string.tab_responder, Icons.Filled.SmartToy),
     Cart(R.string.tab_cart, Icons.Filled.ShoppingCart),
-    Orders(R.string.tab_orders, Icons.AutoMirrored.Filled.ListAlt),
+    Accounting(R.string.tab_accounting, Icons.Filled.CreditCard),
     Profile(R.string.tab_account, Icons.Filled.Person),
 }
 
@@ -205,16 +206,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         perks = listOf(stringResource(R.string.guest_cart_p1), stringResource(R.string.guest_cart_p2)),
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
-                    ) else CartScreen(factory, onCheckoutSuccess = { selectedTab = HomeTab.Orders })
-                HomeTab.Orders ->
-                    if (isGuest) AccountPrompt(
-                        icon = Icons.AutoMirrored.Filled.ListAlt,
-                        title = stringResource(R.string.guest_orders_title),
-                        subtitle = stringResource(R.string.guest_orders_sub),
-                        perks = listOf(stringResource(R.string.guest_orders_p1), stringResource(R.string.guest_orders_p2)),
-                        onLogin = { goLogin() },
-                        onRegister = { goRegister() },
-                    ) else OrdersScreen(factory, onOrderClick = { id -> rootNavController.navigate("order/$id") })
+                    ) else CartScreen(factory, onCheckoutSuccess = { rootNavController.navigate("orders") })
+                HomeTab.Accounting -> AccountingScreen(container) { rootNavController.navigate("accountingPlans") }
                 HomeTab.Profile ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.Person,
@@ -236,8 +229,10 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onOpenMyAds = { rootNavController.navigate("myAds") },
                         onOpenWallet = { rootNavController.navigate("wallet") },
                         onOpenFavorites = { rootNavController.navigate("favorites") },
+                        onOpenOrders = { rootNavController.navigate("orders") },
                         onOpenMarketing = { rootNavController.navigate("marketing") },
                         onOpenHistory = { rootNavController.navigate("discountHistory/mine") },
+                        onOpenMarketplace = { rootNavController.navigate("marketplace") },
                     )
             }
         }

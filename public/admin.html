@@ -40,7 +40,11 @@
   .sidebar .brand small { display: block; font-size: 11px; opacity: .65; letter-spacing: .02em; }
   .nav-scroll { flex: 1; overflow-y: auto; padding: 4px 12px 12px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
   .nav-group { margin-top: 14px; }
-  .nav-group > .nav-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; opacity: .5; padding: 0 12px 6px; text-transform: uppercase; }
+  .nav-group > .nav-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; opacity: .72; padding: 7px 12px; text-transform: uppercase; cursor: pointer; display:flex; align-items:center; justify-content:space-between; border-radius:8px; user-select:none; }
+  .nav-group > .nav-title:hover { background: rgba(255,255,255,.07); opacity:1; }
+  .nav-group > .nav-title::after { content:'⌄'; font-size:14px; transition:transform .16s; }
+  .nav-group.collapsed > .nav-title::after { transform:rotate(90deg); }
+  .nav-group.collapsed > .nav-item { display:none; }
   .sidebar .nav-item { display: flex; align-items: center; gap: 11px; padding: 9px 12px; margin: 2px 0; border-radius: 12px; cursor: pointer; font-weight: 500; font-size: 14px; color: rgba(255,255,255,.82); transition: background .15s, color .15s; border: 0; user-select: none; }
   .sidebar .nav-item .ni { width: 30px; height: 30px; display: grid; place-items: center; font-size: 15px; background: rgba(255,255,255,.08); border-radius: 9px; flex-shrink: 0; }
   .sidebar .nav-item .nt { flex: 1; min-width: 0; }
@@ -234,7 +238,7 @@
     <div class="brand"><img class="badge-logo" src="/brand/logo-full-horizontal-white.png" alt="DALILACOM"><small>لوحة التحكم</small></div>
     <nav class="nav-scroll">
       <div class="nav-item active" data-section="home" onclick="showSection('home'); loadHome()"><span class="ni">🏠</span><span class="nt">الرئيسية</span></div>
-      <div class="nav-group"><div class="nav-title">العمل اليومي</div>
+      <div class="nav-group"><div class="nav-title" role="button" tabindex="0" onclick="toggleAdminGroup(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAdminGroup(this)}">العمل اليومي</div>
         <div class="nav-item" data-section="merchants" onclick="showSection('merchants')"><span class="ni">🏪</span><span class="nt">أصحاب الأنشطة</span></div>
         <div class="nav-item" data-section="discounts" onclick="showSection('discounts'); loadDiscounts()"><span class="ni">🏷️</span><span class="nt">الحسومات</span><span id="disc-pending-count" class="badge PENDING" style="display:none"></span></div>
         <div class="nav-item" data-section="prodreview" onclick="showSection('prodreview'); loadProductReview()"><span class="ni">🛡️</span><span class="nt">مراجعة المنتجات</span><span id="prev-pending-count" class="badge PENDING" style="display:none"></span></div>
@@ -243,21 +247,21 @@
         <div class="nav-item" data-section="suggestions" onclick="showSection('suggestions'); loadSuggestions()"><span class="ni">💡</span><span class="nt">اقتراحات المهن</span><span id="sug-pending-count" class="badge PENDING" style="display:none"></span></div>
         <div class="nav-item" data-section="broadcasts" onclick="showSection('broadcasts')"><span class="ni">📣</span><span class="nt">الإعلانات</span><span id="bc-pending-count" class="badge PENDING" style="display:none"></span></div>
       </div>
-      <div class="nav-group"><div class="nav-title">المحتوى والكتالوج</div>
+      <div class="nav-group"><div class="nav-title" role="button" tabindex="0" onclick="toggleAdminGroup(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAdminGroup(this)}">المحتوى والكتالوج</div>
         <div class="nav-item" data-section="categories" onclick="showSection('categories')"><span class="ni">🗂️</span><span class="nt">التصنيفات</span></div>
         <div class="nav-item" data-section="pcats" onclick="showSection('pcats'); loadProductCats()"><span class="ni">🏷️</span><span class="nt">تصنيفات المنتجات</span></div>
-        <div class="nav-item" data-section="store" onclick="showSection('store')"><span class="ni">🛍️</span><span class="nt">المتجر</span></div>
+        <div class="nav-item" data-section="store" onclick="showSection('store'); loadMarketplaceAdmin()"><span class="ni">🛍️</span><span class="nt">المتجر</span></div>
         <div class="nav-item" data-section="plans" onclick="showSection('plans')"><span class="ni">💳</span><span class="nt">الباقات والأسعار</span></div>
         <div class="nav-item" data-section="geo" onclick="showSection('geo')"><span class="ni">🗺️</span><span class="nt">المدن والأحياء</span></div>
         <div class="nav-item" data-section="landmarks" onclick="showSection('landmarks'); lmOpen()"><span class="ni">📍</span><span class="nt">المعالم العامة</span></div>
       </div>
-      <div class="nav-group"><div class="nav-title">المستخدمون والتسويق</div>
+      <div class="nav-group"><div class="nav-title" role="button" tabindex="0" onclick="toggleAdminGroup(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAdminGroup(this)}">المستخدمون والتسويق</div>
         <div class="nav-item" data-section="users" onclick="showSection('users'); loadUsers()"><span class="ni">👥</span><span class="nt">المستخدمون</span></div>
         <div class="nav-item" data-section="marketers" onclick="showSection('marketers'); loadMarketers()"><span class="ni">📣</span><span class="nt">المسوّقون</span></div>
         <div class="nav-item" data-section="responder" onclick="showSection('responder')"><span class="ni">🤖</span><span class="nt">المجيب الآلي</span></div>
         <div class="nav-item" data-section="push" onclick="showSection('push')"><span class="ni">🔔</span><span class="nt">الإشعارات</span></div>
       </div>
-      <div class="nav-group"><div class="nav-title">النظام</div>
+      <div class="nav-group"><div class="nav-title" role="button" tabindex="0" onclick="toggleAdminGroup(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAdminGroup(this)}">النظام</div>
         <div class="nav-item" data-section="ai" onclick="showSection('ai')"><span class="ni">🧠</span><span class="nt">حالة الذكاء الاصطناعي</span></div>
         <div class="nav-item" data-section="appfile" onclick="showSection('appfile'); loadAppDownload()"><span class="ni">📱</span><span class="nt">تحميل التطبيق (APK)</span></div>
         <div class="nav-item" data-section="social" onclick="showSection('social'); loadSocialLinks()"><span class="ni">🔗</span><span class="nt">روابط التواصل الاجتماعي</span></div>
@@ -498,6 +502,7 @@
             <select id="np-service">
               <option value="MEMBERSHIP">عضوية الزبون (بطاقة الحسم)</option>
               <option value="MERCHANT_ACCOUNT">باقة النشاط</option>
+              <option value="ACCOUNTING">المحاسبة</option>
             </select></div>
           <div><label>الاسم</label><input id="np-name" placeholder="Monthly" /></div>
         </div>
@@ -507,6 +512,7 @@
           <div><label>السعر (بالعملة)</label><input placeholder="مثال: 9.99" id="np-price" value="9.99" /></div>
           <div><label>العملة</label><input placeholder="مثال: EUR" id="np-currency" value="EUR" /></div>
           <div><label>السعر بالكوينز</label><input id="np-credits" placeholder="مثال: 1000" /></div>
+          <div><label>معرّف خطة PayPal (اختياري)</label><input id="np-paypal-plan" placeholder="P-…" /></div>
         </div>
         <button style="margin-top:12px" onclick="addServicePlan()">إضافة</button>
       </div>
@@ -819,6 +825,17 @@
     <div class="section" id="section-store" style="display:none">
       <h2>المتجر الإلكتروني</h2>
       <p class="subtitle">منتجات كل المتاجر بمكان واحد. قبل ما يعبّيه أصحاب الأنشطة، ضيف منتجات تجريبية لتشوف شكله.</p>
+      <div class="card">
+        <h3>بيع المستخدمين العاديين</h3>
+        <p class="muted">المستخدم والتاجر يفتحان متجراً خاصاً ويستخدمان نفس الباقات. حدد عدد المنتجات المجانية وما إذا كان المجاني يسمح بالجديد.</p>
+        <div class="form-row"><label>عدد المنتجات المجانية لكل متجر بالشهر <input id="mp-free-limit" type="number" min="0" step="1" value="3"></label>
+          <label style="display:flex;align-items:center;gap:8px"><input id="mp-new-enabled" type="checkbox"> السماح ببيع المنتجات الجديدة ضمن المجاني (ينطبق على المستخدم والتاجر)</label></div>
+        <button style="margin-top:12px" onclick="saveMarketplaceSettings()">حفظ الإعدادات</button><span id="mp-settings-msg" class="muted" style="margin-right:12px"></span>
+      </div>
+      <div class="card">
+        <h3>إعلانات بانتظار المراجعة</h3><p class="muted">الإعلان المعتمد فقط يظهر للناس.</p>
+        <table><thead><tr><th>المنتج</th><th>السعر</th><th>الحالة</th><th>صاحب الإعلان</th><th></th></tr></thead><tbody id="mp-review-body"></tbody></table>
+      </div>
       <div class="card">
         <h3>منتجات تجريبية</h3>
         <p class="muted">يضيف 5 متاجر وهمية و50 منتج موزّعة على أقسام المتجر. الحذف يمسح هالتجريبي فقط ولا يمس بيانات حقيقية.</p>

@@ -57,6 +57,7 @@ const planBody = {
   priceCents: z.number().int().nonnegative(),
   currency: z.string().length(3).default("EUR"),
   priceCredits: z.number().int().nonnegative().nullable().optional(),
+  paypalPlanId: z.string().trim().max(100).nullable().optional(),
   monthlyBroadcastLimit: z.number().int().nonnegative().nullable().optional(),
   sortOrder: z.number().int().default(0),
   isActive: z.boolean().default(true),
@@ -80,6 +81,7 @@ const updatePlanBody = z.object({
   priceCents: z.number().int().nonnegative().optional(),
   currency: z.string().length(3).optional(),
   priceCredits: z.number().int().nonnegative().nullable().optional(),
+  paypalPlanId: z.string().trim().max(100).nullable().optional(),
   monthlyBroadcastLimit: z.number().int().nonnegative().nullable().optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
@@ -125,6 +127,7 @@ planRouter.put("/:id/prices", requireAuth, requireRole(Role.ADMIN), route(async 
             priceCredits: z.number().int().nonnegative(),
             cashAmountCents: z.number().int().nonnegative().nullable().optional(),
             currencyCode: z.string().length(3).nullable().optional(),
+            paypalPlanId: z.string().trim().max(100).nullable().optional(),
             isActive: z.boolean().optional(),
           }),
         )
