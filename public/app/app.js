@@ -243,7 +243,6 @@ function setHomeTab(tab) {
   // The auto-responder is a whole screen of its own: the middle button opens it (guests are taken to sign in first).
   if (tab === "responder") {
     if (SOON.responder) return toast(t("soon.responder"));
-    if (!S.token) return go("login");
     S._resp = null;
     return go("responder");
   }
@@ -393,7 +392,7 @@ const SOCIAL_NAME = { facebook: "Facebook", instagram: "Instagram", youtube: "Yo
 const SOCIAL_GLYPH = {
   facebook: '<path fill="#fff" d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.6-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3z"/>',
   instagram: '<rect x="5.2" y="5.2" width="13.6" height="13.6" rx="4.1" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="16.3" cy="7.7" r="1.05" fill="#fff"/>',
-  youtube: '<rect x="3.4" y="6.4" width="17.2" height="11.2" rx="3.2" fill="#fff"/><path d="M10.2 9.5v5l4.4-2.5z" fill="#ba2a34"/>',
+  youtube: '<rect x="3.4" y="6.4" width="17.2" height="11.2" rx="3.2" fill="#fff"/><path d="M10.2 9.5v5l4.4-2.5z" fill="#f48050"/>',
   googleplay: '<polygon fill="#00A0FF" points="5,2.5 5,21.5 13,12"/><polygon fill="#00E676" points="5,2.5 13,12 16.8,9.97"/><polygon fill="#FFC800" points="13,12 16.8,9.97 20,12 16.8,14.03"/><polygon fill="#FF3A44" points="5,21.5 13,12 16.8,14.03"/>',
   tiktok: '<path d="M13.3 4.6v10.1a2.9 2.9 0 1 1-2.9-2.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.3 4.6c.3 2.1 1.7 3.6 4 3.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
 };
@@ -1057,7 +1056,7 @@ const HOME_TABS = [
 ];
 
 function screenHomeShell() {
-  const needsAccount = ["card", "cart", "orders", "accounting", "profile"].includes(S.homeTab) && !S.token;
+  const needsAccount = ["card", "cart", "orders", "profile"].includes(S.homeTab) && !S.token;
   const body = needsAccount ? guestPrompt(S.homeTab) : {
     store: screenStore,
     card: tabCard,
@@ -2195,7 +2194,7 @@ function syncRadiusLayer() {
   if (key !== S._radiusDrawn) {
     S._radiusDrawn = key;
     if (S._radiusLayer) { map.removeLayer(S._radiusLayer); S._radiusLayer = null; }
-    if (key) S._radiusLayer = L.circle([center.lat, center.lng], { radius: d.radiusKm * 1000, color: "#ba2a34", weight: 2, dashArray: "6 6", fillColor: "#ba2a34", fillOpacity: 0.06, interactive: false }).addTo(map);
+    if (key) S._radiusLayer = L.circle([center.lat, center.lng], { radius: d.radiusKm * 1000, color: "#f48050", weight: 2, dashArray: "6 6", fillColor: "#f48050", fillOpacity: 0.06, interactive: false }).addTo(map);
   }
   if (!S._radiusFit) return;
   S._radiusFit = false;
@@ -2235,7 +2234,7 @@ function syncMapMarkers() {
       const selected = d.selectedId === m.id;
       // the pin carries the shop's logo, or the first letter of its name; a shop with a discount wears a small tag on top
       const size = selected ? 46 : 38;
-      const bg = selected ? "#111" : hasDiscount ? "#ba2a34" : "#8a7a78";
+      const bg = selected ? "#111" : hasDiscount ? "#f48050" : "#8a7a78";
       const inner = m.avatarUrl
         ? `<img src="${esc(m.avatarUrl)}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;transform:rotate(45deg);background:#fff">`
         : `<span style="transform:rotate(45deg);font-weight:800;font-size:${selected ? 19 : 16}px;line-height:1">${esc((m.businessName || "?").trim().slice(0, 1).toUpperCase())}</span>`;
@@ -2511,22 +2510,61 @@ async function loadOrders() {
 }
 
 /* ---- Accountant: money movement and stock for any signed-in account ---- */
+/* ---- Section intro pages: what a section does, shown before its tools (first visit, guests, and from the "about" link) ---- */
+
+const INTROS = {
+  accounting: { icon: "🧮", features: ["📒", "📦", "🧾", "📊"] },
+  responder: { icon: "🤖", features: ["💬", "⚙️", "✨", "📥"] },
+};
+function introSeen(kind) { try { return localStorage.getItem("dlk_intro_" + kind) === "1"; } catch (e) { return false; } }
+function introOpenNow(kind) { return S._introOpen === kind || !S.token || !introSeen(kind); }
+function showIntro(kind) { S._introOpen = kind; render(); window.scrollTo(0, 0); }
+function introFinish(kind) {
+  try { localStorage.setItem("dlk_intro_" + kind, "1"); } catch (e) {}
+  S._introOpen = null; render(); window.scrollTo(0, 0);
+}
+/** The page itself. [primary] is the main button ({ label, action }); [extra] is an optional second button. */
+function introHtml(kind, primary, extra, backHtml) {
+  const cfg = INTROS[kind], k = "sec." + kind + ".";
+  return `${backHtml || ""}
+    <div class="intro">
+      <section class="intro-hero">
+        <span class="intro-dot d1"></span><span class="intro-dot d2"></span><span class="intro-dot d3"></span>
+        <div class="intro-kicker">${cfg.icon} ${esc(t(k + "kicker"))}</div>
+        <h1>${esc(t(k + "title"))}</h1>
+        <p>${esc(t(k + "sub"))}</p>
+        <div class="intro-actions">
+          <button class="btn" onclick="${primary.action}">${esc(primary.label)}</button>
+          ${extra ? `<button class="btn outline" onclick="${extra.action}">${esc(extra.label)}</button>` : ""}
+        </div>
+      </section>
+      <h2 class="intro-h">${esc(t("sec.why"))}</h2>
+      <div class="intro-grid">
+        ${cfg.features.map((icon, i) => `<div class="intro-feat"><span class="intro-ico">${icon}</span><b>${esc(t(k + "f" + (i + 1) + ".t"))}</b><p>${esc(t(k + "f" + (i + 1) + ".d"))}</p></div>`).join("")}
+      </div>
+      <h2 class="intro-h">${esc(t("sec.how"))}</h2>
+      <ol class="intro-steps">${[1, 2, 3].map((n) => `<li><span>${n}</span>${esc(t(k + "s" + n))}</li>`).join("")}</ol>
+      <div class="intro-final"><button class="btn" onclick="${primary.action}">${esc(primary.label)}</button></div>
+    </div>`;
+}
+
 function screenAccounting() {
-  if (!S.token) return guestPrompt("accounting");
+  // the intro: for guests (with the sign-in button), on the first visit, and when the "about" link is tapped
+  if (!S.token) return introHtml("accounting", { label: t("sec.login"), action: "go('login')" }, { label: t("sec.register"), action: "go('register')" });
+  if (introOpenNow("accounting")) {
+    const reopened = S._introOpen === "accounting";
+    return introHtml("accounting", { label: t("sec.start"), action: "introFinish('accounting')" }, null, reopened ? `<button class="back-btn" onclick="introFinish('accounting')">‹ ${esc(t("sec.accounting.back"))}</button>` : "");
+  }
   if (!S._accounting || S._accounting.loading) {
     if (!S._accounting) { S._accounting = { loading: true }; loadAccounting(); }
     return `<h1 class="screen-title">${esc(t("accounting.title"))}</h1>${spinner()}`;
   }
   const a = S._accounting;
-  if (a.requiresPlan) return `
-    <h1 class="screen-title">${esc(t("accounting.title"))}</h1>
-    <div class="card empty-state"><p>${esc(t("accounting.planRequired"))}</p>
-      <button class="btn" onclick="S._allPlans=null;go('allPlans')">${esc(t("plans.title"))}</button>
-    </div>`;
+  if (a.requiresPlan) return introHtml("accounting", { label: t("sec.plans"), action: "S._allPlans=null;go('allPlans')" }, null, `<p class="intro-note">${esc(t("accounting.planRequired"))}</p>`);
   const totals = a.summary?.totals || [];
   return `
     <h1 class="screen-title">${esc(t("accounting.title"))}</h1>
-    <p class="muted" style="text-align:center">${esc(t("accounting.subtitle"))}</p>
+    <p class="muted" style="text-align:center">${esc(t("accounting.subtitle"))} <button class="intro-link" onclick="showIntro('accounting')">ⓘ ${esc(t("sec.about"))}</button></p>
     <div class="card"><div class="section-title">${esc(t("accounting.month"))}</div>
       ${totals.length ? totals.map(x => `<div class="title-line"><span>${esc(x.currency)}</span><span>${esc(t("accounting.income"))}: ${fmt(x.incomeCents,x.currency)} · ${esc(t("accounting.expenses"))}: ${fmt(x.expensesCents,x.currency)} · <b>${esc(t("accounting.net"))}: ${fmt(x.netCents,x.currency)}</b></span></div>`).join("") : `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
       <p class="muted">${esc(t("accounting.inventory"))}: ${a.summary?.inventory?.products || 0} ${esc(t("accounting.products"))} · ${esc(t("accounting.units"))}: ${a.summary?.inventory?.units || 0}</p>
@@ -2681,7 +2719,7 @@ async function printAccountingReport() {
   const rows = (data || []).map(e => `<tr><td>${esc(new Date(e.occurredAt).toLocaleDateString())}</td><td>${esc(e.type === "INCOME" ? t("accounting.income") : t("accounting.expenses"))}</td><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${esc(fmt(e.amountCents, e.currency))}</td></tr>`).join("");
   const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
   if (!win) return toast(t("accounting.allowPrint"));
-  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(t("accounting.title"))}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h1{color:#ba2a34}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:start}th{background:#f7f3f3}@media print{button{display:none}}</style><h1>${esc(t("accounting.title"))}</h1><p>${esc(new Date().toLocaleDateString())}</p><table><thead><tr><th>${esc(t("accounting.date"))}</th><th>${esc(t("accounting.entryType"))}</th><th>${esc(t("accounting.category"))}</th><th>${esc(t("accounting.description"))}</th><th>${esc(t("accounting.amount"))}</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print()<\/script></html>`);
+  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(t("accounting.title"))}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h1{color:#f48050}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:start}th{background:#f7f3f3}@media print{button{display:none}}</style><h1>${esc(t("accounting.title"))}</h1><p>${esc(new Date().toLocaleDateString())}</p><table><thead><tr><th>${esc(t("accounting.date"))}</th><th>${esc(t("accounting.entryType"))}</th><th>${esc(t("accounting.category"))}</th><th>${esc(t("accounting.description"))}</th><th>${esc(t("accounting.amount"))}</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print()<\/script></html>`);
   win.document.close();
 }
 
@@ -5656,7 +5694,7 @@ function syncRouteLayer() {
   S._routeDrawn = key;
   if (S._routeLayer) { map.removeLayer(S._routeLayer); S._routeLayer = null; }
   if (!r || !r.data || !r.data.geometry.length) return;
-  S._routeLayer = L.polyline(r.data.geometry, { color: r.mode === "walking" ? "#1e6fe0" : "#ba2a34", weight: 6, opacity: 0.9, dashArray: r.mode === "walking" ? "1 10" : null, lineCap: "round" }).addTo(map);
+  S._routeLayer = L.polyline(r.data.geometry, { color: r.mode === "walking" ? "#1e6fe0" : "#f48050", weight: 6, opacity: 0.9, dashArray: r.mode === "walking" ? "1 10" : null, lineCap: "round" }).addTo(map);
   if (!(S._nav && S._nav.follow)) moveMap(() => map.fitBounds(S._routeLayer.getBounds(), { padding: [50, 50], animate: false }));
 }
 
@@ -6337,7 +6375,7 @@ async function exportDocument(path) {
   if (!res.ok) { if (win) win.close(); return toast("تعذّر تجهيز المستند"); }
   const html = await res.text();
   if (win) {
-    const bar = `<div class="no-print" style="position:sticky;top:0;z-index:5;padding:10px;background:#222;text-align:center"><button onclick="window.print()" style="padding:10px 22px;border:0;border-radius:8px;background:#ba2a34;color:#fff;font:700 15px sans-serif;cursor:pointer">🖨️ ${esc(t("doc.print"))}</button></div><style>@media print{.no-print{display:none!important}}</style>`;
+    const bar = `<div class="no-print" style="position:sticky;top:0;z-index:5;padding:10px;background:#222;text-align:center"><button onclick="window.print()" style="padding:10px 22px;border:0;border-radius:8px;background:#f48050;color:#fff;font:700 15px sans-serif;cursor:pointer">🖨️ ${esc(t("doc.print"))}</button></div><style>@media print{.no-print{display:none!important}}</style>`;
     win.document.open();
     win.document.write(html.replace(/<body([^>]*)>/i, (m) => m + bar));
     win.document.close();
@@ -7947,13 +7985,15 @@ async function submitTopup() {
 
 function screenResponder() {
   if (SOON.responder) return `${backRow()}<div class="center-pad"><h1 class="screen-title">🤖 ${esc(t("tab.responder"))}</h1><p class="muted" style="text-align:center">${esc(t("soon.responder"))}</p></div>`;
+  if (!S.token) return introHtml("responder", { label: t("sec.login"), action: "go('login')" }, { label: t("sec.register"), action: "go('register')" }, backRow());
+  if (introOpenNow("responder")) return introHtml("responder", { label: t("sec.start"), action: "introFinish('responder')" }, null, S._introOpen === "responder" ? `<button class="back-btn" onclick="introFinish('responder')">‹ ${esc(t("sec.responder.back"))}</button>` : backRow());
   if (!S._resp) { S._resp = { loading: true, tab: "overview" }; loadResponder(); }
   const r = S._resp;
   if (r.loading) return backRow() + spinner();
   const tabs = [["overview", "الحالة"], ["channels", "القنوات"], ["rules", "القواعد"], ["inbox", "الوارد"]];
   return `
     ${backRow()}
-    <h1 class="screen-title">🤖 المجيب الآلي</h1>
+    <h1 class="screen-title">🤖 المجيب الآلي <button class="intro-link" onclick="showIntro('responder')">ⓘ ${esc(t("sec.about"))}</button></h1>
     <div class="chip-row" style="margin:10px 0 14px">
       ${tabs.map(([id, label]) => `<button class="chip ${r.tab === id ? "active" : ""}" onclick="setRespTab('${id}')">${label}</button>`).join("")}
     </div>
@@ -8170,7 +8210,7 @@ function respRules() {
         <button class="btn small outline" style="width:auto;margin-top:6px" onclick="respLoadPosts()">تحميل منشوراتي</button>
         ${r.postsError ? `<p class="muted" style="color:#b71c1c">${esc(r.postsError)}</p>` : ""}
         ${posts.map((p) => `
-          <label class="card" style="display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:10px;font-size:13px;cursor:pointer;${picked.includes(p.id) ? "outline:2px solid var(--primary,#ba2a34)" : ""}">
+          <label class="card" style="display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:10px;font-size:13px;cursor:pointer;${picked.includes(p.id) ? "outline:2px solid var(--primary,#f48050)" : ""}">
             <input type="checkbox" style="width:auto;margin-top:4px" ${picked.includes(p.id) ? "checked" : ""} onchange="respTogglePost('${esc(p.id)}')" />
             ${/^https:\/\//.test(p.image || "") ? `<img src="${esc(p.image)}" alt="" loading="lazy" style="width:84px;height:84px;object-fit:cover;border-radius:8px;flex:none" />` : ""}
             <span style="flex:1;min-width:0">
