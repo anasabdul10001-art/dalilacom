@@ -53,6 +53,11 @@ enum class IntroKind(
         listOf(R.string.sec_acc_f1t to R.string.sec_acc_f1d, R.string.sec_acc_f2t to R.string.sec_acc_f2d, R.string.sec_acc_f3t to R.string.sec_acc_f3d, R.string.sec_acc_f4t to R.string.sec_acc_f4d),
         listOf(R.string.sec_acc_s1, R.string.sec_acc_s2, R.string.sec_acc_s3),
     ),
+    Hr(
+        "hr", R.string.sec_hr_kicker, R.string.sec_hr_title, R.string.sec_hr_sub, listOf("🕒", "🏖️", "💵", "🤝"),
+        listOf(R.string.sec_hr_f1t to R.string.sec_hr_f1d, R.string.sec_hr_f2t to R.string.sec_hr_f2d, R.string.sec_hr_f3t to R.string.sec_hr_f3d, R.string.sec_hr_f4t to R.string.sec_hr_f4d),
+        listOf(R.string.sec_hr_s1, R.string.sec_hr_s2, R.string.sec_hr_s3),
+    ),
     Responder(
         "responder", R.string.sec_resp_kicker, R.string.sec_resp_title, R.string.sec_resp_sub, listOf("💬", "⚙️", "✨", "📥"),
         listOf(R.string.sec_resp_f1t to R.string.sec_resp_f1d, R.string.sec_resp_f2t to R.string.sec_resp_f2d, R.string.sec_resp_f3t to R.string.sec_resp_f3d, R.string.sec_resp_f4t to R.string.sec_resp_f4d),

@@ -59,6 +59,7 @@ fun ProfileScreen(
     onOpenWallet: () -> Unit,
     onOpenFavorites: () -> Unit = {},
     onOpenOrders: () -> Unit = {},
+    onOpenCart: () -> Unit = {},
     onOpenMarketing: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onOpenMarketplace: () -> Unit = {},
@@ -137,6 +138,7 @@ if (role == "CUSTOMER") {
             OutlinedButton(onClick = onOpenAppointments, modifier = Modifier.fillMaxWidth()) { Text("📅  " + stringResource(R.string.appointment_my_title)) }
         }
         OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
+        OutlinedButton(onClick = onOpenCart, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_my_cart)) }
         OutlinedButton(onClick = onOpenOrders, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.tab_orders)) }
         Spacer(Modifier.height(12.dp))
         Card(modifier = Modifier.fillMaxWidth()) {

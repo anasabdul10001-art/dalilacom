@@ -648,6 +648,7 @@ const ICON = {
   store: '<svg viewBox="0 0 24 24"><path d="M4 9 5.5 4h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9"/><path d="M5.5 11.5V20h13v-8.5"/><path d="M10 20v-4.5h4V20"/></svg>',
   cart: '<svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.2 11h10.4L20 8H6.2"/></svg>',
   orders: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M8 9h8M8 13h8"/></svg>',
+  users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.5-3.2 3-5 6-5s5.5 1.8 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.2c2.4.2 4 1.6 4.5 4.3"/></svg>',
   calculator: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8v3H8zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>',
   user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.3"/><path d="M5 20c1.3-3.6 4-5.4 7-5.4s5.7 1.8 7 5.4"/></svg>',
   scan: '<svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M4 12h16" stroke-dasharray="2.5 2.5"/></svg>',
@@ -1050,7 +1051,7 @@ const HOME_TABS = [
   { id: "discover", label: "tab.map", icon: "search" },
   { id: "deals", label: "tab.deals", icon: "tag" },
   { id: "responder", label: "tab.responder", icon: "bot", hero: true },
-  { id: "cart", label: "tab.cart", icon: "cart" },
+  { id: "hr", label: "tab.hr", icon: "users" },
   { id: "accounting", label: "tab.accounting", icon: "calculator" },
   { id: "profile", label: "tab.account", icon: "user" },
 ];
@@ -1059,6 +1060,7 @@ function screenHomeShell() {
   const needsAccount = ["card", "cart", "orders", "profile"].includes(S.homeTab) && !S.token;
   const body = needsAccount ? guestPrompt(S.homeTab) : {
     store: screenStore,
+    hr: screenHr,
     card: tabCard,
     deals: tabDeals,
     discover: tabDiscover,
@@ -1071,7 +1073,7 @@ function screenHomeShell() {
     <div>${body}</div>
     <div class="tabbar" id="home-tabbar">
       ${HOME_TABS.map((tab) => `
-        <button class="${S.homeTab === tab.id ? "active" : ""} ${tab.hero ? "hero" : ""}" onclick="setHomeTab('${tab.id}')">
+        <button class="${S.homeTab === tab.id || (tab.id === "profile" && S.homeTab === "cart") ? "active" : ""} ${tab.hero ? "hero" : ""}" onclick="setHomeTab('${tab.id}')">
           ${ICON[tab.icon]}<span>${esc(t(tab.label))}</span>
         </button>`).join("")}
     </div>
@@ -2514,6 +2516,7 @@ async function loadOrders() {
 
 const INTROS = {
   accounting: { icon: "🧮", features: ["📒", "📦", "🧾", "📊"] },
+  hr: { icon: "👥", features: ["🕒", "🏖️", "💵", "🤝"] },
   responder: { icon: "🤖", features: ["💬", "⚙️", "✨", "📥"] },
 };
 function introSeen(kind) { try { return localStorage.getItem("dlk_intro_" + kind) === "1"; } catch (e) { return false; } }
@@ -2547,6 +2550,11 @@ function introHtml(kind, primary, extra, backHtml) {
       <div class="intro-final"><button class="btn" onclick="${primary.action}">${esc(primary.label)}</button></div>
     </div>`;
 }
+
+// The HR system is a separate web application: this tab is its front page, with a button that opens it.
+const HR_URL = "https://nawa-frontend.onrender.com";
+function openHr() { window.open(HR_URL, "_blank", "noopener"); }
+function screenHr() { return introHtml("hr", { label: t("sec.hr.open"), action: "openHr()" }); }
 
 function screenAccounting() {
   // the intro: for guests (with the sign-in button), on the first visit, and when the "about" link is tapped
@@ -2771,6 +2779,8 @@ if (S.role === "MERCHANT" && !S._fitnessAccessChecked) loadFitnessAccess();
           ${p.bio ? `<p class="muted" style="margin:0 0 6px;max-width:260px">${esc(p.bio)}</p>` : ""}
           <button class="link-btn" onclick="go('profileEdit')">${esc(t("profile.edit"))}</button>`;
       })()}
+      <div style="height:10px"></div>
+      <button class="btn outline" style="max-width:240px" onclick="setHomeTab('cart')">🛒 ${esc(t("profile.myCart"))}</button>
       <div style="height:10px"></div>
       ${S.role === "MERCHANT"
         ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='catalog';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>

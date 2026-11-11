@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Storefront
@@ -83,10 +84,16 @@ private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) 
     Deals(R.string.tab_deals, Icons.Filled.LocalOffer),
     /** Not a page of this shell: the middle button opens the auto-responder screen. */
     Responder(R.string.tab_responder, Icons.Filled.SmartToy),
+    /** Not in the bar any more: the cart is opened from the account page (and from the store's bag). */
     Cart(R.string.tab_cart, Icons.Filled.ShoppingCart),
+    /** The HR system is a separate web application: this tab is its front page, with a button that opens it. */
+    Hr(R.string.tab_hr, Icons.Filled.Groups),
     Accounting(R.string.tab_accounting, Icons.Filled.CreditCard),
     Profile(R.string.tab_account, Icons.Filled.Person),
 }
+
+/** The HR system's web address (a separate application from this one). */
+private const val HR_URL = "https://nawa-frontend.onrender.com"
 
 @Composable
 fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
@@ -143,7 +150,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     Scaffold(
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
-                HomeTab.values().forEach { tab ->
+                HomeTab.values().filter { it != HomeTab.Cart }.forEach { tab ->
                     if (tab == HomeTab.Responder) {
                         // The one button that stands out: a red disc, opening the auto-responder (guests sign in first).
                         NavigationBarItem(
@@ -159,7 +166,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         )
                     } else {
                         NavigationBarItem(
-                            selected = selectedTab == tab,
+                            selected = selectedTab == tab || (tab == HomeTab.Profile && selectedTab == HomeTab.Cart),
                             onClick = {
                                 if (tab == HomeTab.Discover) showDealsOnMap = false
                                 selectedTab = tab
@@ -216,6 +223,11 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
                     ) else CartScreen(factory, onCheckoutSuccess = { rootNavController.navigate("orders") })
+                HomeTab.Hr -> com.dalilacom.app.ui.common.SectionIntro(
+                    kind = com.dalilacom.app.ui.common.IntroKind.Hr,
+                    primaryLabel = stringResource(R.string.sec_hr_open),
+                    onPrimary = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(HR_URL))) },
+                )
                 HomeTab.Accounting -> {
                     // the section's front page: for guests (sign in), on the first visit, and again from the "about" link
                     var introSeen by remember { mutableStateOf(com.dalilacom.app.ui.common.IntroPrefs.seen(context, com.dalilacom.app.ui.common.IntroKind.Accounting)) }
@@ -254,6 +266,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onOpenWallet = { rootNavController.navigate("wallet") },
                         onOpenFavorites = { rootNavController.navigate("favorites") },
                         onOpenOrders = { rootNavController.navigate("orders") },
+                        onOpenCart = { selectedTab = HomeTab.Cart },
                         onOpenMarketing = { rootNavController.navigate("marketing") },
                         onOpenHistory = { rootNavController.navigate("discountHistory/mine") },
                         onOpenMarketplace = { rootNavController.navigate("marketplace") },

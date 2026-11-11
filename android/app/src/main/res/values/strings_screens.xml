@@ -481,4 +481,21 @@
     <string name="sec_resp_s1" formatted="false">اربط قنواتك</string>
     <string name="sec_resp_s2" formatted="false">اكتب قواعدك أو فعّل الذكاء الاصطناعي</string>
     <string name="sec_resp_s3" formatted="false">خلّيه يشتغل وتابع الوارد</string>
+    <string name="tab_hr" formatted="false">HR</string>
+    <string name="profile_my_cart" formatted="false">🛒 سلتي</string>
+    <string name="sec_hr_open" formatted="false">افتح نظام الـ HR</string>
+    <string name="sec_hr_kicker" formatted="false">👥 الموارد البشرية (HR)</string>
+    <string name="sec_hr_title" formatted="false">أدِر موظفينك من مكان واحد</string>
+    <string name="sec_hr_sub" formatted="false">حضور وإجازات ورواتب وسلف لموظفي شركتك، ببساطة وبتقارير جاهزة.</string>
+    <string name="sec_hr_f1t" formatted="false">الحضور والانصراف</string>
+    <string name="sec_hr_f1d" formatted="false">الموظف بيسجّل حضوره وانصرافه، وإنت بتتابع الدوام وبتصحّح أي تسجيل.</string>
+    <string name="sec_hr_f2t" formatted="false">الإجازات</string>
+    <string name="sec_hr_f2d" formatted="false">الموظف بيطلب إجازة، وبتمرّ على مديره ثم الموارد البشرية، والرصيد بينحسب لحاله.</string>
+    <string name="sec_hr_f3t" formatted="false">الرواتب</string>
+    <string name="sec_hr_f3d" formatted="false">كشوف رواتب شهرية جاهزة، مع خصم الغياب وأقساط السلف تلقائياً.</string>
+    <string name="sec_hr_f4t" formatted="false">السلف</string>
+    <string name="sec_hr_f4d" formatted="false">طلب السلفة وموافقتها وتقسيطها على الرواتب، بدون ورق وبدون حسابات يدوية.</string>
+    <string name="sec_hr_s1" formatted="false">سجّل شركتك</string>
+    <string name="sec_hr_s2" formatted="false">أضف أقسامك وموظفيك</string>
+    <string name="sec_hr_s3" formatted="false">شغّل الرواتب وتابع التقارير</string>
 </resources>

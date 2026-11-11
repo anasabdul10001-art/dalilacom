@@ -481,4 +481,21 @@
     <string name="sec_resp_s1" formatted="false">Connect your channels</string>
     <string name="sec_resp_s2" formatted="false">Write your rules or turn on AI</string>
     <string name="sec_resp_s3" formatted="false">Let it run and follow the inbox</string>
+    <string name="tab_hr" formatted="false">HR</string>
+    <string name="profile_my_cart" formatted="false">🛒 My cart</string>
+    <string name="sec_hr_open" formatted="false">Open the HR system</string>
+    <string name="sec_hr_kicker" formatted="false">👥 Human resources (HR)</string>
+    <string name="sec_hr_title" formatted="false">Manage your staff in one place</string>
+    <string name="sec_hr_sub" formatted="false">Attendance, leave, payroll and salary advances for your company\'s employees, simply and with ready reports.</string>
+    <string name="sec_hr_f1t" formatted="false">Attendance</string>
+    <string name="sec_hr_f1d" formatted="false">Employees check in and out, and you follow the working time and correct any record.</string>
+    <string name="sec_hr_f2t" formatted="false">Leave</string>
+    <string name="sec_hr_f2d" formatted="false">An employee asks for leave, it goes to their manager and then to HR, and the balance is calculated for you.</string>
+    <string name="sec_hr_f3t" formatted="false">Payroll</string>
+    <string name="sec_hr_f3d" formatted="false">Monthly payslips ready to go, with absences and advance installments deducted automatically.</string>
+    <string name="sec_hr_f4t" formatted="false">Salary advances</string>
+    <string name="sec_hr_f4d" formatted="false">Ask for an advance, approve it and spread it over the salaries, with no paper and no manual sums.</string>
+    <string name="sec_hr_s1" formatted="false">Register your company</string>
+    <string name="sec_hr_s2" formatted="false">Add your departments and employees</string>
+    <string name="sec_hr_s3" formatted="false">Run payroll and follow the reports</string>
 </resources>
