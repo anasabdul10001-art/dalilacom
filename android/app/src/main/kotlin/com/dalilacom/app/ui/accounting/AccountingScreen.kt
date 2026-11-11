@@ -44,7 +44,7 @@ import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
 
 @Composable
-fun AccountingScreen(container: AppContainer, onAbout: () -> Unit = {}, onOpenPlans: () -> Unit = {}) {
+fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var loading by remember { mutableStateOf(true) }
@@ -105,15 +105,11 @@ fun AccountingScreen(container: AppContainer, onAbout: () -> Unit = {}, onOpenPl
         return
     }
     if (container.accountingRepository.requiresPlan) {
-        // no plan yet: the intro page, with the plans as its button
-        com.dalilacom.app.ui.common.SectionIntro(
-            kind = com.dalilacom.app.ui.common.IntroKind.Accounting,
-            primaryLabel = stringResource(R.string.accounting_open_plans),
-            onPrimary = onOpenPlans,
-            secondaryLabel = stringResource(R.string.billing_refresh_status),
-            onSecondary = { scope.launch { reload() } },
-            note = stringResource(R.string.accounting_plan_required),
-        )
+        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+            Text(stringResource(R.string.site_planNeeded), style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Button(onClick = onOpenPlans, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) { Text(stringResource(R.string.site_plans)) }
+            OutlinedButton(onClick = { scope.launch { reload() } }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.billing_refresh_status)) }
+        }
         return
     }
     LazyColumn(
@@ -122,7 +118,6 @@ fun AccountingScreen(container: AppContainer, onAbout: () -> Unit = {}, onOpenPl
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { Text(stringResource(R.string.accounting_title), style = MaterialTheme.typography.headlineSmall) }
-        item { TextButton(onClick = onAbout) { Text(stringResource(R.string.sec_about)) } }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

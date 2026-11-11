@@ -405,39 +405,29 @@ fun DalilacomNavGraph(
                 }
                 return@composable
             }
-            // the section's front page: for guests (sign in), on the first visit, and again from the "about" link
-            val introContext = androidx.compose.ui.platform.LocalContext.current
+            // the section is a small site of its own: its home page is always there, and the tool is the other tab
             var signedIn by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
-            var introSeen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.dalilacom.app.ui.common.IntroPrefs.seen(introContext, com.dalilacom.app.ui.common.IntroKind.Responder)) }
-            var introReopened by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
             androidx.compose.runtime.LaunchedEffect(Unit) { signedIn = container.authRepository.hasStoredSession() }
             val hasMetaReturn = entry.arguments?.getString("ok") != null || entry.arguments?.getString("session") != null
-            when {
-                signedIn == null -> androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize())
-                signedIn == false -> com.dalilacom.app.ui.common.SectionIntro(
-                    kind = com.dalilacom.app.ui.common.IntroKind.Responder,
-                    primaryLabel = androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.sec_login),
-                    onPrimary = { navController.navigate("login") },
-                    secondaryLabel = androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.sec_register),
-                    onSecondary = { navController.navigate("register") },
-                    onBack = { navController.popBackStack() },
-                )
-                (!introSeen && !hasMetaReturn) || introReopened -> com.dalilacom.app.ui.common.SectionIntro(
-                    kind = com.dalilacom.app.ui.common.IntroKind.Responder,
-                    primaryLabel = androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.sec_start),
-                    onPrimary = { com.dalilacom.app.ui.common.IntroPrefs.markSeen(introContext, com.dalilacom.app.ui.common.IntroKind.Responder); introSeen = true; introReopened = false },
-                    onBack = { if (introReopened) introReopened = false else navController.popBackStack() },
-                )
-                else -> ResponderScreen(
-                    factory = factory,
-                    onBack = { navController.popBackStack() },
-                    onOpenWallet = { navController.navigate("wallet") },
-                    onAbout = { introReopened = true },
-                    metaOk = entry.arguments?.getString("ok")?.let { it == "1" },
-                    metaConnectionId = entry.arguments?.getString("connectionId"),
-                    metaSessionId = entry.arguments?.getString("session"),
-                )
-            }
+            if (signedIn == null) androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize())
+            else com.dalilacom.app.ui.common.SectionSite(
+                kind = com.dalilacom.app.ui.common.SiteKind.Responder,
+                signedIn = signedIn == true,
+                onLogin = { navController.navigate("login") },
+                onRegister = { navController.navigate("register") },
+                onBack = { navController.popBackStack() },
+                startOnApp = hasMetaReturn,
+                appContent = {
+                    ResponderScreen(
+                        factory = factory,
+                        onBack = { navController.popBackStack() },
+                        onOpenWallet = { navController.navigate("wallet") },
+                        metaOk = entry.arguments?.getString("ok")?.let { it == "1" },
+                        metaConnectionId = entry.arguments?.getString("connectionId"),
+                        metaSessionId = entry.arguments?.getString("session"),
+                    )
+                },
+            )
         }
         composable("wallet") {
             WalletScreen(factory = factory, onBack = { navController.popBackStack() })

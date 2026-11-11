@@ -515,4 +515,116 @@
     <string name="prof_sec_account" formatted="false">My account and security</string>
     <string name="prof_sec_account_sub" formatted="false">My data, notifications, log out</string>
     <string name="store_visit_shop" formatted="false">Visit the shop</string>
+    <string name="site_tab_home" formatted="false">Home</string>
+    <string name="site_why" formatted="false">Why use it</string>
+    <string name="site_faq" formatted="false">Common questions</string>
+    <string name="site_stepsTitle" formatted="false">How it works</string>
+    <string name="site_featuresTitle" formatted="false">Everything in one place</string>
+    <string name="site_ctaTitle" formatted="false">Ready to start?</string>
+    <string name="site_ctaSub" formatted="false">A few simple steps and you will see the difference from day one.</string>
+    <string name="site_open_responder" formatted="false">Open the auto-responder</string>
+    <string name="site_open_accounting" formatted="false">Open the accounting dashboard</string>
+    <string name="site_open_hr" formatted="false">Open the HR system</string>
+    <string name="site_login" formatted="false">Sign in to start</string>
+    <string name="site_register" formatted="false">Create an account</string>
+    <string name="site_plans" formatted="false">See the plans</string>
+    <string name="site_learn" formatted="false">Learn more</string>
+    <string name="site_planNeeded" formatted="false">Accounting needs an active plan or a trial period.</string>
+    <string name="site_responder_tab_overview" formatted="false">Status</string>
+    <string name="site_responder_tab_channels" formatted="false">Channels</string>
+    <string name="site_responder_tab_rules" formatted="false">Rules</string>
+    <string name="site_responder_tab_inbox" formatted="false">Inbox</string>
+    <string name="site_accounting_tab_summary" formatted="false">Summary</string>
+    <string name="site_accounting_tab_entry" formatted="false">Add entry</string>
+    <string name="site_accounting_tab_invoices" formatted="false">Invoices</string>
+    <string name="site_accounting_tab_stock" formatted="false">Stock</string>
+    <string name="site_art_chat1" formatted="false">How much is this product?</string>
+    <string name="site_art_chat2" formatted="false">It is $25 and delivery is free 🚚</string>
+    <string name="site_art_chat3" formatted="false">Where are you located?</string>
+    <string name="site_art_chat4" formatted="false">In Damascus, open 9 to 9 ✅</string>
+    <string name="site_art_kw1" formatted="false">Prices</string>
+    <string name="site_art_kw2" formatted="false">Hours</string>
+    <string name="site_art_kw3" formatted="false">Address</string>
+    <string name="site_art_income" formatted="false">Income</string>
+    <string name="site_art_expense" formatted="false">Expenses</string>
+    <string name="site_art_net" formatted="false">Net profit</string>
+    <string name="site_art_invoice" formatted="false">Purchase invoice</string>
+    <string name="site_art_total" formatted="false">Total</string>
+    <string name="site_art_low" formatted="false">Running low</string>
+    <string name="site_art_item1" formatted="false">Cotton shirt</string>
+    <string name="site_art_item2" formatted="false">Sports shoes</string>
+    <string name="site_art_item3" formatted="false">Leather bag</string>
+    <string name="site_art_payslip" formatted="false">Payslip</string>
+    <string name="site_art_netpay" formatted="false">Net pay</string>
+    <string name="site_art_leave" formatted="false">Leave</string>
+    <string name="site_art_present" formatted="false">Present</string>
+    <string name="site_responder_slide1_t" formatted="false">An instant answer to every message</string>
+    <string name="site_responder_slide1_d" formatted="false">A customer asks at 3 a.m.? The auto-responder answers in seconds, in your own style.</string>
+    <string name="site_responder_slide2_t" formatted="false">Facebook, Instagram and Telegram</string>
+    <string name="site_responder_slide2_d" formatted="false">Connect your pages once, and every message and comment lands in one place.</string>
+    <string name="site_responder_slide3_t" formatted="false">AI that knows your shop</string>
+    <string name="site_responder_slide3_d" formatted="false">It answers only from what you wrote: prices, hours and address, never making things up.</string>
+    <string name="site_responder_st1_n" formatted="false">24/7</string>
+    <string name="site_responder_st1_l" formatted="false">Always on</string>
+    <string name="site_responder_st2_n" formatted="false">Seconds</string>
+    <string name="site_responder_st2_l" formatted="false">Time to answer a customer</string>
+    <string name="site_responder_st3_n" formatted="false">100%</string>
+    <string name="site_responder_st3_l" formatted="false">From your own information</string>
+    <string name="site_responder_s1_d" formatted="false">Press “Connect” and pick your page: no code, no fuss.</string>
+    <string name="site_responder_s2_d" formatted="false">Write keywords and ready answers, or turn on AI for the rest.</string>
+    <string name="site_responder_s3_d" formatted="false">Every conversation is in the inbox and you can step in whenever you want.</string>
+    <string name="site_responder_faq1_q" formatted="false">Which channels does it support?</string>
+    <string name="site_responder_faq1_a" formatted="false">Facebook Messenger, Instagram messages and comments, and Telegram.</string>
+    <string name="site_responder_faq2_q" formatted="false">Does it make up answers?</string>
+    <string name="site_responder_faq2_a" formatted="false">No. It answers only from the information you entered, and hands the chat to you when it does not know.</string>
+    <string name="site_responder_faq3_q" formatted="false">Can I step into a conversation?</string>
+    <string name="site_responder_faq3_a" formatted="false">Of course. From the inbox you see everything and can reply yourself at any time.</string>
+    <string name="site_responder_faq4_q" formatted="false">How much does it cost?</string>
+    <string name="site_responder_faq4_a" formatted="false">There are plans for every size of business, with a trial period. You can see them inside the section.</string>
+    <string name="site_accounting_slide1_t" formatted="false">Your books at a glance</string>
+    <string name="site_accounting_slide1_d" formatted="false">Income, expenses and net profit per currency, with no spreadsheets.</string>
+    <string name="site_accounting_slide2_t" formatted="false">Photograph the invoice and you are done</string>
+    <string name="site_accounting_slide2_d" formatted="false">AI reads the amount and the supplier, and you review and confirm in one tap.</string>
+    <string name="site_accounting_slide3_t" formatted="false">Your stock under control</string>
+    <string name="site_accounting_slide3_d" formatted="false">Follow quantities, search by barcode and notice any product that is running low.</string>
+    <string name="site_accounting_st1_n" formatted="false">📊</string>
+    <string name="site_accounting_st1_l" formatted="false">Your net profit, live</string>
+    <string name="site_accounting_st2_n" formatted="false">🧾</string>
+    <string name="site_accounting_st2_l" formatted="false">Invoices from a photo</string>
+    <string name="site_accounting_st3_n" formatted="false">📦</string>
+    <string name="site_accounting_st3_l" formatted="false">Stock by barcode</string>
+    <string name="site_accounting_s1_d" formatted="false">Start with a trial or a plan and the accounting dashboard opens.</string>
+    <string name="site_accounting_s2_d" formatted="false">Record your entries and add your products, or photograph invoices.</string>
+    <string name="site_accounting_s3_d" formatted="false">See the net, and download your reports as CSV or print them.</string>
+    <string name="site_accounting_faq1_q" formatted="false">Do I need to know accounting?</string>
+    <string name="site_accounting_faq1_a" formatted="false">No. Record your income and expenses and the rest is calculated for you.</string>
+    <string name="site_accounting_faq2_q" formatted="false">Is it linked to my store?</string>
+    <string name="site_accounting_faq2_a" formatted="false">Yes. Delivered orders are recorded for you: income, cost and delivery fees.</string>
+    <string name="site_accounting_faq3_q" formatted="false">Can I export my data?</string>
+    <string name="site_accounting_faq3_a" formatted="false">You can download all your entries as a CSV file at any time.</string>
+    <string name="site_accounting_faq4_q" formatted="false">Do I need a subscription?</string>
+    <string name="site_accounting_faq4_a" formatted="false">Accounting needs an active plan or a trial, and the button shows the plans.</string>
+    <string name="site_hr_slide1_t" formatted="false">Your staff in one place</string>
+    <string name="site_hr_slide1_d" formatted="false">Profiles, departments and permissions, with every company\'s data kept separate and safe.</string>
+    <string name="site_hr_slide2_t" formatted="false">Payroll in one click</string>
+    <string name="site_hr_slide2_d" formatted="false">Monthly payslips, with absences and advance installments deducted automatically.</string>
+    <string name="site_hr_slide3_t" formatted="false">Leave and advances without paper</string>
+    <string name="site_hr_slide3_d" formatted="false">Requests and approvals in a chain (manager then HR), with the balance worked out for you.</string>
+    <string name="site_hr_st1_n" formatted="false">🕒</string>
+    <string name="site_hr_st1_l" formatted="false">Attendance</string>
+    <string name="site_hr_st2_n" formatted="false">💵</string>
+    <string name="site_hr_st2_l" formatted="false">Ready payslips</string>
+    <string name="site_hr_st3_n" formatted="false">🔒</string>
+    <string name="site_hr_st3_l" formatted="false">Each company\'s data apart</string>
+    <string name="site_hr_s1_d" formatted="false">Register your company and choose its currency.</string>
+    <string name="site_hr_s2_d" formatted="false">Add your departments and employees and set their permissions.</string>
+    <string name="site_hr_s3_d" formatted="false">Run payroll and follow the reports and dashboards.</string>
+    <string name="site_hr_faq1_q" formatted="false">Is it a separate program?</string>
+    <string name="site_hr_faq1_a" formatted="false">Yes, the HR system is independent with its own site, and you open it from here with one button.</string>
+    <string name="site_hr_faq2_q" formatted="false">Is my data safe?</string>
+    <string name="site_hr_faq2_a" formatted="false">Every company\'s data is fully separate from the others, and permissions are set per role.</string>
+    <string name="site_hr_faq3_q" formatted="false">Who can do what?</string>
+    <string name="site_hr_faq3_a" formatted="false">There are roles: company admin, HR, department manager and employee, each with their own permissions.</string>
+    <string name="site_hr_faq4_q" formatted="false">How much does it cost?</string>
+    <string name="site_hr_faq4_a" formatted="false">There are plans and a trial period, which you can see inside the system.</string>
 </resources>

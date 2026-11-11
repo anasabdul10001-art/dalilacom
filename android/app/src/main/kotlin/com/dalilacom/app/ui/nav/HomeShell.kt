@@ -223,24 +223,20 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
                     ) else CartScreen(factory, onCheckoutSuccess = { rootNavController.navigate("orders") })
-                HomeTab.Hr -> com.dalilacom.app.ui.common.SectionIntro(
-                    kind = com.dalilacom.app.ui.common.IntroKind.Hr,
-                    primaryLabel = stringResource(R.string.sec_hr_open),
-                    onPrimary = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(HR_URL))) },
+                HomeTab.Hr -> com.dalilacom.app.ui.common.SectionSite(
+                    kind = com.dalilacom.app.ui.common.SiteKind.Hr,
+                    signedIn = !isGuest,
+                    onLogin = { goLogin() },
+                    onRegister = { goRegister() },
+                    onOpenExternal = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(HR_URL))) },
                 )
-                HomeTab.Accounting -> {
-                    // the section's front page: for guests (sign in), on the first visit, and again from the "about" link
-                    var introSeen by remember { mutableStateOf(com.dalilacom.app.ui.common.IntroPrefs.seen(context, com.dalilacom.app.ui.common.IntroKind.Accounting)) }
-                    var introReopened by rememberSaveable { mutableStateOf(false) }
-                    if (isGuest || !introSeen || introReopened) com.dalilacom.app.ui.common.SectionIntro(
-                        kind = com.dalilacom.app.ui.common.IntroKind.Accounting,
-                        primaryLabel = stringResource(if (isGuest) R.string.sec_login else R.string.sec_start),
-                        onPrimary = { if (isGuest) goLogin() else { com.dalilacom.app.ui.common.IntroPrefs.markSeen(context, com.dalilacom.app.ui.common.IntroKind.Accounting); introSeen = true; introReopened = false } },
-                        secondaryLabel = if (isGuest) stringResource(R.string.sec_register) else null,
-                        onSecondary = { goRegister() },
-                        onBack = if (introReopened && !isGuest) ({ introReopened = false }) else null,
-                    ) else AccountingScreen(container, onAbout = { introReopened = true }) { rootNavController.navigate("accountingPlans") }
-                }
+                HomeTab.Accounting -> com.dalilacom.app.ui.common.SectionSite(
+                    kind = com.dalilacom.app.ui.common.SiteKind.Accounting,
+                    signedIn = !isGuest,
+                    onLogin = { goLogin() },
+                    onRegister = { goRegister() },
+                    appContent = { AccountingScreen(container) { rootNavController.navigate("accountingPlans") } },
+                )
                 HomeTab.Profile ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.Person,

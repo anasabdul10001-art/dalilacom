@@ -244,6 +244,7 @@ function setHomeTab(tab) {
   if (tab === "responder") {
     if (SOON.responder) return toast(t("soon.responder"));
     S._resp = null;
+    (S._site = S._site || {}).responder = "home";
     return go("responder");
   }
   // the store is the first tab (and the page the site opens on): guests may browse it too; coming back to it starts fresh
@@ -2512,80 +2513,121 @@ async function loadOrders() {
 }
 
 /* ---- Accountant: money movement and stock for any signed-in account ---- */
-/* ---- Section intro pages: what a section does, shown before its tools (first visit, guests, and from the "about" link) ---- */
+/* ---- The three sections (accounting, auto-responder, HR) work like small sites of their own: a tab bar whose first tab is a home page that is always there ---- */
 
-const INTROS = {
-  accounting: { icon: "🧮", features: ["📒", "📦", "🧾", "📊"] },
-  hr: { icon: "👥", features: ["🕒", "🏖️", "💵", "🤝"] },
-  responder: { icon: "🤖", features: ["💬", "⚙️", "✨", "📥"] },
+const SITES = {
+  accounting: { icon: "🧮", tabs: ["summary", "entry", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"] },
+  responder: { icon: "🤖", tabs: ["overview", "channels", "rules", "inbox"], art: ["chat", "orbit", "ai"], features: ["💬", "⚙️", "✨", "📥"] },
+  hr: { icon: "👥", tabs: [], art: ["team", "payslip", "calendar"], features: ["🕒", "🏖️", "💵", "🤝"] },
 };
-function introSeen(kind) { try { return localStorage.getItem("dlk_intro_" + kind) === "1"; } catch (e) { return false; } }
-function introOpenNow(kind) { return S._introOpen === kind || !S.token || !introSeen(kind); }
-function showIntro(kind) { S._introOpen = kind; render(); window.scrollTo(0, 0); }
-function introFinish(kind) {
-  try { localStorage.setItem("dlk_intro_" + kind, "1"); } catch (e) {}
-  S._introOpen = null; render(); window.scrollTo(0, 0);
+function siteTab(kind) { return (S._site && S._site[kind]) || "home"; }
+function setSiteTab(kind, tab) {
+  S._site = S._site || {}; S._site[kind] = tab;
+  if (kind === "responder" && tab !== "home" && S._resp) S._resp.tab = tab;
+  S.error = null; render(); window.scrollTo(0, 0);
 }
-/** The page itself. [primary] is the main button ({ label, action }); [extra] is an optional second button. */
-function introHtml(kind, primary, extra, backHtml) {
-  const cfg = INTROS[kind], k = "sec." + kind + ".";
-  return `${backHtml || ""}
-    <div class="intro">
-      <section class="intro-hero">
-        <span class="intro-dot d1"></span><span class="intro-dot d2"></span><span class="intro-dot d3"></span>
-        <div class="intro-kicker">${cfg.icon} ${esc(t(k + "kicker"))}</div>
-        <h1>${esc(t(k + "title"))}</h1>
-        <p>${esc(t(k + "sub"))}</p>
-        <div class="intro-actions">
-          <button class="btn" onclick="${primary.action}">${esc(primary.label)}</button>
-          ${extra ? `<button class="btn outline" onclick="${extra.action}">${esc(extra.label)}</button>` : ""}
-        </div>
-      </section>
-      <h2 class="intro-h">${esc(t("sec.why"))}</h2>
-      <div class="intro-grid">
-        ${cfg.features.map((icon, i) => `<div class="intro-feat"><span class="intro-ico">${icon}</span><b>${esc(t(k + "f" + (i + 1) + ".t"))}</b><p>${esc(t(k + "f" + (i + 1) + ".d"))}</p></div>`).join("")}
-      </div>
-      <h2 class="intro-h">${esc(t("sec.how"))}</h2>
-      <ol class="intro-steps">${[1, 2, 3].map((n) => `<li><span>${n}</span>${esc(t(k + "s" + n))}</li>`).join("")}</ol>
-      <div class="intro-final"><button class="btn" onclick="${primary.action}">${esc(primary.label)}</button></div>
-    </div>`;
+function siteShell(kind, active, body) {
+  const cfg = SITES[kind];
+  const tabs = [["home", t("site.tab.home")], ...cfg.tabs.map((id) => [id, t("site." + kind + ".tab." + id)])];
+  return `<div class="site site-${kind}">
+    <div class="site-bar"><span class="site-logo">${cfg.icon}</span><b>${esc(t("sec." + kind + ".kicker"))}</b></div>
+    ${cfg.tabs.length ? `<nav class="site-tabs">${tabs.map(([id, label]) => `<button class="${id === active ? "on" : ""}" onclick="setSiteTab('${kind}','${id}')">${esc(label)}</button>`).join("")}</nav>` : ""}
+    ${body}
+  </div>`;
 }
+/** The main buttons of a site's home page, for whoever is looking (a guest, or someone signed in). */
+function siteCta(kind) {
+  if (kind === "hr") return [{ label: t("site.open.hr"), action: "openHr()" }];
+  if (!S.token) return [{ label: t("site.login"), action: "go('login')" }, { label: t("site.register"), action: "go('register')", outline: true }];
+  return [{ label: t("site.open." + kind), action: `setSiteTab('${kind}','${SITES[kind].tabs[0]}')` }];
+}
+const siteButtons = (list) => list.map((b) => `<button class="btn ${b.outline ? "outline" : ""}" onclick="${b.action}">${esc(b.label)}</button>`).join("");
+
+/** The moving pictures of the slides: small scenes made of HTML and CSS (they replay each time their slide comes round). */
+function siteArt(kind, i) {
+  const x = (k) => esc(t("site.art." + k));
+  switch (SITES[kind].art[i]) {
+    case "chat": return `<div class="art art-chat"><div class="bub in" style="--d:.2s">${x("chat1")}</div><div class="bub out" style="--d:1.5s">${x("chat2")}</div><div class="bub in" style="--d:2.9s">${x("chat3")}</div><div class="bub out" style="--d:4.2s">${x("chat4")}</div></div>`;
+    case "orbit": return `<div class="art art-orbit"><i class="ring"></i><div class="core">🤖</div><span class="sat s1">f</span><span class="sat s2">◎</span><span class="sat s3">✈</span></div>`;
+    case "ai": return `<div class="art art-ai"><div class="ai-card"><span class="ai-spark">✨</span><div class="ai-line l1"></div><div class="ai-line l2"></div><div class="ai-line l3"></div></div><div class="ai-chips"><em style="--d:.3s">${x("kw1")}</em><em style="--d:.9s">${x("kw2")}</em><em style="--d:1.5s">${x("kw3")}</em></div></div>`;
+    case "bars": return `<div class="art art-bars"><div class="bars-chart">${[55, 35, 75, 45, 90, 60].map((h, n) => `<span class="${n % 2 ? "exp" : ""}" style="--h:${h}%;--d:${n * 0.15}s"></span>`).join("")}</div><div class="bars-legend"><b>${x("net")}</b><span>+ 1,250</span></div></div>`;
+    case "receipt": return `<div class="art art-receipt"><div class="rc"><b>${x("invoice")}</b><i></i><i></i><i class="s"></i><i></i><div class="rc-total"><span>${x("total")}</span><b>86.40</b></div><span class="scan"></span><span class="rc-ok">✓</span></div></div>`;
+    case "stock": return `<div class="art art-stock">${[["item1", 82, ""], ["item2", 46, ""], ["item3", 12, "low"]].map(([n, w, c], k) => `<div class="stk ${c}" style="--d:${k * 0.2}s"><span>${x(n)}</span><div><i style="--w:${w}%"></i></div>${c ? `<em>${x("low")}</em>` : ""}</div>`).join("")}</div>`;
+    case "team": return `<div class="art art-team">${["👩‍💼", "👨‍💼", "🧑‍💻", "👩‍🔧", "👨‍🏭"].map((c, n) => `<span style="--d:${n * 0.18}s">${c}<i></i></span>`).join("")}<div class="team-note">✓ ${x("present")} 5/5</div></div>`;
+    case "payslip": return `<div class="art art-pay"><div class="pay"><b>${x("payslip")}</b><div class="pay-row"><span></span><span></span></div><div class="pay-row"><span></span><span></span></div><div class="pay-row m"><span></span><span></span></div><div class="pay-net"><span>${x("netpay")}</span><b>1,840</b></div></div></div>`;
+    default: return `<div class="art art-cal"><div class="cal-grid">${Array.from({ length: 28 }, (_, n) => `<span class="${[9, 10, 11, 17].includes(n) ? "lv" : [3, 4].includes(n) ? "off" : ""}" style="--d:${n * 0.03}s"></span>`).join("")}</div><div class="cal-note">🏖️ ${x("leave")}</div></div>`;
+  }
+}
+/** A site's home page: the moving slides, a few figures, what it offers, how it works, common questions, and the button again. */
+function siteLanding(kind) {
+  const k = "site." + kind + ".", ctas = siteButtons(siteCta(kind));
+  const slides = [0, 1, 2].map((i) => `<div class="site-slide ${i === 0 ? "on" : ""}">
+      ${siteArt(kind, i)}
+      <div class="site-slide-text"><h2>${esc(t(k + "slide" + (i + 1) + ".t"))}</h2><p>${esc(t(k + "slide" + (i + 1) + ".d"))}</p><div class="site-actions">${ctas}</div></div>
+    </div>`).join("");
+  return `
+    <section class="site-slider" data-i="0">${slides}<div class="site-dots">${[0, 1, 2].map((i) => `<button class="${i === 0 ? "on" : ""}" onclick="siteSlideTo(this,${i})" aria-label="${i + 1}"></button>`).join("")}</div></section>
+    <div class="site-stats">${[1, 2, 3].map((n) => `<div><b>${esc(t(k + "st" + n + ".n"))}</b><span>${esc(t(k + "st" + n + ".l"))}</span></div>`).join("")}</div>
+    <h2 class="site-h">${esc(t("site.featuresTitle"))}</h2>
+    <div class="site-grid">${SITES[kind].features.map((icon, n) => `<div class="site-feat"><span>${icon}</span><b>${esc(t("sec." + kind + ".f" + (n + 1) + ".t"))}</b><p>${esc(t("sec." + kind + ".f" + (n + 1) + ".d"))}</p></div>`).join("")}</div>
+    <h2 class="site-h">${esc(t("site.stepsTitle"))}</h2>
+    <ol class="site-steps">${[1, 2, 3].map((n) => `<li><span>${n}</span><div><b>${esc(t("sec." + kind + ".s" + n))}</b><p>${esc(t(k + "s" + n + ".d"))}</p></div></li>`).join("")}</ol>
+    <h2 class="site-h">${esc(t("site.faq"))}</h2>
+    <div class="site-faq">${[1, 2, 3, 4].map((n) => `<details><summary>${esc(t(k + "faq" + n + ".q"))}</summary><p>${esc(t(k + "faq" + n + ".a"))}</p></details>`).join("")}</div>
+    <section class="site-cta"><h2>${esc(t("site.ctaTitle"))}</h2><p>${esc(t("site.ctaSub"))}</p><div class="site-actions">${ctas}</div></section>`;
+}
+function siteSlideStep(el, d) {
+  const slides = el.querySelectorAll(".site-slide");
+  if (!slides.length) return;
+  let i = Number(el.dataset.i || 0);
+  slides[i].classList.remove("on");
+  i = (i + d + slides.length) % slides.length;
+  el.dataset.i = String(i);
+  slides[i].classList.add("on");
+  el.querySelectorAll(".site-dots button").forEach((b, n) => b.classList.toggle("on", n === i));
+}
+function siteSlideTo(btn, i) {
+  const el = btn.closest(".site-slider");
+  siteSlideStep(el, i - Number(el.dataset.i || 0));
+}
+setInterval(() => document.querySelectorAll(".site-slider").forEach((el) => { if (!document.hidden) siteSlideStep(el, 1); }), 6000);
 
 // The HR system is a separate web application: this tab is its front page, with a button that opens it.
 const HR_URL = "https://nawa-frontend.onrender.com";
 function openHr() { window.open(HR_URL, "_blank", "noopener"); }
-function screenHr() { return introHtml("hr", { label: t("sec.hr.open"), action: "openHr()" }); }
+function screenHr() { return siteShell("hr", "home", siteLanding("hr")); }
 
 function screenAccounting() {
-  // the intro: for guests (with the sign-in button), on the first visit, and when the "about" link is tapped
-  if (!S.token) return introHtml("accounting", { label: t("sec.login"), action: "go('login')" }, { label: t("sec.register"), action: "go('register')" });
-  if (introOpenNow("accounting")) {
-    const reopened = S._introOpen === "accounting";
-    return introHtml("accounting", { label: t("sec.start"), action: "introFinish('accounting')" }, null, reopened ? `<button class="back-btn" onclick="introFinish('accounting')">‹ ${esc(t("sec.accounting.back"))}</button>` : "");
-  }
+  const tab = siteTab("accounting");
+  // the home page is always there (and is all a guest sees); the tools are the other tabs
+  if (tab === "home" || !S.token) return siteShell("accounting", "home", siteLanding("accounting"));
   if (!S._accounting || S._accounting.loading) {
     if (!S._accounting) { S._accounting = { loading: true }; loadAccounting(); }
-    return `<h1 class="screen-title">${esc(t("accounting.title"))}</h1>${spinner()}`;
+    return siteShell("accounting", tab, spinner());
   }
   const a = S._accounting;
-  if (a.requiresPlan) return introHtml("accounting", { label: t("sec.plans"), action: "S._allPlans=null;go('allPlans')" }, null, `<p class="intro-note">${esc(t("accounting.planRequired"))}</p>`);
+  if (a.requiresPlan) return siteShell("accounting", tab, `<div class="card empty-state"><p>${esc(t("site.planNeeded"))}</p><button class="btn" onclick="S._allPlans=null;go('allPlans')">${esc(t("site.plans"))}</button></div>`);
   const totals = a.summary?.totals || [];
-  return `
-    <h1 class="screen-title">${esc(t("accounting.title"))}</h1>
-    <p class="muted" style="text-align:center">${esc(t("accounting.subtitle"))} <button class="intro-link" onclick="showIntro('accounting')">ⓘ ${esc(t("sec.about"))}</button></p>
+  const cards = {
+    summary: `
     <div class="card"><div class="section-title">${esc(t("accounting.month"))}</div>
       ${totals.length ? totals.map(x => `<div class="title-line"><span>${esc(x.currency)}</span><span>${esc(t("accounting.income"))}: ${fmt(x.incomeCents,x.currency)} · ${esc(t("accounting.expenses"))}: ${fmt(x.expensesCents,x.currency)} · <b>${esc(t("accounting.net"))}: ${fmt(x.netCents,x.currency)}</b></span></div>`).join("") : `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
       <p class="muted">${esc(t("accounting.inventory"))}: ${a.summary?.inventory?.products || 0} ${esc(t("accounting.products"))} · ${esc(t("accounting.units"))}: ${a.summary?.inventory?.units || 0}</p>
       <button class="btn outline" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button>
       <button class="btn outline" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button>
     </div>
+    <div class="card"><div class="section-title">${esc(t("accounting.recent"))}</div>
+      ${(a.summary?.recent || []).map(e => `<div class="title-line"><span><b>${esc(e.description)}</b><div class="muted">${esc(e.category)} · ${new Date(e.occurredAt).toLocaleDateString()}</div></span><strong>${e.type === "EXPENSE" ? "−" : "+"}${fmt(e.amountCents,e.currency)}</strong>${e.source === "MANUAL" || e.source === "INVOICE" ? `<span><button class="btn small outline" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></span>` : ""}</div>`).join("") || `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
+    </div>`,
+    entry: `
     <div class="card"><div class="section-title">${esc(t("accounting.addEntry"))}</div>
       <div class="field"><label>${esc(t("accounting.entryType"))}</label><select id="acc-type"><option value="INCOME">${esc(t("accounting.income"))}</option><option value="EXPENSE">${esc(t("accounting.expenses"))}</option></select></div>
       <div class="field"><label>${esc(t("accounting.category"))}</label><input id="acc-category" placeholder="${esc(t("accounting.categoryHint"))}" /></div>
       <div class="field"><label>${esc(t("accounting.description"))}</label><input id="acc-description" /></div>
       <div class="field"><label>${esc(t("accounting.amount"))}</label><input id="acc-amount" type="number" min="0.01" step="0.01" inputmode="decimal" /></div>
       <button class="btn" onclick="accountingAddEntry()">${esc(t("accounting.save"))}</button>
-    </div>
+    </div>`,
+    invoices: `
     <div class="card"><div class="section-title">${esc(t("accounting.invoicePhoto"))}</div>
       <p class="muted">${esc(t("accounting.invoicePhotoHelp"))}</p>
       <div class="field"><input type="file" accept="image/jpeg,image/png,image/webp" onchange="accountingScanInvoice(this)" /></div>
@@ -2594,7 +2636,8 @@ function screenAccounting() {
         <div class="field"><label>${esc(t("accounting.amount"))}</label><input id="acc-invoice-amount" type="number" min="0.01" step="0.01" value="${a.invoiceDraft.extracted?.totalCents ? (a.invoiceDraft.extracted.totalCents/100).toFixed(2) : ""}" /></div>
         <div class="field"><label>${esc(t("accounting.category"))}</label><input id="acc-invoice-category" value="${esc(t("accounting.purchases"))}" /></div>
         <button class="btn" onclick="accountingConfirmInvoice()">${esc(t("accounting.confirmInvoice"))}</button>` : ""}
-    </div>
+    </div>`,
+    stock: `
     <div class="card"><div class="section-title">${esc(t("accounting.inventory"))} (${a.products?.length || 0})</div>
       <div class="field"><label>${esc(t("accounting.searchBarcode"))}</label><div style="display:flex;gap:8px"><input id="acc-barcode" autocomplete="off"/><button class="btn outline" onclick="accountingScan()">${esc(t("accounting.scan"))}</button></div></div>
       <div id="acc-scanner" hidden><video id="acc-video" playsinline style="width:100%;max-height:220px"></video><button class="btn outline" onclick="accountingStopScan()">${esc(t("accounting.stopScan"))}</button></div>
@@ -2604,10 +2647,9 @@ function screenAccounting() {
       <div class="field"><label>${esc(t("accounting.quantity"))}</label><input id="acc-quantity" type="number" min="0" step="1" value="0" /></div>
       <button class="btn" onclick="accountingAddProduct()">${esc(t("accounting.addProduct"))}</button>
       ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingDeleteProduct('${p.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button>`}</div></div>`).join("")}
-    </div>
-    <div class="card"><div class="section-title">${esc(t("accounting.recent"))}</div>
-      ${(a.summary?.recent || []).map(e => `<div class="title-line"><span><b>${esc(e.description)}</b><div class="muted">${esc(e.category)} · ${new Date(e.occurredAt).toLocaleDateString()}</div></span><strong>${e.type === "EXPENSE" ? "−" : "+"}${fmt(e.amountCents,e.currency)}</strong>${e.source === "MANUAL" || e.source === "INVOICE" ? `<span><button class="btn small outline" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></span>` : ""}</div>`).join("") || `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
-    </div>${errorBanner()}`;
+    </div>`,
+  };
+  return siteShell("accounting", tab, (cards[tab] || cards.summary) + errorBanner());
 }
 async function loadAccounting() {
   const [summary, products] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products")]);
@@ -8045,20 +8087,14 @@ async function submitTopup() {
 
 function screenResponder() {
   if (SOON.responder) return `${backRow()}<div class="center-pad"><h1 class="screen-title">🤖 ${esc(t("tab.responder"))}</h1><p class="muted" style="text-align:center">${esc(t("soon.responder"))}</p></div>`;
-  if (!S.token) return introHtml("responder", { label: t("sec.login"), action: "go('login')" }, { label: t("sec.register"), action: "go('register')" }, backRow());
-  if (introOpenNow("responder")) return introHtml("responder", { label: t("sec.start"), action: "introFinish('responder')" }, null, S._introOpen === "responder" ? `<button class="back-btn" onclick="introFinish('responder')">‹ ${esc(t("sec.responder.back"))}</button>` : backRow());
-  if (!S._resp) { S._resp = { loading: true, tab: "overview" }; loadResponder(); }
+  const tab = siteTab("responder");
+  // the home page is always there (and is all a guest sees); the tools are the other tabs
+  if (tab === "home" || !S.token) return backRow() + siteShell("responder", "home", siteLanding("responder"));
+  if (!S._resp) { S._resp = { loading: true, tab }; loadResponder(); }
   const r = S._resp;
-  if (r.loading) return backRow() + spinner();
-  const tabs = [["overview", "الحالة"], ["channels", "القنوات"], ["rules", "القواعد"], ["inbox", "الوارد"]];
-  return `
-    ${backRow()}
-    <h1 class="screen-title">🤖 المجيب الآلي <button class="intro-link" onclick="showIntro('responder')">ⓘ ${esc(t("sec.about"))}</button></h1>
-    <div class="chip-row" style="margin:10px 0 14px">
-      ${tabs.map(([id, label]) => `<button class="chip ${r.tab === id ? "active" : ""}" onclick="setRespTab('${id}')">${label}</button>`).join("")}
-    </div>
-    ${{ overview: respOverview, channels: respChannels, rules: respRules, inbox: respInbox }[r.tab]()}
-  `;
+  r.tab = tab;
+  if (r.loading) return backRow() + siteShell("responder", tab, spinner());
+  return backRow() + siteShell("responder", tab, { overview: respOverview, channels: respChannels, rules: respRules, inbox: respInbox }[tab]());
 }
 
 async function loadResponder() {
@@ -8072,7 +8108,7 @@ async function loadResponder() {
   render();
 }
 
-function setRespTab(tab) { S._resp.tab = tab; S.error = null; render(); }
+function setRespTab(tab) { setSiteTab("responder", tab); }
 
 function respStatusBadge(st) {
   const map = { TRIAL: ["info", "تجربة مجانية"], ACTIVE: ["success", "فعّالة"], EXPIRED: ["danger", "منتهية"], OFF: ["neutral", "غير مفعّلة"] };
@@ -8536,6 +8572,7 @@ function bootMetaReturn() {
   if (!S.token) return false;
   S.stack = [];
   S.params = {};
+  (S._site = S._site || {}).responder = "channels";
   S._resp = { loading: true, tab: "channels", notice: q.get("ok") === "1" ? "تم ربط الصفحة ✅" : null };
   if (q.get("ok") !== "1") S.error = "تعذّر ربط الصفحة. جرّب من جديد.";
   go("responder");
@@ -8554,6 +8591,7 @@ function bootResponderPlansLink() {
     return true;
   }
   S._resp = null;
+  (S._site = S._site || {}).responder = "overview";
   go("responder");
   return true;
 }

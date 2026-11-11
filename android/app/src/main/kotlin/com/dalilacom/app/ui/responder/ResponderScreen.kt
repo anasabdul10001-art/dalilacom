@@ -77,8 +77,6 @@ fun ResponderScreen(
     factory: ViewModelFactory,
     onBack: () -> Unit,
     onOpenWallet: () -> Unit,
-    /** Opens the section's intro page again. */
-    onAbout: () -> Unit = {},
     /** Come back from the browser through dalilacom://responder/meta (null unless we were sent there). */
     metaOk: Boolean? = null,
     metaConnectionId: String? = null,
@@ -112,7 +110,6 @@ fun ResponderScreen(
         ) {
             TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_328ddce5)) }
             Text(AppStrings.get(R.string.s_2136e58d), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
-            TextButton(onClick = onAbout) { Text(AppStrings.get(R.string.sec_about)) }
         }
         TabRow(selectedTabIndex = state.tab) {
             TAB_TITLES.forEachIndexed { index, title ->
