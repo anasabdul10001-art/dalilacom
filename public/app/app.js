@@ -2765,65 +2765,112 @@ function profileServiceLinksHtml() {
   return "";
 }
 
+/* ---- The account page: a header, three quick tiles, then the rest grouped in sections that open one at a time ---- */
+
+// some labels already start with their own emoji: the row has an icon of its own, so that is dropped
+function plainLabel(text) { return String(text).replace(/^[^\p{L}\p{N}]+/u, ""); }
+function profRow(icon, label, onclick, sub) {
+  return `<button class="prof-row" onclick="${onclick}"><span class="prof-row-ico">${icon}</span><span class="prof-row-text"><b>${esc(plainLabel(label))}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span><span class="prof-chev">›</span></button>`;
+}
+function profSection(id, icon, title, sub, body) {
+  const open = (S._profAcc || {}).open === id;
+  return `<section class="acc ${open ? "open" : ""}">
+    <button class="acc-head" onclick="toggleProfSection('${id}')" aria-expanded="${open}">
+      <span class="acc-ico">${icon}</span>
+      <span class="acc-title"><b>${esc(title)}</b><small>${esc(sub)}</small></span>
+      <span class="acc-chev">⌄</span>
+    </button>
+    ${open ? `<div class="acc-body">${body}</div>` : ""}
+  </section>`;
+}
+function toggleProfSection(id) {
+  S._profAcc = S._profAcc || {};
+  S._profAcc.open = S._profAcc.open === id ? null : id;
+  render();
+}
+
 function tabProfile() {
   if (!S._sellerPays) { S._sellerPays = { loading: true, methods: [] }; loadSellerPaymentMethods(); }
-if (S.role === "MERCHANT" && !S._fitnessAccessChecked) loadFitnessAccess();
+  if (S.role === "MERCHANT" && !S._fitnessAccessChecked) loadFitnessAccess();
+  if (S._profile == null) { S._profile = {}; loadProfile(); }
+  if (S.account == null) { S.account = {}; loadAccountInfo(); }
+  if (S._refMe == null) loadRefMe();
+  const p = S._profile;
+
+  const buy = [
+    profRow("🛒", t("profile.myCart"), "setHomeTab('cart')"),
+    profRow("📦", t("tab.orders"), "setHomeTab('orders')"),
+    profRow("♥", t("profile.favorites"), "go('favorites')"),
+    profRow("🧾", t("dh.titleMine"), "openDiscountHistory('mine')"),
+    profRow("🛍️", t("prof.usedMarket"), "S._market=null;go('marketplace')"),
+  ].join("");
+
+  const wallet = [
+    profRow("👛", t("profile.wallet"), "go('wallet')"),
+    profRow("⭐", t("plans.title"), "S._allPlans=null;go('allPlans')"),
+    `<div class="acc-sub">${sellerPayoutSettingsHtml()}</div>`,
+  ].join("");
+
+  const business = S.role === "MERCHANT"
+    ? [
+        profRow("🏪", t("profile.merchantMode"), "S._mstat=null;S.merchantTab='catalog';go('merchantMode')"),
+        profRow("🛍️", t("sp.title"), "openStorePlans()"),
+        profRow("📍", t("profile.mapListing"), "S._mprof=null;go('merchantProfile')"),
+        profRow("📢", t("profile.myAds"), "S._myAds=null;go('myAds')"),
+        profRow("🤝", t("profile.affiliates"), "openMyMarketingTeam()"),
+      ].join("")
+    : S.role === "CUSTOMER"
+      ? [
+          profRow("📍", t("profile.registerMerchant"), "go('merchantRegister',{mode:'map'})", t("profile.mapActivitySub")),
+          profRow("🛍️", t("profile.openOnlineStore"), "go('merchantRegister',{mode:'store'})", t("profile.startSellingSub")),
+        ].join("")
+      : "";
+
+  const marketing = S._refMe ? profRow("📣", t(S._refMe.isMarketer ? "ref.title" : "ref.become"), "go('marketing')") : "";
+
+  const fitness = S._fitnessAccess
+    ? profRow("🏋️", t("fitness.profile"), "openFitnessProfile()") + profRow("📋", t("fitness.plansTitle"), "openFitnessPlans()")
+    : "";
+  const serviceLinks = profileServiceLinksHtml();
+  const services = fitness + (serviceLinks ? `<div class="acc-legacy">${serviceLinks}</div>` : "");
+
+  const privacy = `
+    <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
+    <p class="muted" style="margin:4px 0 10px">${esc(t("profile.shareLocationSub"))}</p>
+    ${shareLocationOn() ? myLocationHtml() : ""}`;
+
+  const account = [
+    profRow("⚙️", t("profile.account"), "S._acct=null;go('account')"),
+    profRow("⬇️", t("profile.exportData"), "downloadMyData()"),
+    profRow("↩︎", t("profile.logout"), "doLogout()"),
+    `<button class="link-btn acc-danger" onclick="deleteMyAccount()">${esc(t("profile.deleteAccount"))}</button>`,
+  ].join("");
 
   return `
-    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:50px">
-      ${(() => {
-        if (S._profile == null) { S._profile = {}; loadProfile(); }
-        const p = S._profile;
-        return `<div style="display:flex;justify-content:center">${avatarHtml(p.avatarUrl, p.fullName, "huge")}</div>
-          <h1 class="screen-title" style="margin:10px 0 2px">${esc(p.fullName || t("profile.myAccount"))}</h1>
-          ${p.bio ? `<p class="muted" style="margin:0 0 6px;max-width:260px">${esc(p.bio)}</p>` : ""}
-          <button class="link-btn" onclick="go('profileEdit')">${esc(t("profile.edit"))}</button>`;
-      })()}
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="setHomeTab('cart')">🛒 ${esc(t("profile.myCart"))}</button>
-      <div style="height:10px"></div>
-      ${S.role === "MERCHANT"
-        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='catalog';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
-           <div style="height:8px"></div>
-           <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="S._mprof=null;go('merchantProfile')">📍 ${esc(t("profile.mapListing"))}</button>`
-        : S.role === "CUSTOMER" ? `<button class="btn" style="max-width:320px" onclick="go('merchantRegister',{mode:'map'})">📍 ${esc(t("profile.registerMerchant"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.mapActivitySub"))}</p><div style="height:10px"></div><button class="btn outline" style="max-width:320px" onclick="go('merchantRegister',{mode:'store'})">🛍️ ${esc(t("profile.openOnlineStore"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.startSellingSub"))}</p>` : ""}
-      <div style="height:10px"></div>
-      ${S._fitnessAccess ? `<button class="btn outline" style="max-width:280px" onclick="openFitnessProfile()">🏋️ ${esc(t("fitness.profile"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="openFitnessPlans()">📋 ${esc(t("fitness.plansTitle"))}</button><div style="height:8px"></div>` : ""}
-      ${profileServiceLinksHtml()}
-      <div style="height:14px"></div>
-      ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
-      <div style="height:10px"></div>
-      <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
-      <p class="muted" style="margin:0 0 10px">${esc(t("profile.shareLocationSub"))}</p>
-      ${shareLocationOn() ? myLocationHtml() : ""}
-      <button class="btn outline" style="max-width:240px" onclick="S._acct=null;go('account')">${esc(t("profile.account"))}</button>
-      <div style="height:10px"></div>
-      ${sellerPayoutSettingsHtml()}
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('favorites')">♥ ${esc(t("profile.favorites"))}</button>
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="setHomeTab('orders')">📦 ${esc(t("tab.orders"))}</button>
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="S._market=null;go('marketplace')">🛒 سوق المنتجات المستعملة</button>
-      <div style="height:10px"></div>
-      ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
-      <div style="height:10px"></div>
-      ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:280px" onclick="openMyMarketingTeam()">🤝 ${esc(t("profile.affiliates"))}</button><div style="height:10px"></div>` : ""}
-      ${(() => { if (S._refMe == null) { loadRefMe(); return ""; } return `<button class="btn outline" style="max-width:240px" onclick="go('marketing')">📣 ${esc(t(S._refMe.isMarketer ? "ref.title" : "ref.become"))}</button><div style="height:10px"></div>`; })()}
-      <div style="height:10px"></div>
-      ${S.role === "ADMIN" ? `<button class="btn" style="max-width:240px" onclick="S._adr=null;go('adminReview')">📣 ${esc(t("adr.title"))}</button><div style="height:10px"></div>` : ""}
-      <button class="btn outline" style="max-width:240px" onclick="openDiscountHistory('mine')">🧾 ${esc(t("dh.titleMine"))}</button>
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="S._allPlans=null;go('allPlans')">${esc(t("plans.title"))}</button>
-      <div style="height:14px"></div>
+    <div class="prof">
+      <div class="prof-head">
+        ${avatarHtml(p.avatarUrl, p.fullName, "huge")}
+        <h1>${esc(p.fullName || t("profile.myAccount"))}</h1>
+        ${p.bio ? `<p class="muted">${esc(p.bio)}</p>` : ""}
+        <button class="prof-edit" onclick="go('profileEdit')">✎ ${esc(plainLabel(t("profile.edit")))}</button>
+      </div>
+      <div class="prof-quick">
+        <button onclick="setHomeTab('cart')"><span>🛒</span>${esc(plainLabel(t("profile.myCart")))}</button>
+        <button onclick="setHomeTab('orders')"><span>📦</span>${esc(plainLabel(t("tab.orders")))}</button>
+        <button onclick="toggleProfSection('wallet')"><span>👛</span>${esc(plainLabel(t("profile.wallet")))}</button>
+      </div>
+      ${verifyBannerHtml()}
+      <div class="acc-list">
+        ${profSection("buy", "🛒", t("prof.sec.buy"), t("prof.sec.buySub"), buy)}
+        ${profSection("wallet", "👛", t("prof.sec.wallet"), t("prof.sec.walletSub"), wallet)}
+        ${business ? profSection("business", "🏪", t("prof.sec.business"), t("prof.sec.businessSub"), business) : ""}
+        ${marketing ? profSection("marketing", "📣", t("prof.sec.marketing"), t("prof.sec.marketingSub"), marketing) : ""}
+        ${services ? profSection("services", "🩺", t("prof.sec.services"), t("prof.sec.servicesSub"), services) : ""}
+        ${profSection("privacy", "📍", t("prof.sec.privacy"), t("prof.sec.privacySub"), privacy)}
+        ${S.role === "ADMIN" ? profSection("admin", "🛡️", t("prof.sec.admin"), t("prof.sec.adminSub"), profRow("📣", t("adr.title"), "S._adr=null;go('adminReview')")) : ""}
+        ${profSection("account", "⚙️", t("prof.sec.account"), t("prof.sec.accountSub"), account)}
+      </div>
       ${followUsHtml(true)}
-      <button class="btn outline" style="max-width:240px" onclick="downloadMyData()">⬇️ ${esc(t("profile.exportData"))}</button>
-      <div style="height:10px"></div>
-      <button class="btn secondary" style="max-width:240px" onclick="doLogout()">${esc(t("profile.logout"))}</button>
-      <div style="height:10px"></div>
-      <button class="link-btn" style="color:var(--danger, #b71c1c)" onclick="deleteMyAccount()">${esc(t("profile.deleteAccount"))}</button>
       ${legalLinksHtml()}
     </div>
   `;

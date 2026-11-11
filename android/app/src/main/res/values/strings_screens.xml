@@ -498,4 +498,20 @@
     <string name="sec_hr_s1" formatted="false">سجّل شركتك</string>
     <string name="sec_hr_s2" formatted="false">أضف أقسامك وموظفيك</string>
     <string name="sec_hr_s3" formatted="false">شغّل الرواتب وتابع التقارير</string>
+    <string name="prof_sec_buy" formatted="false">مشترياتي</string>
+    <string name="prof_sec_buy_sub" formatted="false">السلة والطلبات والمفضلة</string>
+    <string name="prof_sec_wallet" formatted="false">محفظتي</string>
+    <string name="prof_sec_wallet_sub" formatted="false">الرصيد ووسائل استلام المصاري</string>
+    <string name="prof_sec_business" formatted="false">نشاطي التجاري</string>
+    <string name="prof_sec_business_sub" formatted="false">المتجر والخريطة والإعلانات</string>
+    <string name="prof_sec_marketing" formatted="false">التسويق</string>
+    <string name="prof_sec_marketing_sub" formatted="false">اربح عمولة من الإحالات</string>
+    <string name="prof_sec_services" formatted="false">خدماتي</string>
+    <string name="prof_sec_services_sub" formatted="false">المواعيد والتدريب</string>
+    <string name="prof_sec_privacy" formatted="false">الموقع</string>
+    <string name="prof_sec_privacy_sub" formatted="false">مشاركة موقعي ومكاني على الخريطة</string>
+    <string name="prof_sec_admin" formatted="false">الإدارة</string>
+    <string name="prof_sec_admin_sub" formatted="false">مراجعة الإعلانات والطلبات</string>
+    <string name="prof_sec_account" formatted="false">حسابي وأماني</string>
+    <string name="prof_sec_account_sub" formatted="false">بياناتي، الإشعارات، تسجيل الخروج</string>
 </resources>

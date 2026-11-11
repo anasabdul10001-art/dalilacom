@@ -20,6 +20,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.dalilacom.app.R
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.getValue
@@ -116,31 +128,65 @@ if (role == "CUSTOMER") {
         }
     }
 
+    // the sections open one at a time; the quick tiles and the header stay on top
+    var openSection by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    fun toggle(id: String) { openSection = if (openSection == id) null else id }
+
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Avatar(profile?.fullName ?: AppStrings.get(R.string.s_d14862b0), size = 96.dp, imageUrl = profile?.avatarUrl)
-        Spacer(Modifier.height(10.dp))
-        Text(profile?.fullName ?: stringResource(R.string.profile_title), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-        profile?.bio?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        // header
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
+                .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surfaceVariant)))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(28.dp))
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Avatar(profile?.fullName ?: AppStrings.get(R.string.s_d14862b0), size = 96.dp, imageUrl = profile?.avatarUrl)
+            Spacer(Modifier.height(10.dp))
+            Text(profile?.fullName ?: stringResource(R.string.profile_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+            profile?.bio?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onEditProfile, shape = RoundedCornerShape(999.dp)) { Text("✎  " + plainLabel(stringResource(R.string.profile_edit))) }
         }
-        TextButton(onClick = onEditProfile) { Text(stringResource(R.string.profile_edit)) }
-        TextButton(onClick = onOpenAccount) { Text(stringResource(R.string.profile_account_settings)) }
-        if (role == "CUSTOMER" && (hasDoctorConnection || hasDoctorAppointment)) {
-            OutlinedButton(onClick = onOpenDoctorCare, modifier = Modifier.fillMaxWidth()) { Text("🩺  " + stringResource(R.string.care_title)) }
-            OutlinedButton(onClick = onOpenAppointments, modifier = Modifier.fillMaxWidth()) { Text("📅  " + stringResource(R.string.appointment_my_title)) }
+        // quick tiles
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ProfileTile("🛒", plainLabel(stringResource(R.string.profile_my_cart)), onOpenCart, Modifier.weight(1f))
+            ProfileTile("📦", plainLabel(stringResource(R.string.tab_orders)), onOpenOrders, Modifier.weight(1f))
+            ProfileTile("👛", plainLabel(stringResource(R.string.profile_wallet)), { toggle("wallet") }, Modifier.weight(1f))
         }
-        if (role == "MERCHANT" && doctorProvider) {
-            OutlinedButton(onClick = onOpenDoctorCare, modifier = Modifier.fillMaxWidth()) { Text("🩺  " + stringResource(R.string.care_title)) }
-            OutlinedButton(onClick = onOpenAppointments, modifier = Modifier.fillMaxWidth()) { Text("📅  " + stringResource(R.string.appointment_my_title)) }
+        // Only nag about verifying when the server can actually deliver the email.
+        account?.takeIf { !it.user.emailVerified && it.emailDeliveryEnabled }?.let { me ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(stringResource(R.string.verify_title), style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.verify_sub), style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = {
+                        scope.launch {
+                            val sent = container.authRepository.resendVerification(me.user.email)
+                            Toast.makeText(context, if (sent) context.getString(R.string.verify_sent) else context.getString(R.string.verify_failed), Toast.LENGTH_SHORT).show()
+                        }
+                    }) { Text(stringResource(R.string.verify_resend)) }
+                }
+            }
         }
-        OutlinedButton(onClick = onOpenFavorites, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_favorites)) }
-        OutlinedButton(onClick = onOpenCart, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_my_cart)) }
-        OutlinedButton(onClick = onOpenOrders, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.tab_orders)) }
-        Spacer(Modifier.height(12.dp))
+
+
+        // purchases
+        ProfileSection("🛒", stringResource(R.string.prof_sec_buy), stringResource(R.string.prof_sec_buy_sub), openSection == "buy", { toggle("buy") }) {
+            ProfileRow("🛒", stringResource(R.string.profile_my_cart), onClick = onOpenCart)
+            ProfileRow("📦", stringResource(R.string.tab_orders), onClick = onOpenOrders)
+            ProfileRow("♥", stringResource(R.string.profile_favorites), onClick = onOpenFavorites)
+            ProfileRow("🧾", stringResource(R.string.dh_title_mine), onClick = onOpenHistory)
+            ProfileRow("🛍️", AppStrings.get(R.string.s_e4b4c234), onClick = onOpenMarketplace)
+        }
+        // wallet: the balance, and how the person gets paid for what they sell
+        ProfileSection("👛", stringResource(R.string.prof_sec_wallet), stringResource(R.string.prof_sec_wallet_sub), openSection == "wallet", { toggle("wallet") }) {
+            ProfileRow("👛", stringResource(R.string.profile_wallet), onClick = onOpenWallet)
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text(AppStrings.get(R.string.s_b179bf25), style = MaterialTheme.typography.titleMedium)
@@ -168,57 +214,38 @@ if (role == "CUSTOMER") {
                 }, modifier = Modifier.fillMaxWidth()) { Text(if (payoutSaving) AppStrings.get(R.string.affiliate_team_saving) else AppStrings.get(R.string.s_40c2c372)) }
             }
         }
-        Spacer(Modifier.height(12.dp))
-        if (role == "MERCHANT") {
-            if (fitnessProvider) {
-                OutlinedButton(onClick = onOpenFitnessProfile, modifier = Modifier.fillMaxWidth()) { Text("🏋️  " + stringResource(R.string.fitness_profile)) }
-                OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.fit_auto_c2ed8d0d)) }
+        }
+        // the person's business (a shop) or the way to start one
+        if (role == "MERCHANT" || role == "CUSTOMER") ProfileSection("🏪", stringResource(R.string.prof_sec_business), stringResource(R.string.prof_sec_business_sub), openSection == "business", { toggle("business") }) {
+            if (role == "MERCHANT") {
+                ProfileRow("🏪", stringResource(R.string.profile_merchant_mode), onClick = onOpenMerchantMode)
+                ProfileRow("🛍️", stringResource(R.string.sp_title), onClick = onOpenStore)
+                ProfileRow("📍", stringResource(R.string.profile_map_listing), onClick = onOpenMapListing)
+                ProfileRow("📢", stringResource(R.string.profile_my_ads), onClick = onOpenMyAds)
+                ProfileRow("🤝", stringResource(R.string.profile_marketing_team), onClick = onOpenMarketingTeam)
+            } else {
+                ProfileRow("📍", stringResource(R.string.profile_register_merchant), stringResource(R.string.profile_map_activity_sub), onRegisterMerchant)
+                ProfileRow("🛍️", stringResource(R.string.profile_open_online_store), stringResource(R.string.profile_start_selling_sub), onOpenOnlineStore)
             }
-            Button(onClick = onOpenMerchantMode, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_merchant_mode)) }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sp_title)) }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onOpenMapListing, modifier = Modifier.fillMaxWidth()) { Text("📍  " + stringResource(R.string.profile_map_listing)) }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onOpenMarketingTeam, modifier = Modifier.fillMaxWidth()) { Text("🤝  " + stringResource(R.string.profile_marketing_team)) }
-        } else if (role == "CUSTOMER") {
-            Button(onClick = onRegisterMerchant, modifier = Modifier.fillMaxWidth()) { Text("📍  " + stringResource(R.string.profile_register_merchant)) }
-            Text(stringResource(R.string.profile_map_activity_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 5.dp))
-            Spacer(Modifier.height(10.dp))
-            OutlinedButton(onClick = onOpenOnlineStore, modifier = Modifier.fillMaxWidth()) { Text("🛍️  " + stringResource(R.string.profile_open_online_store)) }
-            Text(stringResource(R.string.profile_start_selling_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 5.dp))
-            Spacer(Modifier.height(8.dp))
-            if (hasFitnessPlan) OutlinedButton(onClick = onOpenFitnessPlans, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.fit_auto_d141a0e3)) }
-
         }
-        Spacer(Modifier.height(24.dp))
-
-        // Only nag about verifying when the server can actually deliver the email.
-        account?.takeIf { !it.user.emailVerified && it.emailDeliveryEnabled }?.let { me ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(stringResource(R.string.verify_title), style = MaterialTheme.typography.titleSmall)
-                    Text(stringResource(R.string.verify_sub), style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = {
-                        scope.launch {
-                            val sent = container.authRepository.resendVerification(me.user.email)
-                            Toast.makeText(context, if (sent) context.getString(R.string.verify_sent) else context.getString(R.string.verify_failed), Toast.LENGTH_SHORT).show()
-                        }
-                    }) { Text(stringResource(R.string.verify_resend)) }
-                }
+        ProfileSection("📣", stringResource(R.string.prof_sec_marketing), stringResource(R.string.prof_sec_marketing_sub), openSection == "marketing", { toggle("marketing") }) {
+            ProfileRow("📣", stringResource(R.string.ref_title), onClick = onOpenMarketing)
+        }
+        // services that exist only when the person has a real relation to them (a doctor, a trainer, a plan)
+        val hasDoctorCare = (role == "CUSTOMER" && (hasDoctorConnection || hasDoctorAppointment)) || (role == "MERCHANT" && doctorProvider)
+        val hasServices = hasDoctorCare || (role == "MERCHANT" && fitnessProvider) || (role == "CUSTOMER" && hasFitnessPlan)
+        if (hasServices) ProfileSection("🩺", stringResource(R.string.prof_sec_services), stringResource(R.string.prof_sec_services_sub), openSection == "services", { toggle("services") }) {
+            if (hasDoctorCare) {
+                ProfileRow("🩺", stringResource(R.string.care_title), onClick = onOpenDoctorCare)
+                ProfileRow("📅", stringResource(R.string.appointment_my_title), onClick = onOpenAppointments)
             }
-            Spacer(Modifier.height(16.dp))
+            if (role == "MERCHANT" && fitnessProvider) {
+                ProfileRow("🏋️", stringResource(R.string.fitness_profile), onClick = onOpenFitnessProfile)
+                ProfileRow("📋", stringResource(R.string.fit_auto_c2ed8d0d), onClick = onOpenFitnessPlans)
+            }
+            if (role == "CUSTOMER" && hasFitnessPlan) ProfileRow("🏋️", stringResource(R.string.fit_auto_d141a0e3), onClick = onOpenFitnessPlans)
         }
-
-        if (role == "ADMIN") {
-            Button(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.review_title)) }
-            Spacer(Modifier.height(8.dp))
-        }
-        Spacer(Modifier.height(16.dp))
-        OutlinedButton(onClick = onOpenNotifications, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.profile_notifications) + if (unread > 0) " ($unread)" else "")
-        }
-        Spacer(Modifier.height(12.dp))
+        ProfileSection("📍", stringResource(R.string.prof_sec_privacy), stringResource(R.string.prof_sec_privacy_sub), openSection == "privacy", { toggle("privacy") }) {
         // Opt-in: with this on, the app tells the server roughly where the person is (while the map is in use) so shops
         // nearby can send them offers. Off by default; switching it off makes the server forget the position.
         val shareLocation by container.sessionStore.shareLocationFlow.collectAsState(initial = false)
@@ -269,23 +296,13 @@ if (role == "CUSTOMER") {
                 Text("✓ " + stringResource(R.string.loc_saved), color = Color(0xFF1E8E3E), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 4.dp))
             }
         }
-        Spacer(Modifier.height(8.dp))
-        if (role == "MERCHANT") {
-            OutlinedButton(onClick = onOpenMyAds, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_my_ads)) }
         }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onOpenMarketplace, modifier = Modifier.fillMaxWidth()) { Text("🛒 " + AppStrings.get(R.string.s_e4b4c234)) }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onOpenWallet, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_wallet)) }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onOpenHistory, modifier = Modifier.fillMaxWidth()) { Text("🧾 " + stringResource(R.string.dh_title_mine)) }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onOpenMarketing, modifier = Modifier.fillMaxWidth()) { Text("📣 " + stringResource(R.string.ref_title)) }
-        Spacer(Modifier.height(16.dp))
-        com.dalilacom.app.ui.common.FollowUsButton(Modifier.fillMaxWidth())
-        com.dalilacom.app.ui.common.LegalLinks()
-        Spacer(Modifier.height(16.dp))
-
+        if (role == "ADMIN") ProfileSection("🛡️", stringResource(R.string.prof_sec_admin), stringResource(R.string.prof_sec_admin_sub), openSection == "admin", { toggle("admin") }) {
+            ProfileRow("📣", stringResource(R.string.review_title), onClick = onOpenReview)
+        }
+        ProfileSection("⚙️", stringResource(R.string.prof_sec_account), stringResource(R.string.prof_sec_account_sub), openSection == "account", { toggle("account") }) {
+            ProfileRow("⚙️", stringResource(R.string.profile_account_settings), onClick = onOpenAccount)
+            ProfileRow("🔔", stringResource(R.string.profile_notifications) + if (unread > 0) " ($unread)" else "", onClick = onOpenNotifications)
         // "Download my data" (GDPR right of access): everything held about the person, handed to the share sheet as text
         val exportContext = androidx.compose.ui.platform.LocalContext.current
         OutlinedButton(onClick = {
@@ -302,8 +319,7 @@ if (role == "CUSTOMER") {
                     .onFailure { android.widget.Toast.makeText(exportContext, it.message, android.widget.Toast.LENGTH_SHORT).show() }
             }
         }, modifier = Modifier.fillMaxWidth()) { Text("⬇️ " + stringResource(R.string.profile_export_data)) }
-        Spacer(Modifier.height(12.dp))
-
+            Spacer(Modifier.height(4.dp))
         Button(onClick = {
             scope.launch {
                 container.notificationRepository.unregisterCurrentDevice() // before the session is gone
@@ -356,5 +372,60 @@ if (role == "CUSTOMER") {
                 dismissButton = { TextButton(onClick = { askDelete = false }) { Text(stringResource(R.string.profile_delete_cancel)) } },
             )
         }
+
+        }
+        com.dalilacom.app.ui.common.FollowUsButton(Modifier.fillMaxWidth())
+        com.dalilacom.app.ui.common.LegalLinks()
+    }
+}
+
+/** Some labels already start with their own emoji; a row has an icon of its own, so that one is dropped. */
+private fun plainLabel(text: String) = text.trimStart { !it.isLetterOrDigit() }
+
+@Composable
+private fun ProfileTile(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp)).clickable(onClick = onClick).padding(vertical = 14.dp, horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) { Text(icon, fontSize = 20.sp) }
+        Text(label, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+    }
+}
+
+/** A group of the account page: a header (icon, title, a line of what is inside, a chevron) that opens the group's content. */
+@Composable
+private fun ProfileSection(icon: String, title: String, sub: String, expanded: Boolean, onToggle: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val border = if (expanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, border, RoundedCornerShape(22.dp))) {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(
+                Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(if (expanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) { Text(icon, fontSize = 21.sp) }
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold)
+                Text(sub, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(if (expanded) "⌃" else "⌄", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (expanded) Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+    }
+}
+
+/** One line inside a group: an icon, the label (and a line under it when it helps) and a chevron. */
+@Composable
+private fun ProfileRow(icon: String, label: String, sub: String? = null, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(icon, fontSize = 19.sp, modifier = Modifier.width(30.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Column(Modifier.weight(1f)) {
+            Text(plainLabel(label), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            if (sub != null) Text(sub, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text("›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

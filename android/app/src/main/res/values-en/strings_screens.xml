@@ -498,4 +498,20 @@
     <string name="sec_hr_s1" formatted="false">Register your company</string>
     <string name="sec_hr_s2" formatted="false">Add your departments and employees</string>
     <string name="sec_hr_s3" formatted="false">Run payroll and follow the reports</string>
+    <string name="prof_sec_buy" formatted="false">My purchases</string>
+    <string name="prof_sec_buy_sub" formatted="false">Cart, orders and favourites</string>
+    <string name="prof_sec_wallet" formatted="false">My wallet</string>
+    <string name="prof_sec_wallet_sub" formatted="false">Balance and how you get paid</string>
+    <string name="prof_sec_business" formatted="false">My business</string>
+    <string name="prof_sec_business_sub" formatted="false">Store, map listing and ads</string>
+    <string name="prof_sec_marketing" formatted="false">Marketing</string>
+    <string name="prof_sec_marketing_sub" formatted="false">Earn commission on referrals</string>
+    <string name="prof_sec_services" formatted="false">My services</string>
+    <string name="prof_sec_services_sub" formatted="false">Appointments and training</string>
+    <string name="prof_sec_privacy" formatted="false">Location</string>
+    <string name="prof_sec_privacy_sub" formatted="false">Share my location and my place on the map</string>
+    <string name="prof_sec_admin" formatted="false">Administration</string>
+    <string name="prof_sec_admin_sub" formatted="false">Review ads and requests</string>
+    <string name="prof_sec_account" formatted="false">My account and security</string>
+    <string name="prof_sec_account_sub" formatted="false">My data, notifications, log out</string>
 </resources>

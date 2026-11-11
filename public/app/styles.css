@@ -1877,3 +1877,37 @@ html[dir="ltr"] .setup-step .s-go { transform: scaleX(-1); }
 .intro-note { margin: 0 0 10px; padding: 10px 14px; border-radius: 14px; background: var(--warning-bg); color: var(--warning); font-size: 13px; text-align: center; }
 .intro-link { border: 0; background: none; color: var(--primary-deep); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; padding: 0 4px; }
 @media (max-width: 420px) { .intro-grid { grid-template-columns: 1fr; } }
+
+/* ---- Account page: header, quick tiles and sections that open one at a time ---- */
+.prof { width: 100%; max-width: 560px; margin: 0 auto; padding: 18px 2px 30px; display: flex; flex-direction: column; gap: 14px; }
+.prof-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 22px 16px 18px; border-radius: 28px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--surface) 0%, var(--surface-alt) 100%); }
+.prof-head h1 { margin: 8px 0 0; font-size: 21px; font-weight: 800; }
+.prof-head .muted { margin: 0; max-width: 300px; font-size: 13px; }
+.prof-edit { margin-top: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px; padding: 7px 16px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.prof-quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.prof-quick button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 6px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.prof-quick button span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 14px; background: var(--surface-alt); font-size: 20px; }
+.acc-list { display: flex; flex-direction: column; gap: 10px; }
+.acc { border: 1px solid var(--border); border-radius: 22px; background: var(--surface); overflow: hidden; }
+.acc.open { border-color: var(--primary); box-shadow: 0 8px 24px -16px var(--primary-deep); }
+.acc-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px; border: 0; background: none; color: var(--text); font: inherit; text-align: start; cursor: pointer; }
+.acc-ico { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--surface-alt); font-size: 21px; }
+.acc.open .acc-ico { background: var(--primary); }
+.acc-title { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acc-title b { font-size: 15px; }
+.acc-title small { color: var(--text-muted); font-size: 12px; }
+.acc-chev { flex: none; color: var(--text-muted); font-size: 20px; line-height: 1; transition: transform .2s; }
+.acc.open .acc-chev { transform: rotate(180deg); color: var(--primary-deep); }
+.acc-body { padding: 2px 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.prof-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 0; border-radius: 16px; background: var(--surface-alt); color: var(--text); font: inherit; text-align: start; cursor: pointer; }
+.prof-row-ico { flex: none; width: 30px; text-align: center; font-size: 19px; }
+.prof-row-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prof-row-text b { font-size: 14px; font-weight: 700; }
+.prof-row-text small { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+.prof-chev { flex: none; color: var(--text-muted); font-size: 20px; }
+[dir="rtl"] .prof-chev, :root[dir="rtl"] .prof-chev { transform: scaleX(-1); }
+.acc-sub .card { width: 100% !important; box-shadow: none; border: 1px solid var(--border); background: var(--surface); }
+.acc-legacy .btn { max-width: none !important; width: 100%; justify-content: flex-start; border: 0; background: var(--surface-alt); border-radius: 16px; margin-bottom: 8px; }
+.acc-legacy div[style*="height"] { display: none; }
+.acc-danger { align-self: center; margin-top: 6px; color: var(--danger, #b71c1c); }
+.prof .card { width: 100% !important; text-align: start; }
