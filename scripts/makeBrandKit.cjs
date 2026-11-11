@@ -9,7 +9,7 @@ const source = path.join(root, "public", "brand", "app-icon-1024-transparent.png
 const out = path.join(root, "brand-kit", "logo");
 fs.mkdirSync(out, { recursive: true });
 
-const RED = { r: 0xcb, g: 0x0c, b: 0x2e };
+const RED = { r: 0xf4, g: 0x80, b: 0x50 }; // the brand coral orange (the variable keeps its old name)
 
 /** The logo with every visible pixel painted one colour (alpha kept). */
 async function mono(color) {
