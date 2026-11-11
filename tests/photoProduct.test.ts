@@ -1,15 +1,23 @@
-import { describe, it, expect, afterAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import crypto from "crypto";
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
 import { reservedIsoCode2, uniqueEmail } from "./helpers";
 import { resetAiProviderState } from "../src/services/ai.service";
+import { getSettings, saveSettings } from "../src/services/settings.service";
 
 const fetchStub = vi.fn();
 vi.stubGlobal("fetch", fetchStub);
 
+let marketplaceBefore: Awaited<ReturnType<typeof getSettings>>["marketplace"];
+beforeAll(async () => {
+  marketplaceBefore = (await getSettings()).marketplace;
+  await saveSettings({ marketplace: { ...marketplaceBefore, allowNewProducts: true } }); // new (not used) products need this switch on the free package
+});
+
 afterAll(async () => {
+  await saveSettings({ marketplace: marketplaceBefore });
   vi.unstubAllGlobals();
   delete process.env.GEMINI_API_KEY;
   await prisma.$disconnect();

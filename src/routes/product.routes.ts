@@ -304,6 +304,8 @@ const updateProductSchema = productFieldsSchema.partial().extend({
   stock: z.number().int().nonnegative().optional(),
   memberDiscountEnabled: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  condition: z.enum(["NEW", "USED"]).optional(), // creation defaults to USED; an edit must not turn NEW back into USED
+  costPriceCents: z.number().int().nonnegative().optional(), // creation defaults to 0; an edit must not wipe the saved cost
 });
 
 productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {

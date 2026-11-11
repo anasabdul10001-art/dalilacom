@@ -1,11 +1,19 @@
-import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import crypto from "crypto";
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
 import { uniqueEmail } from "./helpers";
+import { getSettings, saveSettings } from "../src/services/settings.service";
 
+// These tests are about the paid-plan rule, which applies when the free monthly package is switched off.
+let marketplaceBefore: Awaited<ReturnType<typeof getSettings>>["marketplace"];
+beforeAll(async () => {
+  marketplaceBefore = (await getSettings()).marketplace;
+  await saveSettings({ marketplace: { ...marketplaceBefore, freeListingsPerMonth: 0 } });
+});
 afterAll(async () => {
+  await saveSettings({ marketplace: marketplaceBefore });
   process.env.STORE_PLAN = "off";
   await prisma.$disconnect();
 });
@@ -42,7 +50,7 @@ describe("the store opens when a plan is chosen", () => {
     expect(me.storePlan).toEqual({ required: true, active: false });
     const blocked = await addProduct(s);
     expect(blocked.status).toBe(402);
-    expect(blocked.body.error.code).toBe("PLAN_REQUIRED");
+    expect(blocked.body.error.code).toBe("MARKETPLACE_PLAN_REQUIRED");
     expect(blocked.body.error.message).toMatch(/[\u0600-\u06FF]/);
 
     const listed = (await request(app).get("/merchant/store-plans").set(s.owner.auth)).body;
@@ -53,7 +61,8 @@ describe("the store opens when a plan is chosen", () => {
     expect(chosen.status).toBe(200);
     expect(chosen.body).toMatchObject({ active: true, current: { id: free.id } });
     expect((await prisma.merchantProfile.findUnique({ where: { id: s.id } }))!.planEndsAt!.getTime()).toBeGreaterThan(Date.now() + 29 * 86400000);
-    expect((await addProduct(s)).status).toBe(201);
+    // a free plan does not lift the monthly limit any more: only a paid plan does (see "a paid plan" below)
+    expect((await addProduct(s)).status).toBe(402);
   });
 
   it("a paid plan comes out of the wallet in the same step, and is refused without the money", async () => {
@@ -79,19 +88,35 @@ describe("the store opens when a plan is chosen", () => {
     expect((await request(app).post("/merchant/store-plans/subscribe").set(s.owner.auth).send({ planId: membership.id })).status).toBe(404);
     expect((await request(app).post("/merchant/store-plans/subscribe").set(s.owner.auth).send({ planId: unpriced.id })).status).toBe(409);
 
-    const free = await plan("Free again", 0, null);
-    await request(app).post("/merchant/store-plans/subscribe").set(s.owner.auth).send({ planId: free.id });
+    const paid = await plan("Paid again", 500, 50);
+    await prisma.wallet.upsert({ where: { userId: s.owner.id }, update: { balance: 200 }, create: { userId: s.owner.id, balance: 200 } });
+    await request(app).post("/merchant/store-plans/subscribe").set(s.owner.auth).send({ planId: paid.id });
     expect((await addProduct(s)).status).toBe(201);
     await prisma.merchantProfile.update({ where: { id: s.id }, data: { planEndsAt: new Date(Date.now() - 1000) } });
     expect((await addProduct(s)).status).toBe(402);
     // renewing brings it back
-    await request(app).post("/merchant/store-plans/subscribe").set(s.owner.auth).send({ planId: free.id });
+    await request(app).post("/merchant/store-plans/subscribe").set(s.owner.auth).send({ planId: paid.id });
     expect((await addProduct(s)).status).toBe(201);
   });
 
-  it("the rule is off while the owner has set no store plan (or the switch is off)", async () => {
+  it("the plan rule is off while the owner has set no store plan (or the switch is off), as long as the free package has room", async () => {
     process.env.STORE_PLAN = "off";
+    await saveSettings({ marketplace: { ...marketplaceBefore, freeListingsPerMonth: 3 } });
     const s = await shop();
     expect((await addProduct(s)).status).toBe(201);
+    await saveSettings({ marketplace: { ...marketplaceBefore, freeListingsPerMonth: 0 } });
+  });
+
+  it("with the free monthly package on, no plan is required to open the store", async () => {
+    await saveSettings({ marketplace: { ...marketplaceBefore, freeListingsPerMonth: 3 } });
+    try {
+      await plan("Free store", 0, null);
+      const s = await shop();
+      const me = (await request(app).get("/merchant/me").set(s.owner.auth)).body;
+      expect(me.storePlan).toEqual({ required: false, active: true });
+      expect((await addProduct(s)).status).toBe(201);
+    } finally {
+      await saveSettings({ marketplace: { ...marketplaceBefore, freeListingsPerMonth: 0 } });
+    }
   });
 });
