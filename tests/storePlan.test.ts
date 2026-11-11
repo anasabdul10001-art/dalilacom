@@ -61,8 +61,8 @@ describe("the store opens when a plan is chosen", () => {
     expect(chosen.status).toBe(200);
     expect(chosen.body).toMatchObject({ active: true, current: { id: free.id } });
     expect((await prisma.merchantProfile.findUnique({ where: { id: s.id } }))!.planEndsAt!.getTime()).toBeGreaterThan(Date.now() + 29 * 86400000);
-    // a free plan does not lift the monthly limit any more: only a paid plan does (see "a paid plan" below)
-    expect((await addProduct(s)).status).toBe(402);
+    // a plan priced at 0 is still a plan: once the free monthly allowance is used up, it is what keeps the shop adding products
+    expect((await addProduct(s)).status).toBe(201);
   });
 
   it("a paid plan comes out of the wallet in the same step, and is refused without the money", async () => {

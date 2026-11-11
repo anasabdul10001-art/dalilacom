@@ -18,7 +18,10 @@ export async function countSellerListings(db: Prisma.TransactionClient | typeof 
   return personal + merchant;
 }
 
-/** A paid plan works the same for ordinary accounts and approved merchant shops. */
+/**
+ * Once the free monthly allowance is used up, an account needs an active plan to keep adding products. This works the same for
+ * ordinary accounts and merchant shops. A plan priced at 0 counts: the owner makes one when an account should stay free for longer.
+ */
 export async function hasPaidSellerPlan(userId: string) {
   const [personal, merchant] = await Promise.all([
     prisma.marketplaceSubscription.findUnique({ where: { userId } }),
@@ -27,7 +30,7 @@ export async function hasPaidSellerPlan(userId: string) {
   if (personal && personal.endsAt > new Date()) return true;
   if (!merchant?.plan || (merchant.planEndsAt && merchant.planEndsAt <= new Date())) return false;
   const charge = await creditsChargeFor(merchant.plan, merchant.user.countryCode);
-  return charge !== null && charge > 0;
+  return charge !== null; // priced (even at 0) = a real plan the owner set up; an unpriced one cannot be chosen at all
 }
 
 export async function sellerListingQuota(userId: string) {
