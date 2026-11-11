@@ -109,7 +109,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
       { id: "pro", name: "الباقة الاحترافية", days: 30, uses: 400, credits: 4000 },
     ],
   },
-  marketplace: { freeListingsPerMonth: 3, allowNewProducts: false },
+  marketplace: { freeListingsPerMonth: 3, allowNewProducts: true },
 aiModelPrices: [],
 
 };
