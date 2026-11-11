@@ -9,7 +9,7 @@ import { requireAuth } from "../middleware/auth";
 import { getActiveMembership } from "../services/membership.service";
 import { recordAffiliateCommissionIfReferred } from "../services/affiliate.service";
 import { notify } from "../services/notification.service";
-import { createOrderPayment, isMethodAvailable } from "../services/payment.service";
+import { createOrderPayment } from "../services/payment.service";
 
 export const cartRouter = Router();
 
@@ -56,7 +56,13 @@ async function buildCartView(userId: string) {
     merchantId,
     methods: methods.filter((m) => m.merchantId === merchantId).map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })),
   }));
-  return { items: view, shipping, totalCents: view.reduce((sum, i) => sum + i.lineTotalCents, 0) };
+  const sellers = merchantIds.length ? await prisma.merchantProfile.findMany({ where: { id: { in: merchantIds } }, select: { id: true, userId: true } }) : [];
+  const sellerMethods = sellers.length ? await prisma.sellerPaymentMethod.findMany({ where: { userId: { in: sellers.map((seller) => seller.userId) }, isEnabled: true }, select: { userId: true, provider: true } }) : [];
+  const payments = sellers.map((seller) => ({
+    merchantId: seller.id,
+    methods: ["COD", ...sellerMethods.filter((method) => method.userId === seller.userId).map((method) => method.provider)],
+  }));
+  return { items: view, shipping, payments, totalCents: view.reduce((sum, i) => sum + i.lineTotalCents, 0) };
 }
 
 cartRouter.get("/", requireAuth, route(async (req, res) => {
@@ -135,17 +141,19 @@ function generateOrderNumber(): string {
 
 // Checkout: a cart holding products from several merchants splits into one Order per
 // merchant (section 59.5 "Sub-Orders"), each tracked and updated independently from then on.
-const checkoutSchema = z.object({ shipping: z.record(z.string().uuid(), z.string()).optional(), paymentMethod: z.nativeEnum(PaymentMethod).default("COD") }); // shop id -> the chosen shipping method id
+const checkoutSchema = z.object({
+  shipping: z.record(z.string().uuid(), z.string()).optional(),
+  paymentMethods: z.record(z.string().uuid(), z.nativeEnum(PaymentMethod)).optional(),
+  paymentMethod: z.nativeEnum(PaymentMethod).optional(), // older app versions use one method for the whole cart
+}); // per-shop choices; old clients continue to default to cash on delivery
 
 cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
   const userId = req.user!.id;
   const checkoutBody = checkoutSchema.safeParse(req.body ?? {});
   if (!checkoutBody.success) return sendValidationError(res, checkoutBody.error);
   const chosenShipping = checkoutBody.data.shipping ?? {};
-  const paymentMethod = checkoutBody.data.paymentMethod;
-  if (!isMethodAvailable(paymentMethod)) {
-    return sendError(res, 400, "PAYMENT_METHOD_UNAVAILABLE", "طريقة الدفع هذه غير متوفرة حاليًا، اختر الدفع عند الاستلام");
-  }
+  const chosenPaymentMethods = checkoutBody.data.paymentMethods ?? {};
+  const legacyPaymentMethod = checkoutBody.data.paymentMethod ?? "COD";
   const cart = await getOrCreateCart(userId);
   const items = await prisma.cartItem.findMany({
     where: { cartId: cart.id },
@@ -185,9 +193,17 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
 
       // a shop that lists shipping methods needs one chosen; its cost joins the order's total
       const shopMethods = await tx.shippingMethod.findMany({ where: { merchantId: { in: [...byMerchant.keys()] }, isActive: true } });
+      const sellers = await tx.merchantProfile.findMany({ where: { id: { in: [...byMerchant.keys()] } }, select: { id: true, userId: true } });
+      const sellerIds = sellers.map((seller) => seller.userId);
+      const sellerPayments = await tx.sellerPaymentMethod.findMany({ where: { userId: { in: sellerIds }, isEnabled: true } });
 
       const createdOrders = [];
       for (const [merchantId, merchantItems] of byMerchant) {
+        const method = chosenPaymentMethods[merchantId] ?? legacyPaymentMethod;
+        const seller = sellers.find((candidate) => candidate.id === merchantId);
+        const provider = method === "BANK_ALSHAM" || method === "SYRIATEL" || method === "MTN" ? method : null;
+        const recipient = provider && seller ? sellerPayments.find((candidate) => candidate.userId === seller.userId && candidate.provider === provider) : null;
+        if (method === "ONLINE" || (provider && !recipient)) throw new Error(`PAYMENT_METHOD_UNAVAILABLE:${merchantId}`);
         const offered = shopMethods.filter((m) => m.merchantId === merchantId);
         const picked = offered.find((m) => m.id === chosenShipping[merchantId]);
         if (offered.length > 0 && !picked) throw new Error(`SHIPPING_REQUIRED:${merchantId}`);
@@ -210,10 +226,12 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
             unitPriceCents,
           });
 
-          await tx.product.update({
-            where: { id: product.id },
+          // taken only while enough is left at this very moment: two customers checking out together cannot both get the last pieces
+          const taken = await tx.product.updateMany({
+            where: { id: product.id, stock: { gte: item.quantity } },
             data: { stock: { decrement: item.quantity } },
           });
+          if (taken.count === 0) throw new Error(`OUT_OF_STOCK:${product.name}`);
         }
 
         const order = await tx.order.create({
@@ -230,7 +248,7 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
           },
           include: { items: true },
         });
-        const payment = await createOrderPayment(tx, order.id, paymentMethod, order.totalCents);
+        const payment = await createOrderPayment(tx, order.id, method, order.totalCents, recipient ? { name: recipient.recipientName, account: recipient.accountNumber } : undefined);
         await recordAffiliateCommissionIfReferred(tx, merchantId, userId, "ORDER", order.id, order.totalCents);
         createdOrders.push({ ...order, payment });
       }
@@ -270,6 +288,9 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
 
     res.status(201).json(orders);
   } catch (err) {
+    if (err instanceof Error && err.message.startsWith("PAYMENT_METHOD_UNAVAILABLE:")) {
+      return sendError(res, 400, "PAYMENT_METHOD_UNAVAILABLE", "وسيلة الدفع المختارة غير مفعّلة عند صاحب المتجر. اختر الدفع عند الاستلام أو وسيلة أخرى.");
+    }
     if (err instanceof Error && err.message.startsWith("OUT_OF_STOCK:")) {
       return sendError(res, 409, "CONFLICT", `Not enough stock for "${err.message.split(":")[1]}"`);
     }

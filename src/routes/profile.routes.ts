@@ -12,8 +12,34 @@ import { exportPersonalData } from "../services/dataExport.service";
 import { gdprStrict, TERMS_VERSION } from "../lib/consent";
 
 import { sniffImageMime } from "../lib/image";
+import { SellerPaymentProvider } from "@prisma/client";
 
 export const profileRouter = Router();
+
+const sellerPaymentMethodsSchema = z.object({ methods: z.array(z.object({
+  provider: z.nativeEnum(SellerPaymentProvider),
+  recipientName: z.string().trim().min(2).max(100),
+  accountNumber: z.string().trim().min(5).max(40),
+  isEnabled: z.boolean().default(true),
+})).max(3).refine((methods) => new Set(methods.map((method) => method.provider)).size === methods.length, "لا تكرر وسيلة الدفع") });
+
+// Account owner only: payout details are private and never shown on public profiles.
+profileRouter.get("/payment-methods", requireAuth, route(async (req, res) => {
+  const methods = await prisma.sellerPaymentMethod.findMany({ where: { userId: req.user!.id }, orderBy: { provider: "asc" } });
+  res.json({ methods });
+}));
+
+profileRouter.put("/payment-methods", requireAuth, route(async (req, res) => {
+  const parsed = sellerPaymentMethodsSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id;
+  const methods = await prisma.$transaction(async (tx) => {
+    await tx.sellerPaymentMethod.deleteMany({ where: { userId } });
+    if (parsed.data.methods.length) await tx.sellerPaymentMethod.createMany({ data: parsed.data.methods.map((method) => ({ ...method, userId })) });
+    return tx.sellerPaymentMethod.findMany({ where: { userId }, orderBy: { provider: "asc" } });
+  });
+  res.json({ methods });
+}));
 
 const MAX_AVATAR_BYTES = 300 * 1024; // the apps downscale to ~512px before upload, so this is generous
 

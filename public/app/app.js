@@ -24,7 +24,7 @@ const S = {
   token: localStorage.getItem("dlk_token") || null,
   role: localStorage.getItem("dlk_role") || null,
   screen: S_initialScreen(),
-  homeTab: "discover",
+  homeTab: "store", // the site opens on the store; the map and the other sections are one tap away in the bar
   merchantTab: "home",
   params: {},
   stack: [],
@@ -142,9 +142,9 @@ async function api(method, path, body) {
     const data = await res.json().catch(() => ({}));
     if (method !== "GET" && res.ok && S._onboarding) S._onboarding.at = 0; // any write may change the setup checklist
     if (res.status === 401 && S.token) {
-      // An expired/revoked session drops the visitor back onto the (public) map, not a login wall.
+      // An expired/revoked session drops the visitor back onto the (public) store, not a login wall.
       clearToken();
-      S.homeTab = "discover";
+      S.homeTab = "store";
       reset("home");
     }
     return { ok: res.ok, status: res.status, data };
@@ -243,12 +243,12 @@ function setHomeTab(tab) {
   // The auto-responder is a whole screen of its own: the middle button opens it (guests are taken to sign in first).
   if (tab === "responder") {
     if (SOON.responder) return toast(t("soon.responder"));
-    if (!S.token) return go("login");
     S._resp = null;
+    (S._site = S._site || {}).responder = "home";
     return go("responder");
   }
-  // the store is a whole screen of its own: guests may browse it too
-  if (tab === "store") return openStore();
+  // the store is the first tab (and the page the site opens on): guests may browse it too; coming back to it starts fresh
+  if (tab === "store" && (S.screen !== "home" || S.homeTab !== "store")) S._store = null;
   if (tab !== "card") stopQrLoop();
   // the deals tab is the map of the shops with a discount; it shares the map's state with the plain map tab
   if (tab === "deals" || tab === "discover") {
@@ -393,7 +393,7 @@ const SOCIAL_NAME = { facebook: "Facebook", instagram: "Instagram", youtube: "Yo
 const SOCIAL_GLYPH = {
   facebook: '<path fill="#fff" d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.6-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3z"/>',
   instagram: '<rect x="5.2" y="5.2" width="13.6" height="13.6" rx="4.1" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="16.3" cy="7.7" r="1.05" fill="#fff"/>',
-  youtube: '<rect x="3.4" y="6.4" width="17.2" height="11.2" rx="3.2" fill="#fff"/><path d="M10.2 9.5v5l4.4-2.5z" fill="#ba2a34"/>',
+  youtube: '<rect x="3.4" y="6.4" width="17.2" height="11.2" rx="3.2" fill="#fff"/><path d="M10.2 9.5v5l4.4-2.5z" fill="#f48050"/>',
   googleplay: '<polygon fill="#00A0FF" points="5,2.5 5,21.5 13,12"/><polygon fill="#00E676" points="5,2.5 13,12 16.8,9.97"/><polygon fill="#FFC800" points="13,12 16.8,9.97 20,12 16.8,14.03"/><polygon fill="#FF3A44" points="5,21.5 13,12 16.8,14.03"/>',
   tiktok: '<path d="M13.3 4.6v10.1a2.9 2.9 0 1 1-2.9-2.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.3 4.6c.3 2.1 1.7 3.6 4 3.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
 };
@@ -423,7 +423,7 @@ function logoSrc(kind, tone) {
 /** The essential pages (about, privacy, terms, returns, shipping): small links at the bottom of the main screens. */
 function legalLinksHtml() {
   const L = [["about", "legal.about"], ["impressum", "legal.impressum"], ["privacy", "legal.privacy"], ["terms", "legal.terms"], ["refund", "legal.refund"], ["shipping", "legal.shipping"]];
-  return `<nav class="legal-links" aria-label="legal">${L.map(([p, k]) => `<a href="/${p}.html" target="_blank" rel="noopener">${esc(t(k))}</a>`).join("")}</nav>`;
+  return '<nav class="legal-links" aria-label="legal"><a href="/services" target="_blank" rel="noopener">' + esc(t("services.overview")) + '</a>' + L.map(([p, k]) => '<a href="/' + p + '.html" target="_blank" rel="noopener">' + esc(t(k)) + '</a>').join("") + '</nav>';
 }
 
 /** Small round icons to our pages (the ones switched on in the admin panel), with the line that other pages with the name are not ours. */
@@ -590,7 +590,8 @@ const ORDER_ACTION_LABEL = {
 function payLineHtml(payment) {
   if (!payment) return "";
   const done = payment.status === "PAID_CASH" || payment.status === "PAID_ONLINE";
-  return `<p class="muted">💵 ${esc(t("pay.cod"))} · <b class="${done ? "ok" : ""}">${esc(t("pay." + payment.status))}</b></p>`;
+  const labels = { COD: "الدفع عند الاستلام", BANK_ALSHAM: "بنك الشام", SYRIATEL: "سيرياتل كاش", MTN: "MTN كاش", ONLINE: "دفع إلكتروني" };
+  return `<p class="muted">💳 ${esc(labels[payment.method] || payment.method)} · <b class="${done ? "ok" : ""}">${esc(t("pay." + payment.status))}</b></p>${payment.recipientAccount ? `<p class="muted">حوّل إلى ${esc(payment.recipientName || "")} · ${esc(payment.recipientAccount)}${payment.reference ? `<br>رقم العملية: ${esc(payment.reference)}` : ""}</p>` : ""}`;
 }
 
 /** The shop's button once the order is on its way: the cash was handed over. */
@@ -606,6 +607,30 @@ async function confirmCash(id) {
   toast(t("pay.cashConfirmed"));
   S._mOrders = null; S._orderDetail = null;
   render();
+}
+
+function confirmTransferButton(ord) {
+  const p = ord.payment;
+  if (!(ord.customer || ord.user) || !p || !["BANK_ALSHAM", "SYRIATEL", "MTN"].includes(p.method) || p.status !== "PENDING" || !p.reference) return "";
+  return `<button class="btn outline" style="margin-top:8px" onclick="confirmTransfer('${ord.id}')">تأكيد وصول التحويل</button>`;
+}
+async function confirmTransfer(id) {
+  const { ok, data } = await api("POST", `/orders/${id}/payment/confirm-transfer`);
+  if (!ok) return toast(errMsg(data, "تعذّر التأكيد"));
+  toast("تم تأكيد وصول التحويل"); S._mOrders = null; S._orderDetail = null; render();
+}
+function transferReferenceForm(ord) {
+  const p = ord.payment;
+  if (!p || !["BANK_ALSHAM", "SYRIATEL", "MTN"].includes(p.method) || p.status !== "PENDING" || ord.customer) return "";
+  if (p.reference) return `<p class="muted">رقم التحويل الذي أرسلته: ${esc(p.reference)}. بانتظار تأكيد صاحب المتجر.</p>`;
+  return `<div class="field"><label>رقم العملية بعد التحويل</label><input id="transfer-reference" maxlength="100" placeholder="اكتب رقم العملية الظاهر في تطبيقك" /></div><button class="btn outline" onclick="submitTransfer('${ord.id}')">أرسلت التحويل</button>`;
+}
+async function submitTransfer(id) {
+  const reference = qs("transfer-reference")?.value?.trim();
+  if (!reference || reference.length < 3) return toast("أدخل رقم العملية أولاً");
+  const { ok, data } = await api("POST", `/orders/${id}/payment/submit-transfer`, { reference });
+  if (!ok) return toast(errMsg(data, "تعذّر حفظ رقم العملية"));
+  await loadOrderDetail(id);
 }
 
 function orderBadge(status) {
@@ -624,6 +649,8 @@ const ICON = {
   store: '<svg viewBox="0 0 24 24"><path d="M4 9 5.5 4h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9"/><path d="M5.5 11.5V20h13v-8.5"/><path d="M10 20v-4.5h4V20"/></svg>',
   cart: '<svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.2 11h10.4L20 8H6.2"/></svg>',
   orders: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path d="M8 9h8M8 13h8"/></svg>',
+  users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.5-3.2 3-5 6-5s5.5 1.8 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.2c2.4.2 4 1.6 4.5 4.3"/></svg>',
+  calculator: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8v3H8zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>',
   user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.3"/><path d="M5 20c1.3-3.6 4-5.4 7-5.4s5.7 1.8 7 5.4"/></svg>',
   scan: '<svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M4 12h16" stroke-dasharray="2.5 2.5"/></svg>',
   box: '<svg viewBox="0 0 24 24"><path d="M3.5 7 12 3l8.5 4-8.5 4-8.5-4Z"/><path d="M3.5 7v10L12 21l8.5-4V7"/><path d="M12 11v10"/></svg>',
@@ -656,6 +683,10 @@ function renderScreen() {
     case "wallet": return screenWallet();
     case "responder": return screenResponder();
     case "favorites": return screenFavorites();
+    case "marketplace": return screenMarketplace();
+    case "marketplaceStore": return screenMarketplaceStore();
+    case "accounting": return screenAccounting();
+    case "allPlans": return screenAllPlans();
     case "store": return screenStore();
     case "productWizard": return screenProductWizard();
     case "discounts": return screenDiscounts();
@@ -1001,7 +1032,7 @@ async function deleteMyAccount() {
   const { ok, data } = await api("DELETE", "/profile/me", { confirm: true, password: password || undefined });
   if (!ok) return toast(errMsg(data, t("profile.deleteFailed")));
   clearToken();
-  S.homeTab = "discover";
+  S.homeTab = "store";
   reset("home");
   toast(t("profile.deleted"));
 }
@@ -1010,37 +1041,40 @@ function doLogout() {
   api("POST", "/auth/logout");
   clearToken();
   S._mstat = null; S._ship = null; S._shipPick = {};
-  S.homeTab = "discover";
+  S.homeTab = "store";
   reset("home");
 }
 
 /* ================= HOME SHELL ================= */
 
 const HOME_TABS = [
-  { id: "discover", label: "tab.map", icon: "search" },
   { id: "store", label: "tab.store", icon: "store" },
+  { id: "discover", label: "tab.map", icon: "search" },
   { id: "deals", label: "tab.deals", icon: "tag" },
   { id: "responder", label: "tab.responder", icon: "bot", hero: true },
-  { id: "cart", label: "tab.cart", icon: "cart" },
-  { id: "orders", label: "tab.orders", icon: "orders" },
+  { id: "hr", label: "tab.hr", icon: "users" },
+  { id: "accounting", label: "tab.accounting", icon: "calculator" },
   { id: "profile", label: "tab.account", icon: "user" },
 ];
 
 function screenHomeShell() {
   const needsAccount = ["card", "cart", "orders", "profile"].includes(S.homeTab) && !S.token;
   const body = needsAccount ? guestPrompt(S.homeTab) : {
+    store: screenStore,
+    hr: screenHr,
     card: tabCard,
     deals: tabDeals,
     discover: tabDiscover,
     cart: tabCart,
     orders: tabOrders,
+    accounting: screenAccounting,
     profile: tabProfile,
   }[S.homeTab]();
   return `
     <div>${body}</div>
     <div class="tabbar" id="home-tabbar">
       ${HOME_TABS.map((tab) => `
-        <button class="${S.homeTab === tab.id ? "active" : ""} ${tab.hero ? "hero" : ""}" onclick="setHomeTab('${tab.id}')">
+        <button class="${S.homeTab === tab.id || (tab.id === "profile" && S.homeTab === "cart") ? "active" : ""} ${tab.hero ? "hero" : ""}" onclick="setHomeTab('${tab.id}')">
           ${ICON[tab.icon]}<span>${esc(t(tab.label))}</span>
         </button>`).join("")}
     </div>
@@ -2163,7 +2197,7 @@ function syncRadiusLayer() {
   if (key !== S._radiusDrawn) {
     S._radiusDrawn = key;
     if (S._radiusLayer) { map.removeLayer(S._radiusLayer); S._radiusLayer = null; }
-    if (key) S._radiusLayer = L.circle([center.lat, center.lng], { radius: d.radiusKm * 1000, color: "#ba2a34", weight: 2, dashArray: "6 6", fillColor: "#ba2a34", fillOpacity: 0.06, interactive: false }).addTo(map);
+    if (key) S._radiusLayer = L.circle([center.lat, center.lng], { radius: d.radiusKm * 1000, color: "#f48050", weight: 2, dashArray: "6 6", fillColor: "#f48050", fillOpacity: 0.06, interactive: false }).addTo(map);
   }
   if (!S._radiusFit) return;
   S._radiusFit = false;
@@ -2203,7 +2237,7 @@ function syncMapMarkers() {
       const selected = d.selectedId === m.id;
       // the pin carries the shop's logo, or the first letter of its name; a shop with a discount wears a small tag on top
       const size = selected ? 46 : 38;
-      const bg = selected ? "#111" : hasDiscount ? "#ba2a34" : "#8a7a78";
+      const bg = selected ? "#111" : hasDiscount ? "#f48050" : "#8a7a78";
       const inner = m.avatarUrl
         ? `<img src="${esc(m.avatarUrl)}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;transform:rotate(45deg);background:#fff">`
         : `<span style="transform:rotate(45deg);font-weight:800;font-size:${selected ? 19 : 16}px;line-height:1">${esc((m.businessName || "?").trim().slice(0, 1).toUpperCase())}</span>`;
@@ -2343,10 +2377,11 @@ function tabCart() {
     ${items.length === 0 ? `<div class="empty-state">سلتك فاضية</div>` : items.map(cartItemHtml).join("")}
     ${items.length > 0 ? `
       ${(c.shipping || []).filter((x) => x.methods.length).map((x) => shipChoiceHtml(x, items)).join("")}
+      ${(c.payments || []).map((x) => payChoiceHtml(x, items)).join("")}
       <div class="divider"></div>
       ${shipTotal(c) > 0 ? `<div class="title-line"><span>${esc(t("ship.title"))}</span><span class="price">${fmt(shipTotal(c))}</span></div>` : ""}
       <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(c.totalCents + shipTotal(c))}</span></div>
-      <p class="muted">💵 ${esc(t("pay.cod"))}</p>
+      <p class="muted">بعد التحويل، أدخل رقم العملية في تفاصيل الطلب ليؤكد صاحب المتجر وصول المبلغ.</p>
       <div style="height:10px"></div>
       <button class="btn" onclick="doCheckout()">إتمام الطلب</button>
     ` : ""}
@@ -2364,6 +2399,14 @@ function pickShip(merchantId, methodId) {
   S._shipPick = S._shipPick || {};
   S._shipPick[merchantId] = methodId;
   render();
+}
+
+const PAYMENT_LABELS = { COD: "الدفع عند الاستلام", BANK_ALSHAM: "بنك الشام", SYRIATEL: "سيرياتل كاش", MTN: "MTN كاش" };
+function pickPayment(merchantId, method) { S._paymentPick = S._paymentPick || {}; S._paymentPick[merchantId] = method; render(); }
+function payChoiceHtml(x, items) {
+  const shop = (items.find((i) => i.product.merchant.id === x.merchantId) || { product: { merchant: { businessName: "" } } }).product.merchant.businessName;
+  const choices = x.methods || ["COD"], picked = (S._paymentPick || {})[x.merchantId] || "COD";
+  return `<div class="card"><div class="section-title" style="margin-top:0">💳 طريقة الدفع · ${esc(shop)}</div>${choices.map((m) => `<label class="ship-opt ${picked === m ? "on" : ""}"><input type="radio" name="pay-${x.merchantId}" ${picked === m ? "checked" : ""} onchange="pickPayment('${x.merchantId}','${m}')"><span>${esc(PAYMENT_LABELS[m] || m)}</span></label>`).join("")}</div>`;
 }
 
 function shipChoiceHtml(x, items) {
@@ -2399,10 +2442,12 @@ function cartItemHtml(i) {
 
 async function loadCart() {
   const { ok, data } = await api("GET", "/cart");
-  S._cart = { loading: false, items: ok ? data.items : [], shipping: ok ? data.shipping || [] : [], totalCents: ok ? data.totalCents : 0 };
+  S._cart = { loading: false, items: ok ? data.items : [], shipping: ok ? data.shipping || [] : [], payments: ok ? data.payments || [] : [], totalCents: ok ? data.totalCents : 0 };
   // a shop with a single method needs no choosing
   S._shipPick = S._shipPick || {};
   (S._cart.shipping || []).forEach((x) => { if (x.methods.length === 1) S._shipPick[x.merchantId] = x.methods[0].id; });
+  S._paymentPick = S._paymentPick || {};
+  (S._cart.payments || []).forEach((x) => { if (!x.methods.includes(S._paymentPick[x.merchantId])) S._paymentPick[x.merchantId] = "COD"; });
   render();
 }
 
@@ -2427,7 +2472,9 @@ async function doCheckout() {
   const shipping = {};
   ((S._cart && S._cart.shipping) || []).forEach((x) => { if (pick[x.merchantId]) shipping[x.merchantId] = pick[x.merchantId]; });
   S.busy = true; render();
-  const { ok, data } = await api("POST", "/cart/checkout", { shipping, paymentMethod: "COD" });
+  const paymentMethods = {};
+  ((S._cart && S._cart.payments) || []).forEach((x) => { paymentMethods[x.merchantId] = (S._paymentPick || {})[x.merchantId] || "COD"; });
+  const { ok, data } = await api("POST", "/cart/checkout", { shipping, paymentMethods });
   S.busy = false;
   if (ok) {
     S._cart = null;
@@ -2465,6 +2512,267 @@ async function loadOrders() {
   render();
 }
 
+/* ---- Accountant: money movement and stock for any signed-in account ---- */
+/* ---- The three sections (accounting, auto-responder, HR) work like small sites of their own: a tab bar whose first tab is a home page that is always there ---- */
+
+const SITES = {
+  accounting: { icon: "🧮", tabs: ["summary", "entry", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"] },
+  responder: { icon: "🤖", tabs: ["overview", "channels", "rules", "inbox"], art: ["chat", "orbit", "ai"], features: ["💬", "⚙️", "✨", "📥"] },
+  hr: { icon: "👥", tabs: [], art: ["team", "payslip", "calendar"], features: ["🕒", "🏖️", "💵", "🤝"] },
+};
+function siteTab(kind) { return (S._site && S._site[kind]) || "home"; }
+function setSiteTab(kind, tab) {
+  S._site = S._site || {}; S._site[kind] = tab;
+  if (kind === "responder" && tab !== "home" && S._resp) S._resp.tab = tab;
+  S.error = null; render(); window.scrollTo(0, 0);
+}
+function siteShell(kind, active, body) {
+  const cfg = SITES[kind];
+  const tabs = [["home", t("site.tab.home")], ...cfg.tabs.map((id) => [id, t("site." + kind + ".tab." + id)])];
+  return `<div class="site site-${kind}">
+    <div class="site-bar"><span class="site-logo">${cfg.icon}</span><b>${esc(t("sec." + kind + ".kicker"))}</b></div>
+    ${cfg.tabs.length ? `<nav class="site-tabs">${tabs.map(([id, label]) => `<button class="${id === active ? "on" : ""}" onclick="setSiteTab('${kind}','${id}')">${esc(label)}</button>`).join("")}</nav>` : ""}
+    ${body}
+  </div>`;
+}
+/** The main buttons of a site's home page, for whoever is looking (a guest, or someone signed in). */
+function siteCta(kind) {
+  if (kind === "hr") return [{ label: t("site.open.hr"), action: "openHr()" }];
+  if (!S.token) return [{ label: t("site.login"), action: "go('login')" }, { label: t("site.register"), action: "go('register')", outline: true }];
+  return [{ label: t("site.open." + kind), action: `setSiteTab('${kind}','${SITES[kind].tabs[0]}')` }];
+}
+const siteButtons = (list) => list.map((b) => `<button class="btn ${b.outline ? "outline" : ""}" onclick="${b.action}">${esc(b.label)}</button>`).join("");
+
+/** The moving pictures of the slides: small scenes made of HTML and CSS (they replay each time their slide comes round). */
+function siteArt(kind, i) {
+  const x = (k) => esc(t("site.art." + k));
+  switch (SITES[kind].art[i]) {
+    case "chat": return `<div class="art art-chat"><div class="bub in" style="--d:.2s">${x("chat1")}</div><div class="bub out" style="--d:1.5s">${x("chat2")}</div><div class="bub in" style="--d:2.9s">${x("chat3")}</div><div class="bub out" style="--d:4.2s">${x("chat4")}</div></div>`;
+    case "orbit": return `<div class="art art-orbit"><i class="ring"></i><div class="core">🤖</div><span class="sat s1">f</span><span class="sat s2">◎</span><span class="sat s3">✈</span></div>`;
+    case "ai": return `<div class="art art-ai"><div class="ai-card"><span class="ai-spark">✨</span><div class="ai-line l1"></div><div class="ai-line l2"></div><div class="ai-line l3"></div></div><div class="ai-chips"><em style="--d:.3s">${x("kw1")}</em><em style="--d:.9s">${x("kw2")}</em><em style="--d:1.5s">${x("kw3")}</em></div></div>`;
+    case "bars": return `<div class="art art-bars"><div class="bars-chart">${[55, 35, 75, 45, 90, 60].map((h, n) => `<span class="${n % 2 ? "exp" : ""}" style="--h:${h}%;--d:${n * 0.15}s"></span>`).join("")}</div><div class="bars-legend"><b>${x("net")}</b><span>+ 1,250</span></div></div>`;
+    case "receipt": return `<div class="art art-receipt"><div class="rc"><b>${x("invoice")}</b><i></i><i></i><i class="s"></i><i></i><div class="rc-total"><span>${x("total")}</span><b>86.40</b></div><span class="scan"></span><span class="rc-ok">✓</span></div></div>`;
+    case "stock": return `<div class="art art-stock">${[["item1", 82, ""], ["item2", 46, ""], ["item3", 12, "low"]].map(([n, w, c], k) => `<div class="stk ${c}" style="--d:${k * 0.2}s"><span>${x(n)}</span><div><i style="--w:${w}%"></i></div>${c ? `<em>${x("low")}</em>` : ""}</div>`).join("")}</div>`;
+    case "team": return `<div class="art art-team">${["👩‍💼", "👨‍💼", "🧑‍💻", "👩‍🔧", "👨‍🏭"].map((c, n) => `<span style="--d:${n * 0.18}s">${c}<i></i></span>`).join("")}<div class="team-note">✓ ${x("present")} 5/5</div></div>`;
+    case "payslip": return `<div class="art art-pay"><div class="pay"><b>${x("payslip")}</b><div class="pay-row"><span></span><span></span></div><div class="pay-row"><span></span><span></span></div><div class="pay-row m"><span></span><span></span></div><div class="pay-net"><span>${x("netpay")}</span><b>1,840</b></div></div></div>`;
+    default: return `<div class="art art-cal"><div class="cal-grid">${Array.from({ length: 28 }, (_, n) => `<span class="${[9, 10, 11, 17].includes(n) ? "lv" : [3, 4].includes(n) ? "off" : ""}" style="--d:${n * 0.03}s"></span>`).join("")}</div><div class="cal-note">🏖️ ${x("leave")}</div></div>`;
+  }
+}
+/** A site's home page: the moving slides, a few figures, what it offers, how it works, common questions, and the button again. */
+function siteLanding(kind) {
+  const k = "site." + kind + ".", ctas = siteButtons(siteCta(kind));
+  const slides = [0, 1, 2].map((i) => `<div class="site-slide ${i === 0 ? "on" : ""}">
+      ${siteArt(kind, i)}
+      <div class="site-slide-text"><h2>${esc(t(k + "slide" + (i + 1) + ".t"))}</h2><p>${esc(t(k + "slide" + (i + 1) + ".d"))}</p><div class="site-actions">${ctas}</div></div>
+    </div>`).join("");
+  return `
+    <section class="site-slider" data-i="0">${slides}<div class="site-dots">${[0, 1, 2].map((i) => `<button class="${i === 0 ? "on" : ""}" onclick="siteSlideTo(this,${i})" aria-label="${i + 1}"></button>`).join("")}</div></section>
+    <div class="site-stats">${[1, 2, 3].map((n) => `<div><b>${esc(t(k + "st" + n + ".n"))}</b><span>${esc(t(k + "st" + n + ".l"))}</span></div>`).join("")}</div>
+    <h2 class="site-h">${esc(t("site.featuresTitle"))}</h2>
+    <div class="site-grid">${SITES[kind].features.map((icon, n) => `<div class="site-feat"><span>${icon}</span><b>${esc(t("sec." + kind + ".f" + (n + 1) + ".t"))}</b><p>${esc(t("sec." + kind + ".f" + (n + 1) + ".d"))}</p></div>`).join("")}</div>
+    <h2 class="site-h">${esc(t("site.stepsTitle"))}</h2>
+    <ol class="site-steps">${[1, 2, 3].map((n) => `<li><span>${n}</span><div><b>${esc(t("sec." + kind + ".s" + n))}</b><p>${esc(t(k + "s" + n + ".d"))}</p></div></li>`).join("")}</ol>
+    <h2 class="site-h">${esc(t("site.faq"))}</h2>
+    <div class="site-faq">${[1, 2, 3, 4].map((n) => `<details><summary>${esc(t(k + "faq" + n + ".q"))}</summary><p>${esc(t(k + "faq" + n + ".a"))}</p></details>`).join("")}</div>
+    <section class="site-cta"><h2>${esc(t("site.ctaTitle"))}</h2><p>${esc(t("site.ctaSub"))}</p><div class="site-actions">${ctas}</div></section>`;
+}
+function siteSlideStep(el, d) {
+  const slides = el.querySelectorAll(".site-slide");
+  if (!slides.length) return;
+  let i = Number(el.dataset.i || 0);
+  slides[i].classList.remove("on");
+  i = (i + d + slides.length) % slides.length;
+  el.dataset.i = String(i);
+  slides[i].classList.add("on");
+  el.querySelectorAll(".site-dots button").forEach((b, n) => b.classList.toggle("on", n === i));
+}
+function siteSlideTo(btn, i) {
+  const el = btn.closest(".site-slider");
+  siteSlideStep(el, i - Number(el.dataset.i || 0));
+}
+setInterval(() => document.querySelectorAll(".site-slider").forEach((el) => { if (!document.hidden) siteSlideStep(el, 1); }), 6000);
+
+// The HR system is a separate web application: this tab is its front page, with a button that opens it.
+const HR_URL = "https://nawa-frontend.onrender.com";
+function openHr() { window.open(HR_URL, "_blank", "noopener"); }
+function screenHr() { return siteShell("hr", "home", siteLanding("hr")); }
+
+function screenAccounting() {
+  const tab = siteTab("accounting");
+  // the home page is always there (and is all a guest sees); the tools are the other tabs
+  if (tab === "home" || !S.token) return siteShell("accounting", "home", siteLanding("accounting"));
+  if (!S._accounting || S._accounting.loading) {
+    if (!S._accounting) { S._accounting = { loading: true }; loadAccounting(); }
+    return siteShell("accounting", tab, spinner());
+  }
+  const a = S._accounting;
+  if (a.requiresPlan) return siteShell("accounting", tab, `<div class="card empty-state"><p>${esc(t("site.planNeeded"))}</p><button class="btn" onclick="S._allPlans=null;go('allPlans')">${esc(t("site.plans"))}</button></div>`);
+  const totals = a.summary?.totals || [];
+  const cards = {
+    summary: `
+    <div class="card"><div class="section-title">${esc(t("accounting.month"))}</div>
+      ${totals.length ? totals.map(x => `<div class="title-line"><span>${esc(x.currency)}</span><span>${esc(t("accounting.income"))}: ${fmt(x.incomeCents,x.currency)} · ${esc(t("accounting.expenses"))}: ${fmt(x.expensesCents,x.currency)} · <b>${esc(t("accounting.net"))}: ${fmt(x.netCents,x.currency)}</b></span></div>`).join("") : `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
+      <p class="muted">${esc(t("accounting.inventory"))}: ${a.summary?.inventory?.products || 0} ${esc(t("accounting.products"))} · ${esc(t("accounting.units"))}: ${a.summary?.inventory?.units || 0}</p>
+      <button class="btn outline" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button>
+      <button class="btn outline" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button>
+    </div>
+    <div class="card"><div class="section-title">${esc(t("accounting.recent"))}</div>
+      ${(a.summary?.recent || []).map(e => `<div class="title-line"><span><b>${esc(e.description)}</b><div class="muted">${esc(e.category)} · ${new Date(e.occurredAt).toLocaleDateString()}</div></span><strong>${e.type === "EXPENSE" ? "−" : "+"}${fmt(e.amountCents,e.currency)}</strong>${e.source === "MANUAL" || e.source === "INVOICE" ? `<span><button class="btn small outline" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></span>` : ""}</div>`).join("") || `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
+    </div>`,
+    entry: `
+    <div class="card"><div class="section-title">${esc(t("accounting.addEntry"))}</div>
+      <div class="field"><label>${esc(t("accounting.entryType"))}</label><select id="acc-type"><option value="INCOME">${esc(t("accounting.income"))}</option><option value="EXPENSE">${esc(t("accounting.expenses"))}</option></select></div>
+      <div class="field"><label>${esc(t("accounting.category"))}</label><input id="acc-category" placeholder="${esc(t("accounting.categoryHint"))}" /></div>
+      <div class="field"><label>${esc(t("accounting.description"))}</label><input id="acc-description" /></div>
+      <div class="field"><label>${esc(t("accounting.amount"))}</label><input id="acc-amount" type="number" min="0.01" step="0.01" inputmode="decimal" /></div>
+      <button class="btn" onclick="accountingAddEntry()">${esc(t("accounting.save"))}</button>
+    </div>`,
+    invoices: `
+    <div class="card"><div class="section-title">${esc(t("accounting.invoicePhoto"))}</div>
+      <p class="muted">${esc(t("accounting.invoicePhotoHelp"))}</p>
+      <div class="field"><input type="file" accept="image/jpeg,image/png,image/webp" onchange="accountingScanInvoice(this)" /></div>
+      ${a.invoiceDraft ? `<div class="badge warning">${esc(t("accounting.reviewBeforeSave"))}</div>
+        <div class="field"><label>${esc(t("accounting.description"))}</label><input id="acc-invoice-description" value="${esc([a.invoiceDraft.extracted?.supplier,a.invoiceDraft.extracted?.description].filter(Boolean).join(" — "))}" /></div>
+        <div class="field"><label>${esc(t("accounting.amount"))}</label><input id="acc-invoice-amount" type="number" min="0.01" step="0.01" value="${a.invoiceDraft.extracted?.totalCents ? (a.invoiceDraft.extracted.totalCents/100).toFixed(2) : ""}" /></div>
+        <div class="field"><label>${esc(t("accounting.category"))}</label><input id="acc-invoice-category" value="${esc(t("accounting.purchases"))}" /></div>
+        <button class="btn" onclick="accountingConfirmInvoice()">${esc(t("accounting.confirmInvoice"))}</button>` : ""}
+    </div>`,
+    stock: `
+    <div class="card"><div class="section-title">${esc(t("accounting.inventory"))} (${a.products?.length || 0})</div>
+      <div class="field"><label>${esc(t("accounting.searchBarcode"))}</label><div style="display:flex;gap:8px"><input id="acc-barcode" autocomplete="off"/><button class="btn outline" onclick="accountingScan()">${esc(t("accounting.scan"))}</button></div></div>
+      <div id="acc-scanner" hidden><video id="acc-video" playsinline style="width:100%;max-height:220px"></video><button class="btn outline" onclick="accountingStopScan()">${esc(t("accounting.stopScan"))}</button></div>
+      <div class="field"><label>${esc(t("accounting.product"))}</label><input id="acc-product-name" /></div>
+      <div class="field"><label>${esc(t("accounting.salePrice"))}</label><input id="acc-sale-price" type="number" min="0" step="0.01" /></div>
+      <div class="field"><label>${esc(t("accounting.costPrice"))}</label><input id="acc-cost-price" type="number" min="0" step="0.01" /></div>
+      <div class="field"><label>${esc(t("accounting.quantity"))}</label><input id="acc-quantity" type="number" min="0" step="1" value="0" /></div>
+      <button class="btn" onclick="accountingAddProduct()">${esc(t("accounting.addProduct"))}</button>
+      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingDeleteProduct('${p.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button>`}</div></div>`).join("")}
+    </div>`,
+  };
+  return siteShell("accounting", tab, (cards[tab] || cards.summary) + errorBanner());
+}
+async function loadAccounting() {
+  const [summary, products] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products")]);
+  const requiresPlan = summary.status === 402 || products.status === 402;
+  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
+  render();
+}
+function accountingCents(id) { return Math.round(Number(qs(id)?.value || 0) * 100); }
+async function accountingAddEntry() {
+  const body = { type: qs("acc-type").value, category: qs("acc-category").value.trim(), description: qs("acc-description").value.trim(), amountCents: accountingCents("acc-amount"), currency: S.currency || "EUR" };
+  const { ok, data } = await api("POST", "/accounting/entries", body);
+  if (!ok) return toast(errMsg(data, "ما قدرنا نحفظ الحركة"));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingAddProduct() {
+  const body = { name: qs("acc-product-name").value.trim(), barcode: qs("acc-barcode").value.trim() || null, salePriceCents: accountingCents("acc-sale-price"), costCents: accountingCents("acc-cost-price"), quantity: Number(qs("acc-quantity").value || 0), currency: S.currency || "EUR" };
+  const { ok, data } = await api("POST", "/accounting/products", body);
+  if (!ok) return toast(errMsg(data, "ما قدرنا نضيف المنتج"));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingScanInvoice(input) {
+  const file = input?.files?.[0]; if (!file) return;
+  try {
+    const response = await fetch("/accounting/invoices/scan", { method: "POST", headers: { Authorization: "Bearer " + S.token, "Content-Type": file.type }, body: file });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return toast(errMsg(data, t("accounting.invoiceScanFailed")));
+    S._accounting.invoiceDraft = data; render();
+  } catch (_) { toast(t("accounting.invoiceScanFailed")); }
+}
+async function accountingConfirmInvoice() {
+  const draft = S._accounting?.invoiceDraft; if (!draft?.id) return;
+  const body = { description: qs("acc-invoice-description").value.trim(), amountCents: accountingCents("acc-invoice-amount"), category: qs("acc-invoice-category").value.trim(), currency: draft.extracted?.currency || S.currency || "EUR", ...(draft.extracted?.date ? { occurredAt: new Date(`${draft.extracted.date}T12:00:00`).toISOString() } : {}) };
+  const { ok, data } = await api("POST", `/accounting/invoices/${draft.id}/confirm`, body);
+  if (!ok) return toast(errMsg(data, t("accounting.invoiceSaveFailed")));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingSell(id) {
+  const product = (S._accounting?.products || []).find(p => p.id === id);
+  const quantity = Number(prompt(t("accounting.sellQuantity"), "1"));
+  if (!quantity) return;
+  const { ok, data } = await api("POST", `/accounting/products/${id}/sell`, { quantity });
+  if (!ok) return toast(errMsg(data, "ما قدرنا نسجل البيع"));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingAdjustStock(id, isIn) {
+  const quantity = Number(prompt(t(isIn ? "accounting.addQuantity" : "accounting.removeQuantity"), "1"));
+  if (!quantity) return;
+  const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: isIn ? "STOCK_IN" : "STOCK_OUT", quantity, note: isIn ? "إدخال يدوي" : "إخراج يدوي" });
+  if (!ok) return toast(errMsg(data, "ما قدرنا نعدّل الجرد"));
+  S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingSetCost(id) {
+  const product = (S._accounting?.products || []).find(p => p.id === id); if (!product) return;
+  const raw = prompt(t("accounting.costPrice"), (product.costCents / 100).toFixed(2)); if (raw === null) return;
+  const amount = Number(raw.replace(",", ".")); if (!Number.isFinite(amount) || amount < 0) return toast(t("accounting.invalidAmount"));
+  const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: "ADJUSTMENT", quantity: product.quantity, unitCostCents: Math.round(amount * 100), note: "تحديث تكلفة الشراء" });
+  if (!ok) return toast(errMsg(data, "ما قدرنا نحدّث تكلفة المنتج"));
+  S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingDeleteProduct(id) {
+  if (!confirm(t("accounting.confirmDelete"))) return;
+  const { ok, data } = await api("DELETE", `/accounting/products/${id}`);
+  if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));
+  toast(t("accounting.deleted")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingDeleteEntry(id) {
+  if (!confirm(t("accounting.confirmDelete"))) return;
+  const { ok, data } = await api("DELETE", `/accounting/entries/${id}`);
+  if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));
+  toast(t("accounting.deleted")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingEditEntry(id) {
+  const entry = (S._accounting?.summary?.recent || []).find(e => e.id === id); if (!entry) return;
+  const description = prompt(t("accounting.description"), entry.description); if (description === null) return;
+  const raw = prompt(t("accounting.amount"), (entry.amountCents / 100).toFixed(2)); if (raw === null) return;
+  const amount = Number(raw.replace(",", ".")); if (!Number.isFinite(amount) || amount <= 0) return toast(t("accounting.invalidAmount"));
+  const { ok, data } = await api("PATCH", `/accounting/entries/${id}`, { description: description.trim(), amountCents: Math.round(amount * 100) });
+  if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
+}
+let accountingStream = null;
+async function accountingScan() {
+  if (!("BarcodeDetector" in window) || !navigator.mediaDevices?.getUserMedia) return toast(t("accounting.scannerUnavailable"));
+  try {
+    const scanner = document.getElementById("acc-scanner");
+    const video = document.getElementById("acc-video");
+    scanner.hidden = false;
+    accountingStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    video.srcObject = accountingStream; await video.play();
+    const detector = new BarcodeDetector();
+    const scan = async () => {
+      if (!accountingStream) return;
+      const found = await detector.detect(video);
+      if (found.length) { qs("acc-barcode").value = found[0].rawValue; accountingStopScan(); await accountingLookupBarcode(); return; }
+      requestAnimationFrame(scan);
+    };
+    scan();
+  } catch (_) { accountingStopScan(); toast(t("accounting.scannerUnavailable")); }
+}
+function accountingStopScan() { if (accountingStream) accountingStream.getTracks().forEach(t => t.stop()); accountingStream = null; if (qs("acc-scanner")) qs("acc-scanner").hidden = true; }
+async function accountingLookupBarcode() {
+  const code = qs("acc-barcode")?.value?.trim(); if (!code) return;
+  const { ok, data } = await api("GET", `/accounting/products/barcode/${encodeURIComponent(code)}`);
+  if (ok) { qs("acc-product-name").value = data.name; qs("acc-sale-price").value = (data.salePriceCents / 100).toFixed(2); qs("acc-cost-price").value = (data.costCents / 100).toFixed(2); qs("acc-quantity").value = "0"; }
+  else toast(errMsg(data, t("accounting.newBarcode")));
+}
+async function downloadAccounting() {
+  try {
+    const response = await fetch("/accounting/export.csv", { headers: { Authorization: "Bearer " + S.token } });
+    if (!response.ok) throw new Error();
+    const url = URL.createObjectURL(await response.blob()); const a = document.createElement("a"); a.href = url; a.download = "dalilacom-accounting.csv"; a.click(); URL.revokeObjectURL(url);
+  } catch (_) { toast(t("accounting.exportFailed")); }
+}
+async function printAccountingReport() {
+  const { ok, data } = await api("GET", "/accounting/entries");
+  if (!ok) return toast(errMsg(data, t("accounting.exportFailed")));
+  const rows = (data || []).map(e => `<tr><td>${esc(new Date(e.occurredAt).toLocaleDateString())}</td><td>${esc(e.type === "INCOME" ? t("accounting.income") : t("accounting.expenses"))}</td><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${esc(fmt(e.amountCents, e.currency))}</td></tr>`).join("");
+  const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
+  if (!win) return toast(t("accounting.allowPrint"));
+  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(t("accounting.title"))}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h1{color:#f48050}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:start}th{background:#f7f3f3}@media print{button{display:none}}</style><h1>${esc(t("accounting.title"))}</h1><p>${esc(new Date().toLocaleDateString())}</p><table><thead><tr><th>${esc(t("accounting.date"))}</th><th>${esc(t("accounting.entryType"))}</th><th>${esc(t("accounting.category"))}</th><th>${esc(t("accounting.description"))}</th><th>${esc(t("accounting.amount"))}</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print()<\/script></html>`);
+  win.document.close();
+}
+
 /* ---- Profile tab ---- */
 
 function loadProfileServiceActivity() {
@@ -2499,58 +2807,145 @@ function profileServiceLinksHtml() {
   return "";
 }
 
+/* ---- The account page: a header, three quick tiles, then the rest grouped in sections that open one at a time ---- */
+
+// some labels already start with their own emoji: the row has an icon of its own, so that is dropped
+function plainLabel(text) { return String(text).replace(/^[^\p{L}\p{N}]+/u, ""); }
+function profRow(icon, label, onclick, sub) {
+  return `<button class="prof-row" onclick="${onclick}"><span class="prof-row-ico">${icon}</span><span class="prof-row-text"><b>${esc(plainLabel(label))}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span><span class="prof-chev">›</span></button>`;
+}
+function profSection(id, icon, title, sub, body) {
+  const open = (S._profAcc || {}).open === id;
+  return `<section class="acc ${open ? "open" : ""}">
+    <button class="acc-head" onclick="toggleProfSection('${id}')" aria-expanded="${open}">
+      <span class="acc-ico">${icon}</span>
+      <span class="acc-title"><b>${esc(title)}</b><small>${esc(sub)}</small></span>
+      <span class="acc-chev">⌄</span>
+    </button>
+    ${open ? `<div class="acc-body">${body}</div>` : ""}
+  </section>`;
+}
+function toggleProfSection(id) {
+  S._profAcc = S._profAcc || {};
+  S._profAcc.open = S._profAcc.open === id ? null : id;
+  render();
+}
+
 function tabProfile() {
+  if (!S._sellerPays) { S._sellerPays = { loading: true, methods: [] }; loadSellerPaymentMethods(); }
   if (S.role === "MERCHANT" && !S._fitnessAccessChecked) loadFitnessAccess();
+  if (S._profile == null) { S._profile = {}; loadProfile(); }
+  if (S.account == null) { S.account = {}; loadAccountInfo(); }
+  if (S._refMe == null) loadRefMe();
+  const p = S._profile;
+
+  const buy = [
+    profRow("🛒", t("profile.myCart"), "setHomeTab('cart')"),
+    profRow("📦", t("tab.orders"), "setHomeTab('orders')"),
+    profRow("♥", t("profile.favorites"), "go('favorites')"),
+    profRow("🧾", t("dh.titleMine"), "openDiscountHistory('mine')"),
+    profRow("🛍️", t("prof.usedMarket"), "S._market=null;go('marketplace')"),
+  ].join("");
+
+  const wallet = [
+    profRow("👛", t("profile.wallet"), "go('wallet')"),
+    profRow("⭐", t("plans.title"), "S._allPlans=null;go('allPlans')"),
+    `<div class="acc-sub">${sellerPayoutSettingsHtml()}</div>`,
+  ].join("");
+
+  const business = S.role === "MERCHANT"
+    ? [
+        profRow("🏪", t("profile.merchantMode"), "S._mstat=null;S.merchantTab='catalog';go('merchantMode')"),
+        profRow("🛍️", t("sp.title"), "openStorePlans()"),
+        profRow("📍", t("profile.mapListing"), "S._mprof=null;go('merchantProfile')"),
+        profRow("📢", t("profile.myAds"), "S._myAds=null;go('myAds')"),
+        profRow("🤝", t("profile.affiliates"), "openMyMarketingTeam()"),
+      ].join("")
+    : S.role === "CUSTOMER"
+      ? [
+          profRow("📍", t("profile.registerMerchant"), "go('merchantRegister',{mode:'map'})", t("profile.mapActivitySub")),
+          profRow("🛍️", t("profile.openOnlineStore"), "go('merchantRegister',{mode:'store'})", t("profile.startSellingSub")),
+        ].join("")
+      : "";
+
+  const marketing = S._refMe ? profRow("📣", t(S._refMe.isMarketer ? "ref.title" : "ref.become"), "go('marketing')") : "";
+
+  const fitness = S._fitnessAccess
+    ? profRow("🏋️", t("fitness.profile"), "openFitnessProfile()") + profRow("📋", t("fitness.plansTitle"), "openFitnessPlans()")
+    : "";
+  const serviceLinks = profileServiceLinksHtml();
+  const services = fitness + (serviceLinks ? `<div class="acc-legacy">${serviceLinks}</div>` : "");
+
+  const privacy = `
+    <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
+    <p class="muted" style="margin:4px 0 10px">${esc(t("profile.shareLocationSub"))}</p>
+    ${shareLocationOn() ? myLocationHtml() : ""}`;
+
+  const account = [
+    profRow("⚙️", t("profile.account"), "S._acct=null;go('account')"),
+    profRow("⬇️", t("profile.exportData"), "downloadMyData()"),
+    profRow("↩︎", t("profile.logout"), "doLogout()"),
+    `<button class="link-btn acc-danger" onclick="deleteMyAccount()">${esc(t("profile.deleteAccount"))}</button>`,
+  ].join("");
+
   return `
-    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:50px">
-      ${(() => {
-        if (S._profile == null) { S._profile = {}; loadProfile(); }
-        const p = S._profile;
-        return `<div style="display:flex;justify-content:center">${avatarHtml(p.avatarUrl, p.fullName, "huge")}</div>
-          <h1 class="screen-title" style="margin:10px 0 2px">${esc(p.fullName || t("profile.myAccount"))}</h1>
-          ${p.bio ? `<p class="muted" style="margin:0 0 6px;max-width:260px">${esc(p.bio)}</p>` : ""}
-          <button class="link-btn" onclick="go('profileEdit')">${esc(t("profile.edit"))}</button>`;
-      })()}
-      <div style="height:10px"></div>
-      ${S.role === "MERCHANT"
-        ? `<button class="btn" style="max-width:240px" onclick="S._mstat=null;S.merchantTab='catalog';go('merchantMode')">${esc(t("profile.merchantMode"))}</button>
-           <div style="height:8px"></div>
-           <button class="btn outline" style="max-width:240px" onclick="openStorePlans()">🛍️ ${esc(t("sp.title"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="S._mprof=null;go('merchantProfile')">📍 ${esc(t("profile.mapListing"))}</button>`
-        : S.role === "CUSTOMER" ? `<button class="btn" style="max-width:320px" onclick="go('merchantRegister',{mode:'map'})">📍 ${esc(t("profile.registerMerchant"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.mapActivitySub"))}</p><div style="height:10px"></div><button class="btn outline" style="max-width:320px" onclick="go('merchantRegister',{mode:'store'})">🛍️ ${esc(t("profile.openOnlineStore"))}</button><p class="muted" style="max-width:320px;margin:6px 0 0">${esc(t("profile.startSellingSub"))}</p>` : ""}
-      <div style="height:10px"></div>
-      ${S._fitnessAccess ? `<button class="btn outline" style="max-width:280px" onclick="openFitnessProfile()">🏋️ ${esc(t("fitness.profile"))}</button><div style="height:8px"></div><button class="btn outline" style="max-width:280px" onclick="openFitnessPlans()">📋 ${esc(t("fitness.plansTitle"))}</button><div style="height:8px"></div>` : ""}
-      ${profileServiceLinksHtml()}
-      <div style="height:14px"></div>
-      ${(() => { if (S.account == null) { S.account = {}; loadAccountInfo(); } return verifyBannerHtml(); })()}
-      <div style="height:10px"></div>
-      <label class="switch-row"><input type="checkbox" ${shareLocationOn() ? "checked" : ""} onchange="setShareLocation(this.checked)" /><span>${esc(t("profile.shareLocation"))}</span></label>
-      <p class="muted" style="margin:0 0 10px">${esc(t("profile.shareLocationSub"))}</p>
-      ${shareLocationOn() ? myLocationHtml() : ""}
-      <button class="btn outline" style="max-width:240px" onclick="S._acct=null;go('account')">${esc(t("profile.account"))}</button>
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('favorites')">♥ ${esc(t("profile.favorites"))}</button>
-      <div style="height:10px"></div>
-      ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:240px" onclick="S._myAds=null;go('myAds')">${esc(t("profile.myAds"))}</button>` : ""}
-      <div style="height:10px"></div>
-      ${S.role === "MERCHANT" ? `<button class="btn outline" style="max-width:280px" onclick="openMyMarketingTeam()">🤝 ${esc(t("profile.affiliates"))}</button><div style="height:10px"></div>` : ""}
-      ${(() => { if (S._refMe == null) { loadRefMe(); return ""; } return `<button class="btn outline" style="max-width:240px" onclick="go('marketing')">📣 ${esc(t(S._refMe.isMarketer ? "ref.title" : "ref.become"))}</button><div style="height:10px"></div>`; })()}
-      <div style="height:10px"></div>
-      ${S.role === "ADMIN" ? `<button class="btn" style="max-width:240px" onclick="S._adr=null;go('adminReview')">📣 ${esc(t("adr.title"))}</button><div style="height:10px"></div>` : ""}
-      <button class="btn outline" style="max-width:240px" onclick="openDiscountHistory('mine')">🧾 ${esc(t("dh.titleMine"))}</button>
-      <div style="height:10px"></div>
-      <button class="btn outline" style="max-width:240px" onclick="go('wallet')">${esc(t("profile.wallet"))}</button>
-      <div style="height:14px"></div>
+    <div class="prof">
+      <div class="prof-head">
+        ${avatarHtml(p.avatarUrl, p.fullName, "huge")}
+        <h1>${esc(p.fullName || t("profile.myAccount"))}</h1>
+        ${p.bio ? `<p class="muted">${esc(p.bio)}</p>` : ""}
+        <button class="prof-edit" onclick="go('profileEdit')">✎ ${esc(plainLabel(t("profile.edit")))}</button>
+      </div>
+      <div class="prof-quick">
+        <button onclick="setHomeTab('cart')"><span>🛒</span>${esc(plainLabel(t("profile.myCart")))}</button>
+        <button onclick="setHomeTab('orders')"><span>📦</span>${esc(plainLabel(t("tab.orders")))}</button>
+        <button onclick="toggleProfSection('wallet')"><span>👛</span>${esc(plainLabel(t("profile.wallet")))}</button>
+      </div>
+      ${verifyBannerHtml()}
+      <div class="acc-list">
+        ${profSection("buy", "🛒", t("prof.sec.buy"), t("prof.sec.buySub"), buy)}
+        ${profSection("wallet", "👛", t("prof.sec.wallet"), t("prof.sec.walletSub"), wallet)}
+        ${business ? profSection("business", "🏪", t("prof.sec.business"), t("prof.sec.businessSub"), business) : ""}
+        ${marketing ? profSection("marketing", "📣", t("prof.sec.marketing"), t("prof.sec.marketingSub"), marketing) : ""}
+        ${services ? profSection("services", "🩺", t("prof.sec.services"), t("prof.sec.servicesSub"), services) : ""}
+        ${profSection("privacy", "📍", t("prof.sec.privacy"), t("prof.sec.privacySub"), privacy)}
+        ${S.role === "ADMIN" ? profSection("admin", "🛡️", t("prof.sec.admin"), t("prof.sec.adminSub"), profRow("📣", t("adr.title"), "S._adr=null;go('adminReview')")) : ""}
+        ${profSection("account", "⚙️", t("prof.sec.account"), t("prof.sec.accountSub"), account)}
+      </div>
       ${followUsHtml(true)}
-      <button class="btn outline" style="max-width:240px" onclick="downloadMyData()">⬇️ ${esc(t("profile.exportData"))}</button>
-      <div style="height:10px"></div>
-      <button class="btn secondary" style="max-width:240px" onclick="doLogout()">${esc(t("profile.logout"))}</button>
-      <div style="height:10px"></div>
-      <button class="link-btn" style="color:var(--danger, #b71c1c)" onclick="deleteMyAccount()">${esc(t("profile.deleteAccount"))}</button>
       ${legalLinksHtml()}
     </div>
   `;
 }
 
+const PAYOUT_OPTIONS = [["BANK_ALSHAM", "بنك الشام"], ["SYRIATEL", "سيرياتل كاش"], ["MTN", "MTN كاش"]];
+function sellerPayoutSettingsHtml() {
+  const state = S._sellerPays || { loading: true, methods: [] };
+  if (state.loading) return `<div class="card" style="width:min(100%,420px)">جاري تحميل وسائل استلام المصاري…</div>`;
+  const byProvider = Object.fromEntries((state.methods || []).map((method) => [method.provider, method]));
+  return `<div class="card" style="width:min(100%,420px);text-align:right"><div class="section-title" style="margin-top:0">كيف تستلم مصاري مبيعاتك؟</div><p class="muted">اختَر الوسائل التي عندك. لن تظهر للزبون إلا بعد أن يطلب منك منتجاً.</p>${PAYOUT_OPTIONS.map(([provider, label]) => { const method = byProvider[provider] || {}; return `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="payout-on-${provider}" ${method.isEnabled ? "checked" : ""}><strong>${label}</strong></label><div class="field"><label>الاسم المسجل</label><input id="payout-name-${provider}" value="${esc(method.recipientName || "")}" placeholder="الاسم كما يظهر بالحساب" /></div><div class="field"><label>رقم الحساب أو المحفظة</label><input id="payout-account-${provider}" value="${esc(method.accountNumber || "")}" placeholder="رقم المحفظة أو الحساب" /></div>`; }).join("")}<button class="btn" ${state.saving ? "disabled" : ""} onclick="saveSellerPaymentMethods()">${state.saving ? "جارٍ الحفظ…" : "حفظ وسائل الاستلام"}</button></div>`;
+}
+async function loadSellerPaymentMethods() {
+  const { ok, data } = await api("GET", "/profile/payment-methods");
+  S._sellerPays = { loading: false, methods: ok ? data.methods : [], error: ok ? "" : errMsg(data, "تعذّر تحميل وسائل الاستلام") };
+  render();
+}
+async function saveSellerPaymentMethods() {
+  const methods = PAYOUT_OPTIONS.flatMap(([provider]) => {
+    const enabled = qs(`payout-on-${provider}`)?.checked;
+    const recipientName = qs(`payout-name-${provider}`)?.value.trim() || "";
+    const accountNumber = qs(`payout-account-${provider}`)?.value.trim() || "";
+    if (!enabled && !recipientName && !accountNumber) return [];
+    if (!recipientName || !accountNumber) { S.error = "أكمل الاسم ورقم الحساب لكل وسيلة اخترتها"; return null; }
+    return [{ provider, recipientName, accountNumber, isEnabled: enabled }];
+  });
+  if (methods.some((entry) => entry === null)) return render();
+  S._sellerPays.saving = true; render();
+  const { ok, data } = await api("PUT", "/profile/payment-methods", { methods });
+  S._sellerPays = { loading: false, methods: ok ? data.methods : S._sellerPays.methods, error: ok ? "" : errMsg(data, "تعذّر الحفظ") };
+  if (!ok) S.error = S._sellerPays.error; else toast("تم حفظ وسائل الاستلام");
+  render();
+}
 function openDoctorCare() { S._doctorCare = null; S._careSelected = null; S._careRecords = null; go("doctorCare"); }
 async function loadDoctorCare() {
   const { ok, data } = await api("GET", "/doctor-care");
@@ -2695,6 +3090,7 @@ function openMyMarketingTeam() {
   S._catalog = null;
   S._openMarketingTeam = true;
   go("merchantMode");
+
 }
 
 /* ================= MARKETING: my referral link, the people I brought, what I earned ================= */
@@ -3040,8 +3436,6 @@ function screenMerchantDetail() {
   const votes = x.ratingCount || 0;
   const followers = x.followersCount || 0;
   const sold = products.reduce((n, p) => n + (p.soldCount || 0), 0);
-  let hue = 0;
-  for (const c of String(x.id)) hue = (hue * 31 + c.charCodeAt(0)) % 360;
   const q = (m.q || "").trim().toLowerCase();
   const sorted = [...products].filter((p) => !q || p.name.toLowerCase().includes(q)).sort({
     popular: (p1, p2) => p2.soldCount - p1.soldCount,
@@ -3098,7 +3492,7 @@ function screenMerchantDetail() {
         </form>
         <button class="store-icon-btn store-cart" onclick="storeToCart()" aria-label="cart">${ICON.bag}</button>
       </div>
-      <div class="shop-cover" style="--h:${hue}">
+      <div class="shop-cover">
         <div class="shop-id">
           ${avatarHtml(x.avatarUrl, x.businessName, "big")}
           <div class="shop-id-text">
@@ -3263,7 +3657,10 @@ const storeSecName = (x) => (x ? (LANG === "ar" ? x.name : x.nameEn || x.name) :
 
 function openStore() {
   S._store = null;
-  go("store");
+  S.stack = [];
+  S.screen = "home";
+  S.homeTab = "store";
+  render();
 }
 
 function storeState() {
@@ -3491,6 +3888,7 @@ function storeSetSort(v) { S._store.sort = v; loadStoreList(false); }
 function storeBack() {
   const st = S._store;
   if (st && (st.q || st.section || st.deals || st.byPhoto)) { st.q = ""; st.section = ""; st.deals = false; st.byPhoto = null; window.scrollTo(0, 0); render(); return; }
+  if (S.screen === "home") return; // on the store tab there is nothing behind it: only a search or a filter can be left
   S._store = null;
   back();
 }
@@ -4497,6 +4895,94 @@ function storeSection(title, items, kind) {
     </section>`;
 }
 
+function screenMarketplace() {
+  if (!S._market) { S._market = { loading: true, settings: {}, listings: [] }; loadMarketplace(); }
+  const m = S._market;
+  if (m.loading) return `<h1 class="screen-title">سوق المنتجات</h1>${spinner()}`;
+  const mine = m.mine || [];
+  const quota = m.quota || { used: 0, freeLimit: 0, remaining: 0, paid: false };
+  const products = m.listings || [];
+  const statusText = { PENDING_REVIEW: 'بانتظار مراجعة الإدارة', ACTIVE: 'منشور', SOLD: 'مُباع', HIDDEN: 'مخفي', REJECTED: 'مرفوض بعد مراجعة الذكاء الاصطناعي' };
+  return `<button class="link-btn" onclick="back()">← رجوع</button><h1 class="screen-title">سوق المنتجات</h1>
+    <p class="muted">بيع وشراء المنتجات بين مستخدمي دليلكم. الإعلانات تظهر بعد مراجعتها.</p>
+    <div class="card"><input id="mp-search" placeholder="ابحث عن منتج" value="${esc(m.q || '')}" onkeydown="if(event.key==='Enter')searchMarketplace()"><button class="btn" onclick="searchMarketplace()">بحث</button></div>
+    ${S.token && !m.store ? `<div class="card"><h3>افتح متجرك الخاص</h3><p class="muted">بعد إنشاء متجرك بتقدر تضيف المنتجات وتشارك صفحة متجرك مع الناس.</p><input id="mp-store-name" maxlength="70" placeholder="اسم المتجر"><textarea id="mp-store-description" maxlength="500" placeholder="وصف المتجر (اختياري)"></textarea><button class="btn" onclick="saveMyMarketplaceStore()">إنشاء المتجر</button><p id="mp-store-msg" class="muted"></p></div>` : ''}
+    ${S.token && m.store ? `<div class="card"><h3>متجري: ${esc(m.store.name)}</h3><p>${esc(m.store.description || '')}</p><button class="btn outline" onclick="go('marketplaceStore',{storeId:'${esc(m.store.id)}'})">عرض متجري للناس</button></div><div class="card"><h3>منتج جديد بمتجري</h3><p class="muted">المجاني المتبقي هذا الشهر: ${quota.remaining} من ${quota.freeLimit}${quota.paid ? ' · عندك باقة فعالة' : ''}</p>
+      ${quota.remaining <= 0 && !quota.paid ? `<p>استهلكت إعلاناتك المجانية. اختر باقة للمتابعة:</p>${(m.plans || []).map(p => `<button class="btn outline" onclick="buyMarketplacePlan('${esc(p.id)}')">${esc(p.name)} · ${p.priceCredits == null ? 'السعر غير محدد' : p.priceCredits + ' رصيد'}</button>`).join('')}` : ''}
+      <input id="mp-title" maxlength="80" placeholder="اسم المنتج"><textarea id="mp-description" maxlength="1000" placeholder="وصف مختصر"></textarea>
+      <input id="mp-price" type="number" min="0.01" step="0.01" placeholder="السعر"><select id="mp-condition"><option value="USED">مستعمل</option>${m.settings.allowNewProducts || quota.paid ? '<option value="NEW">جديد</option>' : ''}</select>
+      <input id="mp-category" maxlength="60" placeholder="التصنيف (اختياري)"><input id="mp-phone" maxlength="30" placeholder="رقم للتواصل (اختياري)"><label>صورة المنتج (اختياري) <input id="mp-photo" type="file" accept="image/jpeg,image/png,image/webp"></label>
+      <button class="btn" onclick="createMarketplaceListing()">إضافة المنتج</button><p id="mp-form-msg" class="muted"></p></div>
+      <div class="card"><h3>إعلاناتي</h3>${mine.length ? mine.map(x => `<p><b>${esc(x.title)}</b> · ${esc(statusText[x.status] || x.status)}${x.reviewNote ? `<br><small class="muted">السبب: ${esc(x.reviewNote)}</small>` : ''} ${x.status === 'ACTIVE' ? `<button class="small" onclick="setMarketplaceStatus('${esc(x.id)}','SOLD')">تم البيع</button>` : ''}</p>`).join('') : '<p class="muted">ما عندك إعلانات بعد</p>'}</div>` : `<div class="card">سجّل دخولك لتضيف إعلانك. <button class="btn" onclick="go('login')">تسجيل الدخول</button></div>`}
+    <h2>متاجر المستخدمين</h2>${products.length ? products.map(x => `<article class="card">${x.imageUrl ? `<img src="${esc(x.imageUrl)}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px">` : ''}<h3>${esc(x.title)}</h3><p>${esc(x.description || '')}</p><b>${fmt(x.priceCents, x.currency)}</b><p class="muted">${x.condition === 'USED' ? 'مستعمل' : 'جديد'} · <button class="link-btn" onclick="go('marketplaceStore',{storeId:'${esc(x.storeId)}'})">متجر ${esc(x.sellerName || '')}</button>${x.contactPhone ? ` · للتواصل: ${esc(x.contactPhone)}` : ''}</p></article>`).join('') : '<div class="empty-state">ما في منتجات منشورة حالياً</div>'}`;
+}
+
+async function loadMarketplace(q) {
+  const s = await api('GET', '/marketplace/settings');
+  const l = await api('GET', '/marketplace/listings' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  let own = { data: {} };
+  if (S.token) own = await api('GET', '/marketplace/mine');
+  S._market = { loading: false, settings: s.ok ? s.data : {}, listings: l.ok ? l.data.listings : [], q: q || '', mine: own.data.listings || [], store: own.data.store || null, quota: own.data.quota, plans: own.data.plans || [] };
+  render();
+}
+
+async function saveMyMarketplaceStore() {
+  const msg = document.getElementById('mp-store-msg');
+  const name = document.getElementById('mp-store-name').value.trim();
+  if (name.length < 2) { msg.textContent = 'اكتب اسماً للمتجر (حرفين على الأقل).'; return; }
+  const { ok, data } = await api('PUT', '/marketplace/my-store', { name, description: document.getElementById('mp-store-description').value.trim() || undefined });
+  if (!ok) { msg.textContent = errMsg(data, 'تعذّر إنشاء المتجر'); return; }
+  await loadMarketplace(S._market?.q || '');
+}
+
+function screenMarketplaceStore() {
+  if (!S._marketStore) { S._marketStore = { loading: true }; loadMarketplaceStore(S.params.storeId); }
+  const d = S._marketStore;
+  if (d.loading) return spinner();
+  if (!d.store) return `<button class="link-btn" onclick="back()">← رجوع</button><div class="empty-state">المتجر غير موجود</div>`;
+  return `<button class="link-btn" onclick="back()">← رجوع</button><h1 class="screen-title">${esc(d.store.name)}</h1><p class="muted">${esc(d.store.description || '')}</p>${d.listings.length ? d.listings.map(x => `<article class="card">${x.imageUrl ? `<img src="${esc(x.imageUrl)}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px">` : ''}<h3>${esc(x.title)}</h3><p>${esc(x.description || '')}</p><b>${fmt(x.priceCents, x.currency)}</b><p class="muted">${x.condition === 'USED' ? 'مستعمل' : 'جديد'}${x.contactPhone ? ` · للتواصل: ${esc(x.contactPhone)}` : ''}</p></article>`).join('') : '<div class="empty-state">المتجر لسه ما فيه منتجات منشورة</div>'}`;
+}
+
+async function loadMarketplaceStore(id) {
+  const { ok, data } = await api('GET', '/marketplace/stores/' + encodeURIComponent(id));
+  S._marketStore = { loading: false, store: ok ? data.store : null, listings: ok ? data.listings : [] };
+  render();
+}
+
+function searchMarketplace() { loadMarketplace(document.getElementById('mp-search')?.value || ''); }
+
+async function createMarketplaceListing() {
+  const msg = document.getElementById('mp-form-msg');
+  const title = document.getElementById('mp-title').value.trim();
+  const price = Number(latinDigits(document.getElementById('mp-price').value));
+  if (title.length < 2 || !(price > 0)) { msg.textContent = 'اكتب اسم المنتج وسعراً صحيحاً.'; return; }
+  let imageUrl;
+  const file = document.getElementById('mp-photo').files?.[0];
+  if (file) {
+    const headers = { 'Content-Type': file.type, 'Authorization': 'Bearer ' + S.token };
+    const upload = await fetch('/marketplace/photos', { method: 'POST', headers, body: file });
+    const photo = await upload.json().catch(() => ({}));
+    if (!upload.ok) { msg.textContent = 'تعذّر رفع الصورة.'; return; }
+    imageUrl = photo.url;
+  }
+  const { ok, data } = await api('POST', '/marketplace/listings', { title, description: document.getElementById('mp-description').value.trim(), priceCents: Math.round(price * 100), currency: S.currency || 'EUR', condition: document.getElementById('mp-condition').value, category: document.getElementById('mp-category').value.trim() || undefined, contactPhone: document.getElementById('mp-phone').value.trim() || undefined, imageUrl });
+  if (!ok) { msg.textContent = errMsg(data, 'تعذّر إرسال الإعلان'); return; }
+  await loadMarketplace(S._market?.q || '');
+  toast('وصل إعلانك للإدارة للمراجعة');
+}
+
+async function setMarketplaceStatus(id, status) {
+  const { ok, data } = await api('PATCH', '/marketplace/listings/' + id, { status });
+  if (!ok) return toast(errMsg(data, 'تعذّر تحديث الإعلان'));
+  loadMarketplace(S._market?.q || '');
+}
+
+async function buyMarketplacePlan(planId) {
+  const { ok, data } = await api('POST', '/marketplace/subscribe', { planId });
+  if (!ok) return toast(errMsg(data, 'تعذّر شراء الباقة'));
+  loadMarketplace(S._market?.q || '');
+}
+
 function screenStore() {
   const st = storeState();
   const home = st.home;
@@ -4538,7 +5024,7 @@ function screenStore() {
   return `
     <div class="store">
       <div class="store-head">
-        <button class="store-icon-btn" onclick="storeBack()" aria-label="back">›</button>
+        ${S.screen === "store" || filtering ? `<button class="store-icon-btn" onclick="storeBack()" aria-label="back">›</button>` : ""}
         <b class="store-brand">${esc(t("tab.store"))}</b>
         <form class="store-search" onsubmit="storeSearch(event)">
           <input id="store-q" type="search" value="${esc(st.q)}" placeholder="${esc(t("store.searchPlaceholder"))}" />
@@ -4557,6 +5043,7 @@ function screenStore() {
     </div>`;
 }
 
+function plainSoldBy(text) { return String(text).replace(/[:：]\s*$/, ""); }
 function screenProductDetail() {
   if (!S._productDetail || S._productDetail.id !== S.params.productId) {
     S._productDetail = { id: S.params.productId, loading: true, qty: 1 };
@@ -4585,13 +5072,17 @@ function screenProductDetail() {
                  <div class="pd-member">⭐ ${esc(t("store.memberPrice"))}</div>`
               : `<b>${priceText(prod, false)}</b>`}
           </div>
+          <button class="pd-seller" onclick="go('merchantDetail',{merchantId:'${prod.merchant.id}'})">
+            ${avatarHtml(prod.merchant.avatarUrl, prod.merchant.name, "big")}
+            <span class="pd-seller-text"><small>${esc(plainSoldBy(t("store.soldBy")))}</small><b>${esc(prod.merchant.name)}</b></span>
+            <span class="pd-seller-go">${esc(t("store.visitShop"))}</span>
+          </button>
           ${prod.description ? `<p class="pd-desc">${esc(prod.description)}</p>` : ""}
           ${(prod.specs && prod.specs.length) || prod.condition ? `<div class="pd-specs">
             ${prod.condition ? `<div><span>${esc(t("wiz.condition"))}</span><b>${esc(t("wiz.cond." + prod.condition))}</b></div>` : ""}
             ${(prod.specs || []).map((x) => `<div><span>${esc(x.label)}</span><b>${esc(x.value)}</b></div>`).join("")}
           </div>` : ""}
           <div class="pd-rows">
-            <div><span>${esc(t("store.soldBy"))}</span><a onclick="go('merchantDetail',{merchantId:'${prod.merchant.id}'})">${esc(prod.merchant.name)}</a></div>
             <div><span>${esc(t("store.availability"))}</span>${available ? `<b class="${prod.stock <= 5 ? "low" : "ok"}">✓ ${esc(t("store.stockCount", { n: prod.stock }))}</b>` : `<b class="low">${esc(t("store.unavailable"))}</b>`}</div>
           </div>
           ${(prod.shipping || []).length ? `<div class="pd-ship"><b>🚚 ${esc(t("ship.methods"))}</b>${prod.shipping.map((m) => `<div><span>${esc(m.name)}</span><span>${m.costCents ? fmt(m.costCents) : esc(t("ship.free"))}</span></div>`).join("")}</div>` : ""}
@@ -4673,7 +5164,9 @@ function screenOrderDetail() {
     <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(ord.totalCents)}</span></div>
     ${ord.memberDiscountCents > 0 ? `<p class="muted">وفّرت ${fmt(ord.memberDiscountCents)} بسعر أعضاء دليلكم</p>` : ""}
     ${payLineHtml(ord.payment)}
+    ${transferReferenceForm(ord)}
     ${ord.customer ? confirmCashButton(ord, false) : ""}
+    ${confirmTransferButton(ord)}
     ${ord.status === "DELIVERED" && ord.rated ? `
       <div class="section-title">${esc(t("rv.rateTitle"))}</div>
       <div class="rv-rate-list">
@@ -5303,7 +5796,7 @@ function syncRouteLayer() {
   S._routeDrawn = key;
   if (S._routeLayer) { map.removeLayer(S._routeLayer); S._routeLayer = null; }
   if (!r || !r.data || !r.data.geometry.length) return;
-  S._routeLayer = L.polyline(r.data.geometry, { color: r.mode === "walking" ? "#1e6fe0" : "#ba2a34", weight: 6, opacity: 0.9, dashArray: r.mode === "walking" ? "1 10" : null, lineCap: "round" }).addTo(map);
+  S._routeLayer = L.polyline(r.data.geometry, { color: r.mode === "walking" ? "#1e6fe0" : "#f48050", weight: 6, opacity: 0.9, dashArray: r.mode === "walking" ? "1 10" : null, lineCap: "round" }).addTo(map);
   if (!(S._nav && S._nav.follow)) moveMap(() => map.fitBounds(S._routeLayer.getBounds(), { padding: [50, 50], animate: false }));
 }
 
@@ -5984,7 +6477,7 @@ async function exportDocument(path) {
   if (!res.ok) { if (win) win.close(); return toast("تعذّر تجهيز المستند"); }
   const html = await res.text();
   if (win) {
-    const bar = `<div class="no-print" style="position:sticky;top:0;z-index:5;padding:10px;background:#222;text-align:center"><button onclick="window.print()" style="padding:10px 22px;border:0;border-radius:8px;background:#ba2a34;color:#fff;font:700 15px sans-serif;cursor:pointer">🖨️ ${esc(t("doc.print"))}</button></div><style>@media print{.no-print{display:none!important}}</style>`;
+    const bar = `<div class="no-print" style="position:sticky;top:0;z-index:5;padding:10px;background:#222;text-align:center"><button onclick="window.print()" style="padding:10px 22px;border:0;border-radius:8px;background:#f48050;color:#fff;font:700 15px sans-serif;cursor:pointer">🖨️ ${esc(t("doc.print"))}</button></div><style>@media print{.no-print{display:none!important}}</style>`;
     win.document.open();
     win.document.write(html.replace(/<body([^>]*)>/i, (m) => m + bar));
     win.document.close();
@@ -6308,6 +6801,57 @@ function screenPricing() {
   return header + group.plans.map((plan) => planCardHtml(plan, credit, plan.source === "catalog" && plan.priceCredits !== null ? { fn: "subscribeFromPricing", label: t("pricing.renew") } : null)).join("") + errorBanner();
 }
 
+function screenAllPlans() {
+  if (!S._allPlans) { S._allPlans = { loading: true }; loadAllPlans(); }
+  const state = S._allPlans;
+  const head = `${backRow()}<h1 class="screen-title">${esc(t("plans.title"))}</h1><p class="screen-sub">${esc(t("plans.subtitle"))}</p>`;
+  if (state.loading) return head + spinner();
+  if (!state.catalog) return head + `<div class="empty-state">${esc(t("plans.failed"))}</div>`;
+  const groups = (state.catalog.services || []).map(group => `<section class="card"><h2 class="section-title">${esc(t(`service.${group.service}`))}</h2>${group.plans.map(p => `<article class="card" style="margin:10px 0"><h3>${esc(p.name)}</h3><p class="muted">${esc(p.description || "")}</p><strong>${p.cashAmountCents === 0 ? esc(t("plans.free")) : esc(fmt(p.cashAmountCents, p.currency))}</strong><p class="muted">${p.durationDays} ${esc(t("plans.days"))}${p.trialDays ? ` · ${p.trialDays} ${esc(t("plans.trialDays"))}` : ""}</p><ul>${(p.features || []).map(f => `<li>${esc(f.text)}</li>`).join("")}</ul>${p.trialDays ? `<button class="btn" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',${p.cashAmountCents === 0},${p.trialDays})">${esc(t("plans.startTrial"))}</button>` : p.cashAmountCents === 0 ? `<button class="btn" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',true,0)">${esc(t("plans.subscribe"))}</button>` : `<button class="btn" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',false,0,'STRIPE')">${esc(t("plans.payCard"))}</button>${p.paypalAvailable ? ` <button class="btn outline" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',false,0,'PAYPAL')">${esc(t("plans.payPaypal"))}</button>` : ""}`}</article>`).join("")}</section>`).join("");
+  const active = (state.subscriptions || []).map(sub => `<div class="title-line"><span><b>${esc(sub.plan?.name || t("plans.title"))}</b><div class="muted">${esc(sub.status)} · ${sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString() : ""}</div></span>${sub.status === "ACTIVE" ? `<button class="btn small outline" onclick="cancelPlatformSubscription('${esc(sub.id)}')">${esc(t("plans.cancel"))}</button>` : ""}</div>`).join("");
+  return head + (active ? `<section class="card"><h2 class="section-title">${esc(t("plans.mySubscriptions"))}</h2>${active}</section>` : "") + groups + errorBanner();
+}
+
+async function loadAllPlans() {
+  const [catalog, mine] = await Promise.all([api("GET", "/plans/catalog"), S.token ? api("GET", "/billing/mine") : Promise.resolve({ ok: true, data: [] })]);
+  S._allPlans = { loading: false, catalog: catalog.ok ? catalog.data : null, subscriptions: mine.ok ? mine.data : [] };
+  render();
+}
+
+async function cancelPlatformSubscription(id) {
+  if (!window.confirm(t("plans.cancelConfirm"))) return;
+  const { ok, data } = await api("POST", `/billing/${encodeURIComponent(id)}/cancel`, {});
+  if (!ok) { S.error = errMsg(data, t("plans.failed")); return render(); }
+  toast(t("plans.cancelled")); S._allPlans = null; loadAllPlans();
+}
+
+async function startServicePlan(planId, service, source, isFree, trialDays, provider = "STRIPE") {
+  if (!S.token) return go("login");
+  if (source === "settings") {
+    const { ok, data } = await api("POST", "/responder/activate", {});
+    if (!ok) { S.error = errMsg(data, t("plans.failed")); return render(); }
+    toast(t("plans.started")); S._allPlans = null; return render();
+  }
+  if (trialDays > 0 && service !== "MEMBERSHIP") {
+    const { ok, data } = await api("POST", "/billing/trial", { planId });
+    if (!ok) { S.error = errMsg(data, t("plans.failed")); return render(); }
+    toast(t("plans.started")); S._allPlans = null; loadAllPlans(); return;
+  }
+  if (service === "MEMBERSHIP" && (isFree || trialDays > 0)) {
+    const { ok, data } = await api("POST", "/membership/subscribe", { planId });
+    if (ok) { toast(t("plans.started")); S._card = null; S._cardLoaded = null; S._allPlans = null; return render(); }
+    S.error = errMsg(data, t("plans.failed")); return render();
+  }
+  if (isFree) {
+    const { ok, data } = await api("POST", "/billing/activate-free", { planId });
+    if (ok) { toast(t("plans.started")); S._allPlans = null; return render(); }
+    S.error = errMsg(data, t("plans.failed")); return render();
+  }
+  const { ok, data } = await api("POST", "/billing/checkout", { planId, provider });
+  if (!ok) { S.error = errMsg(data, t("plans.paymentSetup")); return render(); }
+  location.assign(data.checkoutUrl);
+}
+
 async function loadPricing() {
   const { ok, data } = await api("GET", "/plans/catalog");
   S._pricing = { loading: false, catalog: ok ? data : null };
@@ -6415,7 +6959,7 @@ function screenStorePlans() {
   const current = d.current && d.active
     ? `<div class="card"><strong>${esc(t("sp.current", { name: d.current.name }))}</strong>${d.current.endsAt ? `<p class="muted" style="margin:4px 0 0">${esc(t("sp.until", { date: day(d.current.endsAt) }))} · ${countdownHtml(d.current.endsAt)}</p>` : ""}<div style="height:10px"></div>${open}</div>`
     : "";
-  const intro = !d.required ? `<div class="card"><p>${esc(t("sp.noPlansYet"))}</p>${open}</div>` : !d.active ? `<p class="screen-sub">${esc(t("sp.choose"))}</p>` : `<div class="section-title">${esc(t("sp.change"))}</div>`;
+  const intro = d.freeTier ? `<div class="card"><strong>${LANG === "en" ? "Your free store package" : "باقة متجرك المجانية"}</strong><p class="muted">${d.freeTier.freeListingsPerMonth} ${LANG === "en" ? "products each month" : "منتجات بالشهر"} · ${d.freeTier.allowNewProducts ? (LANG === "en" ? "used and new" : "مستعمل وجديد") : (LANG === "en" ? "used items only" : "مستعمل فقط")}</p>${open}</div><div class="section-title">${esc(t("sp.change"))}</div>` : !d.required ? `<div class="card"><p>${esc(t("sp.noPlansYet"))}</p>${open}</div>` : !d.active ? `<p class="screen-sub">${esc(t("sp.choose"))}</p>` : `<div class="section-title">${esc(t("sp.change"))}</div>`;
   const plans = d.plans.map((p) => `
     <div class="card plan-card">
       <div class="title-line"><strong>${esc(p.name)}</strong><span class="price">${esc(price(p))}</span></div>
@@ -7121,6 +7665,7 @@ function tabMerchantOrders() {
         <p class="muted">${esc(ord.user ? ord.user.fullName : "")}${ord.customerRating && ord.customerRating.ratingCount ? ` · <span class="star">★ ${ord.customerRating.rating.toFixed(1)}</span> (${ord.customerRating.ratingCount})` : ""}</p>
         <p class="price">${fmt(ord.totalCents)}</p>
         ${payLineHtml(ord.payment)}
+        ${confirmTransferButton(ord)}
         ${confirmCashButton(ord, true)}
         ${ord.status === "DELIVERED" && ord.user ? `<button class="btn small outline" style="width:auto;margin-top:6px" onclick="openReview('customer','${ord.user.id}','${esc(ord.user.fullName).replace(/'/g, "&#39;")}',0,'')">⭐ ${esc(ord.ratedCustomer ? t("rv.edit") : t("rv.rateCustomer"))}</button>` : ""}
         ${(next.length || canCancel) ? `<div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">
@@ -7542,18 +8087,14 @@ async function submitTopup() {
 
 function screenResponder() {
   if (SOON.responder) return `${backRow()}<div class="center-pad"><h1 class="screen-title">🤖 ${esc(t("tab.responder"))}</h1><p class="muted" style="text-align:center">${esc(t("soon.responder"))}</p></div>`;
-  if (!S._resp) { S._resp = { loading: true, tab: "overview" }; loadResponder(); }
+  const tab = siteTab("responder");
+  // the home page is always there (and is all a guest sees); the tools are the other tabs
+  if (tab === "home" || !S.token) return backRow() + siteShell("responder", "home", siteLanding("responder"));
+  if (!S._resp) { S._resp = { loading: true, tab }; loadResponder(); }
   const r = S._resp;
-  if (r.loading) return backRow() + spinner();
-  const tabs = [["overview", "الحالة"], ["channels", "القنوات"], ["rules", "القواعد"], ["inbox", "الوارد"]];
-  return `
-    ${backRow()}
-    <h1 class="screen-title">🤖 المجيب الآلي</h1>
-    <div class="chip-row" style="margin:10px 0 14px">
-      ${tabs.map(([id, label]) => `<button class="chip ${r.tab === id ? "active" : ""}" onclick="setRespTab('${id}')">${label}</button>`).join("")}
-    </div>
-    ${{ overview: respOverview, channels: respChannels, rules: respRules, inbox: respInbox }[r.tab]()}
-  `;
+  r.tab = tab;
+  if (r.loading) return backRow() + siteShell("responder", tab, spinner());
+  return backRow() + siteShell("responder", tab, { overview: respOverview, channels: respChannels, rules: respRules, inbox: respInbox }[tab]());
 }
 
 async function loadResponder() {
@@ -7567,7 +8108,7 @@ async function loadResponder() {
   render();
 }
 
-function setRespTab(tab) { S._resp.tab = tab; S.error = null; render(); }
+function setRespTab(tab) { setSiteTab("responder", tab); }
 
 function respStatusBadge(st) {
   const map = { TRIAL: ["info", "تجربة مجانية"], ACTIVE: ["success", "فعّالة"], EXPIRED: ["danger", "منتهية"], OFF: ["neutral", "غير مفعّلة"] };
@@ -7765,7 +8306,7 @@ function respRules() {
         <button class="btn small outline" style="width:auto;margin-top:6px" onclick="respLoadPosts()">تحميل منشوراتي</button>
         ${r.postsError ? `<p class="muted" style="color:#b71c1c">${esc(r.postsError)}</p>` : ""}
         ${posts.map((p) => `
-          <label class="card" style="display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:10px;font-size:13px;cursor:pointer;${picked.includes(p.id) ? "outline:2px solid var(--primary,#ba2a34)" : ""}">
+          <label class="card" style="display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:10px;font-size:13px;cursor:pointer;${picked.includes(p.id) ? "outline:2px solid var(--primary,#f48050)" : ""}">
             <input type="checkbox" style="width:auto;margin-top:4px" ${picked.includes(p.id) ? "checked" : ""} onchange="respTogglePost('${esc(p.id)}')" />
             ${/^https:\/\//.test(p.image || "") ? `<img src="${esc(p.image)}" alt="" loading="lazy" style="width:84px;height:84px;object-fit:cover;border-radius:8px;flex:none" />` : ""}
             <span style="flex:1;min-width:0">
@@ -8031,6 +8572,7 @@ function bootMetaReturn() {
   if (!S.token) return false;
   S.stack = [];
   S.params = {};
+  (S._site = S._site || {}).responder = "channels";
   S._resp = { loading: true, tab: "channels", notice: q.get("ok") === "1" ? "تم ربط الصفحة ✅" : null };
   if (q.get("ok") !== "1") S.error = "تعذّر ربط الصفحة. جرّب من جديد.";
   go("responder");
@@ -8049,6 +8591,7 @@ function bootResponderPlansLink() {
     return true;
   }
   S._resp = null;
+  (S._site = S._site || {}).responder = "overview";
   go("responder");
   return true;
 }

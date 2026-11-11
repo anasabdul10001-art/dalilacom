@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import { z } from "zod";
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { prisma } from "../prisma";
 import { ApiError, sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth, requireRole } from "../middleware/auth";
@@ -14,13 +14,13 @@ import { route } from "../lib/asyncRoute";
 import { resolveLanguage } from "../lib/languages";
 import { sectionOfProductCategory } from "../services/productCategory.service";
 import { REVIEWED_FIELDS, moderateProduct } from "../services/productModeration.service";
-import { hasActiveStorePlan, storePlanRequired } from "../services/storePlan.service";
 import { optionalUserId } from "../services/viewerCountry.service";
 import { translateProducts } from "../services/contentTranslation.service";
 import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
 import { priceColumns } from "../lib/pricing";
 import { marketOfUser } from "../services/viewerCountry.service";
+import { countSellerListings, hasPaidSellerPlan, sellerListingQuota } from "../services/sellerListingsQuota.service";
 
 export const productRouter = Router();
 
@@ -35,17 +35,19 @@ const productFieldsSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
   priceCents: z.number().int().positive(),
+  costPriceCents: z.number().int().nonnegative().default(0),
   categoryId: z.string().uuid().optional(),
   productCategoryId: z.string().uuid().optional(), // where the product is filed (ProductCategory)
   stock: z.number().int().nonnegative().default(0),
   sku: z.string().optional(),
+  barcode: z.string().trim().max(80).optional().nullable(),
   memberDiscountEnabled: z.boolean().default(false),
   memberPriceCents: z.number().int().positive().optional(),
   // the online store: where it is listed, how it looks and what it is
   storeSection: z.string().refine(isStoreSection, "Unknown store section").optional(),
   images: z.array(z.string().regex(/^\/store\/photos\/[0-9a-f-]{36}$/)).max(6).optional(),
   specs: z.array(z.object({ label: z.string().trim().min(1).max(30), value: z.string().trim().min(1).max(60) })).max(10).optional(),
-  condition: z.enum(["NEW", "USED"]).optional(),
+  condition: z.enum(["NEW", "USED"]).default("USED"),
 });
 
 /** Photos are the shop's own: each one has to be among the pictures this shop uploaded. */
@@ -77,8 +79,10 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), route(async (re
     return sendError(res, 403, "FORBIDDEN", result.error ?? "Forbidden");
   }
 
-  // the store opens when the shop has chosen a plan (the free one or a paid one); until then no product can be added
-  if ((await storePlanRequired()) && !hasActiveStorePlan(result.merchant)) return sendError(res, 402, "PLAN_REQUIRED", "Choose a store plan first");
+  // The same free package and monthly product limit apply to merchant stores and ordinary user stores.
+  const [settings, quota] = await Promise.all([getSettings(), sellerListingQuota(req.user!.id)]);
+  if (!quota.paid && parsed.data.condition === "NEW" && !settings.marketplace.allowNewProducts) return sendError(res, 403, "NEW_PRODUCTS_CLOSED", "الباقة المجانية الحالية تسمح بالمنتجات المستعملة فقط");
+  if (!quota.paid && quota.remaining <= 0) return sendError(res, 402, "MARKETPLACE_PLAN_REQUIRED", "وصلت للعدد المجاني لهذا الشهر. اختر باقة للمتابعة.");
 
   if (parsed.data.categoryId) {
     const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
@@ -97,9 +101,23 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), route(async (re
   }
   const columns = priceColumns({ priceCents: rest.priceCents, memberPriceCents: rest.memberPriceCents }, result.merchant, await marketOfUser(result.merchant.userId)); // in the shop's own money (one setting for the whole shop)
   if (!columns) return sendError(res, 400, "USD_RATE_REQUIRED", "حدّد سعر صرف الدولار أولًا من إعدادات الأسعار");
-  const product = await prisma.product.create({
-    data: { merchantId: result.merchant.id, ...rest, ...columns, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images?.length ? { images, imageUrl: images[0] } : {}) },
+  const product = await prisma.$transaction(async tx => {
+    await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${req.user!.id}))`);
+    const used = await countSellerListings(tx, req.user!.id);
+    const paid = await hasPaidSellerPlan(req.user!.id);
+    if (!paid && rest.condition === "NEW" && !settings.marketplace.allowNewProducts) throw new Error("MARKETPLACE_NEW_CLOSED");
+    if (!paid && used >= settings.marketplace.freeListingsPerMonth) throw new Error("MARKETPLACE_QUOTA");
+    return tx.product.create({
+      data: { merchantId: result.merchant.id, ...rest, ...columns, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images?.length ? { images, imageUrl: images[0] } : {}) },
+    });
+  }).catch(err => {
+    if ((err as Error).message === "MARKETPLACE_QUOTA" || (err as Error).message === "MARKETPLACE_NEW_CLOSED") return null;
+    throw err;
   });
+  if (!product) {
+    if (!quota.paid && rest.condition === "NEW" && !settings.marketplace.allowNewProducts) return sendError(res, 403, "NEW_PRODUCTS_CLOSED", "الباقة المجانية الحالية تسمح بالمنتجات المستعملة فقط");
+    return sendError(res, 402, "MARKETPLACE_PLAN_REQUIRED", "وصلت للعدد المجاني لهذا الشهر. اختر باقة للمتابعة.");
+  }
   const outcome = await moderateProduct(product.id); // looked at before anyone sees it
   res.status(201).json({ ...product, moderation: outcome.moderation, moderationNote: outcome.note });
 }));
@@ -286,6 +304,8 @@ const updateProductSchema = productFieldsSchema.partial().extend({
   stock: z.number().int().nonnegative().optional(),
   memberDiscountEnabled: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  condition: z.enum(["NEW", "USED"]).optional(), // creation defaults to USED; an edit must not turn NEW back into USED
+  costPriceCents: z.number().int().nonnegative().optional(), // creation defaults to 0; an edit must not wipe the saved cost
 });
 
 productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
@@ -298,6 +318,10 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), route(async
   const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
   if (!merchant || !existing || existing.merchantId !== merchant.id) {
     return sendError(res, 404, "NOT_FOUND", "Product not found");
+  }
+  if (parsed.data.condition === "NEW") {
+    const [settings, quota] = await Promise.all([getSettings(), sellerListingQuota(req.user!.id)]);
+    if (!quota.paid && !settings.marketplace.allowNewProducts) return sendError(res, 403, "NEW_PRODUCTS_CLOSED", "الباقة المجانية الحالية تسمح بالمنتجات المستعملة فقط");
   }
 
   // the photos: each must be one this shop uploaded; the first is the main one

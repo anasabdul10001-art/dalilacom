@@ -2,9 +2,9 @@
 @font-face { font-family: "Tajawal"; font-weight: 500; src: url("../fonts/tajawal_medium.ttf"); }
 @font-face { font-family: "Tajawal"; font-weight: 700; src: url("../fonts/tajawal_bold.ttf"); }
 :root {
-  --red: #cb0c2e;        /* the logo's red */
-  --ui-red: #ba2a34;     /* buttons and links in the app and the site */
-  --deep: #5a0e12;       /* the dark end of the red gradient */
+  --red: #f48050;        /* the logo's red */
+  --ui-red: #f48050;     /* buttons and links in the app and the site */
+  --deep: #c4552b;       /* the dark end of the red gradient */
   --black: #010101;      /* the logo's black */
   --ink: #1c1413;        /* text */
   --white: #ffffff;

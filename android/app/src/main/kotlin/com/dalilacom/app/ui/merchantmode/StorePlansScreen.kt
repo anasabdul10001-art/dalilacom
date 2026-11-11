@@ -1,5 +1,6 @@
 package com.dalilacom.app.ui.merchantmode
 
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,6 +66,15 @@ fun StorePlansScreen(container: AppContainer, onBack: () -> Unit, onOpenStore: (
             }
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.sp_change), style = MaterialTheme.typography.titleMedium)
+        } else if (d.freeTier != null) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(AppStrings.get(R.string.s_55270d0e), style = MaterialTheme.typography.titleMedium)
+                    Text(AppStrings.get(R.string.s_cc3ae185, d.freeTier.freeListingsPerMonth, AppStrings.get(if (d.freeTier.allowNewProducts) R.string.s_6152db49 else R.string.s_7d192e2b)))
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onOpenStore, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sp_open)) }
+                }
+            }
         } else if (!d.required) {
             Text(stringResource(R.string.sp_no_plans_yet))
             Spacer(Modifier.height(8.dp))

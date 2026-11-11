@@ -73,7 +73,7 @@ private fun pinIcon(context: Context, name: String, logo: Bitmap?, hasDiscount: 
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     val cx = width / 2f
     val cy = pad + head / 2f
-    val fill = when { selected -> Color.BLACK; hasDiscount -> Color.parseColor("#BA2A34"); else -> Color.parseColor("#777777") }
+    val fill = when { selected -> Color.BLACK; hasDiscount -> Color.parseColor("#F48050"); else -> Color.parseColor("#777777") }
     paint.color = Color.WHITE
     canvas.drawPath(Path().apply { moveTo(cx - 9 * d, cy + head / 2 - 3 * d); lineTo(cx, cy + head / 2 + tail); lineTo(cx + 9 * d, cy + head / 2 - 3 * d); close() }, paint)
     canvas.drawCircle(cx, cy, head / 2f, paint)
@@ -121,7 +121,7 @@ private fun clusterIcon(context: Context, count: Int): BitmapDrawable {
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     paint.color = Color.WHITE
     canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
-    paint.color = Color.parseColor("#BA2A34")
+    paint.color = Color.parseColor("#F48050")
     canvas.drawCircle(size / 2f, size / 2f, size / 2f - 3 * d, paint)
     paint.color = Color.WHITE
     paint.textAlign = Paint.Align.CENTER
@@ -388,7 +388,7 @@ fun MerchantsMap(
                 Polygon(map).apply {
                     points = Polygon.pointsAsCircle(GeoPoint(here.first, here.second), radius * 1000.0)
                     fillPaint.color = Color.argb(18, 186, 42, 52)
-                    outlinePaint.color = Color.parseColor("#BA2A34")
+                    outlinePaint.color = Color.parseColor("#F48050")
                     outlinePaint.strokeWidth = 2 * context.resources.displayMetrics.density
                     outlinePaint.pathEffect = DashPathEffect(floatArrayOf(16f, 12f), 0f)
                 },
@@ -400,7 +400,7 @@ fun MerchantsMap(
             map.overlays.add(
                 Polyline(map).apply {
                     setPoints(points.map { GeoPoint(it[0], it[1]) })
-                    outlinePaint.color = if (latestWalking) Color.parseColor("#1E6FE0") else Color.parseColor("#BA2A34")
+                    outlinePaint.color = if (latestWalking) Color.parseColor("#1E6FE0") else Color.parseColor("#F48050")
                     outlinePaint.strokeWidth = 6 * density
                     outlinePaint.strokeCap = Paint.Cap.ROUND
                     outlinePaint.strokeJoin = Paint.Join.ROUND

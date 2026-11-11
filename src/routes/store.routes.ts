@@ -13,6 +13,7 @@ import { normalizeText } from "../services/category.service";
 import { route } from "../lib/asyncRoute";
 import { resolveLanguage } from "../lib/languages";
 import { translateProducts, translateRecords } from "../services/contentTranslation.service";
+import { avatarUrl } from "../lib/profile";
 
 /**
  * The online store: every shop's products in one place, like a marketplace. Read-only and public; buying goes
@@ -20,7 +21,7 @@ import { translateProducts, translateRecords } from "../services/contentTranslat
  */
 export const storeRouter = Router();
 
-type ProductWithShop = Prisma.ProductGetPayload<{ include: { merchant: { select: { id: true; businessName: true; usdRateSyp: true; priceCurrency: true; showBothCurrencies: true } } } }>;
+type ProductWithShop = Prisma.ProductGetPayload<{ include: { merchant: { select: { id: true; businessName: true; usdRateSyp: true; priceCurrency: true; showBothCurrencies: true; user: { select: { id: true; avatarUpdatedAt: true } } } } } }>;
 
 /** A stable colour (0-359) from the id, used by the clients to paint the picture when a product has no photo. */
 function hueOf(id: string): number {
@@ -51,7 +52,8 @@ function view(p: ProductWithShop, market: string) {
     ratingCount: p.ratingCount,
     soldCount: p.soldCount,
     section: section ? { id: section.id, name: section.name, nameEn: section.nameEn, icon: section.icon, image: section.image } : null,
-    merchant: { id: p.merchant.id, name: p.merchant.businessName },
+    // the shop's logo is its owner's account photo; the clients show it as a card that opens the shop
+    merchant: { id: p.merchant.id, name: p.merchant.businessName, avatarUrl: avatarUrl(p.merchant.user.id, p.merchant.user.avatarUpdatedAt) },
   };
 }
 
@@ -101,7 +103,7 @@ async function visibleFor(query: unknown, country: string): Promise<Prisma.Produ
   return { isActive: true, stock: { gt: 0 }, moderation: "APPROVED", merchant };
 }
 
-const include = { merchant: { select: { id: true, businessName: true, usdRateSyp: true, priceCurrency: true, showBothCurrencies: true } } } as const;
+const include = { merchant: { select: { id: true, businessName: true, usdRateSyp: true, priceCurrency: true, showBothCurrencies: true, user: { select: { id: true, avatarUpdatedAt: true } } } } } as const;
 
 const sorts: Record<string, Prisma.ProductOrderByWithRelationInput[]> = {
   popular: [{ soldCount: "desc" }, { createdAt: "desc" }],

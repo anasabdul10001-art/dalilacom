@@ -374,4 +374,257 @@
     <string name="fit_auto_c2ed8d0d" formatted="false">📋  خطط المتدربين</string>
     <string name="fit_auto_d141a0e3" formatted="false">🏋️  خططي الرياضية والغذائية</string>
     <string name="fit_auto_b6b55b3a" formatted="false">اسم الباقة</string>
+    <string name="s_89f995b3" formatted="false">ما قدرنا نتصل بالخدمة</string>
+    <string name="s_f03c2218" formatted="false">تعذر بدء الدفع الإلكتروني</string>
+    <string name="s_f1f017e4" formatted="false">تعذرت قراءة الفاتورة</string>
+    <string name="s_0a2edd30" formatted="false">ما قدرنا نحفظ الحركة</string>
+    <string name="s_364be4bc" formatted="false">تعذّر نشر الإعلان</string>
+    <string name="s_37f81884" formatted="false">تعذّر شراء الباقة</string>
+    <string name="s_cf802fc0" formatted="false">تعذّر حفظ رقم التحويل</string>
+    <string name="s_9338c391" formatted="false">تعذّر تأكيد التحويل</string>
+    <string name="s_9179029e" formatted="false">تعذّر حفظ وسائل استلام المصاري</string>
+    <string name="s_7b9c60b6" formatted="false">تم الحفظ</string>
+    <string name="s_11bc7d18">💳 طريقة الدفع · %1$s</string>
+    <string name="s_20f44d7f" formatted="false">بنك الشام</string>
+    <string name="s_66c40d1d" formatted="false">بعد التحويل، أرسل رقم العملية من صفحة الطلب. صاحب المتجر يؤكد الاستلام بعد مراجعة حسابه.</string>
+    <string name="s_cc3ae185">%1$s منتجات بالشهر · %2$s</string>
+    <string name="s_6152db49" formatted="false">مستعمل وجديد</string>
+    <string name="s_7d192e2b" formatted="false">مستعمل فقط</string>
+    <string name="s_55270d0e" formatted="false">Your free store package</string>
+    <string name="s_4a6a560a">المستلم: %1$s</string>
+    <string name="s_2c0bca89">رقم التحويل: %1$s</string>
+    <string name="s_16765e8a">رقم العملية المرسل: %1$s</string>
+    <string name="s_d701f388" formatted="false">طريقة الدفع: </string>
+    <string name="s_6a069c95" formatted="false">رقم العملية بعد التحويل</string>
+    <string name="s_9c976ca3" formatted="false">أرسلت التحويل</string>
+    <string name="s_f5c962b6" formatted="false">بانتظار صاحب المتجر لتأكيد وصول التحويل.</string>
+    <string name="s_6b666b63" formatted="false">تأكيد وصول التحويل</string>
+    <string name="s_e4b4c234" formatted="false">Community market</string>
+    <string name="s_b179bf25" formatted="false">كيف تستلم مصاري مبيعاتك؟</string>
+    <string name="s_2ace6138" formatted="false">اختَر الوسائل المتاحة عندك. لن تظهر للزبون إلا عند طلب منتج منك.</string>
+    <string name="s_01a85ddc" formatted="false">الاسم المسجل</string>
+    <string name="s_54744a3d" formatted="false">رقم الحساب أو المحفظة</string>
+    <string name="s_4816f255" formatted="false">تم حفظ وسائل الاستلام</string>
+    <string name="s_40c2c372" formatted="false">حفظ وسائل الاستلام</string>
+    <string name="s_29c83806" formatted="false">Photo attached</string>
+    <string name="s_4810cb93" formatted="false">Could not upload photo</string>
+    <string name="s_fa9309cd" formatted="false">← Back</string>
+    <string name="s_ac6aac42" formatted="false">Open your own store</string>
+    <string name="s_d4d43912" formatted="false">Choose a name, then add your products and share your store page.</string>
+    <string name="s_e72dca5d" formatted="false">Store name</string>
+    <string name="s_886333f5" formatted="false">About the store (optional)</string>
+    <string name="s_2203e3d9" formatted="false">Your store is open</string>
+    <string name="s_01b266ff" formatted="false">Could not create store</string>
+    <string name="s_13adebab" formatted="false">Open store</string>
+    <string name="s_d7e8f7da" formatted="false">View my store</string>
+    <string name="s_0ee0b71f" formatted="false">Post an item</string>
+    <string name="s_23a79f17">Free ads left this month: %1$s / %2$s</string>
+    <string name="s_df644ae1" formatted="false">Product name</string>
+    <string name="s_b5a7adde" formatted="false">Description</string>
+    <string name="s_3601146c" formatted="false">Price</string>
+    <string name="s_5e7ac625" formatted="false">Contact phone (optional)</string>
+    <string name="s_fe3ac683" formatted="false">Photo attached ✓</string>
+    <string name="s_c5cd4e00" formatted="false">Add product photo</string>
+    <string name="s_019d1ca7" formatted="false">Used</string>
+    <string name="s_03c2e7e4" formatted="false">New</string>
+    <string name="s_9cd5d5cd" formatted="false">Choose an existing store package to continue.</string>
+    <string name="s_a1272e5c" formatted="false">Package activated</string>
+    <string name="s_928735d6" formatted="false">credits</string>
+    <string name="s_43b0c75a" formatted="false">Sent for review</string>
+    <string name="s_0b9aa735" formatted="false">Send for review</string>
+    <string name="s_985b09fd" formatted="false">My ads</string>
+    <string name="s_92e97e03" formatted="false">Waiting for review</string>
+    <string name="s_bae1ccce" formatted="false">Rejected by AI</string>
+    <string name="s_9b9d8a97" formatted="false">Published</string>
+    <string name="s_d85a8a38" formatted="false">Sold</string>
+    <string name="s_94f37dcd" formatted="false">Reason: </string>
+    <string name="s_9a7d8a0f" formatted="false">Sign in to post an item</string>
+    <string name="s_b6d4223e" formatted="false">Sign in</string>
+    <string name="s_318421e6" formatted="false">Latest items</string>
+    <string name="s_72608e10" formatted="false">Store: </string>
+    <string name="s_698d3436" formatted="false">Contact: </string>
+    <string name="s_1bf1c6ab" formatted="false">No listings yet</string>
+    <string name="s_e767f75b" formatted="false">Loading store…</string>
+    <string name="s_9aba83cd" formatted="false">This store has no published items yet</string>
+    <string name="sec_why" formatted="false">ماذا يقدّم لك؟</string>
+    <string name="sec_how" formatted="false">كيف يشتغل؟</string>
+    <string name="sec_about" formatted="false">ⓘ عن هذا القسم</string>
+    <string name="sec_back" formatted="false">رجوع</string>
+    <string name="sec_start" formatted="false">ابدأ الآن</string>
+    <string name="sec_login" formatted="false">سجّل دخولك للبدء</string>
+    <string name="sec_register" formatted="false">إنشاء حساب</string>
+    <string name="sec_acc_kicker" formatted="false">🧮 المحاسب</string>
+    <string name="sec_acc_title" formatted="false">حسابات محلك بمكان واحد</string>
+    <string name="sec_acc_sub" formatted="false">سجّل دخلك ومصاريفك، تابع بضاعتك، وشوف أرباحك بدون ما تحتاج أي خبرة بالمحاسبة.</string>
+    <string name="sec_acc_f1t" formatted="false">الدخل والمصاريف</string>
+    <string name="sec_acc_f1d" formatted="false">سجّل كل عملية بثواني، وشوف الصافي لكل عملة وكل فترة.</string>
+    <string name="sec_acc_f2t" formatted="false">المخزون والباركود</string>
+    <string name="sec_acc_f2d" formatted="false">تابع كمية كل منتج، ابحث بالباركود، وبتعرف أي منتج قارب يخلص.</string>
+    <string name="sec_acc_f3t" formatted="false">مسح الفواتير</string>
+    <string name="sec_acc_f3d" formatted="false">صوّر الفاتورة والذكاء الاصطناعي بيقرأ المبلغ والمورّد، وإنت بتراجع وبتأكّد.</string>
+    <string name="sec_acc_f4t" formatted="false">تقارير وتصدير</string>
+    <string name="sec_acc_f4d" formatted="false">حمّل كل حركاتك بملف CSV أو اطبع تقرير جاهز لمحاسبك.</string>
+    <string name="sec_acc_s1" formatted="false">اشترك بباقة أو ابدأ التجربة</string>
+    <string name="sec_acc_s2" formatted="false">أدخل منتجاتك وحركاتك</string>
+    <string name="sec_acc_s3" formatted="false">تابع أرباحك وصدّر تقاريرك</string>
+    <string name="sec_resp_kicker" formatted="false">🤖 المجيب الآلي</string>
+    <string name="sec_resp_title" formatted="false">رد على زبائنك حتى وإنت نايم</string>
+    <string name="sec_resp_sub" formatted="false">اربط صفحتك على فيسبوك وانستغرام وتيليغرام، والمجيب الآلي بيرد عن محلك على الرسائل والتعليقات.</string>
+    <string name="sec_resp_f1t" formatted="false">رسائل وتعليقات</string>
+    <string name="sec_resp_f1d" formatted="false">بيرد على رسائل ماسنجر وانستغرام وتيليغرام، وعلى التعليقات تحت منشوراتك.</string>
+    <string name="sec_resp_f2t" formatted="false">قواعد بكلماتك</string>
+    <string name="sec_resp_f2d" formatted="false">حدد كلمات وردود جاهزة (الأسعار، العنوان، الدوام) وبينرد فوراً.</string>
+    <string name="sec_resp_f3t" formatted="false">ذكاء اصطناعي</string>
+    <string name="sec_resp_f3d" formatted="false">لما ما في قاعدة، بيكتب رداً مناسباً من المعلومات اللي أنت أدخلتها فقط.</string>
+    <string name="sec_resp_f4t" formatted="false">صندوق وارد</string>
+    <string name="sec_resp_f4d" formatted="false">شوف كل المحادثات، وتدخّل بإيدك وقت ما بدك، وتابع الملخصات الأسبوعية.</string>
+    <string name="sec_resp_s1" formatted="false">اربط قنواتك</string>
+    <string name="sec_resp_s2" formatted="false">اكتب قواعدك أو فعّل الذكاء الاصطناعي</string>
+    <string name="sec_resp_s3" formatted="false">خلّيه يشتغل وتابع الوارد</string>
+    <string name="tab_hr" formatted="false">HR</string>
+    <string name="profile_my_cart" formatted="false">🛒 سلتي</string>
+    <string name="sec_hr_open" formatted="false">افتح نظام الـ HR</string>
+    <string name="sec_hr_kicker" formatted="false">👥 الموارد البشرية (HR)</string>
+    <string name="sec_hr_title" formatted="false">أدِر موظفينك من مكان واحد</string>
+    <string name="sec_hr_sub" formatted="false">حضور وإجازات ورواتب وسلف لموظفي شركتك، ببساطة وبتقارير جاهزة.</string>
+    <string name="sec_hr_f1t" formatted="false">الحضور والانصراف</string>
+    <string name="sec_hr_f1d" formatted="false">الموظف بيسجّل حضوره وانصرافه، وإنت بتتابع الدوام وبتصحّح أي تسجيل.</string>
+    <string name="sec_hr_f2t" formatted="false">الإجازات</string>
+    <string name="sec_hr_f2d" formatted="false">الموظف بيطلب إجازة، وبتمرّ على مديره ثم الموارد البشرية، والرصيد بينحسب لحاله.</string>
+    <string name="sec_hr_f3t" formatted="false">الرواتب</string>
+    <string name="sec_hr_f3d" formatted="false">كشوف رواتب شهرية جاهزة، مع خصم الغياب وأقساط السلف تلقائياً.</string>
+    <string name="sec_hr_f4t" formatted="false">السلف</string>
+    <string name="sec_hr_f4d" formatted="false">طلب السلفة وموافقتها وتقسيطها على الرواتب، بدون ورق وبدون حسابات يدوية.</string>
+    <string name="sec_hr_s1" formatted="false">سجّل شركتك</string>
+    <string name="sec_hr_s2" formatted="false">أضف أقسامك وموظفيك</string>
+    <string name="sec_hr_s3" formatted="false">شغّل الرواتب وتابع التقارير</string>
+    <string name="prof_sec_buy" formatted="false">مشترياتي</string>
+    <string name="prof_sec_buy_sub" formatted="false">السلة والطلبات والمفضلة</string>
+    <string name="prof_sec_wallet" formatted="false">محفظتي</string>
+    <string name="prof_sec_wallet_sub" formatted="false">الرصيد ووسائل استلام المصاري</string>
+    <string name="prof_sec_business" formatted="false">نشاطي التجاري</string>
+    <string name="prof_sec_business_sub" formatted="false">المتجر والخريطة والإعلانات</string>
+    <string name="prof_sec_marketing" formatted="false">التسويق</string>
+    <string name="prof_sec_marketing_sub" formatted="false">اربح عمولة من الإحالات</string>
+    <string name="prof_sec_services" formatted="false">خدماتي</string>
+    <string name="prof_sec_services_sub" formatted="false">المواعيد والتدريب</string>
+    <string name="prof_sec_privacy" formatted="false">الموقع</string>
+    <string name="prof_sec_privacy_sub" formatted="false">مشاركة موقعي ومكاني على الخريطة</string>
+    <string name="prof_sec_admin" formatted="false">الإدارة</string>
+    <string name="prof_sec_admin_sub" formatted="false">مراجعة الإعلانات والطلبات</string>
+    <string name="prof_sec_account" formatted="false">حسابي وأماني</string>
+    <string name="prof_sec_account_sub" formatted="false">بياناتي، الإشعارات، تسجيل الخروج</string>
+    <string name="store_visit_shop" formatted="false">زيارة المتجر</string>
+    <string name="site_tab_home" formatted="false">الرئيسية</string>
+    <string name="site_why" formatted="false">ليش تستخدمه؟</string>
+    <string name="site_faq" formatted="false">أسئلة شائعة</string>
+    <string name="site_stepsTitle" formatted="false">كيف يشتغل؟</string>
+    <string name="site_featuresTitle" formatted="false">كل شي بمكان واحد</string>
+    <string name="site_ctaTitle" formatted="false">جاهز تبدأ؟</string>
+    <string name="site_ctaSub" formatted="false">خطوات بسيطة وبتشوف الفرق من أول يوم.</string>
+    <string name="site_open_responder" formatted="false">افتح لوحة المجيب الآلي</string>
+    <string name="site_open_accounting" formatted="false">افتح لوحة المحاسب</string>
+    <string name="site_open_hr" formatted="false">افتح نظام الـ HR</string>
+    <string name="site_login" formatted="false">سجّل دخولك للبدء</string>
+    <string name="site_register" formatted="false">إنشاء حساب</string>
+    <string name="site_plans" formatted="false">شوف الباقات</string>
+    <string name="site_learn" formatted="false">تعرّف أكثر</string>
+    <string name="site_planNeeded" formatted="false">المحاسب يحتاج باقة فعّالة أو فترة تجربة.</string>
+    <string name="site_responder_tab_overview" formatted="false">الحالة</string>
+    <string name="site_responder_tab_channels" formatted="false">القنوات</string>
+    <string name="site_responder_tab_rules" formatted="false">القواعد</string>
+    <string name="site_responder_tab_inbox" formatted="false">الوارد</string>
+    <string name="site_accounting_tab_summary" formatted="false">الملخص</string>
+    <string name="site_accounting_tab_entry" formatted="false">إضافة حركة</string>
+    <string name="site_accounting_tab_invoices" formatted="false">الفواتير</string>
+    <string name="site_accounting_tab_stock" formatted="false">المخزون</string>
+    <string name="site_art_chat1" formatted="false">كم سعر هذا المنتج؟</string>
+    <string name="site_art_chat2" formatted="false">السعر 25$ والتوصيل مجاني 🚚</string>
+    <string name="site_art_chat3" formatted="false">وين عنوانكم؟</string>
+    <string name="site_art_chat4" formatted="false">بدمشق، الدوام من 9 لـ 9 ✅</string>
+    <string name="site_art_kw1" formatted="false">الأسعار</string>
+    <string name="site_art_kw2" formatted="false">الدوام</string>
+    <string name="site_art_kw3" formatted="false">العنوان</string>
+    <string name="site_art_income" formatted="false">الدخل</string>
+    <string name="site_art_expense" formatted="false">المصاريف</string>
+    <string name="site_art_net" formatted="false">صافي الربح</string>
+    <string name="site_art_invoice" formatted="false">فاتورة مشتريات</string>
+    <string name="site_art_total" formatted="false">الإجمالي</string>
+    <string name="site_art_low" formatted="false">قارب يخلص</string>
+    <string name="site_art_item1" formatted="false">قميص قطني</string>
+    <string name="site_art_item2" formatted="false">حذاء رياضي</string>
+    <string name="site_art_item3" formatted="false">شنطة جلد</string>
+    <string name="site_art_payslip" formatted="false">كشف راتب</string>
+    <string name="site_art_netpay" formatted="false">صافي الراتب</string>
+    <string name="site_art_leave" formatted="false">إجازة</string>
+    <string name="site_art_present" formatted="false">حاضر</string>
+    <string name="site_responder_slide1_t" formatted="false">رد فوري على كل رسالة</string>
+    <string name="site_responder_slide1_d" formatted="false">زبونك بيسأل الساعة 3 الفجر؟ المجيب الآلي بيرد عليه بثواني، وبأسلوبك.</string>
+    <string name="site_responder_slide2_t" formatted="false">فيسبوك وانستغرام وتيليغرام</string>
+    <string name="site_responder_slide2_d" formatted="false">اربط صفحاتك مرة وحدة، وكل الرسائل والتعليقات بتوصل لمكان واحد.</string>
+    <string name="site_responder_slide3_t" formatted="false">ذكاء اصطناعي بيعرف محلك</string>
+    <string name="site_responder_slide3_d" formatted="false">بيرد من المعلومات اللي كتبتها إنت بس: الأسعار والدوام والعنوان، بدون ما يألّف.</string>
+    <string name="site_responder_st1_n" formatted="false">24/7</string>
+    <string name="site_responder_st1_l" formatted="false">شغّال بدون توقف</string>
+    <string name="site_responder_st2_n" formatted="false">ثواني</string>
+    <string name="site_responder_st2_l" formatted="false">وقت الرد على الزبون</string>
+    <string name="site_responder_st3_n" formatted="false">100%</string>
+    <string name="site_responder_st3_l" formatted="false">من معلوماتك إنت</string>
+    <string name="site_responder_s1_d" formatted="false">اضغط «ربط» واختار صفحتك، بدون أكواد ولا تعقيد.</string>
+    <string name="site_responder_s2_d" formatted="false">اكتب كلمات وردود جاهزة، أو فعّل الذكاء الاصطناعي لباقي الأسئلة.</string>
+    <string name="site_responder_s3_d" formatted="false">كل المحادثات بالوارد، وبتتدخل بإيدك وقت ما بدك.</string>
+    <string name="site_responder_faq1_q" formatted="false">شو القنوات اللي بيدعمها؟</string>
+    <string name="site_responder_faq1_a" formatted="false">ماسنجر فيسبوك، رسائل وتعليقات انستغرام، وتيليغرام.</string>
+    <string name="site_responder_faq2_q" formatted="false">هل بيرد أي شي من عنده؟</string>
+    <string name="site_responder_faq2_a" formatted="false">لا. بيرد من المعلومات اللي أنت أدخلتها فقط، وإذا ما عرف بيحوّل المحادثة لك.</string>
+    <string name="site_responder_faq3_q" formatted="false">فيني أتدخل بالمحادثة؟</string>
+    <string name="site_responder_faq3_a" formatted="false">أكيد. من صندوق الوارد بتشوف كل شي وبتجاوب بإيدك وقت ما بدك.</string>
+    <string name="site_responder_faq4_q" formatted="false">كم بكلّف؟</string>
+    <string name="site_responder_faq4_a" formatted="false">في باقات تناسب حجم شغلك، ومنها فترة تجربة. بتشوف الباقات من داخل القسم.</string>
+    <string name="site_accounting_slide1_t" formatted="false">حساباتك بنظرة وحدة</string>
+    <string name="site_accounting_slide1_d" formatted="false">دخل ومصاريف وصافي ربح لكل عملة، بدون جداول إكسل.</string>
+    <string name="site_accounting_slide2_t" formatted="false">صوّر الفاتورة وخلّص</string>
+    <string name="site_accounting_slide2_d" formatted="false">الذكاء الاصطناعي بيقرأ المبلغ والمورّد، وإنت بتراجع وبتأكّد بضغطة.</string>
+    <string name="site_accounting_slide3_t" formatted="false">مخزونك تحت السيطرة</string>
+    <string name="site_accounting_slide3_d" formatted="false">تابع الكميات، ابحث بالباركود، وانتبه لأي منتج قارب يخلص.</string>
+    <string name="site_accounting_st1_n" formatted="false">📊</string>
+    <string name="site_accounting_st1_l" formatted="false">صافي ربحك لحظة بلحظة</string>
+    <string name="site_accounting_st2_n" formatted="false">🧾</string>
+    <string name="site_accounting_st2_l" formatted="false">فواتير بصورة</string>
+    <string name="site_accounting_st3_n" formatted="false">📦</string>
+    <string name="site_accounting_st3_l" formatted="false">جرد بالباركود</string>
+    <string name="site_accounting_s1_d" formatted="false">ابدأ بتجربة أو باقة، وبتفتح لك لوحة المحاسب.</string>
+    <string name="site_accounting_s2_d" formatted="false">سجّل حركاتك وأضف منتجاتك، أو صوّر الفواتير.</string>
+    <string name="site_accounting_s3_d" formatted="false">شوف الصافي، وحمّل تقاريرك بملف CSV أو اطبعها.</string>
+    <string name="site_accounting_faq1_q" formatted="false">هل لازم أفهم بالمحاسبة؟</string>
+    <string name="site_accounting_faq1_a" formatted="false">لا. سجّل دخلك ومصاريفك والباقي بيتحسب لحاله.</string>
+    <string name="site_accounting_faq2_q" formatted="false">هل بيرتبط مع متجري؟</string>
+    <string name="site_accounting_faq2_a" formatted="false">أيوا. الطلبات المسلّمة بتنسجل لحالها: الدخل والتكلفة وأجور التوصيل.</string>
+    <string name="site_accounting_faq3_q" formatted="false">بقدر أصدّر بياناتي؟</string>
+    <string name="site_accounting_faq3_a" formatted="false">بتحمّل كل حركاتك بملف CSV بأي وقت.</string>
+    <string name="site_accounting_faq4_q" formatted="false">لازم اشتراك؟</string>
+    <string name="site_accounting_faq4_a" formatted="false">المحاسب بيحتاج باقة فعّالة أو فترة تجربة، وبتشوف الباقات من الزر.</string>
+    <string name="site_hr_slide1_t" formatted="false">موظفينك بمكان واحد</string>
+    <string name="site_hr_slide1_d" formatted="false">ملفات وأقسام وصلاحيات، وكل شركة بياناتها منفصلة وآمنة.</string>
+    <string name="site_hr_slide2_t" formatted="false">رواتب بضغطة</string>
+    <string name="site_hr_slide2_d" formatted="false">كشوف رواتب شهرية، مع خصم الغياب وأقساط السلف تلقائياً.</string>
+    <string name="site_hr_slide3_t" formatted="false">إجازات وسلف بدون ورق</string>
+    <string name="site_hr_slide3_d" formatted="false">طلب وموافقة بسلسلة (مدير ثم HR)، والرصيد بينحسب لحاله.</string>
+    <string name="site_hr_st1_n" formatted="false">🕒</string>
+    <string name="site_hr_st1_l" formatted="false">حضور وانصراف</string>
+    <string name="site_hr_st2_n" formatted="false">💵</string>
+    <string name="site_hr_st2_l" formatted="false">كشوف رواتب جاهزة</string>
+    <string name="site_hr_st3_n" formatted="false">🔒</string>
+    <string name="site_hr_st3_l" formatted="false">بيانات كل شركة منفصلة</string>
+    <string name="site_hr_s1_d" formatted="false">سجّل شركتك واختار عملتها.</string>
+    <string name="site_hr_s2_d" formatted="false">أضف أقسامك وموظفينك وحدد صلاحياتهم.</string>
+    <string name="site_hr_s3_d" formatted="false">شغّل الرواتب وتابع التقارير واللوحات.</string>
+    <string name="site_hr_faq1_q" formatted="false">هل هو برنامج منفصل؟</string>
+    <string name="site_hr_faq1_a" formatted="false">أيوا، نظام HR مستقل بموقعه، وبتفتحه من هون بزر واحد.</string>
+    <string name="site_hr_faq2_q" formatted="false">بياناتي آمنة؟</string>
+    <string name="site_hr_faq2_a" formatted="false">كل شركة بياناتها منفصلة تماماً عن غيرها، والصلاحيات بتتحدد لكل دور.</string>
+    <string name="site_hr_faq3_q" formatted="false">مين بيقدر يعمل شو؟</string>
+    <string name="site_hr_faq3_a" formatted="false">في أدوار: مدير الشركة، الموارد البشرية، مدير القسم، والموظف، ولكل واحد صلاحياته.</string>
+    <string name="site_hr_faq4_q" formatted="false">كم بكلّف؟</string>
+    <string name="site_hr_faq4_a" formatted="false">في باقات وفترة تجربة، وبتشوفها من داخل النظام.</string>
 </resources>

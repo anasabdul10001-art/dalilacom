@@ -4,6 +4,12 @@ const state = {
   categoriesFlat: [],
 };
 
+function toggleAdminGroup(title) {
+  const group = title?.closest('.nav-group');
+  if (!group) return;
+  group.classList.toggle('collapsed');
+}
+
 async function api(method, path, body) {
   const headers = { 'Content-Type': 'application/json' };
   if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
@@ -1447,6 +1453,28 @@ async function deleteBanner(id) {
 }
 
 // ---- Store ----
+async function loadMarketplaceAdmin() {
+  const [settings, listings] = await Promise.all([api('GET', '/admin/settings'), api('GET', '/admin/marketplace/listings?status=PENDING_REVIEW')]);
+  if (settings.ok) {
+    const m = settings.data.marketplace || {};
+    document.getElementById('mp-free-limit').value = m.freeListingsPerMonth ?? 3;
+    document.getElementById('mp-new-enabled').checked = !!m.allowNewProducts;
+  }
+  const rows = listings.ok ? listings.data : [];
+  document.getElementById('mp-review-body').innerHTML = rows.length ? rows.map(x => `<tr><td>${esc(x.title)}<br><small>${esc(x.description || '')}</small></td><td>${money(x.priceCents)} ${esc(x.currency)}</td><td>${esc(x.condition === 'USED' ? 'مستعمل' : 'جديد')}</td><td>${esc(x.user?.fullName || '')}<br><small>${esc(x.user?.email || '')}</small></td><td>${x.reviewNote ? `<small class="muted">ملاحظة الذكاء الاصطناعي: ${esc(x.reviewNote)}</small><br>` : ''}<button class="small" onclick="reviewMarketplace('${esc(x.id)}','ACTIVE')">موافقة</button> <button class="small danger" onclick="reviewMarketplace('${esc(x.id)}','HIDDEN')">إخفاء</button></td></tr>`).join('') : '<tr><td colspan="5" class="muted">ما في إعلانات بانتظار المراجعة</td></tr>';
+}
+
+async function saveMarketplaceSettings() {
+  const { ok, data } = await api('PUT', '/admin/settings', { marketplace: { freeListingsPerMonth: Math.max(0, Math.floor(Number(document.getElementById('mp-free-limit').value) || 0)), allowNewProducts: document.getElementById('mp-new-enabled').checked } });
+  document.getElementById('mp-settings-msg').textContent = ok ? 'انحفظ ✓' : errText(data, 'تعذّر الحفظ');
+}
+
+async function reviewMarketplace(id, status) {
+  const { ok, data } = await api('PATCH', '/admin/marketplace/listings/' + id, { status });
+  if (!ok) alert(errText(data, 'تعذّرت مراجعة الإعلان'));
+  loadMarketplaceAdmin();
+}
+
 async function demoStore(method) {
   const out = document.getElementById('store-msg');
   if (method === 'DELETE' && !confirm('حذف المتاجر والمنتجات التجريبية؟')) return;
@@ -1701,11 +1729,13 @@ async function deleteCategory(id) {
 const SERVICE_LABEL = {
   MEMBERSHIP: 'عضوية الزبون',
   MERCHANT_ACCOUNT: 'باقة النشاط',
-  RESPONDER_CUSTOMER: 'المجيب الآلي — زبون',
-  RESPONDER_MERCHANT: 'المجيب الآلي — نشاط',
   RESPONDER_BASIC: 'المجيب الآلي — خطة موحّدة',
+  RESPONDER_CUSTOMER: 'المجيب الآلي — زبون (قديم)',
+  RESPONDER_MERCHANT: 'المجيب الآلي — نشاط (قديم)',
+  ACCOUNTING: 'المحاسبة',
 };
-const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_BASIC', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT'];
+const SERVICE_ORDER = ['MEMBERSHIP', 'MERCHANT_ACCOUNT', 'RESPONDER_BASIC', 'RESPONDER_CUSTOMER', 'RESPONDER_MERCHANT', 'ACCOUNTING'];
+
 let planCountries = [];
 
 function escHtml(s) {
@@ -1733,6 +1763,7 @@ function priceRowHtml(p) {
     <div><label>بالكوينز</label><input placeholder="مثال: 500" class="pp-credits" value="${p.priceCredits ?? ''}" /></div>
     <div><label>بالعملة (اختياري)</label><input placeholder="مثال: 9.99" class="pp-cash" value="${p.cashAmountCents != null ? money(p.cashAmountCents) : ''}" /></div>
     <div><label>رمز العملة</label><input placeholder="مثال: EUR" class="pp-cur" maxlength="3" value="${escHtml(p.currencyCode || '')}" /></div>
+    <div><label>معرّف خطة PayPal لهذا البلد</label><input placeholder="P-… (اختياري)" class="pp-paypal" value="${escHtml(p.paypalPlanId || '')}" /></div>
     <div style="flex:0 0 auto"><label>فعّال</label><input type="checkbox" class="pp-active" style="width:auto" ${p.isActive === false ? '' : 'checked'} /></div>
     <div style="flex:0 0 auto"><button class="small danger" onclick="this.closest('.pp-row').remove()">✕</button></div>
   </div>`;
@@ -1791,6 +1822,7 @@ function planCardHtml(p) {
       <div><label>السعر (بالعملة)</label><input placeholder="مثال: 9.99" id="pl-price-${p.id}" value="${money(p.priceCents)}" /></div>
       <div><label>العملة</label><input placeholder="مثال: EUR" id="pl-currency-${p.id}" maxlength="3" value="${escHtml(p.currency)}" /></div>
       <div><label>السعر بالكوينز (المخصوم من المحفظة)</label><input id="pl-credits-${p.id}" value="${p.priceCredits ?? ''}" placeholder="غير مضبوط" /></div>
+      <div><label>معرّف خطة PayPal</label><input id="pl-paypal-${p.id}" value="${escHtml(p.paypalPlanId || '')}" placeholder="P-… (اختياري)" /></div>
     </div>
     <label>المواصفات — بند بكل سطر، وابدأ السطر بـ ✘ إذا البند غير مشمول</label>
     <textarea id="pl-features-${p.id}" rows="4" placeholder="✔ 500 رد ذكي بالشهر&#10;✘ رسائل جماعية">${escHtml(features)}</textarea>
@@ -1834,7 +1866,7 @@ async function addServicePlan() {
   const priceCredits = creditsRaw === '' ? null : parseNonNegInt(creditsRaw, 'السعر بالكوينز');
   if (!name || !durationDays || trialDays === null || !Number.isFinite(priceCents) || (creditsRaw !== '' && priceCredits === null)) return;
   const { ok, data } = await api('POST', '/plans', {
-    service: document.getElementById('np-service').value, name, durationDays, trialDays, priceCents, currency, priceCredits,
+    service: document.getElementById('np-service').value, name, durationDays, trialDays, priceCents, currency, priceCredits, paypalPlanId: document.getElementById('np-paypal-plan').value.trim() || null,
   });
   if (!ok) { alert(errText(data, 'خطأ')); return; }
   document.getElementById('np-name').value = '';
@@ -1861,6 +1893,7 @@ function readCountryPrices(id) {
       countryId, priceCredits: credits,
       cashAmountCents: cash === '' ? null : Math.round(parseFloat(cash) * 100),
       currencyCode: cur.length === 3 ? cur : null,
+      paypalPlanId: row.querySelector('.pp-paypal').value.trim() || null,
       isActive: row.querySelector('.pp-active').checked,
     });
   }
@@ -1883,7 +1916,7 @@ async function savePlanFull(id) {
 
   const body = {
     name: get('name').value.trim(), description: get('desc').value.trim() || null,
-    durationDays, trialDays, sortOrder, priceCents, currency: get('currency').value.trim().toUpperCase(), priceCredits,
+    durationDays, trialDays, sortOrder, priceCents, currency: get('currency').value.trim().toUpperCase(), priceCredits, paypalPlanId: get('paypal').value.trim() || null,
   };
   if (plan.service === 'MERCHANT_ACCOUNT') {
     const raw = get('broadcast').value.trim();

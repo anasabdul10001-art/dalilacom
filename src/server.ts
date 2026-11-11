@@ -50,7 +50,11 @@ import { corsMiddleware } from "./lib/corsConfig";
 import { localizeResponses } from "./lib/localize";
 import { ApiError, sendError, sendValidationError } from "./lib/apiError";
 import { renewAllDueAiPackages } from "./services/aiQuota.service";
+import { marketplaceRouter } from "./routes/marketplace.routes";
+import { accountingRouter } from "./routes/accounting.routes";
+import { billingRouter } from "./routes/billing.routes";
 import { sendDueDoctorAppointmentReminders } from "./services/doctorAppointmentReminder.service";
+
 
 const app = express();
 app.set("trust proxy", 1); // Render sits behind a proxy — needed for correct req.ip / X-Forwarded-For
@@ -126,6 +130,10 @@ app.get(["/", "/app/"], route(async (req, res, next) => {
     next(err);
   }
 }));
+
+// Public overview page for the map, store, deals, responder and accounting products.
+app.get("/services", (_req, res) => res.sendFile(path.join(__dirname, "../public/services.html")));
+app.get("/services/", (_req, res) => res.sendFile(path.join(__dirname, "../public/services.html")));
 // robots.txt and llms.txt come before the static files: while indexing is off (the default) every crawler is told to stay out.
 // Meta's crawler is the one exception: Facebook Login needs it to read the privacy, terms and data-deletion pages,
 // and it draws the preview card when someone shares a dalilacom.com link. It does not index anything for search.
@@ -200,6 +208,9 @@ app.use("/businesses", businessRouter);
 app.use("/branches", branchRouter);
 app.use("/catalog", catalogRouter);
 app.use("/store", storeRouter);
+app.use("/marketplace", marketplaceRouter);
+app.use("/accounting", accountingRouter);
+app.use("/billing", billingRouter);
 app.use("/ads", adsRouter);
 app.use("/reviews", reviewsRouter);
 app.use("/favorites", favoritesRouter);

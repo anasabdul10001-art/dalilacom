@@ -3,6 +3,7 @@ package com.dalilacom.app.data
 import android.content.Context
 import com.dalilacom.app.data.network.ApiClient
 import com.dalilacom.app.data.repository.AccountRepository
+import com.dalilacom.app.data.repository.AccountingRepository
 import com.dalilacom.app.data.repository.AuthRepository
 import com.dalilacom.app.data.repository.BroadcastRepository
 import com.dalilacom.app.data.repository.CartRepository
@@ -47,6 +48,7 @@ class AppContainer(context: Context) {
     val productRepository = ProductRepository(api)
     val cartRepository = CartRepository(api)
     val storeRepository = StoreRepository(api)
+    val marketplaceRepository = com.dalilacom.app.data.repository.MarketplaceRepository(api)
     val reviewsRepository = com.dalilacom.app.data.repository.ReviewsRepository(api)
     val orderRepository = OrderRepository(api)
     val merchantRepository = MerchantRepository(api, sessionStore)
@@ -58,6 +60,7 @@ class AppContainer(context: Context) {
     val notificationRepository = NotificationRepository(api, context.applicationContext)
     val broadcastRepository = BroadcastRepository(api)
     val accountRepository = AccountRepository(api, tokenStore)
+    val accountingRepository = AccountingRepository(api)
     val landmarkRepository = com.dalilacom.app.data.repository.LandmarkRepository(api)
     val shopAffiliateRepository = com.dalilacom.app.data.repository.ShopAffiliateRepository(api)
 

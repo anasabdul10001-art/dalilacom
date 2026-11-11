@@ -18,48 +18,49 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalLayoutDirection
 import com.dalilacom.app.R
 
-// Official brand colors (section 17)
-val PrimaryRed = Color(0xFFBA2A34)
-val DeepRed = Color(0xFF5A0E12)
+// Brand colors: coral orange on cream, white cards, near-black text (taken from the reference page)
+val BrandOrange = Color(0xFFF48050)
+val BrandOrangeDeep = Color(0xFFC4552B)
 val BrandBlack = Color(0xFF000000)
 val BrandWhite = Color(0xFFFFFFFF)
-val SoftRed = Color(0xFFFBE6E7)
+val BrandPeach = Color(0xFFFDE6D6)
+val BrandInk = Color(0xFF1C1C20)
 
 private val LightColors = lightColorScheme(
-    primary = PrimaryRed,
-    onPrimary = BrandWhite,
-    primaryContainer = SoftRed,
-    onPrimaryContainer = DeepRed,
-    secondary = DeepRed,
+    primary = BrandOrange,
+    onPrimary = BrandInk, // dark text on the coral: white would be too faint
+    primaryContainer = BrandPeach,
+    onPrimaryContainer = Color(0xFF5A2410),
+    secondary = BrandOrangeDeep,
     onSecondary = BrandWhite,
-    secondaryContainer = SoftRed,
-    onSecondaryContainer = DeepRed,
-    background = Color(0xFFFFFFFF),
-    onBackground = Color(0xFF1A1111),
+    secondaryContainer = BrandPeach,
+    onSecondaryContainer = Color(0xFF5A2410),
+    background = Color(0xFFFCF8F4),
+    onBackground = BrandInk,
     surface = BrandWhite,
-    onSurface = Color(0xFF1A1111),
-    surfaceVariant = Color(0xFFF6F1F1),
-    onSurfaceVariant = Color(0xFF675B5B),
-    outline = Color(0xFFB9AAAA),
-    outlineVariant = Color(0xFFEADFDF),
+    onSurface = BrandInk,
+    surfaceVariant = Color(0xFFFBF1E7),
+    onSurfaceVariant = Color(0xFF6B6B70),
+    outline = Color(0xFFD7C9BC),
+    outlineVariant = Color(0xFFEFE4D8),
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFE5555F),
-    onPrimary = BrandWhite,
-    primaryContainer = Color(0xFF4A1519),
-    onPrimaryContainer = Color(0xFFFFDADC),
-    secondary = Color(0xFFFFB3B6),
-    secondaryContainer = Color(0xFF4A1519),
-    onSecondaryContainer = Color(0xFFFFDADC),
-    background = Color(0xFF120607),
-    surface = Color(0xFF1A0B0C),
+    primary = BrandOrange,
+    onPrimary = BrandInk,
+    primaryContainer = Color(0xFF5A2A14),
+    onPrimaryContainer = Color(0xFFFFDCCB),
+    secondary = Color(0xFFFFB594),
+    secondaryContainer = Color(0xFF5A2A14),
+    onSecondaryContainer = Color(0xFFFFDCCB),
+    background = Color(0xFF14100E),
+    surface = Color(0xFF1D1815),
     onBackground = BrandWhite,
     onSurface = BrandWhite,
-    surfaceVariant = Color(0xFF2A1618),
-    onSurfaceVariant = Color(0xFFD7C2C3),
-    outline = Color(0xFF8E7778),
-    outlineVariant = Color(0xFF4A3638),
+    surfaceVariant = Color(0xFF2A2320),
+    onSurfaceVariant = Color(0xFFD9CCC2),
+    outline = Color(0xFF8E7F74),
+    outlineVariant = Color(0xFF4A3D36),
 )
 
 private val Tajawal = FontFamily(

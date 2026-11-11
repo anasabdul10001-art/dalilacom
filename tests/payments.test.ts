@@ -96,12 +96,12 @@ describe("paying for an order", () => {
     expect((await prisma.payment.findUniqueOrThrow({ where: { orderId } })).status).toBe("FAILED");
   });
 
-  it("a merchant cancelling an order that was already paid marks the payment refunded", async () => {
+  it("a merchant cancelling an order that was already paid does not mark the payment refunded (no money is returned by the app)", async () => {
     const { shop, checkout } = await placeOrder();
     const orderId = checkout.body[0].id as string;
     await prisma.payment.update({ where: { orderId }, data: { status: "PAID_CASH", paidAt: new Date() } });
     const res = await request(app).patch(`/orders/${orderId}/status`).set(shop.owner.auth).send({ status: "CANCELLED", cancelReason: "out of stock" });
     expect(res.status).toBe(200);
-    expect((await prisma.payment.findUniqueOrThrow({ where: { orderId } })).status).toBe("REFUNDED");
+    expect((await prisma.payment.findUniqueOrThrow({ where: { orderId } })).status).toBe("PAID_CASH");
   });
 });

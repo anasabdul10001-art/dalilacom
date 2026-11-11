@@ -25,8 +25,8 @@ import androidx.compose.ui.unit.sp
 import com.dalilacom.app.R
 import com.dalilacom.app.data.network.OpenStatusDto
 import com.dalilacom.app.ui.i18n.AppStrings
-import com.dalilacom.app.ui.theme.DeepRed
-import com.dalilacom.app.ui.theme.PrimaryRed
+import com.dalilacom.app.ui.theme.BrandOrangeDeep
+import com.dalilacom.app.ui.theme.BrandOrange
 
 /** Week as people read it here: Saturday first. Keys match the backend's day keys. */
 val DAY_ORDER = listOf("sat", "sun", "mon", "tue", "wed", "thu", "fri")
@@ -95,7 +95,7 @@ fun OpenBadge(status: OpenStatusDto?, modifier: Modifier = Modifier) {
 @Composable
 fun Avatar(name: String, size: Dp = 48.dp, modifier: Modifier = Modifier, imageUrl: String? = null) {
     Box(
-        modifier = modifier.size(size).clip(CircleShape).background(Brush.linearGradient(listOf(DeepRed, PrimaryRed))),
+        modifier = modifier.size(size).clip(CircleShape).background(Brush.linearGradient(listOf(BrandOrangeDeep, BrandOrange))),
         contentAlignment = Alignment.Center,
     ) {
         Text(name.take(1), color = Color.White, fontSize = (size.value * 0.42f).sp, fontWeight = FontWeight.Bold)

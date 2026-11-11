@@ -13,7 +13,7 @@ export async function exportPersonalData(userId: string) {
       isEmailVerified: true, lastLatitude: true, lastLongitude: true, locationUpdatedAt: true, termsAcceptedAt: true, termsVersion: true, locationConsentAt: true, createdAt: true,
     },
   });
-  const [addresses, memberships, orders, walletTransactions, topUps, productReviews, merchantReviews, notifications, favorites, securityEvents, merchant, careConnections, bookedAppointments, clinicAppointments, fitnessPlans, coachFitnessPlans] = await Promise.all([
+  const [addresses, memberships, orders, walletTransactions, topUps, productReviews, merchantReviews, notifications, favorites, securityEvents, merchant, sellerPaymentMethods, careConnections, bookedAppointments, clinicAppointments, fitnessPlans, coachFitnessPlans] = await Promise.all([
     prisma.address.findMany({ where: { userId } }),
     prisma.membership.findMany({
       where: { userId },
@@ -31,6 +31,7 @@ export async function exportPersonalData(userId: string) {
     prisma.favoriteMerchant.findMany({ where: { userId } }),
     prisma.securityEvent.findMany({ where: { userId }, select: { type: true, ip: true, userAgent: true, createdAt: true } }),
     prisma.merchantProfile.findUnique({ where: { userId }, select: { businessName: true, address: true, phone: true, whatsapp: true, latitude: true, longitude: true, approvalStatus: true, createdAt: true, fitnessProfile: true, fitnessOffers: true } }),
+    prisma.sellerPaymentMethod.findMany({ where: { userId }, select: { provider: true, recipientName: true, accountNumber: true, isEnabled: true, createdAt: true, updatedAt: true } }),
     prisma.doctorPatientConnection.findMany({ where: { patientUserId: userId }, select: { status: true, requestedAt: true, consentedAt: true, revokedAt: true, doctor: { select: { businessName: true } }, records: { select: { kind: true, contentEnc: true, createdAt: true }, orderBy: { createdAt: "asc" } } }, orderBy: { requestedAt: "asc" } }),
     prisma.doctorAppointment.findMany({ where: { patientUserId: userId }, select: { startsAt: true, endsAt: true, kind: true, complaintEnc: true, status: true, createdAt: true, doctor: { select: { businessName: true, address: true, phone: true } } }, orderBy: { startsAt: "asc" } }),
     prisma.doctorAppointment.findMany({ where: { doctor: { userId } }, select: { startsAt: true, endsAt: true, status: true, createdAt: true, patient: { select: { fullName: true, email: true, phone: true } } }, orderBy: { startsAt: "asc" } }),
@@ -41,6 +42,7 @@ export async function exportPersonalData(userId: string) {
     exportedAt: new Date().toISOString(),
     account: user,
     merchantProfile: merchant,
+    sellerPaymentMethods,
     medicalRecords: careConnections.map((connection) => ({ status: connection.status, requestedAt: connection.requestedAt, consentedAt: connection.consentedAt, revokedAt: connection.revokedAt, doctor: connection.doctor.businessName, records: connection.records.map((record) => ({ kind: record.kind, ...decryptJson<{ title: string; body: string }>(record.contentEnc), createdAt: record.createdAt })) })),
     appointments: bookedAppointments.map(({ complaintEnc, ...appointment }) => ({ ...appointment, visitReason: complaintEnc ? decryptJson<{ text?: string }>(complaintEnc).text ?? null : null })),
     clinicAppointments,

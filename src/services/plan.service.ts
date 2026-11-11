@@ -37,6 +37,7 @@ export interface CatalogPlan {
   features: CatalogFeature[];
   source: "catalog";
   editable: boolean;
+  paypalAvailable: boolean;
 }
 
 export interface CatalogService {
@@ -53,7 +54,7 @@ export interface Catalog {
 }
 
 /** Every service the pricing page can list, in display order. */
-const SERVICE_ORDER: ServiceKind[] = ["MEMBERSHIP", "MERCHANT_ACCOUNT", "RESPONDER_BASIC"];
+const SERVICE_ORDER: ServiceKind[] = ["MEMBERSHIP", "MERCHANT_ACCOUNT", "RESPONDER_BASIC", "ACCOUNTING"];
 
 /** A plan row plus its country overrides, exactly as the catalogue query returns it. */
 type PlanWithPrices = Prisma.ServicePlanGetPayload<{ include: { prices: true } }>;
@@ -121,10 +122,12 @@ export async function getCatalog(countryCode: string | null, lang: string = DEFA
       features: plan.features.map((f) => ({ text: say(f.text), included: f.included })),
       source: "catalog",
       editable: true,
+      paypalAvailable: !!(price.priceFrom === "country" ? plan.prices.find(p => p.countryId === country?.id)?.paypalPlanId || plan.paypalPlanId : plan.paypalPlanId),
     };
   });
 
   const all = fromCatalog;
+
 
   const services: CatalogService[] = SERVICE_ORDER.map((service) => ({
     service,
@@ -183,6 +186,7 @@ export interface CountryPriceInput {
   priceCredits: number;
   cashAmountCents?: number | null;
   currencyCode?: string | null;
+  paypalPlanId?: string | null;
   isActive?: boolean;
 }
 
@@ -196,6 +200,7 @@ export async function replacePrices(planId: string, prices: CountryPriceInput[])
         priceCredits: p.priceCredits,
         cashAmountCents: p.cashAmountCents ?? null,
         currencyCode: p.currencyCode ?? null,
+        paypalPlanId: p.paypalPlanId?.trim() || null,
         isActive: p.isActive ?? true,
       })),
     }),

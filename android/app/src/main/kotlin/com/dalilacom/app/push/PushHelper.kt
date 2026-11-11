@@ -67,7 +67,7 @@ object PushHelper {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             // the status bar only draws the shape of a small icon, so it is the logo as a white silhouette (a coloured one turns into a blob)
             .setSmallIcon(R.drawable.ic_stat_dalilacom)
-            .setColor(ContextCompat.getColor(context, R.color.brand_red))
+            .setColor(ContextCompat.getColor(context, R.color.brand_orange))
             .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.ic_notification_large))
             .setSubText(context.getString(R.string.app_name))
             .setContentTitle(title)

@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -92,7 +93,6 @@ import kotlinx.coroutines.launch
 /** The store's own palette: black bars, white cards on a light-grey page, orange sale prices. */
 val StoreSale = Color(0xFFFA6338)
 val StoreTag = Color(0xFF7B4FD6)
-private val StoreBar = Color(0xFF000000)
 
 @Composable
 private fun storePage(): Color = if (isSystemInDarkTheme()) Color(0xFF0E0A0A) else Color(0xFFF5F5F5)
@@ -233,6 +233,8 @@ fun StoreScreen(
     onOpenMerchant: (String) -> Unit = {},
     onBookAd: (String) -> Unit = {},
     onStartSelling: () -> Unit = {},
+    /** False when the store is a tab of the home page: there is no page behind it to go back to. */
+    showBack: Boolean = true,
 ) {
     val vm: StoreViewModel = viewModel(factory = ViewModelFactory(container))
     val ui by vm.ui.collectAsState()
@@ -270,9 +272,9 @@ fun StoreScreen(
 
     Column(Modifier.fillMaxSize().background(storePage())) {
         // the black top: back, name, a white search pill, the bag
-        Row(Modifier.fillMaxWidth().background(StoreBar).padding(horizontal = 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { goBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White) }
-            Text(stringResource(R.string.tab_store), color = Color.White, fontWeight = FontWeight.Black, fontSize = 19.sp)
+        Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (showBack) IconButton(onClick = { goBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) } else Spacer(Modifier.width(12.dp))
+            Text(stringResource(R.string.tab_store), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Black, fontSize = 19.sp)
             Spacer(Modifier.width(10.dp))
             Row(
                 Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(Color.White).padding(start = 16.dp, end = 4.dp),
@@ -293,7 +295,7 @@ fun StoreScreen(
                 IconButton(onClick = { vm.search(query) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Search, contentDescription = null, tint = Color(0xFF111111), modifier = Modifier.size(20.dp)) }
             }
             Box {
-                IconButton(onClick = onOpenCart) { Icon(Icons.Outlined.ShoppingBag, contentDescription = null, tint = Color.White) }
+                IconButton(onClick = onOpenCart) { Icon(Icons.Outlined.ShoppingBag, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) }
                 if (ui.cartCount > 0) Box(
                     Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 2.dp).size(18.dp).clip(CircleShape).background(StoreSale),
                     contentAlignment = Alignment.Center,
@@ -301,7 +303,7 @@ fun StoreScreen(
             }
         }
         // the departments as a black strip with an underline on the chosen one
-        LazyRow(Modifier.fillMaxWidth().background(StoreBar), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        LazyRow(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             item { StoreTab(stringResource(R.string.store_all), ui.section.isBlank() && !ui.dealsOnly) { vm.pickSection("") } }
             items(ui.sections, key = { it.id }) { s -> StoreTab(s.label(), ui.section == s.id) { vm.pickSection(s.id) } }
         }
@@ -416,17 +418,17 @@ fun StoreScreen(
                 item {
                     val offer = ui.adOffer
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(8.dp)).background(Color.Black).padding(horizontal = 14.dp, vertical = 12.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             "📢 " + if (offer != null) stringResource(R.string.ads_pitch, offer.fromCredits, offer.creditName, offer.days) else stringResource(R.string.ads_pitch_generic),
-                            color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.width(10.dp))
                         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(stringResource(R.string.ads_book_cta), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable { onBookAd("space") }.padding(horizontal = 12.dp, vertical = 7.dp))
-                            Text(stringResource(R.string.ads_book_banner), color = Color(0xFF111111), fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(Color.White, RoundedCornerShape(4.dp)).clickable { onBookAd("banner") }.padding(horizontal = 12.dp, vertical = 7.dp))
+                            Text(stringResource(R.string.ads_book_cta), color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)).clickable { onBookAd("space") }.padding(horizontal = 12.dp, vertical = 7.dp))
+                            Text(stringResource(R.string.ads_book_banner), color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)).clickable { onBookAd("banner") }.padding(horizontal = 12.dp, vertical = 7.dp))
                         }
                     }
                 }
@@ -474,9 +476,9 @@ private fun HomeSection(title: String, kind: String, items: List<StoreProductDto
 @Composable
 private fun StoreTab(label: String, selected: Boolean, onClick: () -> Unit) {
     Column(Modifier.clickable(onClick = onClick).padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = if (selected) Color.White else Color.White.copy(alpha = 0.75f), fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
+        Text(label, color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
         Spacer(Modifier.height(9.dp))
-        Box(Modifier.height(2.dp).fillMaxWidth().background(if (selected) Color.White else Color.Transparent))
+        Box(Modifier.height(2.dp).fillMaxWidth().background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent))
     }
 }
 
@@ -536,7 +538,7 @@ private fun BannerSlide(b: com.dalilacom.app.data.network.StoreBannerDto, onClic
         "green" -> listOf(Color(0xFF1E8A3A), Color(0xFF7BCF5A))
         "purple" -> listOf(Color(0xFF5B2BD6), Color(0xFFC04BD6))
         "gold" -> listOf(Color(0xFFD98A00), Color(0xFFF5C542))
-        else -> listOf(Color(0xFFFF7A59), Color(0xFFFF4D6D), Color(0xFFE8336D))
+        else -> listOf(Color(0xFFF48050), Color(0xFFE0653A), Color(0xFFC4552B))
     }
     val ink = if (b.bg == "gold") Color(0xFF1B1200) else Color.White
     Box(Modifier.fillMaxWidth().height(170.dp).clickable { onClick(b) }.background(Brush.linearGradient(colors))) {
@@ -556,7 +558,7 @@ private fun BannerSlide(b: com.dalilacom.app.data.network.StoreBannerDto, onClic
 @Composable
 private fun DealsSlide(up: Int, onClick: () -> Unit) {
     Box(
-        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFFFF7A59), Color(0xFFFF4D6D), Color(0xFFE8336D)))).clickable(onClick = onClick).padding(22.dp),
+        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFFF48050), Color(0xFFE0653A), Color(0xFFC4552B)))).clickable(onClick = onClick).padding(22.dp),
     ) {
         Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -586,7 +588,7 @@ private fun BrandSlide(active: Boolean, onClick: () -> Unit) {
     val ring = Color.White.copy(alpha = 0.14f)
     val fill = Color.White.copy(alpha = 0.05f)
     Box(
-        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFF5A0E12), Color(0xFFBA2A34), Color(0xFFCB0C2E)))).clickable(onClick = onClick),
+        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFFC4552B), Color(0xFFF48050), Color(0xFFE0653A)))).clickable(onClick = onClick),
     ) {
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
             val d = drift * 16.dp.toPx()
@@ -613,7 +615,7 @@ private fun BrandSlide(active: Boolean, onClick: () -> Unit) {
                 Text(stringResource(R.string.store_brand_tag1), color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 28.sp)
                 Text(stringResource(R.string.store_brand_tag2), color = Color.White.copy(alpha = 0.92f), fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 28.sp)
                 Text(
-                    stringResource(R.string.store_shop_now), color = Color(0xFFBA2A34), fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    stringResource(R.string.store_shop_now), color = Color(0xFFC4552B), fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     modifier = Modifier.padding(top = 10.dp).graphicsLayer { alpha = btnIn; translationY = (1f - btnIn) * 14.dp.toPx() }.background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 8.dp),
                 )
             }
@@ -625,14 +627,14 @@ private fun BrandSlide(active: Boolean, onClick: () -> Unit) {
 @Composable
 private fun InviteSlide(onClick: () -> Unit) {
     Box(
-        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFF1C1413), Color(0xFF5A0E12), Color(0xFFBA2A34)))).clickable(onClick = onClick),
+        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFF1C1413), Color(0xFFC4552B), Color(0xFFF48050)))).clickable(onClick = onClick),
     ) {
         Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             androidx.compose.foundation.Image(painterResource(R.drawable.brand_logo_full_white), contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.height(96.dp), alpha = 0.95f)
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.ads_invite_t), color = Color.White, fontWeight = FontWeight.Black, fontSize = 21.sp, lineHeight = 26.sp)
                 Text(stringResource(R.string.ads_invite_s), color = Color.White.copy(alpha = 0.92f), fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 18.sp)
-                Text(stringResource(R.string.ads_book_banner), color = Color(0xFFBA2A34), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp).background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 8.dp))
+                Text(stringResource(R.string.ads_book_banner), color = Color(0xFFC4552B), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp).background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 8.dp))
             }
         }
     }
@@ -642,9 +644,9 @@ private fun InviteSlide(onClick: () -> Unit) {
 @Composable
 private fun AdSlotPlaceholder(i: Int, onClick: () -> Unit) {
     val colors = when (i % 3) {
-        0 -> listOf(Color(0xFF5A0E12), Color(0xFFBA2A34))
-        1 -> listOf(Color(0xFF1C1413), Color(0xFF5A0E12))
-        else -> listOf(Color(0xFFBA2A34), Color(0xFFCB0C2E))
+        0 -> listOf(Color(0xFFC4552B), Color(0xFFF48050))
+        1 -> listOf(Color(0xFF1C1413), Color(0xFFC4552B))
+        else -> listOf(Color(0xFFF48050), Color(0xFFE0653A))
     }
     val (title, sub) = when (i % 3) {
         0 -> stringResource(R.string.ads_ph0t) to stringResource(R.string.ads_ph0s)
@@ -659,7 +661,7 @@ private fun AdSlotPlaceholder(i: Int, onClick: () -> Unit) {
                 Text(sub, color = Color.White.copy(alpha = 0.9f), fontSize = 10.5.sp, lineHeight = 14.sp)
             }
         }
-        Text(stringResource(R.string.ads_ph_cta), color = Color(0xFFBA2A34), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.White, RoundedCornerShape(50)).padding(horizontal = 9.dp, vertical = 3.dp))
+        Text(stringResource(R.string.ads_ph_cta), color = Color(0xFFC4552B), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.White, RoundedCornerShape(50)).padding(horizontal = 9.dp, vertical = 3.dp))
     }
 }
 

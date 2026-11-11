@@ -7,6 +7,7 @@ import com.dalilacom.app.ui.i18n.AppStrings
 import com.dalilacom.app.data.network.CartItemDto
 import com.dalilacom.app.data.network.CartShippingDto
 import com.dalilacom.app.data.network.CartViewDto
+import com.dalilacom.app.data.network.CartPaymentDto
 import com.dalilacom.app.data.network.OrderDto
 import com.dalilacom.app.data.repository.CartRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,8 @@ data class CartUiState(
     val totalCents: Int = 0,
     val shipping: List<CartShippingDto> = emptyList(),
     val picks: Map<String, String> = emptyMap(), // shop id -> chosen shipping method id
+    val payments: List<CartPaymentDto> = emptyList(),
+    val paymentPicks: Map<String, String> = emptyMap(),
     val error: String? = null,
     val checkoutOrders: List<OrderDto>? = null,
 )
@@ -41,7 +44,9 @@ class CartViewModel(private val repository: CartRepository) : ViewModel() {
                 items = cart?.items.orEmpty(),
                 totalCents = cart?.totalCents ?: 0,
                 shipping = cart?.shipping.orEmpty(),
+                payments = cart?.payments.orEmpty(),
                 picks = withSingles(cart?.shipping.orEmpty(), _uiState.value.picks),
+                paymentPicks = withPaymentDefaults(cart?.payments.orEmpty(), _uiState.value.paymentPicks),
             )
         }
     }
@@ -72,6 +77,10 @@ class CartViewModel(private val repository: CartRepository) : ViewModel() {
         _uiState.value = _uiState.value.copy(picks = _uiState.value.picks + (merchantId to methodId), error = null)
     }
 
+    fun pickPayment(merchantId: String, method: String) {
+        _uiState.value = _uiState.value.copy(paymentPicks = _uiState.value.paymentPicks + (merchantId to method), error = null)
+    }
+
     /** What the chosen shipping methods cost, all shops together. */
     fun shippingTotal(state: CartUiState): Int =
         state.shipping.sumOf { s -> s.methods.firstOrNull { it.id == state.picks[s.merchantId] }?.costCents ?: 0 }
@@ -84,7 +93,7 @@ class CartViewModel(private val repository: CartRepository) : ViewModel() {
         }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            repository.checkout(state.picks)
+            repository.checkout(state.picks, state.paymentPicks)
                 .onSuccess { orders ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -102,7 +111,7 @@ class CartViewModel(private val repository: CartRepository) : ViewModel() {
     }
 
     private fun applyCart(cart: CartViewDto) {
-        _uiState.value = _uiState.value.copy(items = cart.items, totalCents = cart.totalCents, shipping = cart.shipping, picks = withSingles(cart.shipping, _uiState.value.picks))
+        _uiState.value = _uiState.value.copy(items = cart.items, totalCents = cart.totalCents, shipping = cart.shipping, payments = cart.payments, picks = withSingles(cart.shipping, _uiState.value.picks), paymentPicks = withPaymentDefaults(cart.payments, _uiState.value.paymentPicks))
     }
 
     /** A shop with a single method needs no choosing; choices for methods that no longer exist are dropped. */
@@ -110,4 +119,7 @@ class CartViewModel(private val repository: CartRepository) : ViewModel() {
         val kept = picks.filter { (shop, id) -> shipping.any { s -> s.merchantId == shop && s.methods.any { it.id == id } } }
         return kept + shipping.filter { it.methods.size == 1 && it.merchantId !in kept }.associate { it.merchantId to it.methods[0].id }
     }
+
+    private fun withPaymentDefaults(groups: List<CartPaymentDto>, picks: Map<String, String>): Map<String, String> =
+        groups.associate { group -> group.merchantId to (picks[group.merchantId]?.takeIf { it in group.methods } ?: "COD") }
 }

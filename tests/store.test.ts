@@ -132,3 +132,19 @@ describe("the store only shows a shopper their own country's shops", () => {
     }
   });
 });
+
+describe("the product page knows the shop's logo", () => {
+  it("gives the seller's id, name and logo (the owner's photo, or none), so the page can show a card that opens the shop", async () => {
+    const withLogo = await request(app).get(`/store/products/${syProduct}`).set("CF-IPCountry", "SY");
+    expect(withLogo.status).toBe(200);
+    expect(withLogo.body.merchant).toMatchObject({ name: expect.stringContaining(tag) });
+    expect(withLogo.body.merchant.id).toBeTruthy();
+    expect(withLogo.body.merchant.avatarUrl).toBeNull(); // no photo set yet
+
+    const product = await prisma.product.findUniqueOrThrow({ where: { id: syProduct }, include: { merchant: true } });
+    await prisma.user.update({ where: { id: product.merchant.userId }, data: { avatarUpdatedAt: new Date("2026-01-01T00:00:00Z") } });
+    const after = await request(app).get(`/store/products/${syProduct}`).set("CF-IPCountry", "SY");
+    expect(after.body.merchant.avatarUrl).toBe(`/profile/avatar/${product.merchant.userId}?v=${new Date("2026-01-01T00:00:00Z").getTime()}`);
+  });
+});
+

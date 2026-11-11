@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -39,6 +40,7 @@ import com.dalilacom.app.ui.merchantmode.MerchantModeShell
 import com.dalilacom.app.ui.merchantmode.ProductEditScreen
 import com.dalilacom.app.ui.notifications.NotificationsScreen
 import com.dalilacom.app.ui.orders.OrderDetailScreen
+import com.dalilacom.app.ui.orders.OrdersScreen
 import com.dalilacom.app.ui.places.FavoritesScreen
 import com.dalilacom.app.ui.places.HoursScreen
 import com.dalilacom.app.ui.pricing.PricingScreen
@@ -47,6 +49,8 @@ import com.dalilacom.app.ui.store.AdBookScreen
 import com.dalilacom.app.ui.store.ProductWizardScreen
 import com.dalilacom.app.ui.store.MyAdsScreen
 import com.dalilacom.app.ui.store.StoreScreen
+import com.dalilacom.app.ui.store.MarketplaceScreen
+import com.dalilacom.app.ui.store.MarketplaceStoreScreen
 import com.dalilacom.app.ui.profile.ProfileEditScreen
 import com.dalilacom.app.ui.responder.ResponderScreen
 import com.dalilacom.app.ui.responder.WalletScreen
@@ -251,6 +255,9 @@ fun DalilacomNavGraph(
                 onOpenStore = { navController.navigate("merchantMode/shop") { popUpTo("home") } },
             )
         }
+        composable("accountingPlans") {
+            com.dalilacom.app.ui.accounting.AccountingPlansScreen(container = container, onBack = { navController.popBackStack() })
+        }
         composable("branches") {
             com.dalilacom.app.ui.merchantmode.BranchesScreen(container = container, onBack = { navController.popBackStack() })
         }
@@ -272,6 +279,10 @@ fun DalilacomNavGraph(
                 onStartSelling = { navController.navigate("merchantRegister/store") },
             )
         }
+        composable("marketplace") {
+            MarketplaceScreen(container = container, onBack = { navController.popBackStack() }, onLogin = { navController.navigate("login") }, onOpenStore = { id -> navController.navigate("marketplaceStore/$id") })
+        }
+        composable("marketplaceStore/{storeId}") { entry -> MarketplaceStoreScreen(container = container, storeId = entry.arguments?.getString("storeId").orEmpty(), onBack = { navController.popBackStack() }) }
         composable("productWizard") {
             ProductWizardScreen(container = container, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") }, onOpenShipping = { navController.navigate("shipping") }, onOpenAiPlans = { navController.navigate("aiPlans") }, onBackToShop = { navController.popBackStack("merchantMode", inclusive = false) }, onBackToAccount = { navController.popBackStack("home", inclusive = false) })
         }
@@ -394,17 +405,38 @@ fun DalilacomNavGraph(
                 }
                 return@composable
             }
-            ResponderScreen(
-                factory = factory,
+            // the section is a small site of its own: its home page is always there, and the tool is the other tab
+            var signedIn by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
+            androidx.compose.runtime.LaunchedEffect(Unit) { signedIn = container.authRepository.hasStoredSession() }
+            val hasMetaReturn = entry.arguments?.getString("ok") != null || entry.arguments?.getString("session") != null
+            if (signedIn == null) androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize())
+            else com.dalilacom.app.ui.common.SectionSite(
+                kind = com.dalilacom.app.ui.common.SiteKind.Responder,
+                signedIn = signedIn == true,
+                onLogin = { navController.navigate("login") },
+                onRegister = { navController.navigate("register") },
                 onBack = { navController.popBackStack() },
-                onOpenWallet = { navController.navigate("wallet") },
-                metaOk = entry.arguments?.getString("ok")?.let { it == "1" },
-                metaConnectionId = entry.arguments?.getString("connectionId"),
-                metaSessionId = entry.arguments?.getString("session"),
+                startOnApp = hasMetaReturn,
+                appContent = {
+                    ResponderScreen(
+                        factory = factory,
+                        onBack = { navController.popBackStack() },
+                        onOpenWallet = { navController.navigate("wallet") },
+                        metaOk = entry.arguments?.getString("ok")?.let { it == "1" },
+                        metaConnectionId = entry.arguments?.getString("connectionId"),
+                        metaSessionId = entry.arguments?.getString("session"),
+                    )
+                },
             )
         }
         composable("wallet") {
             WalletScreen(factory = factory, onBack = { navController.popBackStack() })
+        }
+        composable("orders") {
+            androidx.compose.foundation.layout.Column {
+                androidx.compose.material3.TextButton(onClick = { navController.popBackStack() }) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.back)) }
+                OrdersScreen(factory = factory, onOrderClick = { id -> navController.navigate("order/$id") })
+            }
         }
         composable("merchantMode") {
             MerchantModeShell(rootNavController = navController, container = container)

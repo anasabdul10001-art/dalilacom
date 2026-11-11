@@ -272,7 +272,12 @@ const settingsSchema = z.object({
     })
     .partial()
     .optional(),
-  aiModelPrices: z.array(z.object({ provider: z.string().trim().min(1).max(40), model: z.string().trim().min(1).max(120), inputUsdPerMillion: z.number().nonnegative().max(100000).nullable(), outputUsdPerMillion: z.number().nonnegative().max(100000).nullable() })).max(100).optional(),
+  marketplace: z.object({
+    freeListingsPerMonth: z.number().int().nonnegative().max(100000),
+    allowNewProducts: z.boolean(),
+  }).partial().optional(),
+aiModelPrices: z.array(z.object({ provider: z.string().trim().min(1).max(40), model: z.string().trim().min(1).max(120), inputUsdPerMillion: z.number().nonnegative().max(100000).nullable(), outputUsdPerMillion: z.number().nonnegative().max(100000).nullable() })).max(100).optional(),
+
   payment: z
     .object({
       usdtTrc20Address: z.string().trim().regex(/^(T[1-9A-HJ-NP-Za-km-z]{33})?$/, "عنوان TRON غير صالح").optional(),
@@ -296,6 +301,19 @@ const settingsSchema = z.object({
 adminRouter.get("/category-suggestions", route(async (req, res) => {
   const status = z.enum(["PENDING", "APPROVED", "MERGED", "REJECTED"]).catch("PENDING").parse(req.query.status);
   res.json(await listSuggestions(status));
+}));
+
+// Private user listings need owner approval before they appear in the public marketplace.
+adminRouter.get("/marketplace/listings", route(async (req, res) => {
+  const status = z.enum(["PENDING_REVIEW", "ACTIVE", "SOLD", "HIDDEN", "REJECTED"]).catch("PENDING_REVIEW").parse(req.query.status);
+  res.json(await prisma.marketplaceListing.findMany({ where: { status }, orderBy: { createdAt: "asc" }, take: 200, include: { user: { select: { fullName: true, email: true, phone: true } } } }));
+}));
+
+adminRouter.patch("/marketplace/listings/:id", route(async (req, res) => {
+  const parsed = z.object({ status: z.enum(["ACTIVE", "HIDDEN", "SOLD"] as const) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const listing = await prisma.marketplaceListing.update({ where: { id: req.params.id }, data: { status: parsed.data.status } });
+  res.json(listing);
 }));
 
 const approveSuggestionSchema = z.object({

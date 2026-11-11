@@ -202,7 +202,7 @@ export async function cancelAd(userId: string, id: string): Promise<AdBooking> {
 export async function liveAds(country: string, now = new Date()) {
   return prisma.adBooking.findMany({
     where: { countryCode: country, status: "ACTIVE", startsAt: { lte: now }, endsAt: { gt: now } },
-    include: { product: { include: { merchant: { select: { id: true, businessName: true, usdRateSyp: true, priceCurrency: true, showBothCurrencies: true } } } } },
+    include: { product: { include: { merchant: { select: { id: true, businessName: true, usdRateSyp: true, priceCurrency: true, showBothCurrencies: true, user: { select: { id: true, avatarUpdatedAt: true } } } } } } },
     orderBy: { slot: "asc" },
   });
 }

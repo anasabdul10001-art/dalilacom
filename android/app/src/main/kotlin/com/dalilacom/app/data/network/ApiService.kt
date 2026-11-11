@@ -191,6 +191,12 @@ interface ApiService {
     @PATCH("profile/me")
     suspend fun updateProfile(@Body body: UpdateProfileRequest): Response<ProfileDto>
 
+    @GET("profile/payment-methods")
+    suspend fun getSellerPaymentMethods(): Response<SellerPaymentMethodsResponse>
+
+    @PUT("profile/payment-methods")
+    suspend fun saveSellerPaymentMethods(@Body body: SellerPaymentMethodsRequest): Response<SellerPaymentMethodsResponse>
+
     @PUT("profile/avatar")
     suspend fun uploadAvatar(@Body body: RequestBody): Response<ProfileDto>
 
@@ -250,6 +256,21 @@ interface ApiService {
 
     @GET("membership/me")
     suspend fun getMyMembership(): Response<MembershipDto>
+
+    @GET("accounting/summary") suspend fun accountingSummary(): Response<AccountingSummaryDto>
+    @GET("accounting/products") suspend fun accountingProducts(@Query("q") query: String? = null): Response<List<AccountingProductDto>>
+    @POST("accounting/products") suspend fun addAccountingProduct(@Body body: AccountingProductRequest): Response<AccountingProductDto>
+    @POST("accounting/products/{id}/sell") suspend fun sellAccountingProduct(@Path("id") id: String, @Body body: AccountingSellRequest): Response<AccountingSellResponseDto>
+    @POST("accounting/products/{id}/stock") suspend fun changeAccountingStock(@Path("id") id: String, @Body body: AccountingStockRequest): Response<AccountingProductDto>
+    @POST("accounting/entries") suspend fun addAccountingEntry(@Body body: AccountingEntryRequest): Response<AccountingEntryDto>
+    @DELETE("accounting/entries/{id}") suspend fun deleteAccountingEntry(@Path("id") id: String): Response<okhttp3.ResponseBody>
+    @DELETE("accounting/products/{id}") suspend fun deleteAccountingProduct(@Path("id") id: String): Response<okhttp3.ResponseBody>
+    @POST("accounting/invoices/scan") suspend fun scanAccountingInvoice(@Body image: RequestBody): Response<AccountingInvoiceDraftDto>
+    @POST("accounting/invoices/{id}/confirm") suspend fun confirmAccountingInvoice(@Path("id") id: String, @Body body: AccountingInvoiceConfirmRequest): Response<AccountingEntryDto>
+    @GET("plans/catalog") suspend fun planCatalog(): Response<PlanCatalogDto>
+    @POST("billing/checkout") suspend fun beginBillingCheckout(@Body body: BillingRequest): Response<BillingCheckoutDto>
+    @POST("billing/trial") suspend fun beginBillingTrial(@Body body: BillingRequest): Response<kotlinx.serialization.json.JsonElement>
+    @POST("billing/activate-free") suspend fun activateFreePlan(@Body body: BillingRequest): Response<kotlinx.serialization.json.JsonElement>
 
     @GET("qr/mine")
     suspend fun getMyQrCode(): Response<QrCodeDto>
@@ -458,6 +479,18 @@ interface ApiService {
     @GET("store/products/{id}")
     suspend fun storeProduct(@Path("id") id: String): Response<StoreProductDto>
 
+    @GET("marketplace/settings") suspend fun marketplaceSettings(): Response<MarketplaceSettingsDto>
+    @GET("marketplace/listings") suspend fun marketplaceListings(@Query("q") q: String? = null): Response<MarketplaceListingsDto>
+    @GET("marketplace/mine") suspend fun myMarketplace(): Response<MyMarketplaceDto>
+    @GET("marketplace/my-store") suspend fun myMarketplaceStore(): Response<MarketplaceStoreResponseDto>
+    @PUT("marketplace/my-store") suspend fun saveMarketplaceStore(@Body body: Map<String, String?>): Response<MarketplaceStoreResponseDto>
+    @GET("marketplace/stores/{id}") suspend fun marketplaceStore(@Path("id") id: String): Response<MarketplaceStoreDetailDto>
+    @POST("marketplace/listings") suspend fun createMarketplaceListing(@Body body: CreateMarketplaceListingRequest): Response<MarketplaceCreateResponseDto>
+    @retrofit2.http.Headers("Content-Type: image/jpeg")
+    @POST("marketplace/photos") suspend fun uploadMarketplacePhoto(@Body body: RequestBody): Response<ProductPhotoDto>
+    @PATCH("marketplace/listings/{id}") suspend fun updateMarketplaceListing(@Path("id") id: String, @Body body: Map<String, String>): Response<Unit>
+    @POST("marketplace/subscribe") suspend fun subscribeMarketplace(@Body body: Map<String, String>): Response<MarketplaceSubscriptionResponseDto>
+
     @POST("products")
     suspend fun createProduct(@Body body: CreateProductRequest): Response<ProductDto>
 
@@ -589,6 +622,12 @@ interface ApiService {
 
     @POST("orders/{id}/payment/confirm-cash")
     suspend fun confirmCash(@Path("id") id: String): Response<PaymentDto>
+
+    @POST("orders/{id}/payment/submit-transfer")
+    suspend fun submitTransfer(@Path("id") id: String, @Body body: TransferReferenceRequest): Response<PaymentDto>
+
+    @POST("orders/{id}/payment/confirm-transfer")
+    suspend fun confirmTransfer(@Path("id") id: String): Response<PaymentDto>
 
     @PATCH("orders/{id}/status")
     suspend fun updateOrderStatus(@Path("id") id: String, @Body body: UpdateOrderStatusRequest): Response<OrderDto>

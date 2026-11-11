@@ -43,34 +43,34 @@ describe("The project's own translations (a guard for every future change)", () 
 describe("npm run i18n:add", () => {
   it("scaffolds a language on the server, the web and Android — and the checker then lists what is left", async () => {
     const root = copyProject("add");
-    const done = await addLanguage(root, { code: "de", name: "Deutsch", dir: "ltr" });
+    const done = await addLanguage(root, { code: "es", name: "Español", dir: "ltr" });
     expect(done).toHaveLength(3);
 
     // server
-    expect(registeredLanguages(root).map((l) => l.code)).toEqual(["ar", "en", "de"]);
+    expect(registeredLanguages(root).map((l) => l.code)).toEqual(["ar", "en", "es"]);
     const index = fs.readFileSync(path.join(root, "src/i18n/index.ts"), "utf8");
-    expect(index).toContain('import { pack as de } from "./de";');
-    expect(index).toMatch(/\n\s+de,\n\s+\/\/ <\/i18n-packs>/);
-    expect(fs.readFileSync(path.join(root, "src/i18n/de.ts"), "utf8")).toContain('"الباقة غير موجودة": "Plan not found"'); // English placeholder, Arabic key
+    expect(index).toContain('import { pack as es } from "./es";');
+    expect(index).toMatch(/\n\s+es,\n\s+\/\/ <\/i18n-packs>/);
+    expect(fs.readFileSync(path.join(root, "src/i18n/es.ts"), "utf8")).toContain('"الباقة غير موجودة": "Plan not found"'); // English placeholder, Arabic key
 
     // web: a self-registering file, loaded before app.js
-    const web = loadWebLanguage(root, "de")!;
-    expect(web.langs.de).toEqual({ name: "Deutsch", dir: "ltr" });
+    const web = loadWebLanguage(root, "es")!;
+    expect(web.langs.es).toEqual({ name: "Español", dir: "ltr" });
     expect(web.dict["tab.map"]).toBe("Map");
     expect(Object.keys(web.phrases).length).toBeGreaterThan(200);
     expect(web.patterns.length).toBe(loadWebLanguage(root, "en")!.patterns.length);
     const html = fs.readFileSync(path.join(root, "public/app/index.html"), "utf8");
-    expect(html.indexOf('i18n.de.js')).toBeGreaterThan(html.indexOf("i18n.en.js"));
-    expect(html.indexOf('i18n.de.js')).toBeLessThan(html.indexOf('app.js'));
+    expect(html.indexOf('i18n.es.js')).toBeGreaterThan(html.indexOf("i18n.en.js"));
+    expect(html.indexOf('i18n.es.js')).toBeLessThan(html.indexOf('app.js'));
 
     // android
-    expect(fs.existsSync(path.join(root, "android/app/src/main/res/values-de/strings.xml"))).toBe(true);
-    expect(fs.existsSync(path.join(root, "android/app/src/main/res/values-de/strings_screens.xml"))).toBe(true);
-    expect(fs.readFileSync(path.join(root, "android/app/src/main/kotlin/com/dalilacom/app/ui/i18n/AppLanguages.kt"), "utf8")).toContain('AppLanguage("de", "Deutsch", rtl = false),');
+    expect(fs.existsSync(path.join(root, "android/app/src/main/res/values-es/strings.xml"))).toBe(true);
+    expect(fs.existsSync(path.join(root, "android/app/src/main/res/values-es/strings_screens.xml"))).toBe(true);
+    expect(fs.readFileSync(path.join(root, "android/app/src/main/kotlin/com/dalilacom/app/ui/i18n/AppLanguages.kt"), "utf8")).toContain('AppLanguage("es", "Español", rtl = false),');
 
     // nothing is missing (placeholders exist everywhere), but the checker says they are still English — and that the
     // category names need translating by hand
-    const german = (await checkLanguages(root)).languages.find((l) => l.code === "de")!;
+    const german = (await checkLanguages(root)).languages.find((l) => l.code === "es")!;
     expect(german.missing.web).toEqual([]);
     expect(german.missing.android).toEqual([]);
     expect(german.missing.server).toEqual([]);

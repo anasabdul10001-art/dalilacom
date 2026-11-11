@@ -176,7 +176,7 @@ fun LocationPicker(
                                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                                 icon = GradientDrawable().apply {
                                     shape = GradientDrawable.OVAL
-                                    setColor(Color.parseColor("#BA2A34"))
+                                    setColor(Color.parseColor("#F48050"))
                                     setStroke((3 * density).toInt(), Color.WHITE)
                                     setSize(px, px)
                                 }
