@@ -519,6 +519,12 @@ export const en: LanguagePack = {
     "إعلان مستخدم بانتظار المراجعة": "A user listing is waiting for review",
     "تمت الموافقة على إعلانك ✅": "Your listing was approved ✅",
     "لم تتم الموافقة على إعلانك": "Your listing was not approved",
+    "وصلت للحد اليومي لقراءة الفواتير. جرّب غدًا أو اكتب الفاتورة يدويًا.": "You've reached today's limit for reading invoices. Try again tomorrow or enter the invoice by hand.",
+    "القيد غير موجود": "Entry not found",
+    "هذا القيد يُسجَّل تلقائيًا من الطلب ولا يمكن تعديله": "This entry is recorded automatically from the order and cannot be edited",
+    "هذا القيد يُسجَّل تلقائيًا من الطلب ولا يمكن حذفه": "This entry is recorded automatically from the order and cannot be deleted",
+    "منتجات المتجر تُعدَّل من صفحة المتجر": "Store products are edited from the store page",
+    "منتجات المتجر تُحذف من صفحة المتجر": "Store products are deleted from the store page",
   },
   patterns: [
     [/^هالأسبوع وصلك (\d+) رسالة ما لقت رد ثابت\. الذكاء الاصطناعي كان ممكن يرد عليها\.$/, (m) => `This week, ${m[1]} messages arrived without a matching fixed reply. AI could have replied to them.`],

@@ -2556,10 +2556,10 @@ function screenAccounting() {
       <div class="field"><label>${esc(t("accounting.costPrice"))}</label><input id="acc-cost-price" type="number" min="0" step="0.01" /></div>
       <div class="field"><label>${esc(t("accounting.quantity"))}</label><input id="acc-quantity" type="number" min="0" step="1" value="0" /></div>
       <button class="btn" onclick="accountingAddProduct()">${esc(t("accounting.addProduct"))}</button>
-      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button></div></div>`).join("")}
+      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingDeleteProduct('${p.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button>`}</div></div>`).join("")}
     </div>
     <div class="card"><div class="section-title">${esc(t("accounting.recent"))}</div>
-      ${(a.summary?.recent || []).map(e => `<div class="title-line"><span><b>${esc(e.description)}</b><div class="muted">${esc(e.category)} · ${new Date(e.occurredAt).toLocaleDateString()}</div></span><strong>${e.type === "EXPENSE" ? "−" : "+"}${fmt(e.amountCents,e.currency)}</strong></div>`).join("") || `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
+      ${(a.summary?.recent || []).map(e => `<div class="title-line"><span><b>${esc(e.description)}</b><div class="muted">${esc(e.category)} · ${new Date(e.occurredAt).toLocaleDateString()}</div></span><strong>${e.type === "EXPENSE" ? "−" : "+"}${fmt(e.amountCents,e.currency)}</strong>${e.source === "MANUAL" || e.source === "INVOICE" ? `<span><button class="btn small outline" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></span>` : ""}</div>`).join("") || `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
     </div>${errorBanner()}`;
 }
 async function loadAccounting() {
@@ -2619,6 +2619,27 @@ async function accountingSetCost(id) {
   const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: "ADJUSTMENT", quantity: product.quantity, unitCostCents: Math.round(amount * 100), note: "تحديث تكلفة الشراء" });
   if (!ok) return toast(errMsg(data, "ما قدرنا نحدّث تكلفة المنتج"));
   S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingDeleteProduct(id) {
+  if (!confirm(t("accounting.confirmDelete"))) return;
+  const { ok, data } = await api("DELETE", `/accounting/products/${id}`);
+  if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));
+  toast(t("accounting.deleted")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingDeleteEntry(id) {
+  if (!confirm(t("accounting.confirmDelete"))) return;
+  const { ok, data } = await api("DELETE", `/accounting/entries/${id}`);
+  if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));
+  toast(t("accounting.deleted")); S._accounting = { loading: true }; await loadAccounting();
+}
+async function accountingEditEntry(id) {
+  const entry = (S._accounting?.summary?.recent || []).find(e => e.id === id); if (!entry) return;
+  const description = prompt(t("accounting.description"), entry.description); if (description === null) return;
+  const raw = prompt(t("accounting.amount"), (entry.amountCents / 100).toFixed(2)); if (raw === null) return;
+  const amount = Number(raw.replace(",", ".")); if (!Number.isFinite(amount) || amount <= 0) return toast(t("accounting.invalidAmount"));
+  const { ok, data } = await api("PATCH", `/accounting/entries/${id}`, { description: description.trim(), amountCents: Math.round(amount * 100) });
+  if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));
+  toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
 }
 let accountingStream = null;
 async function accountingScan() {

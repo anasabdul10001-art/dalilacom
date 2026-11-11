@@ -4,6 +4,7 @@ import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +65,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var invoiceAmount by remember { mutableStateOf("") }
     var costTarget by remember { mutableStateOf<AccountingProductDto?>(null) }
     var costEditValue by remember { mutableStateOf("") }
+    var deleteProductTarget by remember { mutableStateOf<AccountingProductDto?>(null) }
+    var deleteEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
 
     suspend fun reload() {
         loading = true
@@ -203,10 +207,44 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         }, enabled = p.quantity > 0) { Text("−1") }
                         Button(onClick = { showResult { container.accountingRepository.sell(p.id, 1) } }, enabled = p.quantity > 0 && p.salePriceCents > 0) { Text(stringResource(R.string.accounting_sell_one)) }
                     }
+                    if (!p.id.startsWith("store:")) TextButton(onClick = { deleteProductTarget = p }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
+                }
+            }
+        }
+        val recent = summary?.recent.orEmpty()
+        if (recent.isNotEmpty()) item { Text(stringResource(R.string.accounting_recent), style = MaterialTheme.typography.titleMedium) }
+        items(recent, key = { "entry-" + it.id }) { e ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(e.description, style = MaterialTheme.typography.titleSmall)
+                        Text(e.category, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text((if (e.type == "EXPENSE") "−" else "+") + money(e.amountCents) + " " + e.currency)
+                    // entries the store writes by itself (orders, commissions, delivery) follow the order and cannot be removed here
+                    if (e.source == "MANUAL" || e.source == "INVOICE") TextButton(onClick = { deleteEntryTarget = e }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
                 }
             }
         }
         item { Hint(stringResource(R.string.accounting_footer)) }
+    }
+    deleteProductTarget?.let { product ->
+        AlertDialog(
+            onDismissRequest = { deleteProductTarget = null },
+            title = { Text(stringResource(R.string.accounting_delete)) },
+            text = { Text(stringResource(R.string.accounting_delete_confirm, product.name)) },
+            confirmButton = { Button(onClick = { showResult { container.accountingRepository.deleteProduct(product.id) }; deleteProductTarget = null }) { Text(stringResource(R.string.accounting_delete)) } },
+            dismissButton = { OutlinedButton(onClick = { deleteProductTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    deleteEntryTarget?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { deleteEntryTarget = null },
+            title = { Text(stringResource(R.string.accounting_delete)) },
+            text = { Text(stringResource(R.string.accounting_delete_confirm, entry.description)) },
+            confirmButton = { Button(onClick = { showResult { container.accountingRepository.deleteEntry(entry.id) }; deleteEntryTarget = null }) { Text(stringResource(R.string.accounting_delete)) } },
+            dismissButton = { OutlinedButton(onClick = { deleteEntryTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
     }
     costTarget?.let { product ->
         AlertDialog(

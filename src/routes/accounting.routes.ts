@@ -24,6 +24,9 @@ accountingRouter.post("/invoices/scan", express.raw({ type: ["image/jpeg", "imag
   const mime = sniffImageMime(bytes);
   if (!mime) return sendError(res, 415, "UNSUPPORTED_MEDIA", "الملف مو صورة فاتورة صالحة");
   if (!visionAvailable()) return sendError(res, 503, "AI_UNAVAILABLE", "قراءة الفواتير بالذكاء الاصطناعي غير مفعّلة حاليًا");
+  // every scan costs an AI call: a daily cap per account keeps one account from running up the bill
+  const dailyLimit = Number(process.env.ACCOUNTING_SCAN_DAILY_LIMIT) > 0 ? Number(process.env.ACCOUNTING_SCAN_DAILY_LIMIT) : 30;
+  if ((await prisma.accountingInvoiceDraft.count({ where: { userId: req.user!.id, createdAt: { gte: new Date(Date.now() - 86400000) } } })) >= dailyLimit) return sendError(res, 429, "SCAN_LIMIT", "وصلت للحد اليومي لقراءة الفواتير. جرّب غدًا أو اكتب الفاتورة يدويًا.");
   const extracted = await extractInvoiceFromPhoto({ mime, data: bytes });
   const draft = await prisma.accountingInvoiceDraft.create({ data: { userId: req.user!.id, mime, data: bytes, extracted: extracted ? { supplier: extracted.supplier, description: extracted.description, date: extracted.date, totalCents: extracted.totalCents, currency: extracted.currency } : Prisma.JsonNull } });
   res.status(201).json({ id: draft.id, extracted, needsReview: true });
@@ -120,6 +123,27 @@ accountingRouter.post("/entries", route(async (req, res) => {
   res.status(201).json(row);
 }));
 
+// Entries typed by hand (or from a scanned invoice) can be corrected or removed; the ones the store writes by itself
+// (orders, commissions, delivery) follow the order and cannot be changed here.
+const editableSources = ["MANUAL", "INVOICE"];
+accountingRouter.patch("/entries/:id", route(async (req, res) => {
+  const parsed = entrySchema.partial().safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const row = await prisma.accountingEntry.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true, source: true } });
+  if (!row) return sendError(res, 404, "NOT_FOUND", "القيد غير موجود");
+  if (!editableSources.includes(row.source)) return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من الطلب ولا يمكن تعديله");
+  const { occurredAt, ...rest } = parsed.data;
+  res.json(await prisma.accountingEntry.update({ where: { id: row.id }, data: { ...rest, ...(occurredAt ? { occurredAt: new Date(occurredAt) } : {}) } }));
+}));
+
+accountingRouter.delete("/entries/:id", route(async (req, res) => {
+  const row = await prisma.accountingEntry.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true, source: true } });
+  if (!row) return sendError(res, 404, "NOT_FOUND", "القيد غير موجود");
+  if (!editableSources.includes(row.source)) return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من الطلب ولا يمكن حذفه");
+  await prisma.accountingEntry.delete({ where: { id: row.id } });
+  res.json({ deleted: true });
+}));
+
 accountingRouter.get("/products", route(async (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
   const [products, storeProducts, currency] = await Promise.all([prisma.accountingProduct.findMany({
@@ -151,6 +175,29 @@ accountingRouter.post("/products", route(async (req, res) => {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return sendError(res, 409, "CONFLICT", "هذا الباركود مستخدم لمنتج آخر عندك");
     throw err;
   }
+}));
+
+// The stock quantity changes only through /stock and /sell (so every change leaves a movement); the rest can be edited.
+accountingRouter.patch("/products/:id", route(async (req, res) => {
+  if (req.params.id.startsWith("store:")) return sendError(res, 400, "BAD_REQUEST", "منتجات المتجر تُعدَّل من صفحة المتجر");
+  const parsed = productSchema.omit({ quantity: true }).partial().safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const p = await prisma.accountingProduct.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true } });
+  if (!p) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
+  try {
+    res.json(await prisma.accountingProduct.update({ where: { id: p.id }, data: { ...parsed.data, ...(parsed.data.barcode !== undefined ? { barcode: parsed.data.barcode || null } : {}), ...(parsed.data.sku !== undefined ? { sku: parsed.data.sku || null } : {}) } }));
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return sendError(res, 409, "CONFLICT", "هذا الباركود مستخدم لمنتج آخر عندك");
+    throw err;
+  }
+}));
+
+accountingRouter.delete("/products/:id", route(async (req, res) => {
+  if (req.params.id.startsWith("store:")) return sendError(res, 400, "BAD_REQUEST", "منتجات المتجر تُحذف من صفحة المتجر");
+  const p = await prisma.accountingProduct.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true } });
+  if (!p) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
+  await prisma.accountingProduct.delete({ where: { id: p.id } }); // its stock movements go with it; income already booked stays
+  res.json({ deleted: true });
 }));
 
 accountingRouter.post("/products/:id/stock", route(async (req, res) => {

@@ -33,6 +33,8 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun products(query: String? = null): List<AccountingProductDto> = safeApiCall { api.accountingProducts(query) }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun addProduct(body: AccountingProductRequest): Result<Unit> = result { api.addAccountingProduct(body) }
     suspend fun addEntry(body: AccountingEntryRequest): Result<Unit> = result { api.addAccountingEntry(body) }
+    suspend fun deleteEntry(id: String): Result<Unit> = result { api.deleteAccountingEntry(id) }
+    suspend fun deleteProduct(id: String): Result<Unit> = result { api.deleteAccountingProduct(id) }
     suspend fun sell(id: String, quantity: Int): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity)) }
     suspend fun stock(id: String, action: String, quantity: Int, unitCostCents: Int? = null): Result<Unit> = result { api.changeAccountingStock(id, AccountingStockRequest(action, quantity, unitCostCents = unitCostCents, note = DataLabels.NOTE_MANUAL_ENTRY)) }
     suspend fun scanInvoice(bytes: ByteArray, mime: String): Result<AccountingInvoiceDraftDto> {

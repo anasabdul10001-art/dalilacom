@@ -198,3 +198,60 @@ describe("store stock under simultaneous orders and sales", () => {
   });
 });
 
+describe("accounting: correcting mistakes", () => {
+  it("edits and deletes a hand-typed entry, but not one the store wrote, and not someone else's", async () => {
+    const a = await subscriber("acccorr");
+    const b = await subscriber("acccorr2");
+    const entry = (await request(app).post("/accounting/entries").set(a.auth).send({ type: "EXPENSE", category: "Rent", description: "Rent May", amountCents: 3500 })).body;
+    const edited = await request(app).patch(`/accounting/entries/${entry.id}`).set(a.auth).send({ amountCents: 4000, description: "Rent May (fixed)" });
+    expect(edited.status).toBe(200);
+    expect(edited.body).toMatchObject({ amountCents: 4000, description: "Rent May (fixed)", type: "EXPENSE" });
+    expect((await request(app).patch(`/accounting/entries/${entry.id}`).set(a.auth).send({ amountCents: 0 })).status).toBe(400);
+    expect((await request(app).patch(`/accounting/entries/${entry.id}`).set(b.auth).send({ amountCents: 1 })).status).toBe(404);
+    expect((await request(app).delete(`/accounting/entries/${entry.id}`).set(b.auth)).status).toBe(404);
+
+    const auto = await prisma.accountingEntry.create({ data: { userId: a.id, type: "INCOME", category: "x", description: "from an order", amountCents: 100, source: "ORDER", sourceKey: `t:${crypto.randomUUID()}` } });
+    expect((await request(app).patch(`/accounting/entries/${auto.id}`).set(a.auth).send({ amountCents: 1 })).status).toBe(409);
+    expect((await request(app).delete(`/accounting/entries/${auto.id}`).set(a.auth)).status).toBe(409);
+
+    expect((await request(app).delete(`/accounting/entries/${entry.id}`).set(a.auth)).status).toBe(200);
+    expect((await request(app).get("/accounting/entries").set(a.auth)).body.map((e: { id: string }) => e.id)).toEqual([auto.id]);
+  });
+
+  it("edits a product (not its quantity, which only moves with stock changes) and deletes it", async () => {
+    const a = await subscriber("acccorrp");
+    const b = await subscriber("acccorrp2");
+    const p = (await addProduct(a, { barcode: "777" })).body;
+    const other = (await addProduct(a, { barcode: "888" })).body;
+    const edited = await request(app).patch(`/accounting/products/${p.id}`).set(a.auth).send({ name: "Green tea", salePriceCents: 300, quantity: 999 });
+    expect(edited.status).toBe(200);
+    expect(edited.body).toMatchObject({ name: "Green tea", salePriceCents: 300, quantity: 5 });
+    expect((await request(app).patch(`/accounting/products/${p.id}`).set(a.auth).send({ barcode: "888" })).status).toBe(409);
+    expect((await request(app).patch(`/accounting/products/${p.id}`).set(a.auth).send({ barcode: "" })).body.barcode).toBeNull();
+    expect((await request(app).patch(`/accounting/products/${p.id}`).set(b.auth).send({ name: "Mine now" })).status).toBe(404);
+    expect((await request(app).patch("/accounting/products/store:abc").set(a.auth).send({ name: "x1" })).status).toBe(400);
+    expect((await request(app).delete(`/accounting/products/${p.id}`).set(b.auth)).status).toBe(404);
+    expect((await request(app).delete(`/accounting/products/${p.id}`).set(a.auth)).status).toBe(200);
+    expect((await request(app).get("/accounting/products").set(a.auth)).body.map((x: { id: string }) => x.id)).toEqual([other.id]);
+  });
+});
+
+describe("accounting: invoice scans have a daily cap", () => {
+  it("refuses a scan once the account has used its daily allowance", async () => {
+    const a = await subscriber("accscan");
+    process.env.ACCOUNTING_SCAN_DAILY_LIMIT = "2";
+    const prevKey = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = "test-key"; // makes the vision check pass; the cap is checked before any AI call
+    try {
+      for (let i = 0; i < 2; i++) await prisma.accountingInvoiceDraft.create({ data: { userId: a.id, mime: "image/png", data: Buffer.from([1]) } });
+      const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+      const res = await request(app).post("/accounting/invoices/scan").set(a.auth).set("Content-Type", "image/png").send(png);
+      expect(res.status).toBe(429);
+      expect(res.body.error.code).toBe("SCAN_LIMIT");
+    } finally {
+      delete process.env.ACCOUNTING_SCAN_DAILY_LIMIT;
+      if (prevKey === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = prevKey;
+    }
+  });
+});
+
