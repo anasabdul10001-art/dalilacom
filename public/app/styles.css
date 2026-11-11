@@ -1052,21 +1052,21 @@ body.navigating .tabbar { display: none; }
 .store .btn.outline { background: transparent; color: var(--ink); }
 .store .btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; margin-inline-end: 6px; }
 
-.store-head { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 30; padding: 10px 14px; background: #000; color: #fff; }
-.store-brand { flex: none; font-family: "Cairo", "Tajawal", sans-serif; font-size: 22px; font-weight: 900; letter-spacing: 1px; color: #fff; }
-.store-icon-btn { flex: none; position: relative; width: 42px; height: 42px; border-radius: 50%; border: 0; background: transparent; color: #fff; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.store-icon-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.store-head { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 30; padding: 10px 14px; background: var(--surface-alt); color: var(--text); }
+.store-brand { flex: none; font-family: "Cairo", "Tajawal", sans-serif; font-size: 22px; font-weight: 900; letter-spacing: 1px; color: var(--text); }
+.store-icon-btn { flex: none; position: relative; width: 42px; height: 42px; border-radius: 50%; border: 0; background: transparent; color: var(--text); font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.store-icon-btn:hover { background: rgba(28, 28, 32, 0.07); }
 .store-icon-btn svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.7; }
 .store-badge { position: absolute; top: 2px; inset-inline-end: 0; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--sale); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-.store-search { flex: 1; display: flex; align-items: center; border: 0; border-radius: 999px; background: #fff; overflow: hidden; }
-.store-search input { flex: 1; min-width: 0; padding: 10px 16px; border: 0; outline: none; background: transparent; color: #111; font: inherit; font-size: 14px; }
-.store-search button { flex: none; width: 48px; align-self: stretch; border: 0; background: transparent; color: #111; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.store-search { flex: 1; display: flex; align-items: center; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); overflow: hidden; }
+.store-search input { flex: 1; min-width: 0; padding: 10px 16px; border: 0; outline: none; background: transparent; color: var(--text); font: inherit; font-size: 14px; }
+.store-search button { flex: none; width: 48px; align-self: stretch; border: 0; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .store-search button svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
 
-.store-tabs { display: flex; gap: 22px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; background: #000; position: sticky; top: 62px; z-index: 25; margin-top: -10px; }
+.store-tabs { display: flex; gap: 22px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; background: var(--surface-alt); border-bottom: 1px solid var(--border); position: sticky; top: 62px; z-index: 25; margin-top: -10px; }
 .store-tabs::-webkit-scrollbar { display: none; }
-.store-tabs button { flex: none; padding: 13px 0 11px; border: 0; border-bottom: 2px solid transparent; background: none; color: rgba(255, 255, 255, 0.78); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.store-tabs button.on { color: #fff; border-bottom-color: #fff; font-weight: 800; }
+.store-tabs button { flex: none; padding: 13px 0 11px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.store-tabs button.on { color: var(--text); border-bottom-color: var(--primary); font-weight: 800; }
 
 .store-where { padding: 0 16px; }
 .store-where-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 12.5px; cursor: pointer; }
@@ -1210,7 +1210,7 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .store-slide h1 { margin: 0; font-family: "Cairo", "Tajawal", sans-serif; font-size: 30px; line-height: 1.15; font-weight: 900; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); }
 .store-slide p { margin: 0; font-size: 16px; font-weight: 700; }
 .store-slide .btn-pill { margin-top: 8px; padding: 9px 22px; background: #000; color: #fff; border-radius: 3px; font-size: 13.5px; font-weight: 700; }
-.store-slide.bg-coral { background-image: linear-gradient(115deg, #ff7a59, #ff4d6d 62%, #e8336d); }
+.store-slide.bg-coral { background-image: linear-gradient(115deg, #f48050, #e0653a 62%, #c4552b); }
 .store-slide.bg-black { background-image: linear-gradient(115deg, #111, #3a3a3a); }
 .store-slide.bg-blue { background-image: linear-gradient(115deg, #1e6fe0, #12b3d6); }
 .store-slide.bg-green { background-image: linear-gradient(115deg, #1e8a3a, #7bcf5a); }
@@ -1218,7 +1218,7 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .store-slide.bg-gold { background-image: linear-gradient(115deg, #d98a00, #f5c542); color: #1b1200; }
 .store-slide.has-img { background-image: inherit; }
 /* the Dalilacom brand slide: the logo drifts in, soft circles float, the line rises (restarts each time the slide is shown) */
-.store-slide.brand-slide { background-image: linear-gradient(120deg, #c4552b, #f48050 62%, #cb0c2e); gap: clamp(18px, 4vw, 54px); justify-content: center; overflow: hidden; }
+.store-slide.brand-slide { background-image: linear-gradient(120deg, #c4552b, #f48050 62%, #e0653a); gap: clamp(18px, 4vw, 54px); justify-content: center; overflow: hidden; }
 .brand-slide .bs-orb { position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.05); pointer-events: none; }
 .brand-slide .bs-orb.o1 { width: 220px; height: 220px; inset-inline-start: -60px; top: -90px; }
 .brand-slide .bs-orb.o2 { width: 150px; height: 150px; inset-inline-end: 12%; bottom: -70px; }
@@ -1266,13 +1266,13 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .store-slotstrip { display: flex; gap: 10px; overflow-x: auto; padding: 0 12px; scrollbar-width: none; }
 .store-slotstrip::-webkit-scrollbar { display: none; }
 .store-slotstrip .store-slot { flex: none; width: 168px; }
-.store-adstrip { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 12px; padding: 12px 16px; border-radius: 8px; background: #111; color: #fff; font-size: 13.5px; }
+.store-adstrip { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 12px; padding: 12px 16px; border-radius: 14px; background: var(--surface-alt); border: 1px solid var(--border); color: var(--text); font-size: 13.5px; }
 .store-seller-cta { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:10px 12px 0; padding:14px 16px; border:1px solid color-mix(in srgb,var(--primary) 28%,var(--border)); border-radius:12px; background:color-mix(in srgb,var(--primary) 5%,var(--surface)); }
 .store-seller-cta>div { display:grid; gap:4px; }
 .store-seller-cta small { color:var(--text-muted); line-height:1.45; }
 .store-seller-cta button { flex:none; border:0; border-radius:9px; padding:10px 13px; background:var(--primary); color: var(--on-primary); font:inherit; font-size:13px; font-weight:800; cursor:pointer; }
 @media(max-width:560px) { .store-seller-cta { align-items:stretch; flex-direction:column; } }
-.store-adstrip button { padding: 8px 18px; border: 0; border-radius: 4px; background: #fff; color: #111; font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; }
+.store-adstrip button { padding: 8px 18px; border: 0; border-radius: 999px; background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; }
 
 .ad-packs { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
 .ad-pack { display: flex; flex-direction: column; gap: 3px; padding: 12px 10px; border: 2px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; text-align: center; }
@@ -1590,7 +1590,7 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 /* the invitation tiles in the advertising spaces: a Dalilacom tile where nobody advertises yet */
 .store-slot.is-ph { background: linear-gradient(135deg, #c4552b, #f48050 70%); color: #fff; aspect-ratio: 16 / 10; }
 .store-slot.is-ph.ph-1 { background: linear-gradient(135deg, #1c1413, #c4552b 80%); }
-.store-slot.is-ph.ph-2 { background: linear-gradient(135deg, #f48050, #cb0c2e 75%); }
+.store-slot.is-ph.ph-2 { background: linear-gradient(135deg, #f48050, #e0653a 75%); }
 .store-picks .store-slot.is-ph { aspect-ratio: 16 / 9.4; }
 .ph-body { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
 .ph-logo { flex: none; height: 56%; width: auto; max-height: 64px; }
