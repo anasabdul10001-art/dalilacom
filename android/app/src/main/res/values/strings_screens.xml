@@ -374,4 +374,76 @@
     <string name="fit_auto_c2ed8d0d" formatted="false">📋  خطط المتدربين</string>
     <string name="fit_auto_d141a0e3" formatted="false">🏋️  خططي الرياضية والغذائية</string>
     <string name="fit_auto_b6b55b3a" formatted="false">اسم الباقة</string>
+    <string name="s_89f995b3" formatted="false">ما قدرنا نتصل بالخدمة</string>
+    <string name="s_f03c2218" formatted="false">تعذر بدء الدفع الإلكتروني</string>
+    <string name="s_f1f017e4" formatted="false">تعذرت قراءة الفاتورة</string>
+    <string name="s_0a2edd30" formatted="false">ما قدرنا نحفظ الحركة</string>
+    <string name="s_364be4bc" formatted="false">تعذّر نشر الإعلان</string>
+    <string name="s_37f81884" formatted="false">تعذّر شراء الباقة</string>
+    <string name="s_cf802fc0" formatted="false">تعذّر حفظ رقم التحويل</string>
+    <string name="s_9338c391" formatted="false">تعذّر تأكيد التحويل</string>
+    <string name="s_9179029e" formatted="false">تعذّر حفظ وسائل استلام المصاري</string>
+    <string name="s_7b9c60b6" formatted="false">تم الحفظ</string>
+    <string name="s_11bc7d18">💳 طريقة الدفع · %1$s</string>
+    <string name="s_20f44d7f" formatted="false">بنك الشام</string>
+    <string name="s_66c40d1d" formatted="false">بعد التحويل، أرسل رقم العملية من صفحة الطلب. صاحب المتجر يؤكد الاستلام بعد مراجعة حسابه.</string>
+    <string name="s_cc3ae185">%1$s منتجات بالشهر · %2$s</string>
+    <string name="s_6152db49" formatted="false">مستعمل وجديد</string>
+    <string name="s_7d192e2b" formatted="false">مستعمل فقط</string>
+    <string name="s_55270d0e" formatted="false">Your free store package</string>
+    <string name="s_4a6a560a">المستلم: %1$s</string>
+    <string name="s_2c0bca89">رقم التحويل: %1$s</string>
+    <string name="s_16765e8a">رقم العملية المرسل: %1$s</string>
+    <string name="s_d701f388" formatted="false">طريقة الدفع: </string>
+    <string name="s_6a069c95" formatted="false">رقم العملية بعد التحويل</string>
+    <string name="s_9c976ca3" formatted="false">أرسلت التحويل</string>
+    <string name="s_f5c962b6" formatted="false">بانتظار صاحب المتجر لتأكيد وصول التحويل.</string>
+    <string name="s_6b666b63" formatted="false">تأكيد وصول التحويل</string>
+    <string name="s_e4b4c234" formatted="false">Community market</string>
+    <string name="s_b179bf25" formatted="false">كيف تستلم مصاري مبيعاتك؟</string>
+    <string name="s_2ace6138" formatted="false">اختَر الوسائل المتاحة عندك. لن تظهر للزبون إلا عند طلب منتج منك.</string>
+    <string name="s_01a85ddc" formatted="false">الاسم المسجل</string>
+    <string name="s_54744a3d" formatted="false">رقم الحساب أو المحفظة</string>
+    <string name="s_4816f255" formatted="false">تم حفظ وسائل الاستلام</string>
+    <string name="s_40c2c372" formatted="false">حفظ وسائل الاستلام</string>
+    <string name="s_29c83806" formatted="false">Photo attached</string>
+    <string name="s_4810cb93" formatted="false">Could not upload photo</string>
+    <string name="s_fa9309cd" formatted="false">← Back</string>
+    <string name="s_ac6aac42" formatted="false">Open your own store</string>
+    <string name="s_d4d43912" formatted="false">Choose a name, then add your products and share your store page.</string>
+    <string name="s_e72dca5d" formatted="false">Store name</string>
+    <string name="s_886333f5" formatted="false">About the store (optional)</string>
+    <string name="s_2203e3d9" formatted="false">Your store is open</string>
+    <string name="s_01b266ff" formatted="false">Could not create store</string>
+    <string name="s_13adebab" formatted="false">Open store</string>
+    <string name="s_d7e8f7da" formatted="false">View my store</string>
+    <string name="s_0ee0b71f" formatted="false">Post an item</string>
+    <string name="s_23a79f17">Free ads left this month: %1$s / %2$s</string>
+    <string name="s_df644ae1" formatted="false">Product name</string>
+    <string name="s_b5a7adde" formatted="false">Description</string>
+    <string name="s_3601146c" formatted="false">Price</string>
+    <string name="s_5e7ac625" formatted="false">Contact phone (optional)</string>
+    <string name="s_fe3ac683" formatted="false">Photo attached ✓</string>
+    <string name="s_c5cd4e00" formatted="false">Add product photo</string>
+    <string name="s_019d1ca7" formatted="false">Used</string>
+    <string name="s_03c2e7e4" formatted="false">New</string>
+    <string name="s_9cd5d5cd" formatted="false">Choose an existing store package to continue.</string>
+    <string name="s_a1272e5c" formatted="false">Package activated</string>
+    <string name="s_928735d6" formatted="false">credits</string>
+    <string name="s_43b0c75a" formatted="false">Sent for review</string>
+    <string name="s_0b9aa735" formatted="false">Send for review</string>
+    <string name="s_985b09fd" formatted="false">My ads</string>
+    <string name="s_92e97e03" formatted="false">Waiting for review</string>
+    <string name="s_bae1ccce" formatted="false">Rejected by AI</string>
+    <string name="s_9b9d8a97" formatted="false">Published</string>
+    <string name="s_d85a8a38" formatted="false">Sold</string>
+    <string name="s_94f37dcd" formatted="false">Reason: </string>
+    <string name="s_9a7d8a0f" formatted="false">Sign in to post an item</string>
+    <string name="s_b6d4223e" formatted="false">Sign in</string>
+    <string name="s_318421e6" formatted="false">Latest items</string>
+    <string name="s_72608e10" formatted="false">Store: </string>
+    <string name="s_698d3436" formatted="false">Contact: </string>
+    <string name="s_1bf1c6ab" formatted="false">No listings yet</string>
+    <string name="s_e767f75b" formatted="false">Loading store…</string>
+    <string name="s_9aba83cd" formatted="false">This store has no published items yet</string>
 </resources>

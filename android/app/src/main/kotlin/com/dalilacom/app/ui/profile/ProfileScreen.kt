@@ -141,15 +141,15 @@ if (role == "CUSTOMER") {
         Spacer(Modifier.height(12.dp))
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
-                Text("كيف تستلم مصاري مبيعاتك؟", style = MaterialTheme.typography.titleMedium)
-                Text("اختَر الوسائل المتاحة عندك. لن تظهر للزبون إلا عند طلب منتج منك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                listOf("BANK_ALSHAM" to "بنك الشام", "SYRIATEL" to "سيرياتل كاش", "MTN" to "MTN كاش").forEach { (provider, label) ->
+                Text(AppStrings.get(R.string.s_b179bf25), style = MaterialTheme.typography.titleMedium)
+                Text(AppStrings.get(R.string.s_2ace6138), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                listOf("BANK_ALSHAM" to AppStrings.get(R.string.s_20f44d7f), "SYRIATEL" to AppStrings.get(R.string.fit_auto_31d9b741), "MTN" to AppStrings.get(R.string.fit_auto_d79941c7)).forEach { (provider, label) ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(label, Modifier.weight(1f))
                         Switch(checked = payoutEnabled[provider] ?: false, onCheckedChange = { payoutEnabled[provider] = it })
                     }
-                    OutlinedTextField(value = payoutNames[provider].orEmpty(), onValueChange = { payoutNames[provider] = it }, label = { Text("الاسم المسجل") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(value = payoutAccounts[provider].orEmpty(), onValueChange = { payoutAccounts[provider] = it }, label = { Text("رقم الحساب أو المحفظة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = payoutNames[provider].orEmpty(), onValueChange = { payoutNames[provider] = it }, label = { Text(AppStrings.get(R.string.s_01a85ddc)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = payoutAccounts[provider].orEmpty(), onValueChange = { payoutAccounts[provider] = it }, label = { Text(AppStrings.get(R.string.s_54744a3d)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 }
                 Spacer(Modifier.height(8.dp))
                 Button(enabled = !payoutSaving, onClick = {
@@ -159,11 +159,11 @@ if (role == "CUSTOMER") {
                             com.dalilacom.app.data.network.SellerPaymentMethodDto(provider = provider, recipientName = payoutNames[provider].orEmpty(), accountNumber = payoutAccounts[provider].orEmpty(), isEnabled = true)
                         }
                         container.profileRepository.saveSellerPaymentMethods(methods)
-                            .onFailure { Toast.makeText(context, it.message ?: "تعذّر الحفظ", Toast.LENGTH_LONG).show() }
-                            .onSuccess { Toast.makeText(context, "تم حفظ وسائل الاستلام", Toast.LENGTH_SHORT).show() }
+                            .onFailure { Toast.makeText(context, it.message ?: AppStrings.get(R.string.ship_failed), Toast.LENGTH_LONG).show() }
+                            .onSuccess { Toast.makeText(context, AppStrings.get(R.string.s_4816f255), Toast.LENGTH_SHORT).show() }
                         payoutSaving = false
                     }
-                }, modifier = Modifier.fillMaxWidth()) { Text(if (payoutSaving) "جارٍ الحفظ…" else "حفظ وسائل الاستلام") }
+                }, modifier = Modifier.fillMaxWidth()) { Text(if (payoutSaving) AppStrings.get(R.string.affiliate_team_saving) else AppStrings.get(R.string.s_40c2c372)) }
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -272,7 +272,7 @@ if (role == "CUSTOMER") {
             OutlinedButton(onClick = onOpenMyAds, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_my_ads)) }
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onOpenMarketplace, modifier = Modifier.fillMaxWidth()) { Text("🛒 " + if (com.dalilacom.app.ui.i18n.AppStrings.language == "en") "Community market" else "سوق المستخدمين") }
+        OutlinedButton(onClick = onOpenMarketplace, modifier = Modifier.fillMaxWidth()) { Text("🛒 " + AppStrings.get(R.string.s_e4b4c234)) }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onOpenWallet, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.profile_wallet)) }
         Spacer(Modifier.height(8.dp))

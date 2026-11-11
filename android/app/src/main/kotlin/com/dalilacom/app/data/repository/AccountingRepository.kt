@@ -1,5 +1,8 @@
 package com.dalilacom.app.data.repository
 
+import com.dalilacom.app.ui.i18n.AppStrings
+import com.dalilacom.app.R
+import com.dalilacom.app.data.network.DataLabels
 import com.dalilacom.app.data.network.AccountingEntryRequest
 import com.dalilacom.app.data.network.AccountingProductDto
 import com.dalilacom.app.data.network.AccountingProductRequest
@@ -21,9 +24,9 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun summary() = safeApiCall { api.accountingSummary() }?.also { requiresPlan = it.code() == 402 }?.takeIf { it.isSuccessful }?.body()
     suspend fun planCatalog(): PlanCatalogDto? = safeApiCall { api.planCatalog() }?.takeIf { it.isSuccessful }?.body()
     suspend fun checkout(planId: String, provider: String = "STRIPE"): Result<BillingCheckoutDto> {
-        val response = safeApiCall { api.beginBillingCheckout(BillingRequest(planId, provider)) } ?: return Result.failure(Exception("ما قدرنا نتصل بالخدمة"))
+        val response = safeApiCall { api.beginBillingCheckout(BillingRequest(planId, provider)) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
         val body = response.body()
-        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception("تعذر بدء الدفع الإلكتروني"))
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(AppStrings.get(R.string.s_f03c2218)))
     }
     suspend fun trial(planId: String): Result<Unit> = result { api.beginBillingTrial(BillingRequest(planId)) }
     suspend fun activateFree(planId: String): Result<Unit> = result { api.activateFreePlan(BillingRequest(planId)) }
@@ -31,19 +34,19 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun addProduct(body: AccountingProductRequest): Result<Unit> = result { api.addAccountingProduct(body) }
     suspend fun addEntry(body: AccountingEntryRequest): Result<Unit> = result { api.addAccountingEntry(body) }
     suspend fun sell(id: String, quantity: Int): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity)) }
-    suspend fun stock(id: String, action: String, quantity: Int, unitCostCents: Int? = null): Result<Unit> = result { api.changeAccountingStock(id, AccountingStockRequest(action, quantity, unitCostCents = unitCostCents, note = "إدخال يدوي")) }
+    suspend fun stock(id: String, action: String, quantity: Int, unitCostCents: Int? = null): Result<Unit> = result { api.changeAccountingStock(id, AccountingStockRequest(action, quantity, unitCostCents = unitCostCents, note = DataLabels.NOTE_MANUAL_ENTRY)) }
     suspend fun scanInvoice(bytes: ByteArray, mime: String): Result<AccountingInvoiceDraftDto> {
         val response = safeApiCall { api.scanAccountingInvoice(bytes.toRequestBody(mime.toMediaType())) }
-            ?: return Result.failure(Exception("ما قدرنا نتصل بالخدمة"))
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
         val draft = response.body()
-        return if (response.isSuccessful && draft != null) Result.success(draft) else Result.failure(Exception("تعذرت قراءة الفاتورة"))
+        return if (response.isSuccessful && draft != null) Result.success(draft) else Result.failure(Exception(AppStrings.get(R.string.s_f1f017e4)))
     }
     suspend fun confirmInvoice(id: String, description: String, amountCents: Int, currency: String): Result<Unit> = result {
         api.confirmAccountingInvoice(id, AccountingInvoiceConfirmRequest(description = description, amountCents = amountCents, currency = currency))
     }
 
     private suspend fun result(call: suspend () -> retrofit2.Response<*>): Result<Unit> {
-        val response = safeApiCall { call() } ?: return Result.failure(Exception("ما قدرنا نتصل بالخدمة"))
-        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception("ما قدرنا نحفظ الحركة"))
+        val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(AppStrings.get(R.string.s_0a2edd30)))
     }
 }

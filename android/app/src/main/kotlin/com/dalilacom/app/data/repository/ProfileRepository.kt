@@ -25,7 +25,7 @@ class ProfileRepository(private val api: ApiService) {
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body.methods)
-        else Result.failure(Exception(errorText(response, "تعذّر حفظ وسائل استلام المصاري")))
+        else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_9179029e))))
     }
 
     /** The profile as last seen: the profile screen draws it at once while the fresh one is on its way (no empty name and photo for a moment). */

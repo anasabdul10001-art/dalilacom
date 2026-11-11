@@ -94,18 +94,18 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
                 val payment = order.payment
                 if (payment != null && payment.method in listOf("BANK_ALSHAM", "SYRIATEL", "MTN")) {
                     Spacer(Modifier.height(8.dp))
-                    Text("طريقة الدفع: " + when (payment.method) { "BANK_ALSHAM" -> "بنك الشام"; "SYRIATEL" -> "سيرياتل كاش"; else -> "MTN كاش" }, style = MaterialTheme.typography.titleSmall)
-                    payment.recipientName?.let { Text("المستلم: $it") }
-                    payment.recipientAccount?.let { Text("رقم التحويل: $it", style = MaterialTheme.typography.bodyLarge) }
-                    payment.reference?.let { Text("رقم العملية المرسل: $it") }
+                    Text(AppStrings.get(R.string.s_d701f388) + when (payment.method) { "BANK_ALSHAM" -> AppStrings.get(R.string.s_20f44d7f); "SYRIATEL" -> AppStrings.get(R.string.fit_auto_31d9b741); else -> AppStrings.get(R.string.fit_auto_d79941c7) }, style = MaterialTheme.typography.titleSmall)
+                    payment.recipientName?.let { Text(AppStrings.get(R.string.s_4a6a560a, it)) }
+                    payment.recipientAccount?.let { Text(AppStrings.get(R.string.s_2c0bca89, it), style = MaterialTheme.typography.bodyLarge) }
+                    payment.reference?.let { Text(AppStrings.get(R.string.s_16765e8a, it)) }
                     if (payment.status == "PENDING" && order.customer == null) {
                         if (payment.reference.isNullOrBlank()) {
-                            OutlinedTextField(value = transferReference, onValueChange = { transferReference = it }, label = { Text("رقم العملية بعد التحويل") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                            Button(onClick = { viewModel.submitTransfer(transferReference.trim()) }, enabled = transferReference.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text("أرسلت التحويل") }
-                        } else Text("بانتظار صاحب المتجر لتأكيد وصول التحويل.", style = MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(value = transferReference, onValueChange = { transferReference = it }, label = { Text(AppStrings.get(R.string.s_6a069c95)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            Button(onClick = { viewModel.submitTransfer(transferReference.trim()) }, enabled = transferReference.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_9c976ca3)) }
+                        } else Text(AppStrings.get(R.string.s_f5c962b6), style = MaterialTheme.typography.bodySmall)
                     }
                     if (payment.status == "PENDING" && order.customer != null && !payment.reference.isNullOrBlank()) {
-                        Button(onClick = { viewModel.confirmTransfer() }, modifier = Modifier.fillMaxWidth()) { Text("تأكيد وصول التحويل") }
+                        Button(onClick = { viewModel.confirmTransfer() }, modifier = Modifier.fillMaxWidth()) { Text(AppStrings.get(R.string.s_6b666b63)) }
                     }
                 }
                 if (order.customer != null) com.dalilacom.app.ui.common.ConfirmCashButton(order) { viewModel.confirmCash() }

@@ -1,5 +1,6 @@
 package com.dalilacom.app.ui.common
 
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -20,9 +21,9 @@ fun PaymentLine(order: OrderDto) {
         else -> R.string.pay_pending
     }
     val method = when (payment.method) {
-        "BANK_ALSHAM" -> "بنك الشام"
-        "SYRIATEL" -> "سيرياتل كاش"
-        "MTN" -> "MTN كاش"
+        "BANK_ALSHAM" -> AppStrings.get(R.string.s_20f44d7f)
+        "SYRIATEL" -> AppStrings.get(R.string.fit_auto_31d9b741)
+        "MTN" -> AppStrings.get(R.string.fit_auto_d79941c7)
         else -> stringResource(R.string.pay_cod)
     }
     Text("💳 $method · " + stringResource(status), style = MaterialTheme.typography.bodySmall)

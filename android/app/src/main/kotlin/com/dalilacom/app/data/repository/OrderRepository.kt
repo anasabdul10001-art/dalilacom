@@ -53,7 +53,7 @@ class OrderRepository(private val api: ApiService) {
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body)
-        else Result.failure(Exception(errorText(response, "تعذّر حفظ رقم التحويل")))
+        else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_cf802fc0))))
     }
 
     suspend fun confirmTransfer(id: String): Result<PaymentDto> {
@@ -61,7 +61,7 @@ class OrderRepository(private val api: ApiService) {
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body)
-        else Result.failure(Exception(errorText(response, "تعذّر تأكيد التحويل")))
+        else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_9338c391))))
     }
 
     suspend fun cancel(id: String): Result<OrderDto> {

@@ -1,5 +1,6 @@
 package com.dalilacom.app.ui.store
 
+import com.dalilacom.app.R
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,9 +20,9 @@ fun MarketplaceStoreScreen(container: AppContainer, storeId: String, onBack: () 
     val en = AppStrings.language == "en"
     LaunchedEffect(storeId) { details = container.marketplaceRepository.store(storeId) }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        TextButton(onClick = onBack) { Text(if (en) "← Back" else "← رجوع") }
+        TextButton(onClick = onBack) { Text(AppStrings.get(R.string.s_fa9309cd)) }
         val current = details
-        if (current == null) Text(if (en) "Loading store…" else "عم نحمل المتجر…") else {
+        if (current == null) Text(AppStrings.get(R.string.s_e767f75b)) else {
             Text(current.store.name, style = MaterialTheme.typography.headlineSmall)
             current.store.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Spacer(Modifier.height(12.dp))
@@ -31,11 +32,11 @@ fun MarketplaceStoreScreen(container: AppContainer, storeId: String, onBack: () 
                         product.imageUrl?.let { AsyncImage(model = it, contentDescription = product.title, modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) }
                         Text(product.title, style = MaterialTheme.typography.titleMedium)
                         product.description?.takeIf { it.isNotBlank() }?.let { Text(it) }
-                        Text(formatCents(product.priceCents) + " · " + if (product.condition == "USED") if (en) "Used" else "مستعمل" else if (en) "New" else "جديد", color = MaterialTheme.colorScheme.primary)
-                        product.contactPhone?.let { Text((if (en) "Contact: " else "للتواصل: ") + it) }
+                        Text(formatCents(product.priceCents) + " · " + if (product.condition == "USED") AppStrings.get(R.string.s_019d1ca7) else AppStrings.get(R.string.s_03c2e7e4), color = MaterialTheme.colorScheme.primary)
+                        product.contactPhone?.let { Text((AppStrings.get(R.string.s_698d3436)) + it) }
                     } }
                 }
-                if (current.listings.isEmpty()) item { Text(if (en) "This store has no published items yet" else "ما في منتجات منشورة بهالمتجر حالياً") }
+                if (current.listings.isEmpty()) item { Text(AppStrings.get(R.string.s_9aba83cd)) }
             }
         }
     }

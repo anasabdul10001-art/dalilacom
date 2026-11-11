@@ -1,5 +1,7 @@
 package com.dalilacom.app.data.repository
 
+import com.dalilacom.app.ui.i18n.AppStrings
+import com.dalilacom.app.R
 import com.dalilacom.app.data.network.ApiService
 import com.dalilacom.app.data.network.CreateMarketplaceListingRequest
 import com.dalilacom.app.data.network.MarketplaceListingsDto
@@ -17,12 +19,12 @@ class MarketplaceRepository(private val api: ApiService) {
     suspend fun store(id: String) = safeApiCall { api.marketplaceStore(id) }?.takeIf { it.isSuccessful }?.body()
     suspend fun uploadPhoto(bytes: ByteArray): String? = safeApiCall { api.uploadMarketplacePhoto(bytes.toRequestBody("image/jpeg".toMediaType())) }?.takeIf { it.isSuccessful }?.body()?.url
     suspend fun create(body: CreateMarketplaceListingRequest): Result<Unit> {
-        val response = safeApiCall { api.createMarketplaceListing(body) } ?: return Result.failure(Exception("ما قدرنا نتصل بالخدمة"))
-        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, "تعذّر نشر الإعلان")))
+        val response = safeApiCall { api.createMarketplaceListing(body) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, AppStrings.get(R.string.s_364be4bc))))
     }
     suspend fun markSold(id: String): Boolean = safeApiCall { api.updateMarketplaceListing(id, mapOf("status" to "SOLD")) }?.isSuccessful == true
     suspend fun subscribe(id: String): Result<Unit> {
-        val response = safeApiCall { api.subscribeMarketplace(mapOf("planId" to id)) } ?: return Result.failure(Exception("ما قدرنا نتصل بالخدمة"))
-        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, "تعذّر شراء الباقة")))
+        val response = safeApiCall { api.subscribeMarketplace(mapOf("planId" to id)) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, AppStrings.get(R.string.s_37f81884))))
     }
 }

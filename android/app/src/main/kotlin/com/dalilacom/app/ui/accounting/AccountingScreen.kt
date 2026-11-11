@@ -1,5 +1,6 @@
 package com.dalilacom.app.ui.accounting
 
+import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -90,7 +91,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     fun showResult(action: suspend () -> Result<Unit>) {
         scope.launch {
             val result = action()
-            message = result.fold({ "تم الحفظ" }, { it.message ?: "تعذّر الحفظ" })
+            message = result.fold({ AppStrings.get(R.string.s_7b9c60b6) }, { it.message ?: AppStrings.get(R.string.ship_failed) })
             if (result.isSuccess) reload()
         }
     }

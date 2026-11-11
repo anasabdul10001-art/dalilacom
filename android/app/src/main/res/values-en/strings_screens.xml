@@ -374,4 +374,76 @@
     <string name="fit_auto_c2ed8d0d" formatted="false">📋  Trainee plans</string>
     <string name="fit_auto_d141a0e3" formatted="false">🏋️  My fitness and nutrition plans</string>
     <string name="fit_auto_b6b55b3a" formatted="false">Package name</string>
+    <string name="s_89f995b3" formatted="false">We couldn\'t reach the service</string>
+    <string name="s_f03c2218" formatted="false">Could not start the online payment</string>
+    <string name="s_f1f017e4" formatted="false">Could not read the invoice</string>
+    <string name="s_0a2edd30" formatted="false">We couldn\'t save the entry</string>
+    <string name="s_364be4bc" formatted="false">Could not publish the listing</string>
+    <string name="s_37f81884" formatted="false">Could not buy the plan</string>
+    <string name="s_cf802fc0" formatted="false">Could not save the transfer number</string>
+    <string name="s_9338c391" formatted="false">Could not confirm the transfer</string>
+    <string name="s_9179029e" formatted="false">Could not save the payment methods</string>
+    <string name="s_7b9c60b6" formatted="false">Saved</string>
+    <string name="s_11bc7d18">💳 Payment method · %1$s</string>
+    <string name="s_20f44d7f" formatted="false">Bank Al Sham</string>
+    <string name="s_66c40d1d" formatted="false">After the transfer, send the transaction number from the order page. The store owner confirms receipt after checking their account.</string>
+    <string name="s_cc3ae185">%1$s products each month · %2$s</string>
+    <string name="s_6152db49" formatted="false">used and new</string>
+    <string name="s_7d192e2b" formatted="false">used items only</string>
+    <string name="s_55270d0e" formatted="false">باقة متجرك المجانية</string>
+    <string name="s_4a6a560a">Recipient: %1$s</string>
+    <string name="s_2c0bca89">Transfer number: %1$s</string>
+    <string name="s_16765e8a">Transaction number sent: %1$s</string>
+    <string name="s_d701f388" formatted="false">Payment method: </string>
+    <string name="s_6a069c95" formatted="false">Transaction number after the transfer</string>
+    <string name="s_9c976ca3" formatted="false">I sent the transfer</string>
+    <string name="s_f5c962b6" formatted="false">Waiting for the store owner to confirm the transfer arrived.</string>
+    <string name="s_6b666b63" formatted="false">Confirm the transfer arrived</string>
+    <string name="s_e4b4c234" formatted="false">سوق المستخدمين</string>
+    <string name="s_b179bf25" formatted="false">How do you receive the money from your sales?</string>
+    <string name="s_2ace6138" formatted="false">Choose the methods you have. The customer only sees them after ordering a product from you.</string>
+    <string name="s_01a85ddc" formatted="false">Name on the account</string>
+    <string name="s_54744a3d" formatted="false">Account or wallet number</string>
+    <string name="s_4816f255" formatted="false">Payment methods saved</string>
+    <string name="s_40c2c372" formatted="false">Save payment methods</string>
+    <string name="s_29c83806" formatted="false">تم إرفاق الصورة</string>
+    <string name="s_4810cb93" formatted="false">تعذّر رفع الصورة</string>
+    <string name="s_fa9309cd" formatted="false">← رجوع</string>
+    <string name="s_ac6aac42" formatted="false">افتح متجرك الخاص</string>
+    <string name="s_d4d43912" formatted="false">اختر اسماً لمتجرك، وبعدها أضف منتجاتك وشارك صفحته مع الناس.</string>
+    <string name="s_e72dca5d" formatted="false">اسم المتجر</string>
+    <string name="s_886333f5" formatted="false">وصف المتجر (اختياري)</string>
+    <string name="s_2203e3d9" formatted="false">تم إنشاء متجرك</string>
+    <string name="s_01b266ff" formatted="false">تعذّر إنشاء المتجر</string>
+    <string name="s_13adebab" formatted="false">إنشاء المتجر</string>
+    <string name="s_d7e8f7da" formatted="false">عرض متجري</string>
+    <string name="s_0ee0b71f" formatted="false">أضف منتج للبيع</string>
+    <string name="s_23a79f17">الإعلانات المجانية المتبقية هذا الشهر: %1$s من %2$s</string>
+    <string name="s_df644ae1" formatted="false">اسم المنتج</string>
+    <string name="s_b5a7adde" formatted="false">وصف المنتج</string>
+    <string name="s_3601146c" formatted="false">السعر</string>
+    <string name="s_5e7ac625" formatted="false">رقم للتواصل (اختياري)</string>
+    <string name="s_fe3ac683" formatted="false">الصورة مرفقة ✓</string>
+    <string name="s_c5cd4e00" formatted="false">إضافة صورة للمنتج</string>
+    <string name="s_019d1ca7" formatted="false">مستعمل</string>
+    <string name="s_03c2e7e4" formatted="false">جديد</string>
+    <string name="s_9cd5d5cd" formatted="false">وصلت للحد المجاني. اختر باقة من باقات المتجر للمتابعة.</string>
+    <string name="s_a1272e5c" formatted="false">تم تفعيل الباقة</string>
+    <string name="s_928735d6" formatted="false">رصيد</string>
+    <string name="s_43b0c75a" formatted="false">تم إرسال إعلانك للمراجعة</string>
+    <string name="s_0b9aa735" formatted="false">إرسال للمراجعة</string>
+    <string name="s_985b09fd" formatted="false">إعلاناتي</string>
+    <string name="s_92e97e03" formatted="false">بانتظار المراجعة</string>
+    <string name="s_bae1ccce" formatted="false">مرفوض بعد مراجعة الذكاء الاصطناعي</string>
+    <string name="s_9b9d8a97" formatted="false">منشور</string>
+    <string name="s_d85a8a38" formatted="false">مباع</string>
+    <string name="s_94f37dcd" formatted="false">السبب: </string>
+    <string name="s_9a7d8a0f" formatted="false">سجّل دخولك لتضيف إعلاناً</string>
+    <string name="s_b6d4223e" formatted="false">تسجيل الدخول</string>
+    <string name="s_318421e6" formatted="false">أحدث المنتجات</string>
+    <string name="s_72608e10" formatted="false">المتجر: </string>
+    <string name="s_698d3436" formatted="false">للتواصل: </string>
+    <string name="s_1bf1c6ab" formatted="false">ما في إعلانات منشورة حالياً</string>
+    <string name="s_e767f75b" formatted="false">عم نحمل المتجر…</string>
+    <string name="s_9aba83cd" formatted="false">ما في منتجات منشورة بهالمتجر حالياً</string>
 </resources>
