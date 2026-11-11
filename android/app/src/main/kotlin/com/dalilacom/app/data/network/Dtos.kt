@@ -947,7 +947,7 @@ data class MarketDto(val country: String = "", val currencyCode: String = "")
 data class StoreSectionDto(val id: String, val name: String, val nameEn: String = "", val icon: String = "", val image: String = "", val count: Int = 0)
 
 @Serializable
-data class StoreShopDto(val id: String, val name: String)
+data class StoreShopDto(val id: String, val name: String, val avatarUrl: String? = null)
 
 @Serializable
 data class StoreProductDto(

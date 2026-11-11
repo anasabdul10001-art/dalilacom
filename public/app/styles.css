@@ -1920,3 +1920,14 @@ html[dir="ltr"] .setup-step .s-go { transform: scaleX(-1); }
   .intro-steps { grid-template-columns: repeat(3, 1fr); }
   .prof-quick { max-width: 560px; margin-inline: auto; width: 100%; }
 }
+
+/* ---- the seller on a product page: a card with the shop's logo that opens the shop ---- */
+.pd-seller { width: 100%; display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-alt); color: var(--text); font: inherit; text-align: start; cursor: pointer; }
+.pd-seller:hover { border-color: var(--primary); }
+.pd-seller .avatar, .pd-seller .avatar.big { width: 52px; height: 52px; flex: none; font-size: 22px; border: 2px solid var(--surface); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+.pd-seller-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pd-seller-text small { color: var(--text-muted); font-size: 12px; }
+.pd-seller-text b { font-size: 16px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pd-seller-go { flex: none; padding: 7px 14px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-size: 13px; font-weight: 800; white-space: nowrap; }
+.pd-seller-go::after { content: "›"; display: inline-block; margin-inline-start: 6px; }
+html[dir="rtl"] .pd-seller-go::after { transform: scaleX(-1); }

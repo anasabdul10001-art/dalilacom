@@ -514,4 +514,5 @@
     <string name="prof_sec_admin_sub" formatted="false">مراجعة الإعلانات والطلبات</string>
     <string name="prof_sec_account" formatted="false">حسابي وأماني</string>
     <string name="prof_sec_account_sub" formatted="false">بياناتي، الإشعارات، تسجيل الخروج</string>
+    <string name="store_visit_shop" formatted="false">زيارة المتجر</string>
 </resources>

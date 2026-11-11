@@ -514,4 +514,5 @@
     <string name="prof_sec_admin_sub" formatted="false">Review ads and requests</string>
     <string name="prof_sec_account" formatted="false">My account and security</string>
     <string name="prof_sec_account_sub" formatted="false">My data, notifications, log out</string>
+    <string name="store_visit_shop" formatted="false">Visit the shop</string>
 </resources>

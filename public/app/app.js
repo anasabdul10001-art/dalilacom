@@ -5001,6 +5001,7 @@ function screenStore() {
     </div>`;
 }
 
+function plainSoldBy(text) { return String(text).replace(/[:：]\s*$/, ""); }
 function screenProductDetail() {
   if (!S._productDetail || S._productDetail.id !== S.params.productId) {
     S._productDetail = { id: S.params.productId, loading: true, qty: 1 };
@@ -5029,13 +5030,17 @@ function screenProductDetail() {
                  <div class="pd-member">⭐ ${esc(t("store.memberPrice"))}</div>`
               : `<b>${priceText(prod, false)}</b>`}
           </div>
+          <button class="pd-seller" onclick="go('merchantDetail',{merchantId:'${prod.merchant.id}'})">
+            ${avatarHtml(prod.merchant.avatarUrl, prod.merchant.name, "big")}
+            <span class="pd-seller-text"><small>${esc(plainSoldBy(t("store.soldBy")))}</small><b>${esc(prod.merchant.name)}</b></span>
+            <span class="pd-seller-go">${esc(t("store.visitShop"))}</span>
+          </button>
           ${prod.description ? `<p class="pd-desc">${esc(prod.description)}</p>` : ""}
           ${(prod.specs && prod.specs.length) || prod.condition ? `<div class="pd-specs">
             ${prod.condition ? `<div><span>${esc(t("wiz.condition"))}</span><b>${esc(t("wiz.cond." + prod.condition))}</b></div>` : ""}
             ${(prod.specs || []).map((x) => `<div><span>${esc(x.label)}</span><b>${esc(x.value)}</b></div>`).join("")}
           </div>` : ""}
           <div class="pd-rows">
-            <div><span>${esc(t("store.soldBy"))}</span><a onclick="go('merchantDetail',{merchantId:'${prod.merchant.id}'})">${esc(prod.merchant.name)}</a></div>
             <div><span>${esc(t("store.availability"))}</span>${available ? `<b class="${prod.stock <= 5 ? "low" : "ok"}">✓ ${esc(t("store.stockCount", { n: prod.stock }))}</b>` : `<b class="low">${esc(t("store.unavailable"))}</b>`}</div>
           </div>
           ${(prod.shipping || []).length ? `<div class="pd-ship"><b>🚚 ${esc(t("ship.methods"))}</b>${prod.shipping.map((m) => `<div><span>${esc(m.name)}</span><span>${m.costCents ? fmt(m.costCents) : esc(t("ship.free"))}</span></div>`).join("")}</div>` : ""}

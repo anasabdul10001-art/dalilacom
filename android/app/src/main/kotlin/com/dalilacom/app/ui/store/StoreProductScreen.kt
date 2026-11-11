@@ -41,6 +41,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.dalilacom.app.R
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.data.network.StoreProductDto
 import com.dalilacom.app.data.repository.AuthRepository
@@ -205,9 +207,21 @@ fun StoreProductScreen(
                             }
                         }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.store_sold_by), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        TextButton(onClick = { onOpenMerchant(product.merchant.id) }) { Text(product.merchant.name, fontWeight = FontWeight.Bold) }
+                    // the seller: a card with the shop's logo that opens the shop
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
+                            .clickable { onOpenMerchant(product.merchant.id) }.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        com.dalilacom.app.ui.common.Avatar(product.merchant.name, size = 52.dp, imageUrl = product.merchant.avatarUrl)
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.store_sold_by).trimEnd(':', '：', ' '), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Text(product.merchant.name, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        }
+                        Text(stringResource(R.string.store_visit_shop) + (if (androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) " ‹" else " ›"), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(MaterialTheme.colorScheme.primary).padding(horizontal = 14.dp, vertical = 7.dp))
                     }
                     if (product.shipping.isNotEmpty()) {
                         Surface(shape = RoundedCornerShape(8.dp), border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
