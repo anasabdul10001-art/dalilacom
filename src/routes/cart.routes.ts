@@ -226,10 +226,12 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
             unitPriceCents,
           });
 
-          await tx.product.update({
-            where: { id: product.id },
+          // taken only while enough is left at this very moment: two customers checking out together cannot both get the last pieces
+          const taken = await tx.product.updateMany({
+            where: { id: product.id, stock: { gte: item.quantity } },
             data: { stock: { decrement: item.quantity } },
           });
+          if (taken.count === 0) throw new Error(`OUT_OF_STOCK:${product.name}`);
         }
 
         const order = await tx.order.create({

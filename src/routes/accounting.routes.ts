@@ -77,8 +77,10 @@ const productSchema = z.object({
 
 accountingRouter.get("/summary", route(async (req, res) => {
   const userId = req.user!.id;
-  const from = typeof req.query.from === "string" ? new Date(req.query.from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const to = typeof req.query.to === "string" ? new Date(req.query.to) : new Date();
+  // a plain date (2026-03-10) means the whole day: from its first moment, to its last
+  const plainDate = /^\d{4}-\d{2}-\d{2}$/;
+  const from = typeof req.query.from === "string" ? new Date(plainDate.test(req.query.from) ? `${req.query.from}T00:00:00.000Z` : req.query.from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const to = typeof req.query.to === "string" ? new Date(plainDate.test(req.query.to) ? `${req.query.to}T23:59:59.999Z` : req.query.to) : new Date();
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) return sendError(res, 400, "BAD_REQUEST", "الفترة الزمنية غير صحيحة");
   const [totals, productCount, stock, lowStock, storeProducts, recent] = await Promise.all([
     prisma.accountingEntry.groupBy({ by: ["type", "currency"], where: { userId, occurredAt: { gte: from, lte: to } }, _sum: { amountCents: true } }),
@@ -162,10 +164,13 @@ accountingRouter.post("/products/:id/stock", route(async (req, res) => {
     const signed = parsed.data.action === "STOCK_IN" ? parsed.data.quantity : parsed.data.action === "STOCK_OUT" ? -parsed.data.quantity : parsed.data.quantity - p.stock;
     if (p.stock + signed < 0) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
     const updated = await prisma.$transaction(async tx => {
-      const changed = await tx.product.update({ where: { id: p.id }, data: { stock: { increment: signed }, ...(parsed.data.unitCostCents !== undefined ? { costPriceCents: parsed.data.unitCostCents } : {}) } });
+      // taking stock out only succeeds while enough is left at this very moment (two requests cannot both take the last pieces)
+      if (signed < 0 && !(await tx.product.updateMany({ where: { id: p.id, stock: { gte: -signed } }, data: { stock: { decrement: -signed } } })).count) return null;
+      const changed = await tx.product.update({ where: { id: p.id }, data: { ...(signed > 0 ? { stock: { increment: signed } } : {}), ...(parsed.data.unitCostCents !== undefined ? { costPriceCents: parsed.data.unitCostCents } : {}) } });
       if (signed !== 0) await tx.accountingStockMovement.create({ data: { userId: req.user!.id, storeProductId: p.id, action: parsed.data.action, quantity: parsed.data.quantity, note: parsed.data.note } });
       return changed;
     });
+    if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
     return res.json({ ...updated, quantity: updated.stock, id: `store:${updated.id}`, isStoreProduct: true });
   }
   const p = await prisma.accountingProduct.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
@@ -174,10 +179,12 @@ accountingRouter.post("/products/:id/stock", route(async (req, res) => {
   const signed = parsed.data.action === "STOCK_IN" ? parsed.data.quantity : parsed.data.action === "STOCK_OUT" ? -parsed.data.quantity : parsed.data.quantity - p.quantity;
   if (p.quantity + signed < 0) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
   const updated = await prisma.$transaction(async (tx) => {
-    const changed = await tx.accountingProduct.update({ where: { id: p.id }, data: { quantity: { increment: signed }, ...(parsed.data.unitCostCents !== undefined ? { costCents: parsed.data.unitCostCents } : {}) } });
+    if (signed < 0 && !(await tx.accountingProduct.updateMany({ where: { id: p.id, quantity: { gte: -signed } }, data: { quantity: { decrement: -signed } } })).count) return null;
+    const changed = await tx.accountingProduct.update({ where: { id: p.id }, data: { ...(signed > 0 ? { quantity: { increment: signed } } : {}), ...(parsed.data.unitCostCents !== undefined ? { costCents: parsed.data.unitCostCents } : {}) } });
     if (signed !== 0) await tx.accountingStockMovement.create({ data: { userId: req.user!.id, productId: p.id, action: parsed.data.action, quantity: parsed.data.quantity, unitCostCents: parsed.data.unitCostCents, note: parsed.data.note } });
     return changed;
   });
+  if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
   res.json(updated);
 }));
 
@@ -193,12 +200,16 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
     if (unitPrice <= 0) return sendError(res, 400, "BAD_REQUEST", "أدخل سعر البيع أولاً");
     const total = unitPrice * parsed.data.quantity;
     const ref = `store-manual-sale:${crypto.randomUUID()}`;
-    const [updated] = await prisma.$transaction([
-      prisma.product.update({ where: { id }, data: { stock: { decrement: parsed.data.quantity }, soldCount: { increment: parsed.data.quantity } } }),
-      prisma.accountingStockMovement.create({ data: { userId: req.user!.id, storeProductId: id, action: "STOCK_OUT", quantity: parsed.data.quantity, note: parsed.data.note || "بيع مباشر" } }),
-      prisma.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency: await marketOfUser(req.user!.id), source: "MANUAL", sourceKey: ref } }),
-      ...(product.costPriceCents > 0 ? [prisma.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costPriceCents * parsed.data.quantity, currency: await marketOfUser(req.user!.id), source: "MANUAL", sourceKey: `${ref}:cost` } })] : []),
-    ]);
+    const currency = await marketOfUser(req.user!.id);
+    const updated = await prisma.$transaction(async (tx) => {
+      // the stock is taken only while enough is left at this very moment, so two sales cannot both take the last pieces
+      if (!(await tx.product.updateMany({ where: { id, stock: { gte: parsed.data.quantity } }, data: { stock: { decrement: parsed.data.quantity }, soldCount: { increment: parsed.data.quantity } } })).count) return null;
+      await tx.accountingStockMovement.create({ data: { userId: req.user!.id, storeProductId: id, action: "STOCK_OUT", quantity: parsed.data.quantity, note: parsed.data.note || "بيع مباشر" } });
+      await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency, source: "MANUAL", sourceKey: ref } });
+      if (product.costPriceCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costPriceCents * parsed.data.quantity, currency, source: "MANUAL", sourceKey: `${ref}:cost` } });
+      return tx.product.findUniqueOrThrow({ where: { id } });
+    });
+    if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
     const cost = product.costPriceCents * parsed.data.quantity;
     return res.status(201).json({ product: { ...updated, quantity: updated.stock, id: `store:${updated.id}` }, incomeCents: total, costCents: cost, netCents: total - cost });
   }
@@ -210,18 +221,22 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
   const total = unitPrice * parsed.data.quantity;
   const ref = `manual-sale:${crypto.randomUUID()}`;
   const result = await prisma.$transaction(async (tx) => {
-    const updated = await tx.accountingProduct.update({ where: { id: product.id }, data: { quantity: { decrement: parsed.data.quantity } } });
+    // the stock is taken only while enough is left at this very moment, so two sales cannot both take the last pieces
+    if (!(await tx.accountingProduct.updateMany({ where: { id: product.id, quantity: { gte: parsed.data.quantity } }, data: { quantity: { decrement: parsed.data.quantity } } })).count) return null;
+    const updated = await tx.accountingProduct.findUniqueOrThrow({ where: { id: product.id } });
     await tx.accountingStockMovement.create({ data: { userId: req.user!.id, productId: product.id, action: "STOCK_OUT", quantity: parsed.data.quantity, unitCostCents: product.costCents, note: parsed.data.note || "بيع" } });
     await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency: product.currency, source: "MANUAL", sourceKey: ref } });
     if (product.costCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costCents * parsed.data.quantity, currency: product.currency, source: "MANUAL", sourceKey: `${ref}:cost` } });
     return updated;
   });
+  if (!result) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
   res.status(201).json({ product: result, incomeCents: total, costCents: product.costCents * parsed.data.quantity, netCents: total - product.costCents * parsed.data.quantity });
 }));
 
 accountingRouter.get("/export.csv", route(async (req, res) => {
   const rows = await prisma.accountingEntry.findMany({ where: { userId: req.user!.id }, orderBy: { occurredAt: "asc" }, take: 10000 });
-  const quote = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  // a text that starts with = + - @ would be run as a formula by Excel and the like: a leading ' keeps it plain text
+  const quote = (v: unknown) => `"${String(v ?? "").replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
   const csv = ["Datum;Typ;Kategorie;Beschreibung;Betrag;Waehrung;Quelle", ...rows.map((r) => [r.occurredAt.toISOString(), r.type, r.category, r.description, (r.amountCents / 100).toFixed(2), r.currency, r.source].map(quote).join(";"))].join("\r\n");
   res.set({ "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": "attachment; filename=dalilacom-accounting.csv", "Cache-Control": "no-store" }).send("\uFEFF" + csv);
 }));
