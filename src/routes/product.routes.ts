@@ -102,7 +102,7 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), route(async (re
   const columns = priceColumns({ priceCents: rest.priceCents, memberPriceCents: rest.memberPriceCents }, result.merchant, await marketOfUser(result.merchant.userId)); // in the shop's own money (one setting for the whole shop)
   if (!columns) return sendError(res, 400, "USD_RATE_REQUIRED", "حدّد سعر صرف الدولار أولًا من إعدادات الأسعار");
   const product = await prisma.$transaction(async tx => {
-    await tx.$queryRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${req.user!.id}))`);
+    await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${req.user!.id}))`);
     const used = await countSellerListings(tx, req.user!.id);
     const paid = await hasPaidSellerPlan(req.user!.id);
     if (!paid && rest.condition === "NEW" && !settings.marketplace.allowNewProducts) throw new Error("MARKETPLACE_NEW_CLOSED");

@@ -112,7 +112,7 @@ marketplaceRouter.post("/listings", requireAuth, route(async (req, res) => {
   if (parsed.data.cityId && !await prisma.geoUnit.findUnique({ where: { id: parsed.data.cityId }, select: { id: true } })) return sendError(res, 400, "BAD_REQUEST", "المدينة غير صالحة");
   // Lock each user while counting and creating, so two simultaneous requests cannot exceed the free monthly amount.
   const listing = await prisma.$transaction(async tx => {
-    await tx.$queryRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${req.user!.id}))`);
+    await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${req.user!.id}))`);
     const count = await countSellerListings(tx, req.user!.id);
     const hasPaid = await hasPaidSellerPlan(req.user!.id);
     if (count >= settings.marketplace.freeListingsPerMonth && !hasPaid) throw new Error("MARKETPLACE_QUOTA");
