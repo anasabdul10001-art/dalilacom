@@ -1294,13 +1294,13 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 }
 
 /* ---- a shop's own page, in the store's look ---- */
-.shop-cover { margin: 0 12px; padding: 22px 18px; border-radius: 8px; color: #fff; background: linear-gradient(120deg, hsl(var(--h) 55% 22%), hsl(calc(var(--h) + 40) 65% 42%)); }
+.shop-cover { margin: 0 12px; padding: 22px 18px; border-radius: 14px; color: #fff; background: linear-gradient(120deg, #b84c24, #e0653a); } /* one fixed brand gradient for every shop (it used to take a colour from the shop's id: green, blue, purple...) */
 .shop-id { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .shop-id .avatar, .shop-id .avatar.big { width: 76px; height: 76px; flex: none; border: 3px solid rgba(255, 255, 255, 0.9); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); }
 .shop-id-text { flex: 1; min-width: 180px; }
 .shop-id-text h1 { margin: 0; font-family: "Cairo", "Tajawal", sans-serif; font-size: 22px; line-height: 1.2; font-weight: 800; }
 .shop-id-text p { margin: 2px 0 8px; opacity: 0.9; font-size: 13.5px; }
-.shop-verified { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #1e8aff; color: #fff; font-size: 11px; vertical-align: middle; }
+.shop-verified { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #fff; color: var(--primary-deep); font-size: 11px; font-weight: 800; vertical-align: middle; }
 .shop-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; }
 .shop-stats .star { color: #ffd04a; }
 .shop-stats .badge { background: rgba(255, 255, 255, 0.95); }

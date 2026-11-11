@@ -3394,8 +3394,6 @@ function screenMerchantDetail() {
   const votes = x.ratingCount || 0;
   const followers = x.followersCount || 0;
   const sold = products.reduce((n, p) => n + (p.soldCount || 0), 0);
-  let hue = 0;
-  for (const c of String(x.id)) hue = (hue * 31 + c.charCodeAt(0)) % 360;
   const q = (m.q || "").trim().toLowerCase();
   const sorted = [...products].filter((p) => !q || p.name.toLowerCase().includes(q)).sort({
     popular: (p1, p2) => p2.soldCount - p1.soldCount,
@@ -3452,7 +3450,7 @@ function screenMerchantDetail() {
         </form>
         <button class="store-icon-btn store-cart" onclick="storeToCart()" aria-label="cart">${ICON.bag}</button>
       </div>
-      <div class="shop-cover" style="--h:${hue}">
+      <div class="shop-cover">
         <div class="shop-id">
           ${avatarHtml(x.avatarUrl, x.businessName, "big")}
           <div class="shop-id-text">

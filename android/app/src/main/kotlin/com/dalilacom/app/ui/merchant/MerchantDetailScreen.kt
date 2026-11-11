@@ -152,7 +152,6 @@ fun MerchantDetailScreen(
                 val votes = merchant.ratingCount // the shop's own rating, from the people it delivered to
                 val avg = merchant.rating
                 val sold = products.sumOf { it.soldCount }
-                val hue = merchant.id.fold(0) { h, c -> (h * 31 + c.code) % 360 }.toFloat()
                 val sorted = when (state.sort) {
                     "rating" -> products.sortedByDescending { it.rating }
                     "price_asc" -> products.sortedBy { it.priceCents }
@@ -164,7 +163,7 @@ fun MerchantDetailScreen(
                     item {
                         Box(
                             Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 0.dp).clip(RoundedCornerShape(8.dp))
-                                .background(Brush.linearGradient(listOf(Color.hsl(hue, 0.55f, 0.22f), Color.hsl((hue + 40f) % 360f, 0.65f, 0.42f)))).padding(16.dp),
+                                .background(Brush.linearGradient(listOf(Color(0xFFB84C24), Color(0xFFE0653A)))) // one fixed brand gradient for every shop.padding(16.dp),
                         ) {
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -174,7 +173,7 @@ fun MerchantDetailScreen(
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(merchant.fitnessProfile?.displayName?.takeIf { merchant.isFitnessProvider && it.isNotBlank() } ?: merchant.businessName, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                                             Spacer(Modifier.width(6.dp))
-                                            Box(Modifier.size(18.dp).clip(CircleShape).background(Color(0xFF1E8AFF)), contentAlignment = Alignment.Center) { Text("✓", color = Color.White, fontSize = 11.sp) }
+                                            Box(Modifier.size(18.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) { Text("✓", color = Color(0xFFC4552B), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold) }
                                         }
                                         val sub = listOfNotNull(merchant.category?.name, merchant.distanceKm?.let { "%.1f ".format(java.util.Locale.US, it) + AppStrings.get(R.string.unit_km_short) }).joinToString(" · ")
                                         if (sub.isNotBlank()) Text(sub, color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
