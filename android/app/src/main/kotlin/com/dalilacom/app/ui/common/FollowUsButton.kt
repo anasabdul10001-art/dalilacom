@@ -54,7 +54,7 @@ object SocialLinks {
 
 /** Red discs with a white sign; the Google Play sign keeps its own four colours, so it sits on white (people know the store by it). */
 private fun iconBackground(platform: String): androidx.compose.ui.graphics.Brush =
-    androidx.compose.ui.graphics.SolidColor(if (platform == "googleplay") Color.White else Color(0xFFBA2A34))
+    androidx.compose.ui.graphics.SolidColor(if (platform == "googleplay") Color.White else Color(0xFFF48050))
 
 private fun iconOf(platform: String): Int? = when (platform) {
     "facebook" -> R.drawable.ic_facebook_f
@@ -132,7 +132,7 @@ fun BoxScope.SocialDock() {
         // the small arrow that stays: it points into the screen when folded (pull out) and to the edge when open (push away)
         val tabShape = if (open) androidx.compose.ui.graphics.RectangleShape else startShape
         Box(
-            Modifier.size(width = 24.dp, height = 46.dp).shadow(4.dp, tabShape).clip(tabShape).background(Color(0xFFBA2A34)).clickable { open = !open },
+            Modifier.size(width = 24.dp, height = 46.dp).shadow(4.dp, tabShape).clip(tabShape).background(Color(0xFFF48050)).clickable { open = !open },
             contentAlignment = Alignment.Center,
         ) {
             androidx.compose.material3.Icon(

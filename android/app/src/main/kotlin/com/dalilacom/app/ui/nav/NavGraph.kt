@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -404,14 +405,39 @@ fun DalilacomNavGraph(
                 }
                 return@composable
             }
-            ResponderScreen(
-                factory = factory,
-                onBack = { navController.popBackStack() },
-                onOpenWallet = { navController.navigate("wallet") },
-                metaOk = entry.arguments?.getString("ok")?.let { it == "1" },
-                metaConnectionId = entry.arguments?.getString("connectionId"),
-                metaSessionId = entry.arguments?.getString("session"),
-            )
+            // the section's front page: for guests (sign in), on the first visit, and again from the "about" link
+            val introContext = androidx.compose.ui.platform.LocalContext.current
+            var signedIn by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
+            var introSeen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.dalilacom.app.ui.common.IntroPrefs.seen(introContext, com.dalilacom.app.ui.common.IntroKind.Responder)) }
+            var introReopened by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+            androidx.compose.runtime.LaunchedEffect(Unit) { signedIn = container.authRepository.hasStoredSession() }
+            val hasMetaReturn = entry.arguments?.getString("ok") != null || entry.arguments?.getString("session") != null
+            when {
+                signedIn == null -> androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize())
+                signedIn == false -> com.dalilacom.app.ui.common.SectionIntro(
+                    kind = com.dalilacom.app.ui.common.IntroKind.Responder,
+                    primaryLabel = androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.sec_login),
+                    onPrimary = { navController.navigate("login") },
+                    secondaryLabel = androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.sec_register),
+                    onSecondary = { navController.navigate("register") },
+                    onBack = { navController.popBackStack() },
+                )
+                (!introSeen && !hasMetaReturn) || introReopened -> com.dalilacom.app.ui.common.SectionIntro(
+                    kind = com.dalilacom.app.ui.common.IntroKind.Responder,
+                    primaryLabel = androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.sec_start),
+                    onPrimary = { com.dalilacom.app.ui.common.IntroPrefs.markSeen(introContext, com.dalilacom.app.ui.common.IntroKind.Responder); introSeen = true; introReopened = false },
+                    onBack = { if (introReopened) introReopened = false else navController.popBackStack() },
+                )
+                else -> ResponderScreen(
+                    factory = factory,
+                    onBack = { navController.popBackStack() },
+                    onOpenWallet = { navController.navigate("wallet") },
+                    onAbout = { introReopened = true },
+                    metaOk = entry.arguments?.getString("ok")?.let { it == "1" },
+                    metaConnectionId = entry.arguments?.getString("connectionId"),
+                    metaSessionId = entry.arguments?.getString("session"),
+                )
+            }
         }
         composable("wallet") {
             WalletScreen(factory = factory, onBack = { navController.popBackStack() })

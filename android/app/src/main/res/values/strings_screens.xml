@@ -446,4 +446,39 @@
     <string name="s_1bf1c6ab" formatted="false">No listings yet</string>
     <string name="s_e767f75b" formatted="false">Loading store…</string>
     <string name="s_9aba83cd" formatted="false">This store has no published items yet</string>
+    <string name="sec_why" formatted="false">ماذا يقدّم لك؟</string>
+    <string name="sec_how" formatted="false">كيف يشتغل؟</string>
+    <string name="sec_about" formatted="false">ⓘ عن هذا القسم</string>
+    <string name="sec_back" formatted="false">رجوع</string>
+    <string name="sec_start" formatted="false">ابدأ الآن</string>
+    <string name="sec_login" formatted="false">سجّل دخولك للبدء</string>
+    <string name="sec_register" formatted="false">إنشاء حساب</string>
+    <string name="sec_acc_kicker" formatted="false">🧮 المحاسب</string>
+    <string name="sec_acc_title" formatted="false">حسابات محلك بمكان واحد</string>
+    <string name="sec_acc_sub" formatted="false">سجّل دخلك ومصاريفك، تابع بضاعتك، وشوف أرباحك بدون ما تحتاج أي خبرة بالمحاسبة.</string>
+    <string name="sec_acc_f1t" formatted="false">الدخل والمصاريف</string>
+    <string name="sec_acc_f1d" formatted="false">سجّل كل عملية بثواني، وشوف الصافي لكل عملة وكل فترة.</string>
+    <string name="sec_acc_f2t" formatted="false">المخزون والباركود</string>
+    <string name="sec_acc_f2d" formatted="false">تابع كمية كل منتج، ابحث بالباركود، وبتعرف أي منتج قارب يخلص.</string>
+    <string name="sec_acc_f3t" formatted="false">مسح الفواتير</string>
+    <string name="sec_acc_f3d" formatted="false">صوّر الفاتورة والذكاء الاصطناعي بيقرأ المبلغ والمورّد، وإنت بتراجع وبتأكّد.</string>
+    <string name="sec_acc_f4t" formatted="false">تقارير وتصدير</string>
+    <string name="sec_acc_f4d" formatted="false">حمّل كل حركاتك بملف CSV أو اطبع تقرير جاهز لمحاسبك.</string>
+    <string name="sec_acc_s1" formatted="false">اشترك بباقة أو ابدأ التجربة</string>
+    <string name="sec_acc_s2" formatted="false">أدخل منتجاتك وحركاتك</string>
+    <string name="sec_acc_s3" formatted="false">تابع أرباحك وصدّر تقاريرك</string>
+    <string name="sec_resp_kicker" formatted="false">🤖 المجيب الآلي</string>
+    <string name="sec_resp_title" formatted="false">رد على زبائنك حتى وإنت نايم</string>
+    <string name="sec_resp_sub" formatted="false">اربط صفحتك على فيسبوك وانستغرام وتيليغرام، والمجيب الآلي بيرد عن محلك على الرسائل والتعليقات.</string>
+    <string name="sec_resp_f1t" formatted="false">رسائل وتعليقات</string>
+    <string name="sec_resp_f1d" formatted="false">بيرد على رسائل ماسنجر وانستغرام وتيليغرام، وعلى التعليقات تحت منشوراتك.</string>
+    <string name="sec_resp_f2t" formatted="false">قواعد بكلماتك</string>
+    <string name="sec_resp_f2d" formatted="false">حدد كلمات وردود جاهزة (الأسعار، العنوان، الدوام) وبينرد فوراً.</string>
+    <string name="sec_resp_f3t" formatted="false">ذكاء اصطناعي</string>
+    <string name="sec_resp_f3d" formatted="false">لما ما في قاعدة، بيكتب رداً مناسباً من المعلومات اللي أنت أدخلتها فقط.</string>
+    <string name="sec_resp_f4t" formatted="false">صندوق وارد</string>
+    <string name="sec_resp_f4d" formatted="false">شوف كل المحادثات، وتدخّل بإيدك وقت ما بدك، وتابع الملخصات الأسبوعية.</string>
+    <string name="sec_resp_s1" formatted="false">اربط قنواتك</string>
+    <string name="sec_resp_s2" formatted="false">اكتب قواعدك أو فعّل الذكاء الاصطناعي</string>
+    <string name="sec_resp_s3" formatted="false">خلّيه يشتغل وتابع الوارد</string>
 </resources>

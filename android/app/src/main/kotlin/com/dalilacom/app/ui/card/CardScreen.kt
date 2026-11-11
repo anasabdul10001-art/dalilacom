@@ -40,8 +40,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.ui.ViewModelFactory
 import com.dalilacom.app.ui.common.QrCodeImage
-import com.dalilacom.app.ui.theme.DeepRed
-import com.dalilacom.app.ui.theme.PrimaryRed
+import com.dalilacom.app.ui.theme.BrandOrangeDeep
+import com.dalilacom.app.ui.theme.BrandOrange
 
 @Composable
 fun CardScreen(factory: ViewModelFactory, onRenew: () -> Unit = {}) {
@@ -115,7 +115,7 @@ private fun MembershipCardContent(state: CardUiState, onRenew: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text(AppStrings.get(R.string.s_3f8e51fe), style = MaterialTheme.typography.headlineSmall, color = PrimaryRed)
+        Text(AppStrings.get(R.string.s_3f8e51fe), style = MaterialTheme.typography.headlineSmall, color = BrandOrange)
         Spacer(Modifier.height(16.dp))
 
         // The free period, the last days of a paid one, or an ended card: say so and offer to renew from the plans.
@@ -149,7 +149,7 @@ private fun MembershipCardContent(state: CardUiState, onRenew: () -> Unit) {
         ) {
             Column(
                 modifier = Modifier
-                    .background(Brush.verticalGradient(listOf(DeepRed, PrimaryRed)))
+                    .background(Brush.verticalGradient(listOf(BrandOrangeDeep, BrandOrange)))
                     .fillMaxWidth()
                     .padding(24.dp),
             ) {
@@ -178,7 +178,7 @@ private fun MembershipCardContent(state: CardUiState, onRenew: () -> Unit) {
                 text = (state.memberNumber.orEmpty().filter { it.isDigit() } + code).chunked(4).joinToString(" "),
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
-                color = PrimaryRed,
+                color = BrandOrange,
             )
             Spacer(Modifier.height(8.dp))
             Text(AppStrings.get(R.string.fmt_qr_refresh, state.secondsRemaining ?: 0), style = MaterialTheme.typography.bodySmall)

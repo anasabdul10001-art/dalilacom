@@ -49,8 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.R
 import com.dalilacom.app.ui.ViewModelFactory
-import com.dalilacom.app.ui.theme.DeepRed
-import com.dalilacom.app.ui.theme.PrimaryRed
+import com.dalilacom.app.ui.theme.BrandOrangeDeep
+import com.dalilacom.app.ui.theme.BrandOrange
 
 @Composable
 fun LoginScreen(
@@ -73,7 +73,7 @@ fun LoginScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(DeepRed, PrimaryRed)))
+                .background(Brush.verticalGradient(listOf(BrandOrangeDeep, BrandOrange)))
                 .padding(top = 56.dp, bottom = 64.dp),
             contentAlignment = Alignment.Center,
         ) {

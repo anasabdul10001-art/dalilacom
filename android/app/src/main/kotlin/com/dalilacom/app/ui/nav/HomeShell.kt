@@ -38,6 +38,7 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.dalilacom.app.R
+import com.dalilacom.app.ui.store.StoreScreen
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -70,14 +71,14 @@ import androidx.compose.foundation.clickable
 import com.dalilacom.app.ui.orders.OrdersScreen
 import com.dalilacom.app.ui.accounting.AccountingScreen
 import com.dalilacom.app.ui.profile.ProfileScreen
-import com.dalilacom.app.ui.theme.DeepRed
-import com.dalilacom.app.ui.theme.PrimaryRed
+import com.dalilacom.app.ui.theme.BrandOrangeDeep
+import com.dalilacom.app.ui.theme.BrandOrange
 import androidx.compose.material.icons.filled.SmartToy
 
 private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) {
-    Discover(R.string.tab_map, Icons.Filled.Map),
-    /** Not a page of this shell: the button opens the online store screen (open to guests too). */
+    /** The first tab and the page the app opens on: the online store (open to guests too). */
     Store(R.string.tab_store, Icons.Filled.Storefront),
+    Discover(R.string.tab_map, Icons.Filled.Map),
     /** The discount map; the membership card lives behind a button on it. */
     Deals(R.string.tab_deals, Icons.Filled.LocalOffer),
     /** Not a page of this shell: the middle button opens the auto-responder screen. */
@@ -89,7 +90,7 @@ private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) 
 
 @Composable
 fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
-    var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Discover) }
+    var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Store) }
     var showDealsOnMap by rememberSaveable { mutableStateOf(false) }
     val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
     val factory = remember { ViewModelFactory(container) }
@@ -147,24 +148,21 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         // The one button that stands out: a red disc, opening the auto-responder (guests sign in first).
                         NavigationBarItem(
                             selected = false,
-                            onClick = { if (com.dalilacom.app.ui.common.ComingSoon.RESPONDER) com.dalilacom.app.ui.common.ComingSoon.say(context, soonResponder) else if (isGuest) goLogin() else rootNavController.navigate("responder") },
+                            onClick = { if (com.dalilacom.app.ui.common.ComingSoon.RESPONDER) com.dalilacom.app.ui.common.ComingSoon.say(context, soonResponder) else rootNavController.navigate("responder") }, // guests see the section's intro page first, with a sign-in button
                             icon = {
                                 Box(
-                                    modifier = Modifier.size(44.dp).clip(CircleShape).background(Brush.linearGradient(listOf(DeepRed, PrimaryRed))),
+                                    modifier = Modifier.size(44.dp).clip(CircleShape).background(Brush.linearGradient(listOf(BrandOrangeDeep, BrandOrange))),
                                     contentAlignment = Alignment.Center,
                                 ) { Icon(tab.icon, contentDescription = stringResource(tab.labelRes), tint = Color.White) }
                             },
-                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, color = PrimaryRed, fontSize = 10.sp, lineHeight = 12.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
+                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, color = BrandOrange, fontSize = 10.sp, lineHeight = 12.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
                         )
                     } else {
                         NavigationBarItem(
-                            selected = selectedTab == tab && tab != HomeTab.Store,
+                            selected = selectedTab == tab,
                             onClick = {
-                                if (tab == HomeTab.Store) rootNavController.navigate("store")
-                                else {
-                                    if (tab == HomeTab.Discover) showDealsOnMap = false
-                                    selectedTab = tab
-                                }
+                                if (tab == HomeTab.Discover) showDealsOnMap = false
+                                selectedTab = tab
                             },
                             icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
                             // one word per button on one line, even if it is wider than its slot (the middle button's two words may take two lines)
@@ -191,7 +189,18 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     onClaimLandmark = { id -> rootNavController.navigate("landmarkClaim/$id") },
                     floatingButtons = homeButtons,
                 )
-                HomeTab.Responder, HomeTab.Store -> Unit // never selected: their buttons open their own screens
+                HomeTab.Store -> StoreScreen(
+                    container = container,
+                    onBack = { (context as? android.app.Activity)?.finish() }, // the first page: back leaves the app
+                    onOpenProduct = { id -> rootNavController.navigate("product/$id") },
+                    onOpenCart = { selectedTab = HomeTab.Cart },
+                    onLogin = { goLogin() },
+                    onOpenMerchant = { id -> rootNavController.navigate("merchant/$id") },
+                    onBookAd = { kind -> rootNavController.navigate("adBook?kind=$kind") },
+                    onStartSelling = { rootNavController.navigate("merchantRegister/store") },
+                    showBack = false,
+                )
+                HomeTab.Responder -> Unit // never selected: its button opens its own screen
                 HomeTab.Deals -> DealsScreen(
                     container = container,
                     onMap = { showDealsOnMap = true; selectedTab = HomeTab.Discover },
@@ -207,7 +216,19 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         onLogin = { goLogin() },
                         onRegister = { goRegister() },
                     ) else CartScreen(factory, onCheckoutSuccess = { rootNavController.navigate("orders") })
-                HomeTab.Accounting -> AccountingScreen(container) { rootNavController.navigate("accountingPlans") }
+                HomeTab.Accounting -> {
+                    // the section's front page: for guests (sign in), on the first visit, and again from the "about" link
+                    var introSeen by remember { mutableStateOf(com.dalilacom.app.ui.common.IntroPrefs.seen(context, com.dalilacom.app.ui.common.IntroKind.Accounting)) }
+                    var introReopened by rememberSaveable { mutableStateOf(false) }
+                    if (isGuest || !introSeen || introReopened) com.dalilacom.app.ui.common.SectionIntro(
+                        kind = com.dalilacom.app.ui.common.IntroKind.Accounting,
+                        primaryLabel = stringResource(if (isGuest) R.string.sec_login else R.string.sec_start),
+                        onPrimary = { if (isGuest) goLogin() else { com.dalilacom.app.ui.common.IntroPrefs.markSeen(context, com.dalilacom.app.ui.common.IntroKind.Accounting); introSeen = true; introReopened = false } },
+                        secondaryLabel = if (isGuest) stringResource(R.string.sec_register) else null,
+                        onSecondary = { goRegister() },
+                        onBack = if (introReopened && !isGuest) ({ introReopened = false }) else null,
+                    ) else AccountingScreen(container, onAbout = { introReopened = true }) { rootNavController.navigate("accountingPlans") }
+                }
                 HomeTab.Profile ->
                     if (isGuest) AccountPrompt(
                         icon = Icons.Filled.Person,
@@ -268,7 +289,7 @@ private fun AccountPrompt(
         verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            modifier = Modifier.size(84.dp).clip(CircleShape).background(Brush.linearGradient(listOf(DeepRed, PrimaryRed))),
+            modifier = Modifier.size(84.dp).clip(CircleShape).background(Brush.linearGradient(listOf(BrandOrangeDeep, BrandOrange))),
             contentAlignment = Alignment.Center,
         ) { Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp)) }
         Spacer(Modifier.height(20.dp))

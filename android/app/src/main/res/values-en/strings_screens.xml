@@ -446,4 +446,39 @@
     <string name="s_1bf1c6ab" formatted="false">ما في إعلانات منشورة حالياً</string>
     <string name="s_e767f75b" formatted="false">عم نحمل المتجر…</string>
     <string name="s_9aba83cd" formatted="false">ما في منتجات منشورة بهالمتجر حالياً</string>
+    <string name="sec_why" formatted="false">What you get</string>
+    <string name="sec_how" formatted="false">How it works</string>
+    <string name="sec_about" formatted="false">ⓘ About this section</string>
+    <string name="sec_back" formatted="false">Back</string>
+    <string name="sec_start" formatted="false">Get started</string>
+    <string name="sec_login" formatted="false">Sign in to start</string>
+    <string name="sec_register" formatted="false">Create an account</string>
+    <string name="sec_acc_kicker" formatted="false">🧮 Accounting</string>
+    <string name="sec_acc_title" formatted="false">Your shop\'s books in one place</string>
+    <string name="sec_acc_sub" formatted="false">Record your income and expenses, keep track of your stock and see your profit, with no accounting knowledge needed.</string>
+    <string name="sec_acc_f1t" formatted="false">Income and expenses</string>
+    <string name="sec_acc_f1d" formatted="false">Record every transaction in seconds and see the net per currency and per period.</string>
+    <string name="sec_acc_f2t" formatted="false">Stock and barcodes</string>
+    <string name="sec_acc_f2d" formatted="false">Follow the quantity of every product, search by barcode and see which ones are running out.</string>
+    <string name="sec_acc_f3t" formatted="false">Invoice scanning</string>
+    <string name="sec_acc_f3d" formatted="false">Take a photo of the invoice, AI reads the amount and the supplier, and you review and confirm.</string>
+    <string name="sec_acc_f4t" formatted="false">Reports and export</string>
+    <string name="sec_acc_f4d" formatted="false">Download all your entries as a CSV file or print a ready report for your accountant.</string>
+    <string name="sec_acc_s1" formatted="false">Pick a plan or start the trial</string>
+    <string name="sec_acc_s2" formatted="false">Add your products and entries</string>
+    <string name="sec_acc_s3" formatted="false">Follow your profit and export reports</string>
+    <string name="sec_resp_kicker" formatted="false">🤖 Auto-responder</string>
+    <string name="sec_resp_title" formatted="false">Answer your customers even while you sleep</string>
+    <string name="sec_resp_sub" formatted="false">Connect your Facebook, Instagram and Telegram, and the auto-responder answers messages and comments for your shop.</string>
+    <string name="sec_resp_f1t" formatted="false">Messages and comments</string>
+    <string name="sec_resp_f1d" formatted="false">It answers Messenger, Instagram and Telegram messages, and the comments under your posts.</string>
+    <string name="sec_resp_f2t" formatted="false">Rules in your words</string>
+    <string name="sec_resp_f2d" formatted="false">Set keywords and ready answers (prices, address, opening hours) and they are sent at once.</string>
+    <string name="sec_resp_f3t" formatted="false">Artificial intelligence</string>
+    <string name="sec_resp_f3d" formatted="false">When no rule fits, it writes a suitable answer using only the information you entered.</string>
+    <string name="sec_resp_f4t" formatted="false">Inbox</string>
+    <string name="sec_resp_f4d" formatted="false">See every conversation, step in by hand whenever you want, and follow the weekly summaries.</string>
+    <string name="sec_resp_s1" formatted="false">Connect your channels</string>
+    <string name="sec_resp_s2" formatted="false">Write your rules or turn on AI</string>
+    <string name="sec_resp_s3" formatted="false">Let it run and follow the inbox</string>
 </resources>

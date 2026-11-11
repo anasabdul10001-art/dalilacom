@@ -44,7 +44,7 @@ import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
 
 @Composable
-fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
+fun AccountingScreen(container: AppContainer, onAbout: () -> Unit = {}, onOpenPlans: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var loading by remember { mutableStateOf(true) }
@@ -105,11 +105,15 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         return
     }
     if (container.accountingRepository.requiresPlan) {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-            Text(stringResource(R.string.accounting_plan_required), style = MaterialTheme.typography.titleMedium)
-            Button(onClick = onOpenPlans, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) { Text(stringResource(R.string.accounting_open_plans)) }
-            OutlinedButton(onClick = { scope.launch { reload() } }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.billing_refresh_status)) }
-        }
+        // no plan yet: the intro page, with the plans as its button
+        com.dalilacom.app.ui.common.SectionIntro(
+            kind = com.dalilacom.app.ui.common.IntroKind.Accounting,
+            primaryLabel = stringResource(R.string.accounting_open_plans),
+            onPrimary = onOpenPlans,
+            secondaryLabel = stringResource(R.string.billing_refresh_status),
+            onSecondary = { scope.launch { reload() } },
+            note = stringResource(R.string.accounting_plan_required),
+        )
         return
     }
     LazyColumn(
@@ -118,6 +122,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { Text(stringResource(R.string.accounting_title), style = MaterialTheme.typography.headlineSmall) }
+        item { TextButton(onClick = onAbout) { Text(stringResource(R.string.sec_about)) } }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -233,6 +233,8 @@ fun StoreScreen(
     onOpenMerchant: (String) -> Unit = {},
     onBookAd: (String) -> Unit = {},
     onStartSelling: () -> Unit = {},
+    /** False when the store is a tab of the home page: there is no page behind it to go back to. */
+    showBack: Boolean = true,
 ) {
     val vm: StoreViewModel = viewModel(factory = ViewModelFactory(container))
     val ui by vm.ui.collectAsState()
@@ -271,7 +273,7 @@ fun StoreScreen(
     Column(Modifier.fillMaxSize().background(storePage())) {
         // the black top: back, name, a white search pill, the bag
         Row(Modifier.fillMaxWidth().background(StoreBar).padding(horizontal = 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { goBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White) }
+            if (showBack) IconButton(onClick = { goBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White) } else Spacer(Modifier.width(12.dp))
             Text(stringResource(R.string.tab_store), color = Color.White, fontWeight = FontWeight.Black, fontSize = 19.sp)
             Spacer(Modifier.width(10.dp))
             Row(
@@ -586,7 +588,7 @@ private fun BrandSlide(active: Boolean, onClick: () -> Unit) {
     val ring = Color.White.copy(alpha = 0.14f)
     val fill = Color.White.copy(alpha = 0.05f)
     Box(
-        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFF5A0E12), Color(0xFFBA2A34), Color(0xFFCB0C2E)))).clickable(onClick = onClick),
+        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFFC4552B), Color(0xFFF48050), Color(0xFFCB0C2E)))).clickable(onClick = onClick),
     ) {
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
             val d = drift * 16.dp.toPx()
@@ -613,7 +615,7 @@ private fun BrandSlide(active: Boolean, onClick: () -> Unit) {
                 Text(stringResource(R.string.store_brand_tag1), color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 28.sp)
                 Text(stringResource(R.string.store_brand_tag2), color = Color.White.copy(alpha = 0.92f), fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 28.sp)
                 Text(
-                    stringResource(R.string.store_shop_now), color = Color(0xFFBA2A34), fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    stringResource(R.string.store_shop_now), color = Color(0xFFC4552B), fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     modifier = Modifier.padding(top = 10.dp).graphicsLayer { alpha = btnIn; translationY = (1f - btnIn) * 14.dp.toPx() }.background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 8.dp),
                 )
             }
@@ -625,14 +627,14 @@ private fun BrandSlide(active: Boolean, onClick: () -> Unit) {
 @Composable
 private fun InviteSlide(onClick: () -> Unit) {
     Box(
-        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFF1C1413), Color(0xFF5A0E12), Color(0xFFBA2A34)))).clickable(onClick = onClick),
+        Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(Color(0xFF1C1413), Color(0xFFC4552B), Color(0xFFF48050)))).clickable(onClick = onClick),
     ) {
         Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             androidx.compose.foundation.Image(painterResource(R.drawable.brand_logo_full_white), contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.height(96.dp), alpha = 0.95f)
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.ads_invite_t), color = Color.White, fontWeight = FontWeight.Black, fontSize = 21.sp, lineHeight = 26.sp)
                 Text(stringResource(R.string.ads_invite_s), color = Color.White.copy(alpha = 0.92f), fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 18.sp)
-                Text(stringResource(R.string.ads_book_banner), color = Color(0xFFBA2A34), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp).background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 8.dp))
+                Text(stringResource(R.string.ads_book_banner), color = Color(0xFFC4552B), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp).background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 8.dp))
             }
         }
     }
@@ -642,9 +644,9 @@ private fun InviteSlide(onClick: () -> Unit) {
 @Composable
 private fun AdSlotPlaceholder(i: Int, onClick: () -> Unit) {
     val colors = when (i % 3) {
-        0 -> listOf(Color(0xFF5A0E12), Color(0xFFBA2A34))
-        1 -> listOf(Color(0xFF1C1413), Color(0xFF5A0E12))
-        else -> listOf(Color(0xFFBA2A34), Color(0xFFCB0C2E))
+        0 -> listOf(Color(0xFFC4552B), Color(0xFFF48050))
+        1 -> listOf(Color(0xFF1C1413), Color(0xFFC4552B))
+        else -> listOf(Color(0xFFF48050), Color(0xFFCB0C2E))
     }
     val (title, sub) = when (i % 3) {
         0 -> stringResource(R.string.ads_ph0t) to stringResource(R.string.ads_ph0s)
@@ -659,7 +661,7 @@ private fun AdSlotPlaceholder(i: Int, onClick: () -> Unit) {
                 Text(sub, color = Color.White.copy(alpha = 0.9f), fontSize = 10.5.sp, lineHeight = 14.sp)
             }
         }
-        Text(stringResource(R.string.ads_ph_cta), color = Color(0xFFBA2A34), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.White, RoundedCornerShape(50)).padding(horizontal = 9.dp, vertical = 3.dp))
+        Text(stringResource(R.string.ads_ph_cta), color = Color(0xFFC4552B), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.White, RoundedCornerShape(50)).padding(horizontal = 9.dp, vertical = 3.dp))
     }
 }
 
