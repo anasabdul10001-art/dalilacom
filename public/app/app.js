@@ -24,7 +24,7 @@ const S = {
   token: localStorage.getItem("dlk_token") || null,
   role: localStorage.getItem("dlk_role") || null,
   screen: S_initialScreen(),
-  homeTab: "discover",
+  homeTab: "store", // the site opens on the store; the map and the other sections are one tap away in the bar
   merchantTab: "home",
   params: {},
   stack: [],
@@ -142,9 +142,9 @@ async function api(method, path, body) {
     const data = await res.json().catch(() => ({}));
     if (method !== "GET" && res.ok && S._onboarding) S._onboarding.at = 0; // any write may change the setup checklist
     if (res.status === 401 && S.token) {
-      // An expired/revoked session drops the visitor back onto the (public) map, not a login wall.
+      // An expired/revoked session drops the visitor back onto the (public) store, not a login wall.
       clearToken();
-      S.homeTab = "discover";
+      S.homeTab = "store";
       reset("home");
     }
     return { ok: res.ok, status: res.status, data };
@@ -247,8 +247,8 @@ function setHomeTab(tab) {
     S._resp = null;
     return go("responder");
   }
-  // the store is a whole screen of its own: guests may browse it too
-  if (tab === "store") return openStore();
+  // the store is the first tab (and the page the site opens on): guests may browse it too; coming back to it starts fresh
+  if (tab === "store" && (S.screen !== "home" || S.homeTab !== "store")) S._store = null;
   if (tab !== "card") stopQrLoop();
   // the deals tab is the map of the shops with a discount; it shares the map's state with the plain map tab
   if (tab === "deals" || tab === "discover") {
@@ -1031,7 +1031,7 @@ async function deleteMyAccount() {
   const { ok, data } = await api("DELETE", "/profile/me", { confirm: true, password: password || undefined });
   if (!ok) return toast(errMsg(data, t("profile.deleteFailed")));
   clearToken();
-  S.homeTab = "discover";
+  S.homeTab = "store";
   reset("home");
   toast(t("profile.deleted"));
 }
@@ -1040,15 +1040,15 @@ function doLogout() {
   api("POST", "/auth/logout");
   clearToken();
   S._mstat = null; S._ship = null; S._shipPick = {};
-  S.homeTab = "discover";
+  S.homeTab = "store";
   reset("home");
 }
 
 /* ================= HOME SHELL ================= */
 
 const HOME_TABS = [
-  { id: "discover", label: "tab.map", icon: "search" },
   { id: "store", label: "tab.store", icon: "store" },
+  { id: "discover", label: "tab.map", icon: "search" },
   { id: "deals", label: "tab.deals", icon: "tag" },
   { id: "responder", label: "tab.responder", icon: "bot", hero: true },
   { id: "cart", label: "tab.cart", icon: "cart" },
@@ -1059,6 +1059,7 @@ const HOME_TABS = [
 function screenHomeShell() {
   const needsAccount = ["card", "cart", "orders", "accounting", "profile"].includes(S.homeTab) && !S.token;
   const body = needsAccount ? guestPrompt(S.homeTab) : {
+    store: screenStore,
     card: tabCard,
     deals: tabDeals,
     discover: tabDiscover,
@@ -3521,7 +3522,10 @@ const storeSecName = (x) => (x ? (LANG === "ar" ? x.name : x.nameEn || x.name) :
 
 function openStore() {
   S._store = null;
-  go("store");
+  S.stack = [];
+  S.screen = "home";
+  S.homeTab = "store";
+  render();
 }
 
 function storeState() {
@@ -3749,6 +3753,7 @@ function storeSetSort(v) { S._store.sort = v; loadStoreList(false); }
 function storeBack() {
   const st = S._store;
   if (st && (st.q || st.section || st.deals || st.byPhoto)) { st.q = ""; st.section = ""; st.deals = false; st.byPhoto = null; window.scrollTo(0, 0); render(); return; }
+  if (S.screen === "home") return; // on the store tab there is nothing behind it: only a search or a filter can be left
   S._store = null;
   back();
 }
@@ -4884,7 +4889,7 @@ function screenStore() {
   return `
     <div class="store">
       <div class="store-head">
-        <button class="store-icon-btn" onclick="storeBack()" aria-label="back">›</button>
+        ${S.screen === "store" || filtering ? `<button class="store-icon-btn" onclick="storeBack()" aria-label="back">›</button>` : ""}
         <b class="store-brand">${esc(t("tab.store"))}</b>
         <form class="store-search" onsubmit="storeSearch(event)">
           <input id="store-q" type="search" value="${esc(st.q)}" placeholder="${esc(t("store.searchPlaceholder"))}" />
