@@ -39,7 +39,8 @@ export interface LanguageInfo {
 }
 
 export function registeredLanguages(root: string): LanguageInfo[] {
-  const { text } = read(path.join(root, "src/lib/languages.ts"));
+  // a language commented out with // is hidden (not registered): the checker and the menus skip it
+  const text = read(path.join(root, "src/lib/languages.ts")).text.split("\n").filter((line) => !line.trim().startsWith("//")).join("\n");
   return [...text.matchAll(/\{ code: "([a-z]+)", name: "([^"]+)", dir: "(rtl|ltr)" \}/g)].map((m) => ({ code: m[1], name: m[2], dir: m[3] as "rtl" | "ltr" }));
 }
 

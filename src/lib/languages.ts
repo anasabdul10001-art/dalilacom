@@ -9,7 +9,9 @@ export const SUPPORTED_LANGUAGES = [
   // <languages> — `npm run i18n:add` appends here
   { code: "ar", name: "العربية", dir: "rtl" },
   { code: "en", name: "English", dir: "ltr" },
-  { code: "de", name: "Deutsch", dir: "ltr" },
+  // German is hidden until its translations are complete (npm run i18n:check lists what is missing). To show it again:
+  // uncomment this line, the Android line in AppLanguages.kt, and the i18n.de.js <script> in public/app/index.html.
+  // { code: "de", name: "Deutsch", dir: "ltr" },
   // </languages>
 ] as const;
 

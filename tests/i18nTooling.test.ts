@@ -47,7 +47,7 @@ describe("npm run i18n:add", () => {
     expect(done).toHaveLength(3);
 
     // server
-    expect(registeredLanguages(root).map((l) => l.code)).toEqual(["ar", "en", "de", "es"]);
+    expect(registeredLanguages(root).map((l) => l.code)).toEqual(["ar", "en", "es"]);
     const index = fs.readFileSync(path.join(root, "src/i18n/index.ts"), "utf8");
     expect(index).toContain('import { pack as es } from "./es";');
     expect(index).toMatch(/\n\s+es,\n\s+\/\/ <\/i18n-packs>/);
