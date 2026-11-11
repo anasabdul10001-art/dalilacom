@@ -870,7 +870,7 @@
     <string name="wiz_pending_sub">راجعناه وبنتأكد منه، ولما ينقبل بيصير بالمتجر وبيجيك إشعار.</string>
     <string name="wiz_rejected_title">ما انقبل المنتج</string>
     <string name="wiz_rejected_sub">السبب: %1$s. عدّل الصورة أو الوصف وجرّب من جديد.</string>
-    <string name="rev_pending">قيد المراجعة، ما بيظهر للزبائن قبل ما ينقبل</string>
+    <string name="rev_pending">قيد المراجعة، ما بيظهر بالمتجر قبل الموافقة عليه</string>
     <string name="rev_rejected">ما انقبل: %1$s</string>
     <string name="scan_hint">ضع الكود داخل المربع</string>
     <string name="mp_sec_name">اسم المحل</string>

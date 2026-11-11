@@ -866,7 +866,7 @@
     <string name="wiz_pending_sub">We are checking it. Once accepted it goes into the store and you get a notification.</string>
     <string name="wiz_rejected_title">The product was not accepted</string>
     <string name="wiz_rejected_sub">Reason: %1$s. Change the photo or the description and try again.</string>
-    <string name="rev_pending">Under review, shoppers do not see it until it is accepted</string>
+    <string name="rev_pending">Under review; hidden from the store until approved</string>
     <string name="rev_rejected">Not accepted: %1$s</string>
     <string name="scan_hint">Put the code inside the square</string>
     <string name="mp_sec_name">Shop name</string>

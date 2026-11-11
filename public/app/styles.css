@@ -1801,7 +1801,7 @@ html[dir="ltr"] .setup-step .s-go { transform: scaleX(-1); }
 .manage-product-state { display: flex; flex-wrap: wrap; gap: 5px; }
 .manage-product-state .badge { width: max-content; }
 .manage-review { display: inline-block; padding: 3px 7px; border-radius: 999px; font-size: 11px; font-style: normal; }
-.manage-review.pending { color: #845b00; background: #fff2c7; }
+.manage-review.pending { flex: 1 1 100%; max-width: 100%; white-space: normal; line-height: 1.45; color: #845b00; background: #fff2c7; }
 .manage-review.rejected { color: #a51d2d; background: #ffeaec; }
 .manage-edit { flex: none; padding: 7px; border-radius: 10px; background: rgba(189,39,53,.08); }
 .manage-empty { display: grid; justify-items: center; gap: 7px; padding: 26px 14px; text-align: center; border: 1px dashed var(--border); border-radius: 15px; }

@@ -223,7 +223,7 @@ private fun CatalogProductRow(product: ProductDto, shopMoney: String?, onClick: 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     ProductStateChip(product.isActive)
                     when (product.moderation) {
-                        "PENDING" -> Text("⏳ " + stringResource(R.string.rev_pending), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        "PENDING" -> Text("⏳ " + stringResource(R.string.rev_pending), modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
                         "REJECTED" -> Text("⚠️ " + stringResource(R.string.rev_rejected, product.moderationNote.orEmpty()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
