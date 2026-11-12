@@ -122,6 +122,25 @@ describe("HR payroll runs", () => {
 });
 
 describe("HR payroll -> the owner's accounting", () => {
+  it("a run paid before its period ends is booked as of today, so this month's figures show it at once", async () => {
+    const co = await company("acc2", "SYP");
+    const e = await staff(co, { baseSalary: 100000, attend: false });
+    const now = new Date();
+    const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+    // someone with no check-ins is paid nothing for those days, so give every day of the month an attendance row
+    const rows = [];
+    for (let d = new Date(first); d <= last; d.setUTCDate(d.getUTCDate() + 1)) rows.push({ companyId: co.companyId, employeeId: e.id, checkIn: new Date(d.getTime() + 8 * 3600000), checkOut: new Date(d.getTime() + 16 * 3600000) });
+    await prisma.hrAttendance.createMany({ data: rows });
+    const created = await request(app).post("/hr/payroll-runs").set(co.auth).send({ periodStart: first.toISOString().slice(0, 10), periodEnd: last.toISOString().slice(0, 10) });
+    expect(created.status).toBe(201);
+    expect((await process(co, created.body.id)).status).toBe(200);
+    expect((await pay(co, created.body.id)).status).toBe(200);
+    const [entry] = await expenses(co.id);
+    expect(entry.occurredAt.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(entry.occurredAt.getTime()).toBeGreaterThanOrEqual(first.getTime());
+  });
+
   it("paying books one payroll expense for the owner in the company currency, in the month worked; taking it back removes it", async () => {
     const co = await company("acc1", "SYP");
     await staff(co, { baseSalary: 500000 });

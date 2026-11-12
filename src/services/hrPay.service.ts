@@ -201,7 +201,8 @@ async function bookExpense(tx: Prisma.TransactionClient, company: HrCompany, run
   const sourceKey = payrollSourceKey(run.id);
   const fields = {
     amountCents: total, currency: company.currency,
-    occurredAt: new Date(`${dateKey(run.periodEnd)}T12:00:00.000Z`), // the month that was worked, whenever it was paid
+    // the month that was worked, whenever it was paid; but never later than now, so a run paid before its period ends still shows in this month's figures
+    occurredAt: new Date(Math.min(new Date(`${dateKey(run.periodEnd)}T12:00:00.000Z`).getTime(), Date.now())),
     description: `رواتب الفترة من ${dateKey(run.periodStart)} إلى ${dateKey(run.periodEnd)} · عدد الموظفين ${payslips.length}`,
   };
   await tx.accountingEntry.upsert({
