@@ -44,7 +44,10 @@ async function hrDo(method, path, body, doneKey) {
   const res = await api(method, path, body);
   if (!res.ok) { hrErr(res); return null; }
   // a payroll run that costs nothing books no expense: say so instead of claiming one was added
-  if (doneKey) toast(t(doneKey === "hr.pay.paidDone" && res.data && res.data.expenseBooked === false ? "hr.pay.paidNoExpense" : doneKey));
+  if (doneKey) {
+    const d = res.data || {};
+    toast(t(doneKey === "hr.pay.paidDone" ? (d.expenseBooked === false ? "hr.pay.paidNoExpense" : d.accountingActive === false ? "hr.pay.paidNoAccounting" : doneKey) : doneKey));
+  }
   hrReload();
   return res.data;
 }
@@ -142,12 +145,14 @@ function hrPayroll() {
   if (runs === null || advs === null) return spinner();
   const pendingAdv = advs.filter((a) => a.status === "PENDING_MANAGER" || a.status === "PENDING_HR");
   const cur = ov.manage.currency, owner = ov.manage.role === "OWNER";
+  const paidCost = runs.filter((r) => r.status === "PAID").reduce((sum, r) => sum + ((r.totals && r.totals.cost) || 0), 0);
   const step = (r) => r.status === "DRAFT" ? `<button class="btn small" onclick="hrDo('POST','/hr/payroll-runs/${r.id}/process',undefined,'hr.pay.processed')">${esc(t("hr.pay.process"))}</button>`
     : r.status === "PROCESSED" ? `<button class="btn small" onclick="hrDo('POST','/hr/payroll-runs/${r.id}/mark-paid',undefined,'hr.pay.paidDone')">${esc(t("hr.pay.markPaid"))}</button>`
     : owner ? `<button class="btn small outline" onclick="if(confirm(t('hr.pay.revertAsk')))hrDo('POST','/hr/payroll-runs/${r.id}/revert-paid',undefined,'hr.pay.reverted')">${esc(t("hr.pay.revert"))}</button>` : "";
-  return `<div class="card"><h2>${esc(t("hr.pay.runs"))}</h2><p class="muted">${esc(t("hr.pay.note"))}</p><p class="muted">${esc(t("hr.pay.attNote"))}</p>
+  return `<div class="card"><h2>${esc(t("hr.pay.runs"))}</h2><p class="muted">${esc(t("hr.pay.note"))}</p><p class="muted">${esc(t("hr.pay.attNote"))}</p>${paidCost > 0 ? `<p><b>${esc(t("hr.pay.paidTotal", { n: hrMoney(paidCost, cur) }))}</b></p>` : ""}
     ${runs.length === 0 ? `<div class="empty-state">${esc(t("hr.pay.none"))}</div>` : runs.map((r) => `
       <div class="card" style="margin:8px 0"><div class="title-line"><strong>${esc(hrDay(r.periodStart))} → ${esc(hrDay(r.periodEnd))}</strong><span class="badge ${r.status === "PAID" ? "success" : "neutral"}">${esc(t("hr.run." + r.status))}</span></div>
+      ${r.status !== "DRAFT" && r.totals ? `<p class="muted">${esc(t("hr.pay.gross"))}: ${esc(hrMoney(r.totals.grossPay, cur))} · ${esc(t("hr.pay.deductions"))}: ${esc(hrMoney(r.totals.totalDeductions, cur))} · ${esc(t("hr.pay.net"))}: ${esc(hrMoney(r.totals.netPay, cur))} · <b>${esc(t("hr.pay.cost"))}: ${esc(hrMoney(r.totals.cost, cur))}</b></p>` : ""}
       ${step(r)}</div>`).join("")}
     <div class="field"><label>${esc(t("hr.pay.from"))}</label><input id="hr-run-from" type="date" /></div><div class="field"><label>${esc(t("hr.pay.to"))}</label><input id="hr-run-to" type="date" /></div>
     <button class="btn" onclick="hrCreateRun()">${esc(t("hr.pay.create"))}</button></div>

@@ -124,6 +124,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                     Text(stringResource(R.string.accounting_summary), style = MaterialTheme.typography.titleMedium)
                     summary?.totals.orEmpty().forEach {
                         Text(stringResource(R.string.accounting_totals_line, it.currency, money(it.incomeCents), money(it.expensesCents), money(it.netCents)))
+                        if (it.payrollCents > 0) Text(stringResource(R.string.accounting_payrollShare, "%.2f".format(it.payrollCents / 100.0)), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Text(stringResource(R.string.accounting_stock_summary, summary?.inventory?.products ?: 0, summary?.inventory?.units ?: 0))
                 }

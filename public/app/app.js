@@ -2653,7 +2653,7 @@ function screenAccounting() {
   const cards = {
     summary: `
     <div class="card"><div class="section-title">${esc(t("accounting.month"))}</div>
-      ${totals.length ? totals.map(x => `<div class="title-line"><span>${esc(x.currency)}</span><span>${esc(t("accounting.income"))}: ${fmt(x.incomeCents,x.currency)} · ${esc(t("accounting.expenses"))}: ${fmt(x.expensesCents,x.currency)} · <b>${esc(t("accounting.net"))}: ${fmt(x.netCents,x.currency)}</b></span></div>`).join("") : `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
+      ${totals.length ? totals.map(x => `<div class="title-line"><span>${esc(x.currency)}</span><span>${esc(t("accounting.income"))}: ${fmt(x.incomeCents,x.currency)} · ${esc(t("accounting.expenses"))}: ${fmt(x.expensesCents,x.currency)} · <b>${esc(t("accounting.net"))}: ${fmt(x.netCents,x.currency)}</b>${x.payrollCents > 0 ? ` · ${esc(t("accounting.payrollShare", { n: fmt(x.payrollCents, x.currency) }))}` : ""}</span></div>`).join("") : `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
       <p class="muted">${esc(t("accounting.inventory"))}: ${a.summary?.inventory?.products || 0} ${esc(t("accounting.products"))} · ${esc(t("accounting.units"))}: ${a.summary?.inventory?.units || 0}</p>
       <button class="btn outline" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button>
       <button class="btn outline" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button>

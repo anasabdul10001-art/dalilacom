@@ -122,6 +122,26 @@ describe("HR payroll runs", () => {
 });
 
 describe("HR payroll -> the owner's accounting", () => {
+  it("HR shows its own totals per run, and says whether accounting will show the expense", async () => {
+    const co = await company("acc5", "SYP");
+    await staff(co, { baseSalary: 400000, attend: false });
+    const runId = await newRun(co);
+    await process(co, runId);
+    const paid = await pay(co, runId);
+    expect(paid.body.expenseBooked).toBe(true);
+    expect(paid.body.accountingActive).toBe(false); // the owner has an HR plan only: the expense is kept, accounting will show it later
+    const list = await request(app).get("/hr/payroll-runs").set(co.auth);
+    expect(list.status).toBe(200);
+    expect(list.body[0].totals).toMatchObject({ employees: 1, grossPay: 400000, netPay: 400000, cost: 400000 });
+
+    const accountingPlan = await prisma.servicePlan.create({ data: { name: `Acc ${Date.now()}`, service: "ACCOUNTING", durationDays: 30, priceCents: 200, currency: "USD", priceCredits: 200 } });
+    await prisma.platformSubscription.create({ data: { userId: co.id, planId: accountingPlan.id, provider: "TRIAL", status: "ACTIVE", amountCents: 0, currency: "USD", currentPeriodEnd: new Date(Date.now() + 30 * 86_400_000) } });
+    const runId2 = await newRun(co, "2026-04-01", "2026-04-30");
+    await process(co, runId2);
+    const paid2 = await pay(co, runId2);
+    expect(paid2.body.accountingActive).toBe(true);
+  });
+
   it("a company that keeps no attendance pays full salaries (no day is unpaid) and the expense reaches accounting", async () => {
     const co = await company("acc3", "SYP");
     await staff(co, { baseSalary: 400000, attend: false });

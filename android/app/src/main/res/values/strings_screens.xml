@@ -748,4 +748,11 @@
     <string name="hr_plan_required">قسم الموارد البشرية بيحتاج باقة فعّالة أو فترة تجربة.</string>
     <string name="hr_pay_paidNoExpense">انسجّلت الدفعة. ما انضاف مصروف للمحاسبة لأنو إجمالي الرواتب صفر.</string>
     <string name="hr_pay_attNote">الأيام اللي ما انسجّل فيها حضور بتنحسم من الراتب. وإذا ما حدا بالشركة بيسجّل حضور، الرواتب بتنحسب كاملة.</string>
+    <string name="hr_pay_paidNoAccounting">انسجّلت الدفعة. المصروف محفوظ وبيظهر بالمحاسبة لما تشترك فيها.</string>
+    <string name="hr_pay_gross">الراتب الإجمالي</string>
+    <string name="hr_pay_deductions">الحسومات</string>
+    <string name="hr_pay_net">الصافي للموظفين</string>
+    <string name="hr_pay_cost">كلفة الدورة</string>
+    <string name="hr_pay_paidTotal">إجمالي كلفة الدورات المدفوعة: %1$s</string>
+    <string name="accounting_payrollShare">منها رواتب: %1$s</string>
 </resources>

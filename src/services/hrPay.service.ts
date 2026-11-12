@@ -74,7 +74,20 @@ export async function createRun(companyId: string, input: { periodStart: string;
   return prisma.hrPayrollRun.create({ data: { companyId, periodStart, periodEnd } });
 }
 
-export const listRuns = (companyId: string) => prisma.hrPayrollRun.findMany({ where: { companyId }, orderBy: { periodStart: "desc" }, take: 200 });
+/** The runs with their totals, so HR shows its own bottom line without needing accounting (cost = what the run costs the company, advances held back included). */
+export async function listRuns(companyId: string) {
+  const runs = await prisma.hrPayrollRun.findMany({ where: { companyId }, orderBy: { periodStart: "desc" }, take: 200 });
+  if (runs.length === 0) return [];
+  const slips = await prisma.hrPayslip.findMany({ where: { runId: { in: runs.map((r) => r.id) } }, select: { runId: true, grossPay: true, totalDeductions: true, netPay: true, breakdown: true } });
+  const totals = new Map<string, { employees: number; grossPay: number; totalDeductions: number; netPay: number; cost: number }>();
+  for (const s of slips) {
+    const t = totals.get(s.runId) ?? { employees: 0, grossPay: 0, totalDeductions: 0, netPay: 0, cost: 0 };
+    t.employees += 1; t.grossPay += s.grossPay; t.totalDeductions += s.totalDeductions; t.netPay += s.netPay; t.cost += s.netPay + advancePart(s.breakdown);
+    totals.set(s.runId, t);
+  }
+  const none = { employees: 0, grossPay: 0, totalDeductions: 0, netPay: 0, cost: 0 };
+  return runs.map((r) => ({ ...r, totals: totals.get(r.id) ?? none }));
+}
 
 export async function getRun(companyId: string, id: string) {
   const run = await prisma.hrPayrollRun.findFirst({ where: { id, companyId }, include: { payslips: { include: { employee: { select: { id: true, firstName: true, lastName: true } } } } } });
@@ -228,7 +241,9 @@ export async function markPaid(actor: HrActor, id: string) {
     await tx.hrAuditLog.create({ data: { companyId: actor.company.id, userId: actor.userId, action: "payroll.paid", entityType: "HrPayrollRun", entityId: id } });
   });
   // expenseBooked tells the app whether an expense really reached the owner's accounting (a run that costs nothing books none)
-  return { ...(await prisma.hrPayrollRun.findUniqueOrThrow({ where: { id } })), expenseBooked: booked > 0 };
+  // the expense is always kept; it shows in accounting once the owner has an accounting plan
+  const accountingActive = !!(await prisma.platformSubscription.findFirst({ where: { userId: actor.company.ownerId, status: "ACTIVE", OR: [{ currentPeriodEnd: null }, { currentPeriodEnd: { gt: new Date() } }], plan: { service: "ACCOUNTING" } }, select: { id: true } }));
+  return { ...(await prisma.hrPayrollRun.findUniqueOrThrow({ where: { id } })), expenseBooked: booked > 0, accountingActive };
 }
 
 /** Takes a payment back (PAID -> PROCESSED): the expense it made is removed, in the same transaction. */

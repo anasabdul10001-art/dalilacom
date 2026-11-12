@@ -79,7 +79,8 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
                 after(data)
                 // a payroll run that costs nothing books no expense: say so instead of claiming one was added
                 val booked = ((data as? JsonObject)?.get("expenseBooked") as? JsonPrimitive)?.booleanOrNull
-                val key = if (done == R.string.hr_pay_paidDone && booked == false) R.string.hr_pay_paidNoExpense else done
+                val accountingActive = ((data as? JsonObject)?.get("accountingActive") as? JsonPrimitive)?.booleanOrNull
+                val key = if (done == R.string.hr_pay_paidDone) (if (booked == false) R.string.hr_pay_paidNoExpense else if (accountingActive == false) R.string.hr_pay_paidNoAccounting else done) else done
                 message = key?.let { context.getString(it) }.orEmpty(); overview = null; version++
             }, { message = it.message ?: errorFallback })
         }
@@ -250,12 +251,18 @@ private fun PayrollTab(repo: com.dalilacom.app.data.repository.HrRepository, cur
         Box(stringResource(R.string.hr_pay_runs)) {
             Text(stringResource(R.string.hr_pay_note), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(stringResource(R.string.hr_pay_attNote), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val paidCost = runs.filter { it.s("status") == "PAID" }.sumOf { it.o("totals")?.n("cost") ?: 0.0 }
+            if (paidCost > 0) Text(stringResource(R.string.hr_pay_paidTotal, money(paidCost, cur)), style = MaterialTheme.typography.titleSmall)
             if (runs.isEmpty()) Text(stringResource(R.string.hr_pay_none))
             runs.forEach { r ->
                 val id = r.s("id").orEmpty(); val st = r.s("status").orEmpty()
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("${day(r.s("periodStart"))} → ${day(r.s("periodEnd"))}", style = MaterialTheme.typography.titleSmall)
                     Text(stringResource(when (st) { "PAID" -> R.string.hr_run_PAID; "PROCESSED" -> R.string.hr_run_PROCESSED; else -> R.string.hr_run_DRAFT }), color = MaterialTheme.colorScheme.primary)
+                    r.o("totals")?.takeIf { st != "DRAFT" }?.let { tt ->
+                        Text("${stringResource(R.string.hr_pay_gross)}: ${money(tt.n("grossPay"), cur)} · ${stringResource(R.string.hr_pay_deductions)}: ${money(tt.n("totalDeductions"), cur)} · ${stringResource(R.string.hr_pay_net)}: ${money(tt.n("netPay"), cur)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${stringResource(R.string.hr_pay_cost)}: ${money(tt.n("cost"), cur)}", style = MaterialTheme.typography.titleSmall)
+                    }
                     when {
                         st == "DRAFT" -> Button(onClick = { act(R.string.hr_pay_processed, { repo.post("hr/payroll-runs/$id/process") }, {}) }) { Text(stringResource(R.string.hr_pay_process)) }
                         st == "PROCESSED" -> Button(onClick = { act(R.string.hr_pay_paidDone, { repo.post("hr/payroll-runs/$id/mark-paid") }, {}) }) { Text(stringResource(R.string.hr_pay_markPaid)) }

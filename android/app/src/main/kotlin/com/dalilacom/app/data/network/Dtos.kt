@@ -1315,7 +1315,7 @@ data class TxSummaryDto(val count: Int = 0, val billCents: Int = 0, val discount
 @Serializable
 data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val items: List<DiscountTxDto> = emptyList())
 
-@Serializable data class AccountingCurrencyTotalDto(val currency: String = "EUR", val incomeCents: Int = 0, val expensesCents: Int = 0, val netCents: Int = 0)
+@Serializable data class AccountingCurrencyTotalDto(val currency: String = "EUR", val incomeCents: Int = 0, val expensesCents: Int = 0, val netCents: Int = 0, val payrollCents: Long = 0)
 @Serializable data class AccountingInventoryDto(val products: Int = 0, val units: Int = 0, val outOfStock: Int = 0)
 @Serializable data class AccountingEntryDto(val id: String = "", val type: String = "", val category: String = "", val description: String = "", val amountCents: Int = 0, val currency: String = "EUR", val occurredAt: String = "", val source: String = "MANUAL", val hasReceipt: Boolean = false)
 @Serializable data class AccountingSummaryDto(val totals: List<AccountingCurrencyTotalDto> = emptyList(), val inventory: AccountingInventoryDto = AccountingInventoryDto(), val recent: List<AccountingEntryDto> = emptyList())
