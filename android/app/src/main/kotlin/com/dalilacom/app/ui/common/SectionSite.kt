@@ -169,7 +169,7 @@ private fun SiteHome(kind: SiteKind, signedIn: Boolean, onLogin: () -> Unit, onR
     val primaryLabel = when {
         onOpenExternal != null -> stringResource(R.string.sec_hr_open)
         !signedIn -> stringResource(R.string.site_login)
-        else -> stringResource(if (kind == SiteKind.Responder) R.string.site_open_responder else R.string.site_open_accounting)
+        else -> stringResource(when (kind) { SiteKind.Responder -> R.string.site_open_responder; SiteKind.Hr -> R.string.sec_hr_open; else -> R.string.site_open_accounting })
     }
     val primary: () -> Unit = { if (onOpenExternal != null) onOpenExternal() else if (!signedIn) onLogin() else openApp() }
     val secondaryLabel = if (onOpenExternal == null && !signedIn) stringResource(R.string.site_register) else null

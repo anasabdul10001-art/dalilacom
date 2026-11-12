@@ -483,7 +483,7 @@
     <string name="sec_resp_s3" formatted="false">خلّيه يشتغل وتابع الوارد</string>
     <string name="tab_hr" formatted="false">HR</string>
     <string name="profile_my_cart" formatted="false">🛒 سلتي</string>
-    <string name="sec_hr_open" formatted="false">افتح نظام الـ HR</string>
+    <string name="sec_hr_open" formatted="false">افتح الموارد البشرية</string>
     <string name="sec_hr_kicker" formatted="false">👥 الموارد البشرية (HR)</string>
     <string name="sec_hr_title" formatted="false">أدِر موظفينك من مكان واحد</string>
     <string name="sec_hr_sub" formatted="false">حضور وإجازات ورواتب وسلف لموظفي شركتك، ببساطة وبتقارير جاهزة.</string>
@@ -660,4 +660,89 @@
     <string name="site_hr_faq3_a" formatted="false">في أدوار: مدير الشركة، الموارد البشرية، مدير القسم، والموظف، ولكل واحد صلاحياته.</string>
     <string name="site_hr_faq4_q" formatted="false">كم بكلّف؟</string>
     <string name="site_hr_faq4_a" formatted="false">في باقات وفترة تجربة، وبتشوفها من داخل النظام.</string>
+
+    <!-- Human resources inside DALILACOM -->
+    <string name="site_hr_tab_people">الناس</string>
+    <string name="site_hr_tab_leave">الإجازات</string>
+    <string name="site_hr_tab_payroll">الرواتب</string>
+    <string name="site_hr_tab_job">عملي</string>
+    <string name="hr_getPlan">اشترك بباقة الموارد البشرية</string>
+    <string name="hr_error">صار خطأ، جرّب مرة تانية</string>
+    <string name="hr_company_create">ابدأ شركتك</string>
+    <string name="hr_company_createHint">سمّي شركتك مرة وحدة، وبعدها ضيف موظفينك.</string>
+    <string name="hr_company_name">اسم الشركة</string>
+    <string name="hr_company_createBtn">أنشئ الشركة</string>
+    <string name="hr_company_done">انشأت الشركة</string>
+    <string name="hr_people_count">عدد الموظفين: %1$s</string>
+    <string name="hr_people_empty">ما في موظفين بعد. ضيف أول موظف من تحت.</string>
+    <string name="hr_people_add">موظف جديد</string>
+    <string name="hr_people_addBtn">أضف الموظف</string>
+    <string name="hr_people_added">انضاف الموظف</string>
+    <string name="hr_f_first">الاسم الأول</string>
+    <string name="hr_f_last">الكنية</string>
+    <string name="hr_f_email">الإيميل (للدعوة)</string>
+    <string name="hr_f_position">المسمى الوظيفي</string>
+    <string name="hr_f_hire">تاريخ التعيين</string>
+    <string name="hr_f_salary">الراتب الأساسي (%1$s)</string>
+    <string name="hr_role_HR">موارد بشرية</string>
+    <string name="hr_role_MANAGER">مدير</string>
+    <string name="hr_role_EMPLOYEE">موظف</string>
+    <string name="hr_role_OWNER">صاحب النشاط</string>
+    <string name="hr_status_ACTIVE">على رأس عمله</string>
+    <string name="hr_status_ON_LEAVE">بإجازة</string>
+    <string name="hr_status_TERMINATED">منتهية خدمته</string>
+    <string name="hr_linked">مربوط بحساب</string>
+    <string name="hr_invite">ادعُ لحسابه</string>
+    <string name="hr_invite_emailed">انبعتت الدعوة على الإيميل.</string>
+    <string name="hr_invite_code">انسخ هالرمز وابعتو للموظف. بيظهر مرة وحدة:</string>
+    <string name="hr_leave_pending">طلبات إجازة بانتظار قرارك</string>
+    <string name="hr_leave_none">ما في طلبات إجازة</string>
+    <string name="hr_leave_types">أنواع الإجازات</string>
+    <string name="hr_leave_noTypes">ما في أنواع إجازات بعد. ضيف نوع ليقدر الموظفين يطلبو.</string>
+    <string name="hr_leave_days">%1$s يوم</string>
+    <string name="hr_leave_typeName">اسم النوع</string>
+    <string name="hr_leave_typeDays">الرصيد بالأيام</string>
+    <string name="hr_leave_addType">أضف النوع</string>
+    <string name="hr_leave_typeAdded">انضاف نوع الإجازة</string>
+    <string name="hr_approve">وافق</string>
+    <string name="hr_reject">ارفض</string>
+    <string name="hr_decided">انحفظ القرار</string>
+    <string name="hr_pay_runs">دورات الرواتب</string>
+    <string name="hr_pay_note">لما بتدفع دورة، بيسجّل دليلكم مصروف «رواتب» بمحاسبتك لحالو.</string>
+    <string name="hr_pay_none">ما في دورات رواتب بعد</string>
+    <string name="hr_pay_from">من</string>
+    <string name="hr_pay_to">إلى</string>
+    <string name="hr_pay_create">دورة جديدة</string>
+    <string name="hr_pay_created">انفتحت الدورة</string>
+    <string name="hr_pay_process">احسب الرواتب</string>
+    <string name="hr_pay_processed">انحسبت الرواتب</string>
+    <string name="hr_pay_markPaid">سجّل إنها اندفعت</string>
+    <string name="hr_pay_paidDone">انسجّلت الدفعة وانضاف المصروف للمحاسبة</string>
+    <string name="hr_pay_revert">رجّع الدفعة</string>
+    <string name="hr_pay_revertAsk">بترجّع الدفعة وبيتشال مصروف الرواتب من المحاسبة. متأكد؟</string>
+    <string name="hr_pay_reverted">انرجعت الدفعة</string>
+    <string name="hr_run_DRAFT">مسودة</string>
+    <string name="hr_run_PROCESSED">محسوبة</string>
+    <string name="hr_run_PAID">مدفوعة</string>
+    <string name="hr_adv_pending">سلف بانتظار قرارك</string>
+    <string name="hr_adv_installments">%1$s أقساط</string>
+    <string name="hr_job_invites">دعوات لك</string>
+    <string name="hr_job_accept">اقبل</string>
+    <string name="hr_job_accepted">انربط حسابك بالشركة</string>
+    <string name="hr_job_haveCode">عندك رمز دعوة؟</string>
+    <string name="hr_job_in">سجّلت دخولك الساعة %1$s</string>
+    <string name="hr_job_inBtn">سجّل دخول</string>
+    <string name="hr_job_inDone">انسجّل دخولك</string>
+    <string name="hr_job_out">سجّل خروج</string>
+    <string name="hr_job_outDone">انسجّل خروجك</string>
+    <string name="hr_job_leave">الإجازات</string>
+    <string name="hr_job_noBalances">ما في رصيد إجازات بعد</string>
+    <string name="hr_job_leaveType">نوع الإجازة</string>
+    <string name="hr_job_request">قدّم الطلب</string>
+    <string name="hr_job_requested">انبعت طلب الإجازة</string>
+    <string name="hr_job_slips">كشوف الرواتب</string>
+    <string name="hr_job_noSlips">ما في كشوف رواتب بعد</string>
+    <string name="hr_retry">جرّب مرة تانية</string>
+    <string name="hr_ok">تمام</string>
+    <string name="hr_cancel">إلغاء</string>
 </resources>

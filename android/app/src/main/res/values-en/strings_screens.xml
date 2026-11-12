@@ -483,7 +483,7 @@
     <string name="sec_resp_s3" formatted="false">Let it run and follow the inbox</string>
     <string name="tab_hr" formatted="false">HR</string>
     <string name="profile_my_cart" formatted="false">🛒 My cart</string>
-    <string name="sec_hr_open" formatted="false">Open the HR system</string>
+    <string name="sec_hr_open" formatted="false">Open HR</string>
     <string name="sec_hr_kicker" formatted="false">👥 Human resources (HR)</string>
     <string name="sec_hr_title" formatted="false">Manage your staff in one place</string>
     <string name="sec_hr_sub" formatted="false">Attendance, leave, payroll and salary advances for your company\'s employees, simply and with ready reports.</string>
@@ -543,7 +543,7 @@
     <string name="site_responder_d1_b3" formatted="false">You can switch the whole auto-responder off with one button in your settings.</string>
     <string name="site_responder_d2_t" formatted="false">Rules</string>
     <string name="site_responder_d2_b1" formatted="false">Write keywords, and when a message contains one of them, the reply you chose is sent.</string>
-    <string name="site_responder_d2_b2" formatted="false">You can put the customer's name in a reply, and it is filled in by itself.</string>
+    <string name="site_responder_d2_b2" formatted="false">You can put the customer\'s name in a reply, and it is filled in by itself.</string>
     <string name="site_responder_d2_b3" formatted="false">A message that matches no rule gets a fallback reply: a fixed text, AI, or no reply at all.</string>
     <string name="site_responder_d3_t" formatted="false">Artificial intelligence</string>
     <string name="site_responder_d3_b1" formatted="false">It writes the reply from your business description and the tone of voice you set in the settings.</string>
@@ -660,4 +660,89 @@
     <string name="site_hr_faq3_a" formatted="false">There are roles: company admin, HR, department manager and employee, each with their own permissions.</string>
     <string name="site_hr_faq4_q" formatted="false">How much does it cost?</string>
     <string name="site_hr_faq4_a" formatted="false">There are plans and a trial period, which you can see inside the system.</string>
+
+    <!-- Human resources inside DALILACOM -->
+    <string name="site_hr_tab_people">People</string>
+    <string name="site_hr_tab_leave">Leave</string>
+    <string name="site_hr_tab_payroll">Payroll</string>
+    <string name="site_hr_tab_job">My job</string>
+    <string name="hr_getPlan">Get the HR plan</string>
+    <string name="hr_error">Something went wrong, try again</string>
+    <string name="hr_company_create">Start your company</string>
+    <string name="hr_company_createHint">Name your company once, then add your staff.</string>
+    <string name="hr_company_name">Company name</string>
+    <string name="hr_company_createBtn">Create the company</string>
+    <string name="hr_company_done">Company created</string>
+    <string name="hr_people_count">Employees: %1$s</string>
+    <string name="hr_people_empty">No employees yet. Add the first one below.</string>
+    <string name="hr_people_add">New employee</string>
+    <string name="hr_people_addBtn">Add the employee</string>
+    <string name="hr_people_added">Employee added</string>
+    <string name="hr_f_first">First name</string>
+    <string name="hr_f_last">Last name</string>
+    <string name="hr_f_email">Email (for the invitation)</string>
+    <string name="hr_f_position">Job title</string>
+    <string name="hr_f_hire">Hire date</string>
+    <string name="hr_f_salary">Base salary (%1$s)</string>
+    <string name="hr_role_HR">HR</string>
+    <string name="hr_role_MANAGER">Manager</string>
+    <string name="hr_role_EMPLOYEE">Employee</string>
+    <string name="hr_role_OWNER">Owner</string>
+    <string name="hr_status_ACTIVE">Active</string>
+    <string name="hr_status_ON_LEAVE">On leave</string>
+    <string name="hr_status_TERMINATED">Left the company</string>
+    <string name="hr_linked">linked to an account</string>
+    <string name="hr_invite">Invite to their account</string>
+    <string name="hr_invite_emailed">The invitation was emailed.</string>
+    <string name="hr_invite_code">Copy this code and send it to the employee. It is shown once:</string>
+    <string name="hr_leave_pending">Leave requests waiting for you</string>
+    <string name="hr_leave_none">No leave requests</string>
+    <string name="hr_leave_types">Leave types</string>
+    <string name="hr_leave_noTypes">No leave types yet. Add one so employees can ask for leave.</string>
+    <string name="hr_leave_days">%1$s days</string>
+    <string name="hr_leave_typeName">Type name</string>
+    <string name="hr_leave_typeDays">Balance in days</string>
+    <string name="hr_leave_addType">Add the type</string>
+    <string name="hr_leave_typeAdded">Leave type added</string>
+    <string name="hr_approve">Approve</string>
+    <string name="hr_reject">Reject</string>
+    <string name="hr_decided">Decision saved</string>
+    <string name="hr_pay_runs">Payroll runs</string>
+    <string name="hr_pay_note">When you pay a run, DALILACOM records a payroll expense in your accounting by itself.</string>
+    <string name="hr_pay_none">No payroll runs yet</string>
+    <string name="hr_pay_from">From</string>
+    <string name="hr_pay_to">To</string>
+    <string name="hr_pay_create">New run</string>
+    <string name="hr_pay_created">Run created</string>
+    <string name="hr_pay_process">Calculate payroll</string>
+    <string name="hr_pay_processed">Payroll calculated</string>
+    <string name="hr_pay_markPaid">Mark as paid</string>
+    <string name="hr_pay_paidDone">Payment recorded and the expense added to accounting</string>
+    <string name="hr_pay_revert">Take the payment back</string>
+    <string name="hr_pay_revertAsk">This takes the payment back and removes the payroll expense from accounting. Sure?</string>
+    <string name="hr_pay_reverted">Payment taken back</string>
+    <string name="hr_run_DRAFT">Draft</string>
+    <string name="hr_run_PROCESSED">Calculated</string>
+    <string name="hr_run_PAID">Paid</string>
+    <string name="hr_adv_pending">Advances waiting for you</string>
+    <string name="hr_adv_installments">%1$s installments</string>
+    <string name="hr_job_invites">Invitations for you</string>
+    <string name="hr_job_accept">Accept</string>
+    <string name="hr_job_accepted">Your account is linked to the company</string>
+    <string name="hr_job_haveCode">Have an invitation code?</string>
+    <string name="hr_job_in">You checked in at %1$s</string>
+    <string name="hr_job_inBtn">Check in</string>
+    <string name="hr_job_inDone">Checked in</string>
+    <string name="hr_job_out">Check out</string>
+    <string name="hr_job_outDone">Checked out</string>
+    <string name="hr_job_leave">Leave</string>
+    <string name="hr_job_noBalances">No leave balance yet</string>
+    <string name="hr_job_leaveType">Leave type</string>
+    <string name="hr_job_request">Send the request</string>
+    <string name="hr_job_requested">Leave request sent</string>
+    <string name="hr_job_slips">Payslips</string>
+    <string name="hr_job_noSlips">No payslips yet</string>
+    <string name="hr_retry">Try again</string>
+    <string name="hr_ok">OK</string>
+    <string name="hr_cancel">Cancel</string>
 </resources>

@@ -86,14 +86,12 @@ private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) 
     Responder(R.string.tab_responder, Icons.Filled.SmartToy),
     /** Not in the bar any more: the cart is opened from the account page (and from the store's bag). */
     Cart(R.string.tab_cart, Icons.Filled.ShoppingCart),
-    /** The HR system is a separate web application: this tab is its front page, with a button that opens it. */
+    /** Human resources lives inside DALILACOM: the home page is always there, the tools are the tabs the account's own records allow. */
     Hr(R.string.tab_hr, Icons.Filled.Groups),
     Accounting(R.string.tab_accounting, Icons.Filled.CreditCard),
     Profile(R.string.tab_account, Icons.Filled.Person),
 }
 
-/** The HR system's web address (a separate application from this one). */
-private const val HR_URL = "https://nawa-frontend.onrender.com"
 
 @Composable
 fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
@@ -238,7 +236,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     signedIn = !isGuest,
                     onLogin = { goLogin() },
                     onRegister = { goRegister() },
-                    onOpenExternal = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(HR_URL))) },
+                    appContent = { com.dalilacom.app.ui.hr.HrScreen(container) { rootNavController.navigate("pricing") } },
                 )
                 HomeTab.Accounting -> com.dalilacom.app.ui.common.SectionSite(
                     kind = com.dalilacom.app.ui.common.SiteKind.Accounting,

@@ -61,6 +61,7 @@ class AppContainer(context: Context) {
     val broadcastRepository = BroadcastRepository(api)
     val accountRepository = AccountRepository(api, tokenStore)
     val accountingRepository = AccountingRepository(api)
+    val hrRepository = com.dalilacom.app.data.repository.HrRepository(api)
     val landmarkRepository = com.dalilacom.app.data.repository.LandmarkRepository(api)
     val shopAffiliateRepository = com.dalilacom.app.data.repository.ShopAffiliateRepository(api)
 

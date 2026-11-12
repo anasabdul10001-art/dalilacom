@@ -257,6 +257,9 @@ interface ApiService {
     @GET("membership/me")
     suspend fun getMyMembership(): Response<MembershipDto>
 
+    /** Human resources (inside DALILACOM): every human-resources route (the server's hr area) goes through these two calls. */
+    @GET suspend fun hrGet(@retrofit2.http.Url path: String): Response<kotlinx.serialization.json.JsonElement>
+    @POST suspend fun hrPost(@retrofit2.http.Url path: String, @Body body: kotlinx.serialization.json.JsonObject): Response<kotlinx.serialization.json.JsonElement>
     @GET("accounting/summary") suspend fun accountingSummary(): Response<AccountingSummaryDto>
     @GET("accounting/products") suspend fun accountingProducts(@Query("q") query: String? = null): Response<List<AccountingProductDto>>
     @POST("accounting/products") suspend fun addAccountingProduct(@Body body: AccountingProductRequest): Response<AccountingProductDto>
