@@ -80,6 +80,8 @@ fun CityGate(container: AppContainer, signedInKey: Boolean) {
             Column {
                 Text(stringResource(R.string.city_sub), style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(12.dp))
+                LanguageChips()
+                Spacer(Modifier.height(12.dp))
                 OutlinedButton(onClick = { menu = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(picked?.let { name(it) } ?: stringResource(R.string.city_choose))
                 }
