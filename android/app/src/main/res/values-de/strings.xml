@@ -177,6 +177,8 @@
     <string name="notif_type_order_status">Order status change</string>
     <string name="notif_type_discount">New discount</string>
     <string name="notif_type_membership">Membership about to expire</string>
+    <string name="notif_type_shop_offer">Angebote von Geschäften</string>
+    <string name="notif_type_shop_product">Neue Produkte von Geschäften</string>
     <string name="notif_mode_full">Full</string>
     <string name="notif_mode_in_app">In-app only</string>
     <string name="notif_mode_off">Off</string>

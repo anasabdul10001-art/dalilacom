@@ -469,9 +469,9 @@
     <string name="sec_acc_s3" formatted="false">تابع أرباحك وصدّر تقاريرك</string>
     <string name="sec_resp_kicker" formatted="false">🤖 المجيب الآلي</string>
     <string name="sec_resp_title" formatted="false">رد على زبائنك حتى وإنت نايم</string>
-    <string name="sec_resp_sub" formatted="false">اربط صفحتك على فيسبوك وانستغرام وتيليغرام، والمجيب الآلي بيرد عن محلك على الرسائل والتعليقات.</string>
+    <string name="sec_resp_sub" formatted="false">اربط بوت تيليغرام، والمجيب الآلي بيرد عن محلك على الرسائل. فيسبوك وانستغرام قريباً.</string>
     <string name="sec_resp_f1t" formatted="false">رسائل وتعليقات</string>
-    <string name="sec_resp_f1d" formatted="false">بيرد على رسائل ماسنجر وانستغرام وتيليغرام، وعلى التعليقات تحت منشوراتك.</string>
+    <string name="sec_resp_f1d" formatted="false">بيرد على رسائل تيليغرام اليوم. ماسنجر وانستغرام قريباً.</string>
     <string name="sec_resp_f2t" formatted="false">قواعد بكلماتك</string>
     <string name="sec_resp_f2d" formatted="false">حدد كلمات وردود جاهزة (الأسعار، العنوان، الدوام) وبينرد فوراً.</string>
     <string name="sec_resp_f3t" formatted="false">ذكاء اصطناعي</string>
@@ -560,8 +560,8 @@
     <string name="site_art_present" formatted="false">حاضر</string>
     <string name="site_responder_slide1_t" formatted="false">رد فوري على كل رسالة</string>
     <string name="site_responder_slide1_d" formatted="false">زبونك بيسأل الساعة 3 الفجر؟ المجيب الآلي بيرد عليه بثواني، وبأسلوبك.</string>
-    <string name="site_responder_slide2_t" formatted="false">فيسبوك وانستغرام وتيليغرام</string>
-    <string name="site_responder_slide2_d" formatted="false">اربط صفحاتك مرة وحدة، وكل الرسائل والتعليقات بتوصل لمكان واحد.</string>
+    <string name="site_responder_slide2_t" formatted="false">تيليغرام الآن، والباقي قريباً</string>
+    <string name="site_responder_slide2_d" formatted="false">اربط بوت تيليغرام مرة وحدة، وكل الرسائل بتوصل لمكان واحد. فيسبوك وانستغرام قريباً.</string>
     <string name="site_responder_slide3_t" formatted="false">ذكاء اصطناعي بيعرف محلك</string>
     <string name="site_responder_slide3_d" formatted="false">بيرد من المعلومات اللي كتبتها إنت بس: الأسعار والدوام والعنوان، بدون ما يألّف.</string>
     <string name="site_responder_st1_n" formatted="false">24/7</string>
@@ -574,7 +574,7 @@
     <string name="site_responder_s2_d" formatted="false">اكتب كلمات وردود جاهزة، أو فعّل الذكاء الاصطناعي لباقي الأسئلة.</string>
     <string name="site_responder_s3_d" formatted="false">كل المحادثات بالوارد، وبتتدخل بإيدك وقت ما بدك.</string>
     <string name="site_responder_faq1_q" formatted="false">شو القنوات اللي بيدعمها؟</string>
-    <string name="site_responder_faq1_a" formatted="false">ماسنجر فيسبوك، رسائل وتعليقات انستغرام، وتيليغرام.</string>
+    <string name="site_responder_faq1_a" formatted="false">تيليغرام اليوم. ماسنجر فيسبوك وانستغرام قريباً.</string>
     <string name="site_responder_faq2_q" formatted="false">هل بيرد أي شي من عنده؟</string>
     <string name="site_responder_faq2_a" formatted="false">لا. بيرد من المعلومات اللي أنت أدخلتها فقط، وإذا ما عرف بيحوّل المحادثة لك.</string>
     <string name="site_responder_faq3_q" formatted="false">فيني أتدخل بالمحادثة؟</string>

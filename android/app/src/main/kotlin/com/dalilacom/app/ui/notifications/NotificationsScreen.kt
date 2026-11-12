@@ -50,8 +50,11 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/** The types that actually produce notifications today (the rest are reserved on the server). */
-private val WIRED_TYPES = listOf("ORDER_PLACED", "ORDER_STATUS", "DISCOUNT_RECEIVED", "MEMBERSHIP_EXPIRING")
+/**
+ * The types that actually produce notifications today (the rest are reserved on the server).
+ * NEW_OFFER and NEW_PRODUCT are what a shop's announcement arrives as: listing them is how a user turns those off.
+ */
+private val WIRED_TYPES = listOf("ORDER_PLACED", "ORDER_STATUS", "DISCOUNT_RECEIVED", "MEMBERSHIP_EXPIRING", "NEW_OFFER", "NEW_PRODUCT")
 private val MODE_CYCLE = listOf("FULL", "IN_APP_ONLY", "OFF")
 
 data class NotificationsUiState(
@@ -170,6 +173,8 @@ private fun typeLabel(type: String): Int = when (type) {
     "ORDER_PLACED" -> R.string.notif_type_order_placed
     "ORDER_STATUS" -> R.string.notif_type_order_status
     "DISCOUNT_RECEIVED" -> R.string.notif_type_discount
+    "NEW_OFFER" -> R.string.notif_type_shop_offer
+    "NEW_PRODUCT" -> R.string.notif_type_shop_product
     else -> R.string.notif_type_membership
 }
 

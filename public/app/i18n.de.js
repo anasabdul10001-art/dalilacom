@@ -939,7 +939,7 @@ DICT.de = {
   "profile.account": "⚙️ Account settings",
   "tab.responder": "Responder",
   "profile.shareLocation": "Let nearby shops send me their offers",
-  "profile.shareLocationSub": "Turn it on and set your place on the map below, and offers from nearby shops reach you. We only keep your approximate position (about 1 km); turn it off any time and it is deleted.",
+  "profile.shareLocationSub": "Turn it on and set your place on the map below, and offers from nearby shops reach you. We only keep your approximate position (about 1 km); turn it off any time and it is deleted.", "profile.shopNotif": "Nachrichten von Geschäften (Angebote und neue Produkte)", "profile.shopNotifSub": "Schalten Sie es aus, und Sie erhalten keine Angebots- und Produktnachrichten von Geschäften mehr. Sie können es jederzeit wieder einschalten.",
   "social.google": "Continue with Google",
   "social.facebook": "Continue with Facebook",
   "social.or": "or",

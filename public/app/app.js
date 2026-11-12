@@ -183,6 +183,7 @@ function clearToken() {
   S._onboarding = null;
   S._mprof = null;
   S._profile = null;
+  S._shopNotif = null;
   S._profileServiceActivity = null;
   loadMarket();
 }
@@ -1838,6 +1839,22 @@ function reportLocation(loc) {
   if (S.token && shareLocationOn()) api("PUT", "/profile/location", { latitude: loc.lat, longitude: loc.lng, consent: true });
 }
 
+// Shop announcements (an offer or a new product from a shop) arrive as two notification types on the server.
+// One switch on the account page turns both off or back on.
+const SHOP_NOTIF_TYPES = ["NEW_OFFER", "NEW_PRODUCT"];
+async function loadShopNotif() {
+  S._shopNotif = { loading: true, on: true };
+  const r = await api("GET", "/notifications/preferences");
+  const rows = r.ok && Array.isArray(r.data) ? r.data : [];
+  S._shopNotif = { loading: false, on: !SHOP_NOTIF_TYPES.every(type => (rows.find(x => x.type === type) || {}).mode === "OFF") };
+  render();
+}
+async function setShopNotif(on) {
+  const r = await api("PUT", "/notifications/preferences", { preferences: SHOP_NOTIF_TYPES.map(type => ({ type, mode: on ? "FULL" : "OFF" })) });
+  S._shopNotif = { loading: false, on: r.ok ? on : !on };
+  render();
+}
+
 async function setShareLocation(on) {
   try { localStorage.setItem("dlk_share_loc", on ? "1" : "0"); } catch (e) {}
   if (on) { if (S._discover && S._discover.userLoc) reportLocation(S._discover.userLoc); }
@@ -2881,7 +2898,13 @@ function tabProfile() {
     <p class="muted" style="margin:4px 0 10px">${esc(t("profile.shareLocationSub"))}</p>
     ${shareLocationOn() ? myLocationHtml() : ""}`;
 
+  if (S._shopNotif == null) loadShopNotif();
+  const shopNotif = `
+    <label class="switch-row"><input type="checkbox" ${S._shopNotif && S._shopNotif.on ? "checked" : ""} ${S._shopNotif && S._shopNotif.loading ? "disabled" : ""} onchange="setShopNotif(this.checked)" /><span>${esc(t("profile.shopNotif"))}</span></label>
+    <p class="muted" style="margin:4px 0 10px">${esc(t("profile.shopNotifSub"))}</p>`;
+
   const account = [
+    shopNotif,
     profRow("⚙️", t("profile.account"), "S._acct=null;go('account')"),
     profRow("⬇️", t("profile.exportData"), "downloadMyData()"),
     profRow("↩︎", t("profile.logout"), "doLogout()"),

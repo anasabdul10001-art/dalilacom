@@ -221,6 +221,8 @@
     <string name="notif_type_order_status">تغيّر حالة الطلب</string>
     <string name="notif_type_discount">حسم جديد</string>
     <string name="notif_type_membership">قرب انتهاء العضوية</string>
+    <string name="notif_type_shop_offer">عروض المحلات</string>
+    <string name="notif_type_shop_product">منتجات جديدة من المحلات</string>
     <string name="notif_mode_full">كامل</string>
     <string name="notif_mode_in_app">داخل التطبيق</string>
     <string name="notif_mode_off">مطفأ</string>

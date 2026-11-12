@@ -469,9 +469,9 @@
     <string name="sec_acc_s3" formatted="false">Follow your profit and export reports</string>
     <string name="sec_resp_kicker" formatted="false">🤖 Auto-responder</string>
     <string name="sec_resp_title" formatted="false">Answer your customers even while you sleep</string>
-    <string name="sec_resp_sub" formatted="false">Connect your Facebook, Instagram and Telegram, and the auto-responder answers messages and comments for your shop.</string>
+    <string name="sec_resp_sub" formatted="false">Connect your Telegram bot and the auto-responder answers messages for your shop. Facebook and Instagram are coming soon.</string>
     <string name="sec_resp_f1t" formatted="false">Messages and comments</string>
-    <string name="sec_resp_f1d" formatted="false">It answers Messenger, Instagram and Telegram messages, and the comments under your posts.</string>
+    <string name="sec_resp_f1d" formatted="false">It answers Telegram messages today. Messenger and Instagram are coming soon.</string>
     <string name="sec_resp_f2t" formatted="false">Rules in your words</string>
     <string name="sec_resp_f2d" formatted="false">Set keywords and ready answers (prices, address, opening hours) and they are sent at once.</string>
     <string name="sec_resp_f3t" formatted="false">Artificial intelligence</string>
@@ -560,8 +560,8 @@
     <string name="site_art_present" formatted="false">Present</string>
     <string name="site_responder_slide1_t" formatted="false">An instant answer to every message</string>
     <string name="site_responder_slide1_d" formatted="false">A customer asks at 3 a.m.? The auto-responder answers in seconds, in your own style.</string>
-    <string name="site_responder_slide2_t" formatted="false">Facebook, Instagram and Telegram</string>
-    <string name="site_responder_slide2_d" formatted="false">Connect your pages once, and every message and comment lands in one place.</string>
+    <string name="site_responder_slide2_t" formatted="false">Telegram now, more coming soon</string>
+    <string name="site_responder_slide2_d" formatted="false">Connect your Telegram bot once, and every message lands in one place. Facebook and Instagram are coming soon.</string>
     <string name="site_responder_slide3_t" formatted="false">AI that knows your shop</string>
     <string name="site_responder_slide3_d" formatted="false">It answers only from what you wrote: prices, hours and address, never making things up.</string>
     <string name="site_responder_st1_n" formatted="false">24/7</string>
@@ -574,7 +574,7 @@
     <string name="site_responder_s2_d" formatted="false">Write keywords and ready answers, or turn on AI for the rest.</string>
     <string name="site_responder_s3_d" formatted="false">Every conversation is in the inbox and you can step in whenever you want.</string>
     <string name="site_responder_faq1_q" formatted="false">Which channels does it support?</string>
-    <string name="site_responder_faq1_a" formatted="false">Facebook Messenger, Instagram messages and comments, and Telegram.</string>
+    <string name="site_responder_faq1_a" formatted="false">Telegram today. Facebook Messenger and Instagram are coming soon.</string>
     <string name="site_responder_faq2_q" formatted="false">Does it make up answers?</string>
     <string name="site_responder_faq2_a" formatted="false">No. It answers only from the information you entered, and hands the chat to you when it does not know.</string>
     <string name="site_responder_faq3_q" formatted="false">Can I step into a conversation?</string>
