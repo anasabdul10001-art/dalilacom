@@ -54,7 +54,7 @@ export interface Catalog {
 }
 
 /** Every service the pricing page can list, in display order. */
-const SERVICE_ORDER: ServiceKind[] = ["MEMBERSHIP", "MERCHANT_ACCOUNT", "RESPONDER_BASIC", "ACCOUNTING"];
+const SERVICE_ORDER: ServiceKind[] = ["MEMBERSHIP", "MERCHANT_ACCOUNT", "RESPONDER_BASIC", "ACCOUNTING", "HR"];
 
 /** A plan row plus its country overrides, exactly as the catalogue query returns it. */
 type PlanWithPrices = Prisma.ServicePlanGetPayload<{ include: { prices: true } }>;

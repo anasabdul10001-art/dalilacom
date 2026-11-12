@@ -7,3 +7,4 @@ process.env.META_PUBLIC_ACCESS = "true"; // Facebook/Instagram linking is open t
 process.env.HR_CONNECT_RATE_LIMIT ??= "500";
 process.env.HR_LINK_CODE_RATE_LIMIT ??= "500";
 process.env.HR_SYNC_RATE_LIMIT ??= "500";
+process.env.HR_INVITE_RATE_LIMIT ??= "500";

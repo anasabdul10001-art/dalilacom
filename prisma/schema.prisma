@@ -117,22 +117,23 @@ model User {
   affiliateOf             MerchantAffiliate[] // merchants I market for
   referredAs              AffiliateReferral[] // merchants that credit a specific affiliate for my purchases
 
-  wallet                Wallet?
-  walletTransactions    WalletTransaction[]
-  topUpRequests         TopUpRequest[]
-  responderSubscription ResponderSubscription?
-  responderEntitlements ResponderEntitlement[]
-  channelConnections    ChannelConnection[]
-  responderRules        ResponderRule[]
-  responderInteractions ResponderInteraction[]
-  accountingProducts   AccountingProduct[]
-  accountingEntries    AccountingEntry[]
-  accountingMovements  AccountingStockMovement[]
+  wallet                  Wallet?
+  walletTransactions      WalletTransaction[]
+  topUpRequests           TopUpRequest[]
+  responderSubscription   ResponderSubscription?
+  responderEntitlements   ResponderEntitlement[]
+  channelConnections      ChannelConnection[]
+  responderRules          ResponderRule[]
+  responderInteractions   ResponderInteraction[]
+  accountingProducts      AccountingProduct[]
+  accountingEntries       AccountingEntry[]
+  accountingMovements     AccountingStockMovement[]
   accountingInvoiceDrafts AccountingInvoiceDraft[]
-  hrLinks              HrLink[]
-  platformSubscriptions PlatformSubscription[]
-  responderAiCalls      ResponderAiCall[]
-
+  hrLinks                 HrLink[]
+  hrCompany               HrCompany?                @relation("HrCompanyOwner")
+  hrEmployments           HrEmployee[]              @relation("HrEmployeeUser")
+  platformSubscriptions   PlatformSubscription[]
+  responderAiCalls        ResponderAiCall[]
 
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
@@ -239,6 +240,7 @@ enum ServiceKind {
   RESPONDER_BASIC // unified auto-responder plans, available to every account
   MERCHANT_ACCOUNT // a merchant plan (tiers carry their own broadcast quota)
   ACCOUNTING // accounting app subscription
+  HR // human resources: employees, attendance, leave, payroll, advances
 }
 
 enum MarketplaceListingStatus {
@@ -348,7 +350,7 @@ model ServicePlan {
   memberships              Membership[]
   merchants                MerchantProfile[]
   marketplaceSubscriptions MarketplaceSubscription[]
-  platformSubscriptions   PlatformSubscription[]
+  platformSubscriptions    PlatformSubscription[]
   features                 PlanFeature[]
   prices                   PlanPrice[]
   offers                   PlanOffer[]
@@ -400,19 +402,19 @@ enum ExternalSubscriptionStatus {
 
 /// A single cross-service record for card or SEPA subscriptions handled by the payment gateway.
 model PlatformSubscription {
-  id                       String                    @id @default(uuid())
-  userId                   String
-  planId                   String
-  provider                 String
-  providerCheckoutId       String?                   @unique
-  providerSubscriptionId   String?                   @unique
-  latestInvoiceId          String?                   @unique
-  status                   ExternalSubscriptionStatus @default(PENDING)
-  amountCents              Int
-  currency                 String
-  currentPeriodEnd         DateTime?
-  createdAt                DateTime                  @default(now())
-  updatedAt                DateTime                  @updatedAt
+  id                     String                     @id @default(uuid())
+  userId                 String
+  planId                 String
+  provider               String
+  providerCheckoutId     String?                    @unique
+  providerSubscriptionId String?                    @unique
+  latestInvoiceId        String?                    @unique
+  status                 ExternalSubscriptionStatus @default(PENDING)
+  amountCents            Int
+  currency               String
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
 
   user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan ServicePlan @relation(fields: [planId], references: [id])
@@ -423,21 +425,20 @@ model PlatformSubscription {
 
 // Optional promotion attached to a plan: customer pays for a number of plan periods and receives extra days.
 model PlanOffer {
-  id                   String    @id @default(uuid())
-  planId               String
-  paidPeriods          Int
-  bonusDays            Int
-  text                 String
-  startsAt             DateTime?
-  endsAt               DateTime?
-  isActive             Boolean   @default(true)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  planId      String
+  paidPeriods Int
+  bonusDays   Int
+  text        String
+  startsAt    DateTime?
+  endsAt      DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   plan ServicePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   @@index([planId, isActive])
-
 }
 
 // The VAT/sales-tax rate applied to a country's invoices (section 58/64). Stored in basis points so
@@ -815,13 +816,13 @@ model Product {
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
 
-  merchant           MerchantProfile     @relation(fields: [merchantId], references: [id])
-  category           Category?           @relation(fields: [categoryId], references: [id])
-  cartItems          CartItem[]
-  orderItems         OrderItem[]
-  affiliateReferrals AffiliateReferral[]
-  adBookings         AdBooking[]
-  productCategory    ProductCategory?    @relation(fields: [productCategoryId], references: [id])
+  merchant            MerchantProfile           @relation(fields: [merchantId], references: [id])
+  category            Category?                 @relation(fields: [categoryId], references: [id])
+  cartItems           CartItem[]
+  orderItems          OrderItem[]
+  affiliateReferrals  AffiliateReferral[]
+  adBookings          AdBooking[]
+  productCategory     ProductCategory?          @relation(fields: [productCategoryId], references: [id])
   accountingMovements AccountingStockMovement[]
 
   @@index([merchantId])
@@ -857,7 +858,7 @@ model AccountingProduct {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  user     User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   movements AccountingStockMovement[]
 
   @@unique([userId, barcode])
@@ -866,23 +867,23 @@ model AccountingProduct {
 }
 
 model AccountingEntry {
-  id            String              @id @default(uuid())
-  userId        String
-  type          AccountingEntryType
-  category      String
-  description   String
-  amountCents   BigInt // minor units; wide enough for a month of salaries in a low-value currency
-  currency      String              @default("EUR")
-  occurredAt    DateTime            @default(now())
-  source        String              @default("MANUAL") // MANUAL, ORDER, COMMISSION, DELIVERY, INVOICE, PAYROLL
-  sourceKey     String?
-  receiptName   String?
-  receiptMime   String?
-  receiptData   Bytes?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  id          String              @id @default(uuid())
+  userId      String
+  type        AccountingEntryType
+  category    String
+  description String
+  amountCents BigInt // minor units; wide enough for a month of salaries in a low-value currency
+  currency    String              @default("EUR")
+  occurredAt  DateTime            @default(now())
+  source      String              @default("MANUAL") // MANUAL, ORDER, COMMISSION, DELIVERY, INVOICE, PAYROLL
+  sourceKey   String?
+  receiptName String?
+  receiptMime String?
+  receiptData Bytes?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoiceDraft AccountingInvoiceDraft?
 
   @@unique([userId, sourceKey])
@@ -891,13 +892,13 @@ model AccountingEntry {
 }
 
 model AccountingInvoiceDraft {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   userId      String
   mime        String
   data        Bytes
   extracted   Json?
-  entryId     String?  @unique
-  createdAt   DateTime @default(now())
+  entryId     String?   @unique
+  createdAt   DateTime  @default(now())
   confirmedAt DateTime?
 
   user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -942,20 +943,20 @@ model HrPayrollSync {
 }
 
 model AccountingStockMovement {
-  id          String               @id @default(uuid())
-  userId      String
-  productId   String?
+  id             String                @id @default(uuid())
+  userId         String
+  productId      String?
   storeProductId String?
-  action      AccountingStockAction
-  quantity    Int
-  unitCostCents Int?
-  note        String?
-  occurredAt  DateTime             @default(now())
-  createdAt   DateTime             @default(now())
+  action         AccountingStockAction
+  quantity       Int
+  unitCostCents  Int?
+  note           String?
+  occurredAt     DateTime              @default(now())
+  createdAt      DateTime              @default(now())
 
-  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product AccountingProduct? @relation(fields: [productId], references: [id], onDelete: Cascade)
-  storeProduct Product? @relation(fields: [storeProductId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product      AccountingProduct? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeProduct Product?           @relation(fields: [storeProductId], references: [id], onDelete: Cascade)
 
   @@index([userId, occurredAt])
   @@index([productId, occurredAt])
@@ -2454,4 +2455,322 @@ model AdCreative {
   updatedAt DateTime @updatedAt
 
   @@unique([kind, bookingId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Human resources (the HR section). The owner of a business has one company here; the people who work for it are
+// employees, some of them linked to their own Dalilacom account (they then see "my job"). Money is whole minor units.
+// ─────────────────────────────────────────────────────────────
+
+enum HrRole {
+  HR // runs the company with the owner: employees, attendance, leave, payroll
+  MANAGER // approves the leave and advances of their team
+  EMPLOYEE
+}
+
+enum HrEmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum HrAttendanceSource {
+  WEB
+  MOBILE
+  MANUAL
+}
+
+enum HrLeaveStatus {
+  PENDING_MANAGER
+  PENDING_HR
+  APPROVED
+  REJECTED
+  CANCELED
+}
+
+enum HrComponentType {
+  EARNING
+  DEDUCTION
+}
+
+enum HrCalcType {
+  FIXED
+  PERCENTAGE_OF_BASE
+}
+
+enum HrRunStatus {
+  DRAFT
+  PROCESSED
+  PAID
+}
+
+enum HrAdvanceStatus {
+  PENDING_MANAGER
+  PENDING_HR
+  APPROVED
+  REJECTED
+  REPAID
+}
+
+model HrCompany {
+  id          String   @id @default(uuid())
+  ownerId     String   @unique
+  name        String
+  currency    String // 3-letter code; every amount of the company is in it
+  timezone    String   @default("UTC")
+  workingDays Json? // e.g. ["mon","tue","wed","thu","fri"]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User                @relation("HrCompanyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  departments HrDepartment[]
+  employees   HrEmployee[]
+  invites     HrInvite[]
+  attendance  HrAttendance[]
+  leaveTypes  HrLeaveType[]
+  leaves      HrLeaveRequest[]
+  components  HrSalaryComponent[]
+  runs        HrPayrollRun[]
+  advances    HrAdvance[]
+  auditLogs   HrAuditLog[]
+}
+
+model HrDepartment {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  managerId String?
+  createdAt DateTime @default(now())
+
+  company   HrCompany    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  manager   HrEmployee?  @relation("HrDepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
+  employees HrEmployee[] @relation("HrEmployeeDepartment")
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model HrEmployee {
+  id               String             @id @default(uuid())
+  companyId        String
+  userId           String? // the person's own Dalilacom account, once they accepted the invitation
+  firstName        String
+  lastName         String
+  email            String? // where the invitation goes
+  position         String?
+  departmentId     String?
+  managerId        String?
+  role             HrRole             @default(EMPLOYEE)
+  hireDate         DateTime
+  employmentStatus HrEmploymentStatus @default(ACTIVE)
+  baseSalary       Int?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  company            HrCompany             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user               User?                 @relation("HrEmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
+  department         HrDepartment?         @relation("HrEmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+  manager            HrEmployee?           @relation("HrEmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports      HrEmployee[]          @relation("HrEmployeeManager")
+  managedDepartments HrDepartment[]        @relation("HrDepartmentManager")
+  invite             HrInvite?
+  attendance         HrAttendance[]
+  leaveBalances      HrLeaveBalance[]
+  leaves             HrLeaveRequest[]
+  components         HrEmployeeComponent[]
+  advances           HrAdvance[]
+  payslips           HrPayslip[]
+
+  @@unique([companyId, userId])
+  @@index([companyId])
+  @@index([userId])
+  @@index([departmentId])
+  @@index([managerId])
+}
+
+// An invitation to link an employee to a Dalilacom account: by the code (kept as a hash) or, when the account's
+// verified email is the one on the employee, by accepting it.
+model HrInvite {
+  id         String    @id @default(uuid())
+  companyId  String
+  employeeId String    @unique
+  codeHash   String    @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  company  HrCompany  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+}
+
+model HrAttendance {
+  id         String             @id @default(uuid())
+  companyId  String
+  employeeId String
+  checkIn    DateTime
+  checkOut   DateTime?
+  source     HrAttendanceSource @default(WEB)
+  editedById String? // set when a manager adds or corrects the record by hand
+  notes      String?
+  createdAt  DateTime           @default(now())
+
+  company  HrCompany  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, employeeId, checkIn])
+}
+
+model HrLeaveType {
+  id             String  @id @default(uuid())
+  companyId      String
+  name           String
+  defaultBalance Int // days per year
+  isPaid         Boolean @default(true)
+
+  company  HrCompany        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  balances HrLeaveBalance[]
+  requests HrLeaveRequest[]
+
+  @@unique([companyId, name])
+}
+
+model HrLeaveBalance {
+  id          String @id @default(uuid())
+  employeeId  String
+  leaveTypeId String
+  year        Int
+  balanceDays Float
+
+  employee  HrEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType HrLeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, leaveTypeId, year])
+}
+
+model HrLeaveRequest {
+  id                String        @id @default(uuid())
+  companyId         String
+  employeeId        String
+  leaveTypeId       String
+  startDate         DateTime
+  endDate           DateTime
+  reason            String?
+  status            HrLeaveStatus @default(PENDING_MANAGER)
+  managerApprovedBy String?
+  managerApprovedAt DateTime?
+  hrApprovedBy      String?
+  hrApprovedAt      DateTime?
+  rejectionReason   String?
+  createdAt         DateTime      @default(now())
+
+  company   HrCompany   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee  HrEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType HrLeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, employeeId])
+}
+
+model HrSalaryComponent {
+  id        String          @id @default(uuid())
+  companyId String
+  name      String
+  type      HrComponentType
+  calcType  HrCalcType      @default(FIXED)
+
+  company   HrCompany             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employees HrEmployeeComponent[]
+
+  @@index([companyId])
+}
+
+model HrEmployeeComponent {
+  id          String @id @default(uuid())
+  employeeId  String
+  componentId String
+  fixedAmount Int? // minor units, when the component is FIXED
+  percentage  Float? // e.g. 7.5 for 7.5% of the base salary, when it is PERCENTAGE_OF_BASE
+
+  employee  HrEmployee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  component HrSalaryComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, componentId])
+}
+
+model HrPayrollRun {
+  id          String      @id @default(uuid())
+  companyId   String
+  periodStart DateTime
+  periodEnd   DateTime
+  status      HrRunStatus @default(DRAFT)
+  runAt       DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime    @default(now())
+
+  company  HrCompany   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payslips HrPayslip[]
+
+  @@index([companyId])
+}
+
+model HrPayslip {
+  id              String   @id @default(uuid())
+  runId           String
+  employeeId      String
+  grossPay        Int
+  totalDeductions Int
+  netPay          Int
+  breakdown       Json // earnings, deductions, unpaid absence, advance installments
+  createdAt       DateTime @default(now())
+
+  run      HrPayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employee HrEmployee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([runId, employeeId])
+}
+
+model HrAdvance {
+  id                String          @id @default(uuid())
+  companyId         String
+  employeeId        String
+  amount            Int
+  installmentsCount Int
+  status            HrAdvanceStatus @default(PENDING_MANAGER)
+  reason            String?
+  createdAt         DateTime        @default(now())
+
+  company      HrCompany              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee     HrEmployee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  installments HrAdvanceInstallment[]
+
+  @@index([companyId, employeeId])
+}
+
+model HrAdvanceInstallment {
+  id          String   @id @default(uuid())
+  advanceId   String
+  amount      Int
+  dueDate     DateTime
+  paidInRunId String?
+  isPaid      Boolean  @default(false)
+
+  advance HrAdvance @relation(fields: [advanceId], references: [id], onDelete: Cascade)
+
+  @@index([advanceId])
+}
+
+model HrAuditLog {
+  id         String   @id @default(uuid())
+  companyId  String
+  userId     String?
+  action     String // e.g. "payroll.run", "employee.status_change"
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  company HrCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
 }

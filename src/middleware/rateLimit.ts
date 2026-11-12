@@ -36,5 +36,7 @@ export const qrVerifyRateLimiter = makeLimiter("QR_VERIFY", 60, 1);
 export const routeRateLimiter = makeLimiter("ROUTE", 40, 1);
 // The HR system's server calls: generous enough for retries of many payroll runs, tight enough to stop guessing of link codes.
 export const hrSyncRateLimiter = makeLimiter("HR_SYNC", 60, 1);
+// Invitation codes are secrets: guessing one, or flooding someone with invitations, is slowed down.
+export const hrInviteRateLimiter = makeLimiter("HR_INVITE", 30, 15);
 export const hrConnectRateLimiter = makeLimiter("HR_CONNECT", 10, 15);
 export const hrLinkCodeRateLimiter = makeLimiter("HR_LINK_CODE", 10, 15);
