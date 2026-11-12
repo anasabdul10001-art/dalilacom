@@ -2,6 +2,14 @@
 // PHRASES / PATTERNS / WORDS (the gettext-style table for everything else). See docs/I18N.md.
 LANGS.en = { name: "English", dir: "ltr" };
 DICT.en = {
+  // ---- the store's tiles that introduce the app's sections ----
+  "promo.mapT": "Discover your city's shops", "promo.mapS": "Every nearby shop and service on the map",
+  "promo.dealsT": "Exclusive discounts", "promo.dealsS": "Save at partner shops",
+  "promo.cardT": "Dalilacom membership card", "promo.cardS": "One card, discounts everywhere",
+  "promo.accountingT": "Keep your books", "promo.accountingS": "Income, expenses and profit in one place",
+  "promo.hrT": "Manage your team", "promo.hrS": "Attendance, leave and payroll",
+  "promo.responderT": "Auto-responder", "promo.responderS": "Automatic replies to customers",
+  "promo.open": "Open",
   "accounting.planRequired": "This service requires an active plan or trial. Open plans and choose one that suits you.",
   "accounting.setCost": "Edit purchase cost", "accounting.invalidAmount": "Enter a valid amount.",
   "plans.payCard": "Pay by card or bank", "plans.payPaypal": "Pay with PayPal",

@@ -1131,4 +1131,18 @@
     <string name="plans_days">Tage</string>
     <string name="plans_trial_days">Tage Testphase</string>
     <string name="billing_paypal">Mit PayPal zahlen</string>
+    <!-- the store's tiles that introduce the app's sections -->
+    <string name="promo_map_t">Entdecken Sie die Geschäfte Ihrer Stadt</string>
+    <string name="promo_map_s">Alle Geschäfte in Ihrer Nähe auf der Karte</string>
+    <string name="promo_deals_t">Exklusive Rabatte</string>
+    <string name="promo_deals_s">Sparen bei Partnergeschäften</string>
+    <string name="promo_card_t">Dalilacom-Mitgliedskarte</string>
+    <string name="promo_card_s">Eine Karte, Rabatte überall</string>
+    <string name="promo_accounting_t">Buchhaltung im Griff</string>
+    <string name="promo_accounting_s">Einnahmen, Ausgaben und Gewinn an einem Ort</string>
+    <string name="promo_hr_t">Team verwalten</string>
+    <string name="promo_hr_s">Anwesenheit, Urlaub und Lohn</string>
+    <string name="promo_responder_t">Automatische Antworten</string>
+    <string name="promo_responder_s">Automatische Antworten an Ihre Kunden</string>
+    <string name="promo_open">Öffnen</string>
 </resources>

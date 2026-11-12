@@ -4051,11 +4051,32 @@ function storeSlotPh(i) {
     </div>`;
 }
 
-/** Always six spaces: the held ones first, the rest are the invitation tiles. */
+/** Until shops rent the spaces, they introduce the app's own sections, so the store is never empty. Each one opens its section. */
+const STORE_PROMOS = [
+  { key: "map", icon: "🗺️", go: "setHomeTab('discover')" },
+  { key: "deals", icon: "🏷️", go: "setHomeTab('deals')" },
+  { key: "card", icon: "💳", go: "openMyCard()" },
+  { key: "accounting", icon: "🧮", go: "setHomeTab('accounting')" },
+  { key: "hr", icon: "👥", go: "setHomeTab('hr')" },
+  { key: "responder", icon: "🤖", go: "setHomeTab('responder')" },
+];
+function storePromoTile(i) {
+  const p = STORE_PROMOS[i % STORE_PROMOS.length];
+  return `
+    <div class="store-slot is-ph ph-${i % 3}" role="button" tabindex="0" onclick="${p.go}">
+      <div class="ph-body">
+        <span class="ph-ico" aria-hidden="true">${p.icon}</span>
+        <span class="ph-text"><b>${esc(t("promo." + p.key + "T"))}</b><small>${esc(t("promo." + p.key + "S"))}</small></span>
+        <span class="ph-cta">${esc(t("promo.open"))}</span>
+      </div>
+    </div>`;
+}
+
+/** Always six spaces: the ones a shop rents first, every other one introduces a section of the app. (The old "advertise here" tile, storeSlotPh, is no longer used here; the invitation to advertise stays in its own card below.) */
 function storeSlotsHtml(home, from, to) {
-  const list = home.slots || [];
+  const list = (home.slots || []).filter((s) => s.ad);
   const out = [];
-  for (let i = from; i < to; i++) out.push(list[i] ? storeSlot(list[i]) : storeSlotPh(i));
+  for (let i = from; i < to; i++) out.push(list[i] ? storeSlot(list[i]) : storePromoTile(i));
   return out.join("");
 }
 

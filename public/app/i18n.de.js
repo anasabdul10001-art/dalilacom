@@ -2,6 +2,14 @@
 // translate the values (keep the keys, the {n} / $1 markers). `npm run i18n:check` lists what is left. See docs/I18N.md.
 LANGS.de = { name: "Deutsch", dir: "ltr" };
 DICT.de = {
+  // ---- the store's tiles that introduce the app's sections ----
+  "promo.mapT": "Entdecken Sie die Geschäfte Ihrer Stadt", "promo.mapS": "Alle Geschäfte in Ihrer Nähe auf der Karte",
+  "promo.dealsT": "Exklusive Rabatte", "promo.dealsS": "Sparen bei Partnergeschäften",
+  "promo.cardT": "Dalilacom-Mitgliedskarte", "promo.cardS": "Eine Karte, Rabatte überall",
+  "promo.accountingT": "Buchhaltung im Griff", "promo.accountingS": "Einnahmen, Ausgaben und Gewinn an einem Ort",
+  "promo.hrT": "Team verwalten", "promo.hrS": "Anwesenheit, Urlaub und Lohn",
+  "promo.responderT": "Automatische Antworten", "promo.responderS": "Automatische Antworten an Ihre Kunden",
+  "promo.open": "Öffnen",
   "accounting.planRequired": "Dieser Dienst erfordert einen aktiven Tarif oder eine Testphase. Öffnen Sie die Tarife und wählen Sie einen passenden aus.",
   "accounting.setCost": "Einkaufspreis bearbeiten", "accounting.invalidAmount": "Bitte einen gültigen Betrag eingeben.",
   "plans.payCard": "Mit Karte oder Bankkonto zahlen", "plans.payPaypal": "Mit PayPal zahlen",

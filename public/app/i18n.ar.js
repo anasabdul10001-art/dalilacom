@@ -1,6 +1,14 @@
 // Arabic — the source language of the app. Every key here must exist in every other language's DICT.
 LANGS.ar = { name: "العربية", dir: "rtl" };
 DICT.ar = {
+  // ---- the store's tiles that introduce the app's sections ----
+  "promo.mapT": "اكتشف محلات مدينتك", "promo.mapS": "كل المحلات والخدمات القريبة منك على الخريطة",
+  "promo.dealsT": "حسوم حصرية", "promo.dealsS": "وفّر عند المحلات المشاركة",
+  "promo.cardT": "بطاقة عضوية دليلكم", "promo.cardS": "بطاقة وحدة وحسوم بكل مكان",
+  "promo.accountingT": "حاسب نشاطك", "promo.accountingS": "الدخل والمصاريف والربح بمكان واحد",
+  "promo.hrT": "أدِر موظفينك", "promo.hrS": "حضور وإجازات ورواتب",
+  "promo.responderT": "المجيب الآلي", "promo.responderS": "ردود تلقائية على رسائل زبائنك",
+  "promo.open": "افتح",
   "accounting.planRequired": "هذه الخدمة تحتاج إلى باقة فعّالة أو فترة تجربة. افتح الباقات واختر ما يناسبك.",
   "accounting.setCost": "تعديل تكلفة الشراء", "accounting.invalidAmount": "أدخل مبلغًا صحيحًا.",
   "plans.payCard": "الدفع بالبطاقة أو البنك", "plans.payPaypal": "الدفع عبر PayPal",

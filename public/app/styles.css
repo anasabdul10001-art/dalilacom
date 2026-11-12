@@ -1596,6 +1596,7 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .store-slot.is-ph.ph-2 { background: linear-gradient(135deg, #f48050, #e0653a 75%); }
 .store-picks .store-slot.is-ph { aspect-ratio: 16 / 9.4; }
 .ph-body { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.ph-ico { flex: none; font-size: 34px; line-height: 1; }
 .ph-logo { flex: none; height: 56%; width: auto; max-height: 64px; }
 .ph-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ph-text b { font-family: "Cairo", "Tajawal", sans-serif; font-size: 14px; line-height: 1.3; }
