@@ -6873,6 +6873,13 @@ function screenPricing() {
   return header + group.plans.map((plan) => planCardHtml(plan, credit, plan.source === "catalog" && plan.priceCredits !== null ? { fn: "subscribeFromPricing", label: t("pricing.renew") } : null)).join("") + errorBanner();
 }
 
+/** A plan name written for two languages ("عربي | English") shows only the one for the app's language, never both in one line. */
+function planNameInLang(name) {
+  if (!name || !String(name).includes("|")) return name;
+  const parts = String(name).split("|").map((x) => x.trim());
+  return LANG === "ar" ? parts[0] : parts[parts.length - 1];
+}
+
 function screenAllPlans() {
   if (!S._allPlans) { S._allPlans = { loading: true }; loadAllPlans(); }
   const state = S._allPlans;
@@ -6880,7 +6887,7 @@ function screenAllPlans() {
   if (state.loading) return head + spinner();
   if (!state.catalog) return head + `<div class="empty-state">${esc(t("plans.failed"))}</div>`;
   const groups = (state.catalog.services || []).map(group => `<section class="card"><h2 class="section-title">${esc(t(`service.${group.service}`))}</h2>${group.plans.map(p => `<article class="card" style="margin:10px 0"><h3>${esc(p.name)}</h3><p class="muted">${esc(p.description || "")}</p><strong>${p.cashAmountCents === 0 ? esc(t("plans.free")) : esc(fmt(p.cashAmountCents, p.currency))}</strong><p class="muted">${p.durationDays} ${esc(t("plans.days"))}${p.trialDays ? ` · ${p.trialDays} ${esc(t("plans.trialDays"))}` : ""}</p><ul>${(p.features || []).map(f => `<li>${esc(f.text)}</li>`).join("")}</ul>${p.trialDays ? `<button class="btn" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',${p.cashAmountCents === 0},${p.trialDays})">${esc(t("plans.startTrial"))}</button>` : p.cashAmountCents === 0 ? `<button class="btn" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',true,0)">${esc(t("plans.subscribe"))}</button>` : `<button class="btn" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',false,0,'STRIPE')">${esc(t("plans.payCard"))}</button>${p.paypalAvailable ? ` <button class="btn outline" onclick="startServicePlan('${esc(p.id)}','${esc(p.service)}','${esc(p.source)}',false,0,'PAYPAL')">${esc(t("plans.payPaypal"))}</button>` : ""}`}</article>`).join("")}</section>`).join("");
-  const active = (state.subscriptions || []).map(sub => `<div class="title-line"><span><b>${esc(sub.plan?.name || t("plans.title"))}</b><div class="muted">${esc(sub.status)} · ${sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString() : ""}</div></span>${sub.status === "ACTIVE" ? `<button class="btn small outline" onclick="cancelPlatformSubscription('${esc(sub.id)}')">${esc(t("plans.cancel"))}</button>` : ""}</div>`).join("");
+  const active = (state.subscriptions || []).map(sub => `<div class="title-line"><span><b>${esc(planNameInLang(sub.plan?.name) || t("plans.title"))}</b><div class="muted">${esc(t("plans.status." + sub.status))}${sub.currentPeriodEnd ? ` · <span dir="ltr">${esc(new Date(sub.currentPeriodEnd).toLocaleDateString())}</span>` : ""}</div></span>${sub.status === "ACTIVE" ? `<button class="btn small outline" onclick="cancelPlatformSubscription('${esc(sub.id)}')">${esc(t("plans.cancel"))}</button>` : ""}</div>`).join("");
   return head + (active ? `<section class="card"><h2 class="section-title">${esc(t("plans.mySubscriptions"))}</h2>${active}</section>` : "") + groups + errorBanner();
 }
 

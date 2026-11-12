@@ -652,8 +652,8 @@
     <string name="site_hr_s1_d" formatted="false">سجّل شركتك واختار عملتها.</string>
     <string name="site_hr_s2_d" formatted="false">أضف أقسامك وموظفينك وحدد صلاحياتهم.</string>
     <string name="site_hr_s3_d" formatted="false">شغّل الرواتب وتابع التقارير واللوحات.</string>
-    <string name="site_hr_faq1_q" formatted="false">هل هو برنامج منفصل؟</string>
-    <string name="site_hr_faq1_a" formatted="false">أيوا، نظام HR مستقل بموقعه، وبتفتحه من هون بزر واحد.</string>
+    <string name="site_hr_faq1_q" formatted="false">هل بحتاج موقع أو تطبيق تاني؟</string>
+    <string name="site_hr_faq1_a" formatted="false">لأ. الموارد البشرية جوا دليلكم، بتفتحها من هون بدون أي موقع تاني وبدون تسجيل دخول تاني.</string>
     <string name="site_hr_faq2_q" formatted="false">بياناتي آمنة؟</string>
     <string name="site_hr_faq2_a" formatted="false">كل شركة بياناتها منفصلة تماماً عن غيرها، والصلاحيات بتتحدد لكل دور.</string>
     <string name="site_hr_faq3_q" formatted="false">مين بيقدر يعمل شو؟</string>

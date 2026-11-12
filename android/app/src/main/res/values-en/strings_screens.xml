@@ -652,8 +652,8 @@
     <string name="site_hr_s1_d" formatted="false">Register your company and choose its currency.</string>
     <string name="site_hr_s2_d" formatted="false">Add your departments and employees and set their permissions.</string>
     <string name="site_hr_s3_d" formatted="false">Run payroll and follow the reports and dashboards.</string>
-    <string name="site_hr_faq1_q" formatted="false">Is it a separate program?</string>
-    <string name="site_hr_faq1_a" formatted="false">Yes, the HR system is independent with its own site, and you open it from here with one button.</string>
+    <string name="site_hr_faq1_q" formatted="false">Do I need another website or app?</string>
+    <string name="site_hr_faq1_a" formatted="false">No. HR is inside DALILACOM: you open it from here, with no other website and no second sign-in.</string>
     <string name="site_hr_faq2_q" formatted="false">Is my data safe?</string>
     <string name="site_hr_faq2_a" formatted="false">Every company\'s data is fully separate from the others, and permissions are set per role.</string>
     <string name="site_hr_faq3_q" formatted="false">Who can do what?</string>

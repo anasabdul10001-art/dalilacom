@@ -66,7 +66,7 @@ function hrPeople() {
   if (!ov.manage) {
     return `<div class="card"><h2>${esc(t("hr.company.create"))}</h2>
       <p class="muted">${esc(t("hr.company.createHint"))}</p>
-      <label>${esc(t("hr.company.name"))}</label><input id="hr-co-name" />
+      <div class="field"><label>${esc(t("hr.company.name"))}</label><input id="hr-co-name" /></div>
       <button class="btn" onclick="hrCreateCompany()">${esc(t("hr.company.createBtn"))}</button></div>`;
   }
   const emps = hrData("employees", "/hr/employees");
@@ -82,9 +82,9 @@ function hrPeople() {
         ${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small outline" onclick="hrInvite('${e.id}')">${esc(t("hr.invite"))}</button>`}
       </div>`).join("")}</div>
     <div class="card"><h2>${esc(t("hr.people.add"))}</h2>
-      <div class="row"><div><label>${esc(t("hr.f.first"))}</label><input id="hr-e-first" /></div><div><label>${esc(t("hr.f.last"))}</label><input id="hr-e-last" /></div></div>
-      <div class="row"><div><label>${esc(t("hr.f.email"))}</label><input id="hr-e-email" type="email" /></div><div><label>${esc(t("hr.f.position"))}</label><input id="hr-e-pos" /></div></div>
-      <div class="row"><div><label>${esc(t("hr.f.hire"))}</label><input id="hr-e-hire" type="date" value="${new Date().toISOString().slice(0, 10)}" /></div><div><label>${esc(t("hr.f.salary", { c: cur }))}</label><input id="hr-e-salary" inputmode="decimal" /></div></div>
+      <div class="row"><div class="field"><label>${esc(t("hr.f.first"))}</label><input id="hr-e-first" /></div><div class="field"><label>${esc(t("hr.f.last"))}</label><input id="hr-e-last" /></div></div>
+      <div class="row"><div class="field"><label>${esc(t("hr.f.email"))}</label><input id="hr-e-email" type="email" /></div><div class="field"><label>${esc(t("hr.f.position"))}</label><input id="hr-e-pos" /></div></div>
+      <div class="row"><div class="field"><label>${esc(t("hr.f.hire"))}</label><input id="hr-e-hire" type="date" value="${new Date().toISOString().slice(0, 10)}" /></div><div class="field"><label>${esc(t("hr.f.salary", { c: cur }))}</label><input id="hr-e-salary" inputmode="decimal" /></div></div>
       <button class="btn" onclick="hrAddEmployee()">${esc(t("hr.people.addBtn"))}</button>
     </div>`;
 }
@@ -124,7 +124,7 @@ function hrLeave() {
       </div>`).join("")}</div>
     <div class="card"><h2>${esc(t("hr.leave.types"))}</h2>
       ${types.map((x) => `<p>${esc(x.name)} <span class="muted">· ${esc(t("hr.leave.days", { n: x.defaultBalance }))}</span></p>`).join("") || `<p class="muted">${esc(t("hr.leave.noTypes"))}</p>`}
-      <div class="row"><div><label>${esc(t("hr.leave.typeName"))}</label><input id="hr-lt-name" /></div><div><label>${esc(t("hr.leave.typeDays"))}</label><input id="hr-lt-days" inputmode="numeric" value="14" /></div></div>
+      <div class="row"><div class="field"><label>${esc(t("hr.leave.typeName"))}</label><input id="hr-lt-name" /></div><div class="field"><label>${esc(t("hr.leave.typeDays"))}</label><input id="hr-lt-days" inputmode="numeric" value="14" /></div></div>
       <button class="btn small" onclick="hrAddLeaveType()">${esc(t("hr.leave.addType"))}</button></div>`;
 }
 async function hrDecide(kind, id, decision) { await hrDo("POST", `/hr/${kind}/${id}/decision`, { decision }, "hr.decided"); }
@@ -149,7 +149,7 @@ function hrPayroll() {
     ${runs.length === 0 ? `<div class="empty-state">${esc(t("hr.pay.none"))}</div>` : runs.map((r) => `
       <div class="card" style="margin:8px 0"><div class="title-line"><strong>${esc(hrDay(r.periodStart))} → ${esc(hrDay(r.periodEnd))}</strong><span class="badge ${r.status === "PAID" ? "success" : "neutral"}">${esc(t("hr.run." + r.status))}</span></div>
       ${step(r)}</div>`).join("")}
-    <label>${esc(t("hr.pay.from"))}</label><input id="hr-run-from" type="date" /><label>${esc(t("hr.pay.to"))}</label><input id="hr-run-to" type="date" />
+    <div class="field"><label>${esc(t("hr.pay.from"))}</label><input id="hr-run-from" type="date" /></div><div class="field"><label>${esc(t("hr.pay.to"))}</label><input id="hr-run-to" type="date" /></div>
     <button class="btn" onclick="hrCreateRun()">${esc(t("hr.pay.create"))}</button></div>
     ${pendingAdv.length ? `<div class="card"><h2>${esc(t("hr.adv.pending"))}</h2>${pendingAdv.map((a) => `
       <div class="card" style="margin:8px 0"><strong>${esc(a.employee ? a.employee.firstName + " " + a.employee.lastName : "")}</strong>
@@ -170,7 +170,7 @@ function hrJob() {
   const invHtml = !invites || !invites.length ? "" : `<div class="card"><h2>${esc(t("hr.job.invites"))}</h2>${invites.map((i) => `
     <p><strong>${esc(i.companyName)}</strong> <span class="muted">${esc(i.position || "")}</span>
     <button class="btn small" onclick="hrDo('POST','/hr/me/invitations/${i.id}/accept',undefined,'hr.job.accepted')">${esc(t("hr.job.accept"))}</button></p>`).join("")}</div>`;
-  const codeHtml = `<div class="card"><label>${esc(t("hr.job.haveCode"))}</label><input id="hr-code" /><button class="btn small outline" onclick="hrAcceptCode()">${esc(t("hr.job.accept"))}</button></div>`;
+  const codeHtml = `<div class="card"><div class="field"><label>${esc(t("hr.job.haveCode"))}</label><input id="hr-code" /></div><button class="btn small outline" onclick="hrAcceptCode()">${esc(t("hr.job.accept"))}</button></div>`;
   if (!ov.jobs || !ov.jobs.length) return invHtml + codeHtml;
   const me = hrData("me", "/hr/me"), att = hrData("att", "/hr/me/attendance"), bal = hrData("bal", "/hr/me/leave-balances"), slips = hrData("slips", "/hr/me/payslips");
   if ([me, att, bal, slips].some((x) => x === null)) return invHtml + spinner();
@@ -182,8 +182,8 @@ function hrJob() {
         : `<button class="btn" onclick="hrDo('POST','/hr/me/check-in',undefined,'hr.job.inDone')">${esc(t("hr.job.inBtn"))}</button>`}</div>
     <div class="card"><h2>${esc(t("hr.job.leave"))}</h2>
       ${(Array.isArray(bal) ? bal : []).map((b) => `<p>${esc((b.leaveType && b.leaveType.name) || "")} <span class="muted">· ${esc(t("hr.leave.days", { n: b.balanceDays }))}</span></p>`).join("") || `<p class="muted">${esc(t("hr.job.noBalances"))}</p>`}
-      ${(Array.isArray(bal) ? bal : []).length ? `<label>${esc(t("hr.job.leaveType"))}</label><select id="hr-lr-type">${bal.map((b) => `<option value="${b.leaveTypeId || (b.leaveType && b.leaveType.id)}">${esc((b.leaveType && b.leaveType.name) || "")}</option>`).join("")}</select>
-        <div class="row"><div><label>${esc(t("hr.pay.from"))}</label><input id="hr-lr-from" type="date" /></div><div><label>${esc(t("hr.pay.to"))}</label><input id="hr-lr-to" type="date" /></div></div>
+      ${(Array.isArray(bal) ? bal : []).length ? `<div class="field"><label>${esc(t("hr.job.leaveType"))}</label><select id="hr-lr-type">${bal.map((b) => `<option value="${b.leaveTypeId || (b.leaveType && b.leaveType.id)}">${esc((b.leaveType && b.leaveType.name) || "")}</option>`).join("")}</select></div>
+        <div class="row"><div class="field"><label>${esc(t("hr.pay.from"))}</label><input id="hr-lr-from" type="date" /></div><div class="field"><label>${esc(t("hr.pay.to"))}</label><input id="hr-lr-to" type="date" /></div></div>
         <button class="btn small" onclick="hrRequestLeave()">${esc(t("hr.job.request"))}</button>` : ""}</div>
     <div class="card"><h2>${esc(t("hr.job.slips"))}</h2>
       ${(Array.isArray(slips) ? slips : []).map((s) => `<p>${esc(hrDay(s.run && s.run.periodStart))} → ${esc(hrDay(s.run && s.run.periodEnd))} <strong>${esc(hrMoney(s.netPay, cur))}</strong></p>`).join("") || `<p class="muted">${esc(t("hr.job.noSlips"))}</p>`}</div>`;
