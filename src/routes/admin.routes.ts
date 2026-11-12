@@ -34,6 +34,7 @@ import { invalidateProductCategories } from "../services/productCategory.service
 import { decideProduct } from "../services/productModeration.service";
 import { createMarketer, decideMarketerRequest, listMarketerRequests, listMarketers, updateMarketer } from "../services/referral.service";
 import { approveSuggestion, listSuggestions, mergeSuggestion, rejectSuggestion } from "../services/categorySuggestion.service";
+import { extendTrials } from "../services/trialExtend.service";
 import { grantResponderEntitlement, RESPONDER_LEGACY_PLAN_ID, RESPONDER_SERVICES } from "../services/responder.service";
 
 export const adminRouter = Router();
@@ -778,6 +779,20 @@ adminRouter.post("/responder/grant", route(async (req, res) => {
   });
   await notify({ userId: user.id, type: "SYSTEM", title: "تم تفعيل المجيب الآلي لك", body: `تم منحك خطة «${plan.name}» لمدة ${parsed.data.days} يومًا.`, data: { kind: "RESPONDER", reason: "grant" }, email: false });
   res.status(201).json({ user: { id: user.id, email: user.email, fullName: user.fullName }, plan, entitlement });
+}));
+
+/** Extend the free trials of one service by some days (still running, and optionally the ones that ended recently). */
+adminRouter.post("/trials/extend", route(async (req, res) => {
+  const parsed = z.object({
+    service: z.enum(["ACCOUNTING", "HR", "MERCHANT_ACCOUNT", "RESPONDER_BASIC"]),
+    days: z.number().int().min(1).max(365),
+    endedWithinDays: z.number().int().min(0).max(90).default(0),
+    dryRun: z.boolean().default(false),
+  }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const result = await extendTrials(parsed.data);
+  if (!parsed.data.dryRun) console.info(`[admin] trials extended: ${parsed.data.service} +${parsed.data.days}d, ${result.affected} accounts, by ${req.user!.id}`);
+  res.json(result);
 }));
 
 /* ---------------- AI provider check (booleans + counters only — no keys, no message text) ---------------- */

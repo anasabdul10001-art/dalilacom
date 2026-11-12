@@ -6,6 +6,7 @@ import { route } from "../lib/asyncRoute";
 import { sendError, sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
 import { prisma } from "../prisma";
+import { activatePlan } from "../services/planActivation.service";
 
 export const billingRouter = Router();
 const DAY = 86_400_000;
@@ -146,24 +147,6 @@ function verifyStripe(rawBody: Buffer, header: string | undefined, secret: strin
   if (!timestamp || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false;
   const expected = createHmac("sha256", secret).update(`${timestamp}.${rawBody.toString("utf8")}`).digest();
   return signatures.some(value => { try { const got = Buffer.from(value, "hex"); return got.length === expected.length && timingSafeEqual(got, expected); } catch { return false; } });
-}
-
-async function activatePlan(tx: Prisma.TransactionClient, userId: string, planId: string, service: ServiceKind, endsAt: Date) {
-  const existing = await tx.membership.findFirst({ where: { userId, status: { not: "CANCELLED" } }, orderBy: { createdAt: "desc" } });
-  if (service === "MEMBERSHIP") {
-    if (existing) await tx.membership.update({ where: { id: existing.id }, data: { planId, status: "ACTIVE", endDate: endsAt, isTrial: false } });
-    else await tx.membership.create({ data: { userId, planId, memberNumber: `DLK-${randomInt(1_000_000_000, 9_999_999_999)}`, qrSecret: randomBytes(32).toString("hex"), startDate: new Date(), endDate: endsAt } });
-    return;
-  }
-  if (service === "RESPONDER_CUSTOMER" || service === "RESPONDER_MERCHANT") {
-    await tx.responderSubscription.upsert({ where: { userId }, create: { userId, status: "ACTIVE", periodEnd: endsAt, aiPeriodStart: new Date(), aiRepliesUsed: 0 }, update: { status: "ACTIVE", periodEnd: endsAt, aiPeriodStart: new Date(), aiRepliesUsed: 0 } });
-    return;
-  }
-  if (service === "MERCHANT_ACCOUNT") {
-    const merchant = await tx.merchantProfile.findUnique({ where: { userId }, select: { id: true } });
-    if (merchant) await tx.merchantProfile.update({ where: { userId }, data: { planId, planEndsAt: endsAt } });
-    else await tx.marketplaceSubscription.upsert({ where: { userId }, create: { userId, planId, endsAt }, update: { planId, endsAt } });
-  }
 }
 
 async function deactivatePlan(tx: Prisma.TransactionClient, userId: string, service: ServiceKind) {

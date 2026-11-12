@@ -309,3 +309,41 @@ describe("The account's country drives the price", () => {
     expect(bought.body).toMatchObject({ status: "ACTIVE", creditsPaid: 0 });
   });
 });
+
+describe("admin: extending free trials", () => {
+  it("adds days to running trials (and to recently ended ones when asked), counts without changing on a dry run, and leaves everyone else alone", async () => {
+    const auth = await admin();
+    const p = await prisma.servicePlan.create({ data: { name: `Trial ${Date.now()}`, service: "ACCOUNTING", durationDays: 30, trialDays: 90, priceCents: 200, currency: "USD", priceCredits: 200 } });
+    const mk = async (prefix: string, endsInDays: number, provider = "TRIAL") => {
+      const u = await account(prefix);
+      const sub = await prisma.platformSubscription.create({ data: { userId: u.id, planId: p.id, provider, status: "ACTIVE", amountCents: 0, currency: "USD", currentPeriodEnd: new Date(Date.now() + endsInDays * 86_400_000) } });
+      return sub;
+    };
+    const running = await mk("trial-run", 10);
+    const justEnded = await mk("trial-end", -5);
+    const longAgo = await mk("trial-old", -60);
+    const paidOne = await mk("trial-paid", 10, "STRIPE");
+
+    const dry = await request(app).post("/admin/trials/extend").set("Authorization", auth.bearer).send({ service: "ACCOUNTING", days: 30, endedWithinDays: 10, dryRun: true });
+    expect(dry.status).toBe(200);
+    expect(dry.body.extended).toBe(false);
+    expect(dry.body.affected).toBeGreaterThanOrEqual(2);
+    expect((await prisma.platformSubscription.findUniqueOrThrow({ where: { id: running.id } })).currentPeriodEnd!.getTime()).toBe(running.currentPeriodEnd!.getTime());
+
+    const done = await request(app).post("/admin/trials/extend").set("Authorization", auth.bearer).send({ service: "ACCOUNTING", days: 30, endedWithinDays: 10 });
+    expect(done.status).toBe(200);
+    expect(done.body.extended).toBe(true);
+    const after = async (id: string) => (await prisma.platformSubscription.findUniqueOrThrow({ where: { id } })).currentPeriodEnd!.getTime();
+    const DAY = 86_400_000;
+    expect(Math.abs((await after(running.id)) - (running.currentPeriodEnd!.getTime() + 30 * DAY))).toBeLessThan(1000); // counted from its own end
+    expect(Math.abs((await after(justEnded.id)) - (Date.now() + 30 * DAY))).toBeLessThan(60_000); // counted from today
+    expect(await after(longAgo.id)).toBe(longAgo.currentPeriodEnd!.getTime()); // ended too long ago: untouched
+    expect(await after(paidOne.id)).toBe(paidOne.currentPeriodEnd!.getTime()); // a paid subscription is not a trial
+
+    const bad = await request(app).post("/admin/trials/extend").set("Authorization", auth.bearer).send({ service: "MEMBERSHIP", days: 30 });
+    expect(bad.status).toBe(400);
+    const nobody = await account("trial-user");
+    const denied = await request(app).post("/admin/trials/extend").set("Authorization", nobody.bearer).send({ service: "ACCOUNTING", days: 30 });
+    expect(denied.status).toBe(403);
+  });
+});

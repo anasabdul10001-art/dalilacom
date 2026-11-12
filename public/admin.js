@@ -1859,6 +1859,31 @@ function parseNonNegInt(raw, label) {
   return n;
 }
 
+// ---- extend the free trials of one service ----
+function readTrialExtension(dryRun) {
+  const days = parseInt(document.getElementById('te-days').value, 10);
+  const endedWithinDays = parseInt(document.getElementById('te-ended').value || '0', 10);
+  if (!Number.isInteger(days) || days < 1 || days > 365) { alert('أيام التمديد من 1 لـ365'); return null; }
+  if (!Number.isInteger(endedWithinDays) || endedWithinDays < 0 || endedWithinDays > 90) { alert('اللي خلصت تجربتهم: من 0 لـ90 يوم'); return null; }
+  return { service: document.getElementById('te-service').value, days, endedWithinDays, dryRun };
+}
+async function extendTrialsPreview() {
+  const body = readTrialExtension(true);
+  if (!body) return;
+  const { ok, data } = await api('POST', '/admin/trials/extend', body);
+  document.getElementById('te-msg').textContent = ok ? `الحسابات اللي رح تتأثر: ${data.affected} (تجربتها شغّالة: ${data.running}، خلصت مؤخراً: ${data.ended})` : errText(data, 'خطأ');
+}
+async function extendTrialsRun() {
+  const body = readTrialExtension(false);
+  if (!body) return;
+  const preview = await api('POST', '/admin/trials/extend', { ...body, dryRun: true });
+  if (!preview.ok) { alert(errText(preview.data, 'خطأ')); return; }
+  if (preview.data.affected === 0) { document.getElementById('te-msg').textContent = 'ما في حسابات بتنطبق عليها الشروط'; return; }
+  if (!confirm(`رح تتمدّد تجربة ${preview.data.affected} حساب لـ${body.days} يوم. كمّل؟`)) return;
+  const { ok, data } = await api('POST', '/admin/trials/extend', body);
+  document.getElementById('te-msg').textContent = ok ? `انمدّدت تجربة ${data.affected} حساب` : errText(data, 'خطأ');
+}
+
 async function addServicePlan() {
   const name = document.getElementById('np-name').value.trim();
   const durationDays = parseInt(document.getElementById('np-duration').value, 10);

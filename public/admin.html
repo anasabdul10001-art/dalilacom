@@ -520,6 +520,25 @@
         <button style="margin-top:12px" onclick="addServicePlan()">إضافة</button>
       </div>
 
+      <div class="card">
+        <h3>تمديد التجربة المجانية</h3>
+        <p class="subtitle">بيزيد أيام على التجارب المجانية اللي لسا شغّالة لخدمة معيّنة، وإذا حبيت كمان اللي خلصت مؤخراً. ما بينسحب شي من حدا، ومين ما جرّب أصلاً ما بياخد شي. «كم حساب؟» بيعدّ بدون ما يغيّر.</p>
+        <div class="row">
+          <div><label>الخدمة</label>
+            <select id="te-service">
+              <option value="ACCOUNTING">المحاسبة</option>
+              <option value="HR">الموارد البشرية</option>
+              <option value="RESPONDER_BASIC">المجيب الآلي</option>
+              <option value="MERCHANT_ACCOUNT">باقة النشاط</option>
+            </select></div>
+          <div><label>أيام التمديد</label><input id="te-days" value="30" /></div>
+          <div><label>وشمل اللي خلصت تجربتهم من (يوم)</label><input id="te-ended" value="0" /></div>
+        </div>
+        <button class="btn" onclick="extendTrialsPreview()">كم حساب؟</button>
+        <button class="btn" onclick="extendTrialsRun()">مدّد التجربة</button>
+        <p id="te-msg" class="subtitle"></p>
+      </div>
+
       <div id="plans-list"></div>
 
       <div class="card">
