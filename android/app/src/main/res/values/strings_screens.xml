@@ -746,4 +746,6 @@
     <string name="hr_ok">تمام</string>
     <string name="hr_cancel">إلغاء</string>
     <string name="hr_plan_required">قسم الموارد البشرية بيحتاج باقة فعّالة أو فترة تجربة.</string>
+    <string name="hr_pay_paidNoExpense">انسجّلت الدفعة. ما انضاف مصروف للمحاسبة لأنو إجمالي الرواتب صفر.</string>
+    <string name="hr_pay_attNote">الأيام اللي ما انسجّل فيها حضور بتنحسم من الراتب. وإذا ما حدا بالشركة بيسجّل حضور، الرواتب بتنحسب كاملة.</string>
 </resources>

@@ -75,7 +75,13 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
     /** Run one change; on success say so and reload everything, on failure show the server's own message. */
     fun act(done: Int?, call: suspend () -> Result<JsonElement>, after: (JsonElement) -> Unit = {}) {
         scope.launch {
-            call().fold({ data -> after(data); message = done?.let { context.getString(it) }.orEmpty(); overview = null; version++ }, { message = it.message ?: errorFallback })
+            call().fold({ data ->
+                after(data)
+                // a payroll run that costs nothing books no expense: say so instead of claiming one was added
+                val booked = ((data as? JsonObject)?.get("expenseBooked") as? JsonPrimitive)?.booleanOrNull
+                val key = if (done == R.string.hr_pay_paidDone && booked == false) R.string.hr_pay_paidNoExpense else done
+                message = key?.let { context.getString(it) }.orEmpty(); overview = null; version++
+            }, { message = it.message ?: errorFallback })
         }
     }
 
@@ -243,6 +249,7 @@ private fun PayrollTab(repo: com.dalilacom.app.data.repository.HrRepository, cur
         val runs = data.rows()
         Box(stringResource(R.string.hr_pay_runs)) {
             Text(stringResource(R.string.hr_pay_note), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.hr_pay_attNote), color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (runs.isEmpty()) Text(stringResource(R.string.hr_pay_none))
             runs.forEach { r ->
                 val id = r.s("id").orEmpty(); val st = r.s("status").orEmpty()

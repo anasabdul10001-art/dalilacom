@@ -111,6 +111,8 @@ DICT.en = {
   "hr.decided": "Decision saved",
   "hr.pay.runs": "Payroll runs",
   "hr.pay.note": "When you pay a run, DALILACOM records a payroll expense in your accounting by itself.",
+  "hr.pay.paidNoExpense": "Payment recorded. No expense was added to accounting because the payroll total is zero.",
+  "hr.pay.attNote": "Days with no check-in are deducted from the salary. If nobody in the company records attendance, salaries are paid in full.",
   "hr.pay.none": "No payroll runs yet",
   "hr.pay.from": "From",
   "hr.pay.to": "To",

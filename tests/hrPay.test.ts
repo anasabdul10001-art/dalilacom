@@ -122,6 +122,29 @@ describe("HR payroll runs", () => {
 });
 
 describe("HR payroll -> the owner's accounting", () => {
+  it("a company that keeps no attendance pays full salaries (no day is unpaid) and the expense reaches accounting", async () => {
+    const co = await company("acc3", "SYP");
+    await staff(co, { baseSalary: 400000, attend: false });
+    const runId = await newRun(co);
+    const slips = await process(co, runId);
+    expect(slips.status).toBe(200);
+    expect(slips.body[0].netPay).toBe(400000);
+    const paid = await pay(co, runId);
+    expect(paid.body.expenseBooked).toBe(true);
+    expect(Number((await expenses(co.id))[0].amountCents)).toBe(400000);
+  });
+
+  it("a run that costs nothing says so: no expense is booked and the answer tells the app", async () => {
+    const co = await company("acc4", "SYP");
+    await staff(co, { baseSalary: 0, attend: false });
+    const runId = await newRun(co);
+    await process(co, runId);
+    const paid = await pay(co, runId);
+    expect(paid.status).toBe(200);
+    expect(paid.body.expenseBooked).toBe(false);
+    expect(await expenses(co.id)).toHaveLength(0);
+  });
+
   it("a run paid before its period ends is booked as of today, so this month's figures show it at once", async () => {
     const co = await company("acc2", "SYP");
     const e = await staff(co, { baseSalary: 100000, attend: false });

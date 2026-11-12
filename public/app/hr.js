@@ -43,7 +43,8 @@ function hrErr(res) { toast((res.data && res.data.error && res.data.error.messag
 async function hrDo(method, path, body, doneKey) {
   const res = await api(method, path, body);
   if (!res.ok) { hrErr(res); return null; }
-  if (doneKey) toast(t(doneKey));
+  // a payroll run that costs nothing books no expense: say so instead of claiming one was added
+  if (doneKey) toast(t(doneKey === "hr.pay.paidDone" && res.data && res.data.expenseBooked === false ? "hr.pay.paidNoExpense" : doneKey));
   hrReload();
   return res.data;
 }
@@ -144,7 +145,7 @@ function hrPayroll() {
   const step = (r) => r.status === "DRAFT" ? `<button class="btn small" onclick="hrDo('POST','/hr/payroll-runs/${r.id}/process',undefined,'hr.pay.processed')">${esc(t("hr.pay.process"))}</button>`
     : r.status === "PROCESSED" ? `<button class="btn small" onclick="hrDo('POST','/hr/payroll-runs/${r.id}/mark-paid',undefined,'hr.pay.paidDone')">${esc(t("hr.pay.markPaid"))}</button>`
     : owner ? `<button class="btn small outline" onclick="if(confirm(t('hr.pay.revertAsk')))hrDo('POST','/hr/payroll-runs/${r.id}/revert-paid',undefined,'hr.pay.reverted')">${esc(t("hr.pay.revert"))}</button>` : "";
-  return `<div class="card"><h2>${esc(t("hr.pay.runs"))}</h2><p class="muted">${esc(t("hr.pay.note"))}</p>
+  return `<div class="card"><h2>${esc(t("hr.pay.runs"))}</h2><p class="muted">${esc(t("hr.pay.note"))}</p><p class="muted">${esc(t("hr.pay.attNote"))}</p>
     ${runs.length === 0 ? `<div class="empty-state">${esc(t("hr.pay.none"))}</div>` : runs.map((r) => `
       <div class="card" style="margin:8px 0"><div class="title-line"><strong>${esc(hrDay(r.periodStart))} → ${esc(hrDay(r.periodEnd))}</strong><span class="badge ${r.status === "PAID" ? "success" : "neutral"}">${esc(t("hr.run." + r.status))}</span></div>
       ${step(r)}</div>`).join("")}

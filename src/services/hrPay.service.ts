@@ -101,13 +101,16 @@ export async function processRun(actor: HrActor, id: string) {
 
   type Draft = { employeeId: string; gross: number; deductions: number; net: number; breakdown: Prisma.InputJsonValue; installmentIds: string[]; advanceIds: string[] };
   const drafts: Draft[] = [];
+  // Days without a check-in are unpaid only where the company really keeps attendance: if nobody has a single check-in
+  // in the period, every salary is paid in full (otherwise a company that does not track attendance would pay nothing)
+  const attendanceKept = (await prisma.hrAttendance.count({ where: { companyId: company.id, checkIn: { gte: run.periodStart, lte: endOfDay(run.periodEnd) } } })) > 0;
   for (const emp of employees) {
     const base = emp.baseSalary ?? 0;
     const present = new Set((await prisma.hrAttendance.findMany({ where: { employeeId: emp.id, checkIn: { gte: run.periodStart, lte: endOfDay(run.periodEnd) } }, select: { checkIn: true } })).map((r) => dateKey(r.checkIn)));
     const leaves = await prisma.hrLeaveRequest.findMany({ where: { employeeId: emp.id, status: "APPROVED", startDate: { lte: run.periodEnd }, endDate: { gte: run.periodStart } }, include: { leaveType: true } });
     // a working day with no check-in and no paid leave is unpaid (this also pro-rates someone who joined mid-period)
     let unpaidDays = 0;
-    for (const d of days) {
+    for (const d of attendanceKept ? days : []) {
       if (present.has(dateKey(d))) continue;
       if (leaves.some((l) => l.leaveType.isPaid && d >= l.startDate && d <= l.endDate)) continue;
       unpaidDays += 1;
@@ -197,7 +200,7 @@ export const payrollSourceKey = (runId: string) => `hr-run:${runId}`;
 async function bookExpense(tx: Prisma.TransactionClient, company: HrCompany, run: { id: string; periodStart: Date; periodEnd: Date }) {
   const payslips = await tx.hrPayslip.findMany({ where: { runId: run.id }, select: { netPay: true, breakdown: true } });
   const total = runCost(payslips);
-  if (total <= 0) return;
+  if (total <= 0) return 0;
   const sourceKey = payrollSourceKey(run.id);
   const fields = {
     amountCents: total, currency: company.currency,
@@ -210,19 +213,22 @@ async function bookExpense(tx: Prisma.TransactionClient, company: HrCompany, run
     create: { ...fields, userId: company.ownerId, type: "EXPENSE", category: "رواتب", source: "PAYROLL", sourceKey },
     update: fields,
   });
+  return total;
 }
 
 /** Paid: the run's cost becomes one expense in the owner's accounting, in the same transaction. */
 export async function markPaid(actor: HrActor, id: string) {
   const run = await prisma.hrPayrollRun.findFirst({ where: { id, companyId: actor.company.id } });
   if (!run) throw notFound("دورة الرواتب غير موجودة");
+  let booked = 0;
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.hrPayrollRun.updateMany({ where: { id, status: "PROCESSED" }, data: { status: "PAID", paidAt: new Date() } });
     if (claimed.count !== 1) throw conflict("بتقدر تدفع دورة معالَجة بس");
-    await bookExpense(tx, actor.company, run);
+    booked = await bookExpense(tx, actor.company, run);
     await tx.hrAuditLog.create({ data: { companyId: actor.company.id, userId: actor.userId, action: "payroll.paid", entityType: "HrPayrollRun", entityId: id } });
   });
-  return prisma.hrPayrollRun.findUniqueOrThrow({ where: { id } });
+  // expenseBooked tells the app whether an expense really reached the owner's accounting (a run that costs nothing books none)
+  return { ...(await prisma.hrPayrollRun.findUniqueOrThrow({ where: { id } })), expenseBooked: booked > 0 };
 }
 
 /** Takes a payment back (PAID -> PROCESSED): the expense it made is removed, in the same transaction. */

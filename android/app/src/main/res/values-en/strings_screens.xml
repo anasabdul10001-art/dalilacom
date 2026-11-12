@@ -746,4 +746,6 @@
     <string name="hr_ok">OK</string>
     <string name="hr_cancel">Cancel</string>
     <string name="hr_plan_required">The HR section needs an active plan or a free trial.</string>
+    <string name="hr_pay_paidNoExpense">Payment recorded. No expense was added to accounting because the payroll total is zero.</string>
+    <string name="hr_pay_attNote">Days with no check-in are deducted from the salary. If nobody in the company records attendance, salaries are paid in full.</string>
 </resources>
