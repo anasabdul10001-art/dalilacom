@@ -2533,7 +2533,7 @@ async function loadOrders() {
 /* ---- The three sections (accounting, auto-responder, HR) work like small sites of their own: a tab bar whose first tab is a home page that is always there ---- */
 
 const SITES = {
-  accounting: { icon: "🧮", tabs: ["summary", "entry", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"] },
+  accounting: { icon: "🧮", tabs: ["summary", "entry", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
   responder: { icon: "🤖", tabs: ["overview", "channels", "rules", "inbox"], art: ["chat", "orbit", "ai"], features: ["💬", "⚙️", "✨", "📥"] },
   hr: { icon: "👥", tabs: [], art: ["team", "payslip", "calendar"], features: ["🕒", "🏖️", "💵", "🤝"] },
 };
@@ -2587,6 +2587,8 @@ function siteLanding(kind) {
     <div class="site-stats">${[1, 2, 3].map((n) => `<div><b>${esc(t(k + "st" + n + ".n"))}</b><span>${esc(t(k + "st" + n + ".l"))}</span></div>`).join("")}</div>
     <h2 class="site-h">${esc(t("site.featuresTitle"))}</h2>
     <div class="site-grid">${SITES[kind].features.map((icon, n) => `<div class="site-feat"><span>${icon}</span><b>${esc(t("sec." + kind + ".f" + (n + 1) + ".t"))}</b><p>${esc(t("sec." + kind + ".f" + (n + 1) + ".d"))}</p></div>`).join("")}</div>
+    ${SITES[kind].details ? `<h2 class="site-h">${esc(t("site.detailsTitle"))}</h2>
+    <div class="site-details">${Array.from({ length: SITES[kind].details }, (_, n) => `<div class="site-detail"><span>${SITES[kind].features[n]}</span><div><b>${esc(t(k + "d" + (n + 1) + ".t"))}</b><ul>${[1, 2, 3].map((m) => `<li>${esc(t(k + "d" + (n + 1) + ".b" + m))}</li>`).join("")}</ul></div></div>`).join("")}</div>` : ""}
     <h2 class="site-h">${esc(t("site.stepsTitle"))}</h2>
     <ol class="site-steps">${[1, 2, 3].map((n) => `<li><span>${n}</span><div><b>${esc(t("sec." + kind + ".s" + n))}</b><p>${esc(t(k + "s" + n + ".d"))}</p></div></li>`).join("")}</ol>
     <h2 class="site-h">${esc(t("site.faq"))}</h2>

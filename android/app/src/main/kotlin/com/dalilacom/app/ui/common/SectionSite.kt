@@ -70,6 +70,8 @@ enum class SiteKind(
     val stepT: List<Int>, val stepD: List<Int>,
     val faqQ: List<Int>, val faqA: List<Int>,
     val art: List<String>,
+    /** The "in detail" cards (a title and three lines each); empty for a section that has none yet. */
+    val detailT: List<Int> = emptyList(), val detailB: List<List<Int>> = emptyList(),
 ) {
     Accounting(
         key = "accounting", icon = "🧮", kicker = R.string.sec_acc_kicker, appTab = R.string.site_accounting_tab_summary,
@@ -81,6 +83,13 @@ enum class SiteKind(
         stepT = listOf(R.string.sec_acc_s1, R.string.sec_acc_s2, R.string.sec_acc_s3), stepD = listOf(R.string.site_accounting_s1_d, R.string.site_accounting_s2_d, R.string.site_accounting_s3_d),
         faqQ = listOf(R.string.site_accounting_faq1_q, R.string.site_accounting_faq2_q, R.string.site_accounting_faq3_q, R.string.site_accounting_faq4_q), faqA = listOf(R.string.site_accounting_faq1_a, R.string.site_accounting_faq2_a, R.string.site_accounting_faq3_a, R.string.site_accounting_faq4_a),
         art = listOf("bars", "receipt", "stock"),
+        detailT = listOf(R.string.site_accounting_d1_t, R.string.site_accounting_d2_t, R.string.site_accounting_d3_t, R.string.site_accounting_d4_t),
+        detailB = listOf(
+            listOf(R.string.site_accounting_d1_b1, R.string.site_accounting_d1_b2, R.string.site_accounting_d1_b3),
+            listOf(R.string.site_accounting_d2_b1, R.string.site_accounting_d2_b2, R.string.site_accounting_d2_b3),
+            listOf(R.string.site_accounting_d3_b1, R.string.site_accounting_d3_b2, R.string.site_accounting_d3_b3),
+            listOf(R.string.site_accounting_d4_b1, R.string.site_accounting_d4_b2, R.string.site_accounting_d4_b3),
+        ),
     ),
     Responder(
         key = "responder", icon = "🤖", kicker = R.string.sec_resp_kicker, appTab = R.string.site_responder_tab_overview,
@@ -174,6 +183,18 @@ private fun SiteHome(kind: SiteKind, signedIn: Boolean, onLogin: () -> Unit, onR
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(stringResource(kind.featureT[i]), fontWeight = FontWeight.Bold)
                     Text(stringResource(kind.featureD[i]), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 20.sp)
+                }
+            }
+        }
+        if (kind.detailT.isNotEmpty()) {
+            Text(stringResource(R.string.site_detailsTitle), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            for (i in kind.detailT.indices) Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) { Text(kind.featureIcons[i], fontSize = 23.sp) }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(stringResource(kind.detailT[i]), fontWeight = FontWeight.Bold)
+                        for (line in kind.detailB[i]) Text("• " + stringResource(line), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 20.sp)
+                    }
                 }
             }
         }

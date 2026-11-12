@@ -520,6 +520,23 @@
     <string name="site_faq" formatted="false">Common questions</string>
     <string name="site_stepsTitle" formatted="false">How it works</string>
     <string name="site_featuresTitle" formatted="false">Everything in one place</string>
+    <string name="site_detailsTitle" formatted="false">In detail</string>
+    <string name="site_accounting_d1_t" formatted="false">Income and expenses</string>
+    <string name="site_accounting_d1_b1" formatted="false">Record every entry with its type (income or expense), category, details and amount.</string>
+    <string name="site_accounting_d1_b2" formatted="false">The summary works out income, expenses and the net for each currency and any period.</string>
+    <string name="site_accounting_d1_b3" formatted="false">Edit or delete any entry you got wrong.</string>
+    <string name="site_accounting_d2_t" formatted="false">Stock and barcodes</string>
+    <string name="site_accounting_d2_b1" formatted="false">Add a product with its name, sale price, cost and the quantity you have.</string>
+    <string name="site_accounting_d2_b2" formatted="false">Look up a barcode with the phone camera (if your device supports it) or type it in.</string>
+    <string name="site_accounting_d2_b3" formatted="false">Every sale lowers the quantity and records the income and the cost of the goods sold by itself.</string>
+    <string name="site_accounting_d3_t" formatted="false">Invoice scanning</string>
+    <string name="site_accounting_d3_b1" formatted="false">Take a clear photo of the purchase invoice.</string>
+    <string name="site_accounting_d3_b2" formatted="false">The app reads the amount, the supplier and the description, and you review and edit before saving.</string>
+    <string name="site_accounting_d3_b3" formatted="false">Nothing is saved until you confirm it. There is a daily limit on photos, and you can always type an invoice in.</string>
+    <string name="site_accounting_d4_t" formatted="false">Reports and store link</string>
+    <string name="site_accounting_d4_b1" formatted="false">Download all your entries as a CSV file at any time.</string>
+    <string name="site_accounting_d4_b2" formatted="false">Print the summary report and hand your accountant the numbers ready.</string>
+    <string name="site_accounting_d4_b3" formatted="false">If you have a store on Dalilacom, your delivered orders are recorded by themselves: income, cost and delivery fees.</string>
     <string name="site_ctaTitle" formatted="false">Ready to start?</string>
     <string name="site_ctaSub" formatted="false">A few simple steps and you will see the difference from day one.</string>
     <string name="site_open_responder" formatted="false">Open the auto-responder</string>
