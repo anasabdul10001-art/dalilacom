@@ -58,6 +58,15 @@ export async function requireHrEmployment(req: Request, _res: Response, next: Ne
   next();
 }
 
+/** For the manager's pages: a linked employee who leads a team (the manager or HR role, or someone with people under them), in a company whose plan is active. */
+export async function requireHrTeam(req: Request, _res: Response, next: NextFunction) {
+  const me = req.hrMe!;
+  if (!(await hasHrPlan(me.company.ownerId))) return next(new ApiError(402, "HR_PLAN_REQUIRED", "صاحب النشاط ما فعّل قسم الموارد البشرية حالياً"));
+  const leads = me.employee.role !== "EMPLOYEE" || (await prisma.hrEmployee.count({ where: { companyId: me.company.id, OR: [{ managerId: me.employee.id }, { department: { managerId: me.employee.id } }] } })) > 0;
+  if (!leads) return next(new ApiError(403, "FORBIDDEN", "ما عندك صلاحية على قسم الموارد البشرية"));
+  next();
+}
+
 /** Employees may act (check in, ask for leave...) only while the owner's plan is active; reading their own records is always open. */
 export async function assertCompanyActive(company: HrCompany) {
   if (!(await hasHrPlan(company.ownerId))) throw new ApiError(402, "HR_PLAN_REQUIRED", "صاحب النشاط ما فعّل قسم الموارد البشرية حالياً");

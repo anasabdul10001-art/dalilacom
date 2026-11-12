@@ -3,9 +3,11 @@ import { z } from "zod";
 import { route } from "../lib/asyncRoute";
 import { sendValidationError } from "../lib/apiError";
 import { requireAuth } from "../middleware/auth";
+import { prisma } from "../prisma";
 import { hrInviteRateLimiter } from "../middleware/rateLimit";
-import { requireHrManager } from "../services/hrAccess.service";
+import { requireHrEmployment, requireHrManager, requireHrTeam } from "../services/hrAccess.service";
 import * as core from "../services/hrCore.service";
+import * as time from "../services/hrTime.service";
 
 export const hrRouter = Router();
 hrRouter.use(requireAuth);
@@ -23,6 +25,42 @@ hrRouter.post("/me/accept", hrInviteRateLimiter, route(async (req, res) => {
   const parsed = z.object({ code: z.string().trim().min(10).max(60) }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await core.acceptByCode(req.user!.id, parsed.data.code));
+}));
+
+// ---- "my job": the account's own employee record (every action is for the signed-in employee, never for a person named in the request)
+const me = Router();
+hrRouter.use("/me", route(async (req, res, next) => requireHrEmployment(req, res, next)), me);
+
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}/);
+const leaveRequestSchema = z.object({ leaveTypeId: z.string().uuid(), startDate: isoDay, endDate: isoDay, reason: z.string().trim().max(300).optional() });
+const decisionSchema = z.object({ decision: z.enum(["APPROVE", "REJECT"]), reason: z.string().trim().max(300).optional() });
+const periodQuery = (req: { query: Record<string, unknown> }) => ({ from: typeof req.query.from === "string" ? req.query.from : undefined, to: typeof req.query.to === "string" ? req.query.to : undefined });
+const statusQuery = (req: { query: Record<string, unknown> }) => (["PENDING_MANAGER", "PENDING_HR", "APPROVED", "REJECTED", "CANCELED"].includes(String(req.query.status)) ? (req.query.status as "APPROVED") : undefined);
+const yearQuery = (req: { query: Record<string, unknown> }) => (Number(req.query.year) >= 2000 && Number(req.query.year) <= 2100 ? Number(req.query.year) : new Date().getUTCFullYear());
+
+me.get("/", route(async (req, res) => res.json({ companyId: req.hrMe!.company.id, companyName: req.hrMe!.company.name, currency: req.hrMe!.company.currency, employee: { id: req.hrMe!.employee.id, role: req.hrMe!.employee.role, position: req.hrMe!.employee.position, status: req.hrMe!.employee.employmentStatus } })));
+me.post("/check-in", route(async (req, res) => res.status(201).json(await time.checkIn(req.hrMe!))));
+me.post("/check-out", route(async (req, res) => res.json(await time.checkOut(req.hrMe!))));
+me.get("/attendance", route(async (req, res) => res.json(await time.myAttendance(req.hrMe!, periodQuery(req)))));
+me.get("/leave-balances", route(async (req, res) => res.json(await time.listBalances(req.hrMe!.company.id, req.hrMe!.employee.id, yearQuery(req)))));
+me.get("/leave-requests", route(async (req, res) => res.json(await time.myLeaveRequests(req.hrMe!))));
+me.post("/leave-requests", route(async (req, res) => {
+  const parsed = leaveRequestSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.status(201).json(await time.createLeaveRequest(req.hrMe!, parsed.data));
+}));
+me.post("/leave-requests/:id/cancel", route(async (req, res) => res.json(await time.cancelLeaveRequest(req.hrMe!, req.params.id))));
+
+// ---- a manager: the people under them (direct reports and the departments they manage)
+const team = Router();
+hrRouter.use("/team", route(async (req, res, next) => requireHrEmployment(req, res, next)), route(async (req, res, next) => requireHrTeam(req, res, next)), team);
+team.get("/employees", route(async (req, res) => res.json(await prisma.hrEmployee.findMany({ where: time.teamWhere(req.hrMe!.employee), select: { id: true, firstName: true, lastName: true, position: true, employmentStatus: true }, orderBy: { firstName: "asc" } }))));
+team.get("/attendance", route(async (req, res) => res.json(await time.listAttendance(req.hrMe!.company.id, time.teamWhere(req.hrMe!.employee), { employeeId: typeof req.query.employeeId === "string" ? req.query.employeeId : undefined, ...periodQuery(req) }))));
+team.get("/leave-requests", route(async (req, res) => res.json(await time.listLeaveRequests(req.hrMe!.company.id, time.teamWhere(req.hrMe!.employee), statusQuery(req)))));
+team.post("/leave-requests/:id/decision", route(async (req, res) => {
+  const parsed = decisionSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await time.decideLeaveAsManager(req.hrMe!, req.params.id, parsed.data.decision, parsed.data.reason));
 }));
 
 // ---- the company itself
@@ -94,4 +132,48 @@ manage.delete("/employees/:id/invite", route(async (req, res) => {
 manage.post("/employees/:id/unlink", route(async (req, res) => {
   await core.unlinkEmployee(req.hr!, req.params.id);
   res.json({ unlinked: true });
+}));
+
+// ---- attendance
+manage.get("/attendance", route(async (req, res) => res.json(await time.listAttendance(req.hr!.company.id, { companyId: req.hr!.company.id }, { employeeId: typeof req.query.employeeId === "string" ? req.query.employeeId : undefined, ...periodQuery(req) }))));
+manage.post("/attendance", route(async (req, res) => {
+  const parsed = z.object({ employeeId: z.string().uuid(), checkIn: z.string().datetime(), checkOut: z.string().datetime().optional(), notes: z.string().trim().max(300).optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.status(201).json(await time.createManualAttendance(req.hr!, parsed.data));
+}));
+manage.patch("/attendance/:id", route(async (req, res) => {
+  const parsed = z.object({ checkIn: z.string().datetime().optional(), checkOut: z.string().datetime().nullable().optional(), notes: z.string().trim().max(300).nullable().optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await time.updateAttendance(req.hr!, req.params.id, parsed.data));
+}));
+
+// ---- leave
+const leaveTypeSchema = z.object({ name: z.string().trim().min(1).max(60), defaultBalance: z.number().int().min(0).max(365), isPaid: z.boolean().optional() });
+manage.get("/leave-types", route(async (req, res) => res.json(await time.listLeaveTypes(req.hr!.company.id))));
+manage.post("/leave-types", route(async (req, res) => {
+  const parsed = leaveTypeSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.status(201).json(await time.createLeaveType(req.hr!.company.id, parsed.data));
+}));
+manage.patch("/leave-types/:id", route(async (req, res) => {
+  const parsed = leaveTypeSchema.partial().safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await time.updateLeaveType(req.hr!.company.id, req.params.id, parsed.data));
+}));
+manage.get("/leave-balances", route(async (req, res) => {
+  if (typeof req.query.employeeId !== "string") return res.status(400).json({ error: { code: "BAD_REQUEST", message: "employeeId is required" } });
+  const found = await prisma.hrEmployee.findFirst({ where: { id: req.query.employeeId, companyId: req.hr!.company.id }, select: { id: true } });
+  if (!found) return res.status(404).json({ error: { code: "NOT_FOUND", message: "الموظف غير موجود" } });
+  res.json(await time.listBalances(req.hr!.company.id, found.id, yearQuery(req)));
+}));
+manage.put("/leave-balances", route(async (req, res) => {
+  const parsed = z.object({ employeeId: z.string().uuid(), leaveTypeId: z.string().uuid(), year: z.number().int().min(2000).max(2100), balanceDays: z.number().min(0).max(365) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await time.adjustBalance(req.hr!.company.id, parsed.data));
+}));
+manage.get("/leave-requests", route(async (req, res) => res.json(await time.listLeaveRequests(req.hr!.company.id, { companyId: req.hr!.company.id }, statusQuery(req)))));
+manage.post("/leave-requests/:id/decision", route(async (req, res) => {
+  const parsed = decisionSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await time.decideLeaveAsManagement(req.hr!, req.params.id, parsed.data.decision, parsed.data.reason));
 }));
