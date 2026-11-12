@@ -8,12 +8,14 @@ import { hrInviteRateLimiter } from "../middleware/rateLimit";
 import { requireHrEmployment, requireHrManager, requireHrTeam } from "../services/hrAccess.service";
 import * as core from "../services/hrCore.service";
 import * as time from "../services/hrTime.service";
+import * as pay from "../services/hrPay.service";
 
 export const hrRouter = Router();
 hrRouter.use(requireAuth);
 
 const currencyCode = z.string().regex(/^[A-Za-z]{3}$/);
-const money = z.number().int().nonnegative().max(9_000_000_000);
+// the amount columns are 32-bit: the largest single salary or advance is 2,147,483,647 minor units (a company's total is wider)
+const money = z.number().int().nonnegative().max(2_000_000_000);
 
 // ---- what the HR tab shows this account (no plan needed: it also tells who can start a company)
 hrRouter.get("/overview", route(async (req, res) => res.json(await core.overview(req.user!.id))));
@@ -36,6 +38,7 @@ const leaveRequestSchema = z.object({ leaveTypeId: z.string().uuid(), startDate:
 const decisionSchema = z.object({ decision: z.enum(["APPROVE", "REJECT"]), reason: z.string().trim().max(300).optional() });
 const periodQuery = (req: { query: Record<string, unknown> }) => ({ from: typeof req.query.from === "string" ? req.query.from : undefined, to: typeof req.query.to === "string" ? req.query.to : undefined });
 const statusQuery = (req: { query: Record<string, unknown> }) => (["PENDING_MANAGER", "PENDING_HR", "APPROVED", "REJECTED", "CANCELED"].includes(String(req.query.status)) ? (req.query.status as "APPROVED") : undefined);
+const advanceStatusQuery = (req: { query: Record<string, unknown> }) => (["PENDING_MANAGER", "PENDING_HR", "APPROVED", "REJECTED", "REPAID"].includes(String(req.query.status)) ? (req.query.status as "APPROVED") : undefined);
 const yearQuery = (req: { query: Record<string, unknown> }) => (Number(req.query.year) >= 2000 && Number(req.query.year) <= 2100 ? Number(req.query.year) : new Date().getUTCFullYear());
 
 me.get("/", route(async (req, res) => res.json({ companyId: req.hrMe!.company.id, companyName: req.hrMe!.company.name, currency: req.hrMe!.company.currency, employee: { id: req.hrMe!.employee.id, role: req.hrMe!.employee.role, position: req.hrMe!.employee.position, status: req.hrMe!.employee.employmentStatus } })));
@@ -50,6 +53,14 @@ me.post("/leave-requests", route(async (req, res) => {
   res.status(201).json(await time.createLeaveRequest(req.hrMe!, parsed.data));
 }));
 me.post("/leave-requests/:id/cancel", route(async (req, res) => res.json(await time.cancelLeaveRequest(req.hrMe!, req.params.id))));
+me.get("/payslips", route(async (req, res) => res.json(await pay.myPayslips(req.hrMe!))));
+me.get("/salary", route(async (req, res) => res.json(await pay.mySalary(req.hrMe!))));
+me.get("/advances", route(async (req, res) => res.json(await pay.myAdvances(req.hrMe!))));
+me.post("/advances", route(async (req, res) => {
+  const parsed = z.object({ amount: z.number().int().positive().max(2_000_000_000), installmentsCount: z.number().int().min(1).max(60), reason: z.string().trim().max(300).optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.status(201).json(await pay.createAdvance(req.hrMe!, parsed.data));
+}));
 
 // ---- a manager: the people under them (direct reports and the departments they manage)
 const team = Router();
@@ -176,4 +187,60 @@ manage.post("/leave-requests/:id/decision", route(async (req, res) => {
   const parsed = decisionSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await time.decideLeaveAsManagement(req.hr!, req.params.id, parsed.data.decision, parsed.data.reason));
+}));
+
+// ---- the manager's advances
+team.get("/advances", route(async (req, res) => res.json(await pay.listAdvances(req.hrMe!.company.id, time.teamWhere(req.hrMe!.employee), advanceStatusQuery(req)))));
+team.post("/advances/:id/decision", route(async (req, res) => {
+  const parsed = decisionSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await pay.decideAdvanceAsManager(req.hrMe!, req.params.id, parsed.data.decision));
+}));
+
+// ---- salary structure
+manage.get("/salary-components", route(async (req, res) => res.json(await pay.listComponents(req.hr!.company.id))));
+manage.post("/salary-components", route(async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(1).max(60), type: z.enum(["EARNING", "DEDUCTION"]), calcType: z.enum(["FIXED", "PERCENTAGE_OF_BASE"]).optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.status(201).json(await pay.createComponent(req.hr!.company.id, parsed.data));
+}));
+manage.get("/employees/:id/salary", route(async (req, res) => res.json(await pay.salaryStructure(req.hr!.company.id, req.params.id))));
+manage.put("/employees/:id/salary/base", route(async (req, res) => {
+  const parsed = z.object({ baseSalary: money }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await pay.setBaseSalary(req.hr!, req.params.id, parsed.data.baseSalary);
+  res.json(await pay.salaryStructure(req.hr!.company.id, req.params.id));
+}));
+manage.put("/employees/:id/salary/components", route(async (req, res) => {
+  const parsed = z.object({ componentId: z.string().uuid(), fixedAmount: z.number().int().min(0).max(2_000_000_000).optional(), percentage: z.number().min(0).max(100).optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await pay.setComponent(req.hr!, req.params.id, parsed.data);
+  res.json(await pay.salaryStructure(req.hr!.company.id, req.params.id));
+}));
+manage.delete("/employees/:id/salary/components/:componentId", route(async (req, res) => {
+  await pay.removeComponent(req.hr!, req.params.id, req.params.componentId);
+  res.json({ removed: true });
+}));
+
+// ---- payroll runs (paid -> an expense in the owner's accounting; taking the payment back is the owner's alone)
+manage.get("/payroll-runs", route(async (req, res) => res.json(await pay.listRuns(req.hr!.company.id))));
+manage.post("/payroll-runs", route(async (req, res) => {
+  const parsed = z.object({ periodStart: isoDay, periodEnd: isoDay }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.status(201).json(await pay.createRun(req.hr!.company.id, parsed.data));
+}));
+manage.get("/payroll-runs/:id", route(async (req, res) => res.json(await pay.getRun(req.hr!.company.id, req.params.id))));
+manage.post("/payroll-runs/:id/process", route(async (req, res) => res.json(await pay.processRun(req.hr!, req.params.id))));
+manage.post("/payroll-runs/:id/mark-paid", route(async (req, res) => res.json(await pay.markPaid(req.hr!, req.params.id))));
+manage.post("/payroll-runs/:id/revert-paid", route(async (req, res) => {
+  if (!req.hr!.isOwner) return res.status(403).json({ error: { code: "FORBIDDEN", message: "صاحب النشاط وحده بيرجّع دفعة رواتب" } });
+  res.json(await pay.revertPaid(req.hr!, req.params.id));
+}));
+
+// ---- advances
+manage.get("/advances", route(async (req, res) => res.json(await pay.listAdvances(req.hr!.company.id, { companyId: req.hr!.company.id }, advanceStatusQuery(req)))));
+manage.post("/advances/:id/decision", route(async (req, res) => {
+  const parsed = decisionSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await pay.decideAdvanceAsManagement(req.hr!, req.params.id, parsed.data.decision));
 }));
