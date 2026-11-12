@@ -328,9 +328,20 @@ export const pack: LanguagePack = {
       "تم التسليم": "Delivered",
       "ملغي": "Cancelled",
       "شكراً لتعاملكم معنا — صدرت هذه الفاتورة عبر منصة دليلكم": "Thank you for your business — this invoice was issued through the Dalilacom platform",
-      "صدر هذا الإيصال عبر منصة دليلكم": "This receipt was issued through the Dalilacom platform"
+      "صدر هذا الإيصال عبر منصة دليلكم": "This receipt was issued through the Dalilacom platform",
+      // ---- payroll cost arriving from the HR system ----
+      "هذا القيد يُسجَّل تلقائيًا من نظام الموارد البشرية ولا يمكن تعديله": "Diese Buchung wird automatisch aus dem Personalsystem übernommen und kann nicht bearbeitet werden",
+      "هذا القيد يُسجَّل تلقائيًا من نظام الموارد البشرية ولا يمكن حذفه": "Diese Buchung wird automatisch aus dem Personalsystem übernommen und kann nicht gelöscht werden",
+      "الحساب مربوط بنظام الموارد البشرية من قبل. ألغِ الربط أولاً": "Dieses Konto ist bereits mit dem Personalsystem verknüpft. Heben Sie die Verknüpfung zuerst auf",
+      "رمز الربط غير صحيح أو انتهت صلاحيته": "Der Verknüpfungscode ist falsch oder abgelaufen",
+      "توقيع الطلب غير صحيح": "Die Signatur der Anfrage ist ungültig",
+      "الطلب قديم. تحقق من ساعة الخادم": "Die Anfrage ist zu alt. Prüfen Sie die Uhr des Servers",
+      "تم إلغاء هذا الربط": "Diese Verknüpfung wurde aufgehoben",
+      "طلب آخر لنفس دورة الرواتب قيد المعالجة. أعد المحاولة": "Eine andere Anfrage für denselben Lohnlauf wird gerade verarbeitet. Versuchen Sie es erneut",
+      "رواتب": "Gehälter",
   },
   patterns: [
+    [/^رواتب الفترة من (\d{4}-\d{2}-\d{2}) إلى (\d{4}-\d{2}-\d{2}) · عدد الموظفين (\d+)$/, "Gehälter für $1 bis $2 · $3 Beschäftigte"],
     [/^«(.+)» صار على دليلكم وبيظهر للزبائن\.$/, "\"$1\" is now on Dalilacom and visible to customers."],
     [/^«(.+)»: (.+)\. بتقدر تعدّل معلوماتك وتجرّب من جديد\.$/s, "\"$1\": $2. You can edit your details and try again."],
     [/^بخصوص طلبك للمطالبة بـ «(.+)»: (.+)$/s, "About your request to claim \"$1\": $2"],
