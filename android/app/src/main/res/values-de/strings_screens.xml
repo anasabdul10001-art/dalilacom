@@ -290,7 +290,7 @@
     <string name="site_hr_st3_l" formatted="false">Die Daten jeder Firma sind getrennt und geschützt</string>
 
     <!-- Human resources inside DALILACOM -->
-    <string name="site_hr_tab_people">People</string>
+    <string name="site_hr_tab_people">Employees</string>
     <string name="site_hr_tab_leave">Leave</string>
     <string name="site_hr_tab_payroll">Payroll</string>
     <string name="site_hr_tab_job">My job</string>

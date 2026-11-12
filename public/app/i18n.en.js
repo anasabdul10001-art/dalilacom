@@ -64,7 +64,7 @@ DICT.en = {
   "site.open.responder": "Open the auto-responder",
   "site.open.accounting": "Open the accounting dashboard",
   "site.open.hr": "Open HR",
-  "site.hr.tab.people": "People",
+  "site.hr.tab.people": "Employees",
   "site.hr.tab.leave": "Leave",
   "site.hr.tab.payroll": "Payroll",
   "site.hr.tab.job": "My job",

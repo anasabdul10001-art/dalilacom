@@ -662,7 +662,7 @@
     <string name="site_hr_faq4_a" formatted="false">There are plans and a trial period, which you can see inside the system.</string>
 
     <!-- Human resources inside DALILACOM -->
-    <string name="site_hr_tab_people">People</string>
+    <string name="site_hr_tab_people">Employees</string>
     <string name="site_hr_tab_leave">Leave</string>
     <string name="site_hr_tab_payroll">Payroll</string>
     <string name="site_hr_tab_job">My job</string>

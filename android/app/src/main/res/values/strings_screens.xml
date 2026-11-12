@@ -662,7 +662,7 @@
     <string name="site_hr_faq4_a" formatted="false">في باقات وفترة تجربة، وبتشوفها من داخل النظام.</string>
 
     <!-- Human resources inside DALILACOM -->
-    <string name="site_hr_tab_people">الناس</string>
+    <string name="site_hr_tab_people">الموظفين</string>
     <string name="site_hr_tab_leave">الإجازات</string>
     <string name="site_hr_tab_payroll">الرواتب</string>
     <string name="site_hr_tab_job">عملي</string>
@@ -672,7 +672,7 @@
     <string name="hr_company_createHint">سمّي شركتك مرة وحدة، وبعدها ضيف موظفينك.</string>
     <string name="hr_company_name">اسم الشركة</string>
     <string name="hr_company_createBtn">أنشئ الشركة</string>
-    <string name="hr_company_done">انشأت الشركة</string>
+    <string name="hr_company_done">انعملت الشركة</string>
     <string name="hr_people_count">عدد الموظفين: %1$s</string>
     <string name="hr_people_empty">ما في موظفين بعد. ضيف أول موظف من تحت.</string>
     <string name="hr_people_add">موظف جديد</string>
