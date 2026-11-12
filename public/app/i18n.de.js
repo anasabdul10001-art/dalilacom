@@ -2,6 +2,10 @@
 // translate the values (keep the keys, the {n} / $1 markers). `npm run i18n:check` lists what is left. See docs/I18N.md.
 LANGS.de = { name: "Deutsch", dir: "ltr" };
 DICT.de = {
+  // ---- the three cards on the HR page ----
+  "site.hr.st1.l": "Mitarbeitende stempeln mit dem Handy ein",
+  "site.hr.st2.l": "Das Gehalt wird jeden Monat automatisch berechnet",
+  "site.hr.st3.l": "Die Daten jeder Firma sind getrennt und geschützt",
   // ---- the store's tiles that introduce the app's sections ----
   "promo.mapT": "Entdecken Sie die Geschäfte Ihrer Stadt", "promo.mapS": "Alle Geschäfte in Ihrer Nähe auf der Karte",
   "promo.dealsT": "Exklusive Rabatte", "promo.dealsS": "Sparen bei Partnergeschäften",

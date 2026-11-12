@@ -611,11 +611,11 @@
     <string name="site_hr_slide3_t" formatted="false">إجازات وسلف بدون ورق</string>
     <string name="site_hr_slide3_d" formatted="false">طلب وموافقة بسلسلة (مدير ثم HR)، والرصيد بينحسب لحاله.</string>
     <string name="site_hr_st1_n" formatted="false">🕒</string>
-    <string name="site_hr_st1_l" formatted="false">حضور وانصراف</string>
+    <string name="site_hr_st1_l" formatted="false">الموظف بيسجّل حضوره من جواله</string>
     <string name="site_hr_st2_n" formatted="false">💵</string>
-    <string name="site_hr_st2_l" formatted="false">كشوف رواتب جاهزة</string>
+    <string name="site_hr_st2_l" formatted="false">الراتب بينحسب لحاله كل شهر</string>
     <string name="site_hr_st3_n" formatted="false">🔒</string>
-    <string name="site_hr_st3_l" formatted="false">بيانات كل شركة منفصلة</string>
+    <string name="site_hr_st3_l" formatted="false">كل شركة بياناتها لحالها ومحمية</string>
     <string name="site_hr_s1_d" formatted="false">سجّل شركتك واختار عملتها.</string>
     <string name="site_hr_s2_d" formatted="false">أضف أقسامك وموظفينك وحدد صلاحياتهم.</string>
     <string name="site_hr_s3_d" formatted="false">شغّل الرواتب وتابع التقارير واللوحات.</string>

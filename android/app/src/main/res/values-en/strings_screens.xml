@@ -611,11 +611,11 @@
     <string name="site_hr_slide3_t" formatted="false">Leave and advances without paper</string>
     <string name="site_hr_slide3_d" formatted="false">Requests and approvals in a chain (manager then HR), with the balance worked out for you.</string>
     <string name="site_hr_st1_n" formatted="false">🕒</string>
-    <string name="site_hr_st1_l" formatted="false">Attendance</string>
+    <string name="site_hr_st1_l" formatted="false">Staff clock in from their phones</string>
     <string name="site_hr_st2_n" formatted="false">💵</string>
-    <string name="site_hr_st2_l" formatted="false">Ready payslips</string>
+    <string name="site_hr_st2_l" formatted="false">Pay is worked out for you each month</string>
     <string name="site_hr_st3_n" formatted="false">🔒</string>
-    <string name="site_hr_st3_l" formatted="false">Each company\'s data apart</string>
+    <string name="site_hr_st3_l" formatted="false">Each company\'s data is kept apart and protected</string>
     <string name="site_hr_s1_d" formatted="false">Register your company and choose its currency.</string>
     <string name="site_hr_s2_d" formatted="false">Add your departments and employees and set their permissions.</string>
     <string name="site_hr_s3_d" formatted="false">Run payroll and follow the reports and dashboards.</string>
