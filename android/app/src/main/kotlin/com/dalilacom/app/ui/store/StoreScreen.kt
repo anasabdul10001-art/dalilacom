@@ -9,7 +9,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,7 +94,7 @@ val StoreSale = Color(0xFFFA6338)
 val StoreTag = Color(0xFF7B4FD6)
 
 @Composable
-private fun storePage(): Color = if (isSystemInDarkTheme()) Color(0xFF0E0A0A) else Color(0xFFF5F5F5)
+private fun storePage(): Color = if (com.dalilacom.app.ui.theme.LocalDarkTheme.current) Color(0xFF0E0A0A) else Color(0xFFF5F5F5)
 
 fun StoreSectionDto.label(): String = if (AppStrings.language == "ar") name else nameEn.ifBlank { name }
 

@@ -16,7 +16,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import android.content.Intent
 import android.net.Uri
@@ -135,7 +134,7 @@ fun MerchantDetailScreen(
         }
     }
 
-    val page = if (isSystemInDarkTheme()) Color(0xFF0E0A0A) else Color(0xFFF5F5F5)
+    val page = if (com.dalilacom.app.ui.theme.LocalDarkTheme.current) Color(0xFF0E0A0A) else Color(0xFFF5F5F5)
     Column(modifier = Modifier.fillMaxSize().background(page)) {
         // the black top, like the store's
         Row(Modifier.fillMaxWidth().background(Color.Black).padding(horizontal = 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

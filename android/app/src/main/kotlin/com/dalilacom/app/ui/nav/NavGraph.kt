@@ -346,7 +346,7 @@ fun DalilacomNavGraph(
         }
         composable("accountSettings") {
             val savedTheme by container.sessionStore.themeFlow.collectAsState(initial = null)
-            val dark = when (savedTheme) { "dark" -> true; "light" -> false; else -> androidx.compose.foundation.isSystemInDarkTheme() }
+            val dark = when (savedTheme) { "dark" -> true; "light" -> false; else -> false }
             val settingsScope = androidx.compose.runtime.rememberCoroutineScope()
             AccountSettingsScreen(
                 factory = factory,

@@ -40,12 +40,12 @@ function S_initialScreen() {
 
 /* ---------------- light / dark mode ---------------- */
 
-// Follows the device until the user picks one with the button; the pick is remembered.
-const darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+// Light is the main look. It becomes dark only when the user turns dark mode on with the switch in the account
+// settings (the choice is remembered); the device's own dark setting is deliberately ignored.
 function currentTheme() {
   let saved = null;
   try { saved = localStorage.getItem("dlk_theme"); } catch (e) {}
-  return saved === "light" || saved === "dark" ? saved : darkQuery && darkQuery.matches ? "dark" : "light";
+  return saved === "dark" ? "dark" : "light";
 }
 function applyTheme() { document.documentElement.setAttribute("data-theme", currentTheme()); }
 function toggleTheme() {
@@ -54,7 +54,6 @@ function toggleTheme() {
   render();
 }
 applyTheme();
-if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener("change", () => { applyTheme(); render(); });
 
 /* ---------------- helpers ---------------- */
 
