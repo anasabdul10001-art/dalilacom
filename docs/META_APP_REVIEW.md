@@ -120,3 +120,54 @@ on screen, keep each step visible for a few seconds.
 
 Read the reason in the dashboard, fix exactly that point (usually the screencast missing the permission dialog or a step),
 and resubmit. Rejections for unclear videos are common and are not final.
+
+## Phase 2: publishing our own posts (added 2026-11-12)
+
+Second submission, after the messaging one. Purpose: Dalilacom publishes **its own** marketing posts to **its own** Facebook Pages
+and Instagram account from the approved content calendar. It never posts on a shop's timeline. Names below were checked against
+Meta's permissions reference on 2026-11-12; check them again on the day of submission, Meta renames permissions.
+
+### Facts checked on 2026-11-12
+
+- Business Verification of the portfolio **Anas Abdulaziz** (`2931042627259797`) was submitted on 2026-11-12 (sole proprietorship, Germany,
+  Gewerbe-Anmeldung page 1, confirmed by SMS). Meta said about 2 business days. Status: Business info → "Business verification status".
+- **Access Verification (Tech Provider) is no longer required.** Meta's page says so (updated 2026-10-23). Do not start it.
+- The app already has the use cases "Engage with customers on Messenger", "Manage messaging & content on Instagram" and
+  "Manage everything on your Page". No "Required actions" are open.
+- Dashboard state that day: `pages_show_list`, `pages_manage_metadata`, `pages_read_engagement`, `pages_read_user_content`,
+  `pages_manage_engagement`, `business_management` are "Ready for testing". `pages_manage_posts` and every Instagram permission
+  still show "Add to App Review". `pages_messaging` sits under the Messenger use case.
+- The owner has a role on the app, so posting to the owner's own Pages may work in standard access without review. Test that first
+  (publish one post to each Page). Ask for review only if the call is refused.
+
+### Permissions for publishing
+
+| Permission | Depends on | Why we need it |
+|---|---|---|
+| `pages_manage_posts` | `pages_read_engagement`, `pages_show_list` | To publish, edit and delete DALILACOM's own posts, photos and videos on its own Pages. |
+| `instagram_business_content_publish` | `instagram_business_basic` | To publish DALILACOM's own photo and video posts to its own Instagram professional account. |
+
+If the Instagram connection stays on the Facebook-login path, the older names apply instead: `instagram_content_publish` with
+`instagram_basic`. The app dashboard shows which of the two the use case offers; request only that one.
+
+### Use case text for the reviewer (paste)
+
+DALILACOM is an online directory and store. The company publishes its own announcements, tips and offers on its own Facebook Pages
+and Instagram account. A team member prepares each post in a content calendar, approves it, and the app publishes it at the planned
+time. The app only publishes to Pages and accounts that DALILACOM itself owns. It does not publish for other businesses, does not
+read private data, and does not message anyone.
+
+### Screencast for the publishing permissions (about 2 minutes)
+
+1. The approved calendar entry (text and image) in the publishing tool.
+2. The Facebook permission dialog listing the publishing permission, choosing the DALILACOM Page. *The dialog must be visible.*
+3. Publishing: the post appears on the Page. Show editing and deleting the same post.
+4. Repeat for the Instagram account: the post appears in the feed.
+5. The privacy policy link and how the connection is removed.
+
+### Before submitting phase 2
+
+- [ ] Business Verification approved (check Business info first).
+- [ ] One test post published to each Page and to Instagram by the owner, to see whether review is needed at all.
+- [ ] Only approved calendar content is publishable. Anything outside the calendar goes back to the owner first.
+- [ ] No access token in the chat or in this repository. Keys are entered through the credential tool or set on the server.
