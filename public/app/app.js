@@ -2573,7 +2573,7 @@ function siteCta(kind) {
   if (kind === "hr") {
     // from the account's real HR records: its first tab, or the plans page when nothing makes a section relevant yet
     const first = hrTabs()[0];
-    return [first ? { label: t("site.open.hr"), action: `setSiteTab('hr','${first}')` } : { label: t("hr.getPlan"), action: "go('pricing')" }];
+    return [first ? { label: t("site.open.hr"), action: `setSiteTab('hr','${first}')` } : { label: t("hr.getPlan"), action: "S._allPlans=null;go('allPlans')" }];
   }
   return [{ label: t("site.open." + kind), action: `setSiteTab('${kind}','${SITES[kind].tabs[0]}')` }];
 }

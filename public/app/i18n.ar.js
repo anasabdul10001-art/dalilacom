@@ -12,7 +12,7 @@ DICT.ar = {
   "accounting.planRequired": "هذه الخدمة تحتاج إلى باقة فعّالة أو فترة تجربة. افتح الباقات واختر ما يناسبك.",
   "accounting.setCost": "تعديل تكلفة الشراء", "accounting.invalidAmount": "أدخل مبلغًا صحيحًا.",
   "plans.payCard": "الدفع بالبطاقة أو البنك", "plans.payPaypal": "الدفع عبر PayPal",
-  "plans.startTrial": "ابدأ التجربة", "plans.trialDays": "يوم تجربة", "service.ACCOUNTING": "المحاسبة",
+  "plans.startTrial": "ابدأ التجربة", "plans.trialDays": "يوم تجربة", "service.ACCOUNTING": "المحاسبة", "service.HR": "الموارد البشرية", "service.RESPONDER_BASIC": "المجيب الآلي",
   "services.overview": "اكتشف خدمات دليلكم", "accounting.print": "طباعة التقرير", "accounting.allowPrint": "اسمح بفتح النافذة لطباعة التقرير", "accounting.date": "التاريخ",
   "plans.title": "خدمات وباقات دليلكم", "plans.subtitle": "اختر الخدمة والباقة المناسبة لحسابك.", "plans.failed": "تعذّر تحميل الباقات.", "plans.free": "مجانية", "plans.days": "يوم", "plans.subscribe": "اشترك", "plans.started": "تم تفعيل الباقة", "plans.paymentSetup": "الدفع الإلكتروني غير جاهز لهذا الحساب بعد.", "plans.mySubscriptions": "اشتراكاتي الإلكترونية", "plans.cancel": "إيقاف التجديد", "plans.cancelConfirm": "هل تريد إيقاف التجديد التلقائي؟ سيبقى الاشتراك فعالًا حتى نهاية الفترة المدفوعة.", "plans.cancelled": "تم إيقاف التجديد التلقائي.", "service.MEMBERSHIP": "العضوية", "service.MERCHANT_ACCOUNT": "المتجر الإلكتروني", "service.RESPONDER_CUSTOMER": "المجيب الآلي", "service.RESPONDER_MERCHANT": "المجيب الآلي",
   "tab.map": "الخريطة", "tab.store": "المتجر", "tab.card": "بطاقتي", "tab.cart": "السلة", "tab.orders": "طلباتي", "tab.account": "حسابي", "tab.accounting": "المحاسب",

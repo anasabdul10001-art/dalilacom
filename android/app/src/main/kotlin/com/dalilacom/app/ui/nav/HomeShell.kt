@@ -236,7 +236,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     signedIn = !isGuest,
                     onLogin = { goLogin() },
                     onRegister = { goRegister() },
-                    appContent = { com.dalilacom.app.ui.hr.HrScreen(container) { rootNavController.navigate("pricing") } },
+                    appContent = { com.dalilacom.app.ui.hr.HrScreen(container) { rootNavController.navigate("hrPlans") } },
                 )
                 HomeTab.Accounting -> com.dalilacom.app.ui.common.SectionSite(
                     kind = com.dalilacom.app.ui.common.SiteKind.Accounting,

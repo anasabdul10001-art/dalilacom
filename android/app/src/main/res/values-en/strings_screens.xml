@@ -745,4 +745,5 @@
     <string name="hr_retry">Try again</string>
     <string name="hr_ok">OK</string>
     <string name="hr_cancel">Cancel</string>
+    <string name="hr_plan_required">The HR section needs an active plan or a free trial.</string>
 </resources>

@@ -32,7 +32,7 @@ import com.dalilacom.app.data.network.ServicePlanDto
 import kotlinx.coroutines.launch
 
 @Composable
-fun AccountingPlansScreen(container: AppContainer, onBack: () -> Unit) {
+fun AccountingPlansScreen(container: AppContainer, onBack: () -> Unit, service: String = "ACCOUNTING", hint: Int = R.string.accounting_plan_required) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var plans by remember { mutableStateOf<List<ServicePlanDto>?>(null) }
@@ -42,11 +42,11 @@ fun AccountingPlansScreen(container: AppContainer, onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         val catalog = container.accountingRepository.planCatalog()
         creditName = catalog?.creditName.orEmpty()
-        plans = catalog?.services?.firstOrNull { it.service == "ACCOUNTING" }?.plans.orEmpty()
+        plans = catalog?.services?.firstOrNull { it.service == service }?.plans.orEmpty()
     }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text(stringResource(R.string.billing_title), style = MaterialTheme.typography.headlineSmall)
-        Text("\u2022 ${stringResource(R.string.accounting_plan_required)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
+        Text("\u2022 ${stringResource(hint)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
         when (val list = plans) {
             null -> CircularProgressIndicator()
             else -> LazyColumn(contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

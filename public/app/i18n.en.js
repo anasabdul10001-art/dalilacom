@@ -13,7 +13,7 @@ DICT.en = {
   "accounting.planRequired": "This service requires an active plan or trial. Open plans and choose one that suits you.",
   "accounting.setCost": "Edit purchase cost", "accounting.invalidAmount": "Enter a valid amount.",
   "plans.payCard": "Pay by card or bank", "plans.payPaypal": "Pay with PayPal",
-  "plans.startTrial": "Start free trial", "plans.trialDays": "trial days", "service.ACCOUNTING": "Accounting",
+  "plans.startTrial": "Start free trial", "plans.trialDays": "trial days", "service.ACCOUNTING": "Accounting", "service.HR": "Human resources", "service.RESPONDER_BASIC": "Auto-responder",
   "services.overview": "Explore Dalilacom services", "accounting.print": "Print report", "accounting.allowPrint": "Allow the print window to open", "accounting.date": "Date",
   "plans.title": "Dalilacom services and plans", "plans.subtitle": "Choose the service and plan that suit your account.", "plans.failed": "Could not load plans.", "plans.free": "Free", "plans.days": "days", "plans.subscribe": "Subscribe", "plans.started": "Plan activated", "plans.paymentSetup": "Online payment is not ready for this account yet.", "plans.mySubscriptions": "My online subscriptions", "plans.cancel": "Stop renewal", "plans.cancelConfirm": "Stop automatic renewal? Your subscription remains active until the paid period ends.", "plans.cancelled": "Automatic renewal stopped.", "service.MEMBERSHIP": "Membership", "service.MERCHANT_ACCOUNT": "Online store", "service.RESPONDER_CUSTOMER": "Auto-responder", "service.RESPONDER_MERCHANT": "Auto-responder",
   "tab.map": "Map", "tab.store": "Store", "tab.card": "My card", "tab.cart": "Cart", "tab.orders": "Orders", "tab.account": "Account", "tab.accounting": "Accounting",

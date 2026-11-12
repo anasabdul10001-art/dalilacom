@@ -258,6 +258,9 @@ fun DalilacomNavGraph(
         composable("accountingPlans") {
             com.dalilacom.app.ui.accounting.AccountingPlansScreen(container = container, onBack = { navController.popBackStack() })
         }
+        composable("hrPlans") {
+            com.dalilacom.app.ui.accounting.AccountingPlansScreen(container = container, onBack = { navController.popBackStack() }, service = "HR", hint = com.dalilacom.app.R.string.hr_plan_required)
+        }
         composable("branches") {
             com.dalilacom.app.ui.merchantmode.BranchesScreen(container = container, onBack = { navController.popBackStack() })
         }
