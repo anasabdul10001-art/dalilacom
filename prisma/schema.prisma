@@ -129,7 +129,6 @@ model User {
   accountingEntries       AccountingEntry[]
   accountingMovements     AccountingStockMovement[]
   accountingInvoiceDrafts AccountingInvoiceDraft[]
-  hrLinks                 HrLink[]
   hrCompany               HrCompany?                @relation("HrCompanyOwner")
   hrEmployments           HrEmployee[]              @relation("HrEmployeeUser")
   platformSubscriptions   PlatformSubscription[]
@@ -913,37 +912,8 @@ model AccountingInvoiceDraft {
 // The link between an account's bookkeeping and its company in the separate HR system. The owner makes a
 // one-time code here (only its hash is kept) and pastes it there; the HR server swaps it for a signing secret,
 // kept encrypted. Only payroll totals ever cross this link — never employees or single salaries.
-model HrLink {
-  id            String    @id @default(uuid())
-  userId        String
-  codeHash      String?   @unique // sha256 of the one-time code; cleared once used
-  codeExpiresAt DateTime?
-  secretEnc     String? // signing secret (AES-256-GCM); cleared when the link is revoked
-  companyName   String?
-  connectedAt   DateTime?
-  revokedAt     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  syncs HrPayrollSync[]
-
-  @@index([userId])
-}
 
 // The last state received for one payroll run: an older (or repeated) message is recognised by its revision.
-model HrPayrollSync {
-  id        String   @id @default(uuid())
-  linkId    String
-  runId     String
-  revision  Int
-  entryId   String?
-  updatedAt DateTime @updatedAt
-
-  link HrLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
-
-  @@unique([linkId, runId])
-}
 
 model AccountingStockMovement {
   id             String                @id @default(uuid())

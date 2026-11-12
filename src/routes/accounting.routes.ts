@@ -10,8 +10,8 @@ import express from "express";
 import { sniffImageMime } from "../lib/image";
 import { extractInvoiceFromPhoto, visionAvailable } from "../services/ai.service";
 import { marketOfUser } from "../services/viewerCountry.service";
-import { hrLinkRouter } from "./hrLink.routes";
-import { MAX_ENTRY_CENTS, activeHrLink, payrollEntryIsLocked } from "../services/hrLink.service";
+/** The largest single accounting entry, in minor units. Far below 2^53, so sums of many entries stay exact as JSON numbers. */
+const MAX_ENTRY_CENTS = 9_000_000_000_000;
 
 // Amounts are stored 64-bit; they always fit a JSON number (the limit on one entry keeps even large sums exact).
 const plain = <T extends { amountCents: bigint }>(row: T) => ({ ...row, amountCents: Number(row.amountCents) });
@@ -90,7 +90,7 @@ accountingRouter.get("/summary", route(async (req, res) => {
   const from = typeof req.query.from === "string" ? new Date(plainDate.test(req.query.from) ? `${req.query.from}T00:00:00.000Z` : req.query.from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const to = typeof req.query.to === "string" ? new Date(plainDate.test(req.query.to) ? `${req.query.to}T23:59:59.999Z` : req.query.to) : new Date();
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) return sendError(res, 400, "BAD_REQUEST", "الفترة الزمنية غير صحيحة");
-  const [totals, productCount, stock, lowStock, storeProducts, recent, payroll, hrLink] = await Promise.all([
+  const [totals, productCount, stock, lowStock, storeProducts, recent, payroll] = await Promise.all([
     prisma.accountingEntry.groupBy({ by: ["type", "currency"], where: { userId, occurredAt: { gte: from, lte: to } }, _sum: { amountCents: true } }),
     prisma.accountingProduct.count({ where: { userId } }),
     prisma.accountingProduct.aggregate({ where: { userId }, _sum: { quantity: true } }),
@@ -98,7 +98,6 @@ accountingRouter.get("/summary", route(async (req, res) => {
     prisma.product.findMany({ where: { merchant: { userId }, isActive: true }, select: { stock: true } }),
     prisma.accountingEntry.findMany({ where: { userId }, orderBy: { occurredAt: "desc" }, take: 8 }),
     prisma.accountingEntry.groupBy({ by: ["currency"], where: { userId, source: "PAYROLL", occurredAt: { gte: from, lte: to } }, _sum: { amountCents: true } }),
-    activeHrLink(userId),
   ]);
   const currencies = [...new Set(totals.map((x) => x.currency))];
   res.json({
@@ -110,7 +109,6 @@ accountingRouter.get("/summary", route(async (req, res) => {
       const payrollCents = Number(payroll.find((x) => x.currency === currency)?._sum.amountCents ?? 0);
       return { currency, incomeCents: income, expensesCents: expenses, netCents: income - expenses, ...(payrollCents > 0 ? { payrollCents } : {}) };
     }),
-    ...(hrLink ? { hrLink: { companyName: hrLink.companyName, connectedAt: hrLink.connectedAt } } : {}),
     inventory: { products: productCount + storeProducts.length, units: (stock._sum.quantity ?? 0) + storeProducts.reduce((sum, p) => sum + p.stock, 0), outOfStock: lowStock + storeProducts.filter(p => p.stock <= 0).length },
     recent: recent.map(plain),
   });
@@ -150,8 +148,8 @@ accountingRouter.patch("/entries/:id", route(async (req, res) => {
 accountingRouter.delete("/entries/:id", route(async (req, res) => {
   const row = await prisma.accountingEntry.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true, source: true, sourceKey: true } });
   if (!row) return sendError(res, 404, "NOT_FOUND", "القيد غير موجود");
-  // a payroll entry follows its payroll run while the link lives; once the link is cancelled nothing manages it, so the owner may remove it
-  if (row.source === "PAYROLL" && (await payrollEntryIsLocked(row.sourceKey))) return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من نظام الموارد البشرية ولا يمكن حذفه");
+  // a payroll entry follows its payroll run in the HR section; only one left behind by the old external link (no run to follow) may be removed by hand
+  if (row.source === "PAYROLL" && !row.sourceKey?.startsWith("hr-payroll:")) return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من نظام الموارد البشرية ولا يمكن حذفه");
   if (row.source !== "PAYROLL" && !editableSources.includes(row.source)) return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من الطلب ولا يمكن حذفه");
   await prisma.accountingEntry.delete({ where: { id: row.id } });
   res.json({ deleted: true });
@@ -302,4 +300,3 @@ accountingRouter.get("/export.csv", route(async (req, res) => {
 }));
 
 // Linking the bookkeeping with the HR system (payroll cost arrives by itself). Like the rest of accounting, it needs an active plan.
-accountingRouter.use("/hr-link", hrLinkRouter);
