@@ -173,7 +173,6 @@ function hrJob() {
   const codeHtml = `<div class="card"><label>${esc(t("hr.job.haveCode"))}</label><input id="hr-code" /><button class="btn small outline" onclick="hrAcceptCode()">${esc(t("hr.job.accept"))}</button></div>`;
   if (!ov.jobs || !ov.jobs.length) return invHtml + codeHtml;
   const me = hrData("me", "/hr/me"), att = hrData("att", "/hr/me/attendance"), bal = hrData("bal", "/hr/me/leave-balances"), slips = hrData("slips", "/hr/me/payslips");
-  const types = hrData("myTypes", "/hr/me/leave-balances");
   if ([me, att, bal, slips].some((x) => x === null)) return invHtml + spinner();
   const rows = Array.isArray(att) ? att : (att.items || []);
   const openIn = rows.find((r) => !r.checkOut);

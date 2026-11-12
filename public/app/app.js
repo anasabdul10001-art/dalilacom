@@ -251,6 +251,7 @@ function setHomeTab(tab) {
   // the store is the first tab (and the page the site opens on): guests may browse it too; coming back to it starts fresh
   if (tab === "store" && (S.screen !== "home" || S.homeTab !== "store")) S._store = null;
   if (tab !== "card") stopQrLoop();
+  if (tab === "hr") S._hr = null; // the HR tabs come from the account's records: read them again each time the tab opens (a plan or a company may have been added)
   // the deals tab is the map of the shops with a discount; it shares the map's state with the plain map tab
   if (tab === "deals" || tab === "discover") {
     const d = discoverState();
@@ -6906,7 +6907,7 @@ async function startServicePlan(planId, service, source, isFree, trialDays, prov
   if (trialDays > 0 && service !== "MEMBERSHIP") {
     const { ok, data } = await api("POST", "/billing/trial", { planId });
     if (!ok) { S.error = errMsg(data, t("plans.failed")); return render(); }
-    toast(t("plans.started")); S._allPlans = null; loadAllPlans(); return;
+    toast(t("plans.started")); S._allPlans = null; S._hr = null; loadAllPlans(); return;
   }
   if (service === "MEMBERSHIP" && (isFree || trialDays > 0)) {
     const { ok, data } = await api("POST", "/membership/subscribe", { planId });
@@ -6915,7 +6916,7 @@ async function startServicePlan(planId, service, source, isFree, trialDays, prov
   }
   if (isFree) {
     const { ok, data } = await api("POST", "/billing/activate-free", { planId });
-    if (ok) { toast(t("plans.started")); S._allPlans = null; return render(); }
+    if (ok) { toast(t("plans.started")); S._allPlans = null; S._hr = null; return render(); }
     S.error = errMsg(data, t("plans.failed")); return render();
   }
   const { ok, data } = await api("POST", "/billing/checkout", { planId, provider });
