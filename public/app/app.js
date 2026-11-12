@@ -173,6 +173,7 @@ function saveAccountLanguage() {
 function clearToken() {
   S.token = null;
   S.role = null;
+  S._hr = null;
   localStorage.removeItem("dlk_token");
   localStorage.removeItem("dlk_role");
   if (S._discover) S._discover.favIds = [];
@@ -2558,17 +2559,22 @@ function setSiteTab(kind, tab) {
 }
 function siteShell(kind, active, body) {
   const cfg = SITES[kind];
-  const tabs = [["home", t("site.tab.home")], ...cfg.tabs.map((id) => [id, t("site." + kind + ".tab." + id)])];
+  const tabIds = kind === "hr" ? hrTabs() : cfg.tabs;
+  const tabs = [["home", t("site.tab.home")], ...tabIds.map((id) => [id, t("site." + kind + ".tab." + id)])];
   return `<div class="site site-${kind}">
     <div class="site-bar"><span class="site-logo">${cfg.icon}</span><b>${esc(t("sec." + kind + ".kicker"))}</b></div>
-    ${cfg.tabs.length ? `<nav class="site-tabs">${tabs.map(([id, label]) => `<button class="${id === active ? "on" : ""}" onclick="setSiteTab('${kind}','${id}')">${esc(label)}</button>`).join("")}</nav>` : ""}
+    ${tabIds.length ? `<nav class="site-tabs">${tabs.map(([id, label]) => `<button class="${id === active ? "on" : ""}" onclick="setSiteTab('${kind}','${id}')">${esc(label)}</button>`).join("")}</nav>` : ""}
     ${body}
   </div>`;
 }
 /** The main buttons of a site's home page, for whoever is looking (a guest, or someone signed in). */
 function siteCta(kind) {
-  if (kind === "hr") return [{ label: t("site.open.hr"), action: "openHr()" }];
   if (!S.token) return [{ label: t("site.login"), action: "go('login')" }, { label: t("site.register"), action: "go('register')", outline: true }];
+  if (kind === "hr") {
+    // from the account's real HR records: its first tab, or the plans page when nothing makes a section relevant yet
+    const first = hrTabs()[0];
+    return [first ? { label: t("site.open.hr"), action: `setSiteTab('hr','${first}')` } : { label: t("hr.getPlan"), action: "go('pricing')" }];
+  }
   return [{ label: t("site.open." + kind), action: `setSiteTab('${kind}','${SITES[kind].tabs[0]}')` }];
 }
 const siteButtons = (list) => list.map((b) => `<button class="btn ${b.outline ? "outline" : ""}" onclick="${b.action}">${esc(b.label)}</button>`).join("");
@@ -2624,10 +2630,13 @@ function siteSlideTo(btn, i) {
 }
 setInterval(() => document.querySelectorAll(".site-slider").forEach((el) => { if (!document.hidden) siteSlideStep(el, 1); }), 6000);
 
-// The HR system is a separate web application: this tab is its front page, with a button that opens it.
-const HR_URL = "https://nawa-frontend.onrender.com";
-function openHr() { window.open(HR_URL, "_blank", "noopener"); }
-function screenHr() { return siteShell("hr", "home", siteLanding("hr")); }
+// Human resources lives inside DALILACOM (hr.js): the home page is always there, the tools are the tabs the account's own records allow.
+function screenHr() {
+  const tab = siteTab("hr");
+  if (S.token && !hrState().ov) hrLoadOverview();
+  if (tab === "home" || !S.token || !hrTabs().includes(tab)) return siteShell("hr", "home", siteLanding("hr"));
+  return siteShell("hr", tab, hrBody(tab));
+}
 
 function screenAccounting() {
   const tab = siteTab("accounting");
