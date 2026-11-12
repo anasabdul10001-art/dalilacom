@@ -537,6 +537,22 @@
     <string name="site_accounting_d4_b1" formatted="false">Download all your entries as a CSV file at any time.</string>
     <string name="site_accounting_d4_b2" formatted="false">Print the summary report and hand your accountant the numbers ready.</string>
     <string name="site_accounting_d4_b3" formatted="false">If you have a store on Dalilacom, your delivered orders are recorded by themselves: income, cost and delivery fees.</string>
+    <string name="site_responder_d1_t" formatted="false">Messages</string>
+    <string name="site_responder_d1_b1" formatted="false">Paste the token of your own Telegram bot, and it connects by itself.</string>
+    <string name="site_responder_d1_b2" formatted="false">It answers text messages. It does not answer photos or voice messages.</string>
+    <string name="site_responder_d1_b3" formatted="false">You can switch the whole auto-responder off with one button in your settings.</string>
+    <string name="site_responder_d2_t" formatted="false">Rules</string>
+    <string name="site_responder_d2_b1" formatted="false">Write keywords, and when a message contains one of them, the reply you chose is sent.</string>
+    <string name="site_responder_d2_b2" formatted="false">You can put the customer's name in a reply, and it is filled in by itself.</string>
+    <string name="site_responder_d2_b3" formatted="false">A message that matches no rule gets a fallback reply: a fixed text, AI, or no reply at all.</string>
+    <string name="site_responder_d3_t" formatted="false">Artificial intelligence</string>
+    <string name="site_responder_d3_b1" formatted="false">It writes the reply from your business description and the tone of voice you set in the settings.</string>
+    <string name="site_responder_d3_b2" formatted="false">It is told not to invent prices, availability or policies. When it is not sure, it says the team will follow up.</string>
+    <string name="site_responder_d3_b3" formatted="false">AI is part of the plans that include it, and it has a quota of replies. When the quota is used up, rules and fixed replies carry on.</string>
+    <string name="site_responder_d4_t" formatted="false">Inbox</string>
+    <string name="site_responder_d4_b1" formatted="false">Every message and its reply are saved in the inbox with their status: answered, waiting for you, failed or skipped.</string>
+    <string name="site_responder_d4_b2" formatted="false">When a message looks like a complaint, the customer gets an apology at once and you get a notification.</string>
+    <string name="site_responder_d4_b3" formatted="false">You can reply by hand to any message that is waiting for you or whose sending failed.</string>
     <string name="site_ctaTitle" formatted="false">Ready to start?</string>
     <string name="site_ctaSub" formatted="false">A few simple steps and you will see the difference from day one.</string>
     <string name="site_open_responder" formatted="false">Open the auto-responder</string>

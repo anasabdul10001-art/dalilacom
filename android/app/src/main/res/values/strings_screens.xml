@@ -537,6 +537,22 @@
     <string name="site_accounting_d4_b1" formatted="false">نزّل كل حركاتك بملف CSV بأي وقت.</string>
     <string name="site_accounting_d4_b2" formatted="false">اطبع تقرير الملخص، وجهّز لمحاسبك الأرقام جاهزة.</string>
     <string name="site_accounting_d4_b3" formatted="false">إذا عندك متجر بدليلكم، طلباتك المسلّمة بتنسجّل لحالها: الدخل والتكلفة وأجور التوصيل.</string>
+    <string name="site_responder_d1_t" formatted="false">الرسائل</string>
+    <string name="site_responder_d1_b1" formatted="false">ألصق رمز بوت تيليغرام الخاص فيك، وبيتربط لحاله.</string>
+    <string name="site_responder_d1_b2" formatted="false">بيرد على الرسائل النصية. الصور والرسائل الصوتية ما بيرد عليها.</string>
+    <string name="site_responder_d1_b3" formatted="false">بتقدر توقف المجيب الآلي كله بزر وحدة من إعداداتك.</string>
+    <string name="site_responder_d2_t" formatted="false">القواعد</string>
+    <string name="site_responder_d2_b1" formatted="false">اكتب كلمات، وإذا الرسالة فيها وحدة منها بينبعت الرد اللي حددته.</string>
+    <string name="site_responder_d2_b2" formatted="false">بتقدر تحط اسم الزبون بالرد، ومكانو بيتبدّل لحاله.</string>
+    <string name="site_responder_d2_b3" formatted="false">الرسالة اللي ما تطابقت مع أي قاعدة بتاخد رداً احتياطياً: نص ثابت، أو ذكاء اصطناعي، أو بدون رد.</string>
+    <string name="site_responder_d3_t" formatted="false">الذكاء الاصطناعي</string>
+    <string name="site_responder_d3_b1" formatted="false">بيكتب الرد من وصف نشاطك ونبرة كلامك اللي بتكتبهم بالإعدادات.</string>
+    <string name="site_responder_d3_b2" formatted="false">معطى تعليمات ما يخترع أسعار ولا توفّر ولا سياسات. وإذا مش متأكد بيقول إنو الفريق رح يتابع.</string>
+    <string name="site_responder_d3_b3" formatted="false">الذكاء الاصطناعي جزء من الباقات اللي فيها هالميزة، وإله حصة ردود. إذا خلصت الحصة بتكمل القواعد والردود الثابتة.</string>
+    <string name="site_responder_d4_t" formatted="false">صندوق الوارد</string>
+    <string name="site_responder_d4_b1" formatted="false">كل رسالة وردّها بينحفظوا بالصندوق، ومعهم حالتها: انرد، أو بانتظارك، أو فشل، أو انتخطّت.</string>
+    <string name="site_responder_d4_b2" formatted="false">إذا الرسالة بتشبه شكوى، الزبون بياخد رد اعتذار فوراً، وبتوصلك إشعار.</string>
+    <string name="site_responder_d4_b3" formatted="false">بتقدر ترد بإيدك على أي رسالة بانتظارك أو فشل إرسالها.</string>
     <string name="site_ctaTitle" formatted="false">جاهز تبدأ؟</string>
     <string name="site_ctaSub" formatted="false">خطوات بسيطة وبتشوف الفرق من أول يوم.</string>
     <string name="site_open_responder" formatted="false">افتح لوحة المجيب الآلي</string>

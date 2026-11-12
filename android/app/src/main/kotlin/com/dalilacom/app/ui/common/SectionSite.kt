@@ -101,6 +101,13 @@ enum class SiteKind(
         stepT = listOf(R.string.sec_resp_s1, R.string.sec_resp_s2, R.string.sec_resp_s3), stepD = listOf(R.string.site_responder_s1_d, R.string.site_responder_s2_d, R.string.site_responder_s3_d),
         faqQ = listOf(R.string.site_responder_faq1_q, R.string.site_responder_faq2_q, R.string.site_responder_faq3_q, R.string.site_responder_faq4_q), faqA = listOf(R.string.site_responder_faq1_a, R.string.site_responder_faq2_a, R.string.site_responder_faq3_a, R.string.site_responder_faq4_a),
         art = listOf("chat", "orbit", "ai"),
+        detailT = listOf(R.string.site_responder_d1_t, R.string.site_responder_d2_t, R.string.site_responder_d3_t, R.string.site_responder_d4_t),
+        detailB = listOf(
+            listOf(R.string.site_responder_d1_b1, R.string.site_responder_d1_b2, R.string.site_responder_d1_b3),
+            listOf(R.string.site_responder_d2_b1, R.string.site_responder_d2_b2, R.string.site_responder_d2_b3),
+            listOf(R.string.site_responder_d3_b1, R.string.site_responder_d3_b2, R.string.site_responder_d3_b3),
+            listOf(R.string.site_responder_d4_b1, R.string.site_responder_d4_b2, R.string.site_responder_d4_b3),
+        ),
     ),
     Hr(
         key = "hr", icon = "👥", kicker = R.string.sec_hr_kicker, appTab = R.string.sec_hr_open,
