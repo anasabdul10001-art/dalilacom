@@ -2,6 +2,14 @@
 // PHRASES / PATTERNS / WORDS (the gettext-style table for everything else). See docs/I18N.md.
 LANGS.en = { name: "English", dir: "ltr" };
 DICT.en = {
+  // ---- the store's tiles that introduce the app's sections ----
+  "promo.mapT": "Discover your city's shops", "promo.mapS": "Every nearby shop and service on the map",
+  "promo.dealsT": "Exclusive discounts", "promo.dealsS": "Save at partner shops",
+  "promo.cardT": "Dalilacom membership card", "promo.cardS": "One card, discounts everywhere",
+  "promo.accountingT": "Keep your books", "promo.accountingS": "Income, expenses and profit in one place",
+  "promo.hrT": "Manage your team", "promo.hrS": "Attendance, leave and payroll",
+  "promo.responderT": "Auto-responder", "promo.responderS": "Automatic replies to customers",
+  "promo.open": "Open",
   "accounting.planRequired": "This service requires an active plan or trial. Open plans and choose one that suits you.",
   "accounting.setCost": "Edit purchase cost", "accounting.invalidAmount": "Enter a valid amount.",
   "plans.payCard": "Pay by card or bank", "plans.payPaypal": "Pay with PayPal",
@@ -142,11 +150,11 @@ DICT.en = {
   "site.hr.slide3.t": "Leave and advances without paper",
   "site.hr.slide3.d": "Requests and approvals in a chain (manager then HR), with the balance worked out for you.",
   "site.hr.st1.n": "🕒",
-  "site.hr.st1.l": "Attendance",
+  "site.hr.st1.l": "Staff clock in from their phones",
   "site.hr.st2.n": "💵",
-  "site.hr.st2.l": "Ready payslips",
+  "site.hr.st2.l": "Pay is worked out for you each month",
   "site.hr.st3.n": "🔒",
-  "site.hr.st3.l": "Each company's data apart",
+  "site.hr.st3.l": "Each company's data is kept apart and protected",
   "site.hr.s1.d": "Register your company and choose its currency.",
   "site.hr.s2.d": "Add your departments and employees and set their permissions.",
   "site.hr.s3.d": "Run payroll and follow the reports and dashboards.",

@@ -204,6 +204,16 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                     onLogin = { goLogin() },
                     onOpenMerchant = { id -> rootNavController.navigate("merchant/$id") },
                     onBookAd = { kind -> rootNavController.navigate("adBook?kind=$kind") },
+                    onPromo = { key ->
+                        when (key) {
+                            "map" -> { showDealsOnMap = false; selectedTab = HomeTab.Discover }
+                            "deals" -> selectedTab = HomeTab.Deals
+                            "card" -> rootNavController.navigate("card")
+                            "accounting" -> selectedTab = HomeTab.Accounting
+                            "hr" -> selectedTab = HomeTab.Hr
+                            "responder" -> if (com.dalilacom.app.ui.common.ComingSoon.RESPONDER) com.dalilacom.app.ui.common.ComingSoon.say(context, soonResponder) else rootNavController.navigate("responder")
+                        }
+                    },
                     onStartSelling = { rootNavController.navigate("merchantRegister/store") },
                     showBack = false,
                 )

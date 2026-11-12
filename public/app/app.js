@@ -40,12 +40,12 @@ function S_initialScreen() {
 
 /* ---------------- light / dark mode ---------------- */
 
-// Follows the device until the user picks one with the button; the pick is remembered.
-const darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+// Light is the main look. It becomes dark only when the user turns dark mode on with the switch in the account
+// settings (the choice is remembered); the device's own dark setting is deliberately ignored.
 function currentTheme() {
   let saved = null;
   try { saved = localStorage.getItem("dlk_theme"); } catch (e) {}
-  return saved === "light" || saved === "dark" ? saved : darkQuery && darkQuery.matches ? "dark" : "light";
+  return saved === "dark" ? "dark" : "light";
 }
 function applyTheme() { document.documentElement.setAttribute("data-theme", currentTheme()); }
 function toggleTheme() {
@@ -54,7 +54,6 @@ function toggleTheme() {
   render();
 }
 applyTheme();
-if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener("change", () => { applyTheme(); render(); });
 
 /* ---------------- helpers ---------------- */
 
@@ -292,15 +291,29 @@ function discFabButton(cls) {
 
 /** Inside the map the two sit where the language and theme buttons were. */
 function mapFabsHtml() {
-  return `${showCardFab() ? cardFabButton("map-fab theme-fab") : ""}${showDiscFab() ? discFabButton("map-fab lang-fab") : ""}`;
+  const third = showDiscFab() ? discFabButton("map-fab lang-fab") : showLangFab() ? langFabButton("map-fab lang-fab globe-fab") + langMenuHtml("") : "";
+  return `${showCardFab() ? cardFabButton("map-fab theme-fab") : ""}${third}`;
+}
+
+/* ---- the language button: a visitor changes the language right here, without an account (signed-in people also have it in their settings) ---- */
+
+const FAB_LANG_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 4 5.7 4 9s-1.4 6.3-4 9c-2.6-2.7-4-5.7-4-9s1.4-6.3 4-9z"/></svg>`;
+function showLangFab() { return !S.token && !FAB_HIDDEN.includes(S.screen); }
+function langFabButton(cls) {
+  return `<button class="${cls}" title="${esc(t("acct.language"))}" aria-label="${esc(t("acct.language"))}" onclick="toggleLangMenu()">${FAB_LANG_SVG}</button>`;
+}
+/** The language buttons as a row: on the sign-in pages and the city question, where the visitor starts. */
+function langChipsHtml() {
+  return `<div class="chip-row lang-row">${Object.entries(LANGS).map(([code, l]) => `<button class="chip ${code === LANG ? "active" : ""}" onclick="setLang('${code}')">${esc(l.name)}</button>`).join("")}</div>`;
 }
 
 /** On every other page they stand in a column; the discount menu and the hints open beside the discount button. */
 function floatingButtonsHtml() {
   const card = showCardFab();
   const disc = showDiscFab();
-  if (!card && !disc) return "";
-  const stack = isMapScreen() ? "" : `<div class="fab-stack">${disc ? discFabButton("rfab") : ""}${card ? cardFabButton("rfab") : ""}</div>`;
+  const lang = showLangFab();
+  if (!card && !disc && !lang) return "";
+  const stack = isMapScreen() ? "" : `<div class="fab-stack">${lang ? langFabButton("rfab globe-fab") : ""}${disc ? discFabButton("rfab") : ""}${card ? cardFabButton("rfab") : ""}</div>${lang ? langMenuHtml(" in-stack") : ""}`;
   if (!disc) return stack;
   mfabStartTips();
   return `${stack}
@@ -875,7 +888,7 @@ async function doLogin() {
 
 /** The full logo on the sign-in pages: the dark-lettered one on light themes, the white-lettered one on the dark theme (CSS picks). */
 function authLogoHtml() {
-  return `<img class="auth-logo on-light" src="${logoSrc("vertical", "color")}" alt="DALILACOM" /><img class="auth-logo on-dark" src="${logoSrc("vertical", "white")}" alt="" aria-hidden="true" />`;
+  return langChipsHtml() + `<img class="auth-logo on-light" src="${logoSrc("vertical", "color")}" alt="DALILACOM" /><img class="auth-logo on-dark" src="${logoSrc("vertical", "white")}" alt="" aria-hidden="true" />`;
 }
 
 function screenRegister() {
@@ -4063,11 +4076,32 @@ function storeSlotPh(i) {
     </div>`;
 }
 
-/** Always six spaces: the held ones first, the rest are the invitation tiles. */
+/** Until shops rent the spaces, they introduce the app's own sections, so the store is never empty. Each one opens its section. */
+const STORE_PROMOS = [
+  { key: "map", icon: "🗺️", go: "setHomeTab('discover')" },
+  { key: "deals", icon: "🏷️", go: "setHomeTab('deals')" },
+  { key: "card", icon: "💳", go: "openMyCard()" },
+  { key: "accounting", icon: "🧮", go: "setHomeTab('accounting')" },
+  { key: "hr", icon: "👥", go: "setHomeTab('hr')" },
+  { key: "responder", icon: "🤖", go: "setHomeTab('responder')" },
+];
+function storePromoTile(i) {
+  const p = STORE_PROMOS[i % STORE_PROMOS.length];
+  return `
+    <div class="store-slot is-ph ph-${i % 3}" role="button" tabindex="0" onclick="${p.go}">
+      <div class="ph-body">
+        <span class="ph-ico" aria-hidden="true">${p.icon}</span>
+        <span class="ph-text"><b>${esc(t("promo." + p.key + "T"))}</b><small>${esc(t("promo." + p.key + "S"))}</small></span>
+        <span class="ph-cta">${esc(t("promo.open"))}</span>
+      </div>
+    </div>`;
+}
+
+/** Always six spaces: the ones a shop rents first, every other one introduces a section of the app. (The old "advertise here" tile, storeSlotPh, is no longer used here; the invitation to advertise stays in its own card below.) */
 function storeSlotsHtml(home, from, to) {
-  const list = home.slots || [];
+  const list = (home.slots || []).filter((s) => s.ad);
   const out = [];
-  for (let i = from; i < to; i++) out.push(list[i] ? storeSlot(list[i]) : storeSlotPh(i));
+  for (let i = from; i < to; i++) out.push(list[i] ? storeSlot(list[i]) : storePromoTile(i));
   return out.join("");
 }
 
@@ -6746,10 +6780,12 @@ function categoryPickerHtml(tree, selectedId, pick, onSend) {
   return search + `<div class="muted" style="font-size:12px;margin:-4px 0 6px">${esc(t("cat.orBrowse"))}</div>` + html + catSuggestHtml(onSend);
 }
 
-function toggleLangMenu() { S._langMenu = !S._langMenu; render(); }
-function langMenuHtml() {
-  if (!S._langMenu) return "";
-  return `<div class="lang-menu">${Object.entries(LANGS).map(([code, l]) => `<button class="${code === LANG ? "active" : ""}" onclick="setLang('${code}')">${esc(l.name)}</button>`).join("")}</div>`;
+// the menu is open for the page it was opened on only, so it never stays behind when the visitor moves on
+const langMenuKey = () => S.screen + ":" + S.homeTab;
+function toggleLangMenu() { S._langMenu = S._langMenu === langMenuKey() ? false : langMenuKey(); render(); }
+function langMenuHtml(extra) {
+  if (S._langMenu !== langMenuKey()) return "";
+  return `<div class="lang-menu${extra || ""}">${Object.entries(LANGS).map(([code, l]) => `<button class="${code === LANG ? "active" : ""}" onclick="setLang('${code}')">${esc(l.name)}</button>`).join("")}</div>`;
 }
 
 function setLang(code) {
@@ -8480,6 +8516,7 @@ function cityGateHtml() {
       <div class="city-ico">📍</div>
       <h3>${esc(t("city.title"))}</h3>
       <p class="muted">${esc(t("city.sub"))}</p>
+      ${S.token ? "" : langChipsHtml()}
       <select id="city-pick" onchange="S._cityGate.picked=this.value;render()">
         <option value="">${esc(t("city.choose"))}</option>
         ${g.cities.map((c) => `<option value="${c.id}" ${g.picked === c.id ? "selected" : ""}>${esc(geoName(c))}</option>`).join("")}

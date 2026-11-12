@@ -1237,4 +1237,18 @@
     <string name="accounting_delete">Delete</string>
     <string name="accounting_recent">Recent entries</string>
     <string name="accounting_delete_confirm">Delete “%1$s”?</string>
+    <!-- the store's tiles that introduce the app's sections -->
+    <string name="promo_map_t">Discover your city\'s shops</string>
+    <string name="promo_map_s">Every nearby shop and service on the map</string>
+    <string name="promo_deals_t">Exclusive discounts</string>
+    <string name="promo_deals_s">Save at partner shops</string>
+    <string name="promo_card_t">Dalilacom membership card</string>
+    <string name="promo_card_s">One card, discounts everywhere</string>
+    <string name="promo_accounting_t">Keep your books</string>
+    <string name="promo_accounting_s">Income, expenses and profit in one place</string>
+    <string name="promo_hr_t">Manage your team</string>
+    <string name="promo_hr_s">Attendance, leave and payroll</string>
+    <string name="promo_responder_t">Auto-responder</string>
+    <string name="promo_responder_s">Automatic replies to customers</string>
+    <string name="promo_open">Open</string>
 </resources>

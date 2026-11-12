@@ -285,4 +285,7 @@
     <string name="s_fdc54283" formatted="false">Couldn\'t load the inbox</string>
     <string name="s_fe29f439" formatted="false">Recent transactions</string>
     <string name="s_fe79250b" formatted="false">Verify</string>
+    <string name="site_hr_st1_l" formatted="false">Mitarbeitende stempeln mit dem Handy ein</string>
+    <string name="site_hr_st2_l" formatted="false">Das Gehalt wird jeden Monat automatisch berechnet</string>
+    <string name="site_hr_st3_l" formatted="false">Die Daten jeder Firma sind getrennt und geschützt</string>
 </resources>

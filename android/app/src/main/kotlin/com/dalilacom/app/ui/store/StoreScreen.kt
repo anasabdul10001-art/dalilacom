@@ -9,7 +9,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,7 +94,7 @@ val StoreSale = Color(0xFFFA6338)
 val StoreTag = Color(0xFF7B4FD6)
 
 @Composable
-private fun storePage(): Color = if (isSystemInDarkTheme()) Color(0xFF0E0A0A) else Color(0xFFF5F5F5)
+private fun storePage(): Color = if (com.dalilacom.app.ui.theme.LocalDarkTheme.current) Color(0xFF0E0A0A) else Color(0xFFF5F5F5)
 
 fun StoreSectionDto.label(): String = if (AppStrings.language == "ar") name else nameEn.ifBlank { name }
 
@@ -232,6 +231,8 @@ fun StoreScreen(
     onLogin: () -> Unit,
     onOpenMerchant: (String) -> Unit = {},
     onBookAd: (String) -> Unit = {},
+    /** A tile that introduces one of the app's sections was tapped: "map", "deals", "card", "accounting", "hr" or "responder". */
+    onPromo: (String) -> Unit = {},
     onStartSelling: () -> Unit = {},
     /** False when the store is a tab of the home page: there is no page behind it to go back to. */
     showBack: Boolean = true,
@@ -405,13 +406,14 @@ fun StoreScreen(
                         }
                     }
                 }
-                // the advertising spaces: a shop's paid product, or a best seller with an invitation to advertise
+                // the advertising spaces: a shop's paid product, or (while nobody rents it) a tile that introduces a section of the app
                 item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        val rented = ui.slots.filter { it.ad } // only what a shop rents; every other space introduces a section of the app
                         items(6, key = { it }) { i ->
-                            val sl = ui.slots.getOrNull(i)
+                            val sl = rented.getOrNull(i)
                             if (sl != null) AdSlot(sl, onOpen = { if (sl.adId != null) vm.adClick(sl.adId); onOpenProduct(sl.product.id) }, onAdvertise = { onBookAd("space") }, onAdd = { vm.addToCart(sl.product.id) })
-                            else AdSlotPlaceholder(i, onClick = { onBookAd("space") })
+                            else PromoTile(i, onClick = { onPromo(STORE_PROMOS[i % STORE_PROMOS.size].key) })
                         }
                     }
                 }
@@ -640,7 +642,40 @@ private fun InviteSlide(onClick: () -> Unit) {
     }
 }
 
-/** A space nobody holds yet: a Dalilacom tile that invites people to advertise there, so no space is ever empty. */
+private class StorePromo(val key: String, val icon: String, @androidx.annotation.StringRes val title: Int, @androidx.annotation.StringRes val sub: Int)
+
+/** What the spaces nobody rents show: the app's own sections, so the store is never empty. */
+private val STORE_PROMOS = listOf(
+    StorePromo("map", "🗺️", R.string.promo_map_t, R.string.promo_map_s),
+    StorePromo("deals", "🏷️", R.string.promo_deals_t, R.string.promo_deals_s),
+    StorePromo("card", "💳", R.string.promo_card_t, R.string.promo_card_s),
+    StorePromo("accounting", "🧮", R.string.promo_accounting_t, R.string.promo_accounting_s),
+    StorePromo("hr", "👥", R.string.promo_hr_t, R.string.promo_hr_s),
+    StorePromo("responder", "🤖", R.string.promo_responder_t, R.string.promo_responder_s),
+)
+
+/** A space nobody rents: a tile that introduces one section of the app and opens it. */
+@Composable
+private fun PromoTile(i: Int, onClick: () -> Unit) {
+    val promo = STORE_PROMOS[i % STORE_PROMOS.size]
+    val colors = when (i % 3) {
+        0 -> listOf(Color(0xFFC4552B), Color(0xFFF48050))
+        1 -> listOf(Color(0xFF1C1413), Color(0xFFC4552B))
+        else -> listOf(Color(0xFFF48050), Color(0xFFE0653A))
+    }
+    Box(Modifier.width(168.dp).aspectRatio(1.4f).clip(RoundedCornerShape(6.dp)).background(Brush.linearGradient(colors)).clickable(onClick = onClick)) {
+        Row(Modifier.fillMaxSize().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(promo.icon, fontSize = 30.sp)
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(promo.title), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, lineHeight = 17.sp)
+                Text(stringResource(promo.sub), color = Color.White.copy(alpha = 0.9f), fontSize = 10.5.sp, lineHeight = 14.sp)
+            }
+        }
+        Text(stringResource(R.string.promo_open), color = Color(0xFFC4552B), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.White, RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp))
+    }
+}
+
+/** (No longer used by the store: the old tile that invited shops to advertise in a space nobody rents.) */
 @Composable
 private fun AdSlotPlaceholder(i: Int, onClick: () -> Unit) {
     val colors = when (i % 3) {

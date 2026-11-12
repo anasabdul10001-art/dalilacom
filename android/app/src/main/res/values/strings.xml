@@ -1241,4 +1241,18 @@
     <string name="accounting_delete">حذف</string>
     <string name="accounting_recent">آخر الحركات</string>
     <string name="accounting_delete_confirm">حذف «%1$s»؟</string>
+    <!-- the store's tiles that introduce the app's sections -->
+    <string name="promo_map_t">اكتشف محلات مدينتك</string>
+    <string name="promo_map_s">كل المحلات والخدمات القريبة منك على الخريطة</string>
+    <string name="promo_deals_t">حسوم حصرية</string>
+    <string name="promo_deals_s">وفّر عند المحلات المشاركة</string>
+    <string name="promo_card_t">بطاقة عضوية دليلكم</string>
+    <string name="promo_card_s">بطاقة وحدة وحسوم بكل مكان</string>
+    <string name="promo_accounting_t">حاسب نشاطك</string>
+    <string name="promo_accounting_s">الدخل والمصاريف والربح بمكان واحد</string>
+    <string name="promo_hr_t">أدِر موظفينك</string>
+    <string name="promo_hr_s">حضور وإجازات ورواتب</string>
+    <string name="promo_responder_t">المجيب الآلي</string>
+    <string name="promo_responder_s">ردود تلقائية على رسائل زبائنك</string>
+    <string name="promo_open">افتح</string>
 </resources>

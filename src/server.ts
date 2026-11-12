@@ -52,6 +52,8 @@ import { ApiError, sendError, sendValidationError } from "./lib/apiError";
 import { renewAllDueAiPackages } from "./services/aiQuota.service";
 import { marketplaceRouter } from "./routes/marketplace.routes";
 import { accountingRouter } from "./routes/accounting.routes";
+import { hrIntegrationRouter } from "./routes/hrLink.routes";
+import { hrRouter } from "./routes/hr.routes";
 import { billingRouter } from "./routes/billing.routes";
 import { sendDueDoctorAppointmentReminders } from "./services/doctorAppointmentReminder.service";
 
@@ -210,6 +212,8 @@ app.use("/catalog", catalogRouter);
 app.use("/store", storeRouter);
 app.use("/marketplace", marketplaceRouter);
 app.use("/accounting", accountingRouter);
+app.use("/integrations/hr", hrIntegrationRouter);
+app.use("/hr", hrRouter);
 app.use("/billing", billingRouter);
 app.use("/ads", adsRouter);
 app.use("/reviews", reviewsRouter);

@@ -1,6 +1,14 @@
 // Arabic — the source language of the app. Every key here must exist in every other language's DICT.
 LANGS.ar = { name: "العربية", dir: "rtl" };
 DICT.ar = {
+  // ---- the store's tiles that introduce the app's sections ----
+  "promo.mapT": "اكتشف محلات مدينتك", "promo.mapS": "كل المحلات والخدمات القريبة منك على الخريطة",
+  "promo.dealsT": "حسوم حصرية", "promo.dealsS": "وفّر عند المحلات المشاركة",
+  "promo.cardT": "بطاقة عضوية دليلكم", "promo.cardS": "بطاقة وحدة وحسوم بكل مكان",
+  "promo.accountingT": "حاسب نشاطك", "promo.accountingS": "الدخل والمصاريف والربح بمكان واحد",
+  "promo.hrT": "أدِر موظفينك", "promo.hrS": "حضور وإجازات ورواتب",
+  "promo.responderT": "المجيب الآلي", "promo.responderS": "ردود تلقائية على رسائل زبائنك",
+  "promo.open": "افتح",
   "accounting.planRequired": "هذه الخدمة تحتاج إلى باقة فعّالة أو فترة تجربة. افتح الباقات واختر ما يناسبك.",
   "accounting.setCost": "تعديل تكلفة الشراء", "accounting.invalidAmount": "أدخل مبلغًا صحيحًا.",
   "plans.payCard": "الدفع بالبطاقة أو البنك", "plans.payPaypal": "الدفع عبر PayPal",
@@ -141,11 +149,11 @@ DICT.ar = {
   "site.hr.slide3.t": "إجازات وسلف بدون ورق",
   "site.hr.slide3.d": "طلب وموافقة بسلسلة (مدير ثم HR)، والرصيد بينحسب لحاله.",
   "site.hr.st1.n": "🕒",
-  "site.hr.st1.l": "حضور وانصراف",
+  "site.hr.st1.l": "الموظف بيسجّل حضوره من جواله",
   "site.hr.st2.n": "💵",
-  "site.hr.st2.l": "كشوف رواتب جاهزة",
+  "site.hr.st2.l": "الراتب بينحسب لحاله كل شهر",
   "site.hr.st3.n": "🔒",
-  "site.hr.st3.l": "بيانات كل شركة منفصلة",
+  "site.hr.st3.l": "كل شركة بياناتها لحالها ومحمية",
   "site.hr.s1.d": "سجّل شركتك واختار عملتها.",
   "site.hr.s2.d": "أضف أقسامك وموظفينك وحدد صلاحياتهم.",
   "site.hr.s3.d": "شغّل الرواتب وتابع التقارير واللوحات.",

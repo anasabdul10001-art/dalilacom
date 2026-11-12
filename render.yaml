@@ -21,6 +21,12 @@ services:
         value: "production"
       - key: CREDENTIALS_ENCRYPTION_KEY
         generateValue: true
+      # HR system link: a signed payroll call older than this many seconds is refused. The link secrets themselves
+      # are stored encrypted with CREDENTIALS_ENCRYPTION_KEY, so there is no extra secret to set.
+      - key: HR_SYNC_MAX_SKEW_SECONDS
+        value: "300"
+      - key: HR_SYNC_RATE_LIMIT
+        value: "60"
       - key: PUBLIC_BASE_URL
         value: "https://dalilacom-api.onrender.com"
       - key: ANTHROPIC_API_KEY
@@ -142,6 +148,12 @@ services:
       # Paste the SAME value as the testing service: connected Pages/bots are stored encrypted with it in the shared database.
       - key: CREDENTIALS_ENCRYPTION_KEY
         sync: false
+      # HR system link: a signed payroll call older than this many seconds is refused. The link secrets themselves
+      # are stored encrypted with CREDENTIALS_ENCRYPTION_KEY, so there is no extra secret to set.
+      - key: HR_SYNC_MAX_SKEW_SECONDS
+        value: "300"
+      - key: HR_SYNC_RATE_LIMIT
+        value: "60"
       - key: PUBLIC_BASE_URL
         value: "https://dalilacom.com"
       # Public pages and approved shops are ready to appear in Google.

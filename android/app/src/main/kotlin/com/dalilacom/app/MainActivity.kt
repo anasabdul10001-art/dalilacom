@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
@@ -49,7 +48,7 @@ class MainActivity : ComponentActivity() {
             val dark = when (savedTheme) {
                 "dark" -> true
                 "light" -> false
-                else -> isSystemInDarkTheme()
+                else -> false // light until the user turns dark mode on in the account settings
             }
 
             val savedLanguage by container.sessionStore.languageFlow.collectAsState(initial = initialLanguage)

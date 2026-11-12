@@ -1502,9 +1502,12 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .check-line i { display: block; height: 100%; background: var(--primary, #c8283a); border-radius: 4px; transition: width .3s ease; }
 
 /* the round floating buttons, like the map's own: the member card, and for shops the discount button */
-.rfab, .map-fab.card-fab, .map-fab.disc-fab { display: grid; place-items: center; color: var(--primary, #c8283a); }
+.rfab, .map-fab.card-fab, .map-fab.disc-fab, .map-fab.globe-fab { display: grid; place-items: center; color: var(--primary, #c8283a); }
 .rfab { width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--surface); box-shadow: 0 4px 14px rgba(0, 0, 0, .3); cursor: pointer; padding: 0; }
-.rfab:active, .map-fab.card-fab:active, .map-fab.disc-fab:active { transform: scale(.94); }
+.rfab:active, .map-fab.card-fab:active, .map-fab.disc-fab:active, .map-fab.globe-fab:active { transform: scale(.94); }
+.lang-menu.in-stack { position: fixed; z-index: 600; inset-inline-start: 70px; bottom: calc(142px + env(safe-area-inset-bottom, 0px)); }
+.lang-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+@media (min-width: 900px) { .lang-menu.in-stack { inset-inline-start: 150px; bottom: 80px; } }
 .fab-stack { position: fixed; inset-inline-start: 12px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 500; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: max-content; pointer-events: none; } /* the box can be wider than its two buttons: only the buttons take taps, never the page area around them */
 .fab-stack > * { pointer-events: auto; }
 @media (min-width: 900px) { .fab-stack { bottom: 24px; inset-inline-start: 96px; } } /* the rail is 84px wide: the buttons sit beside it, not under it */
@@ -1593,6 +1596,7 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 .store-slot.is-ph.ph-2 { background: linear-gradient(135deg, #f48050, #e0653a 75%); }
 .store-picks .store-slot.is-ph { aspect-ratio: 16 / 9.4; }
 .ph-body { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.ph-ico { flex: none; font-size: 34px; line-height: 1; }
 .ph-logo { flex: none; height: 56%; width: auto; max-height: 64px; }
 .ph-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ph-text b { font-family: "Cairo", "Tajawal", sans-serif; font-size: 14px; line-height: 1.3; }

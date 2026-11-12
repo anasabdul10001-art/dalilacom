@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dalilacom.app.R
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** Sign-in and the card itself have no floating buttons; a shop's discount button is not shown on the store screens either. */
 private val AUTH_AND_CARD = listOf("splash", "socialReturn", "login", "register", "card", "merchantRegister", "accountSettings", "profileEdit", "productWizard", "merchantProduct")
@@ -70,6 +72,12 @@ fun BoxScope.FloatingButtons(
     val showDisc = merchant && showMerchantFabOn(route)
     if (!showCard && !showDisc) return
     var menuOpen by remember { mutableStateOf(false) }
+    // a visitor (no account) gets a language button above the others; a signed-in person has it in the account settings
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as com.dalilacom.app.DalilacomApp
+    val langScope = androidx.compose.runtime.rememberCoroutineScope()
+    var visitor by remember { mutableStateOf(false) }
+    var langMenuOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(route) { visitor = !app.container.authRepository.hasStoredSession() }
     // every so often a short hint says why a discount is good for the shop (the true reasons), until the shop closes it
     val tips = stringArrayResource(R.array.fab_tips)
     var tipIndex by remember { mutableStateOf(0) }
@@ -88,6 +96,16 @@ fun BoxScope.FloatingButtons(
             .padding(start = 16.dp, bottom = bottomPadding ?: if (hasBottomBar(route)) 152.dp else 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (visitor && showCard) androidx.compose.foundation.layout.Box {
+            SmallFloatingActionButton(onClick = { langMenuOpen = true }, containerColor = container, contentColor = MaterialTheme.colorScheme.primary) {
+                Icon(Icons.Filled.Language, contentDescription = stringResource(R.string.account_language))
+            }
+            DropdownMenu(expanded = langMenuOpen, onDismissRequest = { langMenuOpen = false }) {
+                com.dalilacom.app.ui.i18n.AppLanguages.all.forEach { language ->
+                    DropdownMenuItem(text = { Text(language.nativeName) }, onClick = { langMenuOpen = false; langScope.launch { app.container.sessionStore.saveLanguage(language.code) } })
+                }
+            }
+        }
         if (showDisc) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             androidx.compose.foundation.layout.Box {
                 SmallFloatingActionButton(onClick = { menuOpen = true; tipVisible = false }, containerColor = container, contentColor = MaterialTheme.colorScheme.primary) {

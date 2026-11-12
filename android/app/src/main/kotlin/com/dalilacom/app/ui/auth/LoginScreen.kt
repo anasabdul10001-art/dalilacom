@@ -81,6 +81,8 @@ fun LoginScreen(
                 com.dalilacom.app.ui.common.BrandLogo(modifier = Modifier.width(170.dp), onColor = true)
                 Spacer(Modifier.height(14.dp))
                 Text(AppStrings.get(R.string.s_249b177e), style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
+                Spacer(Modifier.height(14.dp))
+                com.dalilacom.app.ui.common.LanguageChips(onColor = true)
             }
         }
 

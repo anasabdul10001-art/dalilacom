@@ -10,6 +10,11 @@ import express from "express";
 import { sniffImageMime } from "../lib/image";
 import { extractInvoiceFromPhoto, visionAvailable } from "../services/ai.service";
 import { marketOfUser } from "../services/viewerCountry.service";
+import { hrLinkRouter } from "./hrLink.routes";
+import { MAX_ENTRY_CENTS, activeHrLink, payrollEntryIsLocked } from "../services/hrLink.service";
+
+// Amounts are stored 64-bit; they always fit a JSON number (the limit on one entry keeps even large sums exact).
+const plain = <T extends { amountCents: bigint }>(row: T) => ({ ...row, amountCents: Number(row.amountCents) });
 
 export const accountingRouter = Router();
 accountingRouter.use(requireAuth, route(async (req, res, next) => {
@@ -33,7 +38,7 @@ accountingRouter.post("/invoices/scan", express.raw({ type: ["image/jpeg", "imag
 }));
 
 accountingRouter.post("/invoices/:id/confirm", route(async (req, res) => {
-  const parsed = z.object({ category: z.string().trim().min(1).max(50).default("مشتريات"), description: z.string().trim().min(2).max(240).optional(), amountCents: z.number().int().positive().max(2_000_000_000).optional(), currency: currencyCode.optional(), occurredAt: z.string().datetime().optional() }).safeParse(req.body);
+  const parsed = z.object({ category: z.string().trim().min(1).max(50).default("مشتريات"), description: z.string().trim().min(2).max(240).optional(), amountCents: z.number().int().positive().max(MAX_ENTRY_CENTS).optional(), currency: currencyCode.optional(), occurredAt: z.string().datetime().optional() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const draft = await prisma.accountingInvoiceDraft.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
   if (!draft) return sendError(res, 404, "NOT_FOUND", "صورة الفاتورة غير موجودة");
@@ -48,7 +53,7 @@ accountingRouter.post("/invoices/:id/confirm", route(async (req, res) => {
     await tx.accountingInvoiceDraft.update({ where: { id: draft.id }, data: { entryId: created.id, confirmedAt: new Date() } });
     return created;
   });
-  res.status(201).json(entry);
+  res.status(201).json(plain(entry));
 }));
 
 accountingRouter.get("/invoices/:id/photo", route(async (req, res) => {
@@ -62,7 +67,7 @@ const entrySchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]),
   category: z.string().trim().min(1).max(50),
   description: z.string().trim().min(2).max(240),
-  amountCents: z.number().int().positive().max(2_000_000_000),
+  amountCents: z.number().int().positive().max(MAX_ENTRY_CENTS),
   currency: currencyCode.default("EUR"),
   occurredAt: z.string().datetime().optional(),
 });
@@ -85,24 +90,29 @@ accountingRouter.get("/summary", route(async (req, res) => {
   const from = typeof req.query.from === "string" ? new Date(plainDate.test(req.query.from) ? `${req.query.from}T00:00:00.000Z` : req.query.from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const to = typeof req.query.to === "string" ? new Date(plainDate.test(req.query.to) ? `${req.query.to}T23:59:59.999Z` : req.query.to) : new Date();
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) return sendError(res, 400, "BAD_REQUEST", "الفترة الزمنية غير صحيحة");
-  const [totals, productCount, stock, lowStock, storeProducts, recent] = await Promise.all([
+  const [totals, productCount, stock, lowStock, storeProducts, recent, payroll, hrLink] = await Promise.all([
     prisma.accountingEntry.groupBy({ by: ["type", "currency"], where: { userId, occurredAt: { gte: from, lte: to } }, _sum: { amountCents: true } }),
     prisma.accountingProduct.count({ where: { userId } }),
     prisma.accountingProduct.aggregate({ where: { userId }, _sum: { quantity: true } }),
     prisma.accountingProduct.count({ where: { userId, quantity: { lte: 0 } } }),
     prisma.product.findMany({ where: { merchant: { userId }, isActive: true }, select: { stock: true } }),
     prisma.accountingEntry.findMany({ where: { userId }, orderBy: { occurredAt: "desc" }, take: 8 }),
+    prisma.accountingEntry.groupBy({ by: ["currency"], where: { userId, source: "PAYROLL", occurredAt: { gte: from, lte: to } }, _sum: { amountCents: true } }),
+    activeHrLink(userId),
   ]);
   const currencies = [...new Set(totals.map((x) => x.currency))];
   res.json({
     from, to, currencies,
     totals: currencies.map((currency) => {
-      const income = totals.find((x) => x.currency === currency && x.type === "INCOME")?._sum.amountCents ?? 0;
-      const expenses = totals.find((x) => x.currency === currency && x.type === "EXPENSE")?._sum.amountCents ?? 0;
-      return { currency, incomeCents: income, expensesCents: expenses, netCents: income - expenses };
+      const income = Number(totals.find((x) => x.currency === currency && x.type === "INCOME")?._sum.amountCents ?? 0);
+      const expenses = Number(totals.find((x) => x.currency === currency && x.type === "EXPENSE")?._sum.amountCents ?? 0);
+      // the payroll share of the expenses is shown only where salaries were really booked (never an empty line)
+      const payrollCents = Number(payroll.find((x) => x.currency === currency)?._sum.amountCents ?? 0);
+      return { currency, incomeCents: income, expensesCents: expenses, netCents: income - expenses, ...(payrollCents > 0 ? { payrollCents } : {}) };
     }),
+    ...(hrLink ? { hrLink: { companyName: hrLink.companyName, connectedAt: hrLink.connectedAt } } : {}),
     inventory: { products: productCount + storeProducts.length, units: (stock._sum.quantity ?? 0) + storeProducts.reduce((sum, p) => sum + p.stock, 0), outOfStock: lowStock + storeProducts.filter(p => p.stock <= 0).length },
-    recent,
+    recent: recent.map(plain),
   });
 }));
 
@@ -113,14 +123,14 @@ accountingRouter.get("/entries", route(async (req, res) => {
     where: { userId: req.user!.id, ...(type ? { type } : {}), ...(q ? { OR: [{ description: { contains: q, mode: "insensitive" } }, { category: { contains: q, mode: "insensitive" } }] } : {}) },
     orderBy: { occurredAt: "desc" }, take: 250,
   });
-  res.json(rows.map(({ receiptData, ...row }) => ({ ...row, hasReceipt: !!receiptData })));
+  res.json(rows.map(({ receiptData, ...row }) => ({ ...plain(row), hasReceipt: !!receiptData })));
 }));
 
 accountingRouter.post("/entries", route(async (req, res) => {
   const parsed = entrySchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const row = await prisma.accountingEntry.create({ data: { ...parsed.data, userId: req.user!.id, source: "MANUAL", occurredAt: parsed.data.occurredAt ? new Date(parsed.data.occurredAt) : new Date() } });
-  res.status(201).json(row);
+  res.status(201).json(plain(row));
 }));
 
 // Entries typed by hand (or from a scanned invoice) can be corrected or removed; the ones the store writes by itself
@@ -131,15 +141,18 @@ accountingRouter.patch("/entries/:id", route(async (req, res) => {
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const row = await prisma.accountingEntry.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true, source: true } });
   if (!row) return sendError(res, 404, "NOT_FOUND", "القيد غير موجود");
+  if (row.source === "PAYROLL") return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من نظام الموارد البشرية ولا يمكن تعديله");
   if (!editableSources.includes(row.source)) return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من الطلب ولا يمكن تعديله");
   const { occurredAt, ...rest } = parsed.data;
-  res.json(await prisma.accountingEntry.update({ where: { id: row.id }, data: { ...rest, ...(occurredAt ? { occurredAt: new Date(occurredAt) } : {}) } }));
+  res.json(plain(await prisma.accountingEntry.update({ where: { id: row.id }, data: { ...rest, ...(occurredAt ? { occurredAt: new Date(occurredAt) } : {}) } })));
 }));
 
 accountingRouter.delete("/entries/:id", route(async (req, res) => {
-  const row = await prisma.accountingEntry.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true, source: true } });
+  const row = await prisma.accountingEntry.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true, source: true, sourceKey: true } });
   if (!row) return sendError(res, 404, "NOT_FOUND", "القيد غير موجود");
-  if (!editableSources.includes(row.source)) return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من الطلب ولا يمكن حذفه");
+  // a payroll entry follows its payroll run while the link lives; once the link is cancelled nothing manages it, so the owner may remove it
+  if (row.source === "PAYROLL" && (await payrollEntryIsLocked(row.sourceKey))) return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من نظام الموارد البشرية ولا يمكن حذفه");
+  if (row.source !== "PAYROLL" && !editableSources.includes(row.source)) return sendError(res, 409, "CONFLICT", "هذا القيد يُسجَّل تلقائيًا من الطلب ولا يمكن حذفه");
   await prisma.accountingEntry.delete({ where: { id: row.id } });
   res.json({ deleted: true });
 }));
@@ -284,6 +297,9 @@ accountingRouter.get("/export.csv", route(async (req, res) => {
   const rows = await prisma.accountingEntry.findMany({ where: { userId: req.user!.id }, orderBy: { occurredAt: "asc" }, take: 10000 });
   // a text that starts with = + - @ would be run as a formula by Excel and the like: a leading ' keeps it plain text
   const quote = (v: unknown) => `"${String(v ?? "").replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
-  const csv = ["Datum;Typ;Kategorie;Beschreibung;Betrag;Waehrung;Quelle", ...rows.map((r) => [r.occurredAt.toISOString(), r.type, r.category, r.description, (r.amountCents / 100).toFixed(2), r.currency, r.source].map(quote).join(";"))].join("\r\n");
+  const csv = ["Datum;Typ;Kategorie;Beschreibung;Betrag;Waehrung;Quelle", ...rows.map((r) => [r.occurredAt.toISOString(), r.type, r.category, r.description, (Number(r.amountCents) / 100).toFixed(2), r.currency, r.source].map(quote).join(";"))].join("\r\n");
   res.set({ "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": "attachment; filename=dalilacom-accounting.csv", "Cache-Control": "no-store" }).send("\uFEFF" + csv);
 }));
+
+// Linking the bookkeeping with the HR system (payroll cost arrives by itself). Like the rest of accounting, it needs an active plan.
+accountingRouter.use("/hr-link", hrLinkRouter);

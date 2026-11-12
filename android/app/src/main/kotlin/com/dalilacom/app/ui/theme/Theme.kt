@@ -1,6 +1,5 @@
 package com.dalilacom.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -9,6 +8,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -98,9 +98,12 @@ private val AppShapes = Shapes(
 
 private const val MAX_FONT_SCALE = 1.2f
 
+/** Whether the app is showing its dark look right now (screens that paint their own page colour read it, not the phone's setting). */
+val LocalDarkTheme = staticCompositionLocalOf { false }
+
 @Composable
 fun DalilacomTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // light is the main look; dark only when the user turns it on in the account settings
     rtl: Boolean = true,
     content: @Composable () -> Unit,
 ) {
@@ -113,6 +116,7 @@ fun DalilacomTheme(
     CompositionLocalProvider(
         LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr,
         androidx.compose.ui.platform.LocalDensity provides capped,
+        LocalDarkTheme provides darkTheme,
     ) {
         MaterialTheme(colorScheme = colors, typography = AppTypography, shapes = AppShapes, content = content)
     }
