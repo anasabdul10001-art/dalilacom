@@ -912,6 +912,7 @@ DICT.de = {
   "pricing.trial": "{n}-day free trial",
   "pricing.yourCountry": "Your country's price",
   "pricing.broadcasts": "{n} follower broadcasts per month",
+  "pricing.posts": "{n} scheduled posts per month",
   "pricing.subscribe": "Subscribe",
   "pricing.empty": "No plans available right now",
   "pricing.subscribed": "Subscribed ✅",

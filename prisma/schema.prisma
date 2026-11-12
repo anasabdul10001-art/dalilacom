@@ -336,6 +336,9 @@ model ServicePlan {
   // Merchant plans only: how many follower broadcasts this plan allows per period (section 37/76).
   // Null means "not applicable" for that kind of service.
   monthlyBroadcastLimit Int?
+  // Responder plans: how many posts a subscriber may schedule per month through DALILACOM (admin-set).
+  // Null or 0 means the plan does not include publishing; the badge and the section stay hidden then.
+  monthlyPostLimit      Int?
   includesAi            Boolean     @default(false)
   aiReplyLimit          Int         @default(0)
   removesBadge          Boolean     @default(false)

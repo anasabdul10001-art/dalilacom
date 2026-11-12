@@ -1798,6 +1798,7 @@ function addPlanOfferRow(planId) {
 
 function planCardHtml(p) {
   const isMerchant = p.service === 'MERCHANT_ACCOUNT';
+  const isResponder = String(p.service).startsWith('RESPONDER');
   const features = (p.features || []).map(f => (f.included ? '✔ ' : '✘ ') + f.text).join('\n');
   const needsCredits = p.priceCents > 0 && p.priceCredits == null;
   return `<div class="card plan-card">
@@ -1817,6 +1818,7 @@ function planCardHtml(p) {
       <div><label>أيام التجربة</label><input placeholder="مثال: 7" id="pl-trial-${p.id}" value="${p.trialDays}" /></div>
       <div><label>ترتيب العرض</label><input placeholder="مثال: 1" id="pl-sort-${p.id}" value="${p.sortOrder}" /></div>
       ${isMerchant ? `<div><label>حد الرسائل الجماعية بالشهر</label><input placeholder="مثال: 10" id="pl-broadcast-${p.id}" value="${p.monthlyBroadcastLimit ?? ''}" /></div>` : ''}
+      ${isResponder ? `<div><label>عدد المنشورات المجدولة بالشهر (فاضي = بدون نشر)</label><input placeholder="مثال: 10" id="pl-posts-${p.id}" value="${p.monthlyPostLimit ?? ''}" /></div>` : ''}
     </div>
     <div class="row">
       <div><label>السعر (بالعملة)</label><input placeholder="مثال: 9.99" id="pl-price-${p.id}" value="${money(p.priceCents)}" /></div>
@@ -1922,6 +1924,11 @@ async function savePlanFull(id) {
     const raw = get('broadcast').value.trim();
     body.monthlyBroadcastLimit = raw === '' ? null : parseNonNegInt(raw, 'حد الرسائل الجماعية');
     if (raw !== '' && body.monthlyBroadcastLimit === null) return;
+  }
+  if (String(plan.service).startsWith('RESPONDER')) {
+    const rawPosts = get('posts').value.trim();
+    body.monthlyPostLimit = rawPosts === '' ? null : parseNonNegInt(rawPosts, 'عدد المنشورات بالشهر');
+    if (rawPosts !== '' && body.monthlyPostLimit === null) return;
   }
   const saved = await api('PATCH', '/plans/' + id, body);
   if (!saved.ok) { alert(errText(saved.data, 'تعذّر الحفظ')); return; }

@@ -38,6 +38,7 @@ fun PlanCard(plan: CatalogPlanDto, creditName: String, actionLabel: String?, bus
         if (plan.trialDays > 0) add(stringResource(R.string.pricing_trial, plan.trialDays))
         if (plan.priceFrom == "country") add(stringResource(R.string.pricing_your_country))
         plan.monthlyBroadcastLimit?.takeIf { it > 0 }?.let { add(stringResource(R.string.pricing_broadcasts, it)) }
+        plan.monthlyPostLimit?.takeIf { it > 0 }?.let { add(stringResource(R.string.pricing_posts, it)) }
     }
     Surface(shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {

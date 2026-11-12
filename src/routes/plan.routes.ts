@@ -59,6 +59,7 @@ const planBody = {
   priceCredits: z.number().int().nonnegative().nullable().optional(),
   paypalPlanId: z.string().trim().max(100).nullable().optional(),
   monthlyBroadcastLimit: z.number().int().nonnegative().nullable().optional(),
+  monthlyPostLimit: z.number().int().nonnegative().nullable().optional(),
   sortOrder: z.number().int().default(0),
   isActive: z.boolean().default(true),
 };
@@ -83,6 +84,7 @@ const updatePlanBody = z.object({
   priceCredits: z.number().int().nonnegative().nullable().optional(),
   paypalPlanId: z.string().trim().max(100).nullable().optional(),
   monthlyBroadcastLimit: z.number().int().nonnegative().nullable().optional(),
+  monthlyPostLimit: z.number().int().nonnegative().nullable().optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
 });

@@ -378,7 +378,7 @@ DICT.ar = {
   "service.RESPONDER_CUSTOMER": "المجيب الآلي — للزبائن", "service.RESPONDER_MERCHANT": "المجيب الآلي — لأصحاب الأنشطة",
   "pricing.free": "مجاني", "pricing.notPriced": "السعر غير محدد بعد", "pricing.credits": "{n} {credit}",
   "pricing.days": "{n} يوم", "pricing.trial": "تجربة مجانية {n} يوم", "pricing.yourCountry": "سعر بلدك",
-  "pricing.broadcasts": "{n} رسالة جماعية بالشهر", "pricing.subscribe": "اشترك", "pricing.empty": "ما في باقات متاحة حاليًا",
+  "pricing.broadcasts": "{n} رسالة جماعية بالشهر", "pricing.posts": "{n} منشور مجدول بالشهر", "pricing.subscribe": "اشترك", "pricing.empty": "ما في باقات متاحة حاليًا",
   "pricing.subscribed": "تم الاشتراك ✅", "pricing.failed": "تعذّر الاشتراك",
   "responder.plansTitle": "خطط المجيب الآلي", "responder.noActivePlan": "ما عندك خطة فعّالة حاليًا. اختر خطة من الخيارات التالية حتى يبدأ المجيب بالعمل.", "responder.choosePlanHint": "كل خطة بتوضح ميزاتها وسعرها ومدة التجربة قبل ما تختارها.", "responder.planCurrent": "خطتك الحالية", "responder.planTrial": "ابدأ التجربة المجانية", "responder.trialStarted": "بدأت تجربتك للخطة ✅", "responder.offerBonusDays": "+{n} يوم إضافي", "responder.buyOffer": "اشترك بهذا العرض", "responder.aiIncluded": "تتضمن الذكاء الاصطناعي", "responder.fixedIncluded": "ردود ثابتة", "responder.topUp": "اشحن المحفظة للمتابعة",
     "intro.responder.title": "أهلًا بك في المجيب الآلي 👋",

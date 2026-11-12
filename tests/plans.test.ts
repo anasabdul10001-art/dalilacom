@@ -117,6 +117,32 @@ describe("The pricing catalogue (sections 24/60/64)", () => {
     expect(list.body.find((item: any) => item.id === p.id).offers).toContainEqual(expect.objectContaining({ id: created.body.id, paidPeriods: 2, bonusDays: 10 }));
   });
 
+  it("lets an admin set how many posts a responder plan may schedule per month, and returns it in the catalogue", async () => {
+    const auth = await admin();
+    const created = await request(app)
+      .post("/plans")
+      .set("Authorization", auth.bearer)
+      .send({
+        service: "RESPONDER_BASIC",
+        name: `Posts ${Date.now()}`,
+        durationDays: 30,
+        trialDays: 90,
+        priceCents: 200,
+        currency: "USD",
+        priceCredits: 200,
+        monthlyPostLimit: 10,
+      });
+    expect(created.status).toBe(201);
+    expect(created.body.monthlyPostLimit).toBe(10);
+
+    const entry = await catalogEntry("", created.body.id);
+    expect(entry).toMatchObject({ trialDays: 90, monthlyPostLimit: 10 });
+
+    const cleared = await request(app).patch(`/plans/${created.body.id}`).set("Authorization", auth.bearer).send({ monthlyPostLimit: null });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.monthlyPostLimit).toBeNull();
+  });
+
   it("lets an admin build a merchant plan with specifications and a quota, and shows it on the page", async () => {
     const auth = await admin();
 

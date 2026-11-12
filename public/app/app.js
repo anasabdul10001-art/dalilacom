@@ -6782,6 +6782,7 @@ function planCardHtml(plan, credit, action) {
       ${plan.trialDays > 0 ? `<span class="badge success">${esc(t("pricing.trial", { n: plan.trialDays }))}</span>` : ""}
       ${plan.priceFrom === "country" ? `<span class="badge info">${esc(t("pricing.yourCountry"))}</span>` : ""}
       ${plan.monthlyBroadcastLimit ? `<span class="badge neutral">${esc(t("pricing.broadcasts", { n: plan.monthlyBroadcastLimit }))}</span>` : ""}
+      ${plan.monthlyPostLimit ? `<span class="badge neutral">${esc(t("pricing.posts", { n: plan.monthlyPostLimit }))}</span>` : ""}
     </div>
     ${plan.features.length ? `<ul class="plan-features">${plan.features.map((f) => `<li class="${f.included ? "" : "off"}">${f.included ? "\u2714" : "\u2718"} ${esc(f.text)}</li>`).join("")}</ul>` : ""}
     ${action ? `<button class="btn small" ${S.busy ? "disabled" : ""} onclick="${action.fn}('${plan.id}')">${esc(action.label)}</button>` : ""}

@@ -379,7 +379,7 @@ DICT.en = {
   "service.RESPONDER_CUSTOMER": "Auto-responder — customers", "service.RESPONDER_MERCHANT": "Auto-responder — businesses",
   "pricing.free": "Free", "pricing.notPriced": "Price not set yet", "pricing.credits": "{n} {credit}",
   "pricing.days": "{n} days", "pricing.trial": "{n}-day free trial", "pricing.yourCountry": "Your country's price",
-  "pricing.broadcasts": "{n} follower broadcasts per month", "pricing.subscribe": "Subscribe", "pricing.empty": "No plans available right now",
+  "pricing.broadcasts": "{n} follower broadcasts per month", "pricing.posts": "{n} scheduled posts per month", "pricing.subscribe": "Subscribe", "pricing.empty": "No plans available right now",
   "pricing.subscribed": "Subscribed ✅", "pricing.failed": "Couldn't subscribe",
   "responder.plansTitle": "Auto-responder plans", "responder.noActivePlan": "You don't have an active plan. Choose one below to start the auto-responder.", "responder.choosePlanHint": "Each plan shows its features, price, and trial before you choose.", "responder.planCurrent": "Your current plan", "responder.planTrial": "Start free trial", "responder.trialStarted": "Your plan trial has started ✅", "responder.offerBonusDays": "+{n} extra days", "responder.buyOffer": "Choose this offer", "responder.aiIncluded": "AI included", "responder.fixedIncluded": "Fixed replies", "responder.topUp": "Add wallet credits to continue",
     "intro.responder.title": "Welcome to the auto-responder \ud83d\udc4b",

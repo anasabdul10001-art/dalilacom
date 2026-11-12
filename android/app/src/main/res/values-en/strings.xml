@@ -237,6 +237,7 @@
     <string name="pricing_trial">%1$d-day free trial</string>
     <string name="pricing_your_country">Your country\'s price</string>
     <string name="pricing_broadcasts">%1$d follower broadcasts per month</string>
+    <string name="pricing_posts">%1$d scheduled posts per month</string>
     <string name="pricing_subscribe">Subscribe</string>
     <string name="pricing_empty">No plans available right now</string>
     <string name="pricing_subscribed">Subscribed ✅</string>

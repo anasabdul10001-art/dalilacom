@@ -34,6 +34,7 @@ export interface CatalogPlan {
   cashAmountCents: number;
   currency: string;
   monthlyBroadcastLimit: number | null;
+  monthlyPostLimit: number | null;
   features: CatalogFeature[];
   source: "catalog";
   editable: boolean;
@@ -119,6 +120,7 @@ export async function getCatalog(countryCode: string | null, lang: string = DEFA
       cashAmountCents: price.cashAmountCents,
       currency: price.currency,
       monthlyBroadcastLimit: plan.monthlyBroadcastLimit,
+      monthlyPostLimit: plan.monthlyPostLimit,
       features: plan.features.map((f) => ({ text: say(f.text), included: f.included })),
       source: "catalog",
       editable: true,

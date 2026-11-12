@@ -854,6 +854,7 @@ data class CatalogPlanDto(
     val priceCredits: Int? = null,
     val priceFrom: String = "default",
     val monthlyBroadcastLimit: Int? = null,
+    val monthlyPostLimit: Int? = null,
     val features: List<PlanFeatureDto> = emptyList(),
     val source: String = "catalog",
 )
