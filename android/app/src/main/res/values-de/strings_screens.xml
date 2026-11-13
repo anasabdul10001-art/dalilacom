@@ -559,4 +559,25 @@
     <string name="accounting_rec_amount">Change the amount</string>
     <string name="accounting_rec_start">Start date (YYYY-MM-DD)</string>
     <string name="accounting_rec_backfill">Also record the ones missed since the start date</string>
+    <string name="accounting_tax_title">Tax (experimental)</string>
+    <string name="accounting_tax_warn">An experimental feature: the numbers are for your own follow-up. Check them with your accountant before you rely on them in any tax return.</string>
+    <string name="accounting_tax_incl">The price has the tax inside</string>
+    <string name="accounting_tax_excl">The tax is added on top of the price</string>
+    <string name="accounting_tax_default">Default rate</string>
+    <string name="accounting_tax_none">No tax</string>
+    <string name="accounting_tax_rates">Tax rates</string>
+    <string name="accounting_tax_rate_name">Rate name</string>
+    <string name="accounting_tax_rate_pct">Rate %</string>
+    <string name="accounting_tax_add_rate">Add a rate</string>
+    <string name="accounting_tax_off">Switch off</string>
+    <string name="accounting_tax_on">Switch on</string>
+    <string name="accounting_tax_no_rates">No tax rates. Without rates, invoices carry no tax.</string>
+    <string name="accounting_tax_output">Sales tax collected</string>
+    <string name="accounting_tax_input">Purchase tax paid</string>
+    <string name="accounting_tax_payable">Owed to the tax office</string>
+    <string name="accounting_tax_claim">Can be claimed back</string>
+    <string name="accounting_tax_product">Tax</string>
+    <string name="accounting_tax_in_invoice">of which tax</string>
+    <string name="accounting_tax_on_top">Tax added</string>
+    <string name="accounting_tax_report">Tax report for this month</string>
 </resources>

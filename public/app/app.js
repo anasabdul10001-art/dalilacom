@@ -2552,7 +2552,7 @@ async function loadOrders() {
 /* ---- The three sections (accounting, auto-responder, HR) work like small sites of their own: a tab bar whose first tab is a home page that is always there ---- */
 
 const SITES = {
-  accounting: { icon: "🧮", tabs: ["summary", "reports", "entry", "recurring", "sale", "purchases", "parties", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
+  accounting: { icon: "🧮", tabs: ["summary", "reports", "entry", "recurring", "sale", "purchases", "parties", "invoices", "stock", "tax"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
   responder: { icon: "🤖", tabs: ["overview", "channels", "rules", "inbox"], art: ["chat", "orbit", "ai"], features: ["💬", "⚙️", "✨", "📥"], details: 4 },
   hr: { icon: "👥", tabs: [], art: ["team", "payslip", "calendar"], features: ["🕒", "🏖️", "💵", "🤝"] },
 };
@@ -2694,6 +2694,7 @@ function screenAccounting() {
     parties: accountingPartiesCard(),
     purchases: accountingBuyCard(a),
     recurring: accountingRecurringCard(a),
+    tax: accountingTaxCard(a),
     sale: accountingSaleCard(a),
     stock: `
     ${S._count ? accountingCountCard(a) : accountingLowCard(a)}
@@ -2705,18 +2706,102 @@ function screenAccounting() {
       <div class="field"><label>${esc(t("accounting.costPrice"))}</label><input id="acc-cost-price" type="number" min="0" step="0.01" /></div>
       <div class="field"><label>${esc(t("accounting.quantity"))}</label><input id="acc-quantity" type="number" min="0" step="1" value="0" /></div>
       <button class="btn" onclick="accountingAddProduct()">${esc(t("accounting.addProduct"))}</button>
-      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingSetMin('${p.id}')">${esc(t("accounting.low.min"))}${p.lowStockAt ? ": " + p.lowStockAt : ""}</button>`}<button class="btn small outline" onclick="accountingMoves('${p.id}')">${esc(t("accounting.moves"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingDeleteProduct('${p.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button>`}</div></div>`).join("")}
+      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingSetMin('${p.id}')">${esc(t("accounting.low.min"))}${p.lowStockAt ? ": " + p.lowStockAt : ""}</button>`}${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingSetTax('${p.id}')">${esc(t("accounting.tax.product"))}</button>`}<button class="btn small outline" onclick="accountingMoves('${p.id}')">${esc(t("accounting.moves"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingDeleteProduct('${p.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button>`}</div></div>`).join("")}
     </div>`,
   };
   return siteShell("accounting", tab, (cards[tab] || cards.summary) + errorBanner());
 }
 async function loadAccounting() {
   const cashDay = S._accCashDay || new Date().toISOString().slice(0, 10);
-  const [summary, products, cash, sales, low, partiesRes, purchases, recurring] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low"), api("GET", "/accounting/parties"), api("GET", "/accounting/purchases"), api("GET", "/accounting/recurring")]);
+  const [summary, products, cash, sales, low, partiesRes, purchases, recurring, taxRates, taxSettings] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low"), api("GET", "/accounting/parties"), api("GET", "/accounting/purchases"), api("GET", "/accounting/recurring"), api("GET", "/accounting/tax/rates"), api("GET", "/accounting/settings")]);
   const requiresPlan = summary.status === 402 || products.status === 402;
-  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], recurring: recurring.ok ? recurring.data : [], error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
+  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], recurring: recurring.ok ? recurring.data : [], taxRates: taxRates.ok ? taxRates.data : [], taxSettings: taxSettings.ok ? taxSettings.data : { pricesIncludeTax: true, defaultTaxRateId: null }, error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
 }
+/* ---- tax (experimental): rates, how prices are written, a rate per product, and the tax report ---- */
+/** The tax of the lines of an invoice, the same way the server computes it (so the preview matches the saved invoice). */
+function taxPreview(items, discount, include, rateBpOf) {
+  const subtotal = items.reduce((sum, i) => sum + i.gross, 0); let left = discount; let total = 0, tax = 0;
+  items.forEach((i, idx) => {
+    const d = idx === items.length - 1 ? left : Math.round(discount * i.gross / subtotal); left -= d;
+    const base = i.gross - d, bp = rateBpOf(i);
+    const tx = bp > 0 ? (include ? Math.round(base * bp / (10000 + bp)) : Math.round(base * bp / 10000)) : 0;
+    tax += tx; total += include ? base : base + tx;
+  });
+  return { total, tax };
+}
+function accRateBp(productId) {
+  const a = S._accounting || {}; const rates = (a.taxRates || []).filter((r) => r.active);
+  const def = rates.find((r) => r.id === (a.taxSettings || {}).defaultTaxRateId);
+  const p = (a.products || []).find((x) => x.id === productId);
+  const own = p && p.taxRateId ? rates.find((r) => r.id === p.taxRateId) : null;
+  return (own || def || { rateBp: 0 }).rateBp;
+}
+function repTaxState() {
+  if (!S._taxRep) { const today = repDay(0); S._taxRep = { from: today.slice(0, 8) + "01", to: today, data: null, loading: false }; }
+  return S._taxRep;
+}
+async function taxReportLoad() {
+  const r = repTaxState(); if (r.loading) return; r.loading = true;
+  const { ok, data } = await api("GET", `/accounting/tax/report?from=${r.from}&to=${r.to}`);
+  r.loading = false; r.data = ok ? data : { byRate: [], empty: true }; render();
+}
+function taxReportSet(key, value) { const r = repTaxState(); r[key] = value; r.data = null; render(); }
+function accountingTaxCard(a) {
+  const st = a.taxSettings || { pricesIncludeTax: true, defaultTaxRateId: null }, rates = a.taxRates || [];
+  const r = repTaxState(); if (!r.data && !r.loading) taxReportLoad();
+  const rateRows = rates.length === 0 ? `<p class="muted">${esc(t("accounting.tax.noRates"))}</p>` : rates.map((x) => `<div class="item"><div class="item-main"><div class="item-title">${esc(x.name)} · ${x.ratePercent}%</div>${x.active ? "" : `<div class="chips">${uiChip(t("accounting.rec.paused"), "warn")}</div>`}</div><button class="btn small outline" onclick="taxRateToggle('${x.id}',${x.active ? "false" : "true"})">${esc(t(x.active ? "accounting.tax.off" : "accounting.tax.on"))}</button></div>`).join("");
+  const d = r.data && !r.data.empty ? r.data : null, c = d ? d.currency : (S.currency || "EUR");
+  const rep = !d ? (r.loading || !r.data ? skeleton("tiles") : "") : `<div class="tiles">${uiTile(t("accounting.tax.output"), fmt(d.outputTaxCents, c), "income")}${uiTile(t("accounting.tax.input"), fmt(d.inputTaxCents, c), "expense")}${uiTile(t(d.payableCents >= 0 ? "accounting.tax.payable" : "accounting.tax.claim"), fmt(Math.abs(d.payableCents), c), "net", true)}</div>
+    ${d.byRate.length ? `<table class="plain-table" style="width:100%;margin-top:8px"><thead><tr><th>${esc(t("accounting.tax.rate"))}</th><th>${esc(t("accounting.tax.sales"))}: ${esc(t("accounting.tax.base"))}</th><th>${esc(t("accounting.tax.taxCol"))}</th><th>${esc(t("accounting.tax.purchases"))}: ${esc(t("accounting.tax.base"))}</th><th>${esc(t("accounting.tax.taxCol"))}</th></tr></thead><tbody>${d.byRate.map((x) => `<tr><td>${x.ratePercent}%</td><td>${esc(fmt(x.outputBaseCents, c))}</td><td>${esc(fmt(x.outputTaxCents, c))}</td><td>${esc(fmt(x.inputBaseCents, c))}</td><td>${esc(fmt(x.inputTaxCents, c))}</td></tr>`).join("")}</tbody></table>` : ""}
+    <div class="btn-row"><button class="btn soft" onclick="taxReportPrint()">🖨 ${esc(t("accounting.tax.print"))}</button></div>`;
+  return `<div class="card"><div class="section-title">${esc(t("accounting.tax.title"))}</div><div class="badge warning" style="margin-bottom:10px;white-space:normal">${esc(t("accounting.tax.warn"))}</div>
+      <div class="field"><label>${esc(t("accounting.tax.prices"))}</label><select id="tax-incl"><option value="1" ${st.pricesIncludeTax ? "selected" : ""}>${esc(t("accounting.tax.incl"))}</option><option value="0" ${!st.pricesIncludeTax ? "selected" : ""}>${esc(t("accounting.tax.excl"))}</option></select></div>
+      <div class="field"><label>${esc(t("accounting.tax.default"))}</label><select id="tax-default"><option value="">${esc(t("accounting.tax.none"))}</option>${rates.filter((x) => x.active).map((x) => `<option value="${x.id}" ${st.defaultTaxRateId === x.id ? "selected" : ""}>${esc(x.name)} · ${x.ratePercent}%</option>`).join("")}</select></div>
+      <div class="field"><label>${esc(t("accounting.tax.number"))}</label><input id="tax-number" value="${esc(st.taxNumber || "")}" maxlength="60" /></div>
+      <div class="field"><label>${esc(t("accounting.tax.business"))}</label><input id="tax-business" value="${esc(st.businessName || "")}" maxlength="120" /></div>
+      <button class="btn" onclick="taxSettingsSave(this)">${esc(t("accounting.tax.save"))}</button></div>
+    <div class="card"><div class="section-title">${esc(t("accounting.tax.rates"))}</div>${rateRows}
+      <div class="row"><div class="field"><label>${esc(t("accounting.tax.rateName"))}</label><input id="tax-rate-name" maxlength="60" /></div><div class="field"><label>${esc(t("accounting.tax.ratePct"))}</label><input id="tax-rate-pct" inputmode="decimal" /></div></div>
+      <button class="btn soft" onclick="taxRateAdd(this)">${esc(t("accounting.tax.addRate"))}</button></div>
+    <div class="card"><div class="section-title">${esc(t("accounting.tax.report"))}</div>
+      <div class="row"><div class="field"><label>${esc(t("accounting.rep.from"))}</label><input type="date" value="${esc(r.from)}" onchange="taxReportSet('from',this.value)" /></div><div class="field"><label>${esc(t("accounting.rep.to"))}</label><input type="date" value="${esc(r.to)}" onchange="taxReportSet('to',this.value)" /></div></div>${rep}</div>`;
+}
+async function taxSettingsSave(btn) {
+  const v = (id) => (document.getElementById(id) || {}).value || "";
+  const body = { pricesIncludeTax: v("tax-incl") === "1", defaultTaxRateId: v("tax-default") || null, taxNumber: v("tax-number").trim() || null, businessName: v("tax-business").trim() || null };
+  const res = await uiBusy(btn, () => api("PUT", "/accounting/settings", body));
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.tax.saved")); S._taxRep = null; S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+async function taxRateAdd(btn) {
+  const name = ((document.getElementById("tax-rate-name") || {}).value || "").trim(); const pct = Number(String((document.getElementById("tax-rate-pct") || {}).value || "").replace(",", "."));
+  if (!name || !(pct >= 0 && pct <= 100)) return toast(t("accounting.invalidAmount"));
+  const res = await uiBusy(btn, () => api("POST", "/accounting/tax/rates", { name, ratePercent: pct }));
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.tax.rateAdded")); S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+async function taxRateToggle(id, active) {
+  const res = await api("PATCH", "/accounting/tax/rates/" + id, { active });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  S._taxRep = null; S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+async function accountingSetTax(id) {
+  const a = S._accounting; const rates = (a.taxRates || []).filter((x) => x.active);
+  const pick = await uiPick(t("accounting.tax.productPick"), [["", t("accounting.tax.productDefault")], ...rates.map((x) => [x.id, x.name + " · " + x.ratePercent + "%"])]); if (pick === null) return;
+  const res = await api("PATCH", "/accounting/products/" + id, { taxRateId: pick || null });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.low.minSaved")); S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+function taxReportPrint() {
+  const d = repTaxState().data; if (!d || d.empty) return;
+  const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=800"); if (!win) return toast(t("accounting.allowPrint"));
+  const c = d.currency, st = d.settings || {};
+  const rows = d.byRate.map((x) => `<tr><td>${x.ratePercent}%</td><td>${esc(fmt(x.outputBaseCents, c))}</td><td>${esc(fmt(x.outputTaxCents, c))}</td><td>${esc(fmt(x.inputBaseCents, c))}</td><td>${esc(fmt(x.inputTaxCents, c))}</td></tr>`).join("");
+  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(t("accounting.tax.report"))}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h1{color:#f48050}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{border:1px solid #ddd;padding:7px;text-align:start}th{background:#f7f3f3}.w{background:#fff3cd;padding:8px 12px;border-radius:8px}@media print{button{display:none}}</style><h1>${esc(t("accounting.tax.report"))}</h1><p>${st.businessName ? esc(st.businessName) + " · " : ""}${st.taxNumber ? esc(st.taxNumber) + " · " : ""}${esc(d.from)} → ${esc(d.to)} · ${esc(c)}</p><p class="w">${esc(t("accounting.tax.warn"))}</p><table><thead><tr><th>${esc(t("accounting.tax.rate"))}</th><th>${esc(t("accounting.tax.sales"))}: ${esc(t("accounting.tax.base"))}</th><th>${esc(t("accounting.tax.taxCol"))}</th><th>${esc(t("accounting.tax.purchases"))}: ${esc(t("accounting.tax.base"))}</th><th>${esc(t("accounting.tax.taxCol"))}</th></tr></thead><tbody>${rows}</tbody></table><p>${esc(t("accounting.tax.output"))}: <b>${esc(fmt(d.outputTaxCents, c))}</b> · ${esc(t("accounting.tax.input"))}: <b>${esc(fmt(d.inputTaxCents, c))}</b> · ${esc(t(d.payableCents >= 0 ? "accounting.tax.payable" : "accounting.tax.claim"))}: <b>${esc(fmt(Math.abs(d.payableCents), c))}</b></p><script>window.onload=()=>window.print()<\/script></html>`);
+  win.document.close();
+}
+
 /* ---- recurring entries: rent, electricity, subscriptions: written by themselves on their day ---- */
 function accountingRecurringCard(a) {
   const list = a.recurring || [];
@@ -2812,7 +2897,9 @@ function accountingBuyCard(a) {
   }
   if (!products.length) return `<div class="card">${uiEmpty("📦", t("accounting.buy.noProducts"))}</div>${accountingBuyRecent(a)}`;
   const cur = st.items[0] ? st.items[0].currency : products[0].currency;
-  const total = buyTotal(st);
+  const net = buyTotal(st);
+  const buyTax = st.items.reduce((sum, i) => sum + Math.round(i.cost * i.qty * accRateBp(i.productId) / 10000), 0);
+  const total = net + buyTax;
   const lines = st.items.length === 0 ? `<p class="muted">${esc(t("accounting.buy.empty"))}</p>` : st.items.map((i, idx) => `<div class="item"><div class="item-main"><div class="item-title">${esc(i.name)}</div><div class="item-sub">${i.qty} × ${esc(fmt(i.cost, i.currency))}</div></div><div class="item-end">${esc(fmt(i.cost * i.qty, i.currency))}</div><button class="btn small outline" onclick="accountingBuyRemove(${idx})" aria-label="${esc(t("accounting.sale.remove"))}">✕</button></div>`).join("");
   return `<div class="card"><div class="section-title">${esc(t("accounting.buy.title"))}</div><p class="muted" style="margin:0 0 10px">${esc(t("accounting.buy.help"))}</p>
     <div class="field"><label>${esc(t("accounting.sale.product"))}</label><select id="buy-product" onchange="accountingBuyPick(this.value)"><option value="">${esc(t("accounting.sale.pickFirst"))}</option>${products.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(t("accounting.sale.stock"))}: ${p.quantity}</option>`).join("")}</select></div>
@@ -2823,11 +2910,11 @@ function accountingBuyCard(a) {
     <div class="field"><label>${esc(t("accounting.buy.paidNow"))}</label><input inputmode="decimal" value="${esc(st.paid || "")}" oninput="buyState().paid=this.value;accountingBuyTotals()" /></div>
     <div class="field"><label>${esc(t("accounting.pay"))}</label><select onchange="buyState().pay=this.value">${["CASH", "BANK", "WALLET"].map((m) => `<option value="${m}" ${st.pay === m ? "selected" : ""}>${esc(t("accounting.pay." + m))}</option>`).join("")}</select></div>
     <div class="field"><label>${esc(t("accounting.buy.note"))}</label><input value="${esc(st.note)}" oninput="buyState().note=this.value" maxlength="240" /></div>
-    <div class="tiles" id="buy-total-tile">${uiTile(t("accounting.buy.total"), fmt(total, cur), "expense", true)}</div>
+    <div class="tiles" id="buy-total-tile">${uiTile(t("accounting.buy.total"), fmt(total, cur), "expense", true)}${buyTax ? uiTile(t("accounting.tax.onTop"), fmt(buyTax, cur), "payroll", true) : ""}</div>
     <button class="btn" style="margin-top:10px" onclick="accountingBuySave(this)" ${st.items.length ? "" : "disabled"}>${esc(t("accounting.buy.save"))}</button></div>${accountingBuyRecent(a)}`;
 }
 function accountingBuyTotals() {
-  const st = buyState(), total = buyTotal(st); const cur = st.items[0] ? st.items[0].currency : (S.currency || "EUR");
+  const st = buyState(), buyTax = st.items.reduce((sum, i) => sum + Math.round(i.cost * i.qty * accRateBp(i.productId) / 10000), 0), total = buyTotal(st) + buyTax; const cur = st.items[0] ? st.items[0].currency : (S._accounting.products[0] || {}).currency || "EUR";
   const raw = String(st.paid || "").replace(",", ".").trim(); const left = raw === "" ? 0 : Math.max(total - Math.round(Number(raw) * 100), 0);
   const el = document.getElementById("buy-total-tile"); if (el) el.innerHTML = uiTile(t("accounting.buy.total"), fmt(total, cur), "expense", true) + (left > 0 ? uiTile(t("accounting.buy.remaining"), fmt(left, cur), "payroll", true) : "");
 }
@@ -3076,6 +3163,7 @@ function accountingSaleCard(a) {
   }
   if (!products.length) return `<div class="card">${uiEmpty("📦", t("accounting.sale.noProducts"))}</div>${accountingSaleRecent(a)}`;
   const sub = saleSubtotal(st), disc = saleDiscount(st, sub);
+  const taxView = st.items.length ? taxPreview(st.items.map((i) => ({ gross: i.price * i.qty, productId: i.productId })), disc, (a.taxSettings || {}).pricesIncludeTax !== false, (i) => accRateBp(i.productId)) : { total: 0, tax: 0 };
   const lines = st.items.length === 0 ? `<p class="muted">${esc(t("accounting.sale.empty"))}</p>` : st.items.map((i, idx) => `<div class="item"><div class="item-main"><div class="item-title">${esc(i.name)}</div><div class="item-sub">${i.qty} × ${esc(fmt(i.price, i.currency))}</div></div><div class="item-end">${esc(fmt(i.price * i.qty, i.currency))}</div><button class="btn small outline" onclick="accountingSaleRemove(${idx})" aria-label="${esc(t("accounting.sale.remove"))}">✕</button></div>`).join("");
   return `<div class="card"><div class="section-title">${esc(t("accounting.sale.title"))}</div>
     <div class="row"><div class="field"><label>${esc(t("accounting.sale.product"))}</label><select id="sale-product"><option value="">${esc(t("accounting.sale.pickFirst"))}</option>${products.filter((p) => p.quantity > 0 && p.salePriceCents > 0).map((p) => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(fmt(p.salePriceCents, p.currency))} · ${esc(t("accounting.sale.stock"))}: ${p.quantity}</option>`).join("")}</select></div>
@@ -3089,20 +3177,21 @@ function accountingSaleCard(a) {
     <div class="row"><div class="field"><label>${esc(t("accounting.sale.discount"))}</label><input id="sale-discount" inputmode="decimal" value="${esc(st.discount)}" oninput="saleState().discount=this.value;accountingSaleTotals()" /></div>
       <div class="field"><label>&nbsp;</label><select onchange="saleState().mode=this.value;accountingSaleTotals()"><option value="amount" ${st.mode === "amount" ? "selected" : ""}>${esc(t("accounting.sale.discountAmount"))}</option><option value="percent" ${st.mode === "percent" ? "selected" : ""}>${esc(t("accounting.sale.discountPercent"))}</option></select></div></div>
     <div class="field"><label>${esc(t("accounting.pay"))}</label><select onchange="saleState().pay=this.value">${["CASH", "BANK", "WALLET"].map((m) => `<option value="${m}" ${st.pay === m ? "selected" : ""}>${esc(t("accounting.pay." + m))}</option>`).join("")}</select></div>
-    <div class="tiles">${uiTile(t("accounting.sale.subtotal"), fmt(sub, cur), "net")}<div id="sale-total-tile">${uiTile(t("accounting.sale.total"), fmt(Math.max(sub - disc, 0), cur), "income")}</div></div>
+    <div class="tiles">${uiTile(t("accounting.sale.subtotal"), fmt(sub, cur), "net")}<div id="sale-total-tile">${uiTile(t("accounting.sale.total"), fmt(taxView.total || Math.max(sub - disc, 0), cur), "income")}${taxView.tax ? uiTile(t((a.taxSettings || {}).pricesIncludeTax !== false ? "accounting.tax.inInvoice" : "accounting.tax.onTop"), fmt(taxView.tax, cur), "payroll") : ""}</div></div>
     <button class="btn" style="margin-top:10px" onclick="accountingSaleSave(this)" ${st.items.length ? "" : "disabled"}>${esc(t("accounting.sale.save"))}</button></div>${accountingSaleRecent(a)}`;
 }
 function accountingSaleTotals() {
   const st = saleState(), sub = saleSubtotal(st), disc = saleDiscount(st, sub);
   const cur = st.items[0] ? st.items[0].currency : (S.currency || "EUR");
-  const total = Math.max(sub - disc, 0);
+  const tv = st.items.length ? taxPreview(st.items.map((i) => ({ gross: i.price * i.qty, productId: i.productId })), disc, ((S._accounting || {}).taxSettings || {}).pricesIncludeTax !== false, (i) => accRateBp(i.productId)) : { total: 0, tax: 0 };
+  const total = tv.total || Math.max(sub - disc, 0);
   const paidRaw = String(st.paid || "").replace(",", ".").trim();
   const left = paidRaw === "" ? 0 : Math.max(total - Math.round(Number(paidRaw) * 100), 0);
-  const el = document.getElementById("sale-total-tile"); if (el) el.innerHTML = uiTile(t("accounting.sale.total"), fmt(total, cur), "income") + (left > 0 ? uiTile(t("accounting.sale.remaining"), fmt(left, cur), "expense") : "");
+  const el = document.getElementById("sale-total-tile"); if (el) el.innerHTML = uiTile(t("accounting.sale.total"), fmt(total, cur), "income") + (tv.tax ? uiTile(t(((S._accounting || {}).taxSettings || {}).pricesIncludeTax !== false ? "accounting.tax.inInvoice" : "accounting.tax.onTop"), fmt(tv.tax, cur), "payroll") : "") + (left > 0 ? uiTile(t("accounting.sale.remaining"), fmt(left, cur), "expense") : "");
 }
 function accountingSaleLines(d) {
   return `<table class="plain-table" style="width:100%;margin:10px 0"><thead><tr><th>${esc(t("accounting.sale.item"))}</th><th>${esc(t("accounting.sale.qty"))}</th><th>${esc(t("accounting.sale.price"))}</th><th>${esc(t("accounting.sale.lineTotal"))}</th></tr></thead><tbody>${d.lines.map((l) => `<tr><td>${esc(l.name)}</td><td>${l.quantity}</td><td>${esc(fmt(l.unitPriceCents, d.currency))}</td><td>${esc(fmt(l.lineTotalCents, d.currency))}</td></tr>`).join("")}</tbody></table>
-    <p class="muted">${esc(t("accounting.sale.subtotal"))}: <b>${esc(fmt(d.subtotalCents, d.currency))}</b>${d.discountCents ? ` · ${esc(t("accounting.sale.discount"))}: <b>−${esc(fmt(d.discountCents, d.currency))}</b>` : ""} · ${esc(t("accounting.sale.total"))}: <b>${esc(fmt(d.totalCents, d.currency))}</b> · ${esc(t("accounting.pay." + d.payMethod))}</p>`;
+    <p class="muted">${esc(t("accounting.sale.subtotal"))}: <b>${esc(fmt(d.subtotalCents, d.currency))}</b>${d.discountCents ? ` · ${esc(t("accounting.sale.discount"))}: <b>−${esc(fmt(d.discountCents, d.currency))}</b>` : ""} · ${esc(t("accounting.sale.total"))}: <b>${esc(fmt(d.totalCents, d.currency))}</b>${d.taxCents ? ` · ${esc(t(d.pricesIncludeTax ? "accounting.tax.inInvoice" : "accounting.tax.onTop"))}: <b>${esc(fmt(d.taxCents, d.currency))}</b>` : ""} · ${esc(t("accounting.pay." + d.payMethod))}</p>`;
 }
 function accountingSaleRecent(a) {
   const list = a.sales || [];
@@ -3157,7 +3246,7 @@ async function accountingSalePrint(id) {
   const win = window.open("", "_blank", "noopener,noreferrer,width=800,height=900");
   if (!win) return toast(t("accounting.allowPrint"));
   const rows = data.lines.map((l) => `<tr><td>${esc(l.name)}</td><td>${l.quantity}</td><td>${esc(fmt(l.unitPriceCents, data.currency))}</td><td>${esc(fmt(l.lineTotalCents, data.currency))}</td></tr>`).join("");
-  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(t("accounting.sale.number", { n: data.number }))}</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#222;max-width:720px;margin:auto}h1{color:#f48050;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:start}th{background:#f7f3f3}.t{text-align:end;font-size:18px}@media print{button{display:none}}</style><h1>${esc(t("accounting.sale.number", { n: data.number }))}</h1><p>${esc(new Date(data.occurredAt).toLocaleString())}${data.customerName ? " · " + esc(data.customerName) : ""} · ${esc(t("accounting.pay." + data.payMethod))}</p><table><thead><tr><th>${esc(t("accounting.sale.item"))}</th><th>${esc(t("accounting.sale.qty"))}</th><th>${esc(t("accounting.sale.price"))}</th><th>${esc(t("accounting.sale.lineTotal"))}</th></tr></thead><tbody>${rows}</tbody></table><p class="t">${esc(t("accounting.sale.subtotal"))}: ${esc(fmt(data.subtotalCents, data.currency))}</p>${data.discountCents ? `<p class="t">${esc(t("accounting.sale.discount"))}: −${esc(fmt(data.discountCents, data.currency))}</p>` : ""}<p class="t"><b>${esc(t("accounting.sale.total"))}: ${esc(fmt(data.totalCents, data.currency))}</b></p><script>window.onload=()=>window.print()<\/script></html>`);
+  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(t("accounting.sale.number", { n: data.number }))}</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#222;max-width:720px;margin:auto}h1{color:#f48050;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:start}th{background:#f7f3f3}.t{text-align:end;font-size:18px}@media print{button{display:none}}</style>${((S._accounting || {}).taxSettings || {}).businessName ? `<p><b>${esc(S._accounting.taxSettings.businessName)}</b>${S._accounting.taxSettings.taxNumber ? " · " + esc(S._accounting.taxSettings.taxNumber) : ""}</p>` : ""}<h1>${esc(t("accounting.sale.number", { n: data.number }))}</h1><p>${esc(new Date(data.occurredAt).toLocaleString())}${data.customerName ? " · " + esc(data.customerName) : ""} · ${esc(t("accounting.pay." + data.payMethod))}</p><table><thead><tr><th>${esc(t("accounting.sale.item"))}</th><th>${esc(t("accounting.sale.qty"))}</th><th>${esc(t("accounting.sale.price"))}</th><th>${esc(t("accounting.sale.lineTotal"))}</th></tr></thead><tbody>${rows}</tbody></table><p class="t">${esc(t("accounting.sale.subtotal"))}: ${esc(fmt(data.subtotalCents, data.currency))}</p>${data.discountCents ? `<p class="t">${esc(t("accounting.sale.discount"))}: −${esc(fmt(data.discountCents, data.currency))}</p>` : ""}${data.taxCents ? `<p class="t">${esc(t(data.pricesIncludeTax ? "accounting.tax.inInvoice" : "accounting.tax.onTop"))}: ${esc(fmt(data.taxCents, data.currency))}</p>` : ""}<p class="t"><b>${esc(t("accounting.sale.total"))}: ${esc(fmt(data.totalCents, data.currency))}</b></p><script>window.onload=()=>window.print()<\/script></html>`);
   win.document.close();
 }
 

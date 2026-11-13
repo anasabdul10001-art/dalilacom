@@ -43,6 +43,13 @@ class AccountingRepository(private val api: ApiService) {
         val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, AppStrings.get(R.string.s_0a2edd30))))
     }
+    suspend fun taxRates(): List<com.dalilacom.app.data.network.AccountingTaxRateDto> = safeApiCall { api.accountingTaxRates() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    suspend fun settings() = safeApiCall { api.accountingSettings() }?.takeIf { it.isSuccessful }?.body()
+    suspend fun taxReport(from: String, to: String) = safeApiCall { api.accountingTaxReport(from, to) }?.takeIf { it.isSuccessful }?.body()
+    suspend fun addTaxRate(name: String, pct: Double): Result<Unit> = result { api.createAccountingTaxRate(com.dalilacom.app.data.network.AccountingTaxRateRequest(name, pct)) }
+    suspend fun setTaxRateActive(id: String, active: Boolean): Result<Unit> = result { api.patchAccountingTaxRate(id, com.dalilacom.app.data.network.AccountingTaxRatePatch(active)) }
+    suspend fun saveSettings(s: com.dalilacom.app.data.network.AccountingSettingsDto): Result<Unit> = result { api.saveAccountingSettings(s) }
+    suspend fun setProductTax(id: String, rateId: String?): Result<Unit> = result { api.setAccountingProductTax(id, com.dalilacom.app.data.network.AccountingProductTaxPatch(rateId)) }
     suspend fun recurring(): List<com.dalilacom.app.data.network.AccountingRecurringDto> = safeApiCall { api.accountingRecurring() }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun addRecurring(body: com.dalilacom.app.data.network.AccountingRecurringRequest): Result<Unit> = result { api.createAccountingRecurring(body) }
     suspend fun patchRecurring(id: String, active: Boolean? = null, amountCents: Long? = null): Result<Unit> = result { api.patchAccountingRecurring(id, com.dalilacom.app.data.network.AccountingRecurringPatch(active, amountCents)) }

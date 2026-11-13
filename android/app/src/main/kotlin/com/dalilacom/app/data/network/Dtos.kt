@@ -1329,6 +1329,12 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingRecurringPatch(val active: Boolean? = null, val amountCents: Long? = null)
 @Serializable data class AccountingPurchaseItemRequest(val productId: String, val quantity: Int, val unitCostCents: Long)
 @Serializable data class AccountingPurchaseRequest(val items: List<AccountingPurchaseItemRequest>, val partyId: String? = null, val paidCents: Long? = null, val payMethod: String = "CASH")
+@Serializable data class AccountingTaxRateDto(val id: String = "", val name: String = "", val ratePercent: Double = 0.0, val active: Boolean = true)
+@Serializable data class AccountingTaxRateRequest(val name: String, val ratePercent: Double)
+@Serializable data class AccountingTaxRatePatch(val active: Boolean)
+@Serializable data class AccountingSettingsDto(val pricesIncludeTax: Boolean = true, val defaultTaxRateId: String? = null, val taxNumber: String? = null, val businessName: String? = null)
+@Serializable data class AccountingTaxReportDto(val currency: String = "EUR", val outputTaxCents: Long = 0, val inputTaxCents: Long = 0, val payableCents: Long = 0)
+@Serializable data class AccountingProductTaxPatch(val taxRateId: String? = null)
 @Serializable data class AccountingPurchaseLineDto(val id: String = "", val name: String = "", val quantity: Int = 0, val returnedQuantity: Int = 0)
 @Serializable data class AccountingPurchaseDto(val id: String = "", val number: Int = 0, val supplierName: String? = null, val currency: String = "EUR", val occurredAt: String = "", val totalCents: Long = 0, val paidCents: Long = 0, val payMethod: String = "CASH", val lines: List<AccountingPurchaseLineDto> = emptyList())
 @Serializable data class AccountingReturnItemRequest(val lineId: String, val quantity: Int)
@@ -1358,7 +1364,7 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingSaleLineDto(val id: String = "", val name: String = "", val quantity: Int = 0, val returnedQuantity: Int = 0, val unitPriceCents: Long = 0, val lineTotalCents: Long = 0)
 @Serializable data class AccountingSaleDto(
     val id: String = "", val number: Int = 0, val customerName: String? = null, val currency: String = "EUR", val payMethod: String = "CASH",
-    val occurredAt: String = "", val subtotalCents: Long = 0, val discountCents: Long = 0, val totalCents: Long = 0, val lines: List<AccountingSaleLineDto> = emptyList(),
+    val occurredAt: String = "", val subtotalCents: Long = 0, val discountCents: Long = 0, val totalCents: Long = 0, val taxCents: Long = 0, val pricesIncludeTax: Boolean = true, val lines: List<AccountingSaleLineDto> = emptyList(),
 )
 @Serializable data class AccountingCashMethodDto(val payMethod: String = "", val incomeCents: Long = 0, val expensesCents: Long = 0)
 @Serializable data class AccountingCashUnspecifiedDto(val incomeCents: Long = 0, val expensesCents: Long = 0)

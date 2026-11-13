@@ -271,6 +271,13 @@ interface ApiService {
     @POST("accounting/sales/{id}/returns") suspend fun returnAccountingSale(@Path("id") id: String, @Body body: AccountingReturnRequest): Response<okhttp3.ResponseBody>
     @POST("accounting/purchases/{id}/returns") suspend fun returnAccountingPurchase(@Path("id") id: String, @Body body: AccountingReturnRequest): Response<okhttp3.ResponseBody>
     @GET("accounting/recurring") suspend fun accountingRecurring(): Response<List<AccountingRecurringDto>>
+    @GET("accounting/tax/rates") suspend fun accountingTaxRates(): Response<List<AccountingTaxRateDto>>
+    @POST("accounting/tax/rates") suspend fun createAccountingTaxRate(@Body body: AccountingTaxRateRequest): Response<okhttp3.ResponseBody>
+    @retrofit2.http.PATCH("accounting/tax/rates/{id}") suspend fun patchAccountingTaxRate(@Path("id") id: String, @Body body: AccountingTaxRatePatch): Response<okhttp3.ResponseBody>
+    @GET("accounting/settings") suspend fun accountingSettings(): Response<AccountingSettingsDto>
+    @retrofit2.http.PUT("accounting/settings") suspend fun saveAccountingSettings(@Body body: AccountingSettingsDto): Response<okhttp3.ResponseBody>
+    @GET("accounting/tax/report") suspend fun accountingTaxReport(@Query("from") from: String, @Query("to") to: String): Response<AccountingTaxReportDto>
+    @retrofit2.http.PATCH("accounting/products/{id}") suspend fun setAccountingProductTax(@Path("id") id: String, @Body body: AccountingProductTaxPatch): Response<okhttp3.ResponseBody>
     @POST("accounting/recurring") suspend fun createAccountingRecurring(@Body body: AccountingRecurringRequest): Response<okhttp3.ResponseBody>
     @retrofit2.http.PATCH("accounting/recurring/{id}") suspend fun patchAccountingRecurring(@Path("id") id: String, @Body body: AccountingRecurringPatch): Response<okhttp3.ResponseBody>
     @DELETE("accounting/recurring/{id}") suspend fun deleteAccountingRecurring(@Path("id") id: String): Response<okhttp3.ResponseBody>

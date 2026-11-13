@@ -931,4 +931,25 @@
     <string name="accounting_rec_amount">تغيير المبلغ</string>
     <string name="accounting_rec_start">تاريخ البداية (YYYY-MM-DD)</string>
     <string name="accounting_rec_backfill">سجّل كمان الفايت منذ تاريخ البداية</string>
+    <string name="accounting_tax_title">الضريبة (تجريبي)</string>
+    <string name="accounting_tax_warn">ميزة تجريبية: الأرقام للمتابعة فقط. راجعها مع محاسبك قبل ما تعتمد عليها بأي تصريح ضريبي.</string>
+    <string name="accounting_tax_incl">السعر فيه الضريبة</string>
+    <string name="accounting_tax_excl">الضريبة بتنضاف على السعر</string>
+    <string name="accounting_tax_default">النسبة الافتراضية</string>
+    <string name="accounting_tax_none">بدون ضريبة</string>
+    <string name="accounting_tax_rates">نسب الضريبة</string>
+    <string name="accounting_tax_rate_name">اسم النسبة</string>
+    <string name="accounting_tax_rate_pct">النسبة %</string>
+    <string name="accounting_tax_add_rate">إضافة نسبة</string>
+    <string name="accounting_tax_off">إيقاف</string>
+    <string name="accounting_tax_on">تفعيل</string>
+    <string name="accounting_tax_no_rates">ما في نسب ضريبة. بدون نسب، الفواتير بدون ضريبة.</string>
+    <string name="accounting_tax_output">ضريبة المبيعات المحصّلة</string>
+    <string name="accounting_tax_input">ضريبة المشتريات المدفوعة</string>
+    <string name="accounting_tax_payable">المستحق للدائرة الضريبية</string>
+    <string name="accounting_tax_claim">مبلغ ممكن استرداده</string>
+    <string name="accounting_tax_product">ضريبة</string>
+    <string name="accounting_tax_in_invoice">منها ضريبة</string>
+    <string name="accounting_tax_on_top">ضريبة مضافة</string>
+    <string name="accounting_tax_report">تقرير الضريبة لهالشهر</string>
 </resources>

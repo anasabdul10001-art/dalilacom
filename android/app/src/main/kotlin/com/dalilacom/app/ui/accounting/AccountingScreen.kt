@@ -81,6 +81,13 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var returnPurchase by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingPurchaseDto?>(null) }
     val returnQty = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
     var returnMethod by remember { mutableStateOf("CASH") }
+    var taxRates by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingTaxRateDto>>(emptyList()) }
+    var taxSettings by remember { mutableStateOf(com.dalilacom.app.data.network.AccountingSettingsDto()) }
+    var taxReport by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingTaxReportDto?>(null) }
+    var taxRateName by remember { mutableStateOf("") }
+    var taxRatePct by remember { mutableStateOf("") }
+    var taxDefaultOpen by remember { mutableStateOf(false) }
+    var taxProductTarget by remember { mutableStateOf<AccountingProductDto?>(null) }
     var recurring by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingRecurringDto>>(emptyList()) }
     var recType by remember { mutableStateOf("EXPENSE") }
     var recFreq by remember { mutableStateOf("MONTHLY") }
@@ -152,6 +159,10 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         partiesData = container.accountingRepository.parties()
         purchases = container.accountingRepository.purchases()
         recurring = container.accountingRepository.recurring()
+        taxRates = container.accountingRepository.taxRates()
+        taxSettings = container.accountingRepository.settings() ?: taxSettings
+        val todayUtc = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+        taxReport = container.accountingRepository.taxReport(todayUtc.withDayOfMonth(1).toString(), todayUtc.toString())
         val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
         val (rf, rt) = when (reportPreset) { "today" -> today to today; "week" -> today.minusDays(6) to today; "last30" -> today.minusDays(29) to today; else -> today.withDayOfMonth(1) to today }
         report = container.accountingRepository.report(rf.toString(), rt.toString())
@@ -467,6 +478,48 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.accounting_tax_title), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.accounting_tax_warn), style = MaterialTheme.typography.bodySmall, color = androidx.compose.ui.graphics.Color(0xFF8A6D00))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (taxSettings.pricesIncludeTax) Button(onClick = {}) { Text(stringResource(R.string.accounting_tax_incl), fontSize = 12.sp) } else OutlinedButton(onClick = { scope.launch { container.accountingRepository.saveSettings(taxSettings.copy(pricesIncludeTax = true)); reload() } }) { Text(stringResource(R.string.accounting_tax_incl), fontSize = 12.sp) }
+                        if (!taxSettings.pricesIncludeTax) Button(onClick = {}) { Text(stringResource(R.string.accounting_tax_excl), fontSize = 12.sp) } else OutlinedButton(onClick = { scope.launch { container.accountingRepository.saveSettings(taxSettings.copy(pricesIncludeTax = false)); reload() } }) { Text(stringResource(R.string.accounting_tax_excl), fontSize = 12.sp) }
+                    }
+                    androidx.compose.foundation.layout.Box {
+                        OutlinedButton(onClick = { taxDefaultOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_tax_default) + ": " + (taxRates.firstOrNull { it.id == taxSettings.defaultTaxRateId }?.let { it.name + " · " + it.ratePercent + "%" } ?: stringResource(R.string.accounting_tax_none))) }
+                        androidx.compose.material3.DropdownMenu(expanded = taxDefaultOpen, onDismissRequest = { taxDefaultOpen = false }) {
+                            androidx.compose.material3.DropdownMenuItem(text = { Text(stringResource(R.string.accounting_tax_none)) }, onClick = { taxDefaultOpen = false; scope.launch { container.accountingRepository.saveSettings(taxSettings.copy(defaultTaxRateId = null)); reload() } })
+                            taxRates.filter { it.active }.forEach { r -> androidx.compose.material3.DropdownMenuItem(text = { Text(r.name + " · " + r.ratePercent + "%") }, onClick = { taxDefaultOpen = false; scope.launch { container.accountingRepository.saveSettings(taxSettings.copy(defaultTaxRateId = r.id)); reload() } }) }
+                        }
+                    }
+                    Text(stringResource(R.string.accounting_tax_rates), style = MaterialTheme.typography.titleSmall)
+                    if (taxRates.isEmpty()) Text(stringResource(R.string.accounting_tax_no_rates), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    taxRates.forEach { r ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(r.name + " · " + r.ratePercent + "%" + (if (r.active) "" else " (" + stringResource(R.string.accounting_rec_paused) + ")"), modifier = Modifier.weight(1f))
+                            TextButton(onClick = { scope.launch { container.accountingRepository.setTaxRateActive(r.id, !r.active); reload() } }) { Text(stringResource(if (r.active) R.string.accounting_tax_off else R.string.accounting_tax_on)) }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(taxRateName, { taxRateName = it }, label = { Text(stringResource(R.string.accounting_tax_rate_name)) }, singleLine = true, modifier = Modifier.weight(1f))
+                        OutlinedTextField(taxRatePct, { taxRatePct = it }, label = { Text(stringResource(R.string.accounting_tax_rate_pct)) }, singleLine = true, modifier = Modifier.weight(0.6f))
+                    }
+                    Button(onClick = {
+                        val pct = taxRatePct.replace(',', '.').toDoubleOrNull()
+                        if (taxRateName.isBlank() || pct == null || pct < 0 || pct > 100) { message = context.getString(R.string.accounting_missing_entry); return@Button }
+                        scope.launch { container.accountingRepository.addTaxRate(taxRateName.trim(), pct).fold({ taxRateName = ""; taxRatePct = ""; reload() }, { message = it.message ?: AppStrings.get(R.string.ship_failed) }) }
+                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_tax_add_rate)) }
+                    taxReport?.let { tr ->
+                        Text(stringResource(R.string.accounting_tax_report), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.accounting_tax_output) + ": " + money(tr.outputTaxCents.toInt()) + " " + tr.currency)
+                        Text(stringResource(R.string.accounting_tax_input) + ": " + money(tr.inputTaxCents.toInt()) + " " + tr.currency)
+                        Text(stringResource(if (tr.payableCents >= 0) R.string.accounting_tax_payable else R.string.accounting_tax_claim) + ": " + money(kotlin.math.abs(tr.payableCents).toInt()) + " " + tr.currency, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                    }
+                }
+            }
+        }
         partiesData?.let { pd ->
             item {
                 Card(Modifier.fillMaxWidth()) {
@@ -675,6 +728,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         if (!p.id.startsWith("store:")) TextButton(onClick = { minTarget = p; minValue = p.lowStockAt.toString() }) { Text(stringResource(R.string.accounting_low_min) + (if (p.lowStockAt > 0) ": " + p.lowStockAt else "")) }
+                        if (!p.id.startsWith("store:")) TextButton(onClick = { taxProductTarget = p }) { Text(stringResource(R.string.accounting_tax_product)) }
                         TextButton(onClick = { movesTarget = p; scope.launch { moves = container.accountingRepository.movements(p.id) } }) { Text(stringResource(R.string.accounting_moves)) }
                     }
                     if (!p.id.startsWith("store:")) TextButton(onClick = { deleteProductTarget = p }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
@@ -855,12 +909,27 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             dismissButton = { OutlinedButton(onClick = { recAmountTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
+    taxProductTarget?.let { p ->
+        AlertDialog(
+            onDismissRequest = { taxProductTarget = null },
+            title = { Text(p.name + " · " + stringResource(R.string.accounting_tax_product)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(onClick = { taxProductTarget = null; scope.launch { container.accountingRepository.setProductTax(p.id, null); reload() } }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_tax_default)) }
+                    taxRates.filter { it.active }.forEach { r -> OutlinedButton(onClick = { taxProductTarget = null; scope.launch { container.accountingRepository.setProductTax(p.id, r.id); reload() } }, modifier = Modifier.fillMaxWidth()) { Text(r.name + " · " + r.ratePercent + "%") } }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { OutlinedButton(onClick = { taxProductTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
     savedSale?.let { sale ->
         val text = buildString {
             append(context.getString(R.string.accounting_sale_number, sale.number)); append("\n")
             sale.customerName?.let { append(it); append("\n") }
             sale.lines.forEach { l -> append(l.name + " × " + l.quantity + " = " + money(l.lineTotalCents.toInt()) + " " + sale.currency + "\n") }
             if (sale.discountCents > 0) append(context.getString(R.string.accounting_sale_discount) + ": −" + money(sale.discountCents.toInt()) + " " + sale.currency + "\n")
+            if (sale.taxCents > 0) append(context.getString(if (sale.pricesIncludeTax) R.string.accounting_tax_in_invoice else R.string.accounting_tax_on_top) + ": " + money(sale.taxCents.toInt()) + " " + sale.currency + "\n")
             append(context.getString(R.string.accounting_sale_total) + ": " + money(sale.totalCents.toInt()) + " " + sale.currency)
         }
         AlertDialog(
