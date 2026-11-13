@@ -2646,22 +2646,25 @@ function screenAccounting() {
   if (tab === "home" || !S.token) return siteShell("accounting", "home", siteLanding("accounting"));
   if (!S._accounting || S._accounting.loading) {
     if (!S._accounting) { S._accounting = { loading: true }; loadAccounting(); }
-    return siteShell("accounting", tab, spinner());
+    return siteShell("accounting", tab, skeleton("tiles"));
   }
   const a = S._accounting;
   if (a.requiresPlan) return siteShell("accounting", tab, `<div class="card empty-state"><p>${esc(t("site.planNeeded"))}</p><button class="btn" onclick="S._allPlans=null;go('allPlans')">${esc(t("site.plans"))}</button></div>`);
   const totals = a.summary?.totals || [];
   const cards = {
     summary: `
-    <div class="card"><div class="section-title">${esc(t("accounting.month"))}</div>
-      ${totals.length ? totals.map(x => `<div class="title-line"><span>${esc(x.currency)}</span><span>${esc(t("accounting.income"))}: ${fmt(x.incomeCents,x.currency)} · ${esc(t("accounting.expenses"))}: ${fmt(x.expensesCents,x.currency)} · <b>${esc(t("accounting.net"))}: ${fmt(x.netCents,x.currency)}</b>${x.payrollCents > 0 ? ` · ${esc(t("accounting.payrollShare", { n: fmt(x.payrollCents, x.currency) }))}` : ""}</span></div>`).join("") : `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
-      <p class="muted">${esc(t("accounting.inventory"))}: ${a.summary?.inventory?.products || 0} ${esc(t("accounting.products"))} · ${esc(t("accounting.units"))}: ${a.summary?.inventory?.units || 0}</p>
-      <button class="btn outline" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button>
-      <button class="btn outline" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button>
-    </div>
-    <div class="card"><div class="section-title">${esc(t("accounting.recent"))}</div>
-      ${(a.summary?.recent || []).map(e => `<div class="title-line"><span><b>${esc(e.description)}</b><div class="muted">${esc(e.category)} · ${new Date(e.occurredAt).toLocaleDateString()}</div></span><strong>${e.type === "EXPENSE" ? "−" : "+"}${fmt(e.amountCents,e.currency)}</strong>${e.source === "MANUAL" || e.source === "INVOICE" ? `<span><button class="btn small outline" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></span>` : ""}</div>`).join("") || `<div class="empty-state">${esc(t("accounting.noEntries"))}</div>`}
-    </div>`,
+    <div class="panel-title">${esc(t("accounting.month"))}</div>
+    ${totals.length ? totals.map(x => `<div class="muted" style="margin:6px 2px"><b>${esc(x.currency)}</b></div>
+      <div class="tiles">${uiTile(t("accounting.income"), fmt(x.incomeCents, x.currency), "income")}${uiTile(t("accounting.expenses"), fmt(x.expensesCents, x.currency), "expense")}${uiTile(t("accounting.net"), fmt(x.netCents, x.currency), "net", !(x.payrollCents > 0))}${x.payrollCents > 0 ? uiTile(t("accounting.payrollLabel"), fmt(x.payrollCents, x.currency), "payroll") : ""}</div>`).join("") : uiEmpty("📒", t("accounting.noEntries"))}
+    <p class="muted">${esc(t("accounting.inventory"))}: ${a.summary?.inventory?.products || 0} ${esc(t("accounting.products"))} · ${esc(t("accounting.units"))}: ${a.summary?.inventory?.units || 0}</p>
+    <div class="btn-row"><button class="btn soft" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button><button class="btn soft" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button></div>
+    <div class="panel-title" style="margin-top:16px">${esc(t("accounting.recent"))}</div>
+    ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${e.type === "EXPENSE" ? 4 : 140}">${e.type === "EXPENSE" ? "↓" : "↑"}</span><div class="item-main">
+        <div class="item-title">${esc(e.description)}</div>
+        <div class="item-sub">${esc(e.category)} · <bdi>${new Date(e.occurredAt).toLocaleDateString()}</bdi></div>
+        ${e.source === "PAYROLL" ? `<div class="chips">${uiChip(t("accounting.payrollLabel"), "warn")}</div>` : ""}
+        ${e.source === "MANUAL" || e.source === "INVOICE" ? `<div class="btn-row"><button class="btn small soft" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎ ${esc(t("accounting.edit"))}</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></div>` : ""}
+      </div><div class="item-end ${e.type === "EXPENSE" ? "out" : "in"}">${e.type === "EXPENSE" ? "−" : "+"}${esc(fmt(e.amountCents, e.currency))}</div></div>`).join("") || uiEmpty("🧾", t("accounting.noEntries"))}`,
     entry: `
     <div class="card"><div class="section-title">${esc(t("accounting.addEntry"))}</div>
       <div class="field"><label>${esc(t("accounting.entryType"))}</label><select id="acc-type"><option value="INCOME">${esc(t("accounting.income"))}</option><option value="EXPENSE">${esc(t("accounting.expenses"))}</option></select></div>
@@ -8176,7 +8179,7 @@ function screenResponder() {
   if (!S._resp) { S._resp = { loading: true, tab }; loadResponder(); }
   const r = S._resp;
   r.tab = tab;
-  if (r.loading) return backRow() + siteShell("responder", tab, spinner());
+  if (r.loading) return backRow() + siteShell("responder", tab, skeleton("list", 4));
   return backRow() + siteShell("responder", tab, { overview: respOverview, channels: respChannels, rules: respRules, inbox: respInbox }[tab]());
 }
 
@@ -8468,17 +8471,19 @@ function respInbox() {
   const reason = { complaint: "شكوى", ai_unavailable: "الذكاء الاصطناعي غير متاح", empty_template: "نص الرد فاضي", no_matching_rule: "ما في قاعدة مطابقة", subscription_inactive: "الاشتراك منتهي" };
   return `
     ${errorBanner()}
-    ${r.inbox.length === 0 ? `<div class="empty-state">ما وصل رسائل بعد</div>` : r.inbox.map((i) => {
+    ${r.inbox.length === 0 ? uiEmpty("💬", "ما وصل رسائل بعد") : r.inbox.map((i) => {
       const [cls, text] = label[i.status];
-      return `<div class="card">
-        <div class="title-line"><strong>${esc(i.authorName)}</strong><span class="badge ${cls}">${text}</span></div>
-        <p class="muted">${esc(i.channel)} · ${String(i.createdAt).slice(0, 16).replace("T", " ")}${i.reason ? " · " + esc(reason[i.reason] || i.reason) : ""}</p>
-        <p>${esc(i.message)}</p>
-        ${i.reply ? `<p style="color:var(--primary)">↩ ${esc(i.reply)}</p>` : ""}
+      const tone = { success: "ok", warning: "warn", danger: "bad", neutral: "" }[cls] || "";
+      return `<div class="item">${uiAvatar(i.authorName)}<div class="item-main">
+        <div class="item-title">${esc(i.authorName)}</div>
+        <div class="item-sub">${esc(i.channel)} · <bdi>${String(i.createdAt).slice(0, 16).replace("T", " ")}</bdi></div>
+        <p style="margin:6px 0 0">${esc(i.message)}</p>
+        ${i.reply ? `<p style="color:var(--primary);margin:6px 0 0">↩ ${esc(i.reply)}</p>` : ""}
+        <div class="chips"><span class="chip ${tone}">${text}</span>${i.reason ? `<span class="chip">${esc(reason[i.reason] || i.reason)}</span>` : ""}</div>
         ${i.status === "NEEDS_REVIEW" || i.status === "FAILED" ? `
           <div class="field" style="margin-top:8px"><input id="ib-${i.id}" placeholder="اكتب ردك..." /></div>
           <button class="btn small" onclick="respSendInbox('${i.id}')">إرسال</button>` : ""}
-      </div>`;
+      </div></div>`;
     }).join("")}`;
 }
 
