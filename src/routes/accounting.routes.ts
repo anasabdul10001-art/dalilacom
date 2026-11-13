@@ -933,6 +933,70 @@ accountingRouter.get("/tax/report", route(async (req, res) => {
   res.json({ from: parsed.data.from, to: parsed.data.to, currency, byRate, outputTaxCents: output, inputTaxCents: input, payableCents: output - input, settings: await settingsView(userId) });
 }));
 
+// ---- financial statements (experimental: to be checked with an accountant): the income statement of a period, and a simplified financial position as of now.
+// Everything comes from what was recorded: cash and bank are the movements entered with a payment method, the opening money and what the owner puts in or takes out are not recorded, so they show as the balancing line.
+accountingRouter.get("/statements", route(async (req, res) => {
+  const parsed = z.object({ from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), currency: currencyCode.optional() }).safeParse({ from: req.query.from, to: req.query.to, currency: req.query.currency });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id;
+  const from = new Date(`${parsed.data.from}T00:00:00.000Z`), to = new Date(`${parsed.data.to}T23:59:59.999Z`);
+  if (from > to || to.getTime() - from.getTime() > 800 * 86400000) return sendError(res, 400, "BAD_REQUEST", "الفترة الزمنية غير صحيحة");
+  const currencies = (await prisma.accountingEntry.groupBy({ by: ["currency"], where: { userId } })).map((c) => c.currency);
+  const currency = parsed.data.currency ?? currencies[0] ?? "EUR";
+  const now = new Date();
+  const own = { userId, currency, type: { in: ["INCOME", "EXPENSE"] as ("INCOME" | "EXPENSE")[] } };
+
+  // ---- the income statement of the period
+  const [cats, allTime, moves, partyRows, products, shop, shopCurrency] = await Promise.all([
+    prisma.accountingEntry.groupBy({ by: ["category", "type"], where: { ...own, occurredAt: { gte: from, lte: to } }, _sum: { amountCents: true } }),
+    prisma.accountingEntry.groupBy({ by: ["type"], where: { ...own, occurredAt: { lte: now } }, _sum: { amountCents: true } }),
+    prisma.accountingEntry.groupBy({ by: ["payMethod", "type"], where: { userId, currency, payMethod: { not: null }, occurredAt: { lte: now } }, _sum: { amountCents: true } }),
+    prisma.accountingPartyEntry.findMany({ where: { userId, currency, occurredAt: { lte: now } }, select: { kind: true, amountCents: true, party: { select: { kind: true } } } }),
+    prisma.accountingProduct.findMany({ where: { userId, currency }, select: { quantity: true, costCents: true } }),
+    prisma.product.findMany({ where: { merchant: { userId }, isActive: true }, select: { stock: true, costPriceCents: true } }),
+    marketOfUser(userId),
+  ]);
+  const sum = (rows: { category: string; type: string; _sum: { amountCents: bigint | null } }[], c: string, t: string) => Number(rows.find((x) => x.category === c && x.type === t)?._sum.amountCents ?? 0);
+  const sales = sum(cats, SALES_CATEGORY, "INCOME"), returns = -sum(cats, RETURNS_CATEGORY, "INCOME");
+  const totalIncome = cats.filter((x) => x.type === "INCOME").reduce((a, x) => a + Number(x._sum.amountCents ?? 0), 0);
+  const otherIncome = totalIncome - sales + returns;
+  const cogs = sum(cats, COST_CATEGORY, "EXPENSE");
+  const expenseRows = cats.filter((x) => x.type === "EXPENSE" && x.category !== COST_CATEGORY).map((x) => ({ category: x.category, amountCents: Number(x._sum.amountCents ?? 0) })).sort((a, b) => b.amountCents - a.amountCents);
+  const operating = expenseRows.reduce((a, x) => a + x.amountCents, 0);
+  const revenue = totalIncome; // sales less returns, plus the other income
+  const incomeStatement = { salesCents: sales, returnsCents: returns, otherIncomeCents: otherIncome, revenueCents: revenue, costOfGoodsCents: cogs, grossProfitCents: revenue - cogs, expenses: expenseRows, operatingExpensesCents: operating, netProfitCents: revenue - cogs - operating };
+
+  // ---- the financial position as of now
+  const flow = (m: string) => {
+    const g = (t: string) => Number(moves.find((x) => x.payMethod === m && x.type === t)?._sum.amountCents ?? 0);
+    return g("INCOME") + g("RECEIPT") - g("EXPENSE") - g("PAYOUT");
+  };
+  const cash = ["CASH", "BANK", "WALLET"].map((m) => ({ method: m, cents: flow(m) }));
+  const cashTotal = cash.reduce((a, x) => a + x.cents, 0);
+  const owed = (kind: string) => partyRows.filter((r) => r.party.kind === kind).reduce((a, r) => a + (r.kind === "CHARGE" ? 1 : -1) * Number(r.amountCents), 0);
+  const receivables = Math.max(owed("CUSTOMER"), 0), payables = Math.max(owed("SUPPLIER"), 0);
+  const inventory = products.reduce((a, x) => a + x.quantity * x.costCents, 0) + (shopCurrency === currency ? shop.reduce((a, x) => a + x.stock * x.costPriceCents, 0) : 0);
+  type TaxRow = { tax: bigint };
+  const [outS, outR, inP, inR] = await Promise.all([
+    prisma.$queryRaw<TaxRow[]>`SELECT COALESCE(SUM(l."taxCents"), 0) AS tax FROM "AccountingSaleLine" l JOIN "AccountingSale" s ON s."id" = l."saleId" WHERE s."userId" = ${userId} AND s."currency" = ${currency}`,
+    prisma.$queryRaw<TaxRow[]>`SELECT COALESCE(SUM(l."taxCents"), 0) AS tax FROM "AccountingSaleReturnLine" l JOIN "AccountingSaleReturn" r ON r."id" = l."returnId" WHERE r."userId" = ${userId} AND r."currency" = ${currency}`,
+    prisma.$queryRaw<TaxRow[]>`SELECT COALESCE(SUM(l."taxCents"), 0) AS tax FROM "AccountingPurchaseLine" l JOIN "AccountingPurchase" p ON p."id" = l."purchaseId" WHERE p."userId" = ${userId} AND p."currency" = ${currency}`,
+    prisma.$queryRaw<TaxRow[]>`SELECT COALESCE(SUM(l."taxCents"), 0) AS tax FROM "AccountingPurchaseReturnLine" l JOIN "AccountingPurchaseReturn" r ON r."id" = l."returnId" WHERE r."userId" = ${userId} AND r."currency" = ${currency}`,
+  ]);
+  // tax collected but not yet handed over, or paid in advance (a claim)
+  const taxNet = Number(outS[0].tax) - Number(outR[0].tax) - (Number(inP[0].tax) - Number(inR[0].tax));
+  const taxPayable = Math.max(taxNet, 0), taxClaim = Math.max(-taxNet, 0);
+  const assets = cashTotal + receivables + inventory + taxClaim;
+  const liabilities = payables + taxPayable;
+  const profitToDate = Number(allTime.find((x) => x.type === "INCOME")?._sum.amountCents ?? 0) - Number(allTime.find((x) => x.type === "EXPENSE")?._sum.amountCents ?? 0);
+  const equity = assets - liabilities;
+  res.json({
+    from: parsed.data.from, to: parsed.data.to, currency, currencies, asOf: now.toISOString().slice(0, 10),
+    incomeStatement,
+    position: { cash, cashTotalCents: cashTotal, receivablesCents: receivables, inventoryCents: inventory, taxClaimCents: taxClaim, totalAssetsCents: assets, payablesCents: payables, taxPayableCents: taxPayable, totalLiabilitiesCents: liabilities, equityCents: equity, profitToDateCents: profitToDate, otherEquityCents: equity - profitToDate },
+  });
+}));
+
 // ---- a sales invoice: several products in one sale, a discount, a customer name, a number of its own
 const saleSchema = z.object({
   items: z.array(z.object({ productId: z.string().min(1).max(80), quantity: z.number().int().positive().max(1_000_000), unitPriceCents: z.number().int().positive().max(2_000_000_000).optional() })).min(1).max(100),
