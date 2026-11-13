@@ -36,7 +36,11 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun editEntry(id: String, description: String, amountCents: Int): Result<Unit> = result { api.updateAccountingEntry(id, com.dalilacom.app.data.network.AccountingEntryEditRequest(description, amountCents)) }
     suspend fun deleteEntry(id: String): Result<Unit> = result { api.deleteAccountingEntry(id) }
     suspend fun deleteProduct(id: String): Result<Unit> = result { api.deleteAccountingProduct(id) }
-    suspend fun sell(id: String, quantity: Int): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity)) }
+    suspend fun sell(id: String, quantity: Int, payMethod: String = "CASH"): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity, payMethod = payMethod)) }
+    suspend fun cash(day: String, currency: String) = safeApiCall { api.accountingCash(day, currency) }?.takeIf { it.isSuccessful }?.body()
+    suspend fun closeCash(day: String, currency: String, countedCents: Long): Result<Unit> = result { api.closeAccountingCash(com.dalilacom.app.data.network.AccountingCashCloseRequest(day, currency, countedCents)) }
+    suspend fun reopenCash(day: String, currency: String): Result<Unit> = result { api.reopenAccountingCash(day, currency) }
+    suspend fun setCashOpening(day: String, currency: String, openingCents: Long): Result<Unit> = result { api.setAccountingCashOpening(com.dalilacom.app.data.network.AccountingCashOpeningRequest(day, currency, openingCents)) }
     suspend fun stock(id: String, action: String, quantity: Int, unitCostCents: Int? = null): Result<Unit> = result { api.changeAccountingStock(id, AccountingStockRequest(action, quantity, unitCostCents = unitCostCents, note = DataLabels.NOTE_MANUAL_ENTRY)) }
     suspend fun scanInvoice(bytes: ByteArray, mime: String): Result<AccountingInvoiceDraftDto> {
         val response = safeApiCall { api.scanAccountingInvoice(bytes.toRequestBody(mime.toMediaType())) }

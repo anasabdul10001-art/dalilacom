@@ -1317,13 +1317,24 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 
 @Serializable data class AccountingCurrencyTotalDto(val currency: String = "EUR", val incomeCents: Int = 0, val expensesCents: Int = 0, val netCents: Int = 0, val payrollCents: Long = 0)
 @Serializable data class AccountingInventoryDto(val products: Int = 0, val units: Int = 0, val outOfStock: Int = 0)
-@Serializable data class AccountingEntryDto(val id: String = "", val type: String = "", val category: String = "", val description: String = "", val amountCents: Int = 0, val currency: String = "EUR", val occurredAt: String = "", val source: String = "MANUAL", val hasReceipt: Boolean = false)
+@Serializable data class AccountingEntryDto(val id: String = "", val type: String = "", val category: String = "", val description: String = "", val amountCents: Int = 0, val currency: String = "EUR", val occurredAt: String = "", val source: String = "MANUAL", val hasReceipt: Boolean = false, val payMethod: String? = null)
 @Serializable data class AccountingSummaryDto(val totals: List<AccountingCurrencyTotalDto> = emptyList(), val inventory: AccountingInventoryDto = AccountingInventoryDto(), val recent: List<AccountingEntryDto> = emptyList())
 @Serializable data class AccountingProductDto(val id: String, val name: String, val barcode: String? = null, val sku: String? = null, val unit: String = DataLabels.UNIT_PIECE, val costCents: Int = 0, val salePriceCents: Int = 0, val quantity: Int = 0, val lowStockAt: Int = 0, val currency: String = "EUR")
 @Serializable data class AccountingProductRequest(val name: String, val barcode: String? = null, val sku: String? = null, val unit: String = DataLabels.UNIT_PIECE, val costCents: Int = 0, val salePriceCents: Int = 0, val quantity: Int = 0, val lowStockAt: Int = 0, val currency: String = "EUR")
-@Serializable data class AccountingEntryRequest(val type: String, val category: String, val description: String, val amountCents: Int, val currency: String = "EUR")
+@Serializable data class AccountingEntryRequest(val type: String, val category: String, val description: String, val amountCents: Int, val currency: String = "EUR", val payMethod: String? = null)
 @Serializable data class AccountingEntryEditRequest(val description: String, val amountCents: Int)
-@Serializable data class AccountingSellRequest(val quantity: Int, val unitPriceCents: Int? = null, val note: String? = null)
+@Serializable data class AccountingSellRequest(val quantity: Int, val unitPriceCents: Int? = null, val note: String? = null, val payMethod: String? = null)
+@Serializable data class AccountingCashMethodDto(val payMethod: String = "", val incomeCents: Long = 0, val expensesCents: Long = 0)
+@Serializable data class AccountingCashUnspecifiedDto(val incomeCents: Long = 0, val expensesCents: Long = 0)
+/** The cash box of one day in one currency. */
+@Serializable data class AccountingCashDto(
+    val day: String = "", val currency: String = "EUR", val openingCents: Long = 0, val openingSource: String = "none",
+    val cashInCents: Long = 0, val cashOutCents: Long = 0, val expectedCents: Long = 0,
+    val closed: Boolean = false, val countedCents: Long? = null, val differenceCents: Long? = null,
+    val methods: List<AccountingCashMethodDto> = emptyList(), val unspecified: AccountingCashUnspecifiedDto = AccountingCashUnspecifiedDto(),
+)
+@Serializable data class AccountingCashCloseRequest(val day: String, val currency: String, val countedCents: Long)
+@Serializable data class AccountingCashOpeningRequest(val day: String, val currency: String, val openingCents: Long)
 @Serializable data class AccountingSellResponseDto(val product: AccountingProductDto? = null, val incomeCents: Int = 0, val costCents: Int = 0, val netCents: Int = 0)
 @Serializable data class AccountingStockRequest(val action: String, val quantity: Int, val unitCostCents: Int? = null, val note: String? = null)
 @Serializable data class AccountingInvoiceExtractedDto(val supplier: String? = null, val description: String? = null, val date: String? = null, val totalCents: Int? = null, val currency: String? = null)

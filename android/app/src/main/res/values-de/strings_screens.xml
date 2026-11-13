@@ -429,4 +429,25 @@
     <string name="hr_sal_removed">Item removed</string>
     <string name="hr_sal_close">Close</string>
     <string name="hr_sal_pickComp">Pick an item</string>
+    <string name="accounting_pay">Payment method</string>
+    <string name="accounting_pay_CASH">Cash</string>
+    <string name="accounting_pay_BANK">Bank</string>
+    <string name="accounting_pay_WALLET">Wallet</string>
+    <string name="accounting_sell_pay">How was it paid?</string>
+    <string name="accounting_cash_title">Cash box for the day</string>
+    <string name="accounting_cash_help">The cash box counts cash entries only. Bank and wallet entries are shown on their own below.</string>
+    <string name="accounting_cash_opening">Opening amount</string>
+    <string name="accounting_cash_in">Cash received</string>
+    <string name="accounting_cash_out">Cash paid out</string>
+    <string name="accounting_cash_expected">Expected in the box</string>
+    <string name="accounting_cash_counted">Amount actually counted</string>
+    <string name="accounting_cash_close">Close the day</string>
+    <string name="accounting_cash_closed">This day is closed</string>
+    <string name="accounting_cash_reopen">Open the day again</string>
+    <string name="accounting_cash_diff">Difference</string>
+    <string name="accounting_cash_diff_ok">The box matches</string>
+    <string name="accounting_cash_set_opening">Change the opening amount</string>
+    <string name="accounting_cash_opening_prev">From the closing of the previous day</string>
+    <string name="accounting_cash_other">Bank and wallet (not in the box)</string>
+    <string name="accounting_cash_unspecified">Entries with no payment method (older or automatic), not counted in the box</string>
 </resources>

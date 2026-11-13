@@ -801,4 +801,25 @@
     <string name="hr_sal_removed">انشال البند</string>
     <string name="hr_sal_close">إغلاق</string>
     <string name="hr_sal_pickComp">اختر بنداً</string>
+    <string name="accounting_pay">طريقة الدفع</string>
+    <string name="accounting_pay_CASH">نقداً</string>
+    <string name="accounting_pay_BANK">بنك</string>
+    <string name="accounting_pay_WALLET">محفظة</string>
+    <string name="accounting_sell_pay">كيف اندفعت؟</string>
+    <string name="accounting_cash_title">صندوق اليوم</string>
+    <string name="accounting_cash_help">الصندوق بيحسب الحركات النقدية بس. حركات البنك والمحفظة بتظهر لحالها تحت.</string>
+    <string name="accounting_cash_opening">رصيد البداية</string>
+    <string name="accounting_cash_in">مقبوض نقداً</string>
+    <string name="accounting_cash_out">مدفوع نقداً</string>
+    <string name="accounting_cash_expected">المتوقع بالصندوق</string>
+    <string name="accounting_cash_counted">المبلغ المعدود فعلياً</string>
+    <string name="accounting_cash_close">إقفال اليوم</string>
+    <string name="accounting_cash_closed">النهار مقفول</string>
+    <string name="accounting_cash_reopen">فتح النهار من جديد</string>
+    <string name="accounting_cash_diff">الفرق</string>
+    <string name="accounting_cash_diff_ok">الصندوق مظبوط</string>
+    <string name="accounting_cash_set_opening">تغيير رصيد البداية</string>
+    <string name="accounting_cash_opening_prev">من إقفال النهار السابق</string>
+    <string name="accounting_cash_other">بنك ومحفظة (مو بالصندوق)</string>
+    <string name="accounting_cash_unspecified">حركات بدون طريقة دفع (قديمة أو آلية)، ما بتدخل بحساب الصندوق</string>
 </resources>

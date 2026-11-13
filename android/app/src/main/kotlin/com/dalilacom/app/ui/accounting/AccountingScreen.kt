@@ -72,12 +72,20 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var editEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
     var editDescription by remember { mutableStateOf("") }
     var editAmount by remember { mutableStateOf("") }
+    var entryPay by remember { mutableStateOf("CASH") }
+    var cashDay by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
+    var cash by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingCashDto?>(null) }
+    var cashCounted by remember { mutableStateOf("") }
+    var salePayTarget by remember { mutableStateOf<AccountingProductDto?>(null) }
+    var openingDialog by remember { mutableStateOf(false) }
+    var openingValue by remember { mutableStateOf("") }
     var deleteEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
 
     suspend fun reload() {
         loading = true
         summary = container.accountingRepository.summary()
         products = container.accountingRepository.products()
+        cash = container.accountingRepository.cash(cashDay, "EUR")
         loading = false
     }
     LaunchedEffect(Unit) { reload() }
@@ -143,6 +151,50 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
+        cash?.let { c ->
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.accounting_cash_title), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.accounting_cash_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = { cashDay = java.time.LocalDate.parse(cashDay).minusDays(1).toString(); scope.launch { reload() } }) { Text("‹") }
+                            Text(c.day, style = MaterialTheme.typography.titleSmall)
+                            TextButton(onClick = { cashDay = java.time.LocalDate.parse(cashDay).plusDays(1).toString(); scope.launch { reload() } }) { Text("›") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricTile(stringResource(R.string.accounting_cash_opening), money((c.openingCents).toInt()), "net", Modifier.weight(1f))
+                            MetricTile(stringResource(R.string.accounting_cash_expected), money((c.expectedCents).toInt()), "net", Modifier.weight(1f))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricTile(stringResource(R.string.accounting_cash_in), money((c.cashInCents).toInt()), "income", Modifier.weight(1f))
+                            MetricTile(stringResource(R.string.accounting_cash_out), money((c.cashOutCents).toInt()), "expense", Modifier.weight(1f))
+                        }
+                        if (c.openingSource == "previous") com.dalilacom.app.ui.common.StatusChip(stringResource(R.string.accounting_cash_opening_prev), "info")
+                        if (c.closed) {
+                            val diff = c.differenceCents ?: 0L
+                            com.dalilacom.app.ui.common.StatusChip(stringResource(R.string.accounting_cash_closed) + " · " + stringResource(R.string.accounting_cash_counted) + ": " + money((c.countedCents ?: 0L).toInt()) + " · " + (if (diff == 0L) stringResource(R.string.accounting_cash_diff_ok) else stringResource(R.string.accounting_cash_diff) + ": " + (if (diff > 0) "+" else "−") + money(kotlin.math.abs(diff).toInt())), if (diff == 0L) "ok" else "warn")
+                            OutlinedButton(onClick = { scope.launch { container.accountingRepository.reopenCash(c.day, c.currency); reload() } }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_cash_reopen)) }
+                        } else {
+                            OutlinedTextField(cashCounted, { cashCounted = it }, label = { Text(stringResource(R.string.accounting_cash_counted)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    if (cashCounted.isBlank()) { message = context.getString(R.string.accounting_missing_entry); return@Button }
+                                    scope.launch { container.accountingRepository.closeCash(c.day, c.currency, cents(cashCounted).toLong()); cashCounted = ""; reload() }
+                                }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.accounting_cash_close)) }
+                                OutlinedButton(onClick = { openingValue = money(c.openingCents.toInt()); openingDialog = true }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.accounting_cash_set_opening)) }
+                            }
+                        }
+                        c.methods.filter { it.payMethod != "CASH" && (it.incomeCents != 0L || it.expensesCents != 0L) }.takeIf { it.isNotEmpty() }?.let { others ->
+                            Text(stringResource(R.string.accounting_cash_other) + ": " + others.joinToString(" · ") { m ->
+                                (if (m.payMethod == "BANK") context.getString(R.string.accounting_pay_BANK) else context.getString(R.string.accounting_pay_WALLET)) + " +" + money(m.incomeCents.toInt()) + " −" + money(m.expensesCents.toInt())
+                            }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (c.unspecified.incomeCents != 0L || c.unspecified.expensesCents != 0L) Text(stringResource(R.string.accounting_cash_unspecified) + ": +" + money(c.unspecified.incomeCents.toInt()) + " −" + money(c.unspecified.expensesCents.toInt()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -151,12 +203,18 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         OutlinedButton(onClick = { entryType = "INCOME" }) { Text(stringResource(R.string.accounting_incomeLabel)) }
                         OutlinedButton(onClick = { entryType = "EXPENSE" }) { Text(stringResource(R.string.accounting_expense)) }
                     }
+                    Text(stringResource(R.string.accounting_pay), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("CASH" to R.string.accounting_pay_CASH, "BANK" to R.string.accounting_pay_BANK, "WALLET" to R.string.accounting_pay_WALLET).forEach { (code, label) ->
+                            if (entryPay == code) Button(onClick = { entryPay = code }) { Text(stringResource(label)) } else OutlinedButton(onClick = { entryPay = code }) { Text(stringResource(label)) }
+                        }
+                    }
                     OutlinedTextField(category, { category = it }, label = { Text(stringResource(R.string.accounting_category)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(description, { description = it }, label = { Text(stringResource(R.string.accounting_description)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(amount, { amount = it }, label = { Text(stringResource(R.string.accounting_amount)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Button(onClick = {
                         if (category.isBlank() || description.isBlank() || cents(amount) <= 0) { message = context.getString(R.string.accounting_missing_entry); return@Button }
-                        showResult { container.accountingRepository.addEntry(AccountingEntryRequest(entryType, category, description, cents(amount))) }
+                        showResult { container.accountingRepository.addEntry(AccountingEntryRequest(entryType, category, description, cents(amount), payMethod = entryPay)) }
                     }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_save)) }
                 }
             }
@@ -219,7 +277,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         OutlinedButton(onClick = {
                             if (p.quantity > 0) showResult { container.accountingRepository.stock(p.id, "STOCK_OUT", 1) }
                         }, enabled = p.quantity > 0) { Text("−1") }
-                        Button(onClick = { showResult { container.accountingRepository.sell(p.id, 1) } }, enabled = p.quantity > 0 && p.salePriceCents > 0) { Text(stringResource(R.string.accounting_sell_one)) }
+                        Button(onClick = { salePayTarget = p }, enabled = p.quantity > 0 && p.salePriceCents > 0) { Text(stringResource(R.string.accounting_sell_one)) }
                     }
                     if (!p.id.startsWith("store:")) TextButton(onClick = { deleteProductTarget = p }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
                 }
@@ -235,6 +293,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         Text(e.description, style = MaterialTheme.typography.titleSmall)
                         Text(e.category + " · " + e.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (e.source == "PAYROLL") com.dalilacom.app.ui.common.StatusChip(stringResource(R.string.accounting_payrollLabel), "warn")
+                        e.payMethod?.let { pm -> com.dalilacom.app.ui.common.StatusChip(stringResource(when (pm) { "BANK" -> R.string.accounting_pay_BANK; "WALLET" -> R.string.accounting_pay_WALLET; else -> R.string.accounting_pay_CASH })) }
                     }
                     Text(
                         (if (e.type == "EXPENSE") "−" else "+") + money(e.amountCents) + " " + e.currency,
@@ -256,6 +315,36 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             text = { Text(stringResource(R.string.accounting_delete_confirm, product.name)) },
             confirmButton = { Button(onClick = { showResult { container.accountingRepository.deleteProduct(product.id) }; deleteProductTarget = null }) { Text(stringResource(R.string.accounting_delete)) } },
             dismissButton = { OutlinedButton(onClick = { deleteProductTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    salePayTarget?.let { product ->
+        AlertDialog(
+            onDismissRequest = { salePayTarget = null },
+            title = { Text(stringResource(R.string.accounting_sell_pay)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("CASH" to R.string.accounting_pay_CASH, "BANK" to R.string.accounting_pay_BANK, "WALLET" to R.string.accounting_pay_WALLET).forEach { (code, label) ->
+                        Button(onClick = { salePayTarget = null; showResult { container.accountingRepository.sell(product.id, 1, code) } }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(label)) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { OutlinedButton(onClick = { salePayTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    if (openingDialog) {
+        AlertDialog(
+            onDismissRequest = { openingDialog = false },
+            title = { Text(stringResource(R.string.accounting_cash_opening)) },
+            text = { OutlinedTextField(openingValue, { openingValue = it }, label = { Text(stringResource(R.string.accounting_amount)) }, singleLine = true) },
+            confirmButton = {
+                Button(onClick = {
+                    val c = cash
+                    openingDialog = false
+                    if (c != null) scope.launch { container.accountingRepository.setCashOpening(c.day, c.currency, cents(openingValue).toLong()); reload() }
+                }) { Text(stringResource(R.string.accounting_save)) }
+            },
+            dismissButton = { OutlinedButton(onClick = { openingDialog = false }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
     editEntryTarget?.let { entry ->
