@@ -2662,16 +2662,18 @@ function screenAccounting() {
       <div class="tiles">${uiTile(t("accounting.income"), fmt(x.incomeCents, x.currency), "income")}${uiTile(t("accounting.expenses"), fmt(x.expensesCents, x.currency), "expense")}${uiTile(t("accounting.net"), fmt(x.netCents, x.currency), "net", !(x.payrollCents > 0))}${x.payrollCents > 0 ? uiTile(t("accounting.payrollLabel"), fmt(x.payrollCents, x.currency), "payroll") : ""}</div>`).join("") : uiEmpty("📒", t("accounting.noEntries"))}
     <p class="muted">${esc(t("accounting.inventory"))}: ${a.summary?.inventory?.products || 0} ${esc(t("accounting.products"))} · ${esc(t("accounting.units"))}: ${a.summary?.inventory?.units || 0}</p>
     <div class="btn-row"><button class="btn soft" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button><button class="btn soft" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button></div>
+    ${accountingCashCard(a.cash)}
     <div class="panel-title" style="margin-top:16px">${esc(t("accounting.recent"))}</div>
     ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${e.type === "EXPENSE" ? 4 : 140}">${e.type === "EXPENSE" ? "↓" : "↑"}</span><div class="item-main">
         <div class="item-title">${esc(e.description)}</div>
         <div class="item-sub">${esc(e.category)} · <bdi>${new Date(e.occurredAt).toLocaleDateString()}</bdi></div>
-        ${e.source === "PAYROLL" ? `<div class="chips">${uiChip(t("accounting.payrollLabel"), "warn")}</div>` : ""}
+        ${e.source === "PAYROLL" || e.payMethod ? `<div class="chips">${e.source === "PAYROLL" ? uiChip(t("accounting.payrollLabel"), "warn") : ""}${e.payMethod ? uiChip(t("accounting.pay." + e.payMethod)) : ""}</div>` : ""}
         ${e.source === "MANUAL" || e.source === "INVOICE" ? `<div class="btn-row"><button class="btn small soft" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎ ${esc(t("accounting.edit"))}</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></div>` : ""}
       </div><div class="item-end ${e.type === "EXPENSE" ? "out" : "in"}">${e.type === "EXPENSE" ? "−" : "+"}${esc(fmt(e.amountCents, e.currency))}</div></div>`).join("") || uiEmpty("🧾", t("accounting.noEntries"))}`,
     entry: `
     <div class="card"><div class="section-title">${esc(t("accounting.addEntry"))}</div>
       <div class="field"><label>${esc(t("accounting.entryType"))}</label><select id="acc-type"><option value="INCOME">${esc(t("accounting.income"))}</option><option value="EXPENSE">${esc(t("accounting.expenses"))}</option></select></div>
+      <div class="field"><label>${esc(t("accounting.pay"))}</label><select id="acc-pay"><option value="CASH">${esc(t("accounting.pay.CASH"))}</option><option value="BANK">${esc(t("accounting.pay.BANK"))}</option><option value="WALLET">${esc(t("accounting.pay.WALLET"))}</option></select></div>
       <div class="field"><label>${esc(t("accounting.category"))}</label><input id="acc-category" placeholder="${esc(t("accounting.categoryHint"))}" /></div>
       <div class="field"><label>${esc(t("accounting.description"))}</label><input id="acc-description" /></div>
       <div class="field"><label>${esc(t("accounting.amount"))}</label><input id="acc-amount" type="number" min="0.01" step="0.01" inputmode="decimal" /></div>
@@ -2702,14 +2704,59 @@ function screenAccounting() {
   return siteShell("accounting", tab, (cards[tab] || cards.summary) + errorBanner());
 }
 async function loadAccounting() {
-  const [summary, products] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products")]);
+  const cashDay = S._accCashDay || new Date().toISOString().slice(0, 10);
+  const [summary, products, cash] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`)]);
   const requiresPlan = summary.status === 402 || products.status === 402;
-  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
+  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
+}
+/** The cash box of one day: opening + cash in - cash out = what should be in the box; counting it closes the day. */
+function accountingCashCard(c) {
+  if (!c) return "";
+  const cur = c.currency;
+  const diff = c.differenceCents;
+  const other = c.methods.filter((m) => m.payMethod !== "CASH" && (m.incomeCents || m.expensesCents));
+  return `<div class="panel-title" style="margin-top:16px">${esc(t("accounting.cash.title"))}</div>
+    <div class="card">
+      <p class="muted" style="margin:0 0 10px">${esc(t("accounting.cash.help"))}</p>
+      <div class="field"><label>${esc(t("accounting.cash.day"))}</label><input type="date" value="${esc(c.day)}" onchange="accountingCashDay(this.value)" /></div>
+      <div class="tiles">${uiTile(t("accounting.cash.opening"), fmt(c.openingCents, cur), "net")}${uiTile(t("accounting.cash.in"), fmt(c.cashInCents, cur), "income")}${uiTile(t("accounting.cash.out"), fmt(c.cashOutCents, cur), "expense")}${uiTile(t("accounting.cash.expected"), fmt(c.expectedCents, cur), "net", true)}</div>
+      <div class="chips" style="margin-top:6px">${c.openingSource === "previous" ? uiChip(t("accounting.cash.openingPrev"), "info") : ""}</div>
+      ${c.closed ? `<div class="badge ${diff === 0 ? "success" : "warning"}" style="margin:8px 0">${esc(t("accounting.cash.closed"))} · ${esc(t("accounting.cash.counted"))}: ${esc(fmt(c.countedCents, cur))} · ${diff === 0 ? esc(t("accounting.cash.diffOk")) : esc(t("accounting.cash.diff")) + ": " + esc((diff > 0 ? "+" : "−") + fmt(Math.abs(diff), cur))}</div>
+        <div class="btn-row"><button class="btn small outline" onclick="accountingCashReopen(this)">${esc(t("accounting.cash.reopen"))}</button></div>`
+      : `<div class="field"><label>${esc(t("accounting.cash.counted"))}</label><input id="acc-cash-counted" inputmode="decimal" /></div>
+        <div class="btn-row"><button class="btn small" onclick="accountingCashClose(this)">${esc(t("accounting.cash.close"))}</button><button class="btn small soft" onclick="accountingCashOpening()">${esc(t("accounting.cash.setOpening"))}</button></div>`}
+      ${c.unspecified && (c.unspecified.incomeCents || c.unspecified.expensesCents) ? `<div class="muted" style="margin-top:10px">${esc(t("accounting.cash.unspecified"))}: +${esc(fmt(c.unspecified.incomeCents, cur))} −${esc(fmt(c.unspecified.expensesCents, cur))}</div>` : ""}
+      ${other.length ? `<div class="muted" style="margin-top:10px">${esc(t("accounting.cash.other"))}: ${other.map((m) => esc(t("accounting.pay." + m.payMethod)) + " +" + esc(fmt(m.incomeCents, cur)) + " −" + esc(fmt(m.expensesCents, cur))).join(" · ")}</div>` : ""}
+    </div>`;
+}
+async function accountingCashDay(day) { S._accCashDay = day || null; S._accounting = { ...S._accounting, loading: true }; await loadAccounting(); }
+async function accountingCashClose(btn) {
+  const c = S._accounting?.cash; if (!c) return;
+  const raw = (qs("acc-cash-counted")?.value || "").replace(",", ".");
+  const counted = Number(raw);
+  if (raw === "" || !Number.isFinite(counted) || counted < 0) return toast(t("accounting.invalidAmount"));
+  const res = await uiBusy(btn, () => api("POST", "/accounting/cash/close", { day: c.day, currency: c.currency, countedCents: Math.round(counted * 100) }));
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.cash.closedDone")); await loadAccounting();
+}
+async function accountingCashReopen(btn) {
+  const c = S._accounting?.cash; if (!c) return;
+  const res = await uiBusy(btn, () => api("DELETE", `/accounting/cash/close?day=${c.day}&currency=${encodeURIComponent(c.currency)}`));
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.cash.reopened")); await loadAccounting();
+}
+async function accountingCashOpening() {
+  const c = S._accounting?.cash; if (!c) return;
+  const raw = await uiPrompt(t("accounting.cash.opening"), (c.openingCents / 100).toFixed(2), { numeric: true }); if (raw === null) return;
+  const v = Number(raw.replace(",", ".")); if (!Number.isFinite(v) || v < 0) return toast(t("accounting.invalidAmount"));
+  const res = await api("PUT", "/accounting/cash/opening", { day: c.day, currency: c.currency, openingCents: Math.round(v * 100) });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.cash.openingSaved")); await loadAccounting();
 }
 function accountingCents(id) { return Math.round(Number(qs(id)?.value || 0) * 100); }
 async function accountingAddEntry() {
-  const body = { type: qs("acc-type").value, category: qs("acc-category").value.trim(), description: qs("acc-description").value.trim(), amountCents: accountingCents("acc-amount"), currency: S.currency || "EUR" };
+  const body = { type: qs("acc-type").value, category: qs("acc-category").value.trim(), description: qs("acc-description").value.trim(), amountCents: accountingCents("acc-amount"), currency: S.currency || "EUR", payMethod: qs("acc-pay")?.value || "CASH" };
   const { ok, data } = await api("POST", "/accounting/entries", body);
   if (!ok) return toast(errMsg(data, "ما قدرنا نحفظ الحركة"));
   toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
@@ -2740,7 +2787,9 @@ async function accountingSell(id) {
   const product = (S._accounting?.products || []).find(p => p.id === id);
   const quantity = Number(await uiPrompt(t("accounting.sellQuantity"), "1", { numeric: true }));
   if (!quantity) return;
-  const { ok, data } = await api("POST", `/accounting/products/${id}/sell`, { quantity });
+  const payMethod = await uiPick(t("accounting.sellPay"), [["CASH", t("accounting.pay.CASH")], ["BANK", t("accounting.pay.BANK")], ["WALLET", t("accounting.pay.WALLET")]]);
+  if (!payMethod) return;
+  const { ok, data } = await api("POST", `/accounting/products/${id}/sell`, { quantity, payMethod });
   if (!ok) return toast(errMsg(data, "ما قدرنا نسجل البيع"));
   toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
 }

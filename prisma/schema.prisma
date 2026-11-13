@@ -127,6 +127,7 @@ model User {
   responderInteractions   ResponderInteraction[]
   accountingProducts      AccountingProduct[]
   accountingEntries       AccountingEntry[]
+  accountingCashDays      AccountingCashDay[]
   accountingMovements     AccountingStockMovement[]
   accountingInvoiceDrafts AccountingInvoiceDraft[]
   hrCompany               HrCompany?                @relation("HrCompanyOwner")
@@ -868,22 +869,50 @@ model AccountingProduct {
   @@index([userId, sku])
 }
 
+enum AccountingPayMethod {
+  CASH
+  BANK
+  WALLET
+}
+
+// The cash box of one day in one currency: the opening amount, and what was counted when the day was closed.
+model AccountingCashDay {
+  id               String    @id @default(uuid())
+  userId           String
+  day              String // YYYY-MM-DD
+  currency         String
+  openingCents     BigInt    @default(0)
+  openingSetByHand Boolean   @default(false)
+  countedCents     BigInt?
+  note             String?
+  closedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day, currency])
+  @@index([userId, currency, day])
+}
+
 model AccountingEntry {
-  id          String              @id @default(uuid())
-  userId      String
-  type        AccountingEntryType
-  category    String
-  description String
-  amountCents BigInt // minor units; wide enough for a month of salaries in a low-value currency
-  currency    String              @default("EUR")
-  occurredAt  DateTime            @default(now())
-  source      String              @default("MANUAL") // MANUAL, ORDER, COMMISSION, DELIVERY, INVOICE, PAYROLL
-  sourceKey   String?
-  receiptName String?
-  receiptMime String?
-  receiptData Bytes?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id           String               @id @default(uuid())
+  userId       String
+  type         AccountingEntryType
+  category     String
+  description  String
+  amountCents  BigInt // minor units; wide enough for a month of salaries in a low-value currency
+  currency     String               @default("EUR")
+  occurredAt   DateTime             @default(now())
+  source       String               @default("MANUAL") // MANUAL, ORDER, COMMISSION, DELIVERY, INVOICE, PAYROLL
+  payMethod    AccountingPayMethod? // null = not said (entries the store or payroll write by themselves)
+  recordedById String? // the account that typed it (the owner, later also their staff)
+  sourceKey    String?
+  receiptName  String?
+  receiptMime  String?
+  receiptData  Bytes?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
   user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoiceDraft AccountingInvoiceDraft?
@@ -891,6 +920,7 @@ model AccountingEntry {
   @@unique([userId, sourceKey])
   @@index([userId, occurredAt])
   @@index([userId, type, occurredAt])
+  @@index([userId, payMethod, occurredAt])
 }
 
 model AccountingInvoiceDraft {

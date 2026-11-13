@@ -48,6 +48,20 @@ function uiPrompt(label, value, opts) {
   });
 }
 
+/** A small choice box: options is [[value, label], ...]. Resolves with the chosen value, or null when cancelled. */
+function uiPick(label, options) {
+  return new Promise((resolve) => {
+    const box = document.createElement("div");
+    box.className = "ui-ask";
+    box.innerHTML = `<div class="ui-ask-card" role="dialog" aria-modal="true"><label>${esc(label)}</label>
+      <div class="btn-row">${options.map(([v, l]) => `<button class="btn small soft" data-v="${esc(v)}">${esc(l)}</button>`).join("")}</div>
+      <div class="btn-row"><button class="btn small outline" data-no>${esc(t("adr.cancel"))}</button></div></div>`;
+    const done = (v) => { box.remove(); resolve(v); };
+    box.addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (b) done(b.dataset.v); else if (e.target === box || e.target.closest("[data-no]")) done(null); });
+    document.body.appendChild(box);
+  });
+}
+
 /** Shows a button as working while a request runs, so it cannot be pressed twice. */
 async function uiBusy(btn, work) {
   if (btn && btn.classList) btn.classList.add("busy");

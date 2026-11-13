@@ -473,6 +473,7 @@ export const en: LanguagePack = {
     "منتج المتجر غير موجود": "Store product not found",
     "أدخل كمية أكبر من صفر": "Enter a quantity greater than zero",
     "الكمية الموجودة ما بتكفي": "The quantity in stock is not enough",
+    "هالنهار مقفول. افتحو من جديد قبل ما تغيّر رصيد البداية.": "This day is closed. Open it again before changing the opening amount.",
     "المنتج غير موجود": "Product not found",
     "أدخل سعر البيع أولاً": "Enter the selling price first",
     "بيع مباشر": "Direct sale",

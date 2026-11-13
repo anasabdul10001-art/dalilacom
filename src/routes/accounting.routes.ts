@@ -70,6 +70,7 @@ const entrySchema = z.object({
   amountCents: z.number().int().positive().max(MAX_ENTRY_CENTS),
   currency: currencyCode.default("EUR"),
   occurredAt: z.string().datetime().optional(),
+  payMethod: z.enum(["CASH", "BANK", "WALLET"]).optional(),
 });
 const productSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -127,7 +128,7 @@ accountingRouter.get("/entries", route(async (req, res) => {
 accountingRouter.post("/entries", route(async (req, res) => {
   const parsed = entrySchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const row = await prisma.accountingEntry.create({ data: { ...parsed.data, userId: req.user!.id, source: "MANUAL", occurredAt: parsed.data.occurredAt ? new Date(parsed.data.occurredAt) : new Date() } });
+  const row = await prisma.accountingEntry.create({ data: { ...parsed.data, payMethod: parsed.data.payMethod ?? "CASH", userId: req.user!.id, recordedById: req.user!.id, source: "MANUAL", occurredAt: parsed.data.occurredAt ? new Date(parsed.data.occurredAt) : new Date() } });
   res.status(201).json(plain(row));
 }));
 
@@ -247,7 +248,7 @@ accountingRouter.post("/products/:id/stock", route(async (req, res) => {
 }));
 
 accountingRouter.post("/products/:id/sell", route(async (req, res) => {
-  const parsed = z.object({ quantity: z.number().int().positive().max(1_000_000), unitPriceCents: z.number().int().positive().optional(), note: z.string().trim().max(240).optional() }).safeParse(req.body);
+  const parsed = z.object({ quantity: z.number().int().positive().max(1_000_000), unitPriceCents: z.number().int().positive().optional(), note: z.string().trim().max(240).optional(), payMethod: z.enum(["CASH", "BANK", "WALLET"]).default("CASH") }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   if (req.params.id.startsWith("store:")) {
     const id = req.params.id.slice(6);
@@ -263,8 +264,8 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
       // the stock is taken only while enough is left at this very moment, so two sales cannot both take the last pieces
       if (!(await tx.product.updateMany({ where: { id, stock: { gte: parsed.data.quantity } }, data: { stock: { decrement: parsed.data.quantity }, soldCount: { increment: parsed.data.quantity } } })).count) return null;
       await tx.accountingStockMovement.create({ data: { userId: req.user!.id, storeProductId: id, action: "STOCK_OUT", quantity: parsed.data.quantity, note: parsed.data.note || "بيع مباشر" } });
-      await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency, source: "MANUAL", sourceKey: ref } });
-      if (product.costPriceCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costPriceCents * parsed.data.quantity, currency, source: "MANUAL", sourceKey: `${ref}:cost` } });
+      await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency, source: "MANUAL", sourceKey: ref, payMethod: parsed.data.payMethod, recordedById: req.user!.id } });
+      if (product.costPriceCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costPriceCents * parsed.data.quantity, currency, source: "MANUAL", sourceKey: `${ref}:cost`, recordedById: req.user!.id } });
       return tx.product.findUniqueOrThrow({ where: { id } });
     });
     if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
@@ -283,12 +284,80 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
     if (!(await tx.accountingProduct.updateMany({ where: { id: product.id, quantity: { gte: parsed.data.quantity } }, data: { quantity: { decrement: parsed.data.quantity } } })).count) return null;
     const updated = await tx.accountingProduct.findUniqueOrThrow({ where: { id: product.id } });
     await tx.accountingStockMovement.create({ data: { userId: req.user!.id, productId: product.id, action: "STOCK_OUT", quantity: parsed.data.quantity, unitCostCents: product.costCents, note: parsed.data.note || "بيع" } });
-    await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency: product.currency, source: "MANUAL", sourceKey: ref } });
-    if (product.costCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costCents * parsed.data.quantity, currency: product.currency, source: "MANUAL", sourceKey: `${ref}:cost` } });
+    await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency: product.currency, source: "MANUAL", sourceKey: ref, payMethod: parsed.data.payMethod, recordedById: req.user!.id } });
+    if (product.costCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costCents * parsed.data.quantity, currency: product.currency, source: "MANUAL", sourceKey: `${ref}:cost`, recordedById: req.user!.id } });
     return updated;
   });
   if (!result) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
   res.status(201).json({ product: result, incomeCents: total, costCents: product.costCents * parsed.data.quantity, netCents: total - product.costCents * parsed.data.quantity });
+}));
+
+
+// ---- the cash box of a day: what came in and went out in cash, against what was counted when the day was closed
+const cashDayStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const cashKey = z.object({ day: cashDayStr, currency: currencyCode });
+
+/** The opening of a day: the one set by hand, else what was counted when the last closed day ended, else nothing. */
+async function cashOpening(userId: string, day: string, currency: string) {
+  const own = await prisma.accountingCashDay.findUnique({ where: { userId_day_currency: { userId, day, currency } } });
+  if (own && own.openingSetByHand) return { cents: Number(own.openingCents), source: "set" as const, row: own };
+  const prev = await prisma.accountingCashDay.findFirst({ where: { userId, currency, day: { lt: day }, closedAt: { not: null }, countedCents: { not: null } }, orderBy: { day: "desc" } });
+  if (prev) return { cents: Number(prev.countedCents), source: "previous" as const, row: own };
+  return { cents: 0, source: "none" as const, row: own };
+}
+
+accountingRouter.get("/cash", route(async (req, res) => {
+  const parsed = cashKey.safeParse({ day: req.query.day ?? new Date().toISOString().slice(0, 10), currency: req.query.currency ?? "EUR" });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const { day, currency } = parsed.data;
+  const userId = req.user!.id;
+  const from = new Date(`${day}T00:00:00.000Z`), to = new Date(`${day}T23:59:59.999Z`);
+  const [byMethod, opening] = await Promise.all([
+    prisma.accountingEntry.groupBy({ by: ["payMethod", "type"], where: { userId, currency, occurredAt: { gte: from, lte: to } }, _sum: { amountCents: true } }),
+    cashOpening(userId, day, currency),
+  ]);
+  const sum = (m: string | null, t: string) => Number(byMethod.find((x) => x.payMethod === m && x.type === t)?._sum.amountCents ?? 0);
+  const cashIn = sum("CASH", "INCOME"), cashOut = sum("CASH", "EXPENSE");
+  const expected = opening.cents + cashIn - cashOut;
+  const row = opening.row;
+  const counted = row?.closedAt && row.countedCents != null ? Number(row.countedCents) : null;
+  res.json({
+    day, currency,
+    openingCents: opening.cents, openingSource: opening.source,
+    cashInCents: cashIn, cashOutCents: cashOut, expectedCents: expected,
+    closed: !!row?.closedAt, closedAt: row?.closedAt ?? null, countedCents: counted, differenceCents: counted == null ? null : counted - expected, note: row?.note ?? null,
+    methods: ["CASH", "BANK", "WALLET"].map((m) => ({ payMethod: m, incomeCents: sum(m, "INCOME"), expensesCents: sum(m, "EXPENSE") })),
+    unspecified: { incomeCents: sum(null, "INCOME"), expensesCents: sum(null, "EXPENSE") },
+  });
+}));
+
+accountingRouter.put("/cash/opening", route(async (req, res) => {
+  const parsed = cashKey.extend({ openingCents: z.number().int().nonnegative().max(MAX_ENTRY_CENTS) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const { day, currency, openingCents } = parsed.data;
+  const where = { userId_day_currency: { userId: req.user!.id, day, currency } };
+  const existing = await prisma.accountingCashDay.findUnique({ where });
+  if (existing?.closedAt) return sendError(res, 409, "CONFLICT", "هالنهار مقفول. افتحو من جديد قبل ما تغيّر رصيد البداية.");
+  await prisma.accountingCashDay.upsert({ where, create: { userId: req.user!.id, day, currency, openingCents, openingSetByHand: true }, update: { openingCents, openingSetByHand: true } });
+  res.json({ ok: true });
+}));
+
+accountingRouter.post("/cash/close", route(async (req, res) => {
+  const parsed = cashKey.extend({ countedCents: z.number().int().nonnegative().max(MAX_ENTRY_CENTS), note: z.string().trim().max(240).optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const { day, currency, countedCents, note } = parsed.data;
+  const where = { userId_day_currency: { userId: req.user!.id, day, currency } };
+  const opening = await cashOpening(req.user!.id, day, currency);
+  await prisma.accountingCashDay.upsert({ where, create: { userId: req.user!.id, day, currency, openingCents: opening.cents, countedCents, note, closedAt: new Date() }, update: { countedCents, note: note ?? null, closedAt: new Date() } });
+  res.json({ ok: true });
+}));
+
+accountingRouter.delete("/cash/close", route(async (req, res) => {
+  const parsed = cashKey.safeParse({ day: req.query.day, currency: req.query.currency });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const { day, currency } = parsed.data;
+  await prisma.accountingCashDay.updateMany({ where: { userId: req.user!.id, day, currency }, data: { closedAt: null, countedCents: null } });
+  res.json({ ok: true });
 }));
 
 accountingRouter.get("/export.csv", route(async (req, res) => {
