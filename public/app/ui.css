@@ -3,7 +3,7 @@
 .site .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.04); }
 .site .btn:active:not(:disabled) { transform: scale(.98); }
 .site .btn.outline, .site .btn.secondary, .site .btn.danger, .site .btn.soft { box-shadow: none; }
-.btn.soft { background-color: color-mix(in srgb, var(--primary) 14%, transparent); background-image: none; color: var(--primary); }
+.btn.soft, .btn.soft:not(.outline):not(.secondary):not(.danger) { background-color: color-mix(in srgb, var(--primary) 14%, transparent); background-image: none; color: var(--primary); }
 .btn.busy { position: relative; color: transparent !important; pointer-events: none; }
 .btn.busy::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .5); border-top-color: #fff; animation: spin .7s linear infinite; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
