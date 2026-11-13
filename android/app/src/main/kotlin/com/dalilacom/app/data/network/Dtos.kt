@@ -1326,7 +1326,10 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingSellRequest(val quantity: Int, val unitPriceCents: Int? = null, val note: String? = null, val payMethod: String? = null)
 @Serializable data class AccountingPurchaseItemRequest(val productId: String, val quantity: Int, val unitCostCents: Long)
 @Serializable data class AccountingPurchaseRequest(val items: List<AccountingPurchaseItemRequest>, val partyId: String? = null, val paidCents: Long? = null, val payMethod: String = "CASH")
-@Serializable data class AccountingPurchaseDto(val id: String = "", val number: Int = 0, val supplierName: String? = null, val currency: String = "EUR", val occurredAt: String = "", val totalCents: Long = 0, val paidCents: Long = 0)
+@Serializable data class AccountingPurchaseLineDto(val id: String = "", val name: String = "", val quantity: Int = 0, val returnedQuantity: Int = 0)
+@Serializable data class AccountingPurchaseDto(val id: String = "", val number: Int = 0, val supplierName: String? = null, val currency: String = "EUR", val occurredAt: String = "", val totalCents: Long = 0, val paidCents: Long = 0, val payMethod: String = "CASH", val lines: List<AccountingPurchaseLineDto> = emptyList())
+@Serializable data class AccountingReturnItemRequest(val lineId: String, val quantity: Int)
+@Serializable data class AccountingReturnRequest(val items: List<AccountingReturnItemRequest>, val refundMethod: String? = null)
 @Serializable data class AccountingBalanceDto(val currency: String = "EUR", val balanceCents: Long = 0)
 @Serializable data class AccountingPartyDto(val id: String = "", val kind: String = "CUSTOMER", val name: String = "", val phone: String? = null, val balances: List<AccountingBalanceDto> = emptyList())
 @Serializable data class AccountingPartyTotalDto(val currency: String = "EUR", val cents: Long = 0)
@@ -1349,7 +1352,7 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingMinRequest(val lowStockAt: Int)
 @Serializable data class AccountingSaleItemRequest(val productId: String, val quantity: Int)
 @Serializable data class AccountingSaleRequest(val items: List<AccountingSaleItemRequest>, val discountCents: Long? = null, val discountPercent: Double? = null, val customerName: String? = null, val payMethod: String = "CASH", val partyId: String? = null, val paidCents: Long? = null)
-@Serializable data class AccountingSaleLineDto(val name: String = "", val quantity: Int = 0, val unitPriceCents: Long = 0, val lineTotalCents: Long = 0)
+@Serializable data class AccountingSaleLineDto(val id: String = "", val name: String = "", val quantity: Int = 0, val returnedQuantity: Int = 0, val unitPriceCents: Long = 0, val lineTotalCents: Long = 0)
 @Serializable data class AccountingSaleDto(
     val id: String = "", val number: Int = 0, val customerName: String? = null, val currency: String = "EUR", val payMethod: String = "CASH",
     val occurredAt: String = "", val subtotalCents: Long = 0, val discountCents: Long = 0, val totalCents: Long = 0, val lines: List<AccountingSaleLineDto> = emptyList(),

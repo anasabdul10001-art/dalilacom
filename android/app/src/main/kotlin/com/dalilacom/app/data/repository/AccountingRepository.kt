@@ -37,6 +37,12 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun deleteEntry(id: String): Result<Unit> = result { api.deleteAccountingEntry(id) }
     suspend fun deleteProduct(id: String): Result<Unit> = result { api.deleteAccountingProduct(id) }
     suspend fun sell(id: String, quantity: Int, payMethod: String = "CASH"): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity, payMethod = payMethod)) }
+    suspend fun returnSale(id: String, items: List<Pair<String, Int>>, method: String): Result<Unit> = returned { api.returnAccountingSale(id, com.dalilacom.app.data.network.AccountingReturnRequest(items.map { com.dalilacom.app.data.network.AccountingReturnItemRequest(it.first, it.second) }, method)) }
+    suspend fun returnPurchase(id: String, items: List<Pair<String, Int>>, method: String): Result<Unit> = returned { api.returnAccountingPurchase(id, com.dalilacom.app.data.network.AccountingReturnRequest(items.map { com.dalilacom.app.data.network.AccountingReturnItemRequest(it.first, it.second) }, method)) }
+    private suspend fun returned(call: suspend () -> retrofit2.Response<okhttp3.ResponseBody>): Result<Unit> {
+        val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, AppStrings.get(R.string.s_0a2edd30))))
+    }
     suspend fun purchases(): List<com.dalilacom.app.data.network.AccountingPurchaseDto> = safeApiCall { api.accountingPurchases() }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun createPurchase(body: com.dalilacom.app.data.network.AccountingPurchaseRequest): Result<com.dalilacom.app.data.network.AccountingPurchaseDto> {
         val response = safeApiCall { api.createAccountingPurchase(body) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))

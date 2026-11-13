@@ -908,4 +908,12 @@
     <string name="accounting_buy_saved">انحفظت فاتورة الشراء رقم %1$d</string>
     <string name="accounting_buy_recent">آخر فواتير الشراء</string>
     <string name="accounting_buy_empty">ما في أصناف بالفاتورة بعد.</string>
+    <string name="accounting_ret_btn">مرتجع</string>
+    <string name="accounting_ret_title">تسجيل مرتجع</string>
+    <string name="accounting_ret_max">الحد الأعلى: %1$d</string>
+    <string name="accounting_ret_method">كيف ينرد المبلغ؟</string>
+    <string name="accounting_ret_save">تسجيل المرتجع</string>
+    <string name="accounting_ret_done">انسجّل المرتجع</string>
+    <string name="accounting_ret_none">اكتب كمية مرتجعة وحدة على الأقل</string>
+    <string name="accounting_ret_all">كل الكميات انرجعت من قبل</string>
 </resources>

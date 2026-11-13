@@ -2665,12 +2665,12 @@ function screenAccounting() {
     <div class="btn-row"><button class="btn soft" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button><button class="btn soft" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button></div>
     ${accountingCashCard(a.cash)}
     <div class="panel-title" style="margin-top:16px">${esc(t("accounting.recent"))}</div>
-    ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${accIsOut(e) ? 4 : 140}">${accIsOut(e) ? "↓" : "↑"}</span><div class="item-main">
+    ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${accOut(e) ? 4 : 140}">${accOut(e) ? "↓" : "↑"}</span><div class="item-main">
         <div class="item-title">${esc(e.description)}</div>
         <div class="item-sub">${esc(e.category)} · <bdi>${new Date(e.occurredAt).toLocaleDateString()}</bdi></div>
         ${e.source === "PAYROLL" || e.payMethod ? `<div class="chips">${e.source === "PAYROLL" ? uiChip(t("accounting.payrollLabel"), "warn") : ""}${e.payMethod ? uiChip(t("accounting.pay." + e.payMethod)) : ""}</div>` : ""}
         ${e.source === "MANUAL" || e.source === "INVOICE" ? `<div class="btn-row"><button class="btn small soft" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎ ${esc(t("accounting.edit"))}</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></div>` : ""}
-      </div><div class="item-end ${accIsOut(e) ? "out" : "in"}">${accIsOut(e) ? "−" : "+"}${esc(fmt(e.amountCents, e.currency))}</div></div>`).join("") || uiEmpty("🧾", t("accounting.noEntries"))}`,
+      </div><div class="item-end ${accOut(e) ? "out" : "in"}">${accOut(e) ? "−" : "+"}${esc(fmt(Math.abs(e.amountCents), e.currency))}</div></div>`).join("") || uiEmpty("🧾", t("accounting.noEntries"))}`,
     entry: `
     <div class="card"><div class="section-title">${esc(t("accounting.addEntry"))}</div>
       <div class="field"><label>${esc(t("accounting.entryType"))}</label><select id="acc-type"><option value="INCOME">${esc(t("accounting.income"))}</option><option value="EXPENSE">${esc(t("accounting.expenses"))}</option></select></div>
@@ -2716,6 +2716,40 @@ async function loadAccounting() {
   S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
 }
+/* ---- returns: goods back from a customer, or back to a supplier ---- */
+async function accountingReturnOpen(kind, id) {
+  const { ok, data } = await api("GET", `/accounting/${kind}/${id}`);
+  if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));
+  const isSale = kind === "sales";
+  const lines = data.lines.filter((l) => l.quantity - (l.returnedQuantity || 0) > 0);
+  if (!lines.length) return toast(t("accounting.ret.all"));
+  const box = document.createElement("div"); box.className = "ui-ask";
+  box.innerHTML = `<div class="ui-ask-card" role="dialog" aria-modal="true" style="max-height:85vh;overflow:auto"><label>${esc(t("accounting.ret.title"))}</label>
+    ${lines.map((l) => { const left = l.quantity - (l.returnedQuantity || 0); return `<div class="item"><div class="item-main"><div class="item-title">${esc(l.name)}</div><div class="item-sub">${esc(t(isSale ? "accounting.ret.sold" : "accounting.ret.bought"))}: ${l.quantity}${l.returnedQuantity ? " · " + esc(t("accounting.ret.back")) + ": " + l.returnedQuantity : ""}</div></div><input class="ret-in" data-line="${esc(l.id)}" data-max="${left}" inputmode="numeric" placeholder="0–${left}" style="width:84px" /></div>`; }).join("")}
+    <div class="field" style="margin-top:8px"><label>${esc(t("accounting.ret.method"))}</label><select id="ret-method">${["CASH", "BANK", "WALLET"].map((m) => `<option value="${m}" ${data.payMethod === m ? "selected" : ""}>${esc(t("accounting.pay." + m))}</option>`).join("")}</select></div>
+    <div class="field"><label>${esc(t("accounting.ret.note"))}</label><input id="ret-note" maxlength="240" /></div>
+    <div class="btn-row"><button class="btn small" data-ok>${esc(t("accounting.ret.save"))}</button><button class="btn small outline" data-no>${esc(t("accounting.ret.cancel"))}</button></div></div>`;
+  box.addEventListener("click", async (e) => {
+    if (e.target === box || e.target.closest("[data-no]")) return box.remove();
+    if (!e.target.closest("[data-ok]")) return;
+    const items = [...box.querySelectorAll(".ret-in")].map((i) => ({ lineId: i.dataset.line, quantity: Math.floor(Number(i.value)), max: Number(i.dataset.max) })).filter((i) => i.quantity > 0);
+    if (!items.length) return toast(t("accounting.ret.none"));
+    if (items.some((i) => i.quantity > i.max)) return toast(t("accounting.invalidAmount"));
+    const body = { items: items.map((i) => ({ lineId: i.lineId, quantity: i.quantity })), refundMethod: box.querySelector("#ret-method").value };
+    const note = box.querySelector("#ret-note").value.trim(); if (note) body.note = note;
+    const res = await api("POST", `/accounting/${kind}/${id}/returns`, body);
+    if (!res.ok) {
+      const d = res.data && res.data.error && res.data.error.details;
+      return toast(d && d.name ? t("accounting.ret.stockShort") + ": " + d.name : errMsg(res.data, t("accounting.deleteFailed")));
+    }
+    box.remove();
+    toast(t("accounting.ret.done", { total: fmt(res.data.totalCents, data.currency) }));
+    if (res.data.debtCents > 0) setTimeout(() => toast(t("accounting.ret.detail", { refund: fmt(res.data.refundCents, data.currency), debt: fmt(res.data.debtCents, data.currency) })), 1800);
+    S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+  });
+  document.body.appendChild(box);
+}
+
 /* ---- purchases from suppliers: stock in at cost, money out, a debt for what is not paid ---- */
 function buyState() { return (S._buy = S._buy || { items: [], partyId: "", paid: "", pay: "CASH", note: "", done: null }); }
 function buyTotal(st) { return st.items.reduce((sum, i) => sum + i.cost * i.qty, 0); }
@@ -2754,7 +2788,7 @@ function accountingBuyLines(d) {
 }
 function accountingBuyRecent(a) {
   const list = a.purchases || [];
-  return `<div class="panel-title" style="margin-top:16px">${esc(t("accounting.buy.recent"))}</div>` + (list.length === 0 ? uiEmpty("🧾", t("accounting.buy.noRecent")) : list.slice(0, 8).map((p) => `<div class="item"><span class="avatar" style="--h:30">#${p.number}</span><div class="item-main"><div class="item-title">${esc(p.supplierName || t("accounting.buy.number", { n: p.number }))}</div><div class="item-sub"><bdi>${esc(new Date(p.occurredAt).toLocaleDateString())}</bdi> · ${esc(t("accounting.pay." + p.payMethod))}</div><div class="btn-row"><button class="btn small soft" onclick="accountingBuyPrint('${p.id}')">🖨 ${esc(t("accounting.buy.print"))}</button></div></div><div class="item-end out">${esc(fmt(p.totalCents, p.currency))}</div></div>`).join(""));
+  return `<div class="panel-title" style="margin-top:16px">${esc(t("accounting.buy.recent"))}</div>` + (list.length === 0 ? uiEmpty("🧾", t("accounting.buy.noRecent")) : list.slice(0, 8).map((p) => `<div class="item"><span class="avatar" style="--h:30">#${p.number}</span><div class="item-main"><div class="item-title">${esc(p.supplierName || t("accounting.buy.number", { n: p.number }))}</div><div class="item-sub"><bdi>${esc(new Date(p.occurredAt).toLocaleDateString())}</bdi> · ${esc(t("accounting.pay." + p.payMethod))}</div><div class="btn-row"><button class="btn small soft" onclick="accountingBuyPrint('${p.id}')">🖨 ${esc(t("accounting.buy.print"))}</button><button class="btn small outline" onclick="accountingReturnOpen('purchases','${p.id}')">${esc(t("accounting.ret.btn"))}</button></div></div><div class="item-end out">${esc(fmt(p.totalCents, p.currency))}</div></div>`).join(""));
 }
 function accountingBuyPick(id) { const p = (S._accounting.products || []).find((x) => x.id === id); const el = document.getElementById("buy-cost"); if (p && el) el.value = (p.costCents / 100).toFixed(2); }
 function accountingBuyAdd() {
@@ -2909,7 +2943,7 @@ function accountingReportCard() {
   const prods = d.byProduct.length === 0 ? "" : `<div class="panel-title" style="margin-top:14px">${esc(t("accounting.rep.byProduct"))}</div><table class="plain-table" style="width:100%"><thead><tr><th>${esc(t("accounting.sale.product"))}</th><th>${esc(t("accounting.rep.qty"))}</th><th>${esc(t("accounting.rep.revenue"))}</th><th>${esc(t("accounting.rep.profit"))}</th></tr></thead><tbody>${d.byProduct.map((p) => `<tr><td>${esc(p.name)}</td><td>${p.quantity}</td><td>${esc(fmt(p.revenueCents, c))}</td><td style="color:${p.profitCents >= 0 ? "#2e7d32" : "#c62828"}"><b>${esc(fmt(p.profitCents, c))}</b></td></tr>`).join("")}</tbody></table><p class="muted" style="font-size:12px">${esc(t("accounting.rep.productNote"))}</p>`;
   return `<div class="card"><div class="section-title">${esc(t("accounting.rep.title"))}</div>${controls}
     <div class="tiles">${uiTile(t("accounting.income"), fmt(T.incomeCents, c), "income")}${uiTile(t("accounting.expenses"), fmt(T.expensesCents, c), "expense")}${uiTile(t("accounting.net"), fmt(T.netCents, c), "net", true)}
-      ${uiTile(t("accounting.rep.sales"), fmt(T.salesCents, c), "income")}${uiTile(t("accounting.rep.cogs"), fmt(T.costOfGoodsCents, c), "expense")}${uiTile(t("accounting.rep.gross"), fmt(T.grossProfitCents, c), "net")}${uiTile(t("accounting.rep.other"), fmt(T.otherExpensesCents, c), "expense")}
+      ${uiTile(t("accounting.rep.sales"), fmt(T.salesCents, c), "income")}${T.returnsCents ? uiTile(t("accounting.ret.btn"), fmt(T.returnsCents, c), "expense") : ""}${uiTile(t("accounting.rep.cogs"), fmt(T.costOfGoodsCents, c), "expense")}${uiTile(t("accounting.rep.gross"), fmt(T.grossProfitCents, c), "net")}${uiTile(t("accounting.rep.other"), fmt(T.otherExpensesCents, c), "expense")}
       ${T.invoices ? uiTile(t("accounting.rep.invoices"), String(T.invoices), "net") : ""}${T.discountCents ? uiTile(t("accounting.rep.discounts"), fmt(T.discountCents, c), "payroll") : ""}</div>
     <div class="btn-row"><button class="btn soft" onclick="accountingReportCsv()">⬇ ${esc(t("accounting.rep.csv"))}</button><button class="btn soft" onclick="accountingReportPrint()">🖨 ${esc(t("accounting.rep.print"))}</button></div></div>
     <div class="panel-title" style="margin-top:14px">${esc(t("accounting.rep.series"))}</div><div class="card">${bars}</div>
@@ -3023,7 +3057,7 @@ function accountingSaleLines(d) {
 }
 function accountingSaleRecent(a) {
   const list = a.sales || [];
-  return `<div class="panel-title" style="margin-top:16px">${esc(t("accounting.sale.recent"))}</div>` + (list.length === 0 ? uiEmpty("🧾", t("accounting.sale.noRecent")) : list.slice(0, 8).map((s) => `<div class="item"><span class="avatar" style="--h:140">#${s.number}</span><div class="item-main"><div class="item-title">${esc(s.customerName || t("accounting.sale.number", { n: s.number }))}</div><div class="item-sub"><bdi>${esc(new Date(s.occurredAt).toLocaleDateString())}</bdi> · ${esc(t("accounting.pay." + s.payMethod))}</div><div class="btn-row"><button class="btn small soft" onclick="accountingSalePrint('${s.id}')">🖨 ${esc(t("accounting.sale.print"))}</button></div></div><div class="item-end in">${esc(fmt(s.totalCents, s.currency))}</div></div>`).join(""));
+  return `<div class="panel-title" style="margin-top:16px">${esc(t("accounting.sale.recent"))}</div>` + (list.length === 0 ? uiEmpty("🧾", t("accounting.sale.noRecent")) : list.slice(0, 8).map((s) => `<div class="item"><span class="avatar" style="--h:140">#${s.number}</span><div class="item-main"><div class="item-title">${esc(s.customerName || t("accounting.sale.number", { n: s.number }))}</div><div class="item-sub"><bdi>${esc(new Date(s.occurredAt).toLocaleDateString())}</bdi> · ${esc(t("accounting.pay." + s.payMethod))}</div><div class="btn-row"><button class="btn small soft" onclick="accountingSalePrint('${s.id}')">🖨 ${esc(t("accounting.sale.print"))}</button><button class="btn small outline" onclick="accountingReturnOpen('sales','${s.id}')">${esc(t("accounting.ret.btn"))}</button></div></div><div class="item-end in">${esc(fmt(s.totalCents, s.currency))}</div></div>`).join(""));
 }
 function accountingSaleAdd() {
   const id = (document.getElementById("sale-product") || {}).value; const qty = Math.floor(Number((document.getElementById("sale-qty") || {}).value));
@@ -3123,6 +3157,8 @@ async function accountingCashOpening() {
   toast(t("accounting.cash.openingSaved")); await loadAccounting();
 }
 function accIsOut(e) { return e.type === "EXPENSE" || e.type === "PAYOUT"; }
+/** Money going out: an expense or a payout, or an income taken back by a return (a negative amount). */
+function accOut(e) { return accIsOut(e) !== (e.amountCents < 0); }
 function accountingCents(id) { return Math.round(Number(qs(id)?.value || 0) * 100); }
 async function accountingAddEntry() {
   const body = { type: qs("acc-type").value, category: qs("acc-category").value.trim(), description: qs("acc-description").value.trim(), amountCents: accountingCents("acc-amount"), currency: S.currency || "EUR", payMethod: qs("acc-pay")?.value || "CASH" };

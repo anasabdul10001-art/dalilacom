@@ -76,6 +76,11 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var editEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
     var editDescription by remember { mutableStateOf("") }
     var editAmount by remember { mutableStateOf("") }
+    // a return: which invoice (a sale or a purchase) and the lines with their quantities
+    var returnSale by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingSaleDto?>(null) }
+    var returnPurchase by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingPurchaseDto?>(null) }
+    val returnQty = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
+    var returnMethod by remember { mutableStateOf("CASH") }
     var purchases by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingPurchaseDto>>(emptyList()) }
     var buyBasket by remember { mutableStateOf<List<Triple<AccountingProductDto, Int, Long>>>(emptyList()) }
     var buyPick by remember { mutableStateOf<AccountingProductDto?>(null) }
@@ -325,6 +330,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                 Column(Modifier.weight(1f)) { Text("#" + sl.number + (sl.customerName?.let { " · $it" } ?: ""), style = MaterialTheme.typography.titleSmall); Text(sl.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 Text(money(sl.totalCents.toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
                                 TextButton(onClick = { savedSale = sl }) { Text(stringResource(R.string.accounting_sale_share)) }
+                                TextButton(onClick = { returnQty.clear(); returnMethod = sl.payMethod; returnSale = sl }) { Text(stringResource(R.string.accounting_ret_btn)) }
                             }
                         }
                     }
@@ -398,6 +404,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) { Text("#" + pu.number + (pu.supplierName?.let { " · $it" } ?: ""), style = MaterialTheme.typography.titleSmall); Text(pu.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 Text(money(pu.totalCents.toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                                TextButton(onClick = { returnQty.clear(); returnMethod = pu.payMethod; returnPurchase = pu }) { Text(stringResource(R.string.accounting_ret_btn)) }
                             }
                         }
                     }
@@ -631,7 +638,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         e.payMethod?.let { pm -> com.dalilacom.app.ui.common.StatusChip(stringResource(when (pm) { "BANK" -> R.string.accounting_pay_BANK; "WALLET" -> R.string.accounting_pay_WALLET; else -> R.string.accounting_pay_CASH })) }
                     }
                     Text(
-                        (if (e.type == "EXPENSE") "−" else "+") + money(e.amountCents) + " " + e.currency,
+                        (if ((e.type == "EXPENSE" || e.type == "PAYOUT") != (e.amountCents < 0)) "−" else "+") + money(kotlin.math.abs(e.amountCents)) + " " + e.currency,
                         color = if (e.type == "EXPENSE") androidx.compose.ui.graphics.Color(0xFFC62828) else androidx.compose.ui.graphics.Color(0xFF2E7D32),
                         fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
                     )
@@ -741,6 +748,46 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }) { Text(stringResource(R.string.accounting_save)) }
             },
             dismissButton = { OutlinedButton(onClick = { chargePartyId = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    if (returnSale != null || returnPurchase != null) {
+        val saleRet = returnSale
+        val purRet = returnPurchase
+        val rows: List<Triple<String, String, Int>> = saleRet?.lines?.map { Triple(it.id, it.name, it.quantity - it.returnedQuantity) } ?: purRet?.lines?.map { Triple(it.id, it.name, it.quantity - it.returnedQuantity) }.orEmpty()
+        AlertDialog(
+            onDismissRequest = { returnSale = null; returnPurchase = null },
+            title = { Text(stringResource(R.string.accounting_ret_title)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val open = rows.filter { it.third > 0 }
+                    if (open.isEmpty()) Text(stringResource(R.string.accounting_ret_all))
+                    open.forEach { (lineId, name, left) ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) { Text(name, style = MaterialTheme.typography.titleSmall); Text(stringResource(R.string.accounting_ret_max, left), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            OutlinedTextField(returnQty[lineId].orEmpty(), { returnQty[lineId] = it }, singleLine = true, modifier = Modifier.widthIn(min = 80.dp, max = 100.dp))
+                        }
+                    }
+                    Text(stringResource(R.string.accounting_ret_method), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("CASH" to R.string.accounting_pay_CASH, "BANK" to R.string.accounting_pay_BANK, "WALLET" to R.string.accounting_pay_WALLET).forEach { (code, label) ->
+                            if (returnMethod == code) Button(onClick = { returnMethod = code }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(stringResource(label), fontSize = 12.sp) } else OutlinedButton(onClick = { returnMethod = code }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(stringResource(label), fontSize = 12.sp) }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val items = rows.mapNotNull { (id, _, left) -> returnQty[id]?.trim()?.toIntOrNull()?.takeIf { it in 1..left }?.let { id to it } }
+                    if (items.isEmpty()) { message = context.getString(R.string.accounting_ret_none); return@Button }
+                    val sId = saleRet?.id; val pId = purRet?.id
+                    returnSale = null; returnPurchase = null
+                    scope.launch {
+                        val r = if (sId != null) container.accountingRepository.returnSale(sId, items, returnMethod) else container.accountingRepository.returnPurchase(pId!!, items, returnMethod)
+                        r.fold({ message = context.getString(R.string.accounting_ret_done); reload() }, { message = it.message ?: AppStrings.get(R.string.ship_failed) })
+                    }
+                }) { Text(stringResource(R.string.accounting_ret_save)) }
+            },
+            dismissButton = { OutlinedButton(onClick = { returnSale = null; returnPurchase = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
     savedSale?.let { sale ->

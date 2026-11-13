@@ -908,4 +908,12 @@
     <string name="accounting_buy_saved">Purchase invoice number %1$d saved</string>
     <string name="accounting_buy_recent">Recent purchase invoices</string>
     <string name="accounting_buy_empty">No items on the invoice yet.</string>
+    <string name="accounting_ret_btn">Return</string>
+    <string name="accounting_ret_title">Record a return</string>
+    <string name="accounting_ret_max">Up to %1$d</string>
+    <string name="accounting_ret_method">How is the money paid back?</string>
+    <string name="accounting_ret_save">Record the return</string>
+    <string name="accounting_ret_done">Return recorded</string>
+    <string name="accounting_ret_none">Type a quantity for at least one line</string>
+    <string name="accounting_ret_all">Everything was returned already</string>
 </resources>
