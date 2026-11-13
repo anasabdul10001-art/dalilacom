@@ -394,7 +394,7 @@ fun StoreScreen(
                 // the big banners (the admin's, any number, changing by themselves) or the default one
                 item {
                     val up = ui.deals.maxOfOrNull { it.offPercent() } ?: 0
-                    BannerPager(ui.banners, ui.bannerSeconds, up, onDeals = { vm.seeAll("deals") }, onInvite = { onBookAd("banner") }) { b ->
+                    BannerPager(ui.banners, ui.bannerSeconds, up, onDeals = { vm.seeAll("deals") }, onInvite = { onBookAd("banner") }, onPromo = onPromo) { b ->
                         vm.bannerClick(b.id)
                         val value = b.target.value.orEmpty()
                         when (b.target.type) {
@@ -505,10 +505,11 @@ private fun UnitPicker(allLabel: String, options: List<Pair<String, String>>, se
  */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun BannerPager(banners: List<com.dalilacom.app.data.network.StoreBannerDto>, seconds: Int, dealsUp: Int, onDeals: () -> Unit, onInvite: () -> Unit, onClick: (com.dalilacom.app.data.network.StoreBannerDto) -> Unit) {
-    val middle = maxOf(1, banners.size)
+private fun BannerPager(banners: List<com.dalilacom.app.data.network.StoreBannerDto>, seconds: Int, dealsUp: Int, onDeals: () -> Unit, onInvite: () -> Unit, onPromo: (String) -> Unit, onClick: (com.dalilacom.app.data.network.StoreBannerDto) -> Unit) {
+    val middle = banners.size
+    val promoKeys = listOf("accounting", "hr", "responder", "map", "card")
     val invite = banners.size < 3 // the last slide invites people to the big banner space
-    val count = 1 + middle + (if (invite) 1 else 0)
+    val count = 1 + middle + promoKeys.size + (if (invite) 1 else 0)
     val pager = androidx.compose.foundation.pager.rememberPagerState { count }
     LaunchedEffect(count, seconds) {
         while (true) {
@@ -520,8 +521,8 @@ private fun BannerPager(banners: List<com.dalilacom.app.data.network.StoreBanner
         androidx.compose.foundation.pager.HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth()) { page ->
             if (page == 0) BrandSlide(active = pager.currentPage == 0, onClick = onDeals)
             else if (invite && page == count - 1) InviteSlide(onInvite)
-            else if (banners.isEmpty()) DealsSlide(dealsUp, onDeals)
-            else BannerSlide(banners[page - 1], onClick)
+            else if (page <= middle) BannerSlide(banners[page - 1], onClick)
+            else PromoSlide(promoKeys[page - 1 - middle]) { onPromo(promoKeys[page - 1 - middle]) }
         }
         Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             repeat(count) { i ->
@@ -620,6 +621,31 @@ private fun BrandSlide(active: Boolean, onClick: () -> Unit) {
                     stringResource(R.string.store_shop_now), color = Color(0xFFC4552B), fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     modifier = Modifier.padding(top = 10.dp).graphicsLayer { alpha = btnIn; translationY = (1f - btnIn) * 14.dp.toPx() }.background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 8.dp),
                 )
+            }
+        }
+    }
+}
+
+/** A big slide that introduces one section of the app; the paid ones say the first months are free. */
+@Composable
+private fun PromoSlide(key: String, onClick: () -> Unit) {
+    val promo = STORE_PROMOS.first { it.key == key }
+    val colors = when (key) {
+        "accounting" -> listOf(Color(0xFF0F6B5A), Color(0xFF1FA58A))
+        "hr" -> listOf(Color(0xFF3B3FB8), Color(0xFF6A6FF0))
+        "responder" -> listOf(Color(0xFF7A2FB0), Color(0xFFB35BE0))
+        "map" -> listOf(Color(0xFF1A5FA8), Color(0xFF3A97E0))
+        else -> listOf(Color(0xFFC4552B), Color(0xFFF48050))
+    }
+    val trial = key == "accounting" || key == "hr" || key == "responder"
+    Box(Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(colors)).clickable(onClick = onClick)) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            Text(promo.icon, fontSize = 64.sp)
+            Column(Modifier.weight(1f)) {
+                if (trial) Text(stringResource(R.string.promo_free3), color = Color(0xFF3A2A00), fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, modifier = Modifier.background(Color(0xFFFFD54A), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 3.dp))
+                Text(stringResource(promo.title), color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 28.sp)
+                Text(stringResource(promo.sub), color = Color.White.copy(alpha = 0.92f), fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 18.sp)
+                Text(stringResource(if (trial) R.string.promo_start else R.string.promo_open), color = colors[0], fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp).background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 20.dp, vertical = 7.dp))
             }
         }
     }

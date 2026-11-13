@@ -2073,3 +2073,18 @@ html[dir="rtl"] .pd-seller-go::after { transform: scaleX(-1); }
 }
 @media (max-width: 420px) { .site-grid { grid-template-columns: 1fr; } .site-stats b { font-size: 20px; } }
 @media (prefers-reduced-motion: reduce) { .site *, .site *::before, .site *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } }
+
+/* store slider: slides that introduce the app's sections */
+.store-slide.promo-slide { gap: clamp(18px, 4vw, 54px); justify-content: center; overflow: hidden; }
+.promo-slide.pr-accounting { background-image: linear-gradient(120deg, #0f6b5a, #1fa58a 65%, #16806c); }
+.promo-slide.pr-hr { background-image: linear-gradient(120deg, #3b3fb8, #6a6ff0 65%, #4b50d4); }
+.promo-slide.pr-responder { background-image: linear-gradient(120deg, #7a2fb0, #b35be0 65%, #9640cc); }
+.promo-slide.pr-map { background-image: linear-gradient(120deg, #1a5fa8, #3a97e0 65%, #2478c4); }
+.promo-slide.pr-card { background-image: linear-gradient(120deg, #c4552b, #f48050 62%, #e0653a); }
+.promo-slide .bs-orb { position: absolute; border-radius: 50%; border: 2px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); pointer-events: none; }
+.promo-slide .bs-orb.o1 { width: 220px; height: 220px; inset-inline-start: -60px; top: -90px; }
+.promo-slide .bs-orb.o2 { width: 150px; height: 150px; inset-inline-end: 12%; bottom: -70px; }
+.promo-slide .ps-ico { position: relative; flex: none; font-size: clamp(64px, 14vw, 120px); line-height: 1; filter: drop-shadow(0 8px 18px rgba(0,0,0,.3)); }
+.promo-slide .bs-text { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.promo-slide h1 em { font-style: normal; opacity: .92; }
+.promo-slide .ps-badge { background: #ffd54a; color: #3a2a00; font-weight: 800; font-size: 12px; padding: 3px 10px; border-radius: 999px; }

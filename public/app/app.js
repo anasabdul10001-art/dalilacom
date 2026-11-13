@@ -4646,8 +4646,25 @@ function storeOff(p) {
 /** The slides: the Dalilacom brand slide first (moving), then the admin's banners (or the deals invitation while there are none). */
 function storeSlideList(st, home) {
   const list = st.banners && st.banners.list ? st.banners.list : [];
-  const rest = list.length ? list : [{ fallback: true, bg: "coral", title: t("store.heroBig"), subtitle: t("store.heroUpTo", { n: Math.max(0, ...home.deals.map(storeOff)) }), buttonText: t("store.shopNow"), target: { type: "deals" } }];
-  return [{ brand: true }, ...rest, ...(list.length < 3 ? [{ invite: true }] : [])];
+  // the admin's banners come first; then the app's own sections introduce themselves, so the slider is never just a deals shout
+  const promos = ["accounting", "hr", "responder", "map", "card"].map((key) => ({ promo: key }));
+  return [{ brand: true }, ...list, ...promos, ...(list.length < 3 ? [{ invite: true }] : [])];
+}
+
+/** A big slide that introduces one section of the app (the paid ones say the first months are free). */
+function storePromoSlide(key, on, i) {
+  const p = STORE_PROMOS.find((x) => x.key === key);
+  const trial = ["accounting", "hr", "responder"].includes(key);
+  return `
+    <button class="store-slide promo-slide pr-${key} ${on ? "on" : ""}" onclick="storeBannerGo(${i})">
+      <span class="bs-orb o1"></span><span class="bs-orb o2"></span>
+      <span class="ps-ico" aria-hidden="true">${p.icon}</span>
+      <span class="bs-text">
+        ${trial ? `<span class="ps-badge">${esc(t("promo.free3"))}</span>` : ""}
+        <h1>${esc(t("promo." + key + "T"))}<br><em>${esc(t("promo." + key + "S"))}</em></h1>
+        <span class="btn-pill">${esc(t(trial ? "promo.start" : "promo.open"))}</span>
+      </span>
+    </button>`;
 }
 
 function storeSlider(st, home) {
@@ -4664,7 +4681,7 @@ function storeSlider(st, home) {
             <h1>${esc(t("ads.inviteT"))}<br><em>${esc(t("ads.inviteS"))}</em></h1>
             <span class="btn-pill">${esc(t("ads.bookBanner"))}</span>
           </span>
-        </button>` : b.brand ? `
+        </button>` : b.promo ? storePromoSlide(b.promo, i === idx, i) : b.brand ? `
         <button class="store-slide brand-slide ${i === idx ? "on" : ""}" onclick="storeBannerGo(${i})" aria-label="DALILACOM">
           <span class="bs-orb o1"></span><span class="bs-orb o2"></span><span class="bs-orb o3"></span>
           <span class="bs-logo"><img src="${logoSrc("vertical", "white")}" alt="DALILACOM" /></span>
@@ -4719,6 +4736,7 @@ function storeBannerGo(i) {
   if (!b) return;
   if (b.brand) { storeSeeAll("deals"); return; }
   if (b.invite) { openAdBooking("banner"); return; }
+  if (b.promo) { const p = STORE_PROMOS.find((x) => x.key === b.promo); if (p) new Function(p.go)(); return; }
   if (b.id) api("POST", "/store/banners/" + b.id + "/click");
   const { type, value } = b.target || {};
   if (type === "product" && value) go("productDetail", { productId: value });
