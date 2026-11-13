@@ -271,6 +271,7 @@ interface ApiService {
     @POST("accounting/sales/{id}/returns") suspend fun returnAccountingSale(@Path("id") id: String, @Body body: AccountingReturnRequest): Response<okhttp3.ResponseBody>
     @POST("accounting/purchases/{id}/returns") suspend fun returnAccountingPurchase(@Path("id") id: String, @Body body: AccountingReturnRequest): Response<okhttp3.ResponseBody>
     @GET("accounting/recurring") suspend fun accountingRecurring(): Response<List<AccountingRecurringDto>>
+    @GET("accounting/statements") suspend fun accountingStatements(@Query("from") from: String, @Query("to") to: String): Response<AccountingStatementsDto>
     @GET("accounting/tax/rates") suspend fun accountingTaxRates(): Response<List<AccountingTaxRateDto>>
     @POST("accounting/tax/rates") suspend fun createAccountingTaxRate(@Body body: AccountingTaxRateRequest): Response<okhttp3.ResponseBody>
     @retrofit2.http.PATCH("accounting/tax/rates/{id}") suspend fun patchAccountingTaxRate(@Path("id") id: String, @Body body: AccountingTaxRatePatch): Response<okhttp3.ResponseBody>

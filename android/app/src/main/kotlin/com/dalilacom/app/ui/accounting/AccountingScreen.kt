@@ -81,6 +81,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var returnPurchase by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingPurchaseDto?>(null) }
     val returnQty = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
     var returnMethod by remember { mutableStateOf("CASH") }
+    var statements by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingStatementsDto?>(null) }
     var taxRates by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingTaxRateDto>>(emptyList()) }
     var taxSettings by remember { mutableStateOf(com.dalilacom.app.data.network.AccountingSettingsDto()) }
     var taxReport by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingTaxReportDto?>(null) }
@@ -160,6 +161,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         purchases = container.accountingRepository.purchases()
         recurring = container.accountingRepository.recurring()
         taxRates = container.accountingRepository.taxRates()
+        val stmToday = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+        statements = container.accountingRepository.statements(stmToday.withDayOfMonth(1).toString(), stmToday.toString())
         taxSettings = container.accountingRepository.settings() ?: taxSettings
         val todayUtc = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
         taxReport = container.accountingRepository.taxReport(todayUtc.withDayOfMonth(1).toString(), todayUtc.toString())
@@ -516,6 +519,45 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         Text(stringResource(R.string.accounting_tax_output) + ": " + money(tr.outputTaxCents.toInt()) + " " + tr.currency)
                         Text(stringResource(R.string.accounting_tax_input) + ": " + money(tr.inputTaxCents.toInt()) + " " + tr.currency)
                         Text(stringResource(if (tr.payableCents >= 0) R.string.accounting_tax_payable else R.string.accounting_tax_claim) + ": " + money(kotlin.math.abs(tr.payableCents).toInt()) + " " + tr.currency, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                    }
+                }
+            }
+        }
+        statements?.let { st ->
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val strong = androidx.compose.ui.text.font.FontWeight.ExtraBold
+                        @androidx.compose.runtime.Composable
+                        fun line(label: String, cents: Long, bold: Boolean = false) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(label, fontWeight = if (bold) strong else null, modifier = Modifier.weight(1f))
+                                Text((if (cents < 0) "−" else "") + money(kotlin.math.abs(cents).toInt()) + " " + st.currency, fontWeight = if (bold) strong else null)
+                            }
+                        }
+                        Text(stringResource(R.string.accounting_stm_title), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.accounting_stm_warn), style = MaterialTheme.typography.bodySmall, color = androidx.compose.ui.graphics.Color(0xFF8A6D00))
+                        val i = st.incomeStatement
+                        Text(stringResource(R.string.accounting_stm_income), style = MaterialTheme.typography.titleSmall)
+                        line(stringResource(R.string.accounting_stm_sales), i.salesCents)
+                        if (i.returnsCents != 0L) line(stringResource(R.string.accounting_stm_returns), -i.returnsCents)
+                        line(stringResource(R.string.accounting_stm_revenue), i.revenueCents, true)
+                        line(stringResource(R.string.accounting_stm_cogs), -i.costOfGoodsCents)
+                        line(stringResource(R.string.accounting_stm_gross), i.grossProfitCents, true)
+                        i.expenses.take(8).forEach { e -> line(e.category, -e.amountCents) }
+                        line(stringResource(R.string.accounting_stm_opex), -i.operatingExpensesCents)
+                        line(stringResource(R.string.accounting_stm_net), i.netProfitCents, true)
+                        val p = st.position
+                        Text(stringResource(R.string.accounting_stm_position), style = MaterialTheme.typography.titleSmall)
+                        line(stringResource(R.string.accounting_stm_cash), p.cashTotalCents)
+                        line(stringResource(R.string.accounting_stm_receivables), p.receivablesCents)
+                        line(stringResource(R.string.accounting_stm_inventory), p.inventoryCents)
+                        line(stringResource(R.string.accounting_stm_total_assets), p.totalAssetsCents, true)
+                        line(stringResource(R.string.accounting_stm_payables), p.payablesCents)
+                        if (p.taxPayableCents != 0L) line(stringResource(R.string.accounting_stm_tax_payable), p.taxPayableCents)
+                        line(stringResource(R.string.accounting_stm_total_liabilities), p.totalLiabilitiesCents, true)
+                        line(stringResource(R.string.accounting_stm_equity), p.equityCents, true)
+                        line(stringResource(R.string.accounting_stm_balancing), p.otherEquityCents)
                     }
                 }
             }

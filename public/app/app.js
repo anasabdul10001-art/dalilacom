@@ -2552,7 +2552,7 @@ async function loadOrders() {
 /* ---- The three sections (accounting, auto-responder, HR) work like small sites of their own: a tab bar whose first tab is a home page that is always there ---- */
 
 const SITES = {
-  accounting: { icon: "🧮", tabs: ["summary", "reports", "entry", "recurring", "sale", "purchases", "parties", "invoices", "stock", "tax"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
+  accounting: { icon: "🧮", tabs: ["summary", "reports", "entry", "recurring", "sale", "purchases", "parties", "invoices", "stock", "tax", "statements"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
   responder: { icon: "🤖", tabs: ["overview", "channels", "rules", "inbox"], art: ["chat", "orbit", "ai"], features: ["💬", "⚙️", "✨", "📥"], details: 4 },
   hr: { icon: "👥", tabs: [], art: ["team", "payslip", "calendar"], features: ["🕒", "🏖️", "💵", "🤝"] },
 };
@@ -2695,6 +2695,7 @@ function screenAccounting() {
     purchases: accountingBuyCard(a),
     recurring: accountingRecurringCard(a),
     tax: accountingTaxCard(a),
+    statements: accountingStatementsCard(),
     sale: accountingSaleCard(a),
     stock: `
     ${S._count ? accountingCountCard(a) : accountingLowCard(a)}
@@ -2718,6 +2719,62 @@ async function loadAccounting() {
   S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], recurring: recurring.ok ? recurring.data : [], taxRates: taxRates.ok ? taxRates.data : [], taxSettings: taxSettings.ok ? taxSettings.data : { pricesIncludeTax: true, defaultTaxRateId: null }, error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
 }
+/* ---- financial statements (experimental): the income statement of a period and a simplified financial position ---- */
+function stmState() {
+  if (!S._stm) { const today = repDay(0); S._stm = { from: today.slice(0, 8) + "01", to: today, data: null, loading: false }; }
+  return S._stm;
+}
+async function stmLoad() {
+  const r = stmState(); if (r.loading) return; r.loading = true;
+  const { ok, data } = await api("GET", `/accounting/statements?from=${r.from}&to=${r.to}`);
+  r.loading = false; r.data = ok ? data : { empty: true }; render();
+}
+function stmSet(key, value) { const r = stmState(); r[key] = value; r.data = null; render(); }
+function stmPreset(p) { const r = stmState(), today = repDay(0); r.to = today; r.from = p === "year" ? today.slice(0, 5) + "01-01" : p === "last30" ? repDay(-29) : today.slice(0, 8) + "01"; r.data = null; render(); }
+const stmRow = (label, cents, c, opts) => { opts = opts || {}; return `<div class="item" style="${opts.strong ? "font-weight:800;border-top:1px solid var(--line,#ece0dd)" : ""}"><div class="item-main"><div class="item-title" style="${opts.sub ? "padding-inline-start:14px;font-weight:500" : ""}">${esc(label)}</div></div><div class="item-end ${cents < 0 ? "out" : ""}">${esc(fmt(cents, c))}</div></div>`; };
+function stmHtml(d) {
+  const c = d.currency, I = d.incomeStatement, P = d.position;
+  const methodLabel = { CASH: "accounting.stm.cash", BANK: "accounting.stm.bank", WALLET: "accounting.stm.wallet" };
+  return `<div class="panel-title">${esc(t("accounting.stm.income"))}</div><div class="card">
+      ${stmRow(t("accounting.stm.sales"), I.salesCents, c, { sub: true })}${I.returnsCents ? stmRow(t("accounting.stm.returns"), -I.returnsCents, c, { sub: true }) : ""}${I.otherIncomeCents ? stmRow(t("accounting.stm.other"), I.otherIncomeCents, c, { sub: true }) : ""}
+      ${stmRow(t("accounting.stm.revenue"), I.revenueCents, c, { strong: true })}${stmRow(t("accounting.stm.cogs"), -I.costOfGoodsCents, c, { sub: true })}${stmRow(t("accounting.stm.gross"), I.grossProfitCents, c, { strong: true })}
+      ${I.expenses.length ? `<div class="muted" style="margin:8px 2px">${esc(t("accounting.stm.expenses"))}</div>${I.expenses.map((x) => stmRow(x.category, -x.amountCents, c, { sub: true })).join("")}${stmRow(t("accounting.stm.opex"), -I.operatingExpensesCents, c, { strong: true })}` : ""}
+      ${stmRow(t("accounting.stm.net"), I.netProfitCents, c, { strong: true })}</div>
+    <div class="panel-title" style="margin-top:14px">${esc(t("accounting.stm.position"))}</div><div class="card">
+      <div class="muted" style="margin:0 2px">${esc(t("accounting.stm.assets"))}</div>
+      ${P.cash.map((x) => stmRow(t(methodLabel[x.method]), x.cents, c, { sub: true })).join("")}${stmRow(t("accounting.stm.receivables"), P.receivablesCents, c, { sub: true })}${stmRow(t("accounting.stm.inventory"), P.inventoryCents, c, { sub: true })}${P.taxClaimCents ? stmRow(t("accounting.stm.taxClaim"), P.taxClaimCents, c, { sub: true }) : ""}
+      ${stmRow(t("accounting.stm.totalAssets"), P.totalAssetsCents, c, { strong: true })}
+      <div class="muted" style="margin:8px 2px">${esc(t("accounting.stm.liabilities"))}</div>
+      ${stmRow(t("accounting.stm.payables"), P.payablesCents, c, { sub: true })}${P.taxPayableCents ? stmRow(t("accounting.stm.taxPayable"), P.taxPayableCents, c, { sub: true }) : ""}${stmRow(t("accounting.stm.totalLiabilities"), P.totalLiabilitiesCents, c, { strong: true })}
+      ${stmRow(t("accounting.stm.equity"), P.equityCents, c, { strong: true })}${stmRow(t("accounting.stm.profitToDate"), P.profitToDateCents, c, { sub: true })}${stmRow(t("accounting.stm.balancing"), P.otherEquityCents, c, { sub: true })}
+      <p class="muted" style="font-size:12px;margin:8px 2px 0">${esc(t("accounting.stm.balancingHelp"))}</p></div>`;
+}
+function accountingStatementsCard() {
+  const r = stmState(); if (!r.data && !r.loading) stmLoad();
+  const d = r.data && !r.data.empty ? r.data : null;
+  const chips = [["month", "accounting.rep.month"], ["last30", "accounting.rep.last30"], ["year", ""]].map(([id, k]) => `<button class="chip" style="cursor:pointer" onclick="stmPreset('${id}')">${esc(id === "year" ? new Date().getUTCFullYear() : t(k))}</button>`).join("");
+  const head = `<div class="card"><div class="section-title">${esc(t("accounting.stm.title"))}</div><div class="badge warning" style="margin-bottom:10px;white-space:normal">${esc(t("accounting.stm.warn"))}</div>
+    <div class="chips" style="margin-bottom:10px">${chips}</div>
+    <div class="row"><div class="field"><label>${esc(t("accounting.rep.from"))}</label><input type="date" value="${esc(r.from)}" onchange="stmSet('from',this.value)" /></div><div class="field"><label>${esc(t("accounting.rep.to"))}</label><input type="date" value="${esc(r.to)}" onchange="stmSet('to',this.value)" /></div></div>
+    ${d && d.currencies.length > 1 ? `<div class="field"><label>${esc(t("accounting.rep.currency"))}</label><select onchange="stmCurrency(this.value)">${d.currencies.map((x) => `<option ${x === d.currency ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></div>` : ""}
+    ${d ? `<div class="btn-row"><button class="btn soft" onclick="stmPrint()">🖨 ${esc(t("accounting.stm.print"))}</button></div>` : ""}</div>`;
+  if (r.loading || !r.data) return head + `<div class="card">${skeleton("tiles")}</div>`;
+  if (!d) return head + `<div class="card">${uiEmpty("📊", t("accounting.rep.empty"))}</div>`;
+  return head + stmHtml(d);
+}
+async function stmCurrency(c) {
+  const r = stmState(); r.loading = true; render();
+  const { ok, data } = await api("GET", `/accounting/statements?from=${r.from}&to=${r.to}&currency=${encodeURIComponent(c)}`);
+  r.loading = false; r.data = ok ? data : { empty: true }; render();
+}
+function stmPrint() {
+  const d = stmState().data; if (!d || d.empty) return;
+  const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=900"); if (!win) return toast(t("accounting.allowPrint"));
+  const st = (S._accounting || {}).taxSettings || {};
+  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(t("accounting.stm.title"))}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222;max-width:760px;margin:auto}h1{color:#f48050}.item{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0}.item-end{font-weight:700}.panel-title{font-weight:800;margin-top:18px;color:#c4552b}.muted{color:#666}.card{margin:6px 0}.w{background:#fff3cd;padding:8px 12px;border-radius:8px}@media print{button{display:none}}</style><h1>${esc(t("accounting.stm.title"))}</h1><p>${st.businessName ? esc(st.businessName) + " · " : ""}${esc(d.from)} → ${esc(d.to)} · ${esc(d.currency)}</p><p class="w">${esc(t("accounting.stm.warn"))}</p>${stmHtml(d)}<script>window.onload=()=>window.print()<\/script></html>`);
+  win.document.close();
+}
+
 /* ---- tax (experimental): rates, how prices are written, a rate per product, and the tax report ---- */
 /** The tax of the lines of an invoice, the same way the server computes it (so the preview matches the saved invoice). */
 function taxPreview(items, discount, include, rateBpOf) {

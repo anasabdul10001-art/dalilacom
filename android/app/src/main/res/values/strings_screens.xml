@@ -952,4 +952,24 @@
     <string name="accounting_tax_in_invoice">منها ضريبة</string>
     <string name="accounting_tax_on_top">ضريبة مضافة</string>
     <string name="accounting_tax_report">تقرير الضريبة لهالشهر</string>
+    <string name="accounting_stm_title">الكشوف المالية (تجريبي)</string>
+    <string name="accounting_stm_warn">ميزة تجريبية: كشوف مبسّطة من الحركات اللي سجّلتها، مو ميزانية معتمدة. راجعها مع محاسبك قبل ما تعتمد عليها بأي تصريح أو قرض أو تقرير رسمي.</string>
+    <string name="accounting_stm_income">قائمة الدخل لهالشهر</string>
+    <string name="accounting_stm_position">المركز المالي المبسّط (لحد اليوم)</string>
+    <string name="accounting_stm_sales">المبيعات</string>
+    <string name="accounting_stm_returns">ناقص: المرتجعات</string>
+    <string name="accounting_stm_revenue">إجمالي الدخل</string>
+    <string name="accounting_stm_cogs">ناقص: تكلفة البضاعة المباعة</string>
+    <string name="accounting_stm_gross">الربح الإجمالي</string>
+    <string name="accounting_stm_opex">إجمالي المصاريف</string>
+    <string name="accounting_stm_net">صافي الربح</string>
+    <string name="accounting_stm_cash">النقد والبنك والمحافظ</string>
+    <string name="accounting_stm_receivables">ديون الزبائن لنا</string>
+    <string name="accounting_stm_inventory">المخزون بالتكلفة</string>
+    <string name="accounting_stm_total_assets">مجموع الموجودات</string>
+    <string name="accounting_stm_payables">ديون علينا للموردين</string>
+    <string name="accounting_stm_tax_payable">ضريبة محصّلة مستحقة</string>
+    <string name="accounting_stm_total_liabilities">مجموع المطلوبات</string>
+    <string name="accounting_stm_equity">حقوق صاحب النشاط</string>
+    <string name="accounting_stm_balancing">رأس المال والسحوبات والبضاعة الأولى (الفرق)</string>
 </resources>

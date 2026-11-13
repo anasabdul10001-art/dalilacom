@@ -952,4 +952,24 @@
     <string name="accounting_tax_in_invoice">of which tax</string>
     <string name="accounting_tax_on_top">Tax added</string>
     <string name="accounting_tax_report">Tax report for this month</string>
+    <string name="accounting_stm_title">Financial statements (experimental)</string>
+    <string name="accounting_stm_warn">An experimental feature: simplified statements from the entries you recorded, not an approved balance sheet. Check them with your accountant before you rely on them in a return, a loan or any official report.</string>
+    <string name="accounting_stm_income">Income statement for this month</string>
+    <string name="accounting_stm_position">Simplified financial position (as of today)</string>
+    <string name="accounting_stm_sales">Sales</string>
+    <string name="accounting_stm_returns">Less: returns</string>
+    <string name="accounting_stm_revenue">Total income</string>
+    <string name="accounting_stm_cogs">Less: cost of goods sold</string>
+    <string name="accounting_stm_gross">Gross profit</string>
+    <string name="accounting_stm_opex">Total expenses</string>
+    <string name="accounting_stm_net">Net profit</string>
+    <string name="accounting_stm_cash">Cash, bank and wallets</string>
+    <string name="accounting_stm_receivables">Customers owe us</string>
+    <string name="accounting_stm_inventory">Stock at cost</string>
+    <string name="accounting_stm_total_assets">Total assets</string>
+    <string name="accounting_stm_payables">We owe suppliers</string>
+    <string name="accounting_stm_tax_payable">Tax collected and owed</string>
+    <string name="accounting_stm_total_liabilities">Total liabilities</string>
+    <string name="accounting_stm_equity">Equity of the owner</string>
+    <string name="accounting_stm_balancing">Capital, withdrawals and the first stock (the difference)</string>
 </resources>

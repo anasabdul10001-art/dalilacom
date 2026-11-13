@@ -43,6 +43,7 @@ class AccountingRepository(private val api: ApiService) {
         val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, AppStrings.get(R.string.s_0a2edd30))))
     }
+    suspend fun statements(from: String, to: String) = safeApiCall { api.accountingStatements(from, to) }?.takeIf { it.isSuccessful }?.body()
     suspend fun taxRates(): List<com.dalilacom.app.data.network.AccountingTaxRateDto> = safeApiCall { api.accountingTaxRates() }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun settings() = safeApiCall { api.accountingSettings() }?.takeIf { it.isSuccessful }?.body()
     suspend fun taxReport(from: String, to: String) = safeApiCall { api.accountingTaxReport(from, to) }?.takeIf { it.isSuccessful }?.body()
