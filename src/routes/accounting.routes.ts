@@ -16,6 +16,13 @@ const MAX_ENTRY_CENTS = 9_000_000_000_000;
 
 // Amounts are stored 64-bit; they always fit a JSON number (the limit on one entry keeps even large sums exact).
 
+/** The next invoice number of an account. The lock makes two sales at the same moment take two different numbers. */
+async function nextSaleNumber(tx: Prisma.TransactionClient, userId: string) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"sale-number:" + userId}))`;
+  const last = await tx.accountingSale.aggregate({ where: { userId }, _max: { number: true } });
+  return (last._max.number ?? 0) + 1;
+}
+
 /** When a sale takes a product down to its minimum (or to nothing), tell the owner once: only when the level has just been crossed. */
 function alertLowStock(userId: string, crossed: { name: string; before: number; after: number; min: number }[]) {
   for (const c of crossed) {
@@ -275,6 +282,7 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
       if (!(await tx.product.updateMany({ where: { id, stock: { gte: parsed.data.quantity } }, data: { stock: { decrement: parsed.data.quantity }, soldCount: { increment: parsed.data.quantity } } })).count) return null;
       await tx.accountingStockMovement.create({ data: { userId: req.user!.id, storeProductId: id, action: "STOCK_OUT", quantity: parsed.data.quantity, note: parsed.data.note || "بيع مباشر" } });
       await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency, source: "MANUAL", sourceKey: ref, payMethod: parsed.data.payMethod, recordedById: req.user!.id } });
+      await tx.accountingSale.create({ data: { userId: req.user!.id, number: await nextSaleNumber(tx, req.user!.id), currency, subtotalCents: total, totalCents: total, payMethod: parsed.data.payMethod, recordedById: req.user!.id, lines: { create: [{ productId: `store:${product.id}`, name: product.name, quantity: parsed.data.quantity, unitPriceCents: unitPrice, unitCostCents: product.costPriceCents, lineTotalCents: total }] } } });
       if (product.costPriceCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costPriceCents * parsed.data.quantity, currency, source: "MANUAL", sourceKey: `${ref}:cost`, recordedById: req.user!.id } });
       return tx.product.findUniqueOrThrow({ where: { id } });
     });
@@ -296,6 +304,7 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
     const updated = await tx.accountingProduct.findUniqueOrThrow({ where: { id: product.id } });
     await tx.accountingStockMovement.create({ data: { userId: req.user!.id, productId: product.id, action: "STOCK_OUT", quantity: parsed.data.quantity, unitCostCents: product.costCents, note: parsed.data.note || "بيع" } });
     await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency: product.currency, source: "MANUAL", sourceKey: ref, payMethod: parsed.data.payMethod, recordedById: req.user!.id } });
+    await tx.accountingSale.create({ data: { userId: req.user!.id, number: await nextSaleNumber(tx, req.user!.id), currency: product.currency, subtotalCents: total, totalCents: total, payMethod: parsed.data.payMethod, recordedById: req.user!.id, lines: { create: [{ productId: product.id, name: product.name, quantity: parsed.data.quantity, unitPriceCents: unitPrice, unitCostCents: product.costCents, lineTotalCents: total }] } } });
     if (product.costCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costCents * parsed.data.quantity, currency: product.currency, source: "MANUAL", sourceKey: `${ref}:cost`, recordedById: req.user!.id } });
     return updated;
   });
@@ -304,6 +313,49 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
   res.status(201).json({ product: result, incomeCents: total, costCents: product.costCents * parsed.data.quantity, netCents: total - product.costCents * parsed.data.quantity });
 }));
 
+
+// ---- reports: totals, a series by day / week / month, by category and by product, for any period
+const COST_CATEGORY = "تكلفة البضاعة المباعة";
+const SALES_CATEGORY = "مبيعات";
+accountingRouter.get("/reports", route(async (req, res) => {
+  const parsed = z.object({
+    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    currency: currencyCode.optional(), groupBy: z.enum(["day", "week", "month"]).default("day"),
+  }).safeParse({ from: req.query.from, to: req.query.to, currency: req.query.currency, groupBy: req.query.groupBy ?? "day" });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id;
+  const from = new Date(`${parsed.data.from}T00:00:00.000Z`), to = new Date(`${parsed.data.to}T23:59:59.999Z`);
+  if (from > to || to.getTime() - from.getTime() > 800 * 86400000) return sendError(res, 400, "BAD_REQUEST", "الفترة الزمنية غير صحيحة");
+  const inRange = { userId, occurredAt: { gte: from, lte: to } };
+  const currencies = (await prisma.accountingEntry.groupBy({ by: ["currency"], where: inRange })).map((c) => c.currency);
+  const currency = parsed.data.currency ?? currencies[0] ?? "EUR";
+  const trunc = Prisma.raw(`'${parsed.data.groupBy}'`); // whitelisted by the schema above
+  const [byType, byCategory, series, products, saleTotals] = await Promise.all([
+    prisma.accountingEntry.groupBy({ by: ["type"], where: { ...inRange, currency }, _sum: { amountCents: true } }),
+    prisma.accountingEntry.groupBy({ by: ["category", "type"], where: { ...inRange, currency }, _sum: { amountCents: true }, _count: { _all: true }, orderBy: { _sum: { amountCents: "desc" } }, take: 40 }),
+    prisma.$queryRaw<{ period: Date; type: string; total: bigint }[]>`SELECT date_trunc(${trunc}, "occurredAt" AT TIME ZONE 'UTC') AS period, "type"::text AS type, SUM("amountCents") AS total FROM "AccountingEntry" WHERE "userId" = ${userId} AND "currency" = ${currency} AND "occurredAt" >= ${from} AND "occurredAt" <= ${to} GROUP BY 1, 2 ORDER BY 1`,
+    prisma.$queryRaw<{ name: string; qty: bigint; revenue: bigint; cost: bigint }[]>`SELECT l."name" AS name, SUM(l."quantity") AS qty, SUM(l."lineTotalCents") AS revenue, SUM(l."unitCostCents" * l."quantity") AS cost FROM "AccountingSaleLine" l JOIN "AccountingSale" s ON s."id" = l."saleId" WHERE s."userId" = ${userId} AND s."currency" = ${currency} AND s."occurredAt" >= ${from} AND s."occurredAt" <= ${to} GROUP BY l."name" ORDER BY revenue DESC LIMIT 50`,
+    prisma.accountingSale.aggregate({ where: { userId, currency, occurredAt: { gte: from, lte: to } }, _sum: { discountCents: true }, _count: { _all: true } }),
+  ]);
+  const amount = (t: string) => Number(byType.find((x) => x.type === t)?._sum.amountCents ?? 0);
+  const income = amount("INCOME"), expenses = amount("EXPENSE");
+  const cat = (c: string, t: string) => Number(byCategory.find((x) => x.category === c && x.type === t)?._sum.amountCents ?? 0);
+  const salesCents = cat(SALES_CATEGORY, "INCOME"), cogs = cat(COST_CATEGORY, "EXPENSE");
+  const periods = new Map<string, { period: string; incomeCents: number; expensesCents: number }>();
+  for (const r of series) {
+    const key = new Date(r.period).toISOString().slice(0, 10);
+    const row = periods.get(key) ?? { period: key, incomeCents: 0, expensesCents: 0 };
+    if (r.type === "INCOME") row.incomeCents += Number(r.total); else row.expensesCents += Number(r.total);
+    periods.set(key, row);
+  }
+  res.json({
+    from: parsed.data.from, to: parsed.data.to, currency, currencies, groupBy: parsed.data.groupBy,
+    totals: { incomeCents: income, expensesCents: expenses, netCents: income - expenses, salesCents, costOfGoodsCents: cogs, grossProfitCents: salesCents - cogs, otherExpensesCents: expenses - cogs, invoices: saleTotals._count._all, discountCents: Number(saleTotals._sum.discountCents ?? 0) },
+    series: [...periods.values()].map((p) => ({ ...p, netCents: p.incomeCents - p.expensesCents })),
+    byCategory: byCategory.map((c) => ({ category: c.category, type: c.type, amountCents: Number(c._sum.amountCents ?? 0), entries: c._count._all })),
+    byProduct: products.map((p) => ({ name: p.name, quantity: Number(p.qty), revenueCents: Number(p.revenue), costCents: Number(p.cost), profitCents: Number(p.revenue) - Number(p.cost) })),
+  });
+}));
 
 // ---- stock watch: what is low or out, the movements of a product, and a physical count (counted numbers against the book)
 accountingRouter.get("/stock/low", route(async (req, res) => {
@@ -421,9 +473,8 @@ accountingRouter.post("/sales", route(async (req, res) => {
             : await tx.accountingProduct.updateMany({ where: { id: l.id, quantity: { gte: l.quantity } }, data: { quantity: { decrement: l.quantity } } });
           if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي", { productId: l.key, name: l.name });
         }
-        const last = await tx.accountingSale.aggregate({ where: { userId }, _max: { number: true } });
         const created = await tx.accountingSale.create({
-          data: { userId, number: (last._max.number ?? 0) + 1, customerName: d.customerName || null, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
+          data: { userId, number: await nextSaleNumber(tx, userId), customerName: d.customerName || null, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
             lines: { create: lines.map((l) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitPriceCents: l.unitPrice, unitCostCents: l.unitCost, lineTotalCents: l.unitPrice * l.quantity })) } },
           include: { lines: true },
         });
