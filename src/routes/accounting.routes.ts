@@ -37,6 +37,8 @@ export const accountingRouter = Router();
 accountingRouter.use(requireAuth, route(async (req, res, next) => {
   const active = await prisma.platformSubscription.findFirst({ where: { userId: req.user!.id, status: "ACTIVE", OR: [{ currentPeriodEnd: null }, { currentPeriodEnd: { gt: new Date() } }], plan: { service: "ACCOUNTING" } }, select: { id: true } });
   if (!active) return sendError(res, 402, "ACCOUNTING_PLAN_REQUIRED", "المحاسبة تحتاج باقة فعّالة أو فترة تجربة. افتح صفحة الباقات من حسابك.");
+  // entries that repeat by themselves are written when their day has come, before anything is read
+  if (req.method === "GET") await runRecurring(req.user!.id).catch(() => undefined);
   next();
 }));
 
@@ -726,6 +728,100 @@ accountingRouter.post("/purchases/:id/returns", route(async (req, res) => {
   if (done instanceof SaleError) return sendError(res, done.status, done.code, done.message, done.details);
   if (done instanceof Error) throw done;
   res.status(201).json({ id: done.id, totalCents: total, refundCents: refund, debtCents: debt });
+}));
+
+// ---- entries that repeat by themselves (weekly, monthly, yearly): written when their day has come, never twice
+const dayStr = (d: Date) => d.toISOString().slice(0, 10);
+const daysIn = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+/** The date after `due` for a frequency; monthly and yearly keep the day of the month they started on (a short month takes its last day). */
+function nextOccurrence(due: string, frequency: "WEEKLY" | "MONTHLY" | "YEARLY", anchorDay: number) {
+  const [y, m, d] = due.split("-").map(Number);
+  if (frequency === "WEEKLY") return dayStr(new Date(Date.UTC(y, m - 1, d + 7)));
+  const months = frequency === "MONTHLY" ? 1 : 12;
+  const total = (m - 1) + months;
+  const ny = y + Math.floor(total / 12), nm = total % 12;
+  return dayStr(new Date(Date.UTC(ny, nm, Math.min(anchorDay, daysIn(ny, nm)))));
+}
+const MAX_CATCH_UP = 36;
+
+/** Writes the entry of every due date up to today (at most a few years at once), advances the next date, and tells the owner once. */
+export async function runRecurring(userId: string) {
+  const today = dayStr(new Date());
+  const due = await prisma.accountingRecurring.findMany({ where: { userId, active: true, nextDue: { lte: today } } });
+  let written = 0; const names: string[] = [];
+  for (const r of due) {
+    let next = r.nextDue, count = 0;
+    while (next <= today && (!r.endDate || next <= r.endDate) && count < MAX_CATCH_UP) {
+      const when = new Date(`${next}T12:00:00.000Z`);
+      try {
+        await prisma.accountingEntry.create({ data: { userId, type: r.type, category: r.category, description: r.description, amountCents: r.amountCents, currency: r.currency, occurredAt: when, source: "RECURRING", sourceKey: `recurring:${r.id}:${next}`, payMethod: r.payMethod, recordedById: userId } });
+        count++;
+      } catch (err) {
+        if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) throw err; // already written for that date
+      }
+      next = nextOccurrence(next, r.frequency, r.anchorDay);
+    }
+    const finished = !!r.endDate && next > r.endDate;
+    await prisma.accountingRecurring.update({ where: { id: r.id }, data: { nextDue: next, lastRunAt: new Date(), ...(finished ? { active: false } : {}) } });
+    if (count > 0) { written += count; names.push(r.description); }
+  }
+  if (written > 0) void notify({ userId, type: "SYSTEM", email: false, title: "انسجّلت حركات متكررة", body: names.slice(0, 3).join("، "), data: { kind: "accounting-recurring", count: written } });
+  return written;
+}
+
+const recurringSchema = z.object({
+  type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
+  category: z.string().trim().min(1).max(50),
+  description: z.string().trim().min(2).max(240),
+  amountCents: z.number().int().positive().max(MAX_ENTRY_CENTS),
+  currency: currencyCode.default("EUR"),
+  payMethod: z.enum(["CASH", "BANK", "WALLET"]).optional(),
+  frequency: z.enum(["WEEKLY", "MONTHLY", "YEARLY"]),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  backfill: z.boolean().default(false), // a start date in the past: write the missed ones too (otherwise it starts from the next one)
+});
+const plainRecurring = (r: { id: string; type: string; category: string; description: string; amountCents: bigint; currency: string; payMethod: string | null; frequency: string; nextDue: string; endDate: string | null; active: boolean }) => ({ id: r.id, type: r.type, category: r.category, description: r.description, amountCents: Number(r.amountCents), currency: r.currency, payMethod: r.payMethod, frequency: r.frequency, nextDue: r.nextDue, endDate: r.endDate, active: r.active });
+
+accountingRouter.get("/recurring", route(async (req, res) => {
+  const rows = await prisma.accountingRecurring.findMany({ where: { userId: req.user!.id }, orderBy: [{ active: "desc" }, { nextDue: "asc" }], take: 200 });
+  res.json(rows.map(plainRecurring));
+}));
+
+accountingRouter.post("/recurring", route(async (req, res) => {
+  const parsed = recurringSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const d = parsed.data;
+  if (Number.isNaN(new Date(`${d.startDate}T00:00:00.000Z`).getTime())) return sendError(res, 400, "BAD_REQUEST", "التاريخ غير صحيح");
+  if (d.endDate && d.endDate < d.startDate) return sendError(res, 400, "BAD_REQUEST", "تاريخ النهاية قبل تاريخ البداية");
+  const anchorDay = Number(d.startDate.slice(8, 10));
+  // not written for the past unless asked: the first date to write is the first one on or after today
+  let nextDue = d.startDate;
+  const today = dayStr(new Date());
+  if (!d.backfill) { let guard = 0; while (nextDue < today && guard++ < 5000) nextDue = nextOccurrence(nextDue, d.frequency, anchorDay); }
+  const row = await prisma.accountingRecurring.create({ data: { userId: req.user!.id, type: d.type, category: d.category, description: d.description, amountCents: d.amountCents, currency: d.currency, payMethod: d.payMethod ?? null, frequency: d.frequency, anchorDay, nextDue, endDate: d.endDate ?? null } });
+  await runRecurring(req.user!.id).catch(() => undefined);
+  res.status(201).json(plainRecurring((await prisma.accountingRecurring.findUnique({ where: { id: row.id } })) ?? row));
+}));
+
+accountingRouter.patch("/recurring/:id", route(async (req, res) => {
+  const parsed = z.object({ description: z.string().trim().min(2).max(240).optional(), category: z.string().trim().min(1).max(50).optional(), amountCents: z.number().int().positive().max(MAX_ENTRY_CENTS).optional(), payMethod: z.enum(["CASH", "BANK", "WALLET"]).nullable().optional(), endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), active: z.boolean().optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const own = await prisma.accountingRecurring.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
+  if (!own) return sendError(res, 404, "NOT_FOUND", "غير موجود");
+  const data: Prisma.AccountingRecurringUpdateInput = { ...parsed.data };
+  // resumed after a pause: it starts again from the next date, it does not write what was missed while it was off
+  if (parsed.data.active === true && !own.active) { const today = dayStr(new Date()); let nd = own.nextDue, guard = 0; while (nd < today && guard++ < 5000) nd = nextOccurrence(nd, own.frequency, own.anchorDay); data.nextDue = nd; }
+  const row = await prisma.accountingRecurring.update({ where: { id: own.id }, data });
+  res.json(plainRecurring(row));
+}));
+
+// Stops it for good. The entries it already wrote stay.
+accountingRouter.delete("/recurring/:id", route(async (req, res) => {
+  const own = await prisma.accountingRecurring.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true } });
+  if (!own) return sendError(res, 404, "NOT_FOUND", "غير موجود");
+  await prisma.accountingRecurring.delete({ where: { id: own.id } });
+  res.json({ deleted: true });
 }));
 
 // ---- a sales invoice: several products in one sale, a discount, a customer name, a number of its own

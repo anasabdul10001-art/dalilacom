@@ -133,6 +133,7 @@ model User {
   accountingPurchases       AccountingPurchase[]
   accountingSaleReturns     AccountingSaleReturn[]
   accountingPurchaseReturns AccountingPurchaseReturn[]
+  accountingRecurring       AccountingRecurring[]
   accountingMovements       AccountingStockMovement[]
   accountingInvoiceDrafts   AccountingInvoiceDraft[]
   hrCompany                 HrCompany?                 @relation("HrCompanyOwner")
@@ -1029,6 +1030,36 @@ model AccountingPurchaseReturnLine {
 
   @@index([returnId])
   @@index([purchaseLineId])
+}
+
+enum AccountingRecurringFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// An entry that writes itself on its due dates. nextDue is the next date (YYYY-MM-DD) it has not been written for.
+model AccountingRecurring {
+  id          String                       @id @default(uuid())
+  userId      String
+  type        AccountingEntryType // INCOME or EXPENSE
+  category    String
+  description String
+  amountCents BigInt
+  currency    String
+  payMethod   AccountingPayMethod?
+  frequency   AccountingRecurringFrequency
+  anchorDay   Int // the day of the month it falls on (monthly and yearly)
+  nextDue     String
+  endDate     String?
+  active      Boolean                      @default(true)
+  lastRunAt   DateTime?
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, active, nextDue])
 }
 
 model AccountingPurchase {
