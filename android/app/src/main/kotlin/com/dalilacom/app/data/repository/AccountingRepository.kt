@@ -37,6 +37,14 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun deleteEntry(id: String): Result<Unit> = result { api.deleteAccountingEntry(id) }
     suspend fun deleteProduct(id: String): Result<Unit> = result { api.deleteAccountingProduct(id) }
     suspend fun sell(id: String, quantity: Int, payMethod: String = "CASH"): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity, payMethod = payMethod)) }
+    suspend fun lowStock() = safeApiCall { api.accountingLowStock() }?.takeIf { it.isSuccessful }?.body()
+    suspend fun movements(id: String) = safeApiCall { api.accountingMovements(id) }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    suspend fun countStock(items: List<Pair<String, Int>>): Result<com.dalilacom.app.data.network.AccountingCountResultDto> {
+        val response = safeApiCall { api.accountingStockCount(com.dalilacom.app.data.network.AccountingCountRequest(items.map { com.dalilacom.app.data.network.AccountingCountItemRequest(it.first, it.second) })) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(AppStrings.get(R.string.s_0a2edd30)))
+    }
+    suspend fun setMin(id: String, value: Int): Result<Unit> = result { api.setAccountingProductMin(id, com.dalilacom.app.data.network.AccountingMinRequest(value)) }
     suspend fun sales(): List<com.dalilacom.app.data.network.AccountingSaleDto> = safeApiCall { api.accountingSales() }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun createSale(body: com.dalilacom.app.data.network.AccountingSaleRequest): Result<com.dalilacom.app.data.network.AccountingSaleDto> {
         val response = safeApiCall { api.createAccountingSale(body) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))

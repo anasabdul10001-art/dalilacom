@@ -2661,6 +2661,7 @@ function screenAccounting() {
     ${totals.length ? totals.map(x => `<div class="muted" style="margin:6px 2px"><b>${esc(x.currency)}</b></div>
       <div class="tiles">${uiTile(t("accounting.income"), fmt(x.incomeCents, x.currency), "income")}${uiTile(t("accounting.expenses"), fmt(x.expensesCents, x.currency), "expense")}${uiTile(t("accounting.net"), fmt(x.netCents, x.currency), "net", !(x.payrollCents > 0))}${x.payrollCents > 0 ? uiTile(t("accounting.payrollLabel"), fmt(x.payrollCents, x.currency), "payroll") : ""}</div>`).join("") : uiEmpty("📒", t("accounting.noEntries"))}
     <p class="muted">${esc(t("accounting.inventory"))}: ${a.summary?.inventory?.products || 0} ${esc(t("accounting.products"))} · ${esc(t("accounting.units"))}: ${a.summary?.inventory?.units || 0}</p>
+    ${a.low && (a.low.out + a.low.low) ? `<div class="badge warning" style="margin:6px 0;cursor:pointer" onclick="setSiteTab('accounting','stock')">${esc(t("accounting.low.title"))}: ${a.low.out ? esc(t("accounting.low.out")) + " " + a.low.out : ""}${a.low.out && a.low.low ? " · " : ""}${a.low.low ? esc(t("accounting.low.low")) + " " + a.low.low : ""}</div>` : ""}
     <div class="btn-row"><button class="btn soft" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button><button class="btn soft" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button></div>
     ${accountingCashCard(a.cash)}
     <div class="panel-title" style="margin-top:16px">${esc(t("accounting.recent"))}</div>
@@ -2691,6 +2692,7 @@ function screenAccounting() {
     </div>`,
     sale: accountingSaleCard(a),
     stock: `
+    ${S._count ? accountingCountCard(a) : accountingLowCard(a)}
     <div class="card"><div class="section-title">${esc(t("accounting.inventory"))} (${a.products?.length || 0})</div>
       <div class="field"><label>${esc(t("accounting.searchBarcode"))}</label><div style="display:flex;gap:8px"><input id="acc-barcode" autocomplete="off"/><button class="btn outline" onclick="accountingScan()">${esc(t("accounting.scan"))}</button></div></div>
       <div id="acc-scanner" hidden><video id="acc-video" playsinline style="width:100%;max-height:220px"></video><button class="btn outline" onclick="accountingStopScan()">${esc(t("accounting.stopScan"))}</button></div>
@@ -2699,18 +2701,59 @@ function screenAccounting() {
       <div class="field"><label>${esc(t("accounting.costPrice"))}</label><input id="acc-cost-price" type="number" min="0" step="0.01" /></div>
       <div class="field"><label>${esc(t("accounting.quantity"))}</label><input id="acc-quantity" type="number" min="0" step="1" value="0" /></div>
       <button class="btn" onclick="accountingAddProduct()">${esc(t("accounting.addProduct"))}</button>
-      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingDeleteProduct('${p.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button>`}</div></div>`).join("")}
+      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingSetMin('${p.id}')">${esc(t("accounting.low.min"))}${p.lowStockAt ? ": " + p.lowStockAt : ""}</button>`}<button class="btn small outline" onclick="accountingMoves('${p.id}')">${esc(t("accounting.moves"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingDeleteProduct('${p.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button>`}</div></div>`).join("")}
     </div>`,
   };
   return siteShell("accounting", tab, (cards[tab] || cards.summary) + errorBanner());
 }
 async function loadAccounting() {
   const cashDay = S._accCashDay || new Date().toISOString().slice(0, 10);
-  const [summary, products, cash, sales] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales")]);
+  const [summary, products, cash, sales, low] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low")]);
   const requiresPlan = summary.status === 402 || products.status === 402;
-  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
+  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
 }
+/* ---- stock watch: low and out, the movements of a product, a physical count ---- */
+function accountingLowCard(a) {
+  const low = a.low;
+  const head = `<div class="panel-title">${esc(t("accounting.low.title"))}</div>`;
+  if (!low) return "";
+  const list = low.items.length === 0 ? `<p class="muted">${esc(t("accounting.low.none"))}</p>` : low.items.map((i) => `<div class="item"><span class="avatar" style="--h:${i.level === "OUT" ? 4 : 40}">${i.level === "OUT" ? "!" : "↓"}</span><div class="item-main"><div class="item-title">${esc(i.name)}</div><div class="item-sub">${esc(t("accounting.low.left", { n: i.quantity }))}${i.lowStockAt ? " · " + esc(t("accounting.low.min")) + ": " + i.lowStockAt : ""}</div><div class="chips">${uiChip(t(i.level === "OUT" ? "accounting.low.out" : "accounting.low.low"), i.level === "OUT" ? "bad" : "warn")}</div></div></div>`).join("");
+  return `${head}<div class="card">${list}<div class="btn-row"><button class="btn small soft" onclick="accountingCountStart()">${esc(t("accounting.count.start"))}</button></div></div>`;
+}
+async function accountingSetMin(id) {
+  const p = (S._accounting?.products || []).find((x) => x.id === id); if (!p) return;
+  const raw = await uiPrompt(t("accounting.low.minPrompt"), String(p.lowStockAt || 0), { numeric: true }); if (raw === null) return;
+  const v = Math.floor(Number(raw)); if (!(v >= 0)) return toast(t("accounting.invalidAmount"));
+  const res = await api("PATCH", `/accounting/products/${id}`, { lowStockAt: v });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.low.minSaved")); S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+async function accountingMoves(id) {
+  const { ok, data } = await api("GET", `/accounting/products/${id}/movements`);
+  if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));
+  const box = document.createElement("div"); box.className = "ui-ask";
+  box.innerHTML = `<div class="ui-ask-card" role="dialog" aria-modal="true" style="max-height:80vh;overflow:auto"><label>${esc(t("accounting.moves"))}</label>${data.length === 0 ? `<p class="muted">${esc(t("accounting.moves.none"))}</p>` : data.map((m) => `<div class="item"><div class="item-main"><div class="item-title">${esc(t("accounting.move." + m.action))}: ${m.action === "ADJUSTMENT" ? "→ " : (m.action === "STOCK_OUT" ? "−" : "+")}${m.quantity}</div><div class="item-sub"><bdi>${esc(new Date(m.occurredAt).toLocaleString())}</bdi>${m.note ? " · " + esc(m.note) : ""}</div></div></div>`).join("")}<div class="btn-row"><button class="btn small outline" data-no>${esc(t("accounting.moves.close"))}</button></div></div>`;
+  box.addEventListener("click", (e) => { if (e.target === box || e.target.closest("[data-no]")) box.remove(); });
+  document.body.appendChild(box);
+}
+function accountingCountStart() { S._count = true; render(); }
+function accountingCountCancel() { S._count = false; render(); }
+function accountingCountCard(a) {
+  const rows = (a.products || []).filter((p) => !p.isStoreProduct || true).map((p) => `<div class="item"><div class="item-main"><div class="item-title">${esc(p.name)}</div><div class="item-sub">${esc(t("accounting.count.book"))}: ${p.quantity}</div></div><input class="count-in" data-id="${esc(p.id)}" inputmode="numeric" placeholder="${esc(t("accounting.count.counted"))}" style="width:92px" /></div>`).join("");
+  return `<div class="card"><div class="section-title">${esc(t("accounting.count.start"))}</div><p class="muted">${esc(t("accounting.count.help"))}</p>${rows}<div class="btn-row"><button class="btn" onclick="accountingCountApply(this)">${esc(t("accounting.count.apply"))}</button><button class="btn outline" onclick="accountingCountCancel()">${esc(t("accounting.count.cancel"))}</button></div></div>`;
+}
+async function accountingCountApply(btn) {
+  const items = [...document.querySelectorAll(".count-in")].filter((i) => i.value.trim() !== "").map((i) => ({ productId: i.dataset.id, countedQuantity: Math.floor(Number(i.value)) })).filter((i) => i.countedQuantity >= 0);
+  if (!items.length) return toast(t("accounting.invalidAmount"));
+  const res = await uiBusy(btn, () => api("POST", "/accounting/stock/count", { items }));
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  const d = res.data;
+  toast(d.changed.length ? t("accounting.count.done", { n: d.changed.length }) : t("accounting.count.same"));
+  if (d.skipped.length) setTimeout(() => toast(t("accounting.count.skipped", { n: d.skipped.length })), 1800);
+  S._count = false; S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+
 /* ---- a sales invoice: several products in one sale ---- */
 function saleState() { return (S._sale = S._sale || { items: [], customer: "", discount: "", mode: "amount", pay: "CASH", done: null }); }
 function saleSubtotal(st) { return st.items.reduce((sum, i) => sum + i.price * i.qty, 0); }

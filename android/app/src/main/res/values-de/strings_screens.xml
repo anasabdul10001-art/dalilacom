@@ -470,4 +470,24 @@
     <string name="accounting_sale_close">Done</string>
     <string name="accounting_sale_stock">In stock</string>
     <string name="accounting_sale_item">Item</string>
+    <string name="accounting_low_title">Stock alerts</string>
+    <string name="accounting_low_none">Nothing is running low. All good.</string>
+    <string name="accounting_low_out">Out</string>
+    <string name="accounting_low_low">Running low</string>
+    <string name="accounting_low_left">In stock: %1$d</string>
+    <string name="accounting_low_min">Alert level</string>
+    <string name="accounting_low_min_prompt">Alert me when the quantity falls to (0 = no alert)</string>
+    <string name="accounting_moves">Movements</string>
+    <string name="accounting_moves_none">No movements for this product yet.</string>
+    <string name="accounting_move_STOCK_IN">In</string>
+    <string name="accounting_move_STOCK_OUT">Out</string>
+    <string name="accounting_move_ADJUSTMENT">Set by a count</string>
+    <string name="accounting_count_start">Physical count</string>
+    <string name="accounting_count_help">Type the quantity you counted on the shelf for each product. Any difference is kept in the movements.</string>
+    <string name="accounting_count_apply">Apply the count</string>
+    <string name="accounting_count_cancel">Cancel the count</string>
+    <string name="accounting_count_book">In the books</string>
+    <string name="accounting_count_counted">Counted</string>
+    <string name="accounting_count_done">Count done: %1$d products changed</string>
+    <string name="accounting_count_same">No differences, the books match</string>
 </resources>

@@ -842,4 +842,24 @@
     <string name="accounting_sale_close">تم</string>
     <string name="accounting_sale_stock">الموجود</string>
     <string name="accounting_sale_item">الصنف</string>
+    <string name="accounting_low_title">تنبيهات المخزون</string>
+    <string name="accounting_low_none">ما في منتجات ناقصة. كل شي تمام.</string>
+    <string name="accounting_low_out">خلصت</string>
+    <string name="accounting_low_low">قاربت تخلص</string>
+    <string name="accounting_low_left">الموجود: %1$d</string>
+    <string name="accounting_low_min">حد التنبيه</string>
+    <string name="accounting_low_min_prompt">نبّهني لما تنزل الكمية لـ (0 = بدون تنبيه)</string>
+    <string name="accounting_moves">الحركات</string>
+    <string name="accounting_moves_none">ما في حركات لهالمنتج بعد.</string>
+    <string name="accounting_move_STOCK_IN">إدخال</string>
+    <string name="accounting_move_STOCK_OUT">إخراج</string>
+    <string name="accounting_move_ADJUSTMENT">تعديل بالجرد</string>
+    <string name="accounting_count_start">جرد فعلي</string>
+    <string name="accounting_count_help">اكتب الكمية اللي عددتها بالرف لكل منتج. أي فرق بينسجّل بسجل الحركات.</string>
+    <string name="accounting_count_apply">تطبيق الجرد</string>
+    <string name="accounting_count_cancel">إلغاء الجرد</string>
+    <string name="accounting_count_book">بالدفتر</string>
+    <string name="accounting_count_counted">المعدود</string>
+    <string name="accounting_count_done">انجرد: %1$d منتج اتغيّر</string>
+    <string name="accounting_count_same">ما في فروقات، الدفتر مظبوط</string>
 </resources>

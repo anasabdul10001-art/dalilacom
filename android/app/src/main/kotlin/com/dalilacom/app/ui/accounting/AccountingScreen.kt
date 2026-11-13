@@ -3,6 +3,9 @@ package com.dalilacom.app.ui.accounting
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Column
@@ -72,6 +75,13 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var editEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
     var editDescription by remember { mutableStateOf("") }
     var editAmount by remember { mutableStateOf("") }
+    var low by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingLowDto?>(null) }
+    var countMode by remember { mutableStateOf(false) }
+    val counts = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
+    var minTarget by remember { mutableStateOf<AccountingProductDto?>(null) }
+    var minValue by remember { mutableStateOf("") }
+    var movesTarget by remember { mutableStateOf<AccountingProductDto?>(null) }
+    var moves by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingMovementDto>>(emptyList()) }
     var sales by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingSaleDto>>(emptyList()) }
     var basket by remember { mutableStateOf<List<Pair<AccountingProductDto, Int>>>(emptyList()) }
     var salePick by remember { mutableStateOf<AccountingProductDto?>(null) }
@@ -97,6 +107,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         products = container.accountingRepository.products()
         cash = container.accountingRepository.cash(cashDay, "EUR")
         sales = container.accountingRepository.sales()
+        low = container.accountingRepository.lowStock()
         loading = false
     }
     LaunchedEffect(Unit) { reload() }
@@ -281,6 +292,49 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
+        low?.let { lw ->
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.accounting_low_title), style = MaterialTheme.typography.titleMedium)
+                        if (countMode) {
+                            Text(stringResource(R.string.accounting_count_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            products.filter { !it.id.startsWith("store:") }.forEach { p ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Column(Modifier.weight(1f)) { Text(p.name, style = MaterialTheme.typography.titleSmall); Text(stringResource(R.string.accounting_count_book) + ": " + p.quantity, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                    OutlinedTextField(counts[p.id].orEmpty(), { counts[p.id] = it }, label = { Text(stringResource(R.string.accounting_count_counted)) }, singleLine = true, modifier = Modifier.widthIn(min = 120.dp, max = 140.dp))
+                                }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    val items = counts.entries.mapNotNull { (id, v) -> v.trim().toIntOrNull()?.takeIf { it >= 0 }?.let { id to it } }
+                                    if (items.isEmpty()) { message = context.getString(R.string.accounting_missing_entry); return@Button }
+                                    scope.launch {
+                                        container.accountingRepository.countStock(items).fold({ r ->
+                                            message = if (r.changed.isEmpty()) context.getString(R.string.accounting_count_same) else context.getString(R.string.accounting_count_done, r.changed.size)
+                                            counts.clear(); countMode = false; reload()
+                                        }, { message = it.message ?: AppStrings.get(R.string.ship_failed) })
+                                    }
+                                }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.accounting_count_apply)) }
+                                OutlinedButton(onClick = { counts.clear(); countMode = false }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.accounting_count_cancel)) }
+                            }
+                        } else {
+                            if (lw.items.isEmpty()) Text(stringResource(R.string.accounting_low_none), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            lw.items.forEach { it ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(it.name, style = MaterialTheme.typography.titleSmall)
+                                        Text(stringResource(R.string.accounting_low_left, it.quantity) + (if (it.lowStockAt > 0) " · " + stringResource(R.string.accounting_low_min) + ": " + it.lowStockAt else ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    com.dalilacom.app.ui.common.StatusChip(stringResource(if (it.level == "OUT") R.string.accounting_low_out else R.string.accounting_low_low), if (it.level == "OUT") "bad" else "warn")
+                                }
+                            }
+                            OutlinedButton(onClick = { countMode = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_count_start)) }
+                        }
+                    }
+                }
+            }
+        }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -365,6 +419,10 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         }, enabled = p.quantity > 0) { Text("−1") }
                         Button(onClick = { salePayTarget = p }, enabled = p.quantity > 0 && p.salePriceCents > 0) { Text(stringResource(R.string.accounting_sell_one)) }
                     }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (!p.id.startsWith("store:")) TextButton(onClick = { minTarget = p; minValue = p.lowStockAt.toString() }) { Text(stringResource(R.string.accounting_low_min) + (if (p.lowStockAt > 0) ": " + p.lowStockAt else "")) }
+                        TextButton(onClick = { movesTarget = p; scope.launch { moves = container.accountingRepository.movements(p.id) } }) { Text(stringResource(R.string.accounting_moves)) }
+                    }
                     if (!p.id.startsWith("store:")) TextButton(onClick = { deleteProductTarget = p }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
                 }
             }
@@ -401,6 +459,33 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             text = { Text(stringResource(R.string.accounting_delete_confirm, product.name)) },
             confirmButton = { Button(onClick = { showResult { container.accountingRepository.deleteProduct(product.id) }; deleteProductTarget = null }) { Text(stringResource(R.string.accounting_delete)) } },
             dismissButton = { OutlinedButton(onClick = { deleteProductTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    minTarget?.let { p ->
+        AlertDialog(
+            onDismissRequest = { minTarget = null },
+            title = { Text(p.name) },
+            text = { OutlinedTextField(minValue, { minValue = it }, label = { Text(stringResource(R.string.accounting_low_min_prompt)) }, singleLine = true) },
+            confirmButton = { Button(onClick = { val v = minValue.trim().toIntOrNull(); minTarget = null; if (v != null && v >= 0) showResult { container.accountingRepository.setMin(p.id, v) } }) { Text(stringResource(R.string.accounting_save)) } },
+            dismissButton = { OutlinedButton(onClick = { minTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    movesTarget?.let { p ->
+        AlertDialog(
+            onDismissRequest = { movesTarget = null },
+            title = { Text(p.name + " · " + stringResource(R.string.accounting_moves)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (moves.isEmpty()) Text(stringResource(R.string.accounting_moves_none))
+                    moves.forEach { m ->
+                        Column {
+                            Text(stringResource(when (m.action) { "STOCK_OUT" -> R.string.accounting_move_STOCK_OUT; "ADJUSTMENT" -> R.string.accounting_move_ADJUSTMENT; else -> R.string.accounting_move_STOCK_IN }) + ": " + (if (m.action == "ADJUSTMENT") "→ " else if (m.action == "STOCK_OUT") "−" else "+") + m.quantity, style = MaterialTheme.typography.titleSmall)
+                            Text(m.occurredAt.take(16).replace('T', ' ') + (m.note?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            },
+            confirmButton = { OutlinedButton(onClick = { movesTarget = null }) { Text(stringResource(R.string.accounting_sale_close)) } },
         )
     }
     savedSale?.let { sale ->
