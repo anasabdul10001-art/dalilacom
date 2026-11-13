@@ -129,6 +129,7 @@ model User {
   accountingEntries       AccountingEntry[]
   accountingCashDays      AccountingCashDay[]
   accountingSales         AccountingSale[]
+  accountingParties       AccountingParty[]
   accountingMovements     AccountingStockMovement[]
   accountingInvoiceDrafts AccountingInvoiceDraft[]
   hrCompany               HrCompany?                @relation("HrCompanyOwner")
@@ -837,6 +838,8 @@ model Product {
 enum AccountingEntryType {
   INCOME
   EXPENSE
+  RECEIPT // money received from a customer against what they owe (not profit again)
+  PAYOUT // money paid to a supplier against what we owe (not an expense again)
 }
 
 enum AccountingStockAction {
@@ -897,6 +900,55 @@ model AccountingCashDay {
 }
 
 // A sales invoice: several products sold together, one discount, one way of paying. It writes one income entry (and one cost entry).
+enum AccountingPartyKind {
+  CUSTOMER
+  SUPPLIER
+}
+
+enum AccountingPartyEntryKind {
+  CHARGE // they owe more (customer) / we owe more (supplier)
+  PAYMENT // they paid (customer) / we paid (supplier)
+}
+
+// A customer or a supplier. The balance is the charges minus the payments of its entries: for a customer what they owe us, for a supplier what we owe them.
+model AccountingParty {
+  id         String              @id @default(uuid())
+  userId     String
+  kind       AccountingPartyKind
+  name       String
+  phone      String?
+  note       String?
+  archivedAt DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  user    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries AccountingPartyEntry[]
+
+  @@unique([userId, kind, name])
+  @@index([userId, kind])
+}
+
+model AccountingPartyEntry {
+  id          String                   @id @default(uuid())
+  partyId     String
+  userId      String
+  kind        AccountingPartyEntryKind
+  amountCents BigInt
+  currency    String
+  payMethod   AccountingPayMethod?
+  saleId      String?
+  entryId     String? // the accounting entry it created, when it created one
+  note        String?
+  occurredAt  DateTime                 @default(now())
+  createdAt   DateTime                 @default(now())
+
+  party AccountingParty @relation(fields: [partyId], references: [id], onDelete: Cascade)
+
+  @@index([partyId, occurredAt])
+  @@index([userId])
+}
+
 model AccountingSale {
   id            String              @id @default(uuid())
   userId        String
@@ -907,6 +959,8 @@ model AccountingSale {
   subtotalCents BigInt
   discountCents BigInt              @default(0)
   totalCents    BigInt
+  paidCents     BigInt              @default(0) // what was paid at the sale; the rest is on the customer's account
+  partyId       String?
   payMethod     AccountingPayMethod @default(CASH)
   occurredAt    DateTime            @default(now())
   recordedById  String?
