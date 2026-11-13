@@ -2738,14 +2738,14 @@ async function accountingConfirmInvoice() {
 }
 async function accountingSell(id) {
   const product = (S._accounting?.products || []).find(p => p.id === id);
-  const quantity = Number(prompt(t("accounting.sellQuantity"), "1"));
+  const quantity = Number(await uiPrompt(t("accounting.sellQuantity"), "1", { numeric: true }));
   if (!quantity) return;
   const { ok, data } = await api("POST", `/accounting/products/${id}/sell`, { quantity });
   if (!ok) return toast(errMsg(data, "ما قدرنا نسجل البيع"));
   toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
 }
 async function accountingAdjustStock(id, isIn) {
-  const quantity = Number(prompt(t(isIn ? "accounting.addQuantity" : "accounting.removeQuantity"), "1"));
+  const quantity = Number(await uiPrompt(t(isIn ? "accounting.addQuantity" : "accounting.removeQuantity"), "1", { numeric: true }));
   if (!quantity) return;
   const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: isIn ? "STOCK_IN" : "STOCK_OUT", quantity, note: isIn ? "إدخال يدوي" : "إخراج يدوي" });
   if (!ok) return toast(errMsg(data, "ما قدرنا نعدّل الجرد"));
@@ -2753,7 +2753,7 @@ async function accountingAdjustStock(id, isIn) {
 }
 async function accountingSetCost(id) {
   const product = (S._accounting?.products || []).find(p => p.id === id); if (!product) return;
-  const raw = prompt(t("accounting.costPrice"), (product.costCents / 100).toFixed(2)); if (raw === null) return;
+  const raw = await uiPrompt(t("accounting.costPrice"), (product.costCents / 100).toFixed(2), { numeric: true }); if (raw === null) return;
   const amount = Number(raw.replace(",", ".")); if (!Number.isFinite(amount) || amount < 0) return toast(t("accounting.invalidAmount"));
   const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: "ADJUSTMENT", quantity: product.quantity, unitCostCents: Math.round(amount * 100), note: "تحديث تكلفة الشراء" });
   if (!ok) return toast(errMsg(data, "ما قدرنا نحدّث تكلفة المنتج"));
@@ -2773,8 +2773,8 @@ async function accountingDeleteEntry(id) {
 }
 async function accountingEditEntry(id) {
   const entry = (S._accounting?.summary?.recent || []).find(e => e.id === id); if (!entry) return;
-  const description = prompt(t("accounting.description"), entry.description); if (description === null) return;
-  const raw = prompt(t("accounting.amount"), (entry.amountCents / 100).toFixed(2)); if (raw === null) return;
+  const description = await uiPrompt(t("accounting.description"), entry.description); if (description === null) return;
+  const raw = await uiPrompt(t("accounting.amount"), (entry.amountCents / 100).toFixed(2), { numeric: true }); if (raw === null) return;
   const amount = Number(raw.replace(",", ".")); if (!Number.isFinite(amount) || amount <= 0) return toast(t("accounting.invalidAmount"));
   const { ok, data } = await api("PATCH", `/accounting/entries/${id}`, { description: description.trim(), amountCents: Math.round(amount * 100) });
   if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));

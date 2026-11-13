@@ -135,7 +135,7 @@ async function hrDeptAdd(btn) {
 }
 async function hrDeptRename(id) {
   const d = ((hrState().data || {}).depts || []).find((x) => x.id === id); if (!d) return;
-  const name = prompt(t("hr.dept.name"), d.name); if (name === null || !name.trim()) return;
+  const name = await uiPrompt(t("hr.dept.name"), d.name); if (name === null || !name.trim()) return;
   await hrDo("PATCH", `/hr/departments/${id}`, { name: name.trim() }, "hr.dept.renamed");
 }
 async function hrDeptDelete(btn, id) {

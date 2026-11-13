@@ -28,6 +28,26 @@ function uiStepper(labels, reached) {
 /** A section closed by default, for the details nobody needs at first glance. */
 const uiFold = (title, bodyHtml) => `<details class="fold"><summary>${esc(title)}</summary><div class="fold-body">${bodyHtml}</div></details>`;
 
+/** A small question box inside the page (instead of the browser's own prompt, which looks plain on a phone). Resolves with the text, or null when cancelled. */
+function uiPrompt(label, value, opts) {
+  opts = opts || {};
+  return new Promise((resolve) => {
+    const box = document.createElement("div");
+    box.className = "ui-ask";
+    box.innerHTML = `<div class="ui-ask-card" role="dialog" aria-modal="true"><label>${esc(label)}</label>
+      <input ${opts.numeric ? 'inputmode="decimal"' : ""} value="${esc(value == null ? "" : String(value))}" />
+      <div class="btn-row"><button class="btn small" data-ok>${esc(t("accounting.save"))}</button><button class="btn small outline" data-no>${esc(t("adr.cancel"))}</button></div></div>`;
+    const done = (v) => { box.remove(); resolve(v); };
+    const input = box.querySelector("input");
+    box.querySelector("[data-ok]").onclick = () => done(input.value);
+    box.querySelector("[data-no]").onclick = () => done(null);
+    box.addEventListener("click", (e) => { if (e.target === box) done(null); });
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") done(input.value); else if (e.key === "Escape") done(null); });
+    document.body.appendChild(box);
+    input.focus(); input.select();
+  });
+}
+
 /** Shows a button as working while a request runs, so it cannot be pressed twice. */
 async function uiBusy(btn, work) {
   if (btn && btn.classList) btn.classList.add("busy");

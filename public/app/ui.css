@@ -65,3 +65,9 @@ details.fold .fold-body { padding-top: 8px; font-size: 13px; display: grid; gap:
 .site-offer > span { font-size: 28px; }
 .site-offer b { display: block; font-size: 15.5px; font-weight: 800; color: var(--text); }
 .site-offer small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
+
+/* the small question box (uiPrompt) */
+.ui-ask { position: fixed; inset: 0; z-index: 9000; background: rgba(20, 14, 12, .45); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.ui-ask-card { width: min(380px, 100%); background: var(--card, #fff); border-radius: 22px; padding: 20px; box-shadow: 0 20px 50px -20px rgba(0, 0, 0, .5); }
+.ui-ask-card label { display: block; font-weight: 800; margin-bottom: 10px; }
+.ui-ask-card input { width: 100%; font-size: 18px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--line, #ece0dd); background: var(--bg, #fdfbfa); }
