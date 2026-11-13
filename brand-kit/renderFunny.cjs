@@ -93,8 +93,11 @@ const scenes = {
     <g transform="translate(40 700)"><rect width="180" height="64" rx="8" fill="#fff" stroke="#3a2418" stroke-width="4"/><text x="90" y="44" text-anchor="middle" font-family="Tajawal" font-weight="700" font-size="30" fill="#1c1413">آآآخ!</text></g>`,
 };
 
+// A real picture (made with an image tool) goes in brand-kit/social/weekly/photos/<id>.jpg (or .png): it replaces the drawn scene.
+const photoFile = (id) => ["jpg", "jpeg", "png", "webp"].map((e) => path.join(__dirname, "social", "weekly", "photos", id + "." + e)).find((f) => fs.existsSync(f));
+
 const items = [
-  { id: "w1-sack", scene: "w1-sack", head: ["القبض على ", "كيس الفواتير", " بتهمة إخفاء المصاريف!"], who: "تصريح كيس الفواتير:", quote: "«والله مو قصدي.. بس كنت عم أستنى حدا يرتّبني»" },
+  { id: "w1-sack", scene: "w1-sack", head: ["القبض على ", "صاحب محل", " بتهمة إخفاء المصاريف!"], who: "تصريح صاحب المحل:", quote: "«والله مو قصدي.. بس الفواتير كانت كتير!»" },
   { id: "w1-net", scene: "w1-net", head: ["اختفاء ", "الصافي", " بظروف غامضة!"], who: "تصريح صاحب المحل:", quote: "«بعت كتير هالشهر.. بس وين راحوا؟»" },
   { id: "w1-chair", scene: "w1-chair", head: ["سقوط ", "صاحب محل", " عن الكرسي بعد سؤال: كم ربحت؟"], who: "تصريح صاحب المحل:", quote: "«والله كنت عم أحسبها بالرأس!»" },
 ];
@@ -116,7 +119,7 @@ body{width:${W}px;height:${H}px;position:relative;overflow:hidden;background:#1d
 .quote{position:absolute;left:46px;right:46px;top:248px;background:#fff;color:#1c1413;font-weight:700;font-size:44px;text-align:center;border-radius:40px;padding:18px 20px;line-height:1.35}
 .cta{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-size:34px;font-weight:700;color:#fff}.cta b{color:#f48050}
 </style></head><body>
-<svg class="scene" viewBox="0 0 ${W} 860">${scenes[it.scene]()}</svg>
+${(() => { const f = photoFile(it.id); return f ? `<img class="scene" style="object-fit:cover;object-position:center 30%" src="file:///${f.split(path.sep).join("/")}">` : `<svg class="scene" viewBox="0 0 ${W} 860">${scenes[it.scene]()}</svg>`; })()}
 <div class="tag">😂 خبر مضحك · تمثيل</div><div class="logo"><img src="${logoPng}"></div>
 <div class="panel"><div class="alarm">🚨 خبر عاجل</div>
 <div class="headline">${a}<em>${b}</em>${c}</div>
