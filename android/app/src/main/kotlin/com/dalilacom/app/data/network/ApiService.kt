@@ -260,6 +260,9 @@ interface ApiService {
     /** Human resources (inside DALILACOM): every human-resources route (the server's hr area) goes through these two calls. */
     @GET suspend fun hrGet(@retrofit2.http.Url path: String): Response<kotlinx.serialization.json.JsonElement>
     @POST suspend fun hrPost(@retrofit2.http.Url path: String, @Body body: kotlinx.serialization.json.JsonObject): Response<kotlinx.serialization.json.JsonElement>
+    @retrofit2.http.PUT suspend fun hrPut(@retrofit2.http.Url path: String, @Body body: kotlinx.serialization.json.JsonObject): Response<kotlinx.serialization.json.JsonElement>
+    @retrofit2.http.PATCH suspend fun hrPatch(@retrofit2.http.Url path: String, @Body body: kotlinx.serialization.json.JsonObject): Response<kotlinx.serialization.json.JsonElement>
+    @retrofit2.http.DELETE suspend fun hrDelete(@retrofit2.http.Url path: String): Response<kotlinx.serialization.json.JsonElement>
     @GET("accounting/summary") suspend fun accountingSummary(): Response<AccountingSummaryDto>
     @GET("accounting/products") suspend fun accountingProducts(@Query("q") query: String? = null): Response<List<AccountingProductDto>>
     @POST("accounting/products") suspend fun addAccountingProduct(@Body body: AccountingProductRequest): Response<AccountingProductDto>

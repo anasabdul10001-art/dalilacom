@@ -81,6 +81,7 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
     var message by remember { mutableStateOf("") }
     var codeShown by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableIntStateOf(0) }
+    var salaryFor by remember { mutableStateOf<String?>(null) }
     val errorFallback = stringResource(R.string.hr_error)
     val context = androidx.compose.ui.platform.LocalContext.current
 
@@ -135,7 +136,7 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
         if (message.isNotBlank()) Text(message, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), color = MaterialTheme.colorScheme.primary)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             when (tabs[tab]) {
-                "people" -> PeopleTab(repo, manage, version, ::act) { codeShown = it }
+                "people" -> PeopleTab(repo, manage, version, ::act, salaryFor, { salaryFor = it }) { codeShown = it }
                 "leave" -> LeaveTab(repo, version, ::act)
                 "payroll" -> PayrollTab(repo, manage?.s("currency").orEmpty(), manage?.s("role") == "OWNER", version, ::act)
                 else -> JobTab(repo, ov, jobs, version, ::act)
@@ -171,7 +172,7 @@ private fun Load(repo: com.dalilacom.app.data.repository.HrRepository, path: Str
 
 /* ---- people ---- */
 @Composable
-private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, manage: JsonObject?, version: Int, act: Act, showCode: (String) -> Unit) {
+private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, manage: JsonObject?, version: Int, act: Act, salaryFor: String?, setSalaryFor: (String?) -> Unit, showCode: (String) -> Unit) {
     var coName by remember { mutableStateOf("") }
     if (manage == null) {
         Box(stringResource(R.string.hr_company_create)) {
@@ -184,8 +185,16 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
     val cur = manage.s("currency").orEmpty()
     var first by remember { mutableStateOf("") }; var last by remember { mutableStateOf("") }; var email by remember { mutableStateOf("") }
     var position by remember { mutableStateOf("") }; var hire by remember { mutableStateOf(java.time.LocalDate.now().toString()) }; var salary by remember { mutableStateOf("") }
+    var deptId by remember { mutableStateOf("") }
+    var deptName by remember { mutableStateOf("") }
+    var renameDept by remember { mutableStateOf<JsonObject?>(null) }
+    var renameValue by remember { mutableStateOf("") }
+    var deleteDeptId by remember { mutableStateOf<String?>(null) }
+    var depts by remember(version) { mutableStateOf<List<JsonObject>>(emptyList()) }
+    LaunchedEffect(version) { depts = repo.get("hr/departments").getOrNull().rows() }
     Load(repo, "hr/employees", version) { data ->
         val emps = data.rows()
+        salaryFor?.let { id -> emps.firstOrNull { it.s("id") == id }?.let { SalaryBox(repo, it, cur, version, act) { setSalaryFor(null) } } }
         Box(manage.s("companyName").orEmpty()) {
             Text(stringResource(R.string.hr_people_count, emps.size), color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (emps.isEmpty()) EmptyHint("👥", stringResource(R.string.hr_people_empty))
@@ -201,6 +210,7 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             StatusChip(roleLabel)
                             StatusChip(stringResource(when (st) { "ON_LEAVE" -> R.string.hr_status_ON_LEAVE; "TERMINATED" -> R.string.hr_status_TERMINATED; else -> R.string.hr_status_ACTIVE }), when (st) { "ACTIVE" -> "ok"; "ON_LEAVE" -> "warn"; else -> "bad" })
+                            e.o("department")?.s("name")?.let { StatusChip(it) }
                             if (e.s("userId") != null) StatusChip(stringResource(R.string.hr_linked), "info")
                         }
                         FoldSection(stringResource(R.string.hr_details)) {
@@ -208,6 +218,7 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                             e.s("email")?.let { Text("${stringResource(R.string.hr_f_email)}: $it", fontSize = 13.sp) }
                             Text(stringResource(if (e.s("userId") != null) R.string.hr_linked else R.string.hr_notLinked), fontSize = 13.sp)
                         }
+                        OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { setSalaryFor(e.s("id")) }) { Text(stringResource(R.string.hr_sal_open)) }
                         if (e.s("userId") == null && st != "TERMINATED") OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = {
                             act(null, { repo.post("hr/employees/${e.s("id")}/invite") }) { r ->
                                 val o = r as? JsonObject
@@ -220,10 +231,44 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
             }
         }
     }
+    Box(stringResource(R.string.hr_dept_title)) {
+        if (depts.isEmpty()) EmptyHint("🏷️", stringResource(R.string.hr_dept_empty))
+        depts.forEach { d ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                PersonAvatar(d.s("name").orEmpty())
+                Column(Modifier.weight(1f)) {
+                    Text(d.s("name").orEmpty(), fontWeight = FontWeight.ExtraBold)
+                    Text(stringResource(R.string.hr_dept_count, d.o("_count")?.n("employees")?.toInt() ?: 0), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.5.sp)
+                }
+                TextButton(onClick = { renameDept = d; renameValue = d.s("name").orEmpty() }) { Text(stringResource(R.string.hr_dept_rename)) }
+                TextButton(onClick = { deleteDeptId = d.s("id") }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
+            }
+        }
+        Field(deptName, { deptName = it }, stringResource(R.string.hr_dept_name))
+        Button(onClick = { if (deptName.isNotBlank()) act(R.string.hr_dept_added, { repo.post("hr/departments", buildJsonObject { put("name", deptName.trim()) }) }, { deptName = "" }) }) { Text(stringResource(R.string.hr_dept_add)) }
+    }
+    renameDept?.let { d ->
+        AlertDialog(
+            onDismissRequest = { renameDept = null },
+            title = { Text(stringResource(R.string.hr_dept_rename)) },
+            text = { Field(renameValue, { renameValue = it }, stringResource(R.string.hr_dept_name)) },
+            confirmButton = { TextButton(onClick = { renameDept = null; if (renameValue.isNotBlank()) act(R.string.hr_dept_renamed, { repo.patch("hr/departments/${d.s("id")}", buildJsonObject { put("name", renameValue.trim()) }) }, {}) }) { Text(stringResource(R.string.hr_sal_saveBase)) } },
+            dismissButton = { TextButton(onClick = { renameDept = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    deleteDeptId?.let { id ->
+        AlertDialog(
+            onDismissRequest = { deleteDeptId = null },
+            title = { Text(stringResource(R.string.hr_dept_confirmDelete)) },
+            confirmButton = { TextButton(onClick = { deleteDeptId = null; act(R.string.hr_dept_deleted, { repo.delete("hr/departments/$id") }, {}) }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { deleteDeptId = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
     Box(stringResource(R.string.hr_people_add)) {
         Field(first, { first = it }, stringResource(R.string.hr_f_first)); Field(last, { last = it }, stringResource(R.string.hr_f_last))
         Field(email, { email = it }, stringResource(R.string.hr_f_email)); Field(position, { position = it }, stringResource(R.string.hr_f_position))
         Field(hire, { hire = it }, stringResource(R.string.hr_f_hire)); Field(salary, { salary = it }, stringResource(R.string.hr_f_salary, cur))
+        PickList(listOf("" to stringResource(R.string.hr_dept_none)) + depts.map { (it.s("id") ?: "") to it.s("name").orEmpty() }, deptId, { deptId = it }, stringResource(R.string.hr_f_dept))
         Button(onClick = {
             val cents = salary.trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()?.let { Math.round(it * 100) }
             if (first.isNotBlank() && last.isNotBlank()) act(R.string.hr_people_added, {
@@ -231,6 +276,7 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                     put("firstName", first.trim()); put("lastName", last.trim()); put("hireDate", hire)
                     if (position.isNotBlank()) put("position", position.trim()); if (email.isNotBlank()) put("email", email.trim())
                     if (cents != null) put("baseSalary", cents)
+                    if (deptId.isNotBlank()) put("departmentId", deptId)
                 })
             }, { first = ""; last = ""; email = ""; position = ""; salary = "" })
         }) { Text(stringResource(R.string.hr_people_addBtn)) }
@@ -407,5 +453,78 @@ private fun JobTab(repo: com.dalilacom.app.data.repository.HrRepository, ov: Jso
             if (slips.isEmpty()) Text(stringResource(R.string.hr_job_noSlips), color = MaterialTheme.colorScheme.onSurfaceVariant)
             slips.forEach { s -> Text("${day(s.o("run")?.s("periodStart"))} → ${day(s.o("run")?.s("periodEnd"))}   ${money(s.n("netPay"), cur)}") }
         }
+    }
+}
+
+/** A small drop-down: the label of the chosen option, and a menu with the others. */
+@Composable
+private fun PickList(options: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit, label: String) {
+    var open by remember { mutableStateOf(false) }
+    Column {
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text(options.firstOrNull { it.first == selected }?.second ?: options.firstOrNull()?.second.orEmpty()) }
+        androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (value, text) -> androidx.compose.material3.DropdownMenuItem(text = { Text(text) }, onClick = { onSelect(value); open = false }) }
+        }
+    }
+}
+
+/* ---- the salary structure of one employee: base salary plus additions and deductions ---- */
+@Composable
+private fun SalaryBox(repo: com.dalilacom.app.data.repository.HrRepository, emp: JsonObject, cur: String, version: Int, act: Act, onClose: () -> Unit) {
+    val id = emp.s("id").orEmpty()
+    var base by remember(id, version) { mutableStateOf(emp.n("baseSalary")?.let { "%.2f".format(it / 100.0) } ?: "") }
+    var comps by remember(version) { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var compId by remember { mutableStateOf("") }
+    var value by remember { mutableStateOf("") }
+    var newName by remember { mutableStateOf("") }
+    var newType by remember { mutableStateOf("EARNING") }
+    var newCalc by remember { mutableStateOf("FIXED") }
+    LaunchedEffect(version) { comps = repo.get("hr/salary-components").getOrNull().rows() }
+    Box(stringResource(R.string.hr_sal_title) + ": " + fullName(emp)) {
+        Field(base, { base = it }, stringResource(R.string.hr_sal_base, cur))
+        Button(onClick = {
+            val c = base.replace(',', '.').toDoubleOrNull()?.let { Math.round(it * 100) }
+            if (c != null && c >= 0) act(R.string.hr_sal_saved, { repo.put("hr/employees/$id/salary/base", buildJsonObject { put("baseSalary", c) }) }, {})
+        }) { Text(stringResource(R.string.hr_sal_saveBase)) }
+        Text(stringResource(R.string.hr_sal_items), style = MaterialTheme.typography.titleSmall)
+        Load(repo, "hr/employees/$id/salary", version) { data ->
+            val items = (data as? JsonObject)?.list("components").orEmpty()
+            if (items.isEmpty()) Text(stringResource(R.string.hr_sal_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            items.forEach { c ->
+                val k = c.o("component")
+                val deduction = k?.s("type") == "DEDUCTION"
+                val shown = if (k?.s("calcType") == "FIXED") money(c.n("fixedAmount"), cur) else "${(c.n("percentage") ?: 0.0)}%"
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(k?.s("name").orEmpty(), fontWeight = FontWeight.ExtraBold)
+                        StatusChip(stringResource(if (deduction) R.string.hr_sal_deduction else R.string.hr_sal_earning), if (deduction) "bad" else "ok")
+                    }
+                    Text(shown, fontWeight = FontWeight.ExtraBold)
+                    TextButton(onClick = { act(R.string.hr_sal_removed, { repo.delete("hr/employees/$id/salary/components/${k?.s("id")}") }, {}) }) { Text(stringResource(R.string.hr_sal_remove), color = MaterialTheme.colorScheme.error) }
+                }
+            }
+        }
+        PickList(listOf("" to stringResource(R.string.hr_sal_pickComp)) + comps.map { (it.s("id") ?: "") to (it.s("name").orEmpty() + " · " + stringResource(if (it.s("calcType") == "FIXED") R.string.hr_sal_fixed else R.string.hr_sal_percent)) }, compId, { compId = it }, stringResource(R.string.hr_sal_comp))
+        Field(value, { value = it }, stringResource(R.string.hr_sal_amount))
+        Button(onClick = {
+            val comp = comps.firstOrNull { it.s("id") == compId }
+            val v = value.replace(',', '.').toDoubleOrNull()
+            if (comp != null && v != null && v >= 0) act(R.string.hr_sal_itemAdded, {
+                repo.put("hr/employees/$id/salary/components", buildJsonObject {
+                    put("componentId", compId)
+                    if (comp.s("calcType") == "FIXED") put("fixedAmount", Math.round(v * 100)) else put("percentage", v)
+                })
+            }, { value = "" })
+        }) { Text(stringResource(R.string.hr_sal_addItem)) }
+        FoldSection(stringResource(R.string.hr_sal_newComp)) {
+            Field(newName, { newName = it }, stringResource(R.string.hr_sal_compName))
+            PickList(listOf("EARNING" to stringResource(R.string.hr_sal_earning), "DEDUCTION" to stringResource(R.string.hr_sal_deduction)), newType, { newType = it }, stringResource(R.string.hr_sal_newComp))
+            PickList(listOf("FIXED" to stringResource(R.string.hr_sal_fixed), "PERCENTAGE_OF_BASE" to stringResource(R.string.hr_sal_percent)), newCalc, { newCalc = it }, stringResource(R.string.hr_sal_amount))
+            OutlinedButton(onClick = {
+                if (newName.isNotBlank()) act(R.string.hr_sal_compCreated, { repo.post("hr/salary-components", buildJsonObject { put("name", newName.trim()); put("type", newType); put("calcType", newCalc) }) }, { newName = "" })
+            }) { Text(stringResource(R.string.hr_sal_createComp)) }
+        }
+        OutlinedButton(onClick = onClose) { Text(stringResource(R.string.hr_sal_close)) }
     }
 }

@@ -76,7 +76,8 @@ function hrPeople() {
       <button class="btn" onclick="hrCreateCompany(this)">${esc(t("hr.company.createBtn"))}</button></div>`;
   }
   const emps = hrData("employees", "/hr/employees");
-  if (emps === null) return skeleton("list", 3);
+  const depts = hrData("depts", "/hr/departments");
+  if (emps === null || depts === null) return skeleton("list", 3);
   const cur = ov.manage.currency;
   const list = emps.length === 0 ? uiEmpty("👥", t("hr.people.empty")) : emps.map((e) => {
     const name = hrName(e);
@@ -84,16 +85,24 @@ function hrPeople() {
     const more = `<span>${esc(t("hr.f.hire"))}: <bdi>${esc(hrDay(e.hireDate))}</bdi></span>${e.email ? `<span>${esc(t("hr.f.email"))}: <bdi>${esc(e.email)}</bdi></span>` : ""}<span>${esc(e.userId ? t("hr.linked") : t("hr.notLinked"))}</span>`;
     return `<div class="item">${uiAvatar(name)}<div class="item-main">
         <div class="item-title">${esc(name)}</div><div class="item-sub">${esc(e.position || t("hr.role." + e.role))}</div>
-        <div class="chips">${uiChip(t("hr.role." + e.role))}${uiChip(t("hr.status." + e.employmentStatus), tone)}${e.userId ? uiChip(t("hr.linked"), "info") : ""}</div>
+        <div class="chips">${uiChip(t("hr.role." + e.role))}${uiChip(t("hr.status." + e.employmentStatus), tone)}${e.department ? uiChip(e.department.name) : ""}${e.userId ? uiChip(t("hr.linked"), "info") : ""}</div>
         ${uiFold(t("hr.details"), more)}
-        ${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<div class="btn-row"><button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button></div>`}
+        <div class="btn-row"><button class="btn small soft" onclick="hrSalaryOpen('${e.id}')">${esc(t("hr.sal.open"))}</button>${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button>`}</div>
       </div>${e.baseSalary != null ? `<div class="item-end">${esc(hrMoney(e.baseSalary, cur))}</div>` : ""}</div>`;
   }).join("");
-  return `<div class="panel-title">${esc(ov.manage.companyName)} <small>${esc(t("hr.people.count", { n: emps.length }))}</small></div>${list}
+  const deptOpts = `<option value="">${esc(t("hr.dept.none"))}</option>` + depts.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
+  const deptList = depts.length === 0 ? uiEmpty("🏷️", t("hr.dept.empty")) : depts.map((d) => `<div class="item"><span class="avatar" style="--h:${hrHue(d.name)}">${esc(d.name.slice(0, 1).toUpperCase())}</span><div class="item-main">
+      <div class="item-title">${esc(d.name)}</div><div class="item-sub">${esc(t("hr.dept.count", { n: d._count ? d._count.employees : 0 }))}</div>
+      <div class="btn-row"><button class="btn small soft" onclick="hrDeptRename('${d.id}')">${esc(t("hr.dept.rename"))}</button><button class="btn small outline" onclick="hrDeptDelete(this,'${d.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></div></div></div>`).join("");
+  return `${hrSalaryCard(emps, cur)}<div class="panel-title">${esc(ov.manage.companyName)} <small>${esc(t("hr.people.count", { n: emps.length }))}</small></div>${list}
+    <div class="panel-title" style="margin-top:16px">${esc(t("hr.dept.title"))}</div>${deptList}
+    <div class="card"><div class="field"><label>${esc(t("hr.dept.name"))}</label><input id="hr-d-name" maxlength="80" /></div>
+      <button class="btn soft" onclick="hrDeptAdd(this)">${esc(t("hr.dept.add"))}</button></div>
     <div class="card"><h2>${esc(t("hr.people.add"))}</h2>
       <div class="row"><div class="field"><label>${esc(t("hr.f.first"))}</label><input id="hr-e-first" /></div><div class="field"><label>${esc(t("hr.f.last"))}</label><input id="hr-e-last" /></div></div>
       <div class="row"><div class="field"><label>${esc(t("hr.f.email"))}</label><input id="hr-e-email" type="email" /></div><div class="field"><label>${esc(t("hr.f.position"))}</label><input id="hr-e-pos" /></div></div>
       <div class="row"><div class="field"><label>${esc(t("hr.f.hire"))}</label><input id="hr-e-hire" type="date" value="${new Date().toISOString().slice(0, 10)}" /></div><div class="field"><label>${esc(t("hr.f.salary", { c: cur }))}</label><input id="hr-e-salary" inputmode="decimal" /></div></div>
+      <div class="field"><label>${esc(t("hr.f.dept"))}</label><select id="hr-e-dept">${deptOpts}</select></div>
       <button class="btn" onclick="hrAddEmployee(this)">${esc(t("hr.people.addBtn"))}</button>
     </div>`;
 }
@@ -105,6 +114,7 @@ async function hrCreateCompany(btn) {
 async function hrAddEmployee(btn) {
   const salary = hrVal("hr-e-salary").trim();
   const body = { firstName: hrVal("hr-e-first").trim(), lastName: hrVal("hr-e-last").trim(), hireDate: hrVal("hr-e-hire"), position: hrVal("hr-e-pos").trim() || null, email: hrVal("hr-e-email").trim() || null };
+  if (hrVal("hr-e-dept")) body.departmentId = hrVal("hr-e-dept");
   if (!body.firstName || !body.lastName) return toast(t("hr.f.first"));
   if (salary !== "") { const n = Math.round(parseFloat(salary) * 100); if (!Number.isFinite(n) || n < 0) return toast(t("hr.f.salary", { c: "" })); body.baseSalary = n; }
   await uiBusy(btn, () => hrDo("POST", "/hr/employees", body, "hr.people.added"));
@@ -114,6 +124,84 @@ async function hrInvite(btn, id) {
   if (!res.ok) return hrErr(res);
   // the code is shown once; it is also emailed when the employee has an email address
   alert(t(res.data.emailed ? "hr.invite.emailed" : "hr.invite.code") + (res.data.emailed ? "" : "\n\n" + res.data.code));
+}
+
+/* ---- departments ---- */
+function hrHue(name) { let h = 0; for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+async function hrDeptAdd(btn) {
+  const name = hrVal("hr-d-name").trim();
+  if (!name) return toast(t("hr.dept.name"));
+  await uiBusy(btn, () => hrDo("POST", "/hr/departments", { name }, "hr.dept.added"));
+}
+async function hrDeptRename(id) {
+  const d = ((hrState().data || {}).depts || []).find((x) => x.id === id); if (!d) return;
+  const name = prompt(t("hr.dept.name"), d.name); if (name === null || !name.trim()) return;
+  await hrDo("PATCH", `/hr/departments/${id}`, { name: name.trim() }, "hr.dept.renamed");
+}
+async function hrDeptDelete(btn, id) {
+  if (!confirm(t("hr.dept.confirmDelete"))) return;
+  await uiBusy(btn, () => hrDo("DELETE", `/hr/departments/${id}`, undefined, "hr.dept.deleted"));
+}
+
+/* ---- salary structure of one employee: base salary plus additions and deductions ---- */
+function hrSalaryOpen(id) { const h = hrState(); h.salFor = id; h.data = h.data || {}; delete h.data["sal:" + id]; render(); }
+function hrSalaryClose() { hrState().salFor = null; render(); }
+function hrSalaryCard(emps, cur) {
+  const h = hrState(); if (!h.salFor) return "";
+  const emp = emps.find((e) => e.id === h.salFor); if (!emp) return "";
+  const sal = hrData("sal:" + emp.id, `/hr/employees/${emp.id}/salary`);
+  const comps = hrData("comps", "/hr/salary-components");
+  if (sal === null || comps === null || Array.isArray(sal)) return `<div class="card">${skeleton("list", 2)}</div>`;
+  const items = sal.components.length === 0 ? `<p class="muted">${esc(t("hr.sal.empty"))}</p>` : sal.components.map((c) => {
+    const k = c.component;
+    const val = k.calcType === "FIXED" ? hrMoney(c.fixedAmount, cur) : (Number(c.percentage) + "%");
+    return `<div class="item"><span class="avatar" style="--h:${k.type === "DEDUCTION" ? 4 : 140}">${k.type === "DEDUCTION" ? "−" : "+"}</span><div class="item-main"><div class="item-title">${esc(k.name)}</div>
+      <div class="item-sub">${esc(t(k.type === "DEDUCTION" ? "hr.sal.deduction" : "hr.sal.earning"))}</div></div>
+      <div class="item-end ${k.type === "DEDUCTION" ? "out" : "in"}">${esc(val)}</div>
+      <button class="btn small outline" onclick="hrSalaryRemove(this,'${emp.id}','${k.id}')">${esc(t("hr.sal.remove"))}</button></div>`;
+  }).join("");
+  const compOpts = `<option value="">${esc(t("hr.sal.pickComp"))}</option>` + comps.map((k) => `<option value="${k.id}" data-calc="${k.calcType}">${esc(k.name)} (${esc(t(k.calcType === "FIXED" ? "hr.sal.fixed" : "hr.sal.percent"))})</option>`).join("");
+  return `<div class="card"><div class="section-title">${esc(t("hr.sal.title"))}: ${esc(hrName(emp))}</div>
+    <div class="field"><label>${esc(t("hr.sal.base", { c: cur }))}</label><input id="hr-s-base" inputmode="decimal" value="${sal.baseSalary != null ? (sal.baseSalary / 100).toFixed(2) : ""}" /></div>
+    <button class="btn soft" onclick="hrSalarySaveBase(this,'${emp.id}')">${esc(t("hr.sal.saveBase"))}</button>
+    <div class="panel-title" style="margin-top:14px">${esc(t("hr.sal.items"))}</div>${items}
+    <div class="row"><div class="field"><label>${esc(t("hr.sal.comp"))}</label><select id="hr-s-comp">${compOpts}</select></div>
+      <div class="field"><label>${esc(t("hr.sal.amount", { c: cur }))}</label><input id="hr-s-val" inputmode="decimal" /></div></div>
+    <button class="btn soft" onclick="hrSalaryAddItem(this,'${emp.id}')">${esc(t("hr.sal.addItem"))}</button>
+    ${uiFold(t("hr.sal.newComp"), `<div class="field"><label>${esc(t("hr.sal.compName"))}</label><input id="hr-k-name" maxlength="60" /></div>
+      <div class="row"><div class="field"><label>${esc(t("hr.sal.compType"))}</label><select id="hr-k-type"><option value="EARNING">${esc(t("hr.sal.earning"))}</option><option value="DEDUCTION">${esc(t("hr.sal.deduction"))}</option></select></div>
+      <div class="field"><label>${esc(t("hr.sal.compCalc"))}</label><select id="hr-k-calc"><option value="FIXED">${esc(t("hr.sal.fixed"))}</option><option value="PERCENTAGE_OF_BASE">${esc(t("hr.sal.percent"))}</option></select></div></div>
+      <button class="btn soft" onclick="hrCompCreate(this)">${esc(t("hr.sal.createComp"))}</button>`)}
+    <div class="btn-row" style="margin-top:10px"><button class="btn small outline" onclick="hrSalaryClose()">${esc(t("hr.sal.close"))}</button></div></div>`;
+}
+function hrSalaryRefresh(id) { const h = hrState(); delete h.data["sal:" + id]; delete h.data.employees; render(); }
+async function hrSalarySaveBase(btn, id) {
+  const n = Math.round(parseFloat(hrVal("hr-s-base").replace(",", ".")) * 100);
+  if (!Number.isFinite(n) || n < 0) return toast(t("hr.sal.base", { c: "" }));
+  const res = await uiBusy(btn, () => api("PUT", `/hr/employees/${id}/salary/base`, { baseSalary: n }));
+  if (!res.ok) return hrErr(res);
+  toast(t("hr.sal.saved")); hrSalaryRefresh(id);
+}
+async function hrSalaryAddItem(btn, id) {
+  const sel = document.getElementById("hr-s-comp"); if (!sel || !sel.value) return toast(t("hr.sal.pickComp"));
+  const calc = sel.selectedOptions[0].dataset.calc;
+  const v = parseFloat(hrVal("hr-s-val").replace(",", "."));
+  if (!Number.isFinite(v) || v < 0) return toast(t("hr.sal.amount", { c: "" }));
+  const body = calc === "FIXED" ? { componentId: sel.value, fixedAmount: Math.round(v * 100) } : { componentId: sel.value, percentage: v };
+  const res = await uiBusy(btn, () => api("PUT", `/hr/employees/${id}/salary/components`, body));
+  if (!res.ok) return hrErr(res);
+  toast(t("hr.sal.itemAdded")); hrSalaryRefresh(id);
+}
+async function hrSalaryRemove(btn, id, componentId) {
+  const res = await uiBusy(btn, () => api("DELETE", `/hr/employees/${id}/salary/components/${componentId}`));
+  if (!res.ok) return hrErr(res);
+  toast(t("hr.sal.removed")); hrSalaryRefresh(id);
+}
+async function hrCompCreate(btn) {
+  const name = hrVal("hr-k-name").trim(); if (!name) return toast(t("hr.sal.compName"));
+  const res = await uiBusy(btn, () => api("POST", "/hr/salary-components", { name, type: hrVal("hr-k-type"), calcType: hrVal("hr-k-calc") }));
+  if (!res.ok) return hrErr(res);
+  toast(t("hr.sal.compCreated")); delete hrState().data.comps; render();
 }
 
 /* ---- leave: types and the requests waiting for a decision ---- */

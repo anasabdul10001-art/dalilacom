@@ -22,4 +22,14 @@ class HrRepository(private val api: ApiService) {
         val data = response.body()
         return if (response.isSuccessful && data != null) Result.success(data) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.hr_error))))
     }
+
+    suspend fun put(path: String, body: JsonObject): Result<JsonElement> = send { api.hrPut(path, body) }
+    suspend fun patch(path: String, body: JsonObject): Result<JsonElement> = send { api.hrPatch(path, body) }
+    suspend fun delete(path: String): Result<JsonElement> = send { api.hrDelete(path) }
+
+    private suspend fun send(call: suspend () -> retrofit2.Response<JsonElement>): Result<JsonElement> {
+        val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.hr_error)))
+        val data = response.body()
+        return if (response.isSuccessful && data != null) Result.success(data) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.hr_error))))
+    }
 }
