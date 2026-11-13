@@ -33,6 +33,7 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun products(query: String? = null): List<AccountingProductDto> = safeApiCall { api.accountingProducts(query) }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun addProduct(body: AccountingProductRequest): Result<Unit> = result { api.addAccountingProduct(body) }
     suspend fun addEntry(body: AccountingEntryRequest): Result<Unit> = result { api.addAccountingEntry(body) }
+    suspend fun editEntry(id: String, description: String, amountCents: Int): Result<Unit> = result { api.updateAccountingEntry(id, com.dalilacom.app.data.network.AccountingEntryEditRequest(description, amountCents)) }
     suspend fun deleteEntry(id: String): Result<Unit> = result { api.deleteAccountingEntry(id) }
     suspend fun deleteProduct(id: String): Result<Unit> = result { api.deleteAccountingProduct(id) }
     suspend fun sell(id: String, quantity: Int): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity)) }

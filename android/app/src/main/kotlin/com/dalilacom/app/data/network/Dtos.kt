@@ -1322,6 +1322,7 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingProductDto(val id: String, val name: String, val barcode: String? = null, val sku: String? = null, val unit: String = DataLabels.UNIT_PIECE, val costCents: Int = 0, val salePriceCents: Int = 0, val quantity: Int = 0, val lowStockAt: Int = 0, val currency: String = "EUR")
 @Serializable data class AccountingProductRequest(val name: String, val barcode: String? = null, val sku: String? = null, val unit: String = DataLabels.UNIT_PIECE, val costCents: Int = 0, val salePriceCents: Int = 0, val quantity: Int = 0, val lowStockAt: Int = 0, val currency: String = "EUR")
 @Serializable data class AccountingEntryRequest(val type: String, val category: String, val description: String, val amountCents: Int, val currency: String = "EUR")
+@Serializable data class AccountingEntryEditRequest(val description: String, val amountCents: Int)
 @Serializable data class AccountingSellRequest(val quantity: Int, val unitPriceCents: Int? = null, val note: String? = null)
 @Serializable data class AccountingSellResponseDto(val product: AccountingProductDto? = null, val incomeCents: Int = 0, val costCents: Int = 0, val netCents: Int = 0)
 @Serializable data class AccountingStockRequest(val action: String, val quantity: Int, val unitCostCents: Int? = null, val note: String? = null)

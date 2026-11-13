@@ -266,6 +266,7 @@ interface ApiService {
     @POST("accounting/products/{id}/sell") suspend fun sellAccountingProduct(@Path("id") id: String, @Body body: AccountingSellRequest): Response<AccountingSellResponseDto>
     @POST("accounting/products/{id}/stock") suspend fun changeAccountingStock(@Path("id") id: String, @Body body: AccountingStockRequest): Response<AccountingProductDto>
     @POST("accounting/entries") suspend fun addAccountingEntry(@Body body: AccountingEntryRequest): Response<AccountingEntryDto>
+    @PATCH("accounting/entries/{id}") suspend fun updateAccountingEntry(@Path("id") id: String, @Body body: AccountingEntryEditRequest): Response<AccountingEntryDto>
     @DELETE("accounting/entries/{id}") suspend fun deleteAccountingEntry(@Path("id") id: String): Response<okhttp3.ResponseBody>
     @DELETE("accounting/products/{id}") suspend fun deleteAccountingProduct(@Path("id") id: String): Response<okhttp3.ResponseBody>
     @POST("accounting/invoices/scan") suspend fun scanAccountingInvoice(@Body image: RequestBody): Response<AccountingInvoiceDraftDto>

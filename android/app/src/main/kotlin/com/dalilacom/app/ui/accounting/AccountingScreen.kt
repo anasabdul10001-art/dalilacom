@@ -69,6 +69,9 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var costTarget by remember { mutableStateOf<AccountingProductDto?>(null) }
     var costEditValue by remember { mutableStateOf("") }
     var deleteProductTarget by remember { mutableStateOf<AccountingProductDto?>(null) }
+    var editEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
+    var editDescription by remember { mutableStateOf("") }
+    var editAmount by remember { mutableStateOf("") }
     var deleteEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
 
     suspend fun reload() {
@@ -239,6 +242,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
                     )
                     // entries the store writes by itself (orders, commissions, delivery) follow the order and cannot be removed here
+                    if (e.source == "MANUAL" || e.source == "INVOICE") TextButton(onClick = { editEntryTarget = e; editDescription = e.description; editAmount = money(e.amountCents) }) { Text(stringResource(R.string.accounting_edit)) }
                     if (e.source == "MANUAL" || e.source == "INVOICE") TextButton(onClick = { deleteEntryTarget = e }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
                 }
             }
@@ -252,6 +256,25 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             text = { Text(stringResource(R.string.accounting_delete_confirm, product.name)) },
             confirmButton = { Button(onClick = { showResult { container.accountingRepository.deleteProduct(product.id) }; deleteProductTarget = null }) { Text(stringResource(R.string.accounting_delete)) } },
             dismissButton = { OutlinedButton(onClick = { deleteProductTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    editEntryTarget?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { editEntryTarget = null },
+            title = { Text(stringResource(R.string.accounting_edit)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(editDescription, { editDescription = it }, label = { Text(stringResource(R.string.accounting_description)) }, singleLine = true)
+                    OutlinedTextField(editAmount, { editAmount = it }, label = { Text(stringResource(R.string.accounting_amount)) }, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal))
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = editDescription.isNotBlank() && cents(editAmount) > 0,
+                    onClick = { showResult { container.accountingRepository.editEntry(entry.id, editDescription.trim(), cents(editAmount)) }; editEntryTarget = null },
+                ) { Text(stringResource(R.string.accounting_save)) }
+            },
+            dismissButton = { OutlinedButton(onClick = { editEntryTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
     deleteEntryTarget?.let { entry ->
