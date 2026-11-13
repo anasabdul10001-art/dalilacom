@@ -23,3 +23,9 @@ fun BrandLogo(modifier: Modifier = Modifier, wide: Boolean = false, onColor: Boo
     }
     Image(painterResource(res), contentDescription = "DALILACOM", modifier = modifier, contentScale = ContentScale.Fit)
 }
+
+/** Just the mark (the letter D with its arrows) in white, for the brand bar at the top of every page. */
+@Composable
+fun BrandMark(modifier: Modifier = Modifier) {
+    Image(painterResource(R.drawable.brand_mark_white), contentDescription = "DALILACOM", modifier = modifier, contentScale = ContentScale.Fit)
+}

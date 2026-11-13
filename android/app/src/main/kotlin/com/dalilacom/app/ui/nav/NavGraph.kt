@@ -125,8 +125,8 @@ fun DalilacomNavGraph(
     androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().imePadding()) {
     // the Dalilacom logo stays at the top of every page, so people always know whose app this is
     if (currentRoute != null && listOf("splash", "login", "register", "socialReturn").none { currentRoute.startsWith(it) }) {
-        Box(Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.background).statusBarsPadding().padding(horizontal = 16.dp, vertical = 6.dp)) {
-            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.dalilacom.app.R.drawable.brand_logo), contentDescription = "DALILACOM", modifier = Modifier.height(30.dp).align(Alignment.CenterStart))
+        Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.Color(0xFFC4552B), androidx.compose.ui.graphics.Color(0xFFE0653A)))).statusBarsPadding().padding(horizontal = 16.dp, vertical = 5.dp)) {
+            com.dalilacom.app.ui.common.BrandMark(Modifier.height(28.dp).align(Alignment.CenterStart))
         }
     }
     Box(Modifier.weight(1f).fillMaxWidth().then(if (currentRoute != null && listOf("splash", "login", "register", "socialReturn").none { currentRoute.startsWith(it) }) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier)) {
