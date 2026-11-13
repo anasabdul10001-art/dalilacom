@@ -58,7 +58,7 @@ fun AccountingPlansScreen(container: AppContainer, onBack: () -> Unit, service: 
                             plan.description?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                             val price = if (plan.cashAmountCents <= 0) "${plan.priceCredits ?: 0} $creditName" else "${planMoney(plan.cashAmountCents)} ${plan.currency}"
                             Text(price, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
-                            Text("${plan.durationDays} ${stringResource(R.string.plans_days)}${if (plan.trialDays > 0) " · ${plan.trialDays} ${stringResource(R.string.plans_trial_days)}" else ""}")
+                            Text("${com.dalilacom.app.ui.pricing.planPeriodLabel(plan.durationDays)}${if (plan.trialDays > 0) " · ${plan.trialDays} ${stringResource(R.string.plans_trial_days)}" else ""}")
                             plan.features.forEach { Text("• ${it.text}", style = MaterialTheme.typography.bodySmall) }
                             Button(onClick = {
                                 busyId = plan.id

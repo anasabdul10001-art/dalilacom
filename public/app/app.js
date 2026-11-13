@@ -240,6 +240,10 @@ function resumeAfterAuthentication() {
   return true;
 }
 
+/** A plan length for people: 30 days is "month", 365 is "year", anything else stays in days. */
+function planPeriodLabel(days) { return days === 30 ? t("pricing.month") : days === 365 ? t("pricing.year") : t("pricing.days", { n: days }); }
+function planEvery(days) { return days === 30 ? t("pricing.everyMonth") : days === 365 ? t("pricing.everyYear") : t("pricing.everyDays", { n: days }); }
+
 function setHomeTab(tab) {
   // The auto-responder is a whole screen of its own: the middle button opens it (guests are taken to sign in first).
   if (tab === "responder") {
@@ -6831,7 +6835,7 @@ function planCardHtml(plan, credit, action) {
     <div class="title-line"><strong>${esc(plan.name)}</strong><span class="price">${esc(planPriceText(plan, credit))}</span></div>
     ${plan.description ? `<p class="muted" style="margin:2px 0 6px">${esc(plan.description)}</p>` : ""}
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">
-      <span class="badge neutral">${esc(t("pricing.days", { n: plan.durationDays }))}</span>
+      <span class="badge neutral">${esc(planPeriodLabel(plan.durationDays))}</span>
       ${plan.trialDays > 0 ? `<span class="badge success">${esc(t("pricing.trial", { n: plan.trialDays }))}</span>` : ""}
       ${plan.priceFrom === "country" ? `<span class="badge info">${esc(t("pricing.yourCountry"))}</span>` : ""}
       ${plan.monthlyBroadcastLimit ? `<span class="badge neutral">${esc(t("pricing.broadcasts", { n: plan.monthlyBroadcastLimit }))}</span>` : ""}
@@ -6851,8 +6855,8 @@ function serviceIntroHtml(plans, credit, kind, fn) {
   const lead = plans.find((p) => p.trialDays > 0) || plans[0];
   const price = planPriceText(lead, credit);
   const line = lead.trialDays > 0
-    ? t("intro.trial", { n: lead.trialDays, price, days: lead.durationDays })
-    : t("intro.noTrial", { price, days: lead.durationDays });
+    ? t("intro.trial", { n: lead.trialDays, price, every: planEvery(lead.durationDays) })
+    : t("intro.noTrial", { price, every: planEvery(lead.durationDays) });
   return `
     <div class="card intro-card">
       <h2>${esc(t(`intro.${kind}.title`))}</h2>
@@ -7050,7 +7054,7 @@ function screenStorePlans() {
     <div class="card plan-card">
       <div class="title-line"><strong>${esc(p.name)}</strong><span class="price">${esc(price(p))}</span></div>
       ${p.description ? `<p class="muted" style="margin:2px 0 6px">${esc(p.description)}</p>` : ""}
-      <span class="badge neutral">${esc(t("pricing.days", { n: p.durationDays }))}</span>
+      <span class="badge neutral">${esc(planPeriodLabel(p.durationDays))}</span>
       ${p.features.length ? `<ul class="plan-features">${p.features.map((f) => `<li class="${f.included ? "" : "off"}">${f.included ? "\u2714" : "\u2718"} ${esc(f.text)}</li>`).join("")}</ul>` : ""}
       ${p.priceCredits === null ? "" : `<button class="btn small" ${sp.busy ? "disabled" : ""} onclick="chooseStorePlan('${p.id}')">${esc(t(d.active && d.current && d.current.id === p.id ? "sp.renew" : "sp.choose.btn"))}</button>`}
     </div>`).join("");

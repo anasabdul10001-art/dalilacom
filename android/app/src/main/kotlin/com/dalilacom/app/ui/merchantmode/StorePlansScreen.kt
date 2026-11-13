@@ -95,7 +95,7 @@ fun StorePlansScreen(container: AppContainer, onBack: () -> Unit, onOpenStore: (
                         )
                     }
                     plan.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Text(stringResource(R.string.pricing_days, plan.durationDays), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
+                    Text(com.dalilacom.app.ui.pricing.planPeriodLabel(plan.durationDays), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
                     plan.features.forEach { f -> Text((if (f.included) "✔ " else "✘ ") + f.text, style = MaterialTheme.typography.bodyMedium) }
                     if (plan.priceCredits != null) {
                         Spacer(Modifier.height(8.dp))

@@ -247,8 +247,8 @@
     <string name="pricing_subscribed">تم الاشتراك ✅</string>
     <string name="intro_card_title">أهلًا بك في بطاقة دليلكم 👋</string>
     <string name="intro_card_body">بطاقة رقمية تعطيك حسومات عند المتاجر المشاركة، بس تعرض رمزك على صاحب النشاط.</string>
-    <string name="intro_trial">جرّب الخدمة مجانًا لمدة %1$d يوم. بعدها %2$s كل %3$d يوم.</string>
-    <string name="intro_no_trial">الاشتراك %1$s كل %2$d يوم.</string>
+    <string name="intro_trial">جرّب الخدمة مجانًا لمدة %1$d يوم. بعدها %2$s %3$s.</string>
+    <string name="intro_no_trial">الاشتراك %1$s %2$s.</string>
     <string name="intro_after_continue">بتبدأ تستخدم الخدمة مجانًا، ولما تنتهي المدة بتجدّد من الخطط المتاحة.</string>
     <string name="intro_continue">متابعة</string>
     <string name="intro_responder_title">أهلًا بك في المجيب الآلي 👋</string>
@@ -1258,4 +1258,9 @@
     <string name="promo_open">افتح</string>
     <string name="promo_free3">3 شهور مجاناً</string>
     <string name="promo_start">ابدأ التجربة</string>
+    <string name="pricing_month">شهر</string>
+    <string name="pricing_year">سنة</string>
+    <string name="pricing_every_month">كل شهر</string>
+    <string name="pricing_every_year">كل سنة</string>
+    <string name="pricing_every_days">كل %1$d يوم</string>
 </resources>

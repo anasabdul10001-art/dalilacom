@@ -30,11 +30,26 @@ fun planPriceText(plan: CatalogPlanDto, creditName: String): String = when (plan
     else -> stringResource(R.string.pricing_credits, plan.priceCredits, creditName)
 }
 
+/** A plan length for people: 30 days is "month", 365 is "year", anything else stays in days. */
+@Composable
+fun planPeriodLabel(days: Int): String = when (days) {
+    30 -> stringResource(R.string.pricing_month)
+    365 -> stringResource(R.string.pricing_year)
+    else -> stringResource(R.string.pricing_days, days)
+}
+
+@Composable
+fun planEveryLabel(days: Int): String = when (days) {
+    30 -> stringResource(R.string.pricing_every_month)
+    365 -> stringResource(R.string.pricing_every_year)
+    else -> stringResource(R.string.pricing_every_days, days)
+}
+
 /** One plan: name, price, length, free period, what it includes — and a button when it can be bought. */
 @Composable
 fun PlanCard(plan: CatalogPlanDto, creditName: String, actionLabel: String?, busy: Boolean, onAction: () -> Unit) {
     val facts = buildList {
-        add(stringResource(R.string.pricing_days, plan.durationDays))
+        add(planPeriodLabel(plan.durationDays))
         if (plan.trialDays > 0) add(stringResource(R.string.pricing_trial, plan.trialDays))
         if (plan.priceFrom == "country") add(stringResource(R.string.pricing_your_country))
         plan.monthlyBroadcastLimit?.takeIf { it > 0 }?.let { add(stringResource(R.string.pricing_broadcasts, it)) }
@@ -77,7 +92,7 @@ fun ServiceWelcome(title: String, body: String, trialDays: Int, price: String, p
             Text(body, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(8.dp))
             Text(
-                if (trialDays > 0) stringResource(R.string.intro_trial, trialDays, price, periodDays) else stringResource(R.string.intro_no_trial, price, periodDays),
+                if (trialDays > 0) stringResource(R.string.intro_trial, trialDays, price, planEveryLabel(periodDays)) else stringResource(R.string.intro_no_trial, price, planEveryLabel(periodDays)),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
             )
