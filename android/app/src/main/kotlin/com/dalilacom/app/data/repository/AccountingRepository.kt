@@ -37,6 +37,12 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun deleteEntry(id: String): Result<Unit> = result { api.deleteAccountingEntry(id) }
     suspend fun deleteProduct(id: String): Result<Unit> = result { api.deleteAccountingProduct(id) }
     suspend fun sell(id: String, quantity: Int, payMethod: String = "CASH"): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity, payMethod = payMethod)) }
+    suspend fun purchases(): List<com.dalilacom.app.data.network.AccountingPurchaseDto> = safeApiCall { api.accountingPurchases() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    suspend fun createPurchase(body: com.dalilacom.app.data.network.AccountingPurchaseRequest): Result<com.dalilacom.app.data.network.AccountingPurchaseDto> {
+        val response = safeApiCall { api.createAccountingPurchase(body) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
+        val purchase = response.body()
+        return if (response.isSuccessful && purchase != null) Result.success(purchase) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, AppStrings.get(R.string.s_0a2edd30))))
+    }
     suspend fun parties() = safeApiCall { api.accountingParties() }?.takeIf { it.isSuccessful }?.body()
     suspend fun party(id: String) = safeApiCall { api.accountingParty(id) }?.takeIf { it.isSuccessful }?.body()
     suspend fun addParty(kind: String, name: String): Result<Unit> = result { api.createAccountingParty(com.dalilacom.app.data.network.AccountingPartyRequest(kind, name)) }

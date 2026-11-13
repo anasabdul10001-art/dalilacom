@@ -268,6 +268,8 @@ interface ApiService {
     @POST("accounting/products") suspend fun addAccountingProduct(@Body body: AccountingProductRequest): Response<AccountingProductDto>
     @POST("accounting/products/{id}/sell") suspend fun sellAccountingProduct(@Path("id") id: String, @Body body: AccountingSellRequest): Response<AccountingSellResponseDto>
     @POST("accounting/products/{id}/stock") suspend fun changeAccountingStock(@Path("id") id: String, @Body body: AccountingStockRequest): Response<AccountingProductDto>
+    @POST("accounting/purchases") suspend fun createAccountingPurchase(@Body body: AccountingPurchaseRequest): Response<AccountingPurchaseDto>
+    @GET("accounting/purchases") suspend fun accountingPurchases(): Response<List<AccountingPurchaseDto>>
     @GET("accounting/parties") suspend fun accountingParties(): Response<AccountingPartiesDto>
     @GET("accounting/parties/{id}") suspend fun accountingParty(@Path("id") id: String): Response<AccountingPartyDetailDto>
     @POST("accounting/parties") suspend fun createAccountingParty(@Body body: AccountingPartyRequest): Response<okhttp3.ResponseBody>

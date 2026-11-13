@@ -897,4 +897,15 @@
     <string name="accounting_sale_party">الزبون (للبيع الآجل)</string>
     <string name="accounting_sale_no_party">بدون زبون مسجّل</string>
     <string name="accounting_sale_paid_now">المبلغ المدفوع الآن (فاضي = كامل)</string>
+    <string name="accounting_buy_title">فاتورة شراء جديدة</string>
+    <string name="accounting_buy_help">البضاعة بتدخل للمخزون وتكلفة المنتج بتتحدّث بمتوسط مرجّح. المبلغ المدفوع بيطلع من الصندوق وما بيتسجّل مصروف.</string>
+    <string name="accounting_buy_cost">تكلفة الوحدة</string>
+    <string name="accounting_buy_supplier">المورد (للشراء الآجل)</string>
+    <string name="accounting_buy_no_supplier">بدون مورد مسجّل</string>
+    <string name="accounting_buy_paid_now">المبلغ المدفوع الآن (فاضي = كامل)</string>
+    <string name="accounting_buy_total">إجمالي الفاتورة</string>
+    <string name="accounting_buy_save">حفظ فاتورة الشراء</string>
+    <string name="accounting_buy_saved">انحفظت فاتورة الشراء رقم %1$d</string>
+    <string name="accounting_buy_recent">آخر فواتير الشراء</string>
+    <string name="accounting_buy_empty">ما في أصناف بالفاتورة بعد.</string>
 </resources>

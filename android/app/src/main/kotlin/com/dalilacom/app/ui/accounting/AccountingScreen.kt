@@ -76,6 +76,16 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var editEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
     var editDescription by remember { mutableStateOf("") }
     var editAmount by remember { mutableStateOf("") }
+    var purchases by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingPurchaseDto>>(emptyList()) }
+    var buyBasket by remember { mutableStateOf<List<Triple<AccountingProductDto, Int, Long>>>(emptyList()) }
+    var buyPick by remember { mutableStateOf<AccountingProductDto?>(null) }
+    var buyPickOpen by remember { mutableStateOf(false) }
+    var buyQty by remember { mutableStateOf("1") }
+    var buyCost by remember { mutableStateOf("") }
+    var buyPartyId by remember { mutableStateOf<String?>(null) }
+    var buyPartyOpen by remember { mutableStateOf(false) }
+    var buyPaid by remember { mutableStateOf("") }
+    var buyPayMethod by remember { mutableStateOf("CASH") }
     var partiesData by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingPartiesDto?>(null) }
     var partyKind by remember { mutableStateOf("CUSTOMER") }
     var partyName by remember { mutableStateOf("") }
@@ -125,6 +135,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         sales = container.accountingRepository.sales()
         low = container.accountingRepository.lowStock()
         partiesData = container.accountingRepository.parties()
+        purchases = container.accountingRepository.purchases()
         val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
         val (rf, rt) = when (reportPreset) { "today" -> today to today; "week" -> today.minusDays(6) to today; "last30" -> today.minusDays(29) to today; else -> today.withDayOfMonth(1) to today }
         report = container.accountingRepository.report(rf.toString(), rt.toString())
@@ -314,6 +325,79 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                 Column(Modifier.weight(1f)) { Text("#" + sl.number + (sl.customerName?.let { " · $it" } ?: ""), style = MaterialTheme.typography.titleSmall); Text(sl.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 Text(money(sl.totalCents.toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
                                 TextButton(onClick = { savedSale = sl }) { Text(stringResource(R.string.accounting_sale_share)) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.accounting_buy_title), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.accounting_buy_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    androidx.compose.foundation.layout.Box {
+                        OutlinedButton(onClick = { buyPickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(buyPick?.let { it.name + " · " + stringResource(R.string.accounting_sale_stock) + ": " + it.quantity } ?: stringResource(R.string.accounting_sale_pick)) }
+                        androidx.compose.material3.DropdownMenu(expanded = buyPickOpen, onDismissRequest = { buyPickOpen = false }) {
+                            products.filter { !it.id.startsWith("store:") }.forEach { p -> androidx.compose.material3.DropdownMenuItem(text = { Text(p.name + " · " + p.quantity) }, onClick = { buyPick = p; buyCost = money(p.costCents); buyPickOpen = false }) }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(buyQty, { buyQty = it }, label = { Text(stringResource(R.string.accounting_sale_qty)) }, singleLine = true, modifier = Modifier.weight(1f))
+                        OutlinedTextField(buyCost, { buyCost = it }, label = { Text(stringResource(R.string.accounting_buy_cost)) }, singleLine = true, modifier = Modifier.weight(1f))
+                    }
+                    Button(onClick = {
+                        val p = buyPick; val q = buyQty.toIntOrNull() ?: 0; val c = cents(buyCost).toLong()
+                        if (p == null || q <= 0 || c <= 0) return@Button
+                        val have = buyBasket.firstOrNull { it.first.id == p.id }
+                        val nq = (have?.second ?: 0) + q
+                        val nc = if (have != null) Math.round((have.second * have.third + q * c).toDouble() / nq) else c
+                        buyBasket = buyBasket.filter { it.first.id != p.id } + Triple(p, nq, nc)
+                        buyQty = "1"
+                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_sale_add)) }
+                    if (buyBasket.isEmpty()) Text(stringResource(R.string.accounting_buy_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    buyBasket.forEach { (p, q, c) ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text(p.name, style = MaterialTheme.typography.titleSmall); Text("$q × " + money(c.toInt()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            Text(money((c * q).toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                            TextButton(onClick = { buyBasket = buyBasket.filter { it.first.id != p.id } }) { Text("✕", color = MaterialTheme.colorScheme.error) }
+                        }
+                    }
+                    androidx.compose.foundation.layout.Box {
+                        OutlinedButton(onClick = { buyPartyOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(partiesData?.parties?.firstOrNull { it.id == buyPartyId }?.name ?: stringResource(R.string.accounting_buy_supplier)) }
+                        androidx.compose.material3.DropdownMenu(expanded = buyPartyOpen, onDismissRequest = { buyPartyOpen = false }) {
+                            androidx.compose.material3.DropdownMenuItem(text = { Text(stringResource(R.string.accounting_buy_no_supplier)) }, onClick = { buyPartyId = null; buyPartyOpen = false })
+                            partiesData?.parties.orEmpty().filter { it.kind == "SUPPLIER" }.forEach { c -> androidx.compose.material3.DropdownMenuItem(text = { Text(c.name) }, onClick = { buyPartyId = c.id; buyPartyOpen = false }) }
+                        }
+                    }
+                    OutlinedTextField(buyPaid, { buyPaid = it }, label = { Text(stringResource(R.string.accounting_buy_paid_now)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("CASH" to R.string.accounting_pay_CASH, "BANK" to R.string.accounting_pay_BANK, "WALLET" to R.string.accounting_pay_WALLET).forEach { (code, label) ->
+                            if (buyPayMethod == code) Button(onClick = { buyPayMethod = code }) { Text(stringResource(label)) } else OutlinedButton(onClick = { buyPayMethod = code }) { Text(stringResource(label)) }
+                        }
+                    }
+                    Text(stringResource(R.string.accounting_buy_total) + ": " + money(buyBasket.sumOf { it.third * it.second }.toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                    Button(
+                        enabled = buyBasket.isNotEmpty(),
+                        onClick = {
+                            scope.launch {
+                                val req = com.dalilacom.app.data.network.AccountingPurchaseRequest(
+                                    items = buyBasket.map { com.dalilacom.app.data.network.AccountingPurchaseItemRequest(it.first.id, it.second, it.third) },
+                                    partyId = buyPartyId, paidCents = buyPaid.trim().takeIf { it.isNotEmpty() }?.let { cents(it).toLong() }, payMethod = buyPayMethod,
+                                )
+                                container.accountingRepository.createPurchase(req).fold({ pu ->
+                                    message = context.getString(R.string.accounting_buy_saved, pu.number); buyBasket = emptyList(); buyPaid = ""; buyPartyId = null; buyPick = null; reload()
+                                }, { message = it.message ?: AppStrings.get(R.string.ship_failed) })
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.accounting_buy_save)) }
+                    if (purchases.isNotEmpty()) {
+                        Text(stringResource(R.string.accounting_buy_recent), style = MaterialTheme.typography.titleSmall)
+                        purchases.take(5).forEach { pu ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) { Text("#" + pu.number + (pu.supplierName?.let { " · $it" } ?: ""), style = MaterialTheme.typography.titleSmall); Text(pu.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                Text(money(pu.totalCents.toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
                             }
                         }
                     }

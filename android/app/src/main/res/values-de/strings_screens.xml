@@ -525,4 +525,15 @@
     <string name="accounting_sale_party">Customer (for a sale on credit)</string>
     <string name="accounting_sale_no_party">No registered customer</string>
     <string name="accounting_sale_paid_now">Amount paid now (empty = in full)</string>
+    <string name="accounting_buy_title">New purchase invoice</string>
+    <string name="accounting_buy_help">The goods come into the stock and the cost of the product is updated by a weighted average. The money paid leaves the cash box and is not booked as an expense.</string>
+    <string name="accounting_buy_cost">Cost of one unit</string>
+    <string name="accounting_buy_supplier">Supplier (for a purchase on credit)</string>
+    <string name="accounting_buy_no_supplier">No registered supplier</string>
+    <string name="accounting_buy_paid_now">Amount paid now (empty = in full)</string>
+    <string name="accounting_buy_total">Invoice total</string>
+    <string name="accounting_buy_save">Save the purchase invoice</string>
+    <string name="accounting_buy_saved">Purchase invoice number %1$d saved</string>
+    <string name="accounting_buy_recent">Recent purchase invoices</string>
+    <string name="accounting_buy_empty">No items on the invoice yet.</string>
 </resources>
