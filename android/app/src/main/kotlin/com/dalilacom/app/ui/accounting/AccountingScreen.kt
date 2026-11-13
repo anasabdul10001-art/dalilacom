@@ -72,6 +72,16 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var editEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
     var editDescription by remember { mutableStateOf("") }
     var editAmount by remember { mutableStateOf("") }
+    var sales by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingSaleDto>>(emptyList()) }
+    var basket by remember { mutableStateOf<List<Pair<AccountingProductDto, Int>>>(emptyList()) }
+    var salePick by remember { mutableStateOf<AccountingProductDto?>(null) }
+    var salePickOpen by remember { mutableStateOf(false) }
+    var saleQty by remember { mutableStateOf("1") }
+    var saleCustomer by remember { mutableStateOf("") }
+    var saleDiscount by remember { mutableStateOf("") }
+    var saleDiscountPercent by remember { mutableStateOf(false) }
+    var salePayMethod by remember { mutableStateOf("CASH") }
+    var savedSale by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingSaleDto?>(null) }
     var entryPay by remember { mutableStateOf("CASH") }
     var cashDay by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
     var cash by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingCashDto?>(null) }
@@ -86,6 +96,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         summary = container.accountingRepository.summary()
         products = container.accountingRepository.products()
         cash = container.accountingRepository.cash(cashDay, "EUR")
+        sales = container.accountingRepository.sales()
         loading = false
     }
     LaunchedEffect(Unit) { reload() }
@@ -191,6 +202,81 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                             }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         if (c.unspecified.incomeCents != 0L || c.unspecified.expensesCents != 0L) Text(stringResource(R.string.accounting_cash_unspecified) + ": +" + money(c.unspecified.incomeCents.toInt()) + " −" + money(c.unspecified.expensesCents.toInt()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+        item {
+            val saleSub = basket.sumOf { (p, q) -> p.salePriceCents.toLong() * q }
+            val dv = saleDiscount.replace(',', '.').toDoubleOrNull() ?: 0.0
+            val saleDisc = if (saleDiscountPercent) Math.round(saleSub * dv.coerceIn(0.0, 100.0) / 100.0) else Math.round(dv * 100)
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.accounting_sale_title), style = MaterialTheme.typography.titleMedium)
+                    val sellable = products.filter { it.quantity > 0 && it.salePriceCents > 0 }
+                    androidx.compose.foundation.layout.Box {
+                        OutlinedButton(onClick = { salePickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(salePick?.let { it.name + " · " + money(it.salePriceCents) + " · " + stringResource(R.string.accounting_sale_stock) + ": " + it.quantity } ?: stringResource(R.string.accounting_sale_pick)) }
+                        androidx.compose.material3.DropdownMenu(expanded = salePickOpen, onDismissRequest = { salePickOpen = false }) {
+                            sellable.forEach { p -> androidx.compose.material3.DropdownMenuItem(text = { Text(p.name + " · " + money(p.salePriceCents) + " · " + p.quantity) }, onClick = { salePick = p; salePickOpen = false }) }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(saleQty, { saleQty = it }, label = { Text(stringResource(R.string.accounting_sale_qty)) }, singleLine = true, modifier = Modifier.weight(1f))
+                        Button(onClick = {
+                            val p = salePick; val q = saleQty.toIntOrNull() ?: 0
+                            if (p == null || q <= 0) return@Button
+                            val have = basket.firstOrNull { it.first.id == p.id }?.second ?: 0
+                            if (have + q > p.quantity) { message = AppStrings.get(R.string.s_0a2edd30); return@Button }
+                            basket = basket.filter { it.first.id != p.id } + (p to (have + q))
+                            saleQty = "1"
+                        }) { Text(stringResource(R.string.accounting_sale_add)) }
+                    }
+                    if (basket.isEmpty()) Text(stringResource(R.string.accounting_sale_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    basket.forEach { (p, q) ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text(p.name, style = MaterialTheme.typography.titleSmall); Text("$q × " + money(p.salePriceCents), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            Text(money((p.salePriceCents.toLong() * q).toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                            TextButton(onClick = { basket = basket.filter { it.first.id != p.id } }) { Text("✕", color = MaterialTheme.colorScheme.error) }
+                        }
+                    }
+                    OutlinedTextField(saleCustomer, { saleCustomer = it }, label = { Text(stringResource(R.string.accounting_sale_customer)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(saleDiscount, { saleDiscount = it }, label = { Text(stringResource(R.string.accounting_sale_discount)) }, singleLine = true, modifier = Modifier.weight(1f))
+                        if (!saleDiscountPercent) Button(onClick = { saleDiscountPercent = false }) { Text(stringResource(R.string.accounting_sale_discount_amount)) } else OutlinedButton(onClick = { saleDiscountPercent = false }) { Text(stringResource(R.string.accounting_sale_discount_amount)) }
+                        if (saleDiscountPercent) Button(onClick = { saleDiscountPercent = true }) { Text(stringResource(R.string.accounting_sale_discount_percent)) } else OutlinedButton(onClick = { saleDiscountPercent = true }) { Text(stringResource(R.string.accounting_sale_discount_percent)) }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("CASH" to R.string.accounting_pay_CASH, "BANK" to R.string.accounting_pay_BANK, "WALLET" to R.string.accounting_pay_WALLET).forEach { (code, label) ->
+                            if (salePayMethod == code) Button(onClick = { salePayMethod = code }) { Text(stringResource(label)) } else OutlinedButton(onClick = { salePayMethod = code }) { Text(stringResource(label)) }
+                        }
+                    }
+                    Text(stringResource(R.string.accounting_sale_subtotal) + ": " + money(saleSub.toInt()) + "   ·   " + stringResource(R.string.accounting_sale_total) + ": " + money(kotlin.math.max(saleSub - saleDisc, 0L).toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                    Button(
+                        enabled = basket.isNotEmpty(),
+                        onClick = {
+                            scope.launch {
+                                val req = com.dalilacom.app.data.network.AccountingSaleRequest(
+                                    items = basket.map { com.dalilacom.app.data.network.AccountingSaleItemRequest(it.first.id, it.second) },
+                                    discountCents = if (!saleDiscountPercent && dv > 0) Math.round(dv * 100) else null,
+                                    discountPercent = if (saleDiscountPercent && dv > 0) dv.coerceIn(0.0, 100.0) else null,
+                                    customerName = saleCustomer.trim().ifEmpty { null }, payMethod = salePayMethod,
+                                )
+                                container.accountingRepository.createSale(req).fold({ sale ->
+                                    savedSale = sale; basket = emptyList(); saleCustomer = ""; saleDiscount = ""; salePick = null; reload()
+                                }, { message = it.message ?: AppStrings.get(R.string.ship_failed) })
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.accounting_sale_save)) }
+                    if (sales.isNotEmpty()) {
+                        Text(stringResource(R.string.accounting_sale_recent), style = MaterialTheme.typography.titleSmall)
+                        sales.take(5).forEach { sl ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) { Text("#" + sl.number + (sl.customerName?.let { " · $it" } ?: ""), style = MaterialTheme.typography.titleSmall); Text(sl.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                Text(money(sl.totalCents.toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                                TextButton(onClick = { savedSale = sl }) { Text(stringResource(R.string.accounting_sale_share)) }
+                            }
+                        }
                     }
                 }
             }
@@ -315,6 +401,27 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             text = { Text(stringResource(R.string.accounting_delete_confirm, product.name)) },
             confirmButton = { Button(onClick = { showResult { container.accountingRepository.deleteProduct(product.id) }; deleteProductTarget = null }) { Text(stringResource(R.string.accounting_delete)) } },
             dismissButton = { OutlinedButton(onClick = { deleteProductTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    savedSale?.let { sale ->
+        val text = buildString {
+            append(context.getString(R.string.accounting_sale_number, sale.number)); append("\n")
+            sale.customerName?.let { append(it); append("\n") }
+            sale.lines.forEach { l -> append(l.name + " × " + l.quantity + " = " + money(l.lineTotalCents.toInt()) + " " + sale.currency + "\n") }
+            if (sale.discountCents > 0) append(context.getString(R.string.accounting_sale_discount) + ": −" + money(sale.discountCents.toInt()) + " " + sale.currency + "\n")
+            append(context.getString(R.string.accounting_sale_total) + ": " + money(sale.totalCents.toInt()) + " " + sale.currency)
+        }
+        AlertDialog(
+            onDismissRequest = { savedSale = null },
+            title = { Text(stringResource(R.string.accounting_sale_saved, sale.number)) },
+            text = { Text(text) },
+            confirmButton = {
+                Button(onClick = {
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, text) }
+                    context.startActivity(android.content.Intent.createChooser(send, context.getString(R.string.accounting_sale_share)))
+                }) { Text(stringResource(R.string.accounting_sale_share)) }
+            },
+            dismissButton = { OutlinedButton(onClick = { savedSale = null }) { Text(stringResource(R.string.accounting_sale_close)) } },
         )
     }
     salePayTarget?.let { product ->

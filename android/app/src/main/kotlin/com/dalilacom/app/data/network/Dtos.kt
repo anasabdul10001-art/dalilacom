@@ -1324,6 +1324,13 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingEntryRequest(val type: String, val category: String, val description: String, val amountCents: Int, val currency: String = "EUR", val payMethod: String? = null)
 @Serializable data class AccountingEntryEditRequest(val description: String, val amountCents: Int)
 @Serializable data class AccountingSellRequest(val quantity: Int, val unitPriceCents: Int? = null, val note: String? = null, val payMethod: String? = null)
+@Serializable data class AccountingSaleItemRequest(val productId: String, val quantity: Int)
+@Serializable data class AccountingSaleRequest(val items: List<AccountingSaleItemRequest>, val discountCents: Long? = null, val discountPercent: Double? = null, val customerName: String? = null, val payMethod: String = "CASH")
+@Serializable data class AccountingSaleLineDto(val name: String = "", val quantity: Int = 0, val unitPriceCents: Long = 0, val lineTotalCents: Long = 0)
+@Serializable data class AccountingSaleDto(
+    val id: String = "", val number: Int = 0, val customerName: String? = null, val currency: String = "EUR", val payMethod: String = "CASH",
+    val occurredAt: String = "", val subtotalCents: Long = 0, val discountCents: Long = 0, val totalCents: Long = 0, val lines: List<AccountingSaleLineDto> = emptyList(),
+)
 @Serializable data class AccountingCashMethodDto(val payMethod: String = "", val incomeCents: Long = 0, val expensesCents: Long = 0)
 @Serializable data class AccountingCashUnspecifiedDto(val incomeCents: Long = 0, val expensesCents: Long = 0)
 /** The cash box of one day in one currency. */

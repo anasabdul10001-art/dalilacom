@@ -822,4 +822,24 @@
     <string name="accounting_cash_opening_prev">من إقفال النهار السابق</string>
     <string name="accounting_cash_other">بنك ومحفظة (مو بالصندوق)</string>
     <string name="accounting_cash_unspecified">حركات بدون طريقة دفع (قديمة أو آلية)، ما بتدخل بحساب الصندوق</string>
+    <string name="accounting_sale_title">فاتورة بيع جديدة</string>
+    <string name="accounting_sale_pick">اختر منتجاً</string>
+    <string name="accounting_sale_qty">الكمية</string>
+    <string name="accounting_sale_add">أضف للفاتورة</string>
+    <string name="accounting_sale_empty">ما في أصناف بالفاتورة بعد.</string>
+    <string name="accounting_sale_subtotal">المجموع</string>
+    <string name="accounting_sale_discount">الحسم</string>
+    <string name="accounting_sale_discount_amount">بالمبلغ</string>
+    <string name="accounting_sale_discount_percent">بالنسبة %</string>
+    <string name="accounting_sale_customer">اسم الزبون (اختياري)</string>
+    <string name="accounting_sale_total">الإجمالي بعد الحسم</string>
+    <string name="accounting_sale_save">حفظ الفاتورة</string>
+    <string name="accounting_sale_saved">انحفظت الفاتورة رقم %1$d</string>
+    <string name="accounting_sale_share">مشاركة الفاتورة</string>
+    <string name="accounting_sale_recent">آخر الفواتير</string>
+    <string name="accounting_sale_number">فاتورة بيع رقم %1$d</string>
+    <string name="accounting_sale_remove">إزالة</string>
+    <string name="accounting_sale_close">تم</string>
+    <string name="accounting_sale_stock">الموجود</string>
+    <string name="accounting_sale_item">الصنف</string>
 </resources>

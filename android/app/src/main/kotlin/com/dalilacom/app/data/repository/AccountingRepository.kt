@@ -37,6 +37,12 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun deleteEntry(id: String): Result<Unit> = result { api.deleteAccountingEntry(id) }
     suspend fun deleteProduct(id: String): Result<Unit> = result { api.deleteAccountingProduct(id) }
     suspend fun sell(id: String, quantity: Int, payMethod: String = "CASH"): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity, payMethod = payMethod)) }
+    suspend fun sales(): List<com.dalilacom.app.data.network.AccountingSaleDto> = safeApiCall { api.accountingSales() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    suspend fun createSale(body: com.dalilacom.app.data.network.AccountingSaleRequest): Result<com.dalilacom.app.data.network.AccountingSaleDto> {
+        val response = safeApiCall { api.createAccountingSale(body) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
+        val sale = response.body()
+        return if (response.isSuccessful && sale != null) Result.success(sale) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, AppStrings.get(R.string.s_0a2edd30))))
+    }
     suspend fun cash(day: String, currency: String) = safeApiCall { api.accountingCash(day, currency) }?.takeIf { it.isSuccessful }?.body()
     suspend fun closeCash(day: String, currency: String, countedCents: Long): Result<Unit> = result { api.closeAccountingCash(com.dalilacom.app.data.network.AccountingCashCloseRequest(day, currency, countedCents)) }
     suspend fun reopenCash(day: String, currency: String): Result<Unit> = result { api.reopenAccountingCash(day, currency) }

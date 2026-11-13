@@ -822,4 +822,24 @@
     <string name="accounting_cash_opening_prev">From the closing of the previous day</string>
     <string name="accounting_cash_other">Bank and wallet (not in the box)</string>
     <string name="accounting_cash_unspecified">Entries with no payment method (older or automatic), not counted in the box</string>
+    <string name="accounting_sale_title">New sales invoice</string>
+    <string name="accounting_sale_pick">Pick a product</string>
+    <string name="accounting_sale_qty">Quantity</string>
+    <string name="accounting_sale_add">Add to the invoice</string>
+    <string name="accounting_sale_empty">No items on the invoice yet.</string>
+    <string name="accounting_sale_subtotal">Subtotal</string>
+    <string name="accounting_sale_discount">Discount</string>
+    <string name="accounting_sale_discount_amount">As an amount</string>
+    <string name="accounting_sale_discount_percent">As a percent %</string>
+    <string name="accounting_sale_customer">Customer name (optional)</string>
+    <string name="accounting_sale_total">Total after the discount</string>
+    <string name="accounting_sale_save">Save the invoice</string>
+    <string name="accounting_sale_saved">Invoice number %1$d saved</string>
+    <string name="accounting_sale_share">Share the invoice</string>
+    <string name="accounting_sale_recent">Recent invoices</string>
+    <string name="accounting_sale_number">Sales invoice number %1$d</string>
+    <string name="accounting_sale_remove">Remove</string>
+    <string name="accounting_sale_close">Done</string>
+    <string name="accounting_sale_stock">In stock</string>
+    <string name="accounting_sale_item">Item</string>
 </resources>
