@@ -81,6 +81,16 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var returnPurchase by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingPurchaseDto?>(null) }
     val returnQty = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
     var returnMethod by remember { mutableStateOf("CASH") }
+    var recurring by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingRecurringDto>>(emptyList()) }
+    var recType by remember { mutableStateOf("EXPENSE") }
+    var recFreq by remember { mutableStateOf("MONTHLY") }
+    var recCategory by remember { mutableStateOf("") }
+    var recDescription by remember { mutableStateOf("") }
+    var recAmount by remember { mutableStateOf("") }
+    var recStart by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
+    var recBackfill by remember { mutableStateOf(false) }
+    var recAmountTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingRecurringDto?>(null) }
+    var recAmountValue by remember { mutableStateOf("") }
     var purchases by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingPurchaseDto>>(emptyList()) }
     var buyBasket by remember { mutableStateOf<List<Triple<AccountingProductDto, Int, Long>>>(emptyList()) }
     var buyPick by remember { mutableStateOf<AccountingProductDto?>(null) }
@@ -141,6 +151,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         low = container.accountingRepository.lowStock()
         partiesData = container.accountingRepository.parties()
         purchases = container.accountingRepository.purchases()
+        recurring = container.accountingRepository.recurring()
         val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
         val (rf, rt) = when (reportPreset) { "today" -> today to today; "week" -> today.minusDays(6) to today; "last30" -> today.minusDays(29) to today; else -> today.withDayOfMonth(1) to today }
         report = container.accountingRepository.report(rf.toString(), rt.toString())
@@ -408,6 +419,51 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                             }
                         }
                     }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.accounting_rec_title), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.accounting_rec_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (recurring.isEmpty()) Text(stringResource(R.string.accounting_rec_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    recurring.forEach { r ->
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(r.description, style = MaterialTheme.typography.titleSmall)
+                                    Text(r.category + " · " + stringResource(when (r.frequency) { "WEEKLY" -> R.string.accounting_rec_WEEKLY; "YEARLY" -> R.string.accounting_rec_YEARLY; else -> R.string.accounting_rec_MONTHLY }) + " · " + (if (r.active) stringResource(R.string.accounting_rec_next) + ": " + r.nextDue else stringResource(R.string.accounting_rec_paused)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Text((if (r.type == "EXPENSE") "−" else "+") + money(r.amountCents.toInt()) + " " + r.currency, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, color = if (r.type == "EXPENSE") androidx.compose.ui.graphics.Color(0xFFC62828) else androidx.compose.ui.graphics.Color(0xFF2E7D32))
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(onClick = { recAmountTarget = r; recAmountValue = money(r.amountCents.toInt()) }) { Text(stringResource(R.string.accounting_rec_amount)) }
+                                TextButton(onClick = { scope.launch { container.accountingRepository.patchRecurring(r.id, active = !r.active); reload() } }) { Text(stringResource(if (r.active) R.string.accounting_rec_pause else R.string.accounting_rec_resume)) }
+                                TextButton(onClick = { scope.launch { container.accountingRepository.deleteRecurring(r.id); reload() } }) { Text(stringResource(R.string.accounting_rec_delete), color = MaterialTheme.colorScheme.error) }
+                            }
+                        }
+                    }
+                    Text(stringResource(R.string.accounting_rec_add), style = MaterialTheme.typography.titleSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("EXPENSE" to R.string.accounting_expense, "INCOME" to R.string.accounting_incomeLabel).forEach { (code, label) ->
+                            if (recType == code) Button(onClick = { recType = code }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(stringResource(label), fontSize = 12.sp) } else OutlinedButton(onClick = { recType = code }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(stringResource(label), fontSize = 12.sp) }
+                        }
+                        listOf("MONTHLY" to R.string.accounting_rec_MONTHLY, "WEEKLY" to R.string.accounting_rec_WEEKLY, "YEARLY" to R.string.accounting_rec_YEARLY).forEach { (code, label) ->
+                            if (recFreq == code) Button(onClick = { recFreq = code }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) { Text(stringResource(label), fontSize = 11.sp) } else OutlinedButton(onClick = { recFreq = code }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) { Text(stringResource(label), fontSize = 11.sp) }
+                        }
+                    }
+                    OutlinedTextField(recCategory, { recCategory = it }, label = { Text(stringResource(R.string.accounting_category)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(recDescription, { recDescription = it }, label = { Text(stringResource(R.string.accounting_description)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(recAmount, { recAmount = it }, label = { Text(stringResource(R.string.accounting_amount)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(recStart, { recStart = it }, label = { Text(stringResource(R.string.accounting_rec_start)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Row(verticalAlignment = Alignment.CenterVertically) { androidx.compose.material3.Checkbox(checked = recBackfill, onCheckedChange = { recBackfill = it }); Text(stringResource(R.string.accounting_rec_backfill), style = MaterialTheme.typography.bodySmall) }
+                    Button(onClick = {
+                        if (recCategory.isBlank() || recDescription.trim().length < 2 || cents(recAmount) <= 0) { message = context.getString(R.string.accounting_missing_entry); return@Button }
+                        scope.launch {
+                            container.accountingRepository.addRecurring(com.dalilacom.app.data.network.AccountingRecurringRequest(recType, recCategory.trim(), recDescription.trim(), cents(recAmount).toLong(), payMethod = "CASH", frequency = recFreq, startDate = recStart.trim(), backfill = recBackfill)).fold({ recCategory = ""; recDescription = ""; recAmount = ""; recBackfill = false; reload() }, { message = it.message ?: AppStrings.get(R.string.ship_failed) })
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_rec_add)) }
                 }
             }
         }
@@ -788,6 +844,15 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }) { Text(stringResource(R.string.accounting_ret_save)) }
             },
             dismissButton = { OutlinedButton(onClick = { returnSale = null; returnPurchase = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    recAmountTarget?.let { r ->
+        AlertDialog(
+            onDismissRequest = { recAmountTarget = null },
+            title = { Text(r.description) },
+            text = { OutlinedTextField(recAmountValue, { recAmountValue = it }, label = { Text(stringResource(R.string.accounting_amount)) }, singleLine = true) },
+            confirmButton = { Button(onClick = { val c = cents(recAmountValue).toLong(); recAmountTarget = null; if (c > 0) scope.launch { container.accountingRepository.patchRecurring(r.id, amountCents = c); reload() } }) { Text(stringResource(R.string.accounting_save)) } },
+            dismissButton = { OutlinedButton(onClick = { recAmountTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
     savedSale?.let { sale ->

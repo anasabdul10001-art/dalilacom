@@ -916,4 +916,19 @@
     <string name="accounting_ret_done">انسجّل المرتجع</string>
     <string name="accounting_ret_none">اكتب كمية مرتجعة وحدة على الأقل</string>
     <string name="accounting_ret_all">كل الكميات انرجعت من قبل</string>
+    <string name="accounting_rec_title">مصاريف ودخل متكرر</string>
+    <string name="accounting_rec_help">الإيجار والكهربا والاشتراكات: بتنسجّل لحالها بموعدها. بتقدر توقفها أو تغيّر مبلغها.</string>
+    <string name="accounting_rec_empty">ما في حركات متكررة بعد.</string>
+    <string name="accounting_rec_next">الموعد الجاي</string>
+    <string name="accounting_rec_paused">موقوفة</string>
+    <string name="accounting_rec_WEEKLY">كل أسبوع</string>
+    <string name="accounting_rec_MONTHLY">كل شهر</string>
+    <string name="accounting_rec_YEARLY">كل سنة</string>
+    <string name="accounting_rec_add">إضافة حركة متكررة</string>
+    <string name="accounting_rec_pause">إيقاف</string>
+    <string name="accounting_rec_resume">استئناف</string>
+    <string name="accounting_rec_delete">حذف</string>
+    <string name="accounting_rec_amount">تغيير المبلغ</string>
+    <string name="accounting_rec_start">تاريخ البداية (YYYY-MM-DD)</string>
+    <string name="accounting_rec_backfill">سجّل كمان الفايت منذ تاريخ البداية</string>
 </resources>

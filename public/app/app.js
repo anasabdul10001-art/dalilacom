@@ -2552,7 +2552,7 @@ async function loadOrders() {
 /* ---- The three sections (accounting, auto-responder, HR) work like small sites of their own: a tab bar whose first tab is a home page that is always there ---- */
 
 const SITES = {
-  accounting: { icon: "🧮", tabs: ["summary", "reports", "entry", "sale", "purchases", "parties", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
+  accounting: { icon: "🧮", tabs: ["summary", "reports", "entry", "recurring", "sale", "purchases", "parties", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
   responder: { icon: "🤖", tabs: ["overview", "channels", "rules", "inbox"], art: ["chat", "orbit", "ai"], features: ["💬", "⚙️", "✨", "📥"], details: 4 },
   hr: { icon: "👥", tabs: [], art: ["team", "payslip", "calendar"], features: ["🕒", "🏖️", "💵", "🤝"] },
 };
@@ -2693,6 +2693,7 @@ function screenAccounting() {
     reports: accountingReportCard(),
     parties: accountingPartiesCard(),
     purchases: accountingBuyCard(a),
+    recurring: accountingRecurringCard(a),
     sale: accountingSaleCard(a),
     stock: `
     ${S._count ? accountingCountCard(a) : accountingLowCard(a)}
@@ -2711,11 +2712,59 @@ function screenAccounting() {
 }
 async function loadAccounting() {
   const cashDay = S._accCashDay || new Date().toISOString().slice(0, 10);
-  const [summary, products, cash, sales, low, partiesRes, purchases] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low"), api("GET", "/accounting/parties"), api("GET", "/accounting/purchases")]);
+  const [summary, products, cash, sales, low, partiesRes, purchases, recurring] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low"), api("GET", "/accounting/parties"), api("GET", "/accounting/purchases"), api("GET", "/accounting/recurring")]);
   const requiresPlan = summary.status === 402 || products.status === 402;
-  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
+  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], recurring: recurring.ok ? recurring.data : [], error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
 }
+/* ---- recurring entries: rent, electricity, subscriptions: written by themselves on their day ---- */
+function accountingRecurringCard(a) {
+  const list = a.recurring || [];
+  const rows = list.length === 0 ? uiEmpty("🔁", t("accounting.rec.empty")) : list.map((r) => `<div class="item"><span class="avatar" style="--h:${r.type === "EXPENSE" ? 4 : 140}">${r.type === "EXPENSE" ? "↓" : "↑"}</span><div class="item-main"><div class="item-title">${esc(r.description)}</div><div class="item-sub">${esc(r.category)} · ${esc(t("accounting.rec." + r.frequency))}${r.payMethod ? " · " + esc(t("accounting.pay." + r.payMethod)) : ""}</div><div class="item-sub">${r.active ? esc(t("accounting.rec.next")) + ": <bdi>" + esc(r.nextDue) + "</bdi>" : uiChip(t("accounting.rec.paused"), "warn")}${r.endDate ? " · " + esc(t("accounting.rec.end")) + ": <bdi>" + esc(r.endDate) + "</bdi>" : ""}</div>
+      <div class="btn-row"><button class="btn small soft" onclick="accountingRecAmount('${r.id}')">${esc(t("accounting.rec.changeAmount"))}</button><button class="btn small outline" onclick="accountingRecToggle('${r.id}',${r.active ? "false" : "true"})">${esc(t(r.active ? "accounting.rec.pause" : "accounting.rec.resume"))}</button><button class="btn small outline" onclick="accountingRecDelete('${r.id}')" aria-label="${esc(t("accounting.rec.delete"))}">🗑</button></div></div><div class="item-end ${r.type === "EXPENSE" ? "out" : "in"}">${r.type === "EXPENSE" ? "−" : "+"}${esc(fmt(r.amountCents, r.currency))}</div></div>`).join("");
+  const today = new Date().toISOString().slice(0, 10);
+  return `<div class="card"><div class="section-title">${esc(t("accounting.rec.title"))}</div><p class="muted" style="margin:0 0 10px">${esc(t("accounting.rec.help"))}</p>${rows}</div>
+    <div class="card"><div class="section-title">${esc(t("accounting.rec.add"))}</div>
+      <div class="row"><div class="field"><label>${esc(t("accounting.rec.type"))}</label><select id="rec-type"><option value="EXPENSE">${esc(t("accounting.expenses"))}</option><option value="INCOME">${esc(t("accounting.income"))}</option></select></div>
+        <div class="field"><label>${esc(t("accounting.rec.freq"))}</label><select id="rec-freq"><option value="MONTHLY">${esc(t("accounting.rec.MONTHLY"))}</option><option value="WEEKLY">${esc(t("accounting.rec.WEEKLY"))}</option><option value="YEARLY">${esc(t("accounting.rec.YEARLY"))}</option></select></div></div>
+      <div class="field"><label>${esc(t("accounting.category"))}</label><input id="rec-category" placeholder="${esc(t("accounting.categoryHint"))}" maxlength="50" /></div>
+      <div class="field"><label>${esc(t("accounting.description"))}</label><input id="rec-description" maxlength="240" /></div>
+      <div class="row"><div class="field"><label>${esc(t("accounting.amount"))}</label><input id="rec-amount" inputmode="decimal" /></div>
+        <div class="field"><label>${esc(t("accounting.pay"))}</label><select id="rec-pay"><option value="CASH">${esc(t("accounting.pay.CASH"))}</option><option value="BANK">${esc(t("accounting.pay.BANK"))}</option><option value="WALLET">${esc(t("accounting.pay.WALLET"))}</option></select></div></div>
+      <div class="row"><div class="field"><label>${esc(t("accounting.rec.start"))}</label><input id="rec-start" type="date" value="${today}" /></div><div class="field"><label>${esc(t("accounting.rec.endOpt"))}</label><input id="rec-end" type="date" /></div></div>
+      <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input id="rec-backfill" type="checkbox" /> ${esc(t("accounting.rec.backfill"))}</label>
+      <button class="btn" onclick="accountingRecAdd(this)">${esc(t("accounting.rec.add"))}</button></div>`;
+}
+async function accountingRecAdd(btn) {
+  const v = (id) => (document.getElementById(id) || {}).value || "";
+  const amount = Math.round(Number(v("rec-amount").replace(",", ".")) * 100);
+  if (!v("rec-category").trim() || v("rec-description").trim().length < 2 || !(amount > 0)) return toast(t("accounting.invalidAmount"));
+  const body = { type: v("rec-type"), category: v("rec-category").trim(), description: v("rec-description").trim(), amountCents: amount, currency: S.currency || "EUR", payMethod: v("rec-pay"), frequency: v("rec-freq"), startDate: v("rec-start") || new Date().toISOString().slice(0, 10), backfill: !!(document.getElementById("rec-backfill") || {}).checked };
+  if (v("rec-end")) body.endDate = v("rec-end");
+  const res = await uiBusy(btn, () => api("POST", "/accounting/recurring", body));
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.rec.added")); S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+async function accountingRecToggle(id, active) {
+  const res = await api("PATCH", "/accounting/recurring/" + id, { active });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.rec.updated")); S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+async function accountingRecAmount(id) {
+  const r = (S._accounting.recurring || []).find((x) => x.id === id); if (!r) return;
+  const raw = await uiPrompt(t("accounting.amount"), (r.amountCents / 100).toFixed(2), { numeric: true }); if (raw === null) return;
+  const v = Number(raw.replace(",", ".")); if (!(v > 0)) return toast(t("accounting.invalidAmount"));
+  const res = await api("PATCH", "/accounting/recurring/" + id, { amountCents: Math.round(v * 100) });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.rec.updated")); S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+async function accountingRecDelete(id) {
+  if (!confirm(t("accounting.rec.deleteConfirm"))) return;
+  const res = await api("DELETE", "/accounting/recurring/" + id);
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.rec.deleted")); S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+
 /* ---- returns: goods back from a customer, or back to a supplier ---- */
 async function accountingReturnOpen(kind, id) {
   const { ok, data } = await api("GET", `/accounting/${kind}/${id}`);

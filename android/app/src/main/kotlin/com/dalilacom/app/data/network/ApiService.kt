@@ -270,6 +270,10 @@ interface ApiService {
     @POST("accounting/products/{id}/stock") suspend fun changeAccountingStock(@Path("id") id: String, @Body body: AccountingStockRequest): Response<AccountingProductDto>
     @POST("accounting/sales/{id}/returns") suspend fun returnAccountingSale(@Path("id") id: String, @Body body: AccountingReturnRequest): Response<okhttp3.ResponseBody>
     @POST("accounting/purchases/{id}/returns") suspend fun returnAccountingPurchase(@Path("id") id: String, @Body body: AccountingReturnRequest): Response<okhttp3.ResponseBody>
+    @GET("accounting/recurring") suspend fun accountingRecurring(): Response<List<AccountingRecurringDto>>
+    @POST("accounting/recurring") suspend fun createAccountingRecurring(@Body body: AccountingRecurringRequest): Response<okhttp3.ResponseBody>
+    @retrofit2.http.PATCH("accounting/recurring/{id}") suspend fun patchAccountingRecurring(@Path("id") id: String, @Body body: AccountingRecurringPatch): Response<okhttp3.ResponseBody>
+    @DELETE("accounting/recurring/{id}") suspend fun deleteAccountingRecurring(@Path("id") id: String): Response<okhttp3.ResponseBody>
     @POST("accounting/purchases") suspend fun createAccountingPurchase(@Body body: AccountingPurchaseRequest): Response<AccountingPurchaseDto>
     @GET("accounting/purchases") suspend fun accountingPurchases(): Response<List<AccountingPurchaseDto>>
     @GET("accounting/parties") suspend fun accountingParties(): Response<AccountingPartiesDto>

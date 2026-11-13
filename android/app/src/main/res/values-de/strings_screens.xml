@@ -544,4 +544,19 @@
     <string name="accounting_ret_done">Return recorded</string>
     <string name="accounting_ret_none">Type a quantity for at least one line</string>
     <string name="accounting_ret_all">Everything was returned already</string>
+    <string name="accounting_rec_title">Recurring expenses and income</string>
+    <string name="accounting_rec_help">Rent, electricity, subscriptions: they are recorded by themselves on their day. You can pause them or change the amount.</string>
+    <string name="accounting_rec_empty">No recurring entries yet.</string>
+    <string name="accounting_rec_next">Next one</string>
+    <string name="accounting_rec_paused">Paused</string>
+    <string name="accounting_rec_WEEKLY">Every week</string>
+    <string name="accounting_rec_MONTHLY">Every month</string>
+    <string name="accounting_rec_YEARLY">Every year</string>
+    <string name="accounting_rec_add">Add a recurring entry</string>
+    <string name="accounting_rec_pause">Pause</string>
+    <string name="accounting_rec_resume">Resume</string>
+    <string name="accounting_rec_delete">Delete</string>
+    <string name="accounting_rec_amount">Change the amount</string>
+    <string name="accounting_rec_start">Start date (YYYY-MM-DD)</string>
+    <string name="accounting_rec_backfill">Also record the ones missed since the start date</string>
 </resources>

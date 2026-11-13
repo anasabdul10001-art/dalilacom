@@ -43,6 +43,10 @@ class AccountingRepository(private val api: ApiService) {
         val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, AppStrings.get(R.string.s_0a2edd30))))
     }
+    suspend fun recurring(): List<com.dalilacom.app.data.network.AccountingRecurringDto> = safeApiCall { api.accountingRecurring() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    suspend fun addRecurring(body: com.dalilacom.app.data.network.AccountingRecurringRequest): Result<Unit> = result { api.createAccountingRecurring(body) }
+    suspend fun patchRecurring(id: String, active: Boolean? = null, amountCents: Long? = null): Result<Unit> = result { api.patchAccountingRecurring(id, com.dalilacom.app.data.network.AccountingRecurringPatch(active, amountCents)) }
+    suspend fun deleteRecurring(id: String): Result<Unit> = result { api.deleteAccountingRecurring(id) }
     suspend fun purchases(): List<com.dalilacom.app.data.network.AccountingPurchaseDto> = safeApiCall { api.accountingPurchases() }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun createPurchase(body: com.dalilacom.app.data.network.AccountingPurchaseRequest): Result<com.dalilacom.app.data.network.AccountingPurchaseDto> {
         val response = safeApiCall { api.createAccountingPurchase(body) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
