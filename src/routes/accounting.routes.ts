@@ -293,6 +293,102 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
 }));
 
 
+// ---- a sales invoice: several products in one sale, a discount, a customer name, a number of its own
+const saleSchema = z.object({
+  items: z.array(z.object({ productId: z.string().min(1).max(80), quantity: z.number().int().positive().max(1_000_000), unitPriceCents: z.number().int().positive().max(2_000_000_000).optional() })).min(1).max(100),
+  discountCents: z.number().int().nonnegative().max(MAX_ENTRY_CENTS).optional(),
+  discountPercent: z.number().min(0).max(100).optional(),
+  customerName: z.string().trim().max(120).optional(),
+  note: z.string().trim().max(240).optional(),
+  payMethod: z.enum(["CASH", "BANK", "WALLET"]).default("CASH"),
+  occurredAt: z.string().datetime().optional(),
+});
+type SaleRow = { id: string; number: number; customerName: string | null; note: string | null; currency: string; subtotalCents: bigint; discountCents: bigint; totalCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitPriceCents: bigint; unitCostCents: bigint; lineTotalCents: bigint }[] };
+const plainSale = (r: SaleRow) => ({
+  id: r.id, number: r.number, customerName: r.customerName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt,
+  subtotalCents: Number(r.subtotalCents), discountCents: Number(r.discountCents), totalCents: Number(r.totalCents),
+  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, unitPriceCents: Number(l.unitPriceCents), unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents) })),
+});
+class SaleError extends Error { constructor(public status: number, public code: string, message: string, public details?: unknown) { super(message); } }
+
+accountingRouter.post("/sales", route(async (req, res) => {
+  const parsed = saleSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id;
+  const d = parsed.data;
+  // the same product twice becomes one line
+  const wanted = new Map<string, { quantity: number; unitPriceCents?: number }>();
+  for (const it of d.items) { const cur = wanted.get(it.productId); wanted.set(it.productId, { quantity: (cur?.quantity ?? 0) + it.quantity, unitPriceCents: it.unitPriceCents ?? cur?.unitPriceCents }); }
+  const ids = [...wanted.keys()];
+  const [own, shop, shopCurrency] = await Promise.all([
+    prisma.accountingProduct.findMany({ where: { userId, id: { in: ids.filter((i) => !i.startsWith("store:")) } } }),
+    prisma.product.findMany({ where: { merchant: { userId }, isActive: true, id: { in: ids.filter((i) => i.startsWith("store:")).map((i) => i.slice(6)) } } }),
+    marketOfUser(userId),
+  ]);
+  type Line = { key: string; store: boolean; id: string; name: string; quantity: number; unitPrice: number; unitCost: number; currency: string };
+  const lines: Line[] = [];
+  for (const [key, w] of wanted) {
+    if (key.startsWith("store:")) {
+      const p = shop.find((x) => `store:${x.id}` === key); if (!p) return sendError(res, 404, "NOT_FOUND", "منتج المتجر غير موجود");
+      lines.push({ key, store: true, id: p.id, name: p.name, quantity: w.quantity, unitPrice: w.unitPriceCents ?? p.priceCents, unitCost: p.costPriceCents, currency: shopCurrency });
+    } else {
+      const p = own.find((x) => x.id === key); if (!p) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
+      lines.push({ key, store: false, id: p.id, name: p.name, quantity: w.quantity, unitPrice: w.unitPriceCents ?? p.salePriceCents, unitCost: p.costCents, currency: p.currency });
+    }
+  }
+  if (lines.some((l) => l.unitPrice <= 0)) return sendError(res, 400, "BAD_REQUEST", "أدخل سعر البيع أولاً");
+  const currency = lines[0].currency;
+  if (lines.some((l) => l.currency !== currency)) return sendError(res, 400, "BAD_REQUEST", "كل أصناف الفاتورة لازم تكون بنفس العملة");
+  const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
+  const discount = d.discountPercent != null ? Math.round(subtotal * d.discountPercent / 100) : d.discountCents ?? 0;
+  if (discount > subtotal) return sendError(res, 400, "BAD_REQUEST", "الحسم أكبر من مجموع الفاتورة");
+  const total = subtotal - discount;
+  if (total <= 0) return sendError(res, 400, "BAD_REQUEST", "مجموع الفاتورة لازم يكون أكبر من صفر");
+  const cost = lines.reduce((sum, l) => sum + l.unitCost * l.quantity, 0);
+  const when = d.occurredAt ? new Date(d.occurredAt) : new Date();
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const sale = await prisma.$transaction(async (tx) => {
+        // the stock is taken only while enough is left at this very moment: one short line cancels the whole sale
+        for (const l of lines) {
+          const took = l.store
+            ? await tx.product.updateMany({ where: { id: l.id, stock: { gte: l.quantity } }, data: { stock: { decrement: l.quantity }, soldCount: { increment: l.quantity } } })
+            : await tx.accountingProduct.updateMany({ where: { id: l.id, quantity: { gte: l.quantity } }, data: { quantity: { decrement: l.quantity } } });
+          if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي", { productId: l.key, name: l.name });
+        }
+        const last = await tx.accountingSale.aggregate({ where: { userId }, _max: { number: true } });
+        const created = await tx.accountingSale.create({
+          data: { userId, number: (last._max.number ?? 0) + 1, customerName: d.customerName || null, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
+            lines: { create: lines.map((l) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitPriceCents: l.unitPrice, unitCostCents: l.unitCost, lineTotalCents: l.unitPrice * l.quantity })) } },
+          include: { lines: true },
+        });
+        for (const l of lines) await tx.accountingStockMovement.create({ data: { userId, ...(l.store ? { storeProductId: l.id } : { productId: l.id }), action: "STOCK_OUT", quantity: l.quantity, unitCostCents: l.unitCost, note: `فاتورة بيع #${created.number}` } });
+        const label = `فاتورة بيع #${created.number}${d.customerName ? ` — ${d.customerName}` : ""}`;
+        await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: "مبيعات", description: label, amountCents: total, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}`, payMethod: d.payMethod, recordedById: userId } });
+        if (cost > 0) await tx.accountingEntry.create({ data: { userId, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: label, amountCents: cost, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:cost`, recordedById: userId } });
+        return created;
+      });
+      return res.status(201).json({ ...plainSale(sale), costCents: cost, netCents: total - cost });
+    } catch (err) {
+      if (err instanceof SaleError) return sendError(res, err.status, err.code, err.message, err.details);
+      // two sales at the same moment may pick the same number: take the next one
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002" && attempt < 3) continue;
+      throw err;
+    }
+  }
+}));
+
+accountingRouter.get("/sales", route(async (req, res) => {
+  const rows = await prisma.accountingSale.findMany({ where: { userId: req.user!.id }, include: { lines: true }, orderBy: { number: "desc" }, take: 100 });
+  res.json(rows.map(plainSale));
+}));
+
+accountingRouter.get("/sales/:id", route(async (req, res) => {
+  const row = await prisma.accountingSale.findFirst({ where: { id: req.params.id, userId: req.user!.id }, include: { lines: true } });
+  if (!row) return sendError(res, 404, "NOT_FOUND", "الفاتورة غير موجودة");
+  res.json(plainSale(row));
+}));
+
 // ---- the cash box of a day: what came in and went out in cash, against what was counted when the day was closed
 const cashDayStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const cashKey = z.object({ day: cashDayStr, currency: currencyCode });
