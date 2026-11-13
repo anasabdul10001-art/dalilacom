@@ -76,6 +76,19 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var editEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
     var editDescription by remember { mutableStateOf("") }
     var editAmount by remember { mutableStateOf("") }
+    var partiesData by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingPartiesDto?>(null) }
+    var partyKind by remember { mutableStateOf("CUSTOMER") }
+    var partyName by remember { mutableStateOf("") }
+    var partyDetail by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingPartyDetailDto?>(null) }
+    var payPartyId by remember { mutableStateOf<String?>(null) }
+    var payAmount by remember { mutableStateOf("") }
+    var payMethodChoice by remember { mutableStateOf("CASH") }
+    var chargePartyId by remember { mutableStateOf<String?>(null) }
+    var chargeAmount by remember { mutableStateOf("") }
+    var chargeBook by remember { mutableStateOf(false) }
+    var salePartyId by remember { mutableStateOf<String?>(null) }
+    var salePartyOpen by remember { mutableStateOf(false) }
+    var salePaid by remember { mutableStateOf("") }
     var report by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingReportDto?>(null) }
     var reportPreset by remember { mutableStateOf("month") }
     var low by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingLowDto?>(null) }
@@ -111,6 +124,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         cash = container.accountingRepository.cash(cashDay, "EUR")
         sales = container.accountingRepository.sales()
         low = container.accountingRepository.lowStock()
+        partiesData = container.accountingRepository.parties()
         val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
         val (rf, rt) = when (reportPreset) { "today" -> today to today; "week" -> today.minusDays(6) to today; "last30" -> today.minusDays(29) to today; else -> today.withDayOfMonth(1) to today }
         report = container.accountingRepository.report(rf.toString(), rt.toString())
@@ -256,6 +270,14 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                             TextButton(onClick = { basket = basket.filter { it.first.id != p.id } }) { Text("✕", color = MaterialTheme.colorScheme.error) }
                         }
                     }
+                    androidx.compose.foundation.layout.Box {
+                        OutlinedButton(onClick = { salePartyOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(partiesData?.parties?.firstOrNull { it.id == salePartyId }?.name ?: stringResource(R.string.accounting_sale_party)) }
+                        androidx.compose.material3.DropdownMenu(expanded = salePartyOpen, onDismissRequest = { salePartyOpen = false }) {
+                            androidx.compose.material3.DropdownMenuItem(text = { Text(stringResource(R.string.accounting_sale_no_party)) }, onClick = { salePartyId = null; salePartyOpen = false })
+                            partiesData?.parties.orEmpty().filter { it.kind == "CUSTOMER" }.forEach { c -> androidx.compose.material3.DropdownMenuItem(text = { Text(c.name) }, onClick = { salePartyId = c.id; salePartyOpen = false }) }
+                        }
+                    }
+                    OutlinedTextField(salePaid, { salePaid = it }, label = { Text(stringResource(R.string.accounting_sale_paid_now)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(saleCustomer, { saleCustomer = it }, label = { Text(stringResource(R.string.accounting_sale_customer)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(saleDiscount, { saleDiscount = it }, label = { Text(stringResource(R.string.accounting_sale_discount)) }, singleLine = true, modifier = Modifier.weight(1f))
@@ -276,10 +298,10 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                     items = basket.map { com.dalilacom.app.data.network.AccountingSaleItemRequest(it.first.id, it.second) },
                                     discountCents = if (!saleDiscountPercent && dv > 0) Math.round(dv * 100) else null,
                                     discountPercent = if (saleDiscountPercent && dv > 0) dv.coerceIn(0.0, 100.0) else null,
-                                    customerName = saleCustomer.trim().ifEmpty { null }, payMethod = salePayMethod,
+                                    customerName = saleCustomer.trim().ifEmpty { null }, payMethod = salePayMethod, partyId = salePartyId, paidCents = salePaid.trim().takeIf { it.isNotEmpty() }?.let { cents(it).toLong() },
                                 )
                                 container.accountingRepository.createSale(req).fold({ sale ->
-                                    savedSale = sale; basket = emptyList(); saleCustomer = ""; saleDiscount = ""; salePick = null; reload()
+                                    savedSale = sale; basket = emptyList(); saleCustomer = ""; saleDiscount = ""; salePaid = ""; salePartyId = null; salePick = null; reload()
                                 }, { message = it.message ?: AppStrings.get(R.string.ship_failed) })
                             }
                         },
@@ -294,6 +316,38 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                 TextButton(onClick = { savedSale = sl }) { Text(stringResource(R.string.accounting_sale_share)) }
                             }
                         }
+                    }
+                }
+            }
+        }
+        partiesData?.let { pd ->
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.accounting_party_title), style = MaterialTheme.typography.titleMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (partyKind == "CUSTOMER") Button(onClick = {}) { Text(stringResource(R.string.accounting_party_customers)) } else OutlinedButton(onClick = { partyKind = "CUSTOMER" }) { Text(stringResource(R.string.accounting_party_customers)) }
+                            if (partyKind == "SUPPLIER") Button(onClick = {}) { Text(stringResource(R.string.accounting_party_suppliers)) } else OutlinedButton(onClick = { partyKind = "SUPPLIER" }) { Text(stringResource(R.string.accounting_party_suppliers)) }
+                        }
+                        val tot = if (partyKind == "CUSTOMER") pd.receivable else pd.payable
+                        Text(stringResource(if (partyKind == "CUSTOMER") R.string.accounting_party_receivable else R.string.accounting_party_payable) + ": " + (if (tot.isEmpty()) "0" else tot.joinToString(" · ") { money(it.cents.toInt()) + " " + it.currency }), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                        val list = pd.parties.filter { it.kind == partyKind }
+                        if (list.isEmpty()) Text(stringResource(R.string.accounting_party_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        list.forEach { p ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                com.dalilacom.app.ui.common.PersonAvatar(p.name, 40)
+                                Column(Modifier.weight(1f)) {
+                                    Text(p.name, style = MaterialTheme.typography.titleSmall)
+                                    Text(stringResource(R.string.accounting_party_balance) + ": " + (if (p.balances.isEmpty()) stringResource(R.string.accounting_party_settled) else p.balances.joinToString(" · ") { money(it.balanceCents.toInt()) + " " + it.currency }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                TextButton(onClick = { scope.launch { partyDetail = container.accountingRepository.party(p.id) } }) { Text(stringResource(R.string.accounting_party_statement)) }
+                            }
+                        }
+                        OutlinedTextField(partyName, { partyName = it }, label = { Text(stringResource(R.string.accounting_party_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Button(onClick = {
+                            if (partyName.trim().length < 2) return@Button
+                            scope.launch { container.accountingRepository.addParty(partyKind, partyName.trim()).fold({ partyName = ""; reload() }, { message = it.message ?: AppStrings.get(R.string.ship_failed) }) }
+                        }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_party_add)) }
                     }
                 }
             }
@@ -539,6 +593,70 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             },
             confirmButton = { OutlinedButton(onClick = { movesTarget = null }) { Text(stringResource(R.string.accounting_sale_close)) } },
+        )
+    }
+    partyDetail?.let { d ->
+        AlertDialog(
+            onDismissRequest = { partyDetail = null },
+            title = { Text(d.name) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.accounting_party_balance) + ": " + (if (d.balances.isEmpty()) stringResource(R.string.accounting_party_settled) else d.balances.joinToString(" · ") { money(it.balanceCents.toInt()) + " " + it.currency }), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { payPartyId = d.id; payAmount = d.balances.firstOrNull()?.let { money(it.balanceCents.toInt()) } ?: "" }, enabled = d.balances.isNotEmpty()) { Text(stringResource(R.string.accounting_party_pay)) }
+                        OutlinedButton(onClick = { chargePartyId = d.id; chargeAmount = ""; chargeBook = false }) { Text(stringResource(R.string.accounting_party_charge)) }
+                    }
+                    d.entries.forEach { e ->
+                        Column {
+                            Text((if (e.kind == "PAYMENT") stringResource(R.string.accounting_party_payment_row) else stringResource(R.string.accounting_party_charge_row)) + (e.saleNumber?.let { " · #$it" } ?: "") + ": " + (if (e.kind == "PAYMENT") "−" else "+") + money(e.amountCents.toInt()) + " " + e.currency, style = MaterialTheme.typography.titleSmall)
+                            Text(e.occurredAt.take(10) + " · " + stringResource(R.string.accounting_party_after) + ": " + money(e.balanceAfterCents.toInt()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            },
+            confirmButton = { OutlinedButton(onClick = { partyDetail = null }) { Text(stringResource(R.string.accounting_party_close)) } },
+        )
+    }
+    payPartyId?.let { id ->
+        AlertDialog(
+            onDismissRequest = { payPartyId = null },
+            title = { Text(stringResource(R.string.accounting_party_pay)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(payAmount, { payAmount = it }, label = { Text(stringResource(R.string.accounting_party_amount)) }, singleLine = true)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("CASH" to R.string.accounting_pay_CASH, "BANK" to R.string.accounting_pay_BANK, "WALLET" to R.string.accounting_pay_WALLET).forEach { (code, label) ->
+                            if (payMethodChoice == code) Button(onClick = { payMethodChoice = code }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(stringResource(label), fontSize = 12.sp) } else OutlinedButton(onClick = { payMethodChoice = code }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(stringResource(label), fontSize = 12.sp) }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val c = cents(payAmount).toLong(); val cur = partyDetail?.balances?.firstOrNull()?.currency ?: "EUR"; payPartyId = null
+                    if (c > 0) scope.launch { container.accountingRepository.payParty(id, c, cur, payMethodChoice).fold({ partyDetail = container.accountingRepository.party(id); reload() }, { message = it.message ?: AppStrings.get(R.string.ship_failed) }) }
+                }) { Text(stringResource(R.string.accounting_save)) }
+            },
+            dismissButton = { OutlinedButton(onClick = { payPartyId = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    chargePartyId?.let { id ->
+        AlertDialog(
+            onDismissRequest = { chargePartyId = null },
+            title = { Text(stringResource(R.string.accounting_party_charge)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(chargeAmount, { chargeAmount = it }, label = { Text(stringResource(R.string.accounting_party_amount)) }, singleLine = true)
+                    Row(verticalAlignment = Alignment.CenterVertically) { androidx.compose.material3.Checkbox(checked = chargeBook, onCheckedChange = { chargeBook = it }); Text(stringResource(R.string.accounting_party_book)) }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val c = cents(chargeAmount).toLong(); chargePartyId = null
+                    if (c > 0) scope.launch { container.accountingRepository.chargeParty(id, c, "EUR", chargeBook).fold({ partyDetail = container.accountingRepository.party(id); reload() }, { message = it.message ?: AppStrings.get(R.string.ship_failed) }) }
+                }) { Text(stringResource(R.string.accounting_save)) }
+            },
+            dismissButton = { OutlinedButton(onClick = { chargePartyId = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
     savedSale?.let { sale ->

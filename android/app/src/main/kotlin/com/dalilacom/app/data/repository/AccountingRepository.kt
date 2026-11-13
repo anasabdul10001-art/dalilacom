@@ -37,6 +37,11 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun deleteEntry(id: String): Result<Unit> = result { api.deleteAccountingEntry(id) }
     suspend fun deleteProduct(id: String): Result<Unit> = result { api.deleteAccountingProduct(id) }
     suspend fun sell(id: String, quantity: Int, payMethod: String = "CASH"): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity, payMethod = payMethod)) }
+    suspend fun parties() = safeApiCall { api.accountingParties() }?.takeIf { it.isSuccessful }?.body()
+    suspend fun party(id: String) = safeApiCall { api.accountingParty(id) }?.takeIf { it.isSuccessful }?.body()
+    suspend fun addParty(kind: String, name: String): Result<Unit> = result { api.createAccountingParty(com.dalilacom.app.data.network.AccountingPartyRequest(kind, name)) }
+    suspend fun payParty(id: String, amountCents: Long, currency: String, payMethod: String): Result<Unit> = result { api.payAccountingParty(id, com.dalilacom.app.data.network.AccountingPartyPaymentRequest(amountCents, currency, payMethod)) }
+    suspend fun chargeParty(id: String, amountCents: Long, currency: String, book: Boolean): Result<Unit> = result { api.chargeAccountingParty(id, com.dalilacom.app.data.network.AccountingPartyChargeRequest(amountCents, currency, book)) }
     suspend fun report(from: String, to: String, groupBy: String = "day") = safeApiCall { api.accountingReport(from, to, groupBy) }?.takeIf { it.isSuccessful }?.body()
     suspend fun lowStock() = safeApiCall { api.accountingLowStock() }?.takeIf { it.isSuccessful }?.body()
     suspend fun movements(id: String) = safeApiCall { api.accountingMovements(id) }?.takeIf { it.isSuccessful }?.body().orEmpty()

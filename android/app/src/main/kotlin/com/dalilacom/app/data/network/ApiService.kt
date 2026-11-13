@@ -268,6 +268,11 @@ interface ApiService {
     @POST("accounting/products") suspend fun addAccountingProduct(@Body body: AccountingProductRequest): Response<AccountingProductDto>
     @POST("accounting/products/{id}/sell") suspend fun sellAccountingProduct(@Path("id") id: String, @Body body: AccountingSellRequest): Response<AccountingSellResponseDto>
     @POST("accounting/products/{id}/stock") suspend fun changeAccountingStock(@Path("id") id: String, @Body body: AccountingStockRequest): Response<AccountingProductDto>
+    @GET("accounting/parties") suspend fun accountingParties(): Response<AccountingPartiesDto>
+    @GET("accounting/parties/{id}") suspend fun accountingParty(@Path("id") id: String): Response<AccountingPartyDetailDto>
+    @POST("accounting/parties") suspend fun createAccountingParty(@Body body: AccountingPartyRequest): Response<okhttp3.ResponseBody>
+    @POST("accounting/parties/{id}/payments") suspend fun payAccountingParty(@Path("id") id: String, @Body body: AccountingPartyPaymentRequest): Response<okhttp3.ResponseBody>
+    @POST("accounting/parties/{id}/charges") suspend fun chargeAccountingParty(@Path("id") id: String, @Body body: AccountingPartyChargeRequest): Response<okhttp3.ResponseBody>
     @GET("accounting/reports") suspend fun accountingReport(@Query("from") from: String, @Query("to") to: String, @Query("groupBy") groupBy: String): Response<AccountingReportDto>
     @GET("accounting/stock/low") suspend fun accountingLowStock(): Response<AccountingLowDto>
     @GET("accounting/products/{id}/movements") suspend fun accountingMovements(@Path("id") id: String): Response<List<AccountingMovementDto>>

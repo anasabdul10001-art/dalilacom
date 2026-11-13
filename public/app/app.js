@@ -2552,7 +2552,7 @@ async function loadOrders() {
 /* ---- The three sections (accounting, auto-responder, HR) work like small sites of their own: a tab bar whose first tab is a home page that is always there ---- */
 
 const SITES = {
-  accounting: { icon: "🧮", tabs: ["summary", "reports", "entry", "sale", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
+  accounting: { icon: "🧮", tabs: ["summary", "reports", "entry", "sale", "parties", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
   responder: { icon: "🤖", tabs: ["overview", "channels", "rules", "inbox"], art: ["chat", "orbit", "ai"], features: ["💬", "⚙️", "✨", "📥"], details: 4 },
   hr: { icon: "👥", tabs: [], art: ["team", "payslip", "calendar"], features: ["🕒", "🏖️", "💵", "🤝"] },
 };
@@ -2665,12 +2665,12 @@ function screenAccounting() {
     <div class="btn-row"><button class="btn soft" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button><button class="btn soft" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button></div>
     ${accountingCashCard(a.cash)}
     <div class="panel-title" style="margin-top:16px">${esc(t("accounting.recent"))}</div>
-    ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${e.type === "EXPENSE" ? 4 : 140}">${e.type === "EXPENSE" ? "↓" : "↑"}</span><div class="item-main">
+    ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${accIsOut(e) ? 4 : 140}">${accIsOut(e) ? "↓" : "↑"}</span><div class="item-main">
         <div class="item-title">${esc(e.description)}</div>
         <div class="item-sub">${esc(e.category)} · <bdi>${new Date(e.occurredAt).toLocaleDateString()}</bdi></div>
         ${e.source === "PAYROLL" || e.payMethod ? `<div class="chips">${e.source === "PAYROLL" ? uiChip(t("accounting.payrollLabel"), "warn") : ""}${e.payMethod ? uiChip(t("accounting.pay." + e.payMethod)) : ""}</div>` : ""}
         ${e.source === "MANUAL" || e.source === "INVOICE" ? `<div class="btn-row"><button class="btn small soft" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎ ${esc(t("accounting.edit"))}</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></div>` : ""}
-      </div><div class="item-end ${e.type === "EXPENSE" ? "out" : "in"}">${e.type === "EXPENSE" ? "−" : "+"}${esc(fmt(e.amountCents, e.currency))}</div></div>`).join("") || uiEmpty("🧾", t("accounting.noEntries"))}`,
+      </div><div class="item-end ${accIsOut(e) ? "out" : "in"}">${accIsOut(e) ? "−" : "+"}${esc(fmt(e.amountCents, e.currency))}</div></div>`).join("") || uiEmpty("🧾", t("accounting.noEntries"))}`,
     entry: `
     <div class="card"><div class="section-title">${esc(t("accounting.addEntry"))}</div>
       <div class="field"><label>${esc(t("accounting.entryType"))}</label><select id="acc-type"><option value="INCOME">${esc(t("accounting.income"))}</option><option value="EXPENSE">${esc(t("accounting.expenses"))}</option></select></div>
@@ -2691,6 +2691,7 @@ function screenAccounting() {
         <button class="btn" onclick="accountingConfirmInvoice()">${esc(t("accounting.confirmInvoice"))}</button>` : ""}
     </div>`,
     reports: accountingReportCard(),
+    parties: accountingPartiesCard(),
     sale: accountingSaleCard(a),
     stock: `
     ${S._count ? accountingCountCard(a) : accountingLowCard(a)}
@@ -2709,11 +2710,89 @@ function screenAccounting() {
 }
 async function loadAccounting() {
   const cashDay = S._accCashDay || new Date().toISOString().slice(0, 10);
-  const [summary, products, cash, sales, low] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low")]);
+  const [summary, products, cash, sales, low, customers] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low"), api("GET", "/accounting/parties?kind=CUSTOMER")]);
   const requiresPlan = summary.status === 402 || products.status === 402;
-  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
+  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: customers.ok ? customers.data.parties : [], error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
 }
+/* ---- customers and suppliers: who owes whom, payments, and a statement ---- */
+function partiesState() { return (S._parties = S._parties || { kind: "CUSTOMER", data: null, detail: null, loading: false }); }
+async function partiesLoad() {
+  const p = partiesState(); if (p.loading) return; p.loading = true;
+  const { ok, data } = await api("GET", "/accounting/parties");
+  p.loading = false; p.data = ok ? data : { parties: [], receivable: [], payable: [] }; render();
+}
+async function partiesOpen(id) {
+  const p = partiesState();
+  const { ok, data } = await api("GET", "/accounting/parties/" + id);
+  if (!ok) return toast(errMsg(data, t("accounting.deleteFailed")));
+  p.detail = data; render(); window.scrollTo(0, 0);
+}
+function partiesClose() { partiesState().detail = null; partiesState().data = null; render(); }
+function partiesKind(k) { const p = partiesState(); p.kind = k; p.detail = null; render(); }
+const partyBal = (balances) => (balances && balances.length ? balances.map((b) => fmt(b.balanceCents, b.currency)).join(" · ") : t("accounting.party.settled"));
+function accountingPartiesCard() {
+  const p = partiesState();
+  if (!p.data && !p.loading) partiesLoad();
+  if (!p.data) return `<div class="card">${skeleton("tiles")}</div>`;
+  if (p.detail) return partyDetailCard(p.detail);
+  const isC = p.kind === "CUSTOMER";
+  const list = p.data.parties.filter((x) => x.kind === p.kind);
+  const tot = isC ? p.data.receivable : p.data.payable;
+  const chips = `<div class="chips" style="margin-bottom:10px"><button class="chip ${isC ? "info" : ""}" style="cursor:pointer" onclick="partiesKind('CUSTOMER')">${esc(t("accounting.party.customers"))}</button><button class="chip ${!isC ? "info" : ""}" style="cursor:pointer" onclick="partiesKind('SUPPLIER')">${esc(t("accounting.party.suppliers"))}</button></div>`;
+  const totals = `<div class="tiles">${tot.length ? tot.map((x) => uiTile(t(isC ? "accounting.party.receivable" : "accounting.party.payable"), fmt(x.cents, x.currency), isC ? "income" : "expense", true)).join("") : uiTile(t(isC ? "accounting.party.receivable" : "accounting.party.payable"), "0", "net", true)}</div>`;
+  const rows = list.length === 0 ? uiEmpty("👥", t("accounting.party.empty")) : list.map((x) => `<div class="item"><span class="avatar" style="--h:${isC ? 140 : 30}">${esc(x.name.slice(0, 1).toUpperCase())}</span><div class="item-main"><div class="item-title">${esc(x.name)}</div><div class="item-sub">${x.phone ? "<bdi>" + esc(x.phone) + "</bdi> · " : ""}${esc(t("accounting.party.balance"))}: <b>${esc(partyBal(x.balances))}</b></div><div class="btn-row"><button class="btn small soft" onclick="partiesOpen('${x.id}')">${esc(t("accounting.party.statement"))}</button></div></div></div>`).join("");
+  return `<div class="card">${chips}${totals}</div>${rows}
+    <div class="card"><div class="field"><label>${esc(t("accounting.party.name"))}</label><input id="party-name" maxlength="120" /></div><div class="field"><label>${esc(t("accounting.party.phone"))}</label><input id="party-phone" inputmode="tel" maxlength="40" /></div>
+      <button class="btn soft" onclick="partiesAdd(this)">${esc(t("accounting.party.add"))}</button></div>`;
+}
+async function partiesAdd(btn) {
+  const name = (document.getElementById("party-name") || {}).value || ""; if (name.trim().length < 2) return toast(t("accounting.party.name"));
+  const phone = ((document.getElementById("party-phone") || {}).value || "").trim();
+  const p = partiesState();
+  const res = await uiBusy(btn, () => api("POST", "/accounting/parties", { kind: p.kind, name: name.trim(), ...(phone ? { phone } : {}) }));
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.party.added")); p.data = null; S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+function partyDetailCard(d) {
+  const rows = d.entries.length === 0 ? uiEmpty("🧾", t("accounting.party.empty")) : d.entries.map((e) => `<div class="item"><span class="avatar" style="--h:${e.kind === "PAYMENT" ? 140 : 4}">${e.kind === "PAYMENT" ? "↓" : "↑"}</span><div class="item-main"><div class="item-title">${esc(e.kind === "PAYMENT" ? t("accounting.party.paymentRow") : t("accounting.party.chargeRow"))}${e.saleNumber ? " · " + esc(t("accounting.party.invoice", { n: e.saleNumber })) : ""}</div><div class="item-sub"><bdi>${esc(new Date(e.occurredAt).toLocaleDateString())}</bdi>${e.payMethod ? " · " + esc(t("accounting.pay." + e.payMethod)) : ""}${e.note ? " · " + esc(e.note) : ""}</div><div class="item-sub">${esc(t("accounting.party.after"))}: <b>${esc(fmt(e.balanceAfterCents, e.currency))}</b></div></div><div class="item-end ${e.kind === "PAYMENT" ? "in" : "out"}">${e.kind === "PAYMENT" ? "−" : "+"}${esc(fmt(e.amountCents, e.currency))}</div></div>`).join("");
+  return `<div class="card"><div class="section-title">${esc(d.name)}</div>
+    <div class="tiles">${uiTile(t("accounting.party.balance"), partyBal(d.balances), d.kind === "CUSTOMER" ? "income" : "expense", true)}</div>
+    <div class="btn-row"><button class="btn" onclick="partyPay('${d.id}')">${esc(t("accounting.party.pay"))}</button><button class="btn soft" onclick="partyCharge('${d.id}')">${esc(t("accounting.party.charge"))}</button></div>
+    <div class="btn-row"><button class="btn small soft" onclick="partyPrint()">🖨 ${esc(t("accounting.party.print"))}</button><button class="btn small outline" onclick="partyArchive('${d.id}')">${esc(t("accounting.party.archive"))}</button><button class="btn small outline" onclick="partiesClose()">${esc(t("accounting.party.back"))}</button></div></div>
+    <div class="panel-title" style="margin-top:14px">${esc(t("accounting.party.statement"))}</div>${rows}`;
+}
+async function partyPay(id) {
+  const d = partiesState().detail; if (!d || !d.balances.length) return toast(t("accounting.party.settled"));
+  const cur = d.balances[0].currency;
+  const raw = await uiPrompt(t("accounting.party.payAmount"), (d.balances[0].balanceCents / 100).toFixed(2), { numeric: true }); if (raw === null) return;
+  const v = Number(raw.replace(",", ".")); if (!(v > 0)) return toast(t("accounting.invalidAmount"));
+  const method = await uiPick(t("accounting.pay"), [["CASH", t("accounting.pay.CASH")], ["BANK", t("accounting.pay.BANK")], ["WALLET", t("accounting.pay.WALLET")]]); if (!method) return;
+  const res = await api("POST", `/accounting/parties/${id}/payments`, { amountCents: Math.round(v * 100), currency: cur, payMethod: method });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.party.saved")); await partiesOpen(id); S._accounting = { ...S._accounting, loading: true }; const keep = partiesState().detail; await loadAccounting(); partiesState().detail = keep; render();
+}
+async function partyCharge(id) {
+  const raw = await uiPrompt(t("accounting.party.chargeAmount"), "", { numeric: true }); if (raw === null) return;
+  const v = Number(raw.replace(",", ".")); if (!(v > 0)) return toast(t("accounting.invalidAmount"));
+  const book = await uiPick(t("accounting.party.book"), [["1", t("accounting.party.bookYes")], ["0", t("accounting.party.bookNo")]]); if (book === null) return;
+  const res = await api("POST", `/accounting/parties/${id}/charges`, { amountCents: Math.round(v * 100), currency: S.currency || "EUR", book: book === "1" });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.party.saved")); await partiesOpen(id); S._accounting = { ...S._accounting, loading: true }; const keep = partiesState().detail; await loadAccounting(); partiesState().detail = keep; render();
+}
+async function partyArchive(id) {
+  const res = await api("PATCH", "/accounting/parties/" + id, { archived: true });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t("accounting.party.archived")); partiesState().detail = null; partiesState().data = null; S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
+}
+function partyPrint() {
+  const d = partiesState().detail; if (!d) return;
+  const win = window.open("", "_blank", "noopener,noreferrer,width=800,height=900"); if (!win) return toast(t("accounting.allowPrint"));
+  const rows = d.entries.slice().reverse().map((e) => `<tr><td>${esc(new Date(e.occurredAt).toLocaleDateString())}</td><td>${esc(e.kind === "PAYMENT" ? t("accounting.party.paymentRow") : t("accounting.party.chargeRow"))}${e.saleNumber ? " " + esc(t("accounting.party.invoice", { n: e.saleNumber })) : ""}</td><td>${esc(fmt(e.amountCents, e.currency))}</td><td><b>${esc(fmt(e.balanceAfterCents, e.currency))}</b></td></tr>`).join("");
+  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(d.name)}</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#222;max-width:760px;margin:auto}h1{color:#f48050}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:start}th{background:#f7f3f3}@media print{button{display:none}}</style><h1>${esc(d.name)}</h1><p>${esc(t("accounting.party.balance"))}: <b>${esc(partyBal(d.balances))}</b> · ${esc(new Date().toLocaleDateString())}</p><table><thead><tr><th>${esc(t("accounting.date"))}</th><th></th><th>${esc(t("accounting.amount"))}</th><th>${esc(t("accounting.party.after"))}</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print()<\/script></html>`);
+  win.document.close();
+}
+
 /* ---- reports: any period, by day / week / month, by category and by product ---- */
 function repDay(offset) { const d = new Date(); d.setUTCDate(d.getUTCDate() + offset); return d.toISOString().slice(0, 10); }
 function repState() {
@@ -2846,7 +2925,9 @@ function accountingSaleCard(a) {
     <button class="btn soft" onclick="accountingSaleAdd()">${esc(t("accounting.sale.add"))}</button>
     <div class="row" style="margin-top:10px"><div class="field"><label>${esc(t("accounting.sale.barcode"))}</label><input id="sale-barcode" /></div><div class="field"><label>&nbsp;</label><button class="btn small soft" onclick="accountingSaleAddBarcode()">${esc(t("accounting.sale.addBarcode"))}</button></div></div>
     <div class="panel-title" style="margin-top:12px">${esc(t("accounting.sale.title"))}</div>${lines}
+    <div class="field"><label>${esc(t("accounting.sale.party"))}</label><select onchange="saleState().partyId=this.value;accountingSaleTotals()"><option value="">${esc(t("accounting.sale.noParty"))}</option>${(a.customers || []).map((c) => `<option value="${esc(c.id)}" ${st.partyId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
     <div class="field"><label>${esc(t("accounting.sale.customer"))}</label><input value="${esc(st.customer)}" oninput="saleState().customer=this.value" maxlength="120" /></div>
+    <div class="field"><label>${esc(t("accounting.sale.paidNow"))}</label><input inputmode="decimal" value="${esc(st.paid || "")}" oninput="saleState().paid=this.value;accountingSaleTotals()" /></div>
     <div class="row"><div class="field"><label>${esc(t("accounting.sale.discount"))}</label><input id="sale-discount" inputmode="decimal" value="${esc(st.discount)}" oninput="saleState().discount=this.value;accountingSaleTotals()" /></div>
       <div class="field"><label>&nbsp;</label><select onchange="saleState().mode=this.value;accountingSaleTotals()"><option value="amount" ${st.mode === "amount" ? "selected" : ""}>${esc(t("accounting.sale.discountAmount"))}</option><option value="percent" ${st.mode === "percent" ? "selected" : ""}>${esc(t("accounting.sale.discountPercent"))}</option></select></div></div>
     <div class="field"><label>${esc(t("accounting.pay"))}</label><select onchange="saleState().pay=this.value">${["CASH", "BANK", "WALLET"].map((m) => `<option value="${m}" ${st.pay === m ? "selected" : ""}>${esc(t("accounting.pay." + m))}</option>`).join("")}</select></div>
@@ -2856,7 +2937,10 @@ function accountingSaleCard(a) {
 function accountingSaleTotals() {
   const st = saleState(), sub = saleSubtotal(st), disc = saleDiscount(st, sub);
   const cur = st.items[0] ? st.items[0].currency : (S.currency || "EUR");
-  const el = document.getElementById("sale-total-tile"); if (el) el.innerHTML = uiTile(t("accounting.sale.total"), fmt(Math.max(sub - disc, 0), cur), "income");
+  const total = Math.max(sub - disc, 0);
+  const paidRaw = String(st.paid || "").replace(",", ".").trim();
+  const left = paidRaw === "" ? 0 : Math.max(total - Math.round(Number(paidRaw) * 100), 0);
+  const el = document.getElementById("sale-total-tile"); if (el) el.innerHTML = uiTile(t("accounting.sale.total"), fmt(total, cur), "income") + (left > 0 ? uiTile(t("accounting.sale.remaining"), fmt(left, cur), "expense") : "");
 }
 function accountingSaleLines(d) {
   return `<table class="plain-table" style="width:100%;margin:10px 0"><thead><tr><th>${esc(t("accounting.sale.item"))}</th><th>${esc(t("accounting.sale.qty"))}</th><th>${esc(t("accounting.sale.price"))}</th><th>${esc(t("accounting.sale.lineTotal"))}</th></tr></thead><tbody>${d.lines.map((l) => `<tr><td>${esc(l.name)}</td><td>${l.quantity}</td><td>${esc(fmt(l.unitPriceCents, d.currency))}</td><td>${esc(fmt(l.lineTotalCents, d.currency))}</td></tr>`).join("")}</tbody></table>
@@ -2894,6 +2978,9 @@ async function accountingSaleSave(btn) {
   const st = saleState(); if (!st.items.length) return;
   const sub = saleSubtotal(st);
   const body = { items: st.items.map((i) => ({ productId: i.productId, quantity: i.qty })), payMethod: st.pay, customerName: st.customer.trim() || undefined };
+  if (st.partyId) body.partyId = st.partyId;
+  const paidRaw = String(st.paid || "").replace(",", ".").trim();
+  if (paidRaw !== "") { const pc = Math.round(Number(paidRaw) * 100); if (!(pc >= 0)) return toast(t("accounting.invalidAmount")); body.paidCents = pc; }
   const v = Number(String(st.discount || "").replace(",", ".")) || 0;
   if (v > 0) { if (st.mode === "percent") body.discountPercent = Math.min(v, 100); else body.discountCents = Math.round(v * 100); }
   if (sub <= 0) return;
@@ -2902,7 +2989,7 @@ async function accountingSaleSave(btn) {
     const d = res.data && res.data.error && res.data.error.details;
     return toast(d && d.name ? t("accounting.sale.short", { name: d.name }) : errMsg(res.data, t("accounting.deleteFailed")));
   }
-  S._sale = { items: [], customer: "", discount: "", mode: "amount", pay: "CASH", done: res.data };
+  S._sale = { items: [], customer: "", discount: "", mode: "amount", pay: "CASH", partyId: "", paid: "", done: res.data };
   toast(t("accounting.sale.saved", { n: res.data.number }));
   S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
 }
@@ -2960,6 +3047,7 @@ async function accountingCashOpening() {
   if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
   toast(t("accounting.cash.openingSaved")); await loadAccounting();
 }
+function accIsOut(e) { return e.type === "EXPENSE" || e.type === "PAYOUT"; }
 function accountingCents(id) { return Math.round(Number(qs(id)?.value || 0) * 100); }
 async function accountingAddEntry() {
   const body = { type: qs("acc-type").value, category: qs("acc-category").value.trim(), description: qs("acc-description").value.trim(), amountCents: accountingCents("acc-amount"), currency: S.currency || "EUR", payMethod: qs("acc-pay")?.value || "CASH" };

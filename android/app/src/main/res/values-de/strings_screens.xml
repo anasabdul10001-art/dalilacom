@@ -503,4 +503,26 @@
     <string name="accounting_rep_qty">Quantity</string>
     <string name="accounting_rep_profit">Profit</string>
     <string name="accounting_rep_empty">No entries in this period.</string>
+    <string name="accounting_party_title">Customers and suppliers</string>
+    <string name="accounting_party_customers">Customers</string>
+    <string name="accounting_party_suppliers">Suppliers</string>
+    <string name="accounting_party_receivable">Owed to us by customers</string>
+    <string name="accounting_party_payable">Owed by us to suppliers</string>
+    <string name="accounting_party_name">Name</string>
+    <string name="accounting_party_add">Add</string>
+    <string name="accounting_party_empty">Nothing registered yet.</string>
+    <string name="accounting_party_balance">Balance</string>
+    <string name="accounting_party_settled">Settled</string>
+    <string name="accounting_party_statement">Statement</string>
+    <string name="accounting_party_pay">Record a payment</string>
+    <string name="accounting_party_charge">A debt or an old balance</string>
+    <string name="accounting_party_amount">Amount</string>
+    <string name="accounting_party_book">Record it as an entry in the accounts</string>
+    <string name="accounting_party_payment_row">Payment</string>
+    <string name="accounting_party_charge_row">Debt</string>
+    <string name="accounting_party_after">Balance after</string>
+    <string name="accounting_party_close">Close</string>
+    <string name="accounting_sale_party">Customer (for a sale on credit)</string>
+    <string name="accounting_sale_no_party">No registered customer</string>
+    <string name="accounting_sale_paid_now">Amount paid now (empty = in full)</string>
 </resources>

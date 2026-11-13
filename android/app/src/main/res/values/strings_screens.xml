@@ -875,4 +875,26 @@
     <string name="accounting_rep_qty">الكمية</string>
     <string name="accounting_rep_profit">الربح</string>
     <string name="accounting_rep_empty">ما في حركات بهالفترة.</string>
+    <string name="accounting_party_title">الزبائن والموردين</string>
+    <string name="accounting_party_customers">الزبائن</string>
+    <string name="accounting_party_suppliers">الموردين</string>
+    <string name="accounting_party_receivable">المستحق لنا عند الزبائن</string>
+    <string name="accounting_party_payable">المستحق علينا للموردين</string>
+    <string name="accounting_party_name">الاسم</string>
+    <string name="accounting_party_add">إضافة</string>
+    <string name="accounting_party_empty">ما في أسماء مسجّلة بعد.</string>
+    <string name="accounting_party_balance">الرصيد</string>
+    <string name="accounting_party_settled">مسدّد</string>
+    <string name="accounting_party_statement">كشف الحساب</string>
+    <string name="accounting_party_pay">تسجيل دفعة</string>
+    <string name="accounting_party_charge">دين أو رصيد سابق</string>
+    <string name="accounting_party_amount">المبلغ</string>
+    <string name="accounting_party_book">سجّله كحركة بالمحاسبة</string>
+    <string name="accounting_party_payment_row">دفعة</string>
+    <string name="accounting_party_charge_row">دين</string>
+    <string name="accounting_party_after">الرصيد بعدها</string>
+    <string name="accounting_party_close">إغلاق</string>
+    <string name="accounting_sale_party">الزبون (للبيع الآجل)</string>
+    <string name="accounting_sale_no_party">بدون زبون مسجّل</string>
+    <string name="accounting_sale_paid_now">المبلغ المدفوع الآن (فاضي = كامل)</string>
 </resources>
