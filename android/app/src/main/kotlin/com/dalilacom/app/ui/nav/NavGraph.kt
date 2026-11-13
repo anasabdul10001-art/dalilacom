@@ -14,6 +14,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -114,7 +122,14 @@ fun DalilacomNavGraph(
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
     // Android 15+ draws edge to edge and ignores "adjustResize": the whole app lifts above the keyboard here, so the field being typed in is always in sight
-    Box(Modifier.fillMaxSize().imePadding()) {
+    androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().imePadding()) {
+    // the Dalilacom logo stays at the top of every page, so people always know whose app this is
+    if (currentRoute != null && listOf("splash", "login", "register", "socialReturn").none { currentRoute.startsWith(it) }) {
+        Box(Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.background).statusBarsPadding().padding(horizontal = 16.dp, vertical = 6.dp)) {
+            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.dalilacom.app.R.drawable.brand_logo), contentDescription = "DALILACOM", modifier = Modifier.height(30.dp).align(Alignment.CenterStart))
+        }
+    }
+    Box(Modifier.weight(1f).fillMaxWidth().then(if (currentRoute != null && listOf("splash", "login", "register", "socialReturn").none { currentRoute.startsWith(it) }) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier)) {
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(
@@ -475,5 +490,6 @@ fun DalilacomNavGraph(
         onAddDiscount = { navController.navigate("discounts") },
         onGiveDiscount = { navController.navigate("merchantMode/redeem") }, // opens on the tab where a member's code is scanned
     )
+    }
     }
 }

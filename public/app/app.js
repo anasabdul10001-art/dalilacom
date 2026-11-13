@@ -284,6 +284,12 @@ const FAB_STORE = ["store", "productDetail"]; // the shop's discount button is n
 const FAB_CARD_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.6"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/></svg>`;
 const FAB_TAG_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>`;
 
+/** The Dalilacom mark (the letter D with its arrows) stays in the top corner of every page, so people always see whose site this is. */
+function brandMarkHtml() {
+  if (["login", "register"].includes(S.screen)) return "";
+  return `<button class="brand-mark" onclick="go('home')" aria-label="DALILACOM"><img src="/brand/logo.png" alt="" /></button>`;
+}
+
 function isMapScreen() { return S.screen === "home" && S.homeTab === "discover"; }
 function showCardFab() { return !FAB_HIDDEN.includes(S.screen) && !(S.screen === "home" && S.homeTab === "card"); }
 function showDiscFab() { return S.role === "MERCHANT" && !!S.token && !FAB_HIDDEN.includes(S.screen) && !FAB_STORE.includes(S.screen); }
@@ -547,7 +553,7 @@ async function render() {
   const keepQ = active && (active.id === "disc-q" || active.id === "mr-name" || active.id === "loc-search-q") ? active : null;
   const caret = keepQ ? [keepQ.selectionStart, keepQ.selectionEnd] : null;
   const chipsAt = el.querySelector(".float-chips") ? el.querySelector(".float-chips").scrollLeft : null; // the row of filters stays where the person scrolled it
-  el.innerHTML = renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml() + cityGateHtml();
+  el.innerHTML = brandMarkHtml() + renderScreen() + photoMenuHtml() + floatingButtonsHtml() + socialDockHtml() + landmarkClaimHtml() + landmarkSimilarHtml() + adImageAddHtml() + cityGateHtml();
   wireUpAfterRender();
   wireChipRows(chipsAt);
   placeDiscPopup();

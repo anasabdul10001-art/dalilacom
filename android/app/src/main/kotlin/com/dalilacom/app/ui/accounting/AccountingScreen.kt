@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -236,9 +237,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         }
         cash?.let { c ->
             item {
-                Card(Modifier.fillMaxWidth()) {
+                CollapsibleCard(stringResource(R.string.accounting_cash_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.accounting_cash_title), style = MaterialTheme.typography.titleMedium)
                         Text(stringResource(R.string.accounting_cash_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = { cashDay = java.time.LocalDate.parse(cashDay).minusDays(1).toString(); scope.launch { reload() } }) { Text("‹") }
@@ -282,9 +282,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             val saleSub = basket.sumOf { (p, q) -> p.salePriceCents.toLong() * q }
             val dv = saleDiscount.replace(',', '.').toDoubleOrNull() ?: 0.0
             val saleDisc = if (saleDiscountPercent) Math.round(saleSub * dv.coerceIn(0.0, 100.0) / 100.0) else Math.round(dv * 100)
-            Card(Modifier.fillMaxWidth()) {
+            CollapsibleCard(stringResource(R.string.accounting_sale_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.accounting_sale_title), style = MaterialTheme.typography.titleMedium)
                     val sellable = products.filter { it.quantity > 0 && it.salePriceCents > 0 }
                     androidx.compose.foundation.layout.Box {
                         OutlinedButton(onClick = { salePickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(salePick?.let { it.name + " · " + money(it.salePriceCents) + " · " + stringResource(R.string.accounting_sale_stock) + ": " + it.quantity } ?: stringResource(R.string.accounting_sale_pick)) }
@@ -363,9 +362,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
+            CollapsibleCard(stringResource(R.string.accounting_buy_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.accounting_buy_title), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.accounting_buy_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     androidx.compose.foundation.layout.Box {
                         OutlinedButton(onClick = { buyPickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(buyPick?.let { it.name + " · " + stringResource(R.string.accounting_sale_stock) + ": " + it.quantity } ?: stringResource(R.string.accounting_sale_pick)) }
@@ -437,9 +435,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
+            CollapsibleCard(stringResource(R.string.accounting_rec_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.accounting_rec_title), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.accounting_rec_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (recurring.isEmpty()) Text(stringResource(R.string.accounting_rec_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     recurring.forEach { r ->
@@ -482,9 +479,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
+            CollapsibleCard(stringResource(R.string.accounting_tax_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.accounting_tax_title), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.accounting_tax_warn), style = MaterialTheme.typography.bodySmall, color = androidx.compose.ui.graphics.Color(0xFF8A6D00))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (taxSettings.pricesIncludeTax) Button(onClick = {}) { Text(stringResource(R.string.accounting_tax_incl), fontSize = 12.sp) } else OutlinedButton(onClick = { scope.launch { container.accountingRepository.saveSettings(taxSettings.copy(pricesIncludeTax = true)); reload() } }) { Text(stringResource(R.string.accounting_tax_incl), fontSize = 12.sp) }
@@ -564,9 +560,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         }
         partiesData?.let { pd ->
             item {
-                Card(Modifier.fillMaxWidth()) {
+                CollapsibleCard(stringResource(R.string.accounting_party_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.accounting_party_title), style = MaterialTheme.typography.titleMedium)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             if (partyKind == "CUSTOMER") Button(onClick = {}) { Text(stringResource(R.string.accounting_party_customers)) } else OutlinedButton(onClick = { partyKind = "CUSTOMER" }) { Text(stringResource(R.string.accounting_party_customers)) }
                             if (partyKind == "SUPPLIER") Button(onClick = {}) { Text(stringResource(R.string.accounting_party_suppliers)) } else OutlinedButton(onClick = { partyKind = "SUPPLIER" }) { Text(stringResource(R.string.accounting_party_suppliers)) }
@@ -596,9 +591,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         }
         report?.let { rp ->
             item {
-                Card(Modifier.fillMaxWidth()) {
+                CollapsibleCard(stringResource(R.string.accounting_rep_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.accounting_rep_title), style = MaterialTheme.typography.titleMedium)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("today" to R.string.accounting_rep_today, "week" to R.string.accounting_rep_week, "month" to R.string.accounting_rep_month, "last30" to R.string.accounting_rep_last30).forEach { (code, label) ->
                                 if (reportPreset == code) Button(onClick = {}, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(stringResource(label), fontSize = 12.sp) }
@@ -643,9 +637,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         }
         low?.let { lw ->
             item {
-                Card(Modifier.fillMaxWidth()) {
+                CollapsibleCard(stringResource(R.string.accounting_low_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.accounting_low_title), style = MaterialTheme.typography.titleMedium)
                         if (countMode) {
                             Text(stringResource(R.string.accounting_count_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             products.filter { !it.id.startsWith("store:") }.forEach { p ->
@@ -685,9 +678,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
+            CollapsibleCard(stringResource(R.string.accounting_add_entry)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.accounting_add_entry), style = MaterialTheme.typography.titleMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { entryType = "INCOME" }) { Text(stringResource(R.string.accounting_incomeLabel)) }
                         OutlinedButton(onClick = { entryType = "EXPENSE" }) { Text(stringResource(R.string.accounting_expense)) }
@@ -709,9 +701,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
+            CollapsibleCard(stringResource(R.string.accounting_invoice_photo)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.accounting_invoice_photo), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.accounting_invoice_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedButton(onClick = { invoicePicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_invoice_choose)) }
                     invoiceDraft?.let { draft ->
@@ -730,9 +721,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
+            CollapsibleCard(stringResource(R.string.accounting_inventory)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.accounting_inventory), style = MaterialTheme.typography.titleMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(barcode, { barcode = it }, label = { Text(stringResource(R.string.accounting_barcode)) }, singleLine = true, modifier = Modifier.weight(1f))
                         OutlinedButton(onClick = { scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.ONE_D_CODE_TYPES).setPrompt(context.getString(R.string.accounting_scan_prompt)).setBeepEnabled(false)) }) { Text(stringResource(R.string.accounting_scan)) }
@@ -1059,6 +1049,24 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             }) { Text(stringResource(R.string.accounting_save)) } },
             dismissButton = { OutlinedButton(onClick = { costTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
+    }
+}
+
+/** A section that shows only its title; a tap opens it (and a second tap closes it). */
+@Composable
+private fun CollapsibleCard(title: String, startOpen: Boolean = false, content: @Composable () -> Unit) {
+    var open by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(startOpen) }
+    Card(Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().clickable { open = !open }.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text(if (open) "▲" else "▼", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (open) content()
+        }
     }
 }
 
