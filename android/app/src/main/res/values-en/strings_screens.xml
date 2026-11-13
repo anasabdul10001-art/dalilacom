@@ -757,4 +757,13 @@
     <string name="accounting_payrollShare">of which payroll: %1$s</string>
     <string name="site_offerTitle">Launch offer: 3 months free</string>
     <string name="site_offerSub">For a limited time. No payment card, and nothing is charged on its own.</string>
+    <string name="hr_notLinked">not linked to an account</string>
+    <string name="hr_details">Details</string>
+    <string name="hr_leave_waitHr">Waiting for HR</string>
+    <string name="hr_leave_waitManager">Waiting for the manager</string>
+    <string name="hr_pay_paidTotalLabel">Total cost of paid runs</string>
+    <string name="accounting_payrollLabel">Payroll</string>
+    <string name="accounting_incomeLabel">Income</string>
+    <string name="accounting_expensesLabel">Expenses</string>
+    <string name="accounting_netLabel">Net</string>
 </resources>

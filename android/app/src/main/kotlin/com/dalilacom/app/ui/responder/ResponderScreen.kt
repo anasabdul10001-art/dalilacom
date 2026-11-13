@@ -49,6 +49,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dalilacom.app.data.network.InboxItemDto
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
+import com.dalilacom.app.ui.common.SkeletonList
 import com.dalilacom.app.data.network.MetaPageDto
 import com.dalilacom.app.data.network.ResponderStatusDto
 import com.dalilacom.app.data.network.ResponderPlanDto
@@ -118,7 +121,7 @@ fun ResponderScreen(
         }
 
         if (state.isLoading && state.status == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            SkeletonList(4)
             return@Column
         }
 
@@ -542,17 +545,23 @@ private fun InboxTab(inbox: List<InboxItemDto>, busy: Boolean, onSend: (String, 
     if (inbox.isEmpty()) Text(AppStrings.get(R.string.s_7b3296cc), color = MaterialTheme.colorScheme.outline)
     inbox.forEach { item ->
         var reply by remember(item.id) { mutableStateOf("") }
-        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Column(Modifier.padding(12.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("${item.authorName} (${item.channel})", style = MaterialTheme.typography.titleSmall)
-                    Text(interactionLabel(item.status), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                }
+        androidx.compose.foundation.layout.Row(
+            Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)).padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            com.dalilacom.app.ui.common.PersonAvatar(item.authorName)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(item.authorName, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                Text(item.channel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 Text(item.message)
                 item.reply?.let { Text(AppStrings.get(R.string.fmt_reply, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                com.dalilacom.app.ui.common.StatusChip(
+                    interactionLabel(item.status),
+                    when (item.status) { "SENT" -> "ok"; "NEEDS_REVIEW" -> "warn"; "FAILED" -> "bad"; else -> "neutral" },
+                )
                 if (item.status == "NEEDS_REVIEW" || item.status == "FAILED") {
                     OutlinedTextField(reply, { reply = it }, label = { Text(AppStrings.get(R.string.s_47428e01)) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions.Default, placeholder = { Hint(stringResource(R.string.ph_inbox_reply)) })
-                    Button(onClick = { onSend(item.id, reply) }, enabled = !busy && reply.isNotBlank()) { Text(AppStrings.get(R.string.s_90cf87a4)) }
+                    Button(shape = RoundedCornerShape(12.dp), onClick = { onSend(item.id, reply) }, enabled = !busy && reply.isNotBlank()) { Text(AppStrings.get(R.string.s_90cf87a4)) }
                 }
             }
         }

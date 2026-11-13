@@ -34,6 +34,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.dalilacom.app.R
 import com.dalilacom.app.data.AppContainer
+import com.dalilacom.app.ui.common.MetricTile
+import com.dalilacom.app.ui.common.SkeletonList
+import androidx.compose.foundation.layout.Row
 import com.dalilacom.app.data.network.AccountingEntryRequest
 import com.dalilacom.app.data.network.AccountingProductDto
 import com.dalilacom.app.data.network.AccountingProductRequest
@@ -101,7 +104,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     }
 
     if (loading) {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) { CircularProgressIndicator() }
+        SkeletonList(2, tiles = true)
         return
     }
     if (container.accountingRepository.requiresPlan) {
@@ -123,8 +126,15 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.accounting_summary), style = MaterialTheme.typography.titleMedium)
                     summary?.totals.orEmpty().forEach {
-                        Text(stringResource(R.string.accounting_totals_line, it.currency, money(it.incomeCents), money(it.expensesCents), money(it.netCents)))
-                        if (it.payrollCents > 0) Text(stringResource(R.string.accounting_payrollShare, "%.2f".format(it.payrollCents / 100.0)), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(it.currency, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricTile(stringResource(R.string.accounting_incomeLabel), money(it.incomeCents), "income", Modifier.weight(1f))
+                            MetricTile(stringResource(R.string.accounting_expensesLabel), money(it.expensesCents), "expense", Modifier.weight(1f))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricTile(stringResource(R.string.accounting_netLabel), money(it.netCents), "net", Modifier.weight(1f))
+                            if (it.payrollCents > 0) MetricTile(stringResource(R.string.accounting_payrollLabel), "%.2f".format(it.payrollCents / 100.0), "payroll", Modifier.weight(1f))
+                        }
                     }
                     Text(stringResource(R.string.accounting_stock_summary, summary?.inventory?.products ?: 0, summary?.inventory?.units ?: 0))
                 }
@@ -135,7 +145,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.accounting_add_entry), style = MaterialTheme.typography.titleMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { entryType = "INCOME" }) { Text(stringResource(R.string.accounting_income)) }
+                        OutlinedButton(onClick = { entryType = "INCOME" }) { Text(stringResource(R.string.accounting_incomeLabel)) }
                         OutlinedButton(onClick = { entryType = "EXPENSE" }) { Text(stringResource(R.string.accounting_expense)) }
                     }
                     OutlinedTextField(category, { category = it }, label = { Text(stringResource(R.string.accounting_category)) }, singleLine = true, modifier = Modifier.fillMaxWidth())

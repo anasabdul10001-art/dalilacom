@@ -32,6 +32,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dalilacom.app.R
 import com.dalilacom.app.data.AppContainer
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.Alignment
+import com.dalilacom.app.ui.common.BusyButton
+import com.dalilacom.app.ui.common.EmptyHint
+import com.dalilacom.app.ui.common.FoldSection
+import com.dalilacom.app.ui.common.MetricTile
+import com.dalilacom.app.ui.common.PersonAvatar
+import com.dalilacom.app.ui.common.SkeletonList
+import com.dalilacom.app.ui.common.StatusChip
+import com.dalilacom.app.ui.common.StepBar
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -90,7 +105,7 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
     if (ov == null) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
             if (failed) { Text(errorFallback, color = MaterialTheme.colorScheme.error); OutlinedButton(onClick = { failed = false; version++ }) { Text(stringResource(R.string.hr_retry)) } }
-            else CircularProgressIndicator()
+            else SkeletonList()
         }
         return
     }
@@ -145,7 +160,7 @@ private fun Load(repo: com.dalilacom.app.data.repository.HrRepository, path: Str
     var data by remember(path, version) { mutableStateOf<JsonElement?>(null) }
     LaunchedEffect(path, version) { data = repo.get(path).getOrNull() ?: JsonArray(emptyList()) }
     val d = data
-    if (d == null) CircularProgressIndicator() else content(d)
+    if (d == null) SkeletonList(2) else content(d)
 }
 
 @Composable private fun Box(title: String, content: @Composable () -> Unit) {
@@ -173,19 +188,34 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
         val emps = data.rows()
         Box(manage.s("companyName").orEmpty()) {
             Text(stringResource(R.string.hr_people_count, emps.size), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (emps.isEmpty()) Text(stringResource(R.string.hr_people_empty))
+            if (emps.isEmpty()) EmptyHint("👥", stringResource(R.string.hr_people_empty))
             emps.forEach { e ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(fullName(e), style = MaterialTheme.typography.titleSmall)
-                        Text(listOfNotNull(e.s("position"), e.n("baseSalary")?.let { money(it, cur) }).joinToString(" · "), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (e.s("userId") == null && e.s("employmentStatus") != "TERMINATED") OutlinedButton(onClick = {
+                val name = fullName(e)
+                val st = e.s("employmentStatus").orEmpty()
+                val roleLabel = stringResource(when (e.s("role")) { "HR" -> R.string.hr_role_HR; "MANAGER" -> R.string.hr_role_MANAGER; else -> R.string.hr_role_EMPLOYEE })
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                    PersonAvatar(name)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(name, fontWeight = FontWeight.ExtraBold)
+                        Text(e.s("position") ?: roleLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.5.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            StatusChip(roleLabel)
+                            StatusChip(stringResource(when (st) { "ON_LEAVE" -> R.string.hr_status_ON_LEAVE; "TERMINATED" -> R.string.hr_status_TERMINATED; else -> R.string.hr_status_ACTIVE }), when (st) { "ACTIVE" -> "ok"; "ON_LEAVE" -> "warn"; else -> "bad" })
+                            if (e.s("userId") != null) StatusChip(stringResource(R.string.hr_linked), "info")
+                        }
+                        FoldSection(stringResource(R.string.hr_details)) {
+                            Text("${stringResource(R.string.hr_f_hire)}: ${day(e.s("hireDate"))}", fontSize = 13.sp)
+                            e.s("email")?.let { Text("${stringResource(R.string.hr_f_email)}: $it", fontSize = 13.sp) }
+                            Text(stringResource(if (e.s("userId") != null) R.string.hr_linked else R.string.hr_notLinked), fontSize = 13.sp)
+                        }
+                        if (e.s("userId") == null && st != "TERMINATED") OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = {
                             act(null, { repo.post("hr/employees/${e.s("id")}/invite") }) { r ->
                                 val o = r as? JsonObject
                                 if ((o?.get("emailed") as? JsonPrimitive)?.booleanOrNull != true) o?.s("code")?.let(showCode)
                             }
                         }) { Text(stringResource(R.string.hr_invite)) }
                     }
+                    e.n("baseSalary")?.let { Text(money(it, cur), fontWeight = FontWeight.ExtraBold) }
                 }
             }
         }
@@ -214,14 +244,23 @@ private fun LeaveTab(repo: com.dalilacom.app.data.repository.HrRepository, versi
     Load(repo, "hr/leave-requests", version) { data ->
         val open = data.rows().filter { it.s("status") == "PENDING_MANAGER" || it.s("status") == "PENDING_HR" }
         Box(stringResource(R.string.hr_leave_pending)) {
-            if (open.isEmpty()) Text(stringResource(R.string.hr_leave_none))
+            if (open.isEmpty()) EmptyHint("🏖️", stringResource(R.string.hr_leave_none))
             open.forEach { r ->
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(fullName(r.o("employee")), style = MaterialTheme.typography.titleSmall)
-                    Text("${r.o("leaveType")?.s("name").orEmpty()} · ${day(r.s("startDate"))} → ${day(r.s("endDate"))}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { act(R.string.hr_decided, { repo.post("hr/leave-requests/${r.s("id")}/decision", buildJsonObject { put("decision", "APPROVE") }) }, {}) }) { Text(stringResource(R.string.hr_approve)) }
-                        OutlinedButton(onClick = { act(R.string.hr_decided, { repo.post("hr/leave-requests/${r.s("id")}/decision", buildJsonObject { put("decision", "REJECT") }) }, {}) }) { Text(stringResource(R.string.hr_reject)) }
+                val emp = fullName(r.o("employee"))
+                val nDays = runCatching { java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(day(r.s("startDate"))), java.time.LocalDate.parse(day(r.s("endDate")))) + 1 }.getOrDefault(1L).toInt()
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                    PersonAvatar(emp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(emp, fontWeight = FontWeight.ExtraBold)
+                        Text("${r.o("leaveType")?.s("name").orEmpty()} · ${day(r.s("startDate"))} → ${day(r.s("endDate"))}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.5.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            StatusChip(stringResource(R.string.hr_leave_days, nDays), "info")
+                            StatusChip(stringResource(if (r.s("status") == "PENDING_HR") R.string.hr_leave_waitHr else R.string.hr_leave_waitManager), "warn")
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(shape = RoundedCornerShape(12.dp), onClick = { act(R.string.hr_decided, { repo.post("hr/leave-requests/${r.s("id")}/decision", buildJsonObject { put("decision", "APPROVE") }) }, {}) }) { Text(stringResource(R.string.hr_approve)) }
+                            OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { act(R.string.hr_decided, { repo.post("hr/leave-requests/${r.s("id")}/decision", buildJsonObject { put("decision", "REJECT") }) }, {}) }) { Text(stringResource(R.string.hr_reject)) }
+                        }
                     }
                 }
             }
@@ -252,21 +291,31 @@ private fun PayrollTab(repo: com.dalilacom.app.data.repository.HrRepository, cur
             Text(stringResource(R.string.hr_pay_note), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(stringResource(R.string.hr_pay_attNote), color = MaterialTheme.colorScheme.onSurfaceVariant)
             val paidCost = runs.filter { it.s("status") == "PAID" }.sumOf { it.o("totals")?.n("cost") ?: 0.0 }
-            if (paidCost > 0) Text(stringResource(R.string.hr_pay_paidTotal, money(paidCost, cur)), style = MaterialTheme.typography.titleSmall)
-            if (runs.isEmpty()) Text(stringResource(R.string.hr_pay_none))
+            if (paidCost > 0) MetricTile(stringResource(R.string.hr_pay_paidTotalLabel), money(paidCost, cur), "payroll", Modifier.fillMaxWidth())
+            if (runs.isEmpty()) EmptyHint("💵", stringResource(R.string.hr_pay_none))
             runs.forEach { r ->
                 val id = r.s("id").orEmpty(); val st = r.s("status").orEmpty()
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("${day(r.s("periodStart"))} → ${day(r.s("periodEnd"))}", style = MaterialTheme.typography.titleSmall)
-                    Text(stringResource(when (st) { "PAID" -> R.string.hr_run_PAID; "PROCESSED" -> R.string.hr_run_PROCESSED; else -> R.string.hr_run_DRAFT }), color = MaterialTheme.colorScheme.primary)
+                val steps = listOf(stringResource(R.string.hr_run_DRAFT), stringResource(R.string.hr_run_PROCESSED), stringResource(R.string.hr_run_PAID))
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("${day(r.s("periodStart"))} → ${day(r.s("periodEnd"))}", fontWeight = FontWeight.ExtraBold)
+                        StatusChip(steps[if (st == "PAID") 2 else if (st == "PROCESSED") 1 else 0], if (st == "PAID") "ok" else if (st == "PROCESSED") "info" else "neutral")
+                    }
+                    StepBar(steps, if (st == "PAID") 2 else if (st == "PROCESSED") 1 else 0)
                     r.o("totals")?.takeIf { st != "DRAFT" }?.let { tt ->
-                        Text("${stringResource(R.string.hr_pay_gross)}: ${money(tt.n("grossPay"), cur)} · ${stringResource(R.string.hr_pay_deductions)}: ${money(tt.n("totalDeductions"), cur)} · ${stringResource(R.string.hr_pay_net)}: ${money(tt.n("netPay"), cur)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("${stringResource(R.string.hr_pay_cost)}: ${money(tt.n("cost"), cur)}", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricTile(stringResource(R.string.hr_pay_gross), money(tt.n("grossPay"), cur), "net", Modifier.weight(1f))
+                            MetricTile(stringResource(R.string.hr_pay_deductions), money(tt.n("totalDeductions"), cur), "expense", Modifier.weight(1f))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricTile(stringResource(R.string.hr_pay_net), money(tt.n("netPay"), cur), "income", Modifier.weight(1f))
+                            MetricTile(stringResource(R.string.hr_pay_cost), money(tt.n("cost"), cur), "payroll", Modifier.weight(1f))
+                        }
                     }
                     when {
-                        st == "DRAFT" -> Button(onClick = { act(R.string.hr_pay_processed, { repo.post("hr/payroll-runs/$id/process") }, {}) }) { Text(stringResource(R.string.hr_pay_process)) }
-                        st == "PROCESSED" -> Button(onClick = { act(R.string.hr_pay_paidDone, { repo.post("hr/payroll-runs/$id/mark-paid") }, {}) }) { Text(stringResource(R.string.hr_pay_markPaid)) }
-                        owner -> OutlinedButton(onClick = { revertId = id }) { Text(stringResource(R.string.hr_pay_revert)) }
+                        st == "DRAFT" -> Button(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(46.dp), onClick = { act(R.string.hr_pay_processed, { repo.post("hr/payroll-runs/$id/process") }, {}) }) { Text(stringResource(R.string.hr_pay_process), fontWeight = FontWeight.ExtraBold) }
+                        st == "PROCESSED" -> Button(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(46.dp), onClick = { act(R.string.hr_pay_paidDone, { repo.post("hr/payroll-runs/$id/mark-paid") }, {}) }) { Text(stringResource(R.string.hr_pay_markPaid), fontWeight = FontWeight.ExtraBold) }
+                        owner -> OutlinedButton(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(46.dp), onClick = { revertId = id }) { Text(stringResource(R.string.hr_pay_revert)) }
                     }
                 }
             }

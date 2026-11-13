@@ -757,4 +757,13 @@
     <string name="accounting_payrollShare">منها رواتب: %1$s</string>
     <string name="site_offerTitle">عرض الإطلاق: 3 شهور مجاناً</string>
     <string name="site_offerSub">لفترة محدودة. بدون بطاقة دفع، وما بينسحب شي لحاله.</string>
+    <string name="hr_notLinked">مو مربوط بحساب</string>
+    <string name="hr_details">التفاصيل</string>
+    <string name="hr_leave_waitHr">بانتظار الموارد البشرية</string>
+    <string name="hr_leave_waitManager">بانتظار المدير</string>
+    <string name="hr_pay_paidTotalLabel">إجمالي كلفة الدورات المدفوعة</string>
+    <string name="accounting_payrollLabel">رواتب</string>
+    <string name="accounting_incomeLabel">الدخل</string>
+    <string name="accounting_expensesLabel">المصاريف</string>
+    <string name="accounting_netLabel">الصافي</string>
 </resources>
