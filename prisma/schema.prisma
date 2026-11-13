@@ -117,26 +117,28 @@ model User {
   affiliateOf             MerchantAffiliate[] // merchants I market for
   referredAs              AffiliateReferral[] // merchants that credit a specific affiliate for my purchases
 
-  wallet                  Wallet?
-  walletTransactions      WalletTransaction[]
-  topUpRequests           TopUpRequest[]
-  responderSubscription   ResponderSubscription?
-  responderEntitlements   ResponderEntitlement[]
-  channelConnections      ChannelConnection[]
-  responderRules          ResponderRule[]
-  responderInteractions   ResponderInteraction[]
-  accountingProducts      AccountingProduct[]
-  accountingEntries       AccountingEntry[]
-  accountingCashDays      AccountingCashDay[]
-  accountingSales         AccountingSale[]
-  accountingParties       AccountingParty[]
-  accountingPurchases     AccountingPurchase[]
-  accountingMovements     AccountingStockMovement[]
-  accountingInvoiceDrafts AccountingInvoiceDraft[]
-  hrCompany               HrCompany?                @relation("HrCompanyOwner")
-  hrEmployments           HrEmployee[]              @relation("HrEmployeeUser")
-  platformSubscriptions   PlatformSubscription[]
-  responderAiCalls        ResponderAiCall[]
+  wallet                    Wallet?
+  walletTransactions        WalletTransaction[]
+  topUpRequests             TopUpRequest[]
+  responderSubscription     ResponderSubscription?
+  responderEntitlements     ResponderEntitlement[]
+  channelConnections        ChannelConnection[]
+  responderRules            ResponderRule[]
+  responderInteractions     ResponderInteraction[]
+  accountingProducts        AccountingProduct[]
+  accountingEntries         AccountingEntry[]
+  accountingCashDays        AccountingCashDay[]
+  accountingSales           AccountingSale[]
+  accountingParties         AccountingParty[]
+  accountingPurchases       AccountingPurchase[]
+  accountingSaleReturns     AccountingSaleReturn[]
+  accountingPurchaseReturns AccountingPurchaseReturn[]
+  accountingMovements       AccountingStockMovement[]
+  accountingInvoiceDrafts   AccountingInvoiceDraft[]
+  hrCompany                 HrCompany?                 @relation("HrCompanyOwner")
+  hrEmployments             HrEmployee[]               @relation("HrEmployeeUser")
+  platformSubscriptions     PlatformSubscription[]
+  responderAiCalls          ResponderAiCall[]
 
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
@@ -952,6 +954,83 @@ model AccountingPartyEntry {
 }
 
 // A purchase from a supplier. Stock comes in at its cost; the paid part is money out (a PAYOUT entry, not an expense); the rest is owed to the supplier.
+// Goods that came back from a customer. The sale is not changed: the return is its own record, and the stock, the income, the cost and the money follow it.
+model AccountingSaleReturn {
+  id           String               @id @default(uuid())
+  userId       String
+  saleId       String
+  currency     String
+  totalCents   BigInt // what the customer gets back for these goods (after their share of the invoice discount)
+  refundCents  BigInt               @default(0) // paid back in money
+  debtCents    BigInt               @default(0) // taken off what the customer still owes
+  payMethod    AccountingPayMethod?
+  note         String?
+  occurredAt   DateTime             @default(now())
+  recordedById String?
+  createdAt    DateTime             @default(now())
+
+  user  User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lines AccountingSaleReturnLine[]
+
+  @@index([userId, occurredAt])
+  @@index([saleId])
+}
+
+model AccountingSaleReturnLine {
+  id             String  @id @default(uuid())
+  returnId       String
+  saleLineId     String
+  productId      String?
+  name           String
+  quantity       Int
+  unitPriceCents BigInt
+  unitCostCents  BigInt  @default(0)
+  lineTotalCents BigInt
+
+  ret AccountingSaleReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+
+  @@index([returnId])
+  @@index([saleLineId])
+}
+
+// Goods that went back to a supplier.
+model AccountingPurchaseReturn {
+  id           String               @id @default(uuid())
+  userId       String
+  purchaseId   String
+  currency     String
+  totalCents   BigInt
+  refundCents  BigInt               @default(0) // the supplier paid it back in money
+  debtCents    BigInt               @default(0) // taken off what we still owe the supplier
+  payMethod    AccountingPayMethod?
+  note         String?
+  occurredAt   DateTime             @default(now())
+  recordedById String?
+  createdAt    DateTime             @default(now())
+
+  user  User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lines AccountingPurchaseReturnLine[]
+
+  @@index([userId, occurredAt])
+  @@index([purchaseId])
+}
+
+model AccountingPurchaseReturnLine {
+  id             String  @id @default(uuid())
+  returnId       String
+  purchaseLineId String
+  productId      String?
+  name           String
+  quantity       Int
+  unitCostCents  BigInt
+  lineTotalCents BigInt
+
+  ret AccountingPurchaseReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+
+  @@index([returnId])
+  @@index([purchaseLineId])
+}
+
 model AccountingPurchase {
   id           String              @id @default(uuid())
   userId       String

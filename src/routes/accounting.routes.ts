@@ -314,9 +314,22 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
 }));
 
 
+/** How many of each line were returned already (by line id). */
+async function returnedBySaleLine(lineIds: string[]) {
+  if (!lineIds.length) return {} as Record<string, number>;
+  const rows = await prisma.accountingSaleReturnLine.groupBy({ by: ["saleLineId"], where: { saleLineId: { in: lineIds } }, _sum: { quantity: true } });
+  return Object.fromEntries(rows.map((r) => [r.saleLineId, r._sum.quantity ?? 0]));
+}
+async function returnedByPurchaseLine(lineIds: string[]) {
+  if (!lineIds.length) return {} as Record<string, number>;
+  const rows = await prisma.accountingPurchaseReturnLine.groupBy({ by: ["purchaseLineId"], where: { purchaseLineId: { in: lineIds } }, _sum: { quantity: true } });
+  return Object.fromEntries(rows.map((r) => [r.purchaseLineId, r._sum.quantity ?? 0]));
+}
+
 // ---- reports: totals, a series by day / week / month, by category and by product, for any period
 const COST_CATEGORY = "تكلفة البضاعة المباعة";
 const SALES_CATEGORY = "مبيعات";
+const RETURNS_CATEGORY = "مرتجعات مبيعات";
 accountingRouter.get("/reports", route(async (req, res) => {
   const parsed = z.object({
     from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -330,17 +343,19 @@ accountingRouter.get("/reports", route(async (req, res) => {
   const currencies = (await prisma.accountingEntry.groupBy({ by: ["currency"], where: inRange })).map((c) => c.currency);
   const currency = parsed.data.currency ?? currencies[0] ?? "EUR";
   const trunc = Prisma.raw(`'${parsed.data.groupBy}'`); // whitelisted by the schema above
-  const [byType, byCategory, series, products, saleTotals] = await Promise.all([
+  const [byType, byCategory, series, products, saleTotals, returnedLines] = await Promise.all([
     prisma.accountingEntry.groupBy({ by: ["type"], where: { ...inRange, currency }, _sum: { amountCents: true } }),
     prisma.accountingEntry.groupBy({ by: ["category", "type"], where: { ...inRange, currency }, _sum: { amountCents: true }, _count: { _all: true }, orderBy: { _sum: { amountCents: "desc" } }, take: 40 }),
     prisma.$queryRaw<{ period: Date; type: string; total: bigint }[]>`SELECT date_trunc(${trunc}, "occurredAt" AT TIME ZONE 'UTC') AS period, "type"::text AS type, SUM("amountCents") AS total FROM "AccountingEntry" WHERE "userId" = ${userId} AND "currency" = ${currency} AND "type" IN ('INCOME', 'EXPENSE') AND "occurredAt" >= ${from} AND "occurredAt" <= ${to} GROUP BY 1, 2 ORDER BY 1`,
     prisma.$queryRaw<{ name: string; qty: bigint; revenue: bigint; cost: bigint }[]>`SELECT l."name" AS name, SUM(l."quantity") AS qty, SUM(l."lineTotalCents") AS revenue, SUM(l."unitCostCents" * l."quantity") AS cost FROM "AccountingSaleLine" l JOIN "AccountingSale" s ON s."id" = l."saleId" WHERE s."userId" = ${userId} AND s."currency" = ${currency} AND s."occurredAt" >= ${from} AND s."occurredAt" <= ${to} GROUP BY l."name" ORDER BY revenue DESC LIMIT 50`,
     prisma.accountingSale.aggregate({ where: { userId, currency, occurredAt: { gte: from, lte: to } }, _sum: { discountCents: true }, _count: { _all: true } }),
+    prisma.$queryRaw<{ name: string; qty: bigint; revenue: bigint; cost: bigint }[]>`SELECT l."name" AS name, SUM(l."quantity") AS qty, SUM(l."lineTotalCents") AS revenue, SUM(l."unitCostCents" * l."quantity") AS cost FROM "AccountingSaleReturnLine" l JOIN "AccountingSaleReturn" r ON r."id" = l."returnId" WHERE r."userId" = ${userId} AND r."currency" = ${currency} AND r."occurredAt" >= ${from} AND r."occurredAt" <= ${to} GROUP BY l."name"`,
   ]);
   const amount = (t: string) => Number(byType.find((x) => x.type === t)?._sum.amountCents ?? 0);
   const income = amount("INCOME"), expenses = amount("EXPENSE");
   const cat = (c: string, t: string) => Number(byCategory.find((x) => x.category === c && x.type === t)?._sum.amountCents ?? 0);
-  const salesCents = cat(SALES_CATEGORY, "INCOME"), cogs = cat(COST_CATEGORY, "EXPENSE");
+  const returnsCents = -cat(RETURNS_CATEGORY, "INCOME");
+  const salesCents = cat(SALES_CATEGORY, "INCOME") - returnsCents, cogs = cat(COST_CATEGORY, "EXPENSE");
   const periods = new Map<string, { period: string; incomeCents: number; expensesCents: number }>();
   for (const r of series) {
     const key = new Date(r.period).toISOString().slice(0, 10);
@@ -350,10 +365,18 @@ accountingRouter.get("/reports", route(async (req, res) => {
   }
   res.json({
     from: parsed.data.from, to: parsed.data.to, currency, currencies, groupBy: parsed.data.groupBy,
-    totals: { incomeCents: income, expensesCents: expenses, netCents: income - expenses, salesCents, costOfGoodsCents: cogs, grossProfitCents: salesCents - cogs, otherExpensesCents: expenses - cogs, invoices: saleTotals._count._all, discountCents: Number(saleTotals._sum.discountCents ?? 0) },
+    totals: { incomeCents: income, expensesCents: expenses, netCents: income - expenses, salesCents, costOfGoodsCents: cogs, returnsCents, grossProfitCents: salesCents - cogs, otherExpensesCents: expenses - cogs, invoices: saleTotals._count._all, discountCents: Number(saleTotals._sum.discountCents ?? 0) },
     series: [...periods.values()].map((p) => ({ ...p, netCents: p.incomeCents - p.expensesCents })),
     byCategory: byCategory.map((c) => ({ category: c.category, type: c.type, amountCents: Number(c._sum.amountCents ?? 0), entries: c._count._all })),
-    byProduct: products.map((p) => ({ name: p.name, quantity: Number(p.qty), revenueCents: Number(p.revenue), costCents: Number(p.cost), profitCents: Number(p.revenue) - Number(p.cost) })),
+    byProduct: (() => {
+      const back = new Map(returnedLines.map((r) => [r.name, r]));
+      const names = new Set([...products.map((p) => p.name), ...returnedLines.map((r) => r.name)]);
+      return [...names].map((name) => {
+        const sold = products.find((p) => p.name === name), r = back.get(name);
+        const quantity = Number(sold?.qty ?? 0) - Number(r?.qty ?? 0), revenueCents = Number(sold?.revenue ?? 0) - Number(r?.revenue ?? 0), costCents = Number(sold?.cost ?? 0) - Number(r?.cost ?? 0);
+        return { name, quantity, revenueCents, costCents, profitCents: revenueCents - costCents };
+      }).filter((x) => x.quantity !== 0 || x.revenueCents !== 0).sort((a, b) => b.revenueCents - a.revenueCents);
+    })(),
   });
 }));
 
@@ -517,10 +540,10 @@ const purchaseSchema = z.object({
   note: z.string().trim().max(240).optional(),
   occurredAt: z.string().datetime().optional(),
 });
-type PurchaseRow = { id: string; number: number; partyId: string | null; supplierName: string | null; note: string | null; currency: string; totalCents: bigint; paidCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitCostCents: bigint; lineTotalCents: bigint }[] };
+type PurchaseRow = { returned?: Record<string, number>; id: string; number: number; partyId: string | null; supplierName: string | null; note: string | null; currency: string; totalCents: bigint; paidCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitCostCents: bigint; lineTotalCents: bigint }[] };
 const plainPurchase = (r: PurchaseRow) => ({
   id: r.id, number: r.number, partyId: r.partyId, supplierName: r.supplierName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt, totalCents: Number(r.totalCents), paidCents: Number(r.paidCents),
-  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents) })),
+  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, returnedQuantity: r.returned?.[l.id] ?? 0, unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents) })),
 });
 /** The cost of a product after new units came in: the average of what was there and what arrived, weighted by the quantities. */
 const averageCost = (oldQty: number, oldCost: number, addQty: number, addCost: number) => (oldQty > 0 ? Math.round((oldQty * oldCost + addQty * addCost) / (oldQty + addQty)) : addCost);
@@ -588,13 +611,121 @@ accountingRouter.post("/purchases", route(async (req, res) => {
 
 accountingRouter.get("/purchases", route(async (req, res) => {
   const rows = await prisma.accountingPurchase.findMany({ where: { userId: req.user!.id }, include: { lines: true }, orderBy: { number: "desc" }, take: 100 });
-  res.json(rows.map(plainPurchase));
+  const returned = await returnedByPurchaseLine(rows.flatMap((r) => r.lines.map((l) => l.id)));
+  res.json(rows.map((r) => plainPurchase({ ...r, returned })));
 }));
 
 accountingRouter.get("/purchases/:id", route(async (req, res) => {
   const row = await prisma.accountingPurchase.findFirst({ where: { id: req.params.id, userId: req.user!.id }, include: { lines: true } });
   if (!row) return sendError(res, 404, "NOT_FOUND", "الفاتورة غير موجودة");
-  res.json(plainPurchase(row));
+  res.json(plainPurchase({ ...row, returned: await returnedByPurchaseLine(row.lines.map((l) => l.id)) }));
+}));
+
+// ---- returns. A sales return puts the goods back, takes the income and the cost back, lowers what the customer owes first and pays the rest back in money.
+// A purchase return takes the goods out, lowers what we owe the supplier first and takes the rest back in money. The invoices themselves never change.
+const returnSchema = z.object({
+  items: z.array(z.object({ lineId: z.string().uuid(), quantity: z.number().int().positive().max(1_000_000) })).min(1).max(100),
+  refundMethod: z.enum(["CASH", "BANK", "WALLET"]).optional(),
+  note: z.string().trim().max(240).optional(),
+  occurredAt: z.string().datetime().optional(),
+});
+const owedOn = (rows: LedgerRow[], currency: string) => Math.max(balancesOf(rows).find((b) => b.currency === currency)?.balanceCents ?? 0, 0);
+
+accountingRouter.post("/sales/:id/returns", route(async (req, res) => {
+  const parsed = returnSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id, d = parsed.data;
+  const sale = await prisma.accountingSale.findFirst({ where: { id: req.params.id, userId }, include: { lines: true } });
+  if (!sale) return sendError(res, 404, "NOT_FOUND", "الفاتورة غير موجودة");
+  const returned = await returnedBySaleLine(sale.lines.map((l) => l.id));
+  const wanted = new Map<string, number>();
+  for (const it of d.items) wanted.set(it.lineId, (wanted.get(it.lineId) ?? 0) + it.quantity);
+  const picked: { line: (typeof sale.lines)[number]; quantity: number }[] = [];
+  for (const [lineId, quantity] of wanted) {
+    const line = sale.lines.find((l) => l.id === lineId);
+    if (!line) return sendError(res, 404, "NOT_FOUND", "سطر الفاتورة غير موجود");
+    if (quantity > line.quantity - (returned[lineId] ?? 0)) return sendError(res, 409, "CONFLICT", "الكمية المرتجعة أكبر من الكمية المباعة");
+    picked.push({ line, quantity });
+  }
+  const gross = picked.reduce((sum, p) => sum + Number(p.line.unitPriceCents) * p.quantity, 0);
+  const subtotal = Number(sale.subtotalCents);
+  // the customer got a discount on the whole invoice: they get back the same share of it
+  const share = subtotal > 0 ? Math.round(Number(sale.discountCents) * gross / subtotal) : 0;
+  const total = gross - share;
+  const cost = picked.reduce((sum, p) => sum + Number(p.line.unitCostCents) * p.quantity, 0);
+  const owed = sale.partyId ? owedOn(await prisma.accountingPartyEntry.findMany({ where: { partyId: sale.partyId }, select: { kind: true, amountCents: true, currency: true } }), sale.currency) : 0;
+  const debt = Math.min(total, owed), refund = total - debt;
+  const when = d.occurredAt ? new Date(d.occurredAt) : new Date();
+  const method = d.refundMethod ?? sale.payMethod;
+  const done = await prisma.$transaction(async (tx) => {
+    const created = await tx.accountingSaleReturn.create({
+      data: { userId, saleId: sale.id, currency: sale.currency, totalCents: total, refundCents: refund, debtCents: debt, payMethod: refund > 0 ? method : null, note: d.note || null, occurredAt: when, recordedById: userId,
+        lines: { create: picked.map((p) => ({ saleLineId: p.line.id, productId: p.line.productId, name: p.line.name, quantity: p.quantity, unitPriceCents: p.line.unitPriceCents, unitCostCents: p.line.unitCostCents, lineTotalCents: Number(p.line.unitPriceCents) * p.quantity })) } },
+    });
+    for (const p of picked) {
+      const key = p.line.productId;
+      if (key) {
+        if (key.startsWith("store:")) await tx.product.updateMany({ where: { id: key.slice(6) }, data: { stock: { increment: p.quantity }, soldCount: { decrement: p.quantity } } });
+        else await tx.accountingProduct.updateMany({ where: { id: key, userId }, data: { quantity: { increment: p.quantity } } });
+        await tx.accountingStockMovement.create({ data: { userId, ...(key.startsWith("store:") ? { storeProductId: key.slice(6) } : { productId: key }), action: "STOCK_IN", quantity: p.quantity, unitCostCents: Number(p.line.unitCostCents), note: `مرتجع فاتورة بيع #${sale.number}` } }).catch(() => undefined);
+      }
+    }
+    const label = `مرتجع فاتورة بيع #${sale.number}${sale.customerName ? ` — ${sale.customerName}` : ""}`;
+    // the income and the cost of the returned goods are taken back (negative entries); the money paid back is a payout, not an expense
+    await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: RETURNS_CATEGORY, description: label, amountCents: -total, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}`, recordedById: userId } });
+    if (cost > 0) await tx.accountingEntry.create({ data: { userId, type: "EXPENSE", category: COST_CATEGORY, description: label, amountCents: -cost, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}:cost`, recordedById: userId } });
+    if (refund > 0) {
+      const out = await tx.accountingEntry.create({ data: { userId, type: "PAYOUT", category: "رد مبلغ لزبون", description: label, amountCents: refund, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}:refund`, payMethod: method, recordedById: userId } });
+      void out;
+    }
+    if (debt > 0 && sale.partyId) await tx.accountingPartyEntry.create({ data: { partyId: sale.partyId, userId, kind: "PAYMENT", amountCents: debt, currency: sale.currency, saleId: sale.id, note: label, occurredAt: when } });
+    return created;
+  });
+  res.status(201).json({ id: done.id, totalCents: total, refundCents: refund, debtCents: debt, costCents: cost });
+}));
+
+accountingRouter.post("/purchases/:id/returns", route(async (req, res) => {
+  const parsed = returnSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id, d = parsed.data;
+  const purchase = await prisma.accountingPurchase.findFirst({ where: { id: req.params.id, userId }, include: { lines: true } });
+  if (!purchase) return sendError(res, 404, "NOT_FOUND", "الفاتورة غير موجودة");
+  const returned = await returnedByPurchaseLine(purchase.lines.map((l) => l.id));
+  const wanted = new Map<string, number>();
+  for (const it of d.items) wanted.set(it.lineId, (wanted.get(it.lineId) ?? 0) + it.quantity);
+  const picked: { line: (typeof purchase.lines)[number]; quantity: number }[] = [];
+  for (const [lineId, quantity] of wanted) {
+    const line = purchase.lines.find((l) => l.id === lineId);
+    if (!line) return sendError(res, 404, "NOT_FOUND", "سطر الفاتورة غير موجود");
+    if (quantity > line.quantity - (returned[lineId] ?? 0)) return sendError(res, 409, "CONFLICT", "الكمية المرتجعة أكبر من الكمية المشتراة");
+    picked.push({ line, quantity });
+  }
+  const total = picked.reduce((sum, p) => sum + Number(p.line.unitCostCents) * p.quantity, 0);
+  const owed = purchase.partyId ? owedOn(await prisma.accountingPartyEntry.findMany({ where: { partyId: purchase.partyId }, select: { kind: true, amountCents: true, currency: true } }), purchase.currency) : 0;
+  const debt = Math.min(total, owed), refund = total - debt;
+  const when = d.occurredAt ? new Date(d.occurredAt) : new Date();
+  const method = d.refundMethod ?? purchase.payMethod;
+  const done = await prisma.$transaction(async (tx) => {
+    for (const p of picked) {
+      const key = p.line.productId; if (!key) continue;
+      const took = key.startsWith("store:")
+        ? await tx.product.updateMany({ where: { id: key.slice(6), stock: { gte: p.quantity } }, data: { stock: { decrement: p.quantity } } })
+        : await tx.accountingProduct.updateMany({ where: { id: key, userId, quantity: { gte: p.quantity } }, data: { quantity: { decrement: p.quantity } } });
+      if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي", { productId: key, name: p.line.name });
+      await tx.accountingStockMovement.create({ data: { userId, ...(key.startsWith("store:") ? { storeProductId: key.slice(6) } : { productId: key }), action: "STOCK_OUT", quantity: p.quantity, unitCostCents: Number(p.line.unitCostCents), note: `مرتجع فاتورة شراء #${purchase.number}` } });
+    }
+    const created = await tx.accountingPurchaseReturn.create({
+      data: { userId, purchaseId: purchase.id, currency: purchase.currency, totalCents: total, refundCents: refund, debtCents: debt, payMethod: refund > 0 ? method : null, note: d.note || null, occurredAt: when, recordedById: userId,
+        lines: { create: picked.map((p) => ({ purchaseLineId: p.line.id, productId: p.line.productId, name: p.line.name, quantity: p.quantity, unitCostCents: p.line.unitCostCents, lineTotalCents: Number(p.line.unitCostCents) * p.quantity })) } },
+    });
+    const label = `مرتجع فاتورة شراء #${purchase.number}${purchase.supplierName ? ` — ${purchase.supplierName}` : ""}`;
+    if (refund > 0) await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "استرداد من مورد", description: label, amountCents: refund, currency: purchase.currency, occurredAt: when, source: "RETURN", sourceKey: `purchase-return:${created.id}`, payMethod: method, recordedById: userId } });
+    if (debt > 0 && purchase.partyId) await tx.accountingPartyEntry.create({ data: { partyId: purchase.partyId, userId, kind: "PAYMENT", amountCents: debt, currency: purchase.currency, purchaseId: purchase.id, note: label, occurredAt: when } });
+    return created;
+  }).catch((err) => err);
+  if (done instanceof SaleError) return sendError(res, done.status, done.code, done.message, done.details);
+  if (done instanceof Error) throw done;
+  res.status(201).json({ id: done.id, totalCents: total, refundCents: refund, debtCents: debt });
 }));
 
 // ---- a sales invoice: several products in one sale, a discount, a customer name, a number of its own
@@ -609,11 +740,11 @@ const saleSchema = z.object({
   partyId: z.string().uuid().optional(),
   paidCents: z.number().int().nonnegative().max(MAX_ENTRY_CENTS).optional(),
 });
-type SaleRow = { id: string; number: number; partyId?: string | null; paidCents?: bigint; customerName: string | null; note: string | null; currency: string; subtotalCents: bigint; discountCents: bigint; totalCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitPriceCents: bigint; unitCostCents: bigint; lineTotalCents: bigint }[] };
+type SaleRow = { returned?: Record<string, number>; id: string; number: number; partyId?: string | null; paidCents?: bigint; customerName: string | null; note: string | null; currency: string; subtotalCents: bigint; discountCents: bigint; totalCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitPriceCents: bigint; unitCostCents: bigint; lineTotalCents: bigint }[] };
 const plainSale = (r: SaleRow) => ({
   id: r.id, number: r.number, partyId: r.partyId ?? null, paidCents: Number(r.paidCents ?? r.totalCents), customerName: r.customerName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt,
   subtotalCents: Number(r.subtotalCents), discountCents: Number(r.discountCents), totalCents: Number(r.totalCents),
-  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, unitPriceCents: Number(l.unitPriceCents), unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents) })),
+  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, returnedQuantity: r.returned?.[l.id] ?? 0, unitPriceCents: Number(l.unitPriceCents), unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents) })),
 });
 class SaleError extends Error { constructor(public status: number, public code: string, message: string, public details?: unknown) { super(message); } }
 
@@ -704,13 +835,14 @@ accountingRouter.post("/sales", route(async (req, res) => {
 
 accountingRouter.get("/sales", route(async (req, res) => {
   const rows = await prisma.accountingSale.findMany({ where: { userId: req.user!.id }, include: { lines: true }, orderBy: { number: "desc" }, take: 100 });
-  res.json(rows.map(plainSale));
+  const returned = await returnedBySaleLine(rows.flatMap((r) => r.lines.map((l) => l.id)));
+  res.json(rows.map((r) => plainSale({ ...r, returned })));
 }));
 
 accountingRouter.get("/sales/:id", route(async (req, res) => {
   const row = await prisma.accountingSale.findFirst({ where: { id: req.params.id, userId: req.user!.id }, include: { lines: true } });
   if (!row) return sendError(res, 404, "NOT_FOUND", "الفاتورة غير موجودة");
-  res.json(plainSale(row));
+  res.json(plainSale({ ...row, returned: await returnedBySaleLine(row.lines.map((l) => l.id)) }));
 }));
 
 // ---- the cash box of a day: what came in and went out in cash, against what was counted when the day was closed
