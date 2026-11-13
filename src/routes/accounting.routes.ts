@@ -461,11 +461,13 @@ accountingRouter.get("/parties/:id", route(async (req, res) => {
   if (!p) return sendError(res, 404, "NOT_FOUND", "غير موجود");
   const saleIds = [...new Set(p.entries.map((e) => e.saleId).filter((x): x is string => !!x))];
   const sales = saleIds.length ? await prisma.accountingSale.findMany({ where: { id: { in: saleIds } }, select: { id: true, number: true } }) : [];
+  const purchaseIds = [...new Set(p.entries.map((e) => e.purchaseId).filter((x): x is string => !!x))];
+  const purchases = purchaseIds.length ? await prisma.accountingPurchase.findMany({ where: { id: { in: purchaseIds } }, select: { id: true, number: true } }) : [];
   const running = new Map<string, number>();
   const entries = p.entries.map((e) => {
     const next = (running.get(e.currency) ?? 0) + (e.kind === "CHARGE" ? 1 : -1) * Number(e.amountCents);
     running.set(e.currency, next);
-    return { id: e.id, kind: e.kind, amountCents: Number(e.amountCents), currency: e.currency, payMethod: e.payMethod, note: e.note, occurredAt: e.occurredAt, saleNumber: sales.find((s) => s.id === e.saleId)?.number ?? null, balanceAfterCents: next };
+    return { id: e.id, kind: e.kind, amountCents: Number(e.amountCents), currency: e.currency, payMethod: e.payMethod, note: e.note, occurredAt: e.occurredAt, saleNumber: sales.find((s) => s.id === e.saleId)?.number ?? null, purchaseNumber: purchases.find((x) => x.id === e.purchaseId)?.number ?? null, balanceAfterCents: next };
   });
   res.json({ id: p.id, kind: p.kind, name: p.name, phone: p.phone, note: p.note, archived: !!p.archivedAt, balances: balancesOf(p.entries), entries: entries.reverse() });
 }));
@@ -504,6 +506,95 @@ accountingRouter.post("/parties/:id/payments", route(async (req, res) => {
     await tx.accountingPartyEntry.create({ data: { partyId: p.id, userId, kind: "PAYMENT", amountCents: d.amountCents, currency: d.currency, payMethod: d.payMethod, entryId: e.id, note: d.note, occurredAt: when } });
   });
   res.status(201).json({ ok: true });
+}));
+
+// ---- a purchase from a supplier: stock in at its cost (the average cost is updated), money out, and a debt for what is not paid yet
+const purchaseSchema = z.object({
+  items: z.array(z.object({ productId: z.string().min(1).max(80), quantity: z.number().int().positive().max(1_000_000), unitCostCents: z.number().int().nonnegative().max(2_000_000_000) })).min(1).max(100),
+  partyId: z.string().uuid().optional(),
+  paidCents: z.number().int().nonnegative().max(MAX_ENTRY_CENTS).optional(),
+  payMethod: z.enum(["CASH", "BANK", "WALLET"]).default("CASH"),
+  note: z.string().trim().max(240).optional(),
+  occurredAt: z.string().datetime().optional(),
+});
+type PurchaseRow = { id: string; number: number; partyId: string | null; supplierName: string | null; note: string | null; currency: string; totalCents: bigint; paidCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitCostCents: bigint; lineTotalCents: bigint }[] };
+const plainPurchase = (r: PurchaseRow) => ({
+  id: r.id, number: r.number, partyId: r.partyId, supplierName: r.supplierName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt, totalCents: Number(r.totalCents), paidCents: Number(r.paidCents),
+  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents) })),
+});
+/** The cost of a product after new units came in: the average of what was there and what arrived, weighted by the quantities. */
+const averageCost = (oldQty: number, oldCost: number, addQty: number, addCost: number) => (oldQty > 0 ? Math.round((oldQty * oldCost + addQty * addCost) / (oldQty + addQty)) : addCost);
+
+accountingRouter.post("/purchases", route(async (req, res) => {
+  const parsed = purchaseSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id, d = parsed.data;
+  const wanted = new Map<string, { quantity: number; unitCostCents: number }>();
+  for (const it of d.items) { const cur = wanted.get(it.productId); if (cur) wanted.set(it.productId, { quantity: cur.quantity + it.quantity, unitCostCents: Math.round((cur.quantity * cur.unitCostCents + it.quantity * it.unitCostCents) / (cur.quantity + it.quantity)) }); else wanted.set(it.productId, { quantity: it.quantity, unitCostCents: it.unitCostCents }); }
+  const ids = [...wanted.keys()];
+  const [own, shop, shopCurrency] = await Promise.all([
+    prisma.accountingProduct.findMany({ where: { userId, id: { in: ids.filter((i) => !i.startsWith("store:")) } } }),
+    prisma.product.findMany({ where: { merchant: { userId }, id: { in: ids.filter((i) => i.startsWith("store:")).map((i) => i.slice(6)) } } }),
+    marketOfUser(userId),
+  ]);
+  type Line = { key: string; store: boolean; id: string; name: string; quantity: number; unitCost: number; oldQty: number; oldCost: number; currency: string };
+  const lines: Line[] = [];
+  for (const [key, w] of wanted) {
+    if (key.startsWith("store:")) {
+      const p = shop.find((x) => `store:${x.id}` === key); if (!p) return sendError(res, 404, "NOT_FOUND", "منتج المتجر غير موجود");
+      lines.push({ key, store: true, id: p.id, name: p.name, quantity: w.quantity, unitCost: w.unitCostCents, oldQty: p.stock, oldCost: p.costPriceCents, currency: shopCurrency });
+    } else {
+      const p = own.find((x) => x.id === key); if (!p) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
+      lines.push({ key, store: false, id: p.id, name: p.name, quantity: w.quantity, unitCost: w.unitCostCents, oldQty: p.quantity, oldCost: p.costCents, currency: p.currency });
+    }
+  }
+  const currency = lines[0].currency;
+  if (lines.some((l) => l.currency !== currency)) return sendError(res, 400, "BAD_REQUEST", "كل أصناف الفاتورة لازم تكون بنفس العملة");
+  const total = lines.reduce((sum, l) => sum + l.unitCost * l.quantity, 0);
+  if (total <= 0) return sendError(res, 400, "BAD_REQUEST", "مجموع الفاتورة لازم يكون أكبر من صفر");
+  const paid = d.paidCents ?? total;
+  if (paid > total) return sendError(res, 400, "BAD_REQUEST", "المبلغ المدفوع أكبر من مجموع الفاتورة");
+  let supplier: { id: string; name: string } | null = null;
+  if (d.partyId) {
+    supplier = await prisma.accountingParty.findFirst({ where: { id: d.partyId, userId, kind: "SUPPLIER", archivedAt: null }, select: { id: true, name: true } });
+    if (!supplier) return sendError(res, 404, "NOT_FOUND", "المورد غير موجود");
+  } else if (paid < total) return sendError(res, 400, "BAD_REQUEST", "الشراء الآجل لازم يكون من مورد مسجّل");
+  const when = d.occurredAt ? new Date(d.occurredAt) : new Date();
+  const purchase = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"purchase-number:" + userId}))`;
+    const last = await tx.accountingPurchase.aggregate({ where: { userId }, _max: { number: true } });
+    const created = await tx.accountingPurchase.create({
+      data: { userId, number: (last._max.number ?? 0) + 1, partyId: supplier?.id ?? null, supplierName: supplier?.name ?? null, note: d.note || null, currency, totalCents: total, paidCents: paid, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
+        lines: { create: lines.map((l) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitCostCents: l.unitCost, lineTotalCents: l.unitCost * l.quantity })) } },
+      include: { lines: true },
+    });
+    for (const l of lines) {
+      const cost = averageCost(l.oldQty, l.oldCost, l.quantity, l.unitCost);
+      if (l.store) await tx.product.update({ where: { id: l.id }, data: { stock: { increment: l.quantity }, costPriceCents: cost } });
+      else await tx.accountingProduct.update({ where: { id: l.id }, data: { quantity: { increment: l.quantity }, costCents: cost } });
+      await tx.accountingStockMovement.create({ data: { userId, ...(l.store ? { storeProductId: l.id } : { productId: l.id }), action: "STOCK_IN", quantity: l.quantity, unitCostCents: l.unitCost, note: `فاتورة شراء #${created.number}` } });
+    }
+    const label = `فاتورة شراء #${created.number}${supplier ? ` — ${supplier.name}` : ""}`;
+    // the money that left is a payout, not an expense: the cost of these goods reaches the profit when they are sold
+    const payout = paid > 0 ? await tx.accountingEntry.create({ data: { userId, type: "PAYOUT", category: "مشتريات بضاعة", description: label, amountCents: paid, currency, occurredAt: when, source: "PURCHASE", sourceKey: `purchase:${created.id}`, payMethod: d.payMethod, recordedById: userId } }) : null;
+    if (supplier && paid < total) {
+      await tx.accountingPartyEntry.create({ data: { partyId: supplier.id, userId, kind: "CHARGE", amountCents: total, currency, purchaseId: created.id, note: label, occurredAt: when } });
+      if (payout) await tx.accountingPartyEntry.create({ data: { partyId: supplier.id, userId, kind: "PAYMENT", amountCents: paid, currency, payMethod: d.payMethod, purchaseId: created.id, entryId: payout.id, note: label, occurredAt: when } });
+    }
+    return created;
+  });
+  res.status(201).json(plainPurchase(purchase));
+}));
+
+accountingRouter.get("/purchases", route(async (req, res) => {
+  const rows = await prisma.accountingPurchase.findMany({ where: { userId: req.user!.id }, include: { lines: true }, orderBy: { number: "desc" }, take: 100 });
+  res.json(rows.map(plainPurchase));
+}));
+
+accountingRouter.get("/purchases/:id", route(async (req, res) => {
+  const row = await prisma.accountingPurchase.findFirst({ where: { id: req.params.id, userId: req.user!.id }, include: { lines: true } });
+  if (!row) return sendError(res, 404, "NOT_FOUND", "الفاتورة غير موجودة");
+  res.json(plainPurchase(row));
 }));
 
 // ---- a sales invoice: several products in one sale, a discount, a customer name, a number of its own

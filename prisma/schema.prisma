@@ -130,6 +130,7 @@ model User {
   accountingCashDays      AccountingCashDay[]
   accountingSales         AccountingSale[]
   accountingParties       AccountingParty[]
+  accountingPurchases     AccountingPurchase[]
   accountingMovements     AccountingStockMovement[]
   accountingInvoiceDrafts AccountingInvoiceDraft[]
   hrCompany               HrCompany?                @relation("HrCompanyOwner")
@@ -938,6 +939,7 @@ model AccountingPartyEntry {
   currency    String
   payMethod   AccountingPayMethod?
   saleId      String?
+  purchaseId  String?
   entryId     String? // the accounting entry it created, when it created one
   note        String?
   occurredAt  DateTime                 @default(now())
@@ -947,6 +949,43 @@ model AccountingPartyEntry {
 
   @@index([partyId, occurredAt])
   @@index([userId])
+}
+
+// A purchase from a supplier. Stock comes in at its cost; the paid part is money out (a PAYOUT entry, not an expense); the rest is owed to the supplier.
+model AccountingPurchase {
+  id           String              @id @default(uuid())
+  userId       String
+  number       Int
+  partyId      String?
+  supplierName String?
+  note         String?
+  currency     String
+  totalCents   BigInt
+  paidCents    BigInt              @default(0)
+  payMethod    AccountingPayMethod @default(CASH)
+  occurredAt   DateTime            @default(now())
+  recordedById String?
+  createdAt    DateTime            @default(now())
+
+  user  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lines AccountingPurchaseLine[]
+
+  @@unique([userId, number])
+  @@index([userId, occurredAt])
+}
+
+model AccountingPurchaseLine {
+  id             String  @id @default(uuid())
+  purchaseId     String
+  productId      String?
+  name           String
+  quantity       Int
+  unitCostCents  BigInt
+  lineTotalCents BigInt
+
+  purchase AccountingPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseId])
 }
 
 model AccountingSale {
