@@ -478,6 +478,8 @@ export const en: LanguagePack = {
     "الحسم أكبر من مجموع الفاتورة": "The discount is bigger than the invoice total",
     "مجموع الفاتورة لازم يكون أكبر من صفر": "The invoice total must be more than zero",
     "الفاتورة غير موجودة": "Invoice not found",
+    "خلصت كمية منتج": "A product has run out",
+    "كمية منتج قاربت تخلص": "A product is running low",
     "المنتج غير موجود": "Product not found",
     "أدخل سعر البيع أولاً": "Enter the selling price first",
     "بيع مباشر": "Direct sale",

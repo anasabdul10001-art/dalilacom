@@ -10,10 +10,20 @@ import express from "express";
 import { sniffImageMime } from "../lib/image";
 import { extractInvoiceFromPhoto, visionAvailable } from "../services/ai.service";
 import { marketOfUser } from "../services/viewerCountry.service";
+import { notify } from "../services/notification.service";
 /** The largest single accounting entry, in minor units. Far below 2^53, so sums of many entries stay exact as JSON numbers. */
 const MAX_ENTRY_CENTS = 9_000_000_000_000;
 
 // Amounts are stored 64-bit; they always fit a JSON number (the limit on one entry keeps even large sums exact).
+
+/** When a sale takes a product down to its minimum (or to nothing), tell the owner once: only when the level has just been crossed. */
+function alertLowStock(userId: string, crossed: { name: string; before: number; after: number; min: number }[]) {
+  for (const c of crossed) {
+    if (!(c.before > c.min && c.after <= c.min)) continue;
+    void notify({ userId, type: "SYSTEM", email: false, title: c.after <= 0 ? "خلصت كمية منتج" : "كمية منتج قاربت تخلص", body: `«${c.name}»: ${c.after}`, data: { kind: "accounting-low-stock", name: c.name, quantity: c.after } });
+  }
+}
+
 const plain = <T extends { amountCents: bigint }>(row: T) => ({ ...row, amountCents: Number(row.amountCents) });
 
 export const accountingRouter = Router();
@@ -270,6 +280,7 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
     });
     if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
     const cost = product.costPriceCents * parsed.data.quantity;
+    alertLowStock(req.user!.id, [{ name: product.name, before: product.stock, after: updated.stock, min: 0 }]);
     return res.status(201).json({ product: { ...updated, quantity: updated.stock, id: `store:${updated.id}` }, incomeCents: total, costCents: cost, netCents: total - cost });
   }
   const product = await prisma.accountingProduct.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
@@ -289,9 +300,63 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
     return updated;
   });
   if (!result) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
+  alertLowStock(req.user!.id, [{ name: product.name, before: product.quantity, after: result.quantity, min: product.lowStockAt }]);
   res.status(201).json({ product: result, incomeCents: total, costCents: product.costCents * parsed.data.quantity, netCents: total - product.costCents * parsed.data.quantity });
 }));
 
+
+// ---- stock watch: what is low or out, the movements of a product, and a physical count (counted numbers against the book)
+accountingRouter.get("/stock/low", route(async (req, res) => {
+  const userId = req.user!.id;
+  const [own, shop] = await Promise.all([
+    prisma.accountingProduct.findMany({ where: { userId }, select: { id: true, name: true, unit: true, quantity: true, lowStockAt: true, currency: true } }),
+    prisma.product.findMany({ where: { merchant: { userId }, isActive: true, stock: { lte: 0 } }, select: { id: true, name: true, stock: true } }),
+  ]);
+  const items = [
+    ...own.filter((p) => p.quantity <= 0 || (p.lowStockAt > 0 && p.quantity <= p.lowStockAt)).map((p) => ({ id: p.id, name: p.name, unit: p.unit, quantity: p.quantity, lowStockAt: p.lowStockAt, currency: p.currency, isStoreProduct: false, level: p.quantity <= 0 ? "OUT" : "LOW" })),
+    ...shop.map((p) => ({ id: `store:${p.id}`, name: p.name, unit: "قطعة", quantity: p.stock, lowStockAt: 0, currency: null, isStoreProduct: true, level: "OUT" })),
+  ].sort((a, b) => a.quantity - b.quantity);
+  res.json({ items, out: items.filter((i) => i.level === "OUT").length, low: items.filter((i) => i.level === "LOW").length });
+}));
+
+accountingRouter.get("/products/:id/movements", route(async (req, res) => {
+  const store = req.params.id.startsWith("store:");
+  const id = store ? req.params.id.slice(6) : req.params.id;
+  const owned = store ? await prisma.product.findFirst({ where: { id, merchant: { userId: req.user!.id } }, select: { id: true } }) : await prisma.accountingProduct.findFirst({ where: { id, userId: req.user!.id }, select: { id: true } });
+  if (!owned) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
+  const rows = await prisma.accountingStockMovement.findMany({ where: { userId: req.user!.id, ...(store ? { storeProductId: id } : { productId: id }) }, orderBy: { occurredAt: "desc" }, take: 100 });
+  res.json(rows.map((m) => ({ id: m.id, action: m.action, quantity: m.quantity, unitCostCents: m.unitCostCents, note: m.note, occurredAt: m.occurredAt })));
+}));
+
+// The counted quantity of each product replaces the book quantity; every difference leaves an ADJUSTMENT movement. A product whose quantity changed
+// meanwhile (a sale during the count) is skipped and reported, never overwritten.
+accountingRouter.post("/stock/count", route(async (req, res) => {
+  const parsed = z.object({ items: z.array(z.object({ productId: z.string().min(1).max(80), countedQuantity: z.number().int().nonnegative().max(2_000_000_000) })).min(1).max(500), note: z.string().trim().max(240).optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id;
+  const changed: { id: string; name: string; before: number; after: number; difference: number }[] = [];
+  const skipped: { id: string; name: string }[] = [];
+  let unchanged = 0;
+  for (const it of parsed.data.items) {
+    const store = it.productId.startsWith("store:");
+    const id = store ? it.productId.slice(6) : it.productId;
+    const p = store
+      ? await prisma.product.findFirst({ where: { id, merchant: { userId } }, select: { id: true, name: true, stock: true } }).then((x) => x && { id: x.id, name: x.name, quantity: x.stock })
+      : await prisma.accountingProduct.findFirst({ where: { id, userId }, select: { id: true, name: true, quantity: true } });
+    if (!p) { skipped.push({ id: it.productId, name: it.productId }); continue; }
+    if (p.quantity === it.countedQuantity) { unchanged++; continue; }
+    const ok = await prisma.$transaction(async (tx) => {
+      const done = store
+        ? await tx.product.updateMany({ where: { id: p.id, stock: p.quantity }, data: { stock: it.countedQuantity } })
+        : await tx.accountingProduct.updateMany({ where: { id: p.id, quantity: p.quantity }, data: { quantity: it.countedQuantity } });
+      if (!done.count) return false;
+      await tx.accountingStockMovement.create({ data: { userId, ...(store ? { storeProductId: p.id } : { productId: p.id }), action: "ADJUSTMENT", quantity: it.countedQuantity, note: `جرد فعلي: كان ${p.quantity}${parsed.data.note ? ` — ${parsed.data.note}` : ""}` } });
+      return true;
+    });
+    if (ok) changed.push({ id: it.productId, name: p.name, before: p.quantity, after: it.countedQuantity, difference: it.countedQuantity - p.quantity }); else skipped.push({ id: it.productId, name: p.name });
+  }
+  res.json({ changed, unchanged, skipped });
+}));
 
 // ---- a sales invoice: several products in one sale, a discount, a customer name, a number of its own
 const saleSchema = z.object({
@@ -368,6 +433,7 @@ accountingRouter.post("/sales", route(async (req, res) => {
         if (cost > 0) await tx.accountingEntry.create({ data: { userId, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: label, amountCents: cost, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:cost`, recordedById: userId } });
         return created;
       });
+      alertLowStock(userId, lines.map((l) => { const before = l.store ? shop.find((x) => x.id === l.id)!.stock : own.find((x) => x.id === l.id)!.quantity; const min = l.store ? 0 : own.find((x) => x.id === l.id)!.lowStockAt; return { name: l.name, before, after: before - l.quantity, min }; }));
       return res.status(201).json({ ...plainSale(sale), costCents: cost, netCents: total - cost });
     } catch (err) {
       if (err instanceof SaleError) return sendError(res, err.status, err.code, err.message, err.details);
