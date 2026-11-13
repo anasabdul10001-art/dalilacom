@@ -862,4 +862,17 @@
     <string name="accounting_count_counted">المعدود</string>
     <string name="accounting_count_done">انجرد: %1$d منتج اتغيّر</string>
     <string name="accounting_count_same">ما في فروقات، الدفتر مظبوط</string>
+    <string name="accounting_rep_title">تقرير الأرباح</string>
+    <string name="accounting_rep_today">اليوم</string>
+    <string name="accounting_rep_week">7 أيام</string>
+    <string name="accounting_rep_month">هالشهر</string>
+    <string name="accounting_rep_last30">30 يوم</string>
+    <string name="accounting_rep_sales">المبيعات</string>
+    <string name="accounting_rep_cogs">تكلفة البضاعة</string>
+    <string name="accounting_rep_gross">الربح الإجمالي</string>
+    <string name="accounting_rep_series">الصافي لكل فترة</string>
+    <string name="accounting_rep_by_product">الربح لكل منتج</string>
+    <string name="accounting_rep_qty">الكمية</string>
+    <string name="accounting_rep_profit">الربح</string>
+    <string name="accounting_rep_empty">ما في حركات بهالفترة.</string>
 </resources>

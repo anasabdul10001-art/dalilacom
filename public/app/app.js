@@ -2552,7 +2552,7 @@ async function loadOrders() {
 /* ---- The three sections (accounting, auto-responder, HR) work like small sites of their own: a tab bar whose first tab is a home page that is always there ---- */
 
 const SITES = {
-  accounting: { icon: "🧮", tabs: ["summary", "entry", "sale", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
+  accounting: { icon: "🧮", tabs: ["summary", "reports", "entry", "sale", "invoices", "stock"], art: ["bars", "receipt", "stock"], features: ["📒", "📦", "🧾", "📊"], details: 4 },
   responder: { icon: "🤖", tabs: ["overview", "channels", "rules", "inbox"], art: ["chat", "orbit", "ai"], features: ["💬", "⚙️", "✨", "📥"], details: 4 },
   hr: { icon: "👥", tabs: [], art: ["team", "payslip", "calendar"], features: ["🕒", "🏖️", "💵", "🤝"] },
 };
@@ -2690,6 +2690,7 @@ function screenAccounting() {
         <div class="field"><label>${esc(t("accounting.category"))}</label><input id="acc-invoice-category" value="${esc(t("accounting.purchases"))}" /></div>
         <button class="btn" onclick="accountingConfirmInvoice()">${esc(t("accounting.confirmInvoice"))}</button>` : ""}
     </div>`,
+    reports: accountingReportCard(),
     sale: accountingSaleCard(a),
     stock: `
     ${S._count ? accountingCountCard(a) : accountingLowCard(a)}
@@ -2713,6 +2714,71 @@ async function loadAccounting() {
   S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
 }
+/* ---- reports: any period, by day / week / month, by category and by product ---- */
+function repDay(offset) { const d = new Date(); d.setUTCDate(d.getUTCDate() + offset); return d.toISOString().slice(0, 10); }
+function repState() {
+  if (!S._rep) { const today = repDay(0); S._rep = { preset: "month", from: today.slice(0, 8) + "01", to: today, groupBy: "day", currency: "", data: null, loading: false }; }
+  return S._rep;
+}
+function accountingReportPreset(p) {
+  const r = repState(); r.preset = p; const today = repDay(0);
+  if (p === "today") { r.from = today; r.to = today; r.groupBy = "day"; }
+  else if (p === "week") { r.from = repDay(-6); r.to = today; r.groupBy = "day"; }
+  else if (p === "month") { r.from = today.slice(0, 8) + "01"; r.to = today; r.groupBy = "day"; }
+  else if (p === "last30") { r.from = repDay(-29); r.to = today; r.groupBy = "day"; }
+  r.data = null; render();
+}
+function accountingReportSet(key, value) { const r = repState(); r[key] = value; if (key === "from" || key === "to") r.preset = "custom"; r.data = null; render(); }
+async function accountingReportLoad() {
+  const r = repState(); if (r.loading) return; r.loading = true;
+  const q = new URLSearchParams({ from: r.from, to: r.to, groupBy: r.groupBy }); if (r.currency) q.set("currency", r.currency);
+  const { ok, data } = await api("GET", "/accounting/reports?" + q.toString());
+  r.loading = false; r.error = ok ? "" : errMsg(data, t("accounting.exportFailed"));
+  r.data = ok ? data : { empty: true }; if (ok && !r.currency) r.currency = data.currency;
+  render();
+}
+function accountingReportCard() {
+  const r = repState();
+  if (!r.data && !r.loading) accountingReportLoad();
+  const d = r.data && !r.data.empty ? r.data : null;
+  const chips = [["today", "accounting.rep.today"], ["week", "accounting.rep.week"], ["month", "accounting.rep.month"], ["last30", "accounting.rep.last30"], ["custom", "accounting.rep.custom"]].map(([id, k]) => `<button class="chip ${r.preset === id ? "info" : ""}" style="cursor:pointer" onclick="accountingReportPreset('${id}')">${esc(t(k))}</button>`).join("");
+  const controls = `<div class="chips" style="margin-bottom:10px">${chips}</div>
+    <div class="row"><div class="field"><label>${esc(t("accounting.rep.from"))}</label><input type="date" value="${esc(r.from)}" onchange="accountingReportSet('from',this.value)" /></div><div class="field"><label>${esc(t("accounting.rep.to"))}</label><input type="date" value="${esc(r.to)}" onchange="accountingReportSet('to',this.value)" /></div></div>
+    <div class="row"><div class="field"><label>${esc(t("accounting.rep.group"))}</label><select onchange="accountingReportSet('groupBy',this.value)">${[["day", "accounting.rep.day"], ["week", "accounting.rep.weekly"], ["month", "accounting.rep.monthly"]].map(([v, k]) => `<option value="${v}" ${r.groupBy === v ? "selected" : ""}>${esc(t(k))}</option>`).join("")}</select></div>
+      ${d && d.currencies.length > 1 ? `<div class="field"><label>${esc(t("accounting.rep.currency"))}</label><select onchange="accountingReportSet('currency',this.value)">${d.currencies.map((c) => `<option ${c === r.currency ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>` : ""}</div>`;
+  if (r.loading || !r.data) return `<div class="card">${controls}${skeleton("tiles")}</div>`;
+  if (!d) return `<div class="card">${controls}${uiEmpty("📊", r.error || t("accounting.rep.empty"))}</div>`;
+  const c = d.currency, T = d.totals;
+  const max = Math.max(1, ...d.series.map((x) => Math.abs(x.netCents)));
+  const bars = d.series.length === 0 ? uiEmpty("📊", t("accounting.rep.empty")) : d.series.map((x) => `<div style="display:flex;align-items:center;gap:8px;margin:5px 0"><span class="muted" style="width:86px;font-size:12px"><bdi>${esc(x.period)}</bdi></span><div style="flex:1;background:var(--sand,#f4efec);border-radius:8px;height:18px;overflow:hidden"><div style="height:100%;width:${Math.max(3, Math.round(Math.abs(x.netCents) / max * 100))}%;background:${x.netCents >= 0 ? "#2e7d32" : "#c62828"}"></div></div><b style="width:96px;text-align:end;font-size:13px">${esc(fmt(x.netCents, c))}</b></div>`).join("");
+  const cats = d.byCategory.map((x) => `<div class="item"><span class="avatar" style="--h:${x.type === "EXPENSE" ? 4 : 140}">${x.type === "EXPENSE" ? "↓" : "↑"}</span><div class="item-main"><div class="item-title">${esc(x.category)}</div><div class="item-sub">${x.entries}</div></div><div class="item-end ${x.type === "EXPENSE" ? "out" : "in"}">${x.type === "EXPENSE" ? "−" : "+"}${esc(fmt(x.amountCents, c))}</div></div>`).join("");
+  const prods = d.byProduct.length === 0 ? "" : `<div class="panel-title" style="margin-top:14px">${esc(t("accounting.rep.byProduct"))}</div><table class="plain-table" style="width:100%"><thead><tr><th>${esc(t("accounting.sale.product"))}</th><th>${esc(t("accounting.rep.qty"))}</th><th>${esc(t("accounting.rep.revenue"))}</th><th>${esc(t("accounting.rep.profit"))}</th></tr></thead><tbody>${d.byProduct.map((p) => `<tr><td>${esc(p.name)}</td><td>${p.quantity}</td><td>${esc(fmt(p.revenueCents, c))}</td><td style="color:${p.profitCents >= 0 ? "#2e7d32" : "#c62828"}"><b>${esc(fmt(p.profitCents, c))}</b></td></tr>`).join("")}</tbody></table><p class="muted" style="font-size:12px">${esc(t("accounting.rep.productNote"))}</p>`;
+  return `<div class="card"><div class="section-title">${esc(t("accounting.rep.title"))}</div>${controls}
+    <div class="tiles">${uiTile(t("accounting.income"), fmt(T.incomeCents, c), "income")}${uiTile(t("accounting.expenses"), fmt(T.expensesCents, c), "expense")}${uiTile(t("accounting.net"), fmt(T.netCents, c), "net", true)}
+      ${uiTile(t("accounting.rep.sales"), fmt(T.salesCents, c), "income")}${uiTile(t("accounting.rep.cogs"), fmt(T.costOfGoodsCents, c), "expense")}${uiTile(t("accounting.rep.gross"), fmt(T.grossProfitCents, c), "net")}${uiTile(t("accounting.rep.other"), fmt(T.otherExpensesCents, c), "expense")}
+      ${T.invoices ? uiTile(t("accounting.rep.invoices"), String(T.invoices), "net") : ""}${T.discountCents ? uiTile(t("accounting.rep.discounts"), fmt(T.discountCents, c), "payroll") : ""}</div>
+    <div class="btn-row"><button class="btn soft" onclick="accountingReportCsv()">⬇ ${esc(t("accounting.rep.csv"))}</button><button class="btn soft" onclick="accountingReportPrint()">🖨 ${esc(t("accounting.rep.print"))}</button></div></div>
+    <div class="panel-title" style="margin-top:14px">${esc(t("accounting.rep.series"))}</div><div class="card">${bars}</div>
+    <div class="panel-title" style="margin-top:14px">${esc(t("accounting.rep.byCategory"))}</div>${cats || uiEmpty("📊", t("accounting.rep.empty"))}${prods}`;
+}
+function accountingReportCsv() {
+  const r = repState(), d = r.data; if (!d || d.empty) return;
+  const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const num = (c) => (c / 100).toFixed(2);
+  const rows = [["from", d.from], ["to", d.to], ["currency", d.currency], [], ["income", num(d.totals.incomeCents)], ["expenses", num(d.totals.expensesCents)], ["net", num(d.totals.netCents)], [], ["period", "income", "expenses", "net"], ...d.series.map((x) => [x.period, num(x.incomeCents), num(x.expensesCents), num(x.netCents)]), [], ["category", "type", "amount"], ...d.byCategory.map((x) => [x.category, x.type, num(x.amountCents)]), [], ["product", "quantity", "revenue", "cost", "profit"], ...d.byProduct.map((p) => [p.name, p.quantity, num(p.revenueCents), num(p.costCents), num(p.profitCents)])];
+  const blob = new Blob(["\uFEFF" + rows.map((x) => x.map(q).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `dalilacom-report-${d.from}-${d.to}.csv`; document.body.appendChild(a); a.click(); a.remove();
+}
+function accountingReportPrint() {
+  const r = repState(), d = r.data; if (!d || d.empty) return;
+  const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=800"); if (!win) return toast(t("accounting.allowPrint"));
+  const c = d.currency, T = d.totals;
+  const series = d.series.map((x) => `<tr><td>${esc(x.period)}</td><td>${esc(fmt(x.incomeCents, c))}</td><td>${esc(fmt(x.expensesCents, c))}</td><td><b>${esc(fmt(x.netCents, c))}</b></td></tr>`).join("");
+  const prods = d.byProduct.map((p) => `<tr><td>${esc(p.name)}</td><td>${p.quantity}</td><td>${esc(fmt(p.revenueCents, c))}</td><td>${esc(fmt(p.costCents, c))}</td><td><b>${esc(fmt(p.profitCents, c))}</b></td></tr>`).join("");
+  win.document.write(`<!doctype html><html lang="${LANG}" dir="${LANG === "ar" ? "rtl" : "ltr"}"><meta charset="utf-8"><title>${esc(t("accounting.rep.title"))}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h1{color:#f48050}table{width:100%;border-collapse:collapse;margin:10px 0 20px}th,td{border:1px solid #ddd;padding:7px;text-align:start}th{background:#f7f3f3}@media print{button{display:none}}</style><h1>${esc(t("accounting.rep.title"))}</h1><p>${esc(d.from)} → ${esc(d.to)} · ${esc(c)}</p><p>${esc(t("accounting.income"))}: <b>${esc(fmt(T.incomeCents, c))}</b> · ${esc(t("accounting.expenses"))}: <b>${esc(fmt(T.expensesCents, c))}</b> · ${esc(t("accounting.net"))}: <b>${esc(fmt(T.netCents, c))}</b></p><h3>${esc(t("accounting.rep.series"))}</h3><table><thead><tr><th></th><th>${esc(t("accounting.income"))}</th><th>${esc(t("accounting.expenses"))}</th><th>${esc(t("accounting.net"))}</th></tr></thead><tbody>${series}</tbody></table>${prods ? `<h3>${esc(t("accounting.rep.byProduct"))}</h3><table><thead><tr><th>${esc(t("accounting.sale.product"))}</th><th>${esc(t("accounting.rep.qty"))}</th><th>${esc(t("accounting.rep.revenue"))}</th><th>${esc(t("accounting.rep.cost"))}</th><th>${esc(t("accounting.rep.profit"))}</th></tr></thead><tbody>${prods}</tbody></table>` : ""}<script>window.onload=()=>window.print()<\/script></html>`);
+  win.document.close();
+}
+
 /* ---- stock watch: low and out, the movements of a product, a physical count ---- */
 function accountingLowCard(a) {
   const low = a.low;

@@ -268,6 +268,7 @@ interface ApiService {
     @POST("accounting/products") suspend fun addAccountingProduct(@Body body: AccountingProductRequest): Response<AccountingProductDto>
     @POST("accounting/products/{id}/sell") suspend fun sellAccountingProduct(@Path("id") id: String, @Body body: AccountingSellRequest): Response<AccountingSellResponseDto>
     @POST("accounting/products/{id}/stock") suspend fun changeAccountingStock(@Path("id") id: String, @Body body: AccountingStockRequest): Response<AccountingProductDto>
+    @GET("accounting/reports") suspend fun accountingReport(@Query("from") from: String, @Query("to") to: String, @Query("groupBy") groupBy: String): Response<AccountingReportDto>
     @GET("accounting/stock/low") suspend fun accountingLowStock(): Response<AccountingLowDto>
     @GET("accounting/products/{id}/movements") suspend fun accountingMovements(@Path("id") id: String): Response<List<AccountingMovementDto>>
     @POST("accounting/stock/count") suspend fun accountingStockCount(@Body body: AccountingCountRequest): Response<AccountingCountResultDto>

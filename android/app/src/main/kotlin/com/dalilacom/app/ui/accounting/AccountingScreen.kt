@@ -3,6 +3,7 @@ package com.dalilacom.app.ui.accounting
 import com.dalilacom.app.ui.i18n.AppStrings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -75,6 +76,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var editEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
     var editDescription by remember { mutableStateOf("") }
     var editAmount by remember { mutableStateOf("") }
+    var report by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingReportDto?>(null) }
+    var reportPreset by remember { mutableStateOf("month") }
     var low by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingLowDto?>(null) }
     var countMode by remember { mutableStateOf(false) }
     val counts = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
@@ -108,6 +111,9 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         cash = container.accountingRepository.cash(cashDay, "EUR")
         sales = container.accountingRepository.sales()
         low = container.accountingRepository.lowStock()
+        val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+        val (rf, rt) = when (reportPreset) { "today" -> today to today; "week" -> today.minusDays(6) to today; "last30" -> today.minusDays(29) to today; else -> today.withDayOfMonth(1) to today }
+        report = container.accountingRepository.report(rf.toString(), rt.toString())
         loading = false
     }
     LaunchedEffect(Unit) { reload() }
@@ -286,6 +292,53 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                 Column(Modifier.weight(1f)) { Text("#" + sl.number + (sl.customerName?.let { " · $it" } ?: ""), style = MaterialTheme.typography.titleSmall); Text(sl.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 Text(money(sl.totalCents.toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
                                 TextButton(onClick = { savedSale = sl }) { Text(stringResource(R.string.accounting_sale_share)) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        report?.let { rp ->
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.accounting_rep_title), style = MaterialTheme.typography.titleMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("today" to R.string.accounting_rep_today, "week" to R.string.accounting_rep_week, "month" to R.string.accounting_rep_month, "last30" to R.string.accounting_rep_last30).forEach { (code, label) ->
+                                if (reportPreset == code) Button(onClick = {}, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(stringResource(label), fontSize = 12.sp) }
+                                else OutlinedButton(onClick = { reportPreset = code; scope.launch { reload() } }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(stringResource(label), fontSize = 12.sp) }
+                            }
+                        }
+                        val tt = rp.totals
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricTile(stringResource(R.string.accounting_incomeLabel), money(tt.incomeCents.toInt()), "income", Modifier.weight(1f))
+                            MetricTile(stringResource(R.string.accounting_expensesLabel), money(tt.expensesCents.toInt()), "expense", Modifier.weight(1f))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricTile(stringResource(R.string.accounting_netLabel), money(tt.netCents.toInt()), "net", Modifier.weight(1f))
+                            MetricTile(stringResource(R.string.accounting_rep_gross), money(tt.grossProfitCents.toInt()), "net", Modifier.weight(1f))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricTile(stringResource(R.string.accounting_rep_sales), money(tt.salesCents.toInt()), "income", Modifier.weight(1f))
+                            MetricTile(stringResource(R.string.accounting_rep_cogs), money(tt.costOfGoodsCents.toInt()), "expense", Modifier.weight(1f))
+                        }
+                        if (rp.series.isEmpty()) Text(stringResource(R.string.accounting_rep_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        else {
+                            Text(stringResource(R.string.accounting_rep_series), style = MaterialTheme.typography.titleSmall)
+                            rp.series.takeLast(10).forEach { pr ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(pr.period, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text((if (pr.netCents < 0) "−" else "+") + money(kotlin.math.abs(pr.netCents).toInt()), color = if (pr.netCents < 0) androidx.compose.ui.graphics.Color(0xFFC62828) else androidx.compose.ui.graphics.Color(0xFF2E7D32), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                                }
+                            }
+                        }
+                        if (rp.byProduct.isNotEmpty()) {
+                            Text(stringResource(R.string.accounting_rep_by_product), style = MaterialTheme.typography.titleSmall)
+                            rp.byProduct.take(8).forEach { bp ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(bp.name + " × " + bp.quantity, modifier = Modifier.weight(1f))
+                                    Text(money(bp.profitCents.toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, color = if (bp.profitCents < 0) androidx.compose.ui.graphics.Color(0xFFC62828) else androidx.compose.ui.graphics.Color(0xFF2E7D32))
+                                }
                             }
                         }
                     }

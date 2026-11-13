@@ -37,6 +37,7 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun deleteEntry(id: String): Result<Unit> = result { api.deleteAccountingEntry(id) }
     suspend fun deleteProduct(id: String): Result<Unit> = result { api.deleteAccountingProduct(id) }
     suspend fun sell(id: String, quantity: Int, payMethod: String = "CASH"): Result<Unit> = result { api.sellAccountingProduct(id, AccountingSellRequest(quantity, payMethod = payMethod)) }
+    suspend fun report(from: String, to: String, groupBy: String = "day") = safeApiCall { api.accountingReport(from, to, groupBy) }?.takeIf { it.isSuccessful }?.body()
     suspend fun lowStock() = safeApiCall { api.accountingLowStock() }?.takeIf { it.isSuccessful }?.body()
     suspend fun movements(id: String) = safeApiCall { api.accountingMovements(id) }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun countStock(items: List<Pair<String, Int>>): Result<com.dalilacom.app.data.network.AccountingCountResultDto> {

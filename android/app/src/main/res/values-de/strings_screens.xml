@@ -490,4 +490,17 @@
     <string name="accounting_count_counted">Counted</string>
     <string name="accounting_count_done">Count done: %1$d products changed</string>
     <string name="accounting_count_same">No differences, the books match</string>
+    <string name="accounting_rep_title">Profit report</string>
+    <string name="accounting_rep_today">Today</string>
+    <string name="accounting_rep_week">7 days</string>
+    <string name="accounting_rep_month">This month</string>
+    <string name="accounting_rep_last30">30 days</string>
+    <string name="accounting_rep_sales">Sales</string>
+    <string name="accounting_rep_cogs">Cost of goods</string>
+    <string name="accounting_rep_gross">Gross profit</string>
+    <string name="accounting_rep_series">Net per period</string>
+    <string name="accounting_rep_by_product">Profit by product</string>
+    <string name="accounting_rep_qty">Quantity</string>
+    <string name="accounting_rep_profit">Profit</string>
+    <string name="accounting_rep_empty">No entries in this period.</string>
 </resources>
