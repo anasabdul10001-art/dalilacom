@@ -134,6 +134,8 @@ model User {
   accountingSaleReturns     AccountingSaleReturn[]
   accountingPurchaseReturns AccountingPurchaseReturn[]
   accountingRecurring       AccountingRecurring[]
+  accountingTaxRates        AccountingTaxRate[]
+  accountingSettings        AccountingSettings?
   accountingMovements       AccountingStockMovement[]
   accountingInvoiceDrafts   AccountingInvoiceDraft[]
   hrCompany                 HrCompany?                 @relation("HrCompanyOwner")
@@ -855,6 +857,7 @@ enum AccountingStockAction {
 // The personal/business bookkeeping area is separate from the public store catalog, while allowing
 // a product to be linked to a store item later. Each ordinary account can use it independently.
 model AccountingProduct {
+  taxRateId      String?
   id             String   @id @default(uuid())
   userId         String
   name           String
@@ -978,6 +981,9 @@ model AccountingSaleReturn {
 }
 
 model AccountingSaleReturnLine {
+  taxRateBp      Int     @default(0)
+  taxCents       BigInt  @default(0)
+  baseCents      BigInt  @default(0)
   id             String  @id @default(uuid())
   returnId       String
   saleLineId     String
@@ -1017,6 +1023,9 @@ model AccountingPurchaseReturn {
 }
 
 model AccountingPurchaseReturnLine {
+  taxRateBp      Int     @default(0)
+  taxCents       BigInt  @default(0)
+  baseCents      BigInt  @default(0)
   id             String  @id @default(uuid())
   returnId       String
   purchaseLineId String
@@ -1062,7 +1071,33 @@ model AccountingRecurring {
   @@index([userId, active, nextDue])
 }
 
+// A tax rate of the account, in basis points (1900 = 19.00%). Experimental: to be checked with an accountant before it is relied on.
+model AccountingTaxRate {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  rateBp    Int
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AccountingSettings {
+  userId           String   @id
+  pricesIncludeTax Boolean  @default(true) // true: the price of a product already has its tax inside; false: the tax is added on top
+  defaultTaxRateId String? // the rate for a product that has none
+  taxNumber        String?
+  businessName     String?
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model AccountingPurchase {
+  taxCents     BigInt              @default(0)
   id           String              @id @default(uuid())
   userId       String
   number       Int
@@ -1085,6 +1120,8 @@ model AccountingPurchase {
 }
 
 model AccountingPurchaseLine {
+  taxRateBp      Int     @default(0)
+  taxCents       BigInt  @default(0)
   id             String  @id @default(uuid())
   purchaseId     String
   productId      String?
@@ -1099,21 +1136,23 @@ model AccountingPurchaseLine {
 }
 
 model AccountingSale {
-  id            String              @id @default(uuid())
-  userId        String
-  number        Int // 1, 2, 3... per account
-  customerName  String?
-  note          String?
-  currency      String
-  subtotalCents BigInt
-  discountCents BigInt              @default(0)
-  totalCents    BigInt
-  paidCents     BigInt              @default(0) // what was paid at the sale; the rest is on the customer's account
-  partyId       String?
-  payMethod     AccountingPayMethod @default(CASH)
-  occurredAt    DateTime            @default(now())
-  recordedById  String?
-  createdAt     DateTime            @default(now())
+  taxCents         BigInt              @default(0)
+  pricesIncludeTax Boolean             @default(true)
+  id               String              @id @default(uuid())
+  userId           String
+  number           Int // 1, 2, 3... per account
+  customerName     String?
+  note             String?
+  currency         String
+  subtotalCents    BigInt
+  discountCents    BigInt              @default(0)
+  totalCents       BigInt
+  paidCents        BigInt              @default(0) // what was paid at the sale; the rest is on the customer's account
+  partyId          String?
+  payMethod        AccountingPayMethod @default(CASH)
+  occurredAt       DateTime            @default(now())
+  recordedById     String?
+  createdAt        DateTime            @default(now())
 
   user  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   lines AccountingSaleLine[]
@@ -1123,6 +1162,9 @@ model AccountingSale {
 }
 
 model AccountingSaleLine {
+  discountCents  BigInt  @default(0) // this line's share of the invoice discount
+  taxRateBp      Int     @default(0)
+  taxCents       BigInt  @default(0)
   id             String  @id @default(uuid())
   saleId         String
   productId      String? // an accounting product id, or store:<id> for a product of the shop

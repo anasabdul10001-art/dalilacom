@@ -491,6 +491,8 @@ export const en: LanguagePack = {
     "استرداد من مورد": "Refund from a supplier",
     "انسجّلت حركات متكررة": "Recurring entries were recorded",
     "التاريخ غير صحيح": "The date is not valid",
+    "ضريبة مبيعات محصّلة": "Sales tax collected",
+    "نسبة الضريبة غير موجودة": "Tax rate not found",
     "تاريخ النهاية قبل تاريخ البداية": "The end date is before the start date",
     "سطر الفاتورة غير موجود": "Invoice line not found",
     "الكمية المرتجعة أكبر من الكمية المباعة": "The quantity returned is more than the quantity sold",

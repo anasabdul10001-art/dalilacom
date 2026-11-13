@@ -16,6 +16,33 @@ const MAX_ENTRY_CENTS = 9_000_000_000_000;
 
 // Amounts are stored 64-bit; they always fit a JSON number (the limit on one entry keeps even large sums exact).
 
+
+// ---- tax (experimental: to be checked with an accountant). Rates are in basis points (1900 = 19%). Prices either have their tax inside or get it on top.
+async function taxContext(userId: string) {
+  const [rates, settings] = await Promise.all([prisma.accountingTaxRate.findMany({ where: { userId, active: true } }), prisma.accountingSettings.findUnique({ where: { userId } })]);
+  const byId = new Map(rates.map((r) => [r.id, r.rateBp]));
+  const defaultBp = settings?.defaultTaxRateId ? byId.get(settings.defaultTaxRateId) ?? 0 : 0;
+  return { byId, defaultBp, include: settings?.pricesIncludeTax ?? true, enabled: rates.length > 0, settings };
+}
+const bpFor = (ctx: { byId: Map<string, number>; defaultBp: number }, productRateId: string | null | undefined) => (productRateId ? ctx.byId.get(productRateId) ?? ctx.defaultBp : ctx.defaultBp);
+/** The tax of each line of an invoice. The invoice discount is shared between the lines by their size (the last one takes what is left), and the tax is on what remains of each line. */
+function taxLines(lines: { gross: number; rateBp: number }[], discount: number, include: boolean) {
+  const subtotal = lines.reduce((sum, l) => sum + l.gross, 0);
+  let left = discount;
+  return lines.map((l, i) => {
+    const disc = i === lines.length - 1 ? left : Math.round(discount * l.gross / subtotal);
+    left -= disc;
+    const base = l.gross - disc;
+    const tax = l.rateBp > 0 ? (include ? Math.round(base * l.rateBp / (10000 + l.rateBp)) : Math.round(base * l.rateBp / 10000)) : 0;
+    return { discount: disc, tax, payable: include ? base : base + tax };
+  });
+}
+async function ownRateId(userId: string, id: string | null | undefined) {
+  if (!id) return null;
+  const r = await prisma.accountingTaxRate.findFirst({ where: { id, userId }, select: { id: true } });
+  return r ? r.id : undefined; // undefined: not the account's
+}
+
 /** The next invoice number of an account. The lock makes two sales at the same moment take two different numbers. */
 async function nextSaleNumber(tx: Prisma.TransactionClient, userId: string) {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"sale-number:" + userId}))`;
@@ -101,6 +128,7 @@ const productSchema = z.object({
   quantity: z.number().int().nonnegative().max(2_000_000_000).default(0),
   lowStockAt: z.number().int().nonnegative().max(2_000_000_000).default(0),
   currency: currencyCode.default("EUR"),
+  taxRateId: z.string().uuid().nullable().optional(),
 });
 
 accountingRouter.get("/summary", route(async (req, res) => {
@@ -195,6 +223,7 @@ accountingRouter.get("/products/barcode/:barcode", route(async (req, res) => {
 accountingRouter.post("/products", route(async (req, res) => {
   const parsed = productSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
+  if (parsed.data.taxRateId && (await ownRateId(req.user!.id, parsed.data.taxRateId)) === undefined) return sendError(res, 404, "NOT_FOUND", "نسبة الضريبة غير موجودة");
   try {
     const product = await prisma.$transaction(async (tx) => {
       const created = await tx.accountingProduct.create({ data: { ...parsed.data, userId: req.user!.id, barcode: parsed.data.barcode || null, sku: parsed.data.sku || null } });
@@ -213,6 +242,7 @@ accountingRouter.patch("/products/:id", route(async (req, res) => {
   if (req.params.id.startsWith("store:")) return sendError(res, 400, "BAD_REQUEST", "منتجات المتجر تُعدَّل من صفحة المتجر");
   const parsed = productSchema.omit({ quantity: true }).partial().safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
+  if (parsed.data.taxRateId && (await ownRateId(req.user!.id, parsed.data.taxRateId)) === undefined) return sendError(res, 404, "NOT_FOUND", "نسبة الضريبة غير موجودة");
   const p = await prisma.accountingProduct.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true } });
   if (!p) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
   try {
@@ -269,6 +299,14 @@ accountingRouter.post("/products/:id/stock", route(async (req, res) => {
 accountingRouter.post("/products/:id/sell", route(async (req, res) => {
   const parsed = z.object({ quantity: z.number().int().positive().max(1_000_000), unitPriceCents: z.number().int().positive().optional(), note: z.string().trim().max(240).optional(), payMethod: z.enum(["CASH", "BANK", "WALLET"]).default("CASH") }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
+  if ((await taxContext(req.user!.id)).enabled) {
+    const out = await createSaleInvoice(req.user!.id, { items: [{ productId: req.params.id, quantity: parsed.data.quantity, unitPriceCents: parsed.data.unitPriceCents }], payMethod: parsed.data.payMethod, note: parsed.data.note });
+    if (!out.ok) return sendError(res, out.status, out.code, out.message, out.details);
+    const store = req.params.id.startsWith("store:");
+    const now = store ? await prisma.product.findUnique({ where: { id: req.params.id.slice(6) } }) : await prisma.accountingProduct.findUnique({ where: { id: req.params.id } });
+    const product = store && now ? { ...now, quantity: (now as { stock: number }).stock, id: req.params.id } : now;
+    return res.status(201).json({ product, incomeCents: out.sale.totalCents - out.sale.taxCents, costCents: out.costCents, netCents: out.netCents, taxCents: out.sale.taxCents });
+  }
   if (req.params.id.startsWith("store:")) {
     const id = req.params.id.slice(6);
     const product = await prisma.product.findFirst({ where: { id, merchant: { userId: req.user!.id }, isActive: true } });
@@ -535,17 +573,17 @@ accountingRouter.post("/parties/:id/payments", route(async (req, res) => {
 
 // ---- a purchase from a supplier: stock in at its cost (the average cost is updated), money out, and a debt for what is not paid yet
 const purchaseSchema = z.object({
-  items: z.array(z.object({ productId: z.string().min(1).max(80), quantity: z.number().int().positive().max(1_000_000), unitCostCents: z.number().int().nonnegative().max(2_000_000_000) })).min(1).max(100),
+  items: z.array(z.object({ productId: z.string().min(1).max(80), quantity: z.number().int().positive().max(1_000_000), unitCostCents: z.number().int().nonnegative().max(2_000_000_000), taxRateId: z.string().uuid().nullable().optional() })).min(1).max(100),
   partyId: z.string().uuid().optional(),
   paidCents: z.number().int().nonnegative().max(MAX_ENTRY_CENTS).optional(),
   payMethod: z.enum(["CASH", "BANK", "WALLET"]).default("CASH"),
   note: z.string().trim().max(240).optional(),
   occurredAt: z.string().datetime().optional(),
 });
-type PurchaseRow = { returned?: Record<string, number>; id: string; number: number; partyId: string | null; supplierName: string | null; note: string | null; currency: string; totalCents: bigint; paidCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitCostCents: bigint; lineTotalCents: bigint }[] };
+type PurchaseRow = { returned?: Record<string, number>; taxCents?: bigint; id: string; number: number; partyId: string | null; supplierName: string | null; note: string | null; currency: string; totalCents: bigint; paidCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitCostCents: bigint; lineTotalCents: bigint; taxRateBp?: number; taxCents?: bigint }[] };
 const plainPurchase = (r: PurchaseRow) => ({
-  id: r.id, number: r.number, partyId: r.partyId, supplierName: r.supplierName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt, totalCents: Number(r.totalCents), paidCents: Number(r.paidCents),
-  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, returnedQuantity: r.returned?.[l.id] ?? 0, unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents) })),
+  id: r.id, number: r.number, partyId: r.partyId, supplierName: r.supplierName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt, totalCents: Number(r.totalCents), paidCents: Number(r.paidCents), taxCents: Number(r.taxCents ?? 0),
+  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, returnedQuantity: r.returned?.[l.id] ?? 0, unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents), taxRateBp: l.taxRateBp ?? 0, taxCents: Number(l.taxCents ?? 0) })),
 });
 /** The cost of a product after new units came in: the average of what was there and what arrived, weighted by the quantities. */
 const averageCost = (oldQty: number, oldCost: number, addQty: number, addCost: number) => (oldQty > 0 ? Math.round((oldQty * oldCost + addQty * addCost) / (oldQty + addQty)) : addCost);
@@ -554,28 +592,32 @@ accountingRouter.post("/purchases", route(async (req, res) => {
   const parsed = purchaseSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const userId = req.user!.id, d = parsed.data;
-  const wanted = new Map<string, { quantity: number; unitCostCents: number }>();
-  for (const it of d.items) { const cur = wanted.get(it.productId); if (cur) wanted.set(it.productId, { quantity: cur.quantity + it.quantity, unitCostCents: Math.round((cur.quantity * cur.unitCostCents + it.quantity * it.unitCostCents) / (cur.quantity + it.quantity)) }); else wanted.set(it.productId, { quantity: it.quantity, unitCostCents: it.unitCostCents }); }
+  const wanted = new Map<string, { quantity: number; unitCostCents: number; taxRateId?: string | null }>();
+  for (const it of d.items) { const cur = wanted.get(it.productId); if (cur) wanted.set(it.productId, { quantity: cur.quantity + it.quantity, unitCostCents: Math.round((cur.quantity * cur.unitCostCents + it.quantity * it.unitCostCents) / (cur.quantity + it.quantity)), taxRateId: it.taxRateId ?? cur.taxRateId }); else wanted.set(it.productId, { quantity: it.quantity, unitCostCents: it.unitCostCents, taxRateId: it.taxRateId }); }
   const ids = [...wanted.keys()];
-  const [own, shop, shopCurrency] = await Promise.all([
+  const [own, shop, shopCurrency, tax] = await Promise.all([
     prisma.accountingProduct.findMany({ where: { userId, id: { in: ids.filter((i) => !i.startsWith("store:")) } } }),
     prisma.product.findMany({ where: { merchant: { userId }, id: { in: ids.filter((i) => i.startsWith("store:")).map((i) => i.slice(6)) } } }),
     marketOfUser(userId),
+    taxContext(userId),
   ]);
-  type Line = { key: string; store: boolean; id: string; name: string; quantity: number; unitCost: number; oldQty: number; oldCost: number; currency: string };
+  type Line = { key: string; store: boolean; id: string; name: string; quantity: number; unitCost: number; oldQty: number; oldCost: number; currency: string; rateBp: number };
   const lines: Line[] = [];
   for (const [key, w] of wanted) {
     if (key.startsWith("store:")) {
       const p = shop.find((x) => `store:${x.id}` === key); if (!p) return sendError(res, 404, "NOT_FOUND", "منتج المتجر غير موجود");
-      lines.push({ key, store: true, id: p.id, name: p.name, quantity: w.quantity, unitCost: w.unitCostCents, oldQty: p.stock, oldCost: p.costPriceCents, currency: shopCurrency });
+      lines.push({ key, store: true, id: p.id, name: p.name, quantity: w.quantity, unitCost: w.unitCostCents, oldQty: p.stock, oldCost: p.costPriceCents, currency: shopCurrency, rateBp: w.taxRateId ? (tax.byId.get(w.taxRateId) ?? tax.defaultBp) : tax.defaultBp });
     } else {
       const p = own.find((x) => x.id === key); if (!p) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
-      lines.push({ key, store: false, id: p.id, name: p.name, quantity: w.quantity, unitCost: w.unitCostCents, oldQty: p.quantity, oldCost: p.costCents, currency: p.currency });
+      lines.push({ key, store: false, id: p.id, name: p.name, quantity: w.quantity, unitCost: w.unitCostCents, oldQty: p.quantity, oldCost: p.costCents, currency: p.currency, rateBp: w.taxRateId ? (tax.byId.get(w.taxRateId) ?? bpFor(tax, p.taxRateId)) : bpFor(tax, p.taxRateId) });
     }
   }
   const currency = lines[0].currency;
   if (lines.some((l) => l.currency !== currency)) return sendError(res, 400, "BAD_REQUEST", "كل أصناف الفاتورة لازم تكون بنفس العملة");
-  const total = lines.reduce((sum, l) => sum + l.unitCost * l.quantity, 0);
+  // the cost typed is without tax; the tax paid to the supplier is added on top of it
+  const lineTax = lines.map((l) => Math.round(l.unitCost * l.quantity * l.rateBp / 10000));
+  const taxTotal = lineTax.reduce((sum, x) => sum + x, 0);
+  const total = lines.reduce((sum, l) => sum + l.unitCost * l.quantity, 0) + taxTotal;
   if (total <= 0) return sendError(res, 400, "BAD_REQUEST", "مجموع الفاتورة لازم يكون أكبر من صفر");
   const paid = d.paidCents ?? total;
   if (paid > total) return sendError(res, 400, "BAD_REQUEST", "المبلغ المدفوع أكبر من مجموع الفاتورة");
@@ -589,8 +631,8 @@ accountingRouter.post("/purchases", route(async (req, res) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"purchase-number:" + userId}))`;
     const last = await tx.accountingPurchase.aggregate({ where: { userId }, _max: { number: true } });
     const created = await tx.accountingPurchase.create({
-      data: { userId, number: (last._max.number ?? 0) + 1, partyId: supplier?.id ?? null, supplierName: supplier?.name ?? null, note: d.note || null, currency, totalCents: total, paidCents: paid, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
-        lines: { create: lines.map((l) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitCostCents: l.unitCost, lineTotalCents: l.unitCost * l.quantity })) } },
+      data: { userId, number: (last._max.number ?? 0) + 1, partyId: supplier?.id ?? null, supplierName: supplier?.name ?? null, note: d.note || null, currency, totalCents: total, taxCents: taxTotal, paidCents: paid, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
+        lines: { create: lines.map((l, i) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitCostCents: l.unitCost, lineTotalCents: l.unitCost * l.quantity, taxRateBp: l.rateBp, taxCents: lineTax[i] })) } },
       include: { lines: true },
     });
     for (const l of lines) {
@@ -649,11 +691,16 @@ accountingRouter.post("/sales/:id/returns", route(async (req, res) => {
     if (quantity > line.quantity - (returned[lineId] ?? 0)) return sendError(res, 409, "CONFLICT", "الكمية المرتجعة أكبر من الكمية المباعة");
     picked.push({ line, quantity });
   }
-  const gross = picked.reduce((sum, p) => sum + Number(p.line.unitPriceCents) * p.quantity, 0);
-  const subtotal = Number(sale.subtotalCents);
-  // the customer got a discount on the whole invoice: they get back the same share of it
-  const share = subtotal > 0 ? Math.round(Number(sale.discountCents) * gross / subtotal) : 0;
-  const total = gross - share;
+  // each returned line takes back its own share of the discount and of the tax (an old invoice, from before the lines kept theirs, shares the discount of the invoice)
+  const legacyDiscount = sale.lines.every((l) => Number(l.discountCents) === 0) && Number(sale.discountCents) > 0;
+  const parts = picked.map((p) => {
+    const gross = Number(p.line.unitPriceCents) * p.quantity, frac = p.quantity / p.line.quantity;
+    const disc = legacyDiscount ? Math.round(Number(sale.discountCents) * gross / Number(sale.subtotalCents)) : Math.round(Number(p.line.discountCents) * frac);
+    const taxBackLine = Math.round(Number(p.line.taxCents) * frac);
+    return { gross, tax: taxBackLine, base: gross - disc - (sale.pricesIncludeTax ? taxBackLine : 0), payable: gross - disc + (sale.pricesIncludeTax ? 0 : taxBackLine) };
+  });
+  const total = parts.reduce((sum, x) => sum + x.payable, 0);
+  const taxBack = parts.reduce((sum, x) => sum + x.tax, 0);
   const cost = picked.reduce((sum, p) => sum + Number(p.line.unitCostCents) * p.quantity, 0);
   const owed = sale.partyId ? owedOn(await prisma.accountingPartyEntry.findMany({ where: { partyId: sale.partyId }, select: { kind: true, amountCents: true, currency: true } }), sale.currency) : 0;
   const debt = Math.min(total, owed), refund = total - debt;
@@ -662,7 +709,7 @@ accountingRouter.post("/sales/:id/returns", route(async (req, res) => {
   const done = await prisma.$transaction(async (tx) => {
     const created = await tx.accountingSaleReturn.create({
       data: { userId, saleId: sale.id, currency: sale.currency, totalCents: total, refundCents: refund, debtCents: debt, payMethod: refund > 0 ? method : null, note: d.note || null, occurredAt: when, recordedById: userId,
-        lines: { create: picked.map((p) => ({ saleLineId: p.line.id, productId: p.line.productId, name: p.line.name, quantity: p.quantity, unitPriceCents: p.line.unitPriceCents, unitCostCents: p.line.unitCostCents, lineTotalCents: Number(p.line.unitPriceCents) * p.quantity })) } },
+        lines: { create: picked.map((p, i) => ({ saleLineId: p.line.id, productId: p.line.productId, name: p.line.name, quantity: p.quantity, unitPriceCents: p.line.unitPriceCents, unitCostCents: p.line.unitCostCents, lineTotalCents: Number(p.line.unitPriceCents) * p.quantity, taxRateBp: p.line.taxRateBp, taxCents: parts[i].tax, baseCents: parts[i].base })) } },
     });
     for (const p of picked) {
       const key = p.line.productId;
@@ -674,7 +721,7 @@ accountingRouter.post("/sales/:id/returns", route(async (req, res) => {
     }
     const label = `مرتجع فاتورة بيع #${sale.number}${sale.customerName ? ` — ${sale.customerName}` : ""}`;
     // the income and the cost of the returned goods are taken back (negative entries); the money paid back is a payout, not an expense
-    await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: RETURNS_CATEGORY, description: label, amountCents: -total, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}`, recordedById: userId } });
+    await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: RETURNS_CATEGORY, description: label, amountCents: -(total - taxBack), currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}`, recordedById: userId } });
     if (cost > 0) await tx.accountingEntry.create({ data: { userId, type: "EXPENSE", category: COST_CATEGORY, description: label, amountCents: -cost, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}:cost`, recordedById: userId } });
     if (refund > 0) {
       const out = await tx.accountingEntry.create({ data: { userId, type: "PAYOUT", category: "رد مبلغ لزبون", description: label, amountCents: refund, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}:refund`, payMethod: method, recordedById: userId } });
@@ -702,7 +749,8 @@ accountingRouter.post("/purchases/:id/returns", route(async (req, res) => {
     if (quantity > line.quantity - (returned[lineId] ?? 0)) return sendError(res, 409, "CONFLICT", "الكمية المرتجعة أكبر من الكمية المشتراة");
     picked.push({ line, quantity });
   }
-  const total = picked.reduce((sum, p) => sum + Number(p.line.unitCostCents) * p.quantity, 0);
+  const parts = picked.map((p) => { const base = Number(p.line.unitCostCents) * p.quantity; return { base, tax: Math.round(Number(p.line.taxCents) * p.quantity / p.line.quantity) }; });
+  const total = parts.reduce((sum, x) => sum + x.base + x.tax, 0);
   const owed = purchase.partyId ? owedOn(await prisma.accountingPartyEntry.findMany({ where: { partyId: purchase.partyId }, select: { kind: true, amountCents: true, currency: true } }), purchase.currency) : 0;
   const debt = Math.min(total, owed), refund = total - debt;
   const when = d.occurredAt ? new Date(d.occurredAt) : new Date();
@@ -718,7 +766,7 @@ accountingRouter.post("/purchases/:id/returns", route(async (req, res) => {
     }
     const created = await tx.accountingPurchaseReturn.create({
       data: { userId, purchaseId: purchase.id, currency: purchase.currency, totalCents: total, refundCents: refund, debtCents: debt, payMethod: refund > 0 ? method : null, note: d.note || null, occurredAt: when, recordedById: userId,
-        lines: { create: picked.map((p) => ({ purchaseLineId: p.line.id, productId: p.line.productId, name: p.line.name, quantity: p.quantity, unitCostCents: p.line.unitCostCents, lineTotalCents: Number(p.line.unitCostCents) * p.quantity })) } },
+        lines: { create: picked.map((p, i) => ({ purchaseLineId: p.line.id, productId: p.line.productId, name: p.line.name, quantity: p.quantity, unitCostCents: p.line.unitCostCents, lineTotalCents: Number(p.line.unitCostCents) * p.quantity, taxRateBp: p.line.taxRateBp, taxCents: parts[i].tax, baseCents: parts[i].base })) } },
     });
     const label = `مرتجع فاتورة شراء #${purchase.number}${purchase.supplierName ? ` — ${purchase.supplierName}` : ""}`;
     if (refund > 0) await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "استرداد من مورد", description: label, amountCents: refund, currency: purchase.currency, occurredAt: when, source: "RETURN", sourceKey: `purchase-return:${created.id}`, payMethod: method, recordedById: userId } });
@@ -824,6 +872,67 @@ accountingRouter.delete("/recurring/:id", route(async (req, res) => {
   res.json({ deleted: true });
 }));
 
+// ---- tax settings, rates, and the tax report (experimental: to be checked with an accountant)
+const settingsView = async (userId: string) => {
+  const st = await prisma.accountingSettings.findUnique({ where: { userId } });
+  return { pricesIncludeTax: st?.pricesIncludeTax ?? true, defaultTaxRateId: st?.defaultTaxRateId ?? null, taxNumber: st?.taxNumber ?? null, businessName: st?.businessName ?? null };
+};
+accountingRouter.get("/settings", route(async (req, res) => res.json(await settingsView(req.user!.id))));
+accountingRouter.put("/settings", route(async (req, res) => {
+  const parsed = z.object({ pricesIncludeTax: z.boolean().optional(), defaultTaxRateId: z.string().uuid().nullable().optional(), taxNumber: z.string().trim().max(60).nullable().optional(), businessName: z.string().trim().max(120).nullable().optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id;
+  if (parsed.data.defaultTaxRateId && (await ownRateId(userId, parsed.data.defaultTaxRateId)) === undefined) return sendError(res, 404, "NOT_FOUND", "نسبة الضريبة غير موجودة");
+  await prisma.accountingSettings.upsert({ where: { userId }, create: { userId, ...parsed.data }, update: parsed.data });
+  res.json(await settingsView(userId));
+}));
+
+accountingRouter.get("/tax/rates", route(async (req, res) => {
+  const rows = await prisma.accountingTaxRate.findMany({ where: { userId: req.user!.id }, orderBy: [{ active: "desc" }, { rateBp: "asc" }] });
+  res.json(rows.map((r) => ({ id: r.id, name: r.name, ratePercent: r.rateBp / 100, rateBp: r.rateBp, active: r.active })));
+}));
+accountingRouter.post("/tax/rates", route(async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(1).max(60), ratePercent: z.number().min(0).max(100) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const row = await prisma.accountingTaxRate.create({ data: { userId: req.user!.id, name: parsed.data.name, rateBp: Math.round(parsed.data.ratePercent * 100) } });
+  res.status(201).json({ id: row.id, name: row.name, ratePercent: row.rateBp / 100, rateBp: row.rateBp, active: row.active });
+}));
+// A rate in use is never deleted (old invoices keep it): it is switched off, and products that had it fall back to the default rate.
+accountingRouter.patch("/tax/rates/:id", route(async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(1).max(60).optional(), active: z.boolean().optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const own = await prisma.accountingTaxRate.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true } });
+  if (!own) return sendError(res, 404, "NOT_FOUND", "نسبة الضريبة غير موجودة");
+  const row = await prisma.accountingTaxRate.update({ where: { id: own.id }, data: parsed.data });
+  res.json({ id: row.id, name: row.name, ratePercent: row.rateBp / 100, rateBp: row.rateBp, active: row.active });
+}));
+
+// The tax collected on sales and paid on purchases in a period, by rate, net of what returns took back. The difference is what is owed to (or can be claimed from) the tax office.
+accountingRouter.get("/tax/report", route(async (req, res) => {
+  const parsed = z.object({ from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), currency: currencyCode.optional() }).safeParse({ from: req.query.from, to: req.query.to, currency: req.query.currency });
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const userId = req.user!.id;
+  const from = new Date(`${parsed.data.from}T00:00:00.000Z`), to = new Date(`${parsed.data.to}T23:59:59.999Z`);
+  if (from > to || to.getTime() - from.getTime() > 800 * 86400000) return sendError(res, 400, "BAD_REQUEST", "الفترة الزمنية غير صحيحة");
+  const currency = parsed.data.currency ?? (await prisma.accountingSale.findFirst({ where: { userId }, select: { currency: true }, orderBy: { occurredAt: "desc" } }))?.currency ?? "EUR";
+  type Row = { rate: number; base: bigint; tax: bigint };
+  const [outSales, outReturns, inBuys, inReturns] = await Promise.all([
+    prisma.$queryRaw<Row[]>`SELECT l."taxRateBp" AS rate, SUM(l."lineTotalCents" - l."discountCents" - CASE WHEN s."pricesIncludeTax" THEN l."taxCents" ELSE 0 END) AS base, SUM(l."taxCents") AS tax FROM "AccountingSaleLine" l JOIN "AccountingSale" s ON s."id" = l."saleId" WHERE s."userId" = ${userId} AND s."currency" = ${currency} AND s."occurredAt" >= ${from} AND s."occurredAt" <= ${to} AND l."taxRateBp" > 0 GROUP BY 1`,
+    prisma.$queryRaw<Row[]>`SELECT l."taxRateBp" AS rate, SUM(l."baseCents") AS base, SUM(l."taxCents") AS tax FROM "AccountingSaleReturnLine" l JOIN "AccountingSaleReturn" r ON r."id" = l."returnId" WHERE r."userId" = ${userId} AND r."currency" = ${currency} AND r."occurredAt" >= ${from} AND r."occurredAt" <= ${to} AND l."taxRateBp" > 0 GROUP BY 1`,
+    prisma.$queryRaw<Row[]>`SELECT l."taxRateBp" AS rate, SUM(l."lineTotalCents") AS base, SUM(l."taxCents") AS tax FROM "AccountingPurchaseLine" l JOIN "AccountingPurchase" p ON p."id" = l."purchaseId" WHERE p."userId" = ${userId} AND p."currency" = ${currency} AND p."occurredAt" >= ${from} AND p."occurredAt" <= ${to} AND l."taxRateBp" > 0 GROUP BY 1`,
+    prisma.$queryRaw<Row[]>`SELECT l."taxRateBp" AS rate, SUM(l."baseCents") AS base, SUM(l."taxCents") AS tax FROM "AccountingPurchaseReturnLine" l JOIN "AccountingPurchaseReturn" r ON r."id" = l."returnId" WHERE r."userId" = ${userId} AND r."currency" = ${currency} AND r."occurredAt" >= ${from} AND r."occurredAt" <= ${to} AND l."taxRateBp" > 0 GROUP BY 1`,
+  ]);
+  const rates = new Set([...outSales, ...outReturns, ...inBuys, ...inReturns].map((r) => r.rate));
+  const pick = (rows: Row[], rate: number, k: "base" | "tax") => Number(rows.find((r) => r.rate === rate)?.[k] ?? 0);
+  const byRate = [...rates].sort((a, b) => a - b).map((rate) => ({
+    ratePercent: rate / 100,
+    outputBaseCents: pick(outSales, rate, "base") - pick(outReturns, rate, "base"), outputTaxCents: pick(outSales, rate, "tax") - pick(outReturns, rate, "tax"),
+    inputBaseCents: pick(inBuys, rate, "base") - pick(inReturns, rate, "base"), inputTaxCents: pick(inBuys, rate, "tax") - pick(inReturns, rate, "tax"),
+  }));
+  const output = byRate.reduce((sum, r) => sum + r.outputTaxCents, 0), input = byRate.reduce((sum, r) => sum + r.inputTaxCents, 0);
+  res.json({ from: parsed.data.from, to: parsed.data.to, currency, byRate, outputTaxCents: output, inputTaxCents: input, payableCents: output - input, settings: await settingsView(userId) });
+}));
+
 // ---- a sales invoice: several products in one sale, a discount, a customer name, a number of its own
 const saleSchema = z.object({
   items: z.array(z.object({ productId: z.string().min(1).max(80), quantity: z.number().int().positive().max(1_000_000), unitPriceCents: z.number().int().positive().max(2_000_000_000).optional() })).min(1).max(100),
@@ -836,55 +945,59 @@ const saleSchema = z.object({
   partyId: z.string().uuid().optional(),
   paidCents: z.number().int().nonnegative().max(MAX_ENTRY_CENTS).optional(),
 });
-type SaleRow = { returned?: Record<string, number>; id: string; number: number; partyId?: string | null; paidCents?: bigint; customerName: string | null; note: string | null; currency: string; subtotalCents: bigint; discountCents: bigint; totalCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitPriceCents: bigint; unitCostCents: bigint; lineTotalCents: bigint }[] };
+type SaleRow = { returned?: Record<string, number>; taxCents?: bigint; pricesIncludeTax?: boolean; id: string; number: number; partyId?: string | null; paidCents?: bigint; customerName: string | null; note: string | null; currency: string; subtotalCents: bigint; discountCents: bigint; totalCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitPriceCents: bigint; unitCostCents: bigint; lineTotalCents: bigint; discountCents?: bigint; taxRateBp?: number; taxCents?: bigint }[] };
 const plainSale = (r: SaleRow) => ({
   id: r.id, number: r.number, partyId: r.partyId ?? null, paidCents: Number(r.paidCents ?? r.totalCents), customerName: r.customerName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt,
-  subtotalCents: Number(r.subtotalCents), discountCents: Number(r.discountCents), totalCents: Number(r.totalCents),
-  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, returnedQuantity: r.returned?.[l.id] ?? 0, unitPriceCents: Number(l.unitPriceCents), unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents) })),
+  subtotalCents: Number(r.subtotalCents), discountCents: Number(r.discountCents), totalCents: Number(r.totalCents), taxCents: Number(r.taxCents ?? 0), pricesIncludeTax: r.pricesIncludeTax ?? true,
+  lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, returnedQuantity: r.returned?.[l.id] ?? 0, unitPriceCents: Number(l.unitPriceCents), unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents), discountCents: Number(l.discountCents ?? 0), taxRateBp: l.taxRateBp ?? 0, taxCents: Number(l.taxCents ?? 0) })),
 });
 class SaleError extends Error { constructor(public status: number, public code: string, message: string, public details?: unknown) { super(message); } }
 
-accountingRouter.post("/sales", route(async (req, res) => {
-  const parsed = saleSchema.safeParse(req.body);
-  if (!parsed.success) return sendValidationError(res, parsed.error);
-  const userId = req.user!.id;
-  const d = parsed.data;
+type SaleOutcome = { ok: true; sale: ReturnType<typeof plainSale>; costCents: number; netCents: number } | { ok: false; status: number; code: string; message: string; details?: unknown };
+type SaleInput = z.infer<typeof saleSchema>;
+
+/** The sales invoice: stock out, the tax of each line, the income (without the tax), the cost, the debt of a credit sale. */
+async function createSaleInvoice(userId: string, d: SaleInput): Promise<SaleOutcome> {
+  const fail = (status: number, code: string, message: string, details?: unknown): SaleOutcome => ({ ok: false, status, code, message, details });
   // the same product twice becomes one line
   const wanted = new Map<string, { quantity: number; unitPriceCents?: number }>();
   for (const it of d.items) { const cur = wanted.get(it.productId); wanted.set(it.productId, { quantity: (cur?.quantity ?? 0) + it.quantity, unitPriceCents: it.unitPriceCents ?? cur?.unitPriceCents }); }
   const ids = [...wanted.keys()];
-  const [own, shop, shopCurrency] = await Promise.all([
+  const [own, shop, shopCurrency, tax] = await Promise.all([
     prisma.accountingProduct.findMany({ where: { userId, id: { in: ids.filter((i) => !i.startsWith("store:")) } } }),
     prisma.product.findMany({ where: { merchant: { userId }, isActive: true, id: { in: ids.filter((i) => i.startsWith("store:")).map((i) => i.slice(6)) } } }),
     marketOfUser(userId),
+    taxContext(userId),
   ]);
-  type Line = { key: string; store: boolean; id: string; name: string; quantity: number; unitPrice: number; unitCost: number; currency: string };
+  type Line = { key: string; store: boolean; id: string; name: string; quantity: number; unitPrice: number; unitCost: number; currency: string; rateBp: number };
   const lines: Line[] = [];
   for (const [key, w] of wanted) {
     if (key.startsWith("store:")) {
-      const p = shop.find((x) => `store:${x.id}` === key); if (!p) return sendError(res, 404, "NOT_FOUND", "منتج المتجر غير موجود");
-      lines.push({ key, store: true, id: p.id, name: p.name, quantity: w.quantity, unitPrice: w.unitPriceCents ?? p.priceCents, unitCost: p.costPriceCents, currency: shopCurrency });
+      const p = shop.find((x) => `store:${x.id}` === key); if (!p) return fail(404, "NOT_FOUND", "منتج المتجر غير موجود");
+      lines.push({ key, store: true, id: p.id, name: p.name, quantity: w.quantity, unitPrice: w.unitPriceCents ?? p.priceCents, unitCost: p.costPriceCents, currency: shopCurrency, rateBp: tax.defaultBp });
     } else {
-      const p = own.find((x) => x.id === key); if (!p) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
-      lines.push({ key, store: false, id: p.id, name: p.name, quantity: w.quantity, unitPrice: w.unitPriceCents ?? p.salePriceCents, unitCost: p.costCents, currency: p.currency });
+      const p = own.find((x) => x.id === key); if (!p) return fail(404, "NOT_FOUND", "المنتج غير موجود");
+      lines.push({ key, store: false, id: p.id, name: p.name, quantity: w.quantity, unitPrice: w.unitPriceCents ?? p.salePriceCents, unitCost: p.costCents, currency: p.currency, rateBp: bpFor(tax, p.taxRateId) });
     }
   }
-  if (lines.some((l) => l.unitPrice <= 0)) return sendError(res, 400, "BAD_REQUEST", "أدخل سعر البيع أولاً");
+  if (lines.some((l) => l.unitPrice <= 0)) return fail(400, "BAD_REQUEST", "أدخل سعر البيع أولاً");
   const currency = lines[0].currency;
-  if (lines.some((l) => l.currency !== currency)) return sendError(res, 400, "BAD_REQUEST", "كل أصناف الفاتورة لازم تكون بنفس العملة");
+  if (lines.some((l) => l.currency !== currency)) return fail(400, "BAD_REQUEST", "كل أصناف الفاتورة لازم تكون بنفس العملة");
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const discount = d.discountPercent != null ? Math.round(subtotal * d.discountPercent / 100) : d.discountCents ?? 0;
-  if (discount > subtotal) return sendError(res, 400, "BAD_REQUEST", "الحسم أكبر من مجموع الفاتورة");
-  const total = subtotal - discount;
-  if (total <= 0) return sendError(res, 400, "BAD_REQUEST", "مجموع الفاتورة لازم يكون أكبر من صفر");
+  if (discount > subtotal) return fail(400, "BAD_REQUEST", "الحسم أكبر من مجموع الفاتورة");
+  const calc = taxLines(lines.map((l) => ({ gross: l.unitPrice * l.quantity, rateBp: l.rateBp })), discount, tax.include);
+  const total = calc.reduce((sum, c) => sum + c.payable, 0);
+  const taxTotal = calc.reduce((sum, c) => sum + c.tax, 0);
+  if (total <= 0) return fail(400, "BAD_REQUEST", "مجموع الفاتورة لازم يكون أكبر من صفر");
   // a sale on credit: what was paid now, the rest stays on the customer's account
   const paid = d.paidCents ?? total;
-  if (paid > total) return sendError(res, 400, "BAD_REQUEST", "المبلغ المدفوع أكبر من مجموع الفاتورة");
+  if (paid > total) return fail(400, "BAD_REQUEST", "المبلغ المدفوع أكبر من مجموع الفاتورة");
   let party: { id: string; name: string } | null = null;
   if (d.partyId) {
     party = await prisma.accountingParty.findFirst({ where: { id: d.partyId, userId, kind: "CUSTOMER", archivedAt: null }, select: { id: true, name: true } });
-    if (!party) return sendError(res, 404, "NOT_FOUND", "الزبون غير موجود");
-  } else if (paid < total) return sendError(res, 400, "BAD_REQUEST", "البيع الآجل لازم يكون على زبون مسجّل");
+    if (!party) return fail(404, "NOT_FOUND", "الزبون غير موجود");
+  } else if (paid < total) return fail(400, "BAD_REQUEST", "البيع الآجل لازم يكون على زبون مسجّل");
   const customerLabel = d.customerName || party?.name;
   const cost = lines.reduce((sum, l) => sum + l.unitCost * l.quantity, 0);
   const when = d.occurredAt ? new Date(d.occurredAt) : new Date();
@@ -899,15 +1012,17 @@ accountingRouter.post("/sales", route(async (req, res) => {
           if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي", { productId: l.key, name: l.name });
         }
         const created = await tx.accountingSale.create({
-          data: { userId, number: await nextSaleNumber(tx, userId), customerName: customerLabel || null, partyId: party?.id ?? null, paidCents: paid, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
-            lines: { create: lines.map((l) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitPriceCents: l.unitPrice, unitCostCents: l.unitCost, lineTotalCents: l.unitPrice * l.quantity })) } },
+          data: { userId, number: await nextSaleNumber(tx, userId), customerName: customerLabel || null, partyId: party?.id ?? null, paidCents: paid, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, taxCents: taxTotal, pricesIncludeTax: tax.include, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
+            lines: { create: lines.map((l, i) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitPriceCents: l.unitPrice, unitCostCents: l.unitCost, lineTotalCents: l.unitPrice * l.quantity, discountCents: calc[i].discount, taxRateBp: l.rateBp, taxCents: calc[i].tax })) } },
           include: { lines: true },
         });
         for (const l of lines) await tx.accountingStockMovement.create({ data: { userId, ...(l.store ? { storeProductId: l.id } : { productId: l.id }), action: "STOCK_OUT", quantity: l.quantity, unitCostCents: l.unitCost, note: `فاتورة بيع #${created.number}` } });
         const label = `فاتورة بيع #${created.number}${customerLabel ? ` — ${customerLabel}` : ""}`;
         const onCredit = paid < total;
-        // paid in full: the income is the cash itself. On credit: the income is booked, the cash arrives as a receipt (what was paid now), the rest becomes a debt.
-        await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: "مبيعات", description: label, amountCents: total, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}`, payMethod: onCredit ? null : d.payMethod, recordedById: userId } });
+        const net = total - taxTotal;
+        // paid in full: the income (without the tax) is the cash itself, and the tax collected comes in with it. On credit: the income is booked, the cash arrives as a receipt (what was paid now), the rest becomes a debt.
+        await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: "مبيعات", description: label, amountCents: net, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}`, payMethod: onCredit ? null : d.payMethod, recordedById: userId } });
+        if (!onCredit && taxTotal > 0) await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "ضريبة مبيعات محصّلة", description: label, amountCents: taxTotal, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:tax`, payMethod: d.payMethod, recordedById: userId } });
         if (onCredit && paid > 0) {
           const receipt = await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "دفعة زبون", description: label, amountCents: paid, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:paid`, payMethod: d.payMethod, recordedById: userId } });
           await tx.accountingPartyEntry.create({ data: { partyId: party!.id, userId, kind: "CHARGE", amountCents: total, currency, saleId: created.id, note: label, occurredAt: when } });
@@ -919,14 +1034,22 @@ accountingRouter.post("/sales", route(async (req, res) => {
         return created;
       });
       alertLowStock(userId, lines.map((l) => { const before = l.store ? shop.find((x) => x.id === l.id)!.stock : own.find((x) => x.id === l.id)!.quantity; const min = l.store ? 0 : own.find((x) => x.id === l.id)!.lowStockAt; return { name: l.name, before, after: before - l.quantity, min }; }));
-      return res.status(201).json({ ...plainSale(sale), costCents: cost, netCents: total - cost });
+      return { ok: true, sale: plainSale(sale), costCents: cost, netCents: total - taxTotal - cost };
     } catch (err) {
-      if (err instanceof SaleError) return sendError(res, err.status, err.code, err.message, err.details);
+      if (err instanceof SaleError) return fail(err.status, err.code, err.message, err.details);
       // two sales at the same moment may pick the same number: take the next one
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002" && attempt < 3) continue;
       throw err;
     }
   }
+}
+
+accountingRouter.post("/sales", route(async (req, res) => {
+  const parsed = saleSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const out = await createSaleInvoice(req.user!.id, parsed.data);
+  if (!out.ok) return sendError(res, out.status, out.code, out.message, out.details);
+  res.status(201).json({ ...out.sale, costCents: out.costCents, netCents: out.netCents });
 }));
 
 accountingRouter.get("/sales", route(async (req, res) => {
