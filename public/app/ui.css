@@ -1,0 +1,67 @@
+/* UI kit for the HR, accounting and auto-responder sections: buttons, loaders that look like the page, tiles, list items, steps, folds. */
+.site .btn { transition: transform .12s ease, box-shadow .2s ease, filter .2s ease; box-shadow: 0 8px 18px -10px var(--primary); }
+.site .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.04); }
+.site .btn:active:not(:disabled) { transform: scale(.98); }
+.site .btn.outline, .site .btn.secondary, .site .btn.danger, .site .btn.soft { box-shadow: none; }
+.btn.soft { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); }
+.btn.busy { position: relative; color: transparent !important; pointer-events: none; }
+.btn.busy::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .5); border-top-color: #fff; animation: spin .7s linear infinite; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.btn-row .btn { flex: 1 1 130px; width: auto; }
+
+.skel { position: relative; overflow: hidden; background: var(--surface-alt); border-radius: 12px; }
+.skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); animation: skel 1.3s ease-in-out infinite; }
+@keyframes skel { to { transform: translateX(100%); } }
+.skel-card { height: 96px; margin: 10px 0; border-radius: 20px; }
+.skel-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+.skel-tile { height: 84px; border-radius: 18px; }
+@media (prefers-color-scheme: dark) { .skel::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent); } }
+
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 8px 0; }
+.tile { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); animation: rise .35s ease both; }
+.tile::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: 0; width: 4px; background: var(--tone, var(--primary)); }
+.tile small { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.tile b { font-size: 19px; font-weight: 800; unicode-bidi: plaintext; }
+.tone-income { --tone: var(--success); } .tone-expense { --tone: var(--danger); } .tone-net { --tone: var(--primary); } .tone-payroll { --tone: #c58a00; }
+.tile.wide { grid-column: 1 / -1; }
+
+.item { display: flex; gap: 12px; align-items: flex-start; padding: 14px; margin: 10px 0; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 10px 22px -18px rgba(30, 10, 10, .4); animation: rise .35s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.item-main { flex: 1; min-width: 0; }
+.item-title { font-weight: 800; font-size: 15px; }
+.item-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+.item-end { text-align: end; font-weight: 800; white-space: nowrap; unicode-bidi: plaintext; }
+.item-end.in { color: var(--success); } .item-end.out { color: var(--danger); }
+.avatar { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 16px; background: hsl(var(--h, 20) 58% 46%); }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; background: var(--surface-alt); color: var(--text-muted); }
+.chip.ok { background: var(--success-bg); color: var(--success); } .chip.warn { background: var(--warning-bg); color: var(--warning); } .chip.bad { background: var(--danger-bg); color: var(--danger); } .chip.info { background: var(--info-bg); color: var(--info); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+.stepper { display: flex; gap: 6px; margin: 10px 0 4px; }
+.step { flex: 1; text-align: center; font-size: 11.5px; font-weight: 700; color: var(--text-muted); }
+.step i { display: block; height: 6px; margin-bottom: 5px; border-radius: 6px; background: var(--border); transition: background .3s; }
+.step.done { color: var(--text); } .step.done i { background: var(--primary); }
+
+details.fold { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+details.fold summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; font-size: 12.5px; font-weight: 800; color: var(--primary); }
+details.fold summary::-webkit-details-marker { display: none; }
+details.fold summary::after { content: "⌄"; font-size: 16px; transition: transform .2s; }
+details.fold[open] summary::after { transform: rotate(180deg); }
+details.fold .fold-body { padding-top: 8px; font-size: 13px; display: grid; gap: 4px; }
+
+.empty { text-align: center; padding: 30px 16px; color: var(--text-muted); border: 1.5px dashed var(--border); border-radius: 20px; margin: 10px 0; }
+.empty .ico { display: block; margin-bottom: 8px; font-size: 38px; }
+.panel-title { display: flex; align-items: center; gap: 8px; margin: 4px 2px 6px; font-size: 17px; font-weight: 800; }
+.panel-title small { color: var(--text-muted); font-size: 12.5px; font-weight: 700; }
+.pulse-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 0 var(--success); animation: pulse 1.8s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 9px transparent; } to { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .skel::after, .item, .tile, .pulse-dot { animation: none; } }
+
+/* the store tiles that advertise a paid section carry the free-trial badge */
+.store-slot.is-ph .ph-badge { position: absolute; z-index: 2; top: 10px; inset-inline-end: 10px; padding: 4px 11px; border-radius: 999px; background: #fff; color: #c4552b; font-size: 12px; font-weight: 800; box-shadow: 0 8px 16px -10px rgba(0, 0, 0, .6); }
+
+/* the launch offer on the home page of each paid section */
+.site-offer { display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 14px 16px; border-radius: 20px; background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, var(--surface)), var(--surface)); border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border)); }
+.site-offer > span { font-size: 28px; }
+.site-offer b { display: block; font-size: 15.5px; font-weight: 800; color: var(--text); }
+.site-offer small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }

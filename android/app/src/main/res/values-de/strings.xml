@@ -1148,4 +1148,6 @@
     <string name="promo_responder_t">Automatische Antworten</string>
     <string name="promo_responder_s">Automatische Antworten an Ihre Kunden</string>
     <string name="promo_open">Öffnen</string>
+    <string name="promo_free3">3 Monate kostenlos</string>
+    <string name="promo_start">Jetzt testen</string>
 </resources>

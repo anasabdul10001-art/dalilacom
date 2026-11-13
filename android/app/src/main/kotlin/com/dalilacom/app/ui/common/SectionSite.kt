@@ -175,6 +175,17 @@ private fun SiteHome(kind: SiteKind, signedIn: Boolean, onLogin: () -> Unit, onR
     val secondaryLabel = if (onOpenExternal == null && !signedIn) stringResource(R.string.site_register) else null
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SiteSlider(kind, primaryLabel, primary, secondaryLabel, onRegister)
+        // the launch offer, on the paid sections: the first months are free
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(20.dp)).padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("🎁", fontSize = 28.sp)
+            Column {
+                Text(stringResource(R.string.site_offerTitle), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                Text(stringResource(R.string.site_offerSub), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.5.sp, lineHeight = 19.sp)
+            }
+        }
         // the three figures are one height, whichever of their labels wraps to two lines
         Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (i in 0..2) Column(

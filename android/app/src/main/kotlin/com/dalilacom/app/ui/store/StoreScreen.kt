@@ -671,7 +671,10 @@ private fun PromoTile(i: Int, onClick: () -> Unit) {
                 Text(stringResource(promo.sub), color = Color.White.copy(alpha = 0.9f), fontSize = 10.5.sp, lineHeight = 14.sp)
             }
         }
-        Text(stringResource(R.string.promo_open), color = Color(0xFFC4552B), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.White, RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp))
+        val trial = promo.key == "accounting" || promo.key == "hr" || promo.key == "responder"
+        // the paid sections say on the tile that the first months are free (the offer: 3 months free for a limited time)
+        if (trial) Text(stringResource(R.string.promo_free3), color = Color(0xFFC4552B), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).background(Color.White, RoundedCornerShape(999.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
+        Text(stringResource(if (trial) R.string.promo_start else R.string.promo_open), color = Color(0xFFC4552B), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.White, RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp))
     }
 }
 

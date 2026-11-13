@@ -1255,4 +1255,6 @@
     <string name="promo_responder_t">المجيب الآلي</string>
     <string name="promo_responder_s">ردود تلقائية على رسائل زبائنك</string>
     <string name="promo_open">افتح</string>
+    <string name="promo_free3">3 شهور مجاناً</string>
+    <string name="promo_start">ابدأ التجربة</string>
 </resources>

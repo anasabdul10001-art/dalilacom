@@ -1251,4 +1251,6 @@
     <string name="promo_responder_t">Auto-responder</string>
     <string name="promo_responder_s">Automatic replies to customers</string>
     <string name="promo_open">Open</string>
+    <string name="promo_free3">3 months free</string>
+    <string name="promo_start">Start the trial</string>
 </resources>

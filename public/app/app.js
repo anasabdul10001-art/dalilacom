@@ -2604,6 +2604,7 @@ function siteLanding(kind) {
     </div>`).join("");
   return `
     <section class="site-slider" data-i="0">${slides}<div class="site-dots">${[0, 1, 2].map((i) => `<button class="${i === 0 ? "on" : ""}" onclick="siteSlideTo(this,${i})" aria-label="${i + 1}"></button>`).join("")}</div></section>
+    ${["accounting", "responder", "hr"].includes(kind) ? `<div class="site-offer"><span aria-hidden="true">🎁</span><div><b>${esc(t("site.offerTitle"))}</b><small>${esc(t("site.offerSub"))}</small></div></div>` : ""}
     <div class="site-stats">${[1, 2, 3].map((n) => `<div><b>${esc(t(k + "st" + n + ".n"))}</b><span>${esc(t(k + "st" + n + ".l"))}</span></div>`).join("")}</div>
     <h2 class="site-h">${esc(t("site.featuresTitle"))}</h2>
     <div class="site-grid">${SITES[kind].features.map((icon, n) => `<div class="site-feat"><span>${icon}</span><b>${esc(t("sec." + kind + ".f" + (n + 1) + ".t"))}</b><p>${esc(t("sec." + kind + ".f" + (n + 1) + ".d"))}</p></div>`).join("")}</div>
@@ -4097,12 +4098,15 @@ const STORE_PROMOS = [
 ];
 function storePromoTile(i) {
   const p = STORE_PROMOS[i % STORE_PROMOS.length];
+  // the paid sections say right on the tile that the first months are free (the offer: 3 months free for a limited time)
+  const trial = ["accounting", "hr", "responder"].includes(p.key);
   return `
     <div class="store-slot is-ph ph-${i % 3}" role="button" tabindex="0" onclick="${p.go}">
+      ${trial ? `<span class="ph-badge">${esc(t("promo.free3"))}</span>` : ""}
       <div class="ph-body">
         <span class="ph-ico" aria-hidden="true">${p.icon}</span>
         <span class="ph-text"><b>${esc(t("promo." + p.key + "T"))}</b><small>${esc(t("promo." + p.key + "S"))}</small></span>
-        <span class="ph-cta">${esc(t("promo.open"))}</span>
+        <span class="ph-cta">${esc(t(trial ? "promo.start" : "promo.open"))}</span>
       </div>
     </div>`;
 }

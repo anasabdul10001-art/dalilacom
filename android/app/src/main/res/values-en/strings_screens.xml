@@ -755,4 +755,6 @@
     <string name="hr_pay_cost">Run cost</string>
     <string name="hr_pay_paidTotal">Total cost of paid runs: %1$s</string>
     <string name="accounting_payrollShare">of which payroll: %1$s</string>
+    <string name="site_offerTitle">Launch offer: 3 months free</string>
+    <string name="site_offerSub">For a limited time. No payment card, and nothing is charged on its own.</string>
 </resources>

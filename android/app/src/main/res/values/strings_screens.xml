@@ -755,4 +755,6 @@
     <string name="hr_pay_cost">كلفة الدورة</string>
     <string name="hr_pay_paidTotal">إجمالي كلفة الدورات المدفوعة: %1$s</string>
     <string name="accounting_payrollShare">منها رواتب: %1$s</string>
+    <string name="site_offerTitle">عرض الإطلاق: 3 شهور مجاناً</string>
+    <string name="site_offerSub">لفترة محدودة. بدون بطاقة دفع، وما بينسحب شي لحاله.</string>
 </resources>
