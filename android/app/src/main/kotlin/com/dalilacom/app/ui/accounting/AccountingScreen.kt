@@ -226,12 +226,18 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         if (recent.isNotEmpty()) item { Text(stringResource(R.string.accounting_recent), style = MaterialTheme.typography.titleMedium) }
         items(recent, key = { "entry-" + it.id }) { e ->
             Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
+                Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    com.dalilacom.app.ui.common.PersonAvatar(if (e.type == "EXPENSE") "↓" else "↑", 40)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(e.description, style = MaterialTheme.typography.titleSmall)
-                        Text(e.category, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(e.category + " · " + e.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (e.source == "PAYROLL") com.dalilacom.app.ui.common.StatusChip(stringResource(R.string.accounting_payrollLabel), "warn")
                     }
-                    Text((if (e.type == "EXPENSE") "−" else "+") + money(e.amountCents) + " " + e.currency)
+                    Text(
+                        (if (e.type == "EXPENSE") "−" else "+") + money(e.amountCents) + " " + e.currency,
+                        color = if (e.type == "EXPENSE") androidx.compose.ui.graphics.Color(0xFFC62828) else androidx.compose.ui.graphics.Color(0xFF2E7D32),
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                    )
                     // entries the store writes by itself (orders, commissions, delivery) follow the order and cannot be removed here
                     if (e.source == "MANUAL" || e.source == "INVOICE") TextButton(onClick = { deleteEntryTarget = e }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
                 }
