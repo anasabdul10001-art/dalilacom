@@ -41,6 +41,7 @@ import { broadcastRouter } from "./routes/broadcast.routes";
 import { socialRouter } from "./routes/social.routes";
 import { referralRouter } from "./routes/referral.routes";
 import { legalRouter } from "./routes/legal.routes";
+import { getSettings } from "./services/settings.service";
 import { getVisibleSocialLinks } from "./services/socialLinks.service";
 import { landmarkRouter } from "./routes/landmark.routes";
 import { searchRouter } from "./routes/search.routes";
@@ -97,6 +98,9 @@ app.use(express.json({ verify: (req, _res, buf) => { (req as any).rawBody = buf;
 app.get("/health", (_req, res) => res.json({ ok: true }));
 // Our social media links that the owner switched on (the website, the Android app and the e-mails show them).
 app.get("/social-links", route(async (_req, res) => res.json({ links: await getVisibleSocialLinks() })));
+
+// How long each slide of a section's intro page stays (the super admin sets it; the website and the Android app read it).
+app.get("/site-slides", route(async (_req, res) => res.json({ seconds: (await getSettings()).ads.siteSlideSeconds })));
 
 // The developer test console (public/console.html) is for the owner only: the live service sets HIDE_DEV_CONSOLE=true so it exists
 // only on the testing address.

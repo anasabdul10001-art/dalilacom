@@ -17,6 +17,8 @@ export interface AdSettings {
   autoApprove: boolean;
   /** How long each big banner of the store's front page stays before the next one. */
   bannerSeconds: number;
+  /** How long each slide of a section's intro page (accounting, HR, auto-responder) stays before the next one. */
+  siteSlideSeconds: number;
 }
 
 /** A monthly AI package a shop can buy: a fixed price in wallet credits for a number of uses over some days. */
@@ -99,6 +101,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
     ],
     autoApprove: false,
     bannerSeconds: 5,
+    siteSlideSeconds: 11,
   },
   referral: { marketerPercent: 0, marketerSignupCredits: 0, managerPercent: 0, managerSignupCredits: 0 },
   ai: {

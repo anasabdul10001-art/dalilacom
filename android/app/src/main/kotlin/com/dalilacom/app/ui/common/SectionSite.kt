@@ -38,6 +38,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -252,11 +253,17 @@ private fun SiteHome(kind: SiteKind, signedIn: Boolean, onLogin: () -> Unit, onR
     }
 }
 
+/** How many seconds each slide of a section's intro page stays (the super admin sets it; read once at start). */
+object SiteSlides {
+    val seconds = kotlinx.coroutines.flow.MutableStateFlow(11)
+}
+
 /** Three slides with moving pictures; they change by themselves every few seconds, and the dots jump to one. */
 @Composable
 private fun SiteSlider(kind: SiteKind, primaryLabel: String, onPrimary: () -> Unit, secondaryLabel: String?, onSecondary: () -> Unit) {
     var page by remember { mutableStateOf(0) }
-    LaunchedEffect(page) { delay(11000); page = (page + 1) % 3 }
+    val seconds by SiteSlides.seconds.collectAsState()
+    LaunchedEffect(page, seconds) { delay(seconds * 1000L); page = (page + 1) % 3 }
     Box(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(30.dp))
             .background(Brush.linearGradient(listOf(Color(0xFFFFF6EE), Color(0xFFFDE3D1), Color(0xFFFBCDB2)))),

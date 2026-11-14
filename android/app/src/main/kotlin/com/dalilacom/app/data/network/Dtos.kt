@@ -877,6 +877,9 @@ data class AppUpdateDto(val version: String? = null, val notify: Boolean = false
 data class SocialLinksDto(val links: List<SocialLinkDto> = emptyList())
 
 @Serializable
+data class SiteSlidesDto(val seconds: Int = 11)
+
+@Serializable
 data class LandmarkKindDto(val slug: String, val name: String, val icon: String, val color: String, val geometry: String = "POINT")
 
 @Serializable

@@ -243,6 +243,7 @@ const settingsSchema = z.object({
       bannerPackages: z.array(z.object({ days: z.number().int().min(1).max(365), credits: z.number().int().nonnegative().max(100000000) })).max(12),
       autoApprove: z.boolean(),
       bannerSeconds: z.number().int().min(2).max(60),
+      siteSlideSeconds: z.number().int().min(3).max(60),
     })
     .partial()
     .optional(),

@@ -169,6 +169,14 @@ describe("booking and approving", () => {
 });
 
 describe("the big banners of the front page", () => {
+  it("lets the admin set how long each slide of a section intro page stays, and the public can read it", async () => {
+    const a = await admin();
+    expect((await request(app).put("/admin/settings").set(a.auth).send({ ads: { siteSlideSeconds: 2 } })).status).toBe(400);
+    await request(app).put("/admin/settings").set(a.auth).send({ ads: { siteSlideSeconds: 15 } }).expect(200);
+    expect((await request(app).get("/site-slides")).body.seconds).toBe(15);
+    await request(app).put("/admin/settings").set(a.auth).send({ ads: { siteSlideSeconds: 11 } }).expect(200);
+  });
+
   it("shows only the active, current, own-country ones, in the admin's order, with their picture", async () => {
     const a = await admin();
     await request(app).put("/admin/settings").set(a.auth).send({ ads: { bannerSeconds: 9 } });

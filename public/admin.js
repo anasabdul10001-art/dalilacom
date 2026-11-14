@@ -1232,6 +1232,7 @@ async function loadAds() {
     document.getElementById('ads-banner-packages').innerHTML = '';
     (ads.bannerPackages || []).sort((a, b) => a.days - b.days).forEach(p => addAdPackage(p.days, p.credits, 'ads-banner-packages'));
     document.getElementById('ads-banner-seconds').value = ads.bannerSeconds;
+    document.getElementById('ads-site-slide-seconds').value = ads.siteSlideSeconds || 11;
     document.getElementById('ads-auto').value = String(!!ads.autoApprove);
   }
   const sel = document.getElementById('bn-country');
@@ -1255,7 +1256,7 @@ async function saveAdSettings() {
   const packages = read('ads-packages');
   const bannerPackages = read('ads-banner-packages');
   if ([packages, bannerPackages].some(list => new Set(list.map(p => p.days)).size !== list.length)) { msg.textContent = 'في مدة مكررة'; return; }
-  const { ok, data } = await api('PUT', '/admin/settings', { ads: { packages, bannerPackages, bannerSeconds: Number(document.getElementById('ads-banner-seconds').value) || 5, autoApprove: document.getElementById('ads-auto').value === 'true' } });
+  const { ok, data } = await api('PUT', '/admin/settings', { ads: { packages, bannerPackages, bannerSeconds: Number(document.getElementById('ads-banner-seconds').value) || 5, siteSlideSeconds: Number(document.getElementById('ads-site-slide-seconds').value) || 11, autoApprove: document.getElementById('ads-auto').value === 'true' } });
   msg.textContent = ok ? 'تم الحفظ ✓' : errText(data, 'تعذّر الحفظ');
 }
 

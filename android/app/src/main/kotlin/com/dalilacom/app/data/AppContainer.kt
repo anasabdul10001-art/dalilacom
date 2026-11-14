@@ -68,5 +68,6 @@ class AppContainer(context: Context) {
     init {
         // our social media pages the owner switched on: read once at start; until they load the Facebook page shows
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { storeRepository.socialLinks()?.let { com.dalilacom.app.ui.common.SocialLinks.links.value = it } }
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { storeRepository.siteSlideSeconds()?.takeIf { it in 3..60 }?.let { com.dalilacom.app.ui.common.SiteSlides.seconds.value = it } }
     }
 }

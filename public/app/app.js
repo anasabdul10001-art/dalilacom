@@ -2640,7 +2640,19 @@ function siteSlideTo(btn, i) {
   const el = btn.closest(".site-slider");
   siteSlideStep(el, i - Number(el.dataset.i || 0));
 }
-setInterval(() => document.querySelectorAll(".site-slider").forEach((el) => { if (!document.hidden) siteSlideStep(el, 1); }), 11000);
+let SITE_SLIDE_MS = 11000;
+(function siteSlideLoop() {
+  document.querySelectorAll(".site-slider").forEach((el) => { if (!document.hidden) siteSlideStep(el, 1); });
+  setTimeout(siteSlideLoop, SITE_SLIDE_MS);
+})();
+async function loadSiteSlides() {
+  try {
+    const res = await fetch(API_BASE + "/site-slides");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.seconds >= 3 && data.seconds <= 60) SITE_SLIDE_MS = data.seconds * 1000;
+  } catch (e) { /* the slides keep the default time */ }
+}
 
 // Human resources lives inside DALILACOM (hr.js): the home page is always there, the tools are the tabs the account's own records allow.
 function screenHr() {
@@ -9365,6 +9377,7 @@ function bootResponderPlansLink() {
 loadMarket();
 captureJoin();
 loadSocialLinks();
+loadSiteSlides();
 loadAppDownloadLink();
 
 bootSocialReturn().then((social) => {

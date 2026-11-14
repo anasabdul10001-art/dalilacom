@@ -447,6 +447,10 @@ interface ApiService {
     @GET("social-links")
     suspend fun socialLinks(): Response<SocialLinksDto>
 
+    /** How long each slide of a section's intro page stays (admin panel). */
+    @GET("site-slides")
+    suspend fun siteSlides(): Response<SiteSlidesDto>
+
     /** Is a newer version out, and has the owner switched the "new version" message on. */
     @GET("app-update")
     suspend fun appUpdate(): Response<AppUpdateDto>
