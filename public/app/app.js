@@ -2640,7 +2640,7 @@ function siteSlideTo(btn, i) {
   const el = btn.closest(".site-slider");
   siteSlideStep(el, i - Number(el.dataset.i || 0));
 }
-setInterval(() => document.querySelectorAll(".site-slider").forEach((el) => { if (!document.hidden) siteSlideStep(el, 1); }), 6000);
+setInterval(() => document.querySelectorAll(".site-slider").forEach((el) => { if (!document.hidden) siteSlideStep(el, 1); }), 11000);
 
 // Human resources lives inside DALILACOM (hr.js): the home page is always there, the tools are the tabs the account's own records allow.
 function screenHr() {

@@ -256,7 +256,7 @@ private fun SiteHome(kind: SiteKind, signedIn: Boolean, onLogin: () -> Unit, onR
 @Composable
 private fun SiteSlider(kind: SiteKind, primaryLabel: String, onPrimary: () -> Unit, secondaryLabel: String?, onSecondary: () -> Unit) {
     var page by remember { mutableStateOf(0) }
-    LaunchedEffect(page) { delay(6000); page = (page + 1) % 3 }
+    LaunchedEffect(page) { delay(11000); page = (page + 1) % 3 }
     Box(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(30.dp))
             .background(Brush.linearGradient(listOf(Color(0xFFFFF6EE), Color(0xFFFDE3D1), Color(0xFFFBCDB2)))),
