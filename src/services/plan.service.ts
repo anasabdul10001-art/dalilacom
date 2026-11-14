@@ -31,6 +31,10 @@ export interface CatalogPlan {
   /** The plan's own price, shown when a country override is active so the UI can explain the difference. */
   basePriceCredits: number | null;
   priceFrom: "country" | "default";
+  /** A launch offer on this plan right now: the percent off and when it ends. priceCredits already has it applied; originalPriceCredits is the regular price to show crossed out. */
+  discountPercent: number;
+  discountEndsAt: string | null;
+  originalPriceCredits: number | null;
   cashAmountCents: number;
   currency: string;
   monthlyBroadcastLimit: number | null;
@@ -56,6 +60,23 @@ export interface Catalog {
 
 /** Every service the pricing page can list, in display order. */
 const SERVICE_ORDER: ServiceKind[] = ["MEMBERSHIP", "MERCHANT_ACCOUNT", "RESPONDER_BASIC", "ACCOUNTING", "HR"];
+
+type DiscountFields = { discountPercent?: number | null; discountEndsAt?: Date | null };
+
+/** The percent off a plan has right now: 0 when there is no offer or it has ended. */
+export function activeDiscountPercent(plan: DiscountFields, now: Date = new Date()): number {
+  const percent = plan.discountPercent ?? 0;
+  if (percent <= 0 || percent > 100) return 0;
+  if (plan.discountEndsAt && plan.discountEndsAt <= now) return 0;
+  return percent;
+}
+
+/** `credits` with the plan's offer taken off (rounded to a whole credit); null stays null. */
+export function applyDiscount(credits: number | null, plan: DiscountFields, now: Date = new Date()): number | null {
+  if (credits == null || credits === 0) return credits;
+  const percent = activeDiscountPercent(plan, now);
+  return percent === 0 ? credits : Math.max(0, Math.round((credits * (100 - percent)) / 100));
+}
 
 /** A plan row plus its country overrides, exactly as the catalogue query returns it. */
 type PlanWithPrices = Prisma.ServicePlanGetPayload<{ include: { prices: true } }>;
@@ -114,9 +135,12 @@ export async function getCatalog(countryCode: string | null, lang: string = DEFA
       description: plan.description ? say(plan.description) : plan.description,
       durationDays: plan.durationDays,
       trialDays: plan.trialDays,
-      priceCredits: price.priceCredits,
+      priceCredits: applyDiscount(price.priceCredits, plan),
       basePriceCredits: plan.priceCredits,
       priceFrom: price.priceFrom,
+      discountPercent: activeDiscountPercent(plan),
+      discountEndsAt: activeDiscountPercent(plan) > 0 && plan.discountEndsAt ? plan.discountEndsAt.toISOString() : null,
+      originalPriceCredits: price.priceCredits,
       cashAmountCents: price.cashAmountCents,
       currency: price.currency,
       monthlyBroadcastLimit: plan.monthlyBroadcastLimit,
@@ -242,17 +266,17 @@ export function deleteTaxRate(id: string) {
  * rather than invent an exchange rate. A plan priced 0 is free.
  */
 export async function creditsChargeFor(
-  plan: { id: string; priceCents: number; priceCredits: number | null },
+  plan: { id: string; priceCents: number; priceCredits: number | null; discountPercent?: number | null; discountEndsAt?: Date | null },
   countryCode: string | null,
 ): Promise<number | null> {
   if (countryCode) {
     const country = await prisma.country.findUnique({ where: { isoCode2: countryCode.toUpperCase() }, select: { id: true } });
     if (country) {
       const override = await prisma.planPrice.findFirst({ where: { planId: plan.id, countryId: country.id, isActive: true } });
-      if (override) return override.priceCredits;
+      if (override) return applyDiscount(override.priceCredits, plan);
     }
   }
-  return plan.priceCents > 0 ? plan.priceCredits : 0;
+  return plan.priceCents > 0 ? applyDiscount(plan.priceCredits, plan) : 0;
 }
 
 /** The rate that applies to a customer in `countryCode`, falling back to the platform default. */

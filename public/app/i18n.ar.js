@@ -794,7 +794,7 @@ DICT.ar = {
   "pricing.link": "💳 الباقات والأسعار",
   "service.MEMBERSHIP": "عضوية الزبون (بطاقة الحسم)", "service.MERCHANT_ACCOUNT": "باقات النشاط",
   "service.RESPONDER_CUSTOMER": "المجيب الآلي — للزبائن", "service.RESPONDER_MERCHANT": "المجيب الآلي — لأصحاب الأنشطة",
-  "pricing.free": "مجاني", "pricing.notPriced": "السعر غير محدد بعد", "pricing.credits": "{n} {credit}",
+  "pricing.free": "مجاني", "pricing.notPriced": "السعر غير محدد بعد", "pricing.credits": "{n} {credit}", "pricing.discountOff": "حسم {n}%", "pricing.offerUntil": "العرض لحد {date}",
   "pricing.days": "{n} يوم", "pricing.month": "شهر", "pricing.year": "سنة", "pricing.everyMonth": "كل شهر", "pricing.everyYear": "كل سنة", "pricing.everyDays": "كل {n} يوم", "pricing.trial": "تجربة مجانية {n} يوم", "pricing.yourCountry": "سعر بلدك",
   "pricing.broadcasts": "{n} رسالة جماعية بالشهر", "pricing.posts": "{n} منشور مجدول بالشهر", "pricing.subscribe": "اشترك", "pricing.empty": "ما في باقات متاحة حاليًا",
   "pricing.subscribed": "تم الاشتراك ✅", "pricing.failed": "تعذّر الاشتراك",

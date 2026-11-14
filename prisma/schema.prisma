@@ -353,6 +353,10 @@ model ServicePlan {
   includesAi            Boolean     @default(false)
   aiReplyLimit          Int         @default(0)
   removesBadge          Boolean     @default(false)
+  // A launch offer: a percentage off the price in credits until discountEndsAt (null = until the admin switches it off).
+  // When it ends everyone is charged the regular price again at the next renewal, including those who joined during it.
+  discountPercent       Int         @default(0)
+  discountEndsAt        DateTime?
   sortOrder             Int         @default(0) // display order on the pricing page (lower first)
   isActive              Boolean     @default(true)
   createdAt             DateTime    @default(now())

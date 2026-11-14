@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from "vitest";
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
-import { taxRateFor } from "../src/services/plan.service";
+import { creditsChargeFor, taxRateFor } from "../src/services/plan.service";
 import { uniqueEmail } from "./helpers";
 
 afterAll(async () => {
@@ -347,3 +347,27 @@ describe("admin: extending free trials", () => {
     expect(denied.status).toBe(403);
   });
 });
+
+describe("A launch offer on a plan (percent off until an end date)", () => {
+  it("lowers the price in credits while it runs and goes back to the regular price after it ends", async () => {
+    const adm = await admin();
+    const p = await plan({ name: "Offer", priceCredits: 200 });
+    const set = await request(app).patch(`/plans/${p.id}`).set("Authorization", adm.bearer).send({ discountPercent: 50, discountEndsAt: new Date(Date.now() + 86_400_000).toISOString() });
+    expect(set.status).toBe(200);
+    const during = await catalogEntry("", p.id);
+    expect(during.priceCredits).toBe(100);
+    expect(during.originalPriceCredits).toBe(200);
+    expect(during.discountPercent).toBe(50);
+    expect(await creditsChargeFor(await prisma.servicePlan.findUniqueOrThrow({ where: { id: p.id } }), null)).toBe(100);
+
+    await prisma.servicePlan.update({ where: { id: p.id }, data: { discountEndsAt: new Date(Date.now() - 1000) } });
+    const after = await catalogEntry("", p.id);
+    expect(after.priceCredits).toBe(200);
+    expect(after.discountPercent).toBe(0);
+    expect(await creditsChargeFor(await prisma.servicePlan.findUniqueOrThrow({ where: { id: p.id } }), null)).toBe(200);
+
+    const bad = await request(app).patch(`/plans/${p.id}`).set("Authorization", adm.bearer).send({ discountPercent: 101 });
+    expect(bad.status).toBe(400);
+  });
+});
+

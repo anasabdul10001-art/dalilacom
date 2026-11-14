@@ -59,7 +59,18 @@ fun PlanCard(plan: CatalogPlanDto, creditName: String, actionLabel: String?, bus
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(plan.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Text(planPriceText(plan, creditName), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
+                    if (plan.discountPercent > 0 && (plan.originalPriceCredits ?: 0) > 0) {
+                        Text(stringResource(R.string.pricing_credits, plan.originalPriceCredits!!, creditName), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textDecoration = TextDecoration.LineThrough)
+                    }
+                    Text(planPriceText(plan, creditName), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+            }
+            if (plan.discountPercent > 0) {
+                Text(
+                    stringResource(R.string.pricing_discount_off, plan.discountPercent) + (plan.discountEndsAt?.let { " • " + stringResource(R.string.pricing_offer_until, it.take(10)) } ?: ""),
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp),
+                )
             }
             plan.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Text(facts.joinToString(" • "), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))

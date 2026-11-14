@@ -1187,7 +1187,7 @@ DICT.de = {
   "service.RESPONDER_MERCHANT": "Auto-responder — businesses",
   "pricing.free": "Free",
   "pricing.notPriced": "Price not set yet",
-  "pricing.credits": "{n} {credit}",
+  "pricing.credits": "{n} {credit}", "pricing.discountOff": "{n}% off", "pricing.offerUntil": "Offer until {date}",
   "pricing.days": "{n} days", "pricing.month": "month", "pricing.year": "year", "pricing.everyMonth": "every month", "pricing.everyYear": "every year", "pricing.everyDays": "every {n} days",
   "pricing.trial": "{n}-day free trial",
   "pricing.yourCountry": "Your country's price",

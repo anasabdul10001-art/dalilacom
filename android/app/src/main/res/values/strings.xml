@@ -238,6 +238,8 @@
     <string name="pricing_not_priced">السعر غير محدد بعد</string>
     <string name="pricing_credits">%1$d %2$s</string>
     <string name="pricing_days">%1$d يوم</string>
+    <string name="pricing_discount_off">حسم %1$d%%</string>
+    <string name="pricing_offer_until">العرض لحد %1$s</string>
     <string name="pricing_trial">تجربة مجانية %1$d يوم</string>
     <string name="pricing_your_country">سعر بلدك</string>
     <string name="pricing_broadcasts">%1$d رسالة جماعية بالشهر</string>

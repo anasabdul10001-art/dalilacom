@@ -211,7 +211,7 @@ private fun OverviewTab(
                 plan = CatalogPlanDto(
                     id = plan.id, service = plan.service, name = plan.name, description = plan.description,
                     durationDays = plan.durationDays, trialDays = if (plan.trialAvailable) plan.trialDays else 0, priceCredits = plan.priceCredits,
-                    priceFrom = plan.priceFrom, features = plan.features, source = "catalog",
+                    priceFrom = plan.priceFrom, discountPercent = plan.discountPercent, discountEndsAt = plan.discountEndsAt, originalPriceCredits = plan.originalPriceCredits, features = plan.features, source = "catalog",
                 ),
                 creditName = status.creditName,
                 actionLabel = action,

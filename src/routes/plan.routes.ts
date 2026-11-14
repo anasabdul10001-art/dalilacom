@@ -60,6 +60,8 @@ const planBody = {
   paypalPlanId: z.string().trim().max(100).nullable().optional(),
   monthlyBroadcastLimit: z.number().int().nonnegative().nullable().optional(),
   monthlyPostLimit: z.number().int().nonnegative().nullable().optional(),
+  discountPercent: z.number().int().min(0).max(100).default(0),
+  discountEndsAt: z.string().datetime().nullable().optional().transform((v) => (v ? new Date(v) : null)),
   sortOrder: z.number().int().default(0),
   isActive: z.boolean().default(true),
 };
@@ -85,6 +87,8 @@ const updatePlanBody = z.object({
   paypalPlanId: z.string().trim().max(100).nullable().optional(),
   monthlyBroadcastLimit: z.number().int().nonnegative().nullable().optional(),
   monthlyPostLimit: z.number().int().nonnegative().nullable().optional(),
+  discountPercent: z.number().int().min(0).max(100).optional(),
+  discountEndsAt: z.string().datetime().nullable().optional().transform((v) => (v === undefined ? undefined : v ? new Date(v) : null)),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
 });

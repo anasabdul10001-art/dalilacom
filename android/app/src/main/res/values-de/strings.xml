@@ -194,6 +194,8 @@
     <string name="pricing_not_priced">Price not set yet</string>
     <string name="pricing_credits">%1$d %2$s</string>
     <string name="pricing_days">%1$d days</string>
+    <string name="pricing_discount_off">%1$d%% off</string>
+    <string name="pricing_offer_until">Offer until %1$s</string>
     <string name="pricing_trial">%1$d-day free trial</string>
     <string name="pricing_your_country">Your country\'s price</string>
     <string name="pricing_broadcasts">%1$d follower broadcasts per month</string>

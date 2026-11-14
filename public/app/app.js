@@ -7517,7 +7517,8 @@ function planPriceText(plan, credit) {
 
 function planCardHtml(plan, credit, action) {
   return `<div class="card plan-card">
-    <div class="title-line"><strong>${esc(plan.name)}</strong><span class="price">${esc(planPriceText(plan, credit))}</span></div>
+    <div class="title-line"><strong>${esc(plan.name)}</strong><span class="price">${plan.discountPercent > 0 && plan.originalPriceCredits ? `<s class="muted" style="font-weight:400;margin-inline-end:6px">${esc(t("pricing.credits", { n: plan.originalPriceCredits, credit }))}</s>` : ""}${esc(planPriceText(plan, credit))}</span></div>
+    ${plan.discountPercent > 0 ? `<div style="margin:4px 0"><span class="badge success">${esc(t("pricing.discountOff", { n: plan.discountPercent }))}</span>${plan.discountEndsAt ? ` <span class="muted">${esc(t("pricing.offerUntil", { date: String(plan.discountEndsAt).slice(0, 10) }))}</span>` : ""}</div>` : ""}
     ${plan.description ? `<p class="muted" style="margin:2px 0 6px">${esc(plan.description)}</p>` : ""}
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">
       <span class="badge neutral">${esc(planPeriodLabel(plan.durationDays))}</span>

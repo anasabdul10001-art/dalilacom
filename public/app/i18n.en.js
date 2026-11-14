@@ -795,7 +795,7 @@ DICT.en = {
   "pricing.link": "💳 Plans & pricing",
   "service.MEMBERSHIP": "Customer membership (discount card)", "service.MERCHANT_ACCOUNT": "Business plans",
   "service.RESPONDER_CUSTOMER": "Auto-responder — customers", "service.RESPONDER_MERCHANT": "Auto-responder — businesses",
-  "pricing.free": "Free", "pricing.notPriced": "Price not set yet", "pricing.credits": "{n} {credit}",
+  "pricing.free": "Free", "pricing.notPriced": "Price not set yet", "pricing.credits": "{n} {credit}", "pricing.discountOff": "{n}% off", "pricing.offerUntil": "Offer until {date}",
   "pricing.days": "{n} days", "pricing.month": "month", "pricing.year": "year", "pricing.everyMonth": "every month", "pricing.everyYear": "every year", "pricing.everyDays": "every {n} days", "pricing.trial": "{n}-day free trial", "pricing.yourCountry": "Your country's price",
   "pricing.broadcasts": "{n} follower broadcasts per month", "pricing.posts": "{n} scheduled posts per month", "pricing.subscribe": "Subscribe", "pricing.empty": "No plans available right now",
   "pricing.subscribed": "Subscribed ✅", "pricing.failed": "Couldn't subscribe",

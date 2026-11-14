@@ -1828,6 +1828,11 @@ function planCardHtml(p) {
       <div><label>السعر بالكوينز (المخصوم من المحفظة)</label><input id="pl-credits-${p.id}" value="${p.priceCredits ?? ''}" placeholder="غير مضبوط" /></div>
       <div><label>معرّف خطة PayPal</label><input id="pl-paypal-${p.id}" value="${escHtml(p.paypalPlanId || '')}" placeholder="P-… (اختياري)" /></div>
     </div>
+    <div class="row">
+      <div><label>عرض حسم على السعر بالكوينز (% — 0 = بدون عرض)</label><input type="number" min="0" max="100" id="pl-disc-${p.id}" value="${p.discountPercent || 0}" placeholder="مثال: 50" /></div>
+      <div><label>ينتهي العرض (فاضي = لحد ما توقّفو)</label><input type="datetime-local" id="pl-discend-${p.id}" value="${offerDateInput(p.discountEndsAt)}" /></div>
+    </div>
+    <p class="muted" style="margin:0 0 10px">لما ينتهي العرض بيرجع كل الناس للسعر العادي عند التجديد، حتى اللي اشتركوا خلال العرض.</p>
     <label>المواصفات — بند بكل سطر، وابدأ السطر بـ ✘ إذا البند غير مشمول</label>
     <textarea id="pl-features-${p.id}" rows="4" placeholder="✔ 500 رد ذكي بالشهر&#10;✘ رسائل جماعية">${escHtml(features)}</textarea>
     <label>أسعار خاصة بالبلدان (الباقة بتنباع بسعرها الأساسي لأي بلد ما إلو سطر هون)</label>
@@ -1947,6 +1952,12 @@ async function savePlanFull(id) {
     name: get('name').value.trim(), description: get('desc').value.trim() || null,
     durationDays, trialDays, sortOrder, priceCents, currency: get('currency').value.trim().toUpperCase(), priceCredits, paypalPlanId: get('paypal').value.trim() || null,
   };
+  const discountPercent = parseNonNegInt(get('disc').value.trim() || '0', 'نسبة الحسم');
+  if (discountPercent === null) return;
+  if (discountPercent > 100) { alert('نسبة الحسم ما بتزيد عن 100'); return; }
+  const discEnd = get('discend').value;
+  body.discountPercent = discountPercent;
+  body.discountEndsAt = discEnd ? new Date(discEnd).toISOString() : null;
   if (plan.service === 'MERCHANT_ACCOUNT') {
     const raw = get('broadcast').value.trim();
     body.monthlyBroadcastLimit = raw === '' ? null : parseNonNegInt(raw, 'حد الرسائل الجماعية');
