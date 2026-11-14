@@ -1,0 +1,116 @@
+import { describe, it, expect, afterAll } from "vitest";
+import crypto from "crypto";
+import request from "supertest";
+import { app } from "../src/server";
+import { prisma } from "../src/prisma";
+import { uniqueEmail } from "./helpers";
+
+afterAll(async () => { await prisma.$disconnect(); });
+
+const password = "correct-horse-battery-staple";
+async function account(prefix: string) {
+  const email = uniqueEmail(prefix);
+  expect((await request(app).post("/auth/register").send({ email, password, fullName: `Acc ${prefix}` })).status).toBe(201);
+  const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+  const login = await request(app).post("/auth/login").send({ email, password });
+  return { id: user.id, auth: { Authorization: `Bearer ${login.body.token}` } };
+}
+let planId: string | undefined;
+async function owner(prefix: string) {
+  const a = await account(prefix);
+  if (!planId) planId = (await prisma.servicePlan.create({ data: { service: "ACCOUNTING", name: `Staff plan ${crypto.randomUUID().slice(0, 5)}`, durationDays: 30, priceCents: 0, currency: "EUR", priceCredits: 0 } })).id;
+  await prisma.platformSubscription.create({ data: { userId: a.id, planId, provider: "TEST", status: "ACTIVE", amountCents: 0, currency: "EUR", currentPeriodEnd: new Date(Date.now() + 30 * 86400000) } });
+  return a;
+}
+/** An owner with one product, and a staff member (given role and rate) who accepted the invitation. */
+async function setup(role: string, salesRateBp: number) {
+  const boss = await owner("stboss");
+  const worker = await account("stworker");
+  const staffId = (await request(app).post("/business-staff").set(boss.auth).send({ name: "Sami", role, salesRateBp })).body.id;
+  const inv = await request(app).post(`/business-staff/${staffId}/invite`).set(boss.auth);
+  const code = inv.body.code;
+  const acc = await request(app).post("/business-staff/accept").set(worker.auth).send({ code });
+  expect(acc.status).toBe(200);
+  const product = (await request(app).post("/accounting/products").set(boss.auth).send({ name: "Tea", costCents: 100, salePriceCents: 1000, quantity: 20, currency: "EUR" })).body;
+  const as = { ...worker.auth, "X-Business-Owner": boss.id };
+  return { boss, worker, staffId, product, as };
+}
+
+describe("business staff", () => {
+  it("shows no workplace to an account that was never invited", async () => {
+    const plain = await account("stplain");
+    expect((await request(app).get("/business-staff/workplaces").set(plain.auth)).body).toEqual([]);
+  });
+
+  it("an invitation code works once, and the workplace appears after it", async () => {
+    const s = await setup("CASHIER", 0);
+    const places = (await request(app).get("/business-staff/workplaces").set(s.worker.auth)).body;
+    expect(places).toHaveLength(1);
+    expect(places[0].ownerId).toBe(s.boss.id);
+    const code = (await request(app).post(`/business-staff/${s.staffId}/invite`).set(s.boss.auth));
+    expect(code.status).toBe(409); // already linked
+    const other = await account("stother");
+    expect((await request(app).post("/business-staff/accept").set(other.auth).send({ code: "bsi_notarealcode123456" })).status).toBe(400);
+  });
+
+  it("a stranger cannot work inside someone's accounting", async () => {
+    const s = await setup("CASHIER", 0);
+    const stranger = await account("ststranger");
+    const res = await request(app).get("/accounting/products").set({ ...stranger.auth, "X-Business-Owner": s.boss.id });
+    expect(res.status).toBe(403);
+  });
+
+  it("a cashier sells, is recorded by name, earns a commission, and cannot see the money", async () => {
+    const s = await setup("CASHIER", 500); // 5%
+    const sale = await request(app).post("/accounting/sales").set(s.as).send({ items: [{ productId: s.product.id, quantity: 2 }], payMethod: "CASH" });
+    expect(sale.status).toBe(201);
+    const row = await prisma.accountingSale.findFirstOrThrow({ where: { userId: s.boss.id } });
+    expect(row.recordedById).toBe(s.worker.id);
+    const c = await prisma.businessStaffCommission.findFirstOrThrow({ where: { staffId: s.staffId } });
+    expect(Number(c.amountCents)).toBe(100); // 5% of 2000
+    expect((await request(app).get("/accounting/summary").set(s.as)).status).toBe(403);
+    expect((await request(app).post("/accounting/entries").set(s.as).send({ type: "EXPENSE", category: "x", description: "xx", amountCents: 100 })).status).toBe(403);
+    expect((await request(app).delete(`/accounting/products/${s.product.id}`).set(s.as)).status).toBe(403);
+    // the cashier sees only their own invoices
+    expect((await request(app).get("/accounting/sales").set(s.as)).body).toHaveLength(1);
+    // and the staff member reads their own commissions
+    const mine = (await request(app).get(`/business-staff/me/${s.staffId}/commissions`).set(s.worker.auth)).body;
+    expect(mine).toHaveLength(1);
+  });
+
+  it("a return takes back its share of the unpaid commission", async () => {
+    const s = await setup("MANAGER", 1000); // 10%
+    const sale = (await request(app).post("/accounting/sales").set(s.as).send({ items: [{ productId: s.product.id, quantity: 4 }], payMethod: "CASH" })).body;
+    expect(Number((await prisma.businessStaffCommission.findFirstOrThrow({ where: { staffId: s.staffId } })).amountCents)).toBe(400);
+    const full = (await request(app).get(`/accounting/sales/${sale.id}`).set(s.as)).body;
+    const ret = await request(app).post(`/accounting/sales/${sale.id}/returns`).set(s.as).send({ items: [{ lineId: full.lines[0].id, quantity: 1 }] });
+    expect(ret.status).toBe(201);
+    expect(Number((await prisma.businessStaffCommission.findFirstOrThrow({ where: { staffId: s.staffId } })).amountCents)).toBe(300);
+  });
+
+  it("paying the commissions books one expense and cannot be done twice", async () => {
+    const s = await setup("ASSISTANT", 1000);
+    await request(app).post("/accounting/sales").set(s.as).send({ items: [{ productId: s.product.id, quantity: 1 }], payMethod: "CASH" });
+    const pay = await request(app).post(`/business-staff/${s.staffId}/commissions/pay`).set(s.boss.auth).send({ currency: "EUR" });
+    expect(pay.status).toBe(200);
+    expect(pay.body.paidCents).toBe(100);
+    expect(await prisma.accountingEntry.count({ where: { userId: s.boss.id, category: "عمولات الموظفين" } })).toBe(1);
+    expect((await request(app).post(`/business-staff/${s.staffId}/commissions/pay`).set(s.boss.auth).send({ currency: "EUR" })).status).toBe(409);
+  });
+
+  it("removing the staff member stops the access at once; a stock keeper cannot sell", async () => {
+    const s = await setup("STOCK", 0);
+    expect((await request(app).get("/accounting/products").set(s.as)).status).toBe(200);
+    expect((await request(app).post("/accounting/sales").set(s.as).send({ items: [{ productId: s.product.id, quantity: 1 }], payMethod: "CASH" })).status).toBe(403);
+    await request(app).delete(`/business-staff/${s.staffId}`).set(s.boss.auth);
+    expect((await request(app).get("/accounting/products").set(s.as)).status).toBe(403);
+    expect((await request(app).get("/business-staff/workplaces").set(s.worker.auth)).body).toEqual([]);
+  });
+
+  it("refuses a sales commission for a role that does not sell, and needs the owner's plan", async () => {
+    const boss = await owner("stboss2");
+    expect((await request(app).post("/business-staff").set(boss.auth).send({ name: "Omar", role: "STOCK", salesRateBp: 300 })).status).toBe(400);
+    const noPlan = await account("stnoplan");
+    expect((await request(app).get("/business-staff").set(noPlan.auth)).status).toBe(402);
+  });
+});

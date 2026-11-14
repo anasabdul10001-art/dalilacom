@@ -11,6 +11,7 @@ import { sniffImageMime } from "../lib/image";
 import { extractInvoiceFromPhoto, visionAvailable } from "../services/ai.service";
 import { marketOfUser } from "../services/viewerCountry.service";
 import { notify } from "../services/notification.service";
+import { actAsBusinessStaff, actorOf, accrueSaleCommission, reduceSaleCommission } from "../services/businessStaff.service";
 /** The largest single accounting entry, in minor units. Far below 2^53, so sums of many entries stay exact as JSON numbers. */
 const MAX_ENTRY_CENTS = 9_000_000_000_000;
 
@@ -61,7 +62,7 @@ function alertLowStock(userId: string, crossed: { name: string; before: number; 
 const plain = <T extends { amountCents: bigint }>(row: T) => ({ ...row, amountCents: Number(row.amountCents) });
 
 export const accountingRouter = Router();
-accountingRouter.use(requireAuth, route(async (req, res, next) => {
+accountingRouter.use(requireAuth, route(actAsBusinessStaff), route(async (req, res, next) => {
   const active = await prisma.platformSubscription.findFirst({ where: { userId: req.user!.id, status: "ACTIVE", OR: [{ currentPeriodEnd: null }, { currentPeriodEnd: { gt: new Date() } }], plan: { service: "ACCOUNTING" } }, select: { id: true } });
   if (!active) return sendError(res, 402, "ACCOUNTING_PLAN_REQUIRED", "المحاسبة تحتاج باقة فعّالة أو فترة تجربة. افتح صفحة الباقات من حسابك.");
   // entries that repeat by themselves are written when their day has come, before anything is read
@@ -175,7 +176,7 @@ accountingRouter.get("/entries", route(async (req, res) => {
 accountingRouter.post("/entries", route(async (req, res) => {
   const parsed = entrySchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const row = await prisma.accountingEntry.create({ data: { ...parsed.data, payMethod: parsed.data.payMethod ?? "CASH", userId: req.user!.id, recordedById: req.user!.id, source: "MANUAL", occurredAt: parsed.data.occurredAt ? new Date(parsed.data.occurredAt) : new Date() } });
+  const row = await prisma.accountingEntry.create({ data: { ...parsed.data, payMethod: parsed.data.payMethod ?? "CASH", userId: req.user!.id, recordedById: actorOf(req), source: "MANUAL", occurredAt: parsed.data.occurredAt ? new Date(parsed.data.occurredAt) : new Date() } });
   res.status(201).json(plain(row));
 }));
 
@@ -300,7 +301,7 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
   const parsed = z.object({ quantity: z.number().int().positive().max(1_000_000), unitPriceCents: z.number().int().positive().optional(), note: z.string().trim().max(240).optional(), payMethod: z.enum(["CASH", "BANK", "WALLET"]).default("CASH") }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   if ((await taxContext(req.user!.id)).enabled) {
-    const out = await createSaleInvoice(req.user!.id, { items: [{ productId: req.params.id, quantity: parsed.data.quantity, unitPriceCents: parsed.data.unitPriceCents }], payMethod: parsed.data.payMethod, note: parsed.data.note });
+    const out = await createSaleInvoice(req.user!.id, { items: [{ productId: req.params.id, quantity: parsed.data.quantity, unitPriceCents: parsed.data.unitPriceCents }], payMethod: parsed.data.payMethod, note: parsed.data.note }, actorOf(req));
     if (!out.ok) return sendError(res, out.status, out.code, out.message, out.details);
     const store = req.params.id.startsWith("store:");
     const now = store ? await prisma.product.findUnique({ where: { id: req.params.id.slice(6) } }) : await prisma.accountingProduct.findUnique({ where: { id: req.params.id } });
@@ -321,9 +322,10 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
       // the stock is taken only while enough is left at this very moment, so two sales cannot both take the last pieces
       if (!(await tx.product.updateMany({ where: { id, stock: { gte: parsed.data.quantity } }, data: { stock: { decrement: parsed.data.quantity }, soldCount: { increment: parsed.data.quantity } } })).count) return null;
       await tx.accountingStockMovement.create({ data: { userId: req.user!.id, storeProductId: id, action: "STOCK_OUT", quantity: parsed.data.quantity, note: parsed.data.note || "بيع مباشر" } });
-      await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency, source: "MANUAL", sourceKey: ref, payMethod: parsed.data.payMethod, recordedById: req.user!.id } });
-      await tx.accountingSale.create({ data: { userId: req.user!.id, number: await nextSaleNumber(tx, req.user!.id), currency, subtotalCents: total, totalCents: total, payMethod: parsed.data.payMethod, recordedById: req.user!.id, lines: { create: [{ productId: `store:${product.id}`, name: product.name, quantity: parsed.data.quantity, unitPriceCents: unitPrice, unitCostCents: product.costPriceCents, lineTotalCents: total }] } } });
-      if (product.costPriceCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costPriceCents * parsed.data.quantity, currency, source: "MANUAL", sourceKey: `${ref}:cost`, recordedById: req.user!.id } });
+      await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency, source: "MANUAL", sourceKey: ref, payMethod: parsed.data.payMethod, recordedById: actorOf(req) } });
+      const soldRow = await tx.accountingSale.create({ data: { userId: req.user!.id, number: await nextSaleNumber(tx, req.user!.id), currency, subtotalCents: total, totalCents: total, payMethod: parsed.data.payMethod, recordedById: actorOf(req), lines: { create: [{ productId: `store:${product.id}`, name: product.name, quantity: parsed.data.quantity, unitPriceCents: unitPrice, unitCostCents: product.costPriceCents, lineTotalCents: total }] } } });
+      if (product.costPriceCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costPriceCents * parsed.data.quantity, currency, source: "MANUAL", sourceKey: `${ref}:cost`, recordedById: actorOf(req) } });
+      await accrueSaleCommission(tx, { ownerId: req.user!.id, actorUserId: actorOf(req), saleId: soldRow.id, netCents: total, currency });
       return tx.product.findUniqueOrThrow({ where: { id } });
     });
     if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
@@ -343,9 +345,10 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
     if (!(await tx.accountingProduct.updateMany({ where: { id: product.id, quantity: { gte: parsed.data.quantity } }, data: { quantity: { decrement: parsed.data.quantity } } })).count) return null;
     const updated = await tx.accountingProduct.findUniqueOrThrow({ where: { id: product.id } });
     await tx.accountingStockMovement.create({ data: { userId: req.user!.id, productId: product.id, action: "STOCK_OUT", quantity: parsed.data.quantity, unitCostCents: product.costCents, note: parsed.data.note || "بيع" } });
-    await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency: product.currency, source: "MANUAL", sourceKey: ref, payMethod: parsed.data.payMethod, recordedById: req.user!.id } });
-    await tx.accountingSale.create({ data: { userId: req.user!.id, number: await nextSaleNumber(tx, req.user!.id), currency: product.currency, subtotalCents: total, totalCents: total, payMethod: parsed.data.payMethod, recordedById: req.user!.id, lines: { create: [{ productId: product.id, name: product.name, quantity: parsed.data.quantity, unitPriceCents: unitPrice, unitCostCents: product.costCents, lineTotalCents: total }] } } });
-    if (product.costCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costCents * parsed.data.quantity, currency: product.currency, source: "MANUAL", sourceKey: `${ref}:cost`, recordedById: req.user!.id } });
+    await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "INCOME", category: "مبيعات", description: `${product.name} × ${parsed.data.quantity}`, amountCents: total, currency: product.currency, source: "MANUAL", sourceKey: ref, payMethod: parsed.data.payMethod, recordedById: actorOf(req) } });
+    const soldRow = await tx.accountingSale.create({ data: { userId: req.user!.id, number: await nextSaleNumber(tx, req.user!.id), currency: product.currency, subtotalCents: total, totalCents: total, payMethod: parsed.data.payMethod, recordedById: actorOf(req), lines: { create: [{ productId: product.id, name: product.name, quantity: parsed.data.quantity, unitPriceCents: unitPrice, unitCostCents: product.costCents, lineTotalCents: total }] } } });
+    if (product.costCents > 0) await tx.accountingEntry.create({ data: { userId: req.user!.id, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: `${product.name} × ${parsed.data.quantity}`, amountCents: product.costCents * parsed.data.quantity, currency: product.currency, source: "MANUAL", sourceKey: `${ref}:cost`, recordedById: actorOf(req) } });
+    await accrueSaleCommission(tx, { ownerId: req.user!.id, actorUserId: actorOf(req), saleId: soldRow.id, netCents: total, currency: product.currency });
     return updated;
   });
   if (!result) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
@@ -547,7 +550,7 @@ accountingRouter.post("/parties/:id/charges", route(async (req, res) => {
   await prisma.$transaction(async (tx) => {
     let entryId: string | null = null;
     if (d.book) {
-      const e = await tx.accountingEntry.create({ data: { userId, type: p.kind === "CUSTOMER" ? "INCOME" : "EXPENSE", category: p.kind === "CUSTOMER" ? "مبيعات آجلة" : "مشتريات", description: d.note ? `${p.name} — ${d.note}` : p.name, amountCents: d.amountCents, currency: d.currency, occurredAt: when, source: "PARTY", recordedById: userId } });
+      const e = await tx.accountingEntry.create({ data: { userId, type: p.kind === "CUSTOMER" ? "INCOME" : "EXPENSE", category: p.kind === "CUSTOMER" ? "مبيعات آجلة" : "مشتريات", description: d.note ? `${p.name} — ${d.note}` : p.name, amountCents: d.amountCents, currency: d.currency, occurredAt: when, source: "PARTY", recordedById: actorOf(req) } });
       entryId = e.id;
     }
     await tx.accountingPartyEntry.create({ data: { partyId: p.id, userId, kind: "CHARGE", amountCents: d.amountCents, currency: d.currency, entryId, note: d.note, occurredAt: when } });
@@ -565,7 +568,7 @@ accountingRouter.post("/parties/:id/payments", route(async (req, res) => {
   if (d.amountCents > owed) return sendError(res, 409, "CONFLICT", "المبلغ أكبر من الرصيد المستحق");
   const when = d.occurredAt ? new Date(d.occurredAt) : new Date();
   await prisma.$transaction(async (tx) => {
-    const e = await tx.accountingEntry.create({ data: { userId, type: p.kind === "CUSTOMER" ? "RECEIPT" : "PAYOUT", category: p.kind === "CUSTOMER" ? "دفعة زبون" : "دفعة مورد", description: d.note ? `${p.name} — ${d.note}` : p.name, amountCents: d.amountCents, currency: d.currency, occurredAt: when, source: "PARTY", payMethod: d.payMethod, recordedById: userId } });
+    const e = await tx.accountingEntry.create({ data: { userId, type: p.kind === "CUSTOMER" ? "RECEIPT" : "PAYOUT", category: p.kind === "CUSTOMER" ? "دفعة زبون" : "دفعة مورد", description: d.note ? `${p.name} — ${d.note}` : p.name, amountCents: d.amountCents, currency: d.currency, occurredAt: when, source: "PARTY", payMethod: d.payMethod, recordedById: actorOf(req) } });
     await tx.accountingPartyEntry.create({ data: { partyId: p.id, userId, kind: "PAYMENT", amountCents: d.amountCents, currency: d.currency, payMethod: d.payMethod, entryId: e.id, note: d.note, occurredAt: when } });
   });
   res.status(201).json({ ok: true });
@@ -631,7 +634,7 @@ accountingRouter.post("/purchases", route(async (req, res) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"purchase-number:" + userId}))`;
     const last = await tx.accountingPurchase.aggregate({ where: { userId }, _max: { number: true } });
     const created = await tx.accountingPurchase.create({
-      data: { userId, number: (last._max.number ?? 0) + 1, partyId: supplier?.id ?? null, supplierName: supplier?.name ?? null, note: d.note || null, currency, totalCents: total, taxCents: taxTotal, paidCents: paid, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
+      data: { userId, number: (last._max.number ?? 0) + 1, partyId: supplier?.id ?? null, supplierName: supplier?.name ?? null, note: d.note || null, currency, totalCents: total, taxCents: taxTotal, paidCents: paid, payMethod: d.payMethod, occurredAt: when, recordedById: actorOf(req),
         lines: { create: lines.map((l, i) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitCostCents: l.unitCost, lineTotalCents: l.unitCost * l.quantity, taxRateBp: l.rateBp, taxCents: lineTax[i] })) } },
       include: { lines: true },
     });
@@ -643,7 +646,7 @@ accountingRouter.post("/purchases", route(async (req, res) => {
     }
     const label = `فاتورة شراء #${created.number}${supplier ? ` — ${supplier.name}` : ""}`;
     // the money that left is a payout, not an expense: the cost of these goods reaches the profit when they are sold
-    const payout = paid > 0 ? await tx.accountingEntry.create({ data: { userId, type: "PAYOUT", category: "مشتريات بضاعة", description: label, amountCents: paid, currency, occurredAt: when, source: "PURCHASE", sourceKey: `purchase:${created.id}`, payMethod: d.payMethod, recordedById: userId } }) : null;
+    const payout = paid > 0 ? await tx.accountingEntry.create({ data: { userId, type: "PAYOUT", category: "مشتريات بضاعة", description: label, amountCents: paid, currency, occurredAt: when, source: "PURCHASE", sourceKey: `purchase:${created.id}`, payMethod: d.payMethod, recordedById: actorOf(req) } }) : null;
     if (supplier && paid < total) {
       await tx.accountingPartyEntry.create({ data: { partyId: supplier.id, userId, kind: "CHARGE", amountCents: total, currency, purchaseId: created.id, note: label, occurredAt: when } });
       if (payout) await tx.accountingPartyEntry.create({ data: { partyId: supplier.id, userId, kind: "PAYMENT", amountCents: paid, currency, payMethod: d.payMethod, purchaseId: created.id, entryId: payout.id, note: label, occurredAt: when } });
@@ -708,7 +711,7 @@ accountingRouter.post("/sales/:id/returns", route(async (req, res) => {
   const method = d.refundMethod ?? sale.payMethod;
   const done = await prisma.$transaction(async (tx) => {
     const created = await tx.accountingSaleReturn.create({
-      data: { userId, saleId: sale.id, currency: sale.currency, totalCents: total, refundCents: refund, debtCents: debt, payMethod: refund > 0 ? method : null, note: d.note || null, occurredAt: when, recordedById: userId,
+      data: { userId, saleId: sale.id, currency: sale.currency, totalCents: total, refundCents: refund, debtCents: debt, payMethod: refund > 0 ? method : null, note: d.note || null, occurredAt: when, recordedById: actorOf(req),
         lines: { create: picked.map((p, i) => ({ saleLineId: p.line.id, productId: p.line.productId, name: p.line.name, quantity: p.quantity, unitPriceCents: p.line.unitPriceCents, unitCostCents: p.line.unitCostCents, lineTotalCents: Number(p.line.unitPriceCents) * p.quantity, taxRateBp: p.line.taxRateBp, taxCents: parts[i].tax, baseCents: parts[i].base })) } },
     });
     for (const p of picked) {
@@ -721,13 +724,14 @@ accountingRouter.post("/sales/:id/returns", route(async (req, res) => {
     }
     const label = `مرتجع فاتورة بيع #${sale.number}${sale.customerName ? ` — ${sale.customerName}` : ""}`;
     // the income and the cost of the returned goods are taken back (negative entries); the money paid back is a payout, not an expense
-    await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: RETURNS_CATEGORY, description: label, amountCents: -(total - taxBack), currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}`, recordedById: userId } });
-    if (cost > 0) await tx.accountingEntry.create({ data: { userId, type: "EXPENSE", category: COST_CATEGORY, description: label, amountCents: -cost, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}:cost`, recordedById: userId } });
+    await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: RETURNS_CATEGORY, description: label, amountCents: -(total - taxBack), currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}`, recordedById: actorOf(req) } });
+    if (cost > 0) await tx.accountingEntry.create({ data: { userId, type: "EXPENSE", category: COST_CATEGORY, description: label, amountCents: -cost, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}:cost`, recordedById: actorOf(req) } });
     if (refund > 0) {
-      const out = await tx.accountingEntry.create({ data: { userId, type: "PAYOUT", category: "رد مبلغ لزبون", description: label, amountCents: refund, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}:refund`, payMethod: method, recordedById: userId } });
+      const out = await tx.accountingEntry.create({ data: { userId, type: "PAYOUT", category: "رد مبلغ لزبون", description: label, amountCents: refund, currency: sale.currency, occurredAt: when, source: "RETURN", sourceKey: `sale-return:${created.id}:refund`, payMethod: method, recordedById: actorOf(req) } });
       void out;
     }
     if (debt > 0 && sale.partyId) await tx.accountingPartyEntry.create({ data: { partyId: sale.partyId, userId, kind: "PAYMENT", amountCents: debt, currency: sale.currency, saleId: sale.id, note: label, occurredAt: when } });
+    await reduceSaleCommission(tx, sale.id, total - taxBack);
     return created;
   });
   res.status(201).json({ id: done.id, totalCents: total, refundCents: refund, debtCents: debt, costCents: cost });
@@ -765,11 +769,11 @@ accountingRouter.post("/purchases/:id/returns", route(async (req, res) => {
       await tx.accountingStockMovement.create({ data: { userId, ...(key.startsWith("store:") ? { storeProductId: key.slice(6) } : { productId: key }), action: "STOCK_OUT", quantity: p.quantity, unitCostCents: Number(p.line.unitCostCents), note: `مرتجع فاتورة شراء #${purchase.number}` } });
     }
     const created = await tx.accountingPurchaseReturn.create({
-      data: { userId, purchaseId: purchase.id, currency: purchase.currency, totalCents: total, refundCents: refund, debtCents: debt, payMethod: refund > 0 ? method : null, note: d.note || null, occurredAt: when, recordedById: userId,
+      data: { userId, purchaseId: purchase.id, currency: purchase.currency, totalCents: total, refundCents: refund, debtCents: debt, payMethod: refund > 0 ? method : null, note: d.note || null, occurredAt: when, recordedById: actorOf(req),
         lines: { create: picked.map((p, i) => ({ purchaseLineId: p.line.id, productId: p.line.productId, name: p.line.name, quantity: p.quantity, unitCostCents: p.line.unitCostCents, lineTotalCents: Number(p.line.unitCostCents) * p.quantity, taxRateBp: p.line.taxRateBp, taxCents: parts[i].tax, baseCents: parts[i].base })) } },
     });
     const label = `مرتجع فاتورة شراء #${purchase.number}${purchase.supplierName ? ` — ${purchase.supplierName}` : ""}`;
-    if (refund > 0) await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "استرداد من مورد", description: label, amountCents: refund, currency: purchase.currency, occurredAt: when, source: "RETURN", sourceKey: `purchase-return:${created.id}`, payMethod: method, recordedById: userId } });
+    if (refund > 0) await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "استرداد من مورد", description: label, amountCents: refund, currency: purchase.currency, occurredAt: when, source: "RETURN", sourceKey: `purchase-return:${created.id}`, payMethod: method, recordedById: actorOf(req) } });
     if (debt > 0 && purchase.partyId) await tx.accountingPartyEntry.create({ data: { partyId: purchase.partyId, userId, kind: "PAYMENT", amountCents: debt, currency: purchase.currency, purchaseId: purchase.id, note: label, occurredAt: when } });
     return created;
   }).catch((err) => err);
@@ -1021,7 +1025,7 @@ type SaleOutcome = { ok: true; sale: ReturnType<typeof plainSale>; costCents: nu
 type SaleInput = z.infer<typeof saleSchema>;
 
 /** The sales invoice: stock out, the tax of each line, the income (without the tax), the cost, the debt of a credit sale. */
-async function createSaleInvoice(userId: string, d: SaleInput): Promise<SaleOutcome> {
+async function createSaleInvoice(userId: string, d: SaleInput, actorId: string = userId): Promise<SaleOutcome> {
   const fail = (status: number, code: string, message: string, details?: unknown): SaleOutcome => ({ ok: false, status, code, message, details });
   // the same product twice becomes one line
   const wanted = new Map<string, { quantity: number; unitPriceCents?: number }>();
@@ -1076,7 +1080,7 @@ async function createSaleInvoice(userId: string, d: SaleInput): Promise<SaleOutc
           if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي", { productId: l.key, name: l.name });
         }
         const created = await tx.accountingSale.create({
-          data: { userId, number: await nextSaleNumber(tx, userId), customerName: customerLabel || null, partyId: party?.id ?? null, paidCents: paid, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, taxCents: taxTotal, pricesIncludeTax: tax.include, payMethod: d.payMethod, occurredAt: when, recordedById: userId,
+          data: { userId, number: await nextSaleNumber(tx, userId), customerName: customerLabel || null, partyId: party?.id ?? null, paidCents: paid, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, taxCents: taxTotal, pricesIncludeTax: tax.include, payMethod: d.payMethod, occurredAt: when, recordedById: actorId,
             lines: { create: lines.map((l, i) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitPriceCents: l.unitPrice, unitCostCents: l.unitCost, lineTotalCents: l.unitPrice * l.quantity, discountCents: calc[i].discount, taxRateBp: l.rateBp, taxCents: calc[i].tax })) } },
           include: { lines: true },
         });
@@ -1085,16 +1089,17 @@ async function createSaleInvoice(userId: string, d: SaleInput): Promise<SaleOutc
         const onCredit = paid < total;
         const net = total - taxTotal;
         // paid in full: the income (without the tax) is the cash itself, and the tax collected comes in with it. On credit: the income is booked, the cash arrives as a receipt (what was paid now), the rest becomes a debt.
-        await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: "مبيعات", description: label, amountCents: net, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}`, payMethod: onCredit ? null : d.payMethod, recordedById: userId } });
-        if (!onCredit && taxTotal > 0) await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "ضريبة مبيعات محصّلة", description: label, amountCents: taxTotal, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:tax`, payMethod: d.payMethod, recordedById: userId } });
+        await tx.accountingEntry.create({ data: { userId, type: "INCOME", category: "مبيعات", description: label, amountCents: net, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}`, payMethod: onCredit ? null : d.payMethod, recordedById: actorId } });
+        if (!onCredit && taxTotal > 0) await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "ضريبة مبيعات محصّلة", description: label, amountCents: taxTotal, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:tax`, payMethod: d.payMethod, recordedById: actorId } });
         if (onCredit && paid > 0) {
-          const receipt = await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "دفعة زبون", description: label, amountCents: paid, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:paid`, payMethod: d.payMethod, recordedById: userId } });
+          const receipt = await tx.accountingEntry.create({ data: { userId, type: "RECEIPT", category: "دفعة زبون", description: label, amountCents: paid, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:paid`, payMethod: d.payMethod, recordedById: actorId } });
           await tx.accountingPartyEntry.create({ data: { partyId: party!.id, userId, kind: "CHARGE", amountCents: total, currency, saleId: created.id, note: label, occurredAt: when } });
           await tx.accountingPartyEntry.create({ data: { partyId: party!.id, userId, kind: "PAYMENT", amountCents: paid, currency, payMethod: d.payMethod, saleId: created.id, entryId: receipt.id, note: label, occurredAt: when } });
         } else if (onCredit) {
           await tx.accountingPartyEntry.create({ data: { partyId: party!.id, userId, kind: "CHARGE", amountCents: total, currency, saleId: created.id, note: label, occurredAt: when } });
         }
-        if (cost > 0) await tx.accountingEntry.create({ data: { userId, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: label, amountCents: cost, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:cost`, recordedById: userId } });
+        if (cost > 0) await tx.accountingEntry.create({ data: { userId, type: "EXPENSE", category: "تكلفة البضاعة المباعة", description: label, amountCents: cost, currency, occurredAt: when, source: "SALE", sourceKey: `sale:${created.id}:cost`, recordedById: actorId } });
+        await accrueSaleCommission(tx, { ownerId: userId, actorUserId: actorId, saleId: created.id, netCents: net, currency });
         return created;
       });
       alertLowStock(userId, lines.map((l) => { const before = l.store ? shop.find((x) => x.id === l.id)!.stock : own.find((x) => x.id === l.id)!.quantity; const min = l.store ? 0 : own.find((x) => x.id === l.id)!.lowStockAt; return { name: l.name, before, after: before - l.quantity, min }; }));
@@ -1111,19 +1116,19 @@ async function createSaleInvoice(userId: string, d: SaleInput): Promise<SaleOutc
 accountingRouter.post("/sales", route(async (req, res) => {
   const parsed = saleSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const out = await createSaleInvoice(req.user!.id, parsed.data);
+  const out = await createSaleInvoice(req.user!.id, parsed.data, actorOf(req));
   if (!out.ok) return sendError(res, out.status, out.code, out.message, out.details);
   res.status(201).json({ ...out.sale, costCents: out.costCents, netCents: out.netCents });
 }));
 
 accountingRouter.get("/sales", route(async (req, res) => {
-  const rows = await prisma.accountingSale.findMany({ where: { userId: req.user!.id }, include: { lines: true }, orderBy: { number: "desc" }, take: 100 });
+  const rows = await prisma.accountingSale.findMany({ where: { userId: req.user!.id, ...(req.staffActor?.staff.role === "CASHIER" ? { recordedById: req.staffActor.userId } : {}) }, include: { lines: true }, orderBy: { number: "desc" }, take: 100 });
   const returned = await returnedBySaleLine(rows.flatMap((r) => r.lines.map((l) => l.id)));
   res.json(rows.map((r) => plainSale({ ...r, returned })));
 }));
 
 accountingRouter.get("/sales/:id", route(async (req, res) => {
-  const row = await prisma.accountingSale.findFirst({ where: { id: req.params.id, userId: req.user!.id }, include: { lines: true } });
+  const row = await prisma.accountingSale.findFirst({ where: { id: req.params.id, userId: req.user!.id, ...(req.staffActor?.staff.role === "CASHIER" ? { recordedById: req.staffActor.userId } : {}) }, include: { lines: true } });
   if (!row) return sendError(res, 404, "NOT_FOUND", "الفاتورة غير موجودة");
   res.json(plainSale({ ...row, returned: await returnedBySaleLine(row.lines.map((l) => l.id)) }));
 }));

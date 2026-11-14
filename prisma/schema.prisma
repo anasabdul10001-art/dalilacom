@@ -129,6 +129,8 @@ model User {
   accountingEntries         AccountingEntry[]
   accountingCashDays        AccountingCashDay[]
   accountingSales           AccountingSale[]
+  businessStaff             BusinessStaff[]            @relation("BusinessStaffOwner")
+  staffOf                   BusinessStaff[]            @relation("BusinessStaffUser")
   accountingParties         AccountingParty[]
   accountingPurchases       AccountingPurchase[]
   accountingSaleReturns     AccountingSaleReturn[]
@@ -3064,4 +3066,68 @@ model HrAuditLog {
   company HrCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId, createdAt])
+}
+
+// ---- the staff of a business owner (they work inside the owner's accounting; not the HR section's employees)
+enum BusinessStaffRole {
+  CASHIER // sales only
+  STOCK // stock keeper
+  ASSISTANT // income, expenses, payments, sales (no deleting, no export)
+  MANAGER // everything in accounting
+}
+
+enum BusinessStaffStatus {
+  INVITED
+  ACTIVE
+  REMOVED
+}
+
+enum BusinessCommissionStatus {
+  ACCRUED
+  PAID
+  VOID
+}
+
+model BusinessStaff {
+  id            String              @id @default(uuid())
+  ownerId       String
+  userId        String? // the person's own account, once they accepted
+  name          String
+  role          BusinessStaffRole
+  status        BusinessStaffStatus @default(INVITED)
+  salesRateBp   Int                 @default(0) // commission on the net of each sale they record, in basis points (100 = 1%)
+  fixedPayCents BigInt              @default(0) // a fixed monthly pay, as a note for the owner (the payment itself goes through payroll or an expense)
+  hrEmployeeId  String? // when linked, payroll adds the unpaid commission to the payslip
+  codeHash      String?             @unique
+  codeExpiresAt DateTime?
+  acceptedAt    DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  owner       User                      @relation("BusinessStaffOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  user        User?                     @relation("BusinessStaffUser", fields: [userId], references: [id], onDelete: SetNull)
+  commissions BusinessStaffCommission[]
+
+  @@unique([ownerId, userId])
+  @@index([ownerId])
+  @@index([userId])
+}
+
+model BusinessStaffCommission {
+  id          String                   @id @default(uuid())
+  ownerId     String
+  staffId     String
+  saleId      String                   @unique // one commission per sale; a return reverses it
+  baseCents   BigInt // the net of the sale
+  rateBp      Int
+  amountCents BigInt
+  currency    String
+  status      BusinessCommissionStatus @default(ACCRUED)
+  paidAt      DateTime?
+  createdAt   DateTime                 @default(now())
+
+  staff BusinessStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, status])
+  @@index([staffId, status])
 }
