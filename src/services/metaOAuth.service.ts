@@ -201,10 +201,10 @@ export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaP
 
   let all = accounts.data ?? [];
   let diag = "";
-  // Facebook Login for Business can return an empty /me/accounts even though the person ticked a Page in the dialog (the Page
-  // is granted to the app, not listed under the user). The granted Page ids are in the token's granular scopes: read them and
-  // ask for each Page (and its token) directly.
-  if (all.length === 0) {
+  // Facebook Login for Business can leave a Page the person ticked in the dialog out of /me/accounts (it is granted to the app,
+  // not listed under the user), also when other Pages are listed. The granted Page ids are in the token's granular scopes:
+  // read them and ask for each missing Page (and its token) directly.
+  {
     try {
       const debug = await graphGet<{ data?: { granular_scopes?: { scope?: string; target_ids?: string[] }[] } }>("debug_token", {
         input_token: userToken,
@@ -216,7 +216,9 @@ export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaP
       }
       const found: any[] = [];
       diag = `granted=${[...ids].join(",") || "none"}`;
+      const have = new Set(all.map((p) => String(p?.id)));
       for (const id of ids) {
+        if (have.has(id)) continue; // already listed by /me/accounts
         try {
           found.push(await graphGet<any>(id, { fields: "id,name,access_token,instagram_business_account{id,username}", access_token: userToken }));
         } catch (err) {
@@ -224,7 +226,7 @@ export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaP
           console.warn("[meta-oauth] granted Page could not be read:", id, err instanceof Error ? err.message : err);
         }
       }
-      all = found;
+      all = [...all, ...found];
     } catch (err) {
       diag = `scope lookup: ${err instanceof Error ? err.message : String(err)}`;
       console.warn("[meta-oauth] granular scope lookup failed:", err instanceof Error ? err.message : err);
