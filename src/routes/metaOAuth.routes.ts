@@ -110,7 +110,7 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
 
   if (typeof req.query.error === "string") {
     const reason = typeof req.query.error_description === "string" ? req.query.error_description : req.query.error;
-    return res.status(400).send(page("تم إلغاء الربط", `<p>ما تم منح الصلاحية: ${escapeHtml(reason.slice(0, 300))}</p>`, back({ ok: "0" })));
+    return res.status(400).send(page("تم إلغاء الربط", `<p>ما تم منح الصلاحية: ${escapeHtml(reason.slice(0, 300))}</p>`, back({ ok: "0", msg: reason.slice(0, 200) })));
   }
 
   const code = typeof req.query.code === "string" ? req.query.code : undefined;
@@ -122,7 +122,7 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
     ({ pages, skipped } = await exchangeCodeForPages(code));
   } catch (err) {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الاتصال بفيسبوك";
-    return res.status(502).send(page("تعذّر إكمال الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, back({ ok: "0" })));
+    return res.status(502).send(page("تعذّر إكمال الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, back({ ok: "0", msg: message.slice(0, 200) })));
   }
 
   if (pages.length === 0) {
@@ -130,7 +130,7 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
     const detail = skipped.length > 0
       ? `<p>لقينا ${names ? `«${names}»` : "صفحة"} بس فيسبوك ما سلّمنا صلاحية الإدارة عليها. هذا بيصير غالبًا لما تكون الصفحة ضمن حافظة أعمال وما لك عليها وصول مباشر كمدير صفحة. أضف نفسك مدير صفحة مباشرة من إعدادات الصفحة (وصول فيسبوك الكامل) وجرّب من جديد.</p>`
       : "<p>حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك.</p>";
-    return res.status(400).send(page("ما لقينا صفحات", detail, back({ ok: "0" })));
+    return res.status(400).send(page("ما لقينا صفحات", detail, back({ ok: "0", msg: skipped.length > 0 ? "لقينا الصفحة بس فيسبوك ما سلّمنا صلاحية الإدارة عليها" : "حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك" })));
   }
 
   const sessionId = await createSession(userId, pages);
@@ -144,7 +144,7 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
       );
     } catch (err) {
       const message = err instanceof MetaOAuthError ? err.message : "تعذّر ربط الصفحة";
-      return res.status(400).send(page("تعذّر ربط الصفحة", `<p>${escapeHtml(message.slice(0, 300))}</p>`, back({ ok: "0" })));
+      return res.status(400).send(page("تعذّر ربط الصفحة", `<p>${escapeHtml(message.slice(0, 300))}</p>`, back({ ok: "0", msg: message.slice(0, 200) })));
     }
   }
 
@@ -195,7 +195,7 @@ metaOAuthRouter.get("/oauth/pick", route(async (req, res) => {
     return res.send(page("تم الربط ✅", "<p>صار المجيب الآلي مربوطًا. ارجع للتطبيق لتشوف القناة.</p>", appDeepLink({ ok: "1", connectionId: connection.id }, web)));
   } catch (err) {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الربط";
-    return res.status(400).send(page("تعذّر الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, appDeepLink({ ok: "0" }, web)));
+    return res.status(400).send(page("تعذّر الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, appDeepLink({ ok: "0", msg: message.slice(0, 200) }, web)));
   }
 }));
 

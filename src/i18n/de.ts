@@ -271,6 +271,8 @@ export const pack: LanguagePack = {
       "ما لقينا هي الصفحة بحسابك": "We couldn't find this page in your account",
       "هي القناة غير متاحة": "This channel isn't available",
       "هي الصفحة ما فيها حساب إنستغرام تجاري مربوط": "This page has no linked Instagram business account",
+      "لقينا الصفحة بس فيسبوك ما سلّمنا صلاحية الإدارة عليها": "We found the Page, but Facebook did not give us admin access to it.",
+      "حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك": "Your account has no Facebook Pages you manage, or you did not grant access to your Pages.",
       "ربط فيسبوك مو مفعّل بعد — بدو تطبيق Meta Developer (META_APP_ID و META_APP_SECRET) وموافقة على الصلاحيات.": "Facebook linking isn't enabled yet — it needs a Meta Developer app (META_APP_ID and META_APP_SECRET) and permission approval.",
       "فعّل المجيب الآلي أول (تجربة أو اشتراك)": "Activate the auto-responder first (trial or subscription)",
       "انتهت صلاحية الربط — ابدأ من جديد": "The link expired — start again",

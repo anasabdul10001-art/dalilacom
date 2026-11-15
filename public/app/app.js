@@ -9372,7 +9372,7 @@ function bootMetaReturn() {
   S.params = {};
   (S._site = S._site || {}).responder = "channels";
   S._resp = { loading: true, tab: "channels", notice: q.get("ok") === "1" ? "تم ربط الصفحة ✅" : null };
-  if (q.get("ok") !== "1") S.error = "تعذّر ربط الصفحة. جرّب من جديد.";
+  if (q.get("ok") !== "1") S.error = "تعذّر ربط الصفحة. جرّب من جديد." + (q.get("msg") ? " (" + q.get("msg") + ")" : "");
   go("responder");
   loadResponder(); // go() only loads when there is no state yet, and this state is already marked as loading
   return true;
