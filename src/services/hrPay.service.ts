@@ -197,6 +197,11 @@ export async function processRun(actor: HrActor, id: string) {
     await tx.hrAuditLog.create({ data: { companyId: company.id, userId: actor.userId, action: "payroll.run", entityType: "HrPayrollRun", entityId: run.id, metadata: { employeeCount: drafts.length, totalNetPay: drafts.reduce((s, d) => s + d.net, 0) } } });
   }, { timeout: 120000, maxWait: 30000 });
 
+  // the staff members whose commissions joined a payslip are told too
+  for (const d of drafts.filter((x) => x.commissionIds.length)) {
+    const staffRows = await prisma.businessStaff.findMany({ where: { hrEmployeeId: d.employeeId, userId: { not: null } }, select: { userId: true } });
+    for (const st of staffRows) if (st.userId) await notify({ userId: st.userId, type: "SYSTEM", title: "انضافت عمولاتك لكشف راتبك", data: { kind: "business-staff-commission-paid" }, email: false }).catch(() => undefined);
+  }
   // told only once everything is saved; a failed notification must not undo a finished run
   for (const d of drafts) {
     const emp = employees.find((e) => e.id === d.employeeId);

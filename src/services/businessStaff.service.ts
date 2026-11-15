@@ -219,6 +219,9 @@ export async function payCommissions(ownerId: string, staffId: string, currency:
       data: { userId: ownerId, type: "EXPENSE", category: "عمولات الموظفين", description: `عمولات ${staff.name}`, amountCents: total, currency, source: "COMMISSION", sourceKey: `staff-commission:${staffId}:${Date.now()}`, recordedById: actorUserId },
     });
     return { paidCents: total, count: due.length };
+  }).then(async (out) => {
+    if (staff.userId) await notify({ userId: staff.userId, type: "SYSTEM", title: "اندفعت عمولاتك", body: `${(out.paidCents / 100).toFixed(2)} ${currency}`, data: { kind: "business-staff-commission-paid" }, email: false }).catch(() => undefined);
+    return out;
   });
 }
 
@@ -277,6 +280,7 @@ export async function payFixedSalary(ownerId: string, staffId: string, actorUser
   if (amountCents <= 0) throw new ApiError(409, "CONFLICT", "ما في راتب ثابت محدد لهالموظف");
   const currency = await marketOfUser(ownerId);
   await prisma.accountingEntry.create({ data: { userId: ownerId, type: "EXPENSE", category: "رواتب الموظفين", description: `راتب ${st.name}`, amountCents, currency, source: "MANUAL", recordedById: actorUserId } });
+  if (st.userId) await notify({ userId: st.userId, type: "SYSTEM", title: "اندفع راتبك الثابت", body: `${(amountCents / 100).toFixed(2)} ${currency}`, data: { kind: "business-staff-salary-paid" }, email: false }).catch(() => undefined);
   return { paidCents: amountCents, currency };
 }
 
