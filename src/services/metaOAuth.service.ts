@@ -196,7 +196,33 @@ export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaP
     access_token: userToken,
   });
 
-  const all = accounts.data ?? [];
+  let all = accounts.data ?? [];
+  // Facebook Login for Business can return an empty /me/accounts even though the person ticked a Page in the dialog (the Page
+  // is granted to the app, not listed under the user). The granted Page ids are in the token's granular scopes: read them and
+  // ask for each Page (and its token) directly.
+  if (all.length === 0) {
+    try {
+      const debug = await graphGet<{ data?: { granular_scopes?: { scope?: string; target_ids?: string[] }[] } }>("debug_token", {
+        input_token: userToken,
+        access_token: `${appId}|${appSecret}`,
+      });
+      const ids = new Set<string>();
+      for (const g of debug.data?.granular_scopes ?? []) {
+        if (["pages_show_list", "pages_messaging", "pages_manage_metadata"].includes(g.scope ?? "")) (g.target_ids ?? []).forEach((id) => ids.add(String(id)));
+      }
+      const found: any[] = [];
+      for (const id of ids) {
+        try {
+          found.push(await graphGet<any>(id, { fields: "id,name,access_token,instagram_business_account{id,username}", access_token: userToken }));
+        } catch (err) {
+          console.warn("[meta-oauth] granted Page could not be read:", id, err instanceof Error ? err.message : err);
+        }
+      }
+      all = found;
+    } catch (err) {
+      console.warn("[meta-oauth] granular scope lookup failed:", err instanceof Error ? err.message : err);
+    }
+  }
   // A Page that Facebook lists without a token (typically one the person reaches only through a business portfolio, not
   // as a direct Page admin) cannot be connected; say so instead of silently dropping it.
   const skipped = all.filter((p) => p?.id && !p?.access_token).map((p) => ({ id: String(p.id), name: String(p.name ?? "") }));
