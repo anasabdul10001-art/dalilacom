@@ -78,8 +78,9 @@ export function metaScopes(role?: string): string[] {
   const override = process.env.META_OAUTH_SCOPES?.split(/[,\s]+/).filter(Boolean);
   // Facebook Login for Business only lets us read a granted Page (and its token) with pages_read_engagement, so every link
   // asks for it, even when META_OAUTH_SCOPES is set. (It is part of the App Review request anyway: comments need it.)
-  if (override && override.length > 0) return override.includes("pages_read_engagement") ? override : [...override, "pages_read_engagement"];
-  return role === "ADMIN" ? [...DEFAULT_SCOPES, ...COMMENT_SCOPES] : [...DEFAULT_SCOPES, "pages_read_engagement"];
+  // Replying to comments needs the other two comment permissions as well, so they are always asked for too.
+  const base = override && override.length > 0 ? override : DEFAULT_SCOPES;
+  return [...new Set([...base, ...COMMENT_SCOPES])];
 }
 
 /** Where the browser sends the merchant back to at the end. The Android app registers this scheme. */
