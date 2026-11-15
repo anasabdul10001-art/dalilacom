@@ -959,7 +959,7 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
   /* ordinary screens: a centred column next to the rail */
   .screen-body:not(.map-mode) { padding: 28px 24px 48px; display: flex; flex-direction: column; align-items: center; }
   .screen-body:not(.map-mode):has(> .tabbar) { padding-inline-start: 108px; }
-  .screen-body:not(.map-mode) > *:not(.tabbar):not(.scan-fab) { width: 100%; max-width: 1100px; flex: none; }
+  .screen-body:not(.map-mode) > *:not(.tabbar):not(.scan-fab):not(.brand-mark) { width: 100%; max-width: 1100px; flex: none; }
   /* Unlike account forms, the offers page is a full browsing page and should use the space beside the navigation rail. */
   .screen-body:not(.map-mode) > *:not(.tabbar):not(.scan-fab):has(> .deals-page) { max-width: none; }
   .deals-page { width: 100%; max-width: none; }
