@@ -162,6 +162,7 @@ DICT.en = {
   "hr.pay.cost": "Run cost",
   "hr.pay.paidTotal": "Total cost of paid runs: {n}",
   "accounting.payrollLabel": "Payroll",
+  "accounting.payrollDueLabel": "Payroll due",
   "accounting.payrollShare": "of which payroll: {n}",
   "hr.notLinked": "not linked to an account",
   "hr.details": "Details",

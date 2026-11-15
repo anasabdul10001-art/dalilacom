@@ -161,6 +161,7 @@ DICT.ar = {
   "hr.pay.cost": "كلفة الدورة",
   "hr.pay.paidTotal": "إجمالي كلفة الدورات المدفوعة: {n}",
   "accounting.payrollLabel": "رواتب",
+  "accounting.payrollDueLabel": "رواتب مستحقة",
   "accounting.payrollShare": "منها رواتب: {n}",
   "hr.notLinked": "مو مربوط بحساب",
   "hr.details": "التفاصيل",
