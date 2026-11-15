@@ -9,6 +9,8 @@ import android.content.Context
 object ActingBusiness {
     @Volatile var ownerId: String? = null
         private set
+    /** True only while the marketer tab is on screen: then the offers and announcements calls name the business too. */
+    @Volatile var marketing: Boolean = false
     private var appContext: Context? = null
     private const val PREFS = "dalilacom_staff"
 

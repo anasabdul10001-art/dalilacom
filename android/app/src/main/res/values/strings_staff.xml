@@ -59,4 +59,20 @@
     <string name="staff_deliver">تم التسليم</string>
     <string name="staff_picked_up">الطلب بعهدتك وبالطريق</string>
     <string name="staff_delivered">انسجّل التسليم</string>
+    <string name="staff_role_marketer">مسوّق النشاط</string>
+    <string name="staff_help_marketer">بيجهّز عروض المتجر وبيبعت إعلانات لمتابعينو، بدون وصول للمحاسبة ولا للإعلانات المدفوعة.</string>
+    <string name="staff_marketing_title">التسويق</string>
+    <string name="staff_offer_new">عرض جديد</string>
+    <string name="staff_offer_title">العنوان</string>
+    <string name="staff_offer_percent">نسبة الحسم بالمئة</string>
+    <string name="staff_offer_note">العرض بينراجع من الإدارة قبل ما يظهر للزباين.</string>
+    <string name="staff_offer_add">إضافة العرض</string>
+    <string name="staff_offer_none">ما في عروض بعد</string>
+    <string name="staff_offer_stop">إيقاف</string>
+    <string name="staff_offer_start">تشغيل</string>
+    <string name="staff_announce_title">إعلان لمتابعين النشاط</string>
+    <string name="staff_announce_help">بيوصل لمتابعين النشاط بعد ما تراجعو الإدارة. بتقدر توقف الرسائل الترويجية من إعدادات الإشعارات.</string>
+    <string name="staff_announce_body">نص الإعلان</string>
+    <string name="staff_announce_send">إرسال للمراجعة</string>
+    <string name="staff_announce_sent">انبعت للمراجعة</string>
 </resources>

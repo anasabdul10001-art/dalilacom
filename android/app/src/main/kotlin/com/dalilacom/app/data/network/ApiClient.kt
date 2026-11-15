@@ -27,7 +27,8 @@ private class AuthInterceptor(private val tokenStore: TokenStore) : Interceptor 
             if (token != null) {
                 addHeader("Authorization", "Bearer $token")
                 // the staff member works inside the owner's accounting
-                if (acting != null && chain.request().url.encodedPath.startsWith("/accounting")) addHeader("X-Business-Owner", acting)
+                val path = chain.request().url.encodedPath
+                if (acting != null && (path.startsWith("/accounting") || (ActingBusiness.marketing && (path.startsWith("/merchant/discounts") || path.startsWith("/broadcasts"))))) addHeader("X-Business-Owner", acting)
             }
         }.build()
         return chain.proceed(request)

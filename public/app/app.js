@@ -133,7 +133,7 @@ async function api(method, path, body) {
   // The server answers (errors, pages, names) in the app's language, not the browser's.
   const headers = { "Content-Type": "application/json", "Accept-Language": LANG };
   if (S.token) headers["Authorization"] = "Bearer " + S.token;
-  if (S._actAs && path.startsWith("/accounting")) headers["X-Business-Owner"] = S._actAs;
+  if (S._actAs && (path.startsWith("/accounting") || (/^\/(merchant\/discounts|broadcasts)/.test(path) && S._site && S._site.accounting === "marketing"))) headers["X-Business-Owner"] = S._actAs; // offers and announcements only from the marketer tab
   try {
     const res = await fetch(API_BASE + path, {
       method,
@@ -2673,6 +2673,7 @@ function screenAccounting() {
   if (tab === "staff" && !S._actAs) return siteShell("accounting", tab, staffTab());
   if (tab === "mywork") return siteShell("accounting", tab, staffMyWork());
   if (tab === "deliveries") return siteShell("accounting", tab, staffDeliveries());
+  if (tab === "marketing") return siteShell("accounting", tab, staffMarketing());
   if (S._actAs && !staffActing()) return siteShell("accounting", tab, skeleton("tiles")); // the workplaces are still loading
   if (S._actAs && !accTabs().includes(tab)) return siteShell("accounting", accTabs()[0], staffMyWork());
   if (!S._accounting || S._accounting.loading) {

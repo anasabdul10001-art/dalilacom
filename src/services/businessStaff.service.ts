@@ -25,6 +25,8 @@ declare global {
 
 const INVITE_DAYS = 7;
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
+/** Roles that sell nothing themselves: their commission is on all sales of the business. */
+const TEAM_ROLES: BusinessStaffRole[] = ["STOCK", "MARKETER"];
 export const MAX_RATE_BP = 5000; // a commission above 50% of a sale is a typing mistake
 
 // ---------------------------------------------------------------- what each role may do in accounting
@@ -37,6 +39,7 @@ export const ROLE_TAGS: Record<BusinessStaffRole, Tag[]> = {
   ASSISTANT: ["sell", "salesRead", "productsRead", "partiesRead", "money"],
   MANAGER: ALL,
   DRIVER: [], // works on deliveries, not in accounting
+  MARKETER: [], // works on offers and announcements, not in accounting
 };
 
 /** What a request to the accounting router needs. Anything not listed is "money". */
@@ -167,15 +170,15 @@ type Tx = Prisma.TransactionClient;
 
 /**
  * A sale earns commissions on its net (without tax): the staff member who recorded it gets their rate, and a stock keeper
- * with a rate gets it on every sale of the business (they sell nothing themselves). One commission per person per sale.
+ * or marketer with a rate gets it on every sale of the business (they sell nothing themselves). One commission per person per sale.
  */
 export async function accrueSaleCommission(tx: Tx, input: { ownerId: string; actorUserId: string; saleId: string; netCents: number; currency: string }) {
   if (input.netCents <= 0) return;
-  const staff = await tx.businessStaff.findMany({ where: { ownerId: input.ownerId, status: "ACTIVE", salesRateBp: { gt: 0 }, OR: [{ userId: input.actorUserId }, { role: "STOCK" }] } });
+  const staff = await tx.businessStaff.findMany({ where: { ownerId: input.ownerId, status: "ACTIVE", salesRateBp: { gt: 0 }, OR: [{ userId: input.actorUserId }, { role: { in: TEAM_ROLES } }] } });
   for (const st of staff) {
     if (st.userId === input.ownerId) continue;
-    const mine = st.userId === input.actorUserId && st.role !== "STOCK";
-    if (!mine && st.role !== "STOCK") continue;
+    const mine = st.userId === input.actorUserId && !TEAM_ROLES.includes(st.role);
+    if (!mine && !TEAM_ROLES.includes(st.role)) continue;
     const amountCents = Math.round((input.netCents * st.salesRateBp) / 10000);
     if (amountCents <= 0) continue;
     await tx.businessStaffCommission.create({ data: { ownerId: input.ownerId, staffId: st.id, saleId: mine ? input.saleId : `team:${input.saleId}:${st.id}`, baseCents: input.netCents, rateBp: st.salesRateBp, amountCents, currency: input.currency } });
@@ -262,6 +265,7 @@ export async function driverDeliver(userId: string, staffId: string, orderId: st
     const currency = await marketOfUser(staff.ownerId);
     await prisma.businessStaffCommission.create({ data: { ownerId: staff.ownerId, staffId: staff.id, saleId: `order:${orderId}`, baseCents: net, rateBp: staff.salesRateBp, amountCents, currency } }).catch(() => undefined);
   }
+  await accrueTeamOrderCommissions(orderId).catch(() => undefined);
   await notify({ userId: order.userId, type: "ORDER_STATUS", title: "تحديث على طلبك: DELIVERED", body: "طلبك وصل! منتمنى تكون التجربة حلوة ⭐", data: { orderId, orderNumber: order.orderNumber, status: "DELIVERED" } }).catch(() => undefined);
 }
 
@@ -274,4 +278,20 @@ export async function payFixedSalary(ownerId: string, staffId: string, actorUser
   const currency = await marketOfUser(ownerId);
   await prisma.accountingEntry.create({ data: { userId: ownerId, type: "EXPENSE", category: "رواتب الموظفين", description: `راتب ${st.name}`, amountCents, currency, source: "MANUAL", recordedById: actorUserId } });
   return { paidCents: amountCents, currency };
+}
+
+/** A delivered store order earns the stock keepers and marketers with a rate their share of its net (once per person per order). */
+export async function accrueTeamOrderCommissions(orderId: string) {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { merchant: { select: { userId: true } } } });
+  if (!order || order.status !== "DELIVERED") return;
+  const ownerId = order.merchant.userId;
+  const net = order.subtotalCents - order.memberDiscountCents;
+  const team = await prisma.businessStaff.findMany({ where: { ownerId, status: "ACTIVE", role: { in: TEAM_ROLES }, salesRateBp: { gt: 0 } } });
+  if (!team.length || net <= 0) return;
+  const currency = await marketOfUser(ownerId);
+  for (const st of team) {
+    const amountCents = Math.round((net * st.salesRateBp) / 10000);
+    if (amountCents <= 0) continue;
+    await prisma.businessStaffCommission.create({ data: { ownerId, staffId: st.id, saleId: `team:order:${orderId}:${st.id}`, baseCents: net, rateBp: st.salesRateBp, amountCents, currency } }).catch(() => undefined);
+  }
 }

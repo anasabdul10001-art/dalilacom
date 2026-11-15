@@ -149,4 +149,32 @@ describe("business staff", () => {
     expect((await request(app).get("/accounting/products").set({ ...driver.auth, "X-Business-Owner": boss.id })).status).toBe(403);
     expect((await request(app).get(`/business-staff/driver/${sid}/orders`).set(customer.auth)).status).toBe(403);
   });
+
+  it("a marketer works on the shop offers and announcements only, and earns a team commission on delivered orders", async () => {
+    const boss = await owner("stmboss");
+    await prisma.user.update({ where: { id: boss.id }, data: { role: "MERCHANT" } });
+    const marketer = await account("stmarketer");
+    const customer = await account("stmcust");
+    const category = await prisma.category.findFirstOrThrow();
+    const shop = await prisma.merchantProfile.create({ data: { userId: boss.id, businessName: "Shop M", categoryId: category.id, approvalStatus: "APPROVED", address: "x", phone: "1", latitude: 1, longitude: 2 } });
+    const sid = (await request(app).post("/business-staff").set(boss.auth).send({ name: "Mira", role: "MARKETER", salesRateBp: 300, fixedPayCents: 1000 })).body.id;
+    const code = (await request(app).post(`/business-staff/${sid}/invite`).set(boss.auth)).body.code;
+    await request(app).post("/business-staff/accept").set(marketer.auth).send({ code });
+    const as = { ...marketer.auth, "X-Business-Owner": boss.id };
+    const made = await request(app).post("/merchant/discounts").set(as).send({ title: "Weekend offer", percent: 20 });
+    expect(made.status).toBe(201);
+    expect((await prisma.discount.findFirstOrThrow({ where: { merchantId: shop.id } })).title).toBe("Weekend offer");
+    expect((await request(app).get("/merchant/discounts").set(as)).body).toHaveLength(1);
+    expect((await request(app).get("/broadcasts").set(as)).status).toBe(200);
+    // nothing else of the shop or its money
+    expect((await request(app).get("/accounting/summary").set(as)).status).toBe(403);
+    expect((await request(app).get("/ads/mine").set(as)).status).toBe(403);
+    // a stranger with the header gets nothing
+    const stranger = await account("stmstranger");
+    expect((await request(app).get("/merchant/discounts").set({ ...stranger.auth, "X-Business-Owner": boss.id })).status).toBe(403);
+    // a delivered store order pays the marketer 3% of its net
+    const order = await prisma.order.create({ data: { orderNumber: `M-${Date.now()}`, userId: customer.id, merchantId: shop.id, status: "SHIPPED", subtotalCents: 10000, totalCents: 10000 } });
+    expect((await request(app).patch(`/orders/${order.id}/status`).set(boss.auth).send({ status: "DELIVERED" })).status).toBe(200);
+    expect(Number((await prisma.businessStaffCommission.findFirstOrThrow({ where: { staffId: sid } })).amountCents)).toBe(300);
+  });
 });

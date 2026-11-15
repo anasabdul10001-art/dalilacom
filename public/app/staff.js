@@ -3,7 +3,7 @@
    invitation was accepted (AGENTS.md: no empty profession sections); then the accounting opens for them as the owner's,
    with the tabs their role allows. ---- */
 
-const STAFF_ROLES = ["CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER"];
+const STAFF_ROLES = ["CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER", "MARKETER"];
 /** The accounting tabs each kind of permission opens (the server enforces the same list). */
 const ACC_TAB_TAG = { summary: "reports", reports: "reports", entry: "money", recurring: "money", sale: "sell", purchases: "money", parties: "partiesRead", invoices: "money", stock: "productsRead", tax: "admin", statements: "reports" };
 
@@ -35,7 +35,7 @@ function staffSwitch(ownerId) {
 function accTabs() {
   const all = SITES.accounting.tabs;
   const wp = staffActing();
-  if (wp) return [...(wp.role === "DRIVER" ? ["deliveries"] : []), ...all.filter((id) => (wp.allowed || []).includes(ACC_TAB_TAG[id])), "mywork"];
+  if (wp) return [...(wp.role === "DRIVER" ? ["deliveries"] : []), ...(wp.role === "MARKETER" ? ["marketing"] : []), ...all.filter((id) => (wp.allowed || []).includes(ACC_TAB_TAG[id])), "mywork"];
   return S._actAs ? ["mywork"] : [...all, "staff"];
 }
 
@@ -200,5 +200,50 @@ async function staffOrderAct(btn, staffId, orderId, action) {
     if (!res.ok) return staffErr(res);
     toast(t(action === "pickup" ? "staff.pickedUp" : "staff.delivered"));
     const st = staffState(); st.orders = undefined; st.wp = undefined; st.mine = {}; render();
+  });
+}
+
+/* ---- the marketer's tab: the shop's offers and announcements to its followers (no ads, no money) ---- */
+function staffMarketing() {
+  const wp = staffActing();
+  if (!wp) return uiEmpty("📣", t("staff.noWorkplace"));
+  const st = staffState();
+  if (st.offers === undefined) { st.offers = null; api("GET", "/merchant/discounts").then(({ ok, data }) => { st.offers = ok && Array.isArray(data) ? data : []; render(); }); }
+  const rows = st.offers;
+  return `<div class="card"><div class="section-title">${esc(t("staff.offer.new"))}</div>
+      <div class="field"><label>${esc(t("staff.offer.title"))}</label><input id="mk-title" maxlength="80" /></div>
+      <div class="field"><label>${esc(t("staff.offer.percent"))}</label><input id="mk-percent" type="number" min="1" max="100" inputmode="numeric" /></div>
+      <p class="muted">${esc(t("staff.offer.note"))}</p>
+      <button class="btn" onclick="staffOfferAdd(this)">${esc(t("staff.offer.add"))}</button></div>
+    ${rows === null ? skeleton("list", 2) : rows.length === 0 ? uiEmpty("🏷️", t("staff.offer.none")) : rows.map((d) => `<div class="card"><div class="title-line"><div><strong>${esc(d.title)}</strong><div class="chips">${uiChip(d.percent + "%")}${uiChip(String(d.state || d.status || ""), d.isActive ? "" : "warn")}</div></div>
+        <button class="btn small outline" onclick="staffOfferToggle('${d.id}',${d.isActive ? "false" : "true"})">${esc(t(d.isActive ? "staff.offer.stop" : "staff.offer.start"))}</button></div></div>`).join("")}
+    <div class="card"><div class="section-title">${esc(t("staff.announce.title"))}</div><p class="muted">${esc(t("staff.announce.help"))}</p>
+      <div class="field"><label>${esc(t("staff.offer.title"))}</label><input id="mk-a-title" maxlength="100" /></div>
+      <div class="field"><label>${esc(t("staff.announce.body"))}</label><textarea id="mk-a-body" maxlength="500" rows="3"></textarea></div>
+      <button class="btn" onclick="staffAnnounce(this)">${esc(t("staff.announce.send"))}</button></div>`;
+}
+async function staffOfferAdd(btn) {
+  const v = (id) => (document.getElementById(id) || {}).value || "";
+  const title = v("mk-title").trim(), percent = parseInt(v("mk-percent"), 10);
+  if (title.length < 2 || !(percent >= 1 && percent <= 100)) return toast(t("staff.offer.title"));
+  await uiBusy(btn, async () => {
+    const res = await api("POST", "/merchant/discounts", { title, percent });
+    if (!res.ok) return staffErr(res);
+    toast(t("staff.saved")); staffState().offers = undefined; render();
+  });
+}
+async function staffOfferToggle(id, isActive) {
+  const res = await api("PATCH", `/merchant/discounts/${id}`, { isActive });
+  if (!res.ok) return staffErr(res);
+  staffState().offers = undefined; render();
+}
+async function staffAnnounce(btn) {
+  const v = (id) => (document.getElementById(id) || {}).value || "";
+  const title = v("mk-a-title").trim(), body = v("mk-a-body").trim();
+  if (!title || !body) return toast(t("staff.announce.body"));
+  await uiBusy(btn, async () => {
+    const res = await api("POST", "/broadcasts", { followers: true, title, body });
+    if (!res.ok) return staffErr(res);
+    toast(t("staff.announce.sent"));
   });
 }

@@ -228,6 +228,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     ) {
         item { Text(stringResource(R.string.accounting_title), style = MaterialTheme.typography.headlineSmall) }
         item { StaffSwitcher(workplaces, actingId) { id -> switchWorkplace(id); scope.launch { reload() } } }
+        if (acting?.role == "MARKETER") item { CollapsibleCard(stringResource(R.string.staff_marketing_title), startOpen = true) { StaffMarketing(container) } }
         if (acting?.role == "DRIVER") item { CollapsibleCard(stringResource(R.string.staff_deliveries_title), startOpen = true) { StaffDriverOrders(container, acting) } }
         if (acting != null) item { CollapsibleCard(stringResource(R.string.staff_my_work_title), startOpen = true) { StaffMyWork(container, acting) } }
         else item { CollapsibleCard(stringResource(R.string.staff_title)) { StaffOwnerSection(container) { id -> switchWorkplace(id); scope.launch { reload() } } } }

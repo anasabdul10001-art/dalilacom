@@ -1,6 +1,23 @@
 // Arabic — the source language of the app. Every key here must exist in every other language's DICT.
 LANGS.ar = { name: "العربية", dir: "rtl" };
 DICT.ar = {
+  "site.accounting.tab.marketing": "التسويق",
+  "staff.role.MARKETER": "مسوّق النشاط",
+  "staff.roleHelp.MARKETER": "بيجهّز عروض المتجر وبيبعت إعلانات لمتابعينو، بدون وصول للمحاسبة ولا للإعلانات المدفوعة.",
+  "staff.offer.new": "عرض جديد",
+  "staff.offer.title": "العنوان",
+  "staff.offer.percent": "نسبة الحسم (%)",
+  "staff.offer.note": "العرض بينراجع من الإدارة قبل ما يظهر للزباين.",
+  "staff.offer.add": "إضافة العرض",
+  "staff.offer.none": "ما في عروض بعد",
+  "staff.offer.stop": "إيقاف",
+  "staff.offer.start": "تشغيل",
+  "staff.announce.title": "إعلان لمتابعين النشاط",
+  "staff.announce.help": "بيوصل لمتابعين النشاط بعد ما تراجعو الإدارة. بتقدر توقف الرسائل الترويجية من إعدادات الإشعارات.",
+  "staff.announce.body": "نص الإعلان",
+  "staff.announce.send": "إرسال للمراجعة",
+  "staff.announce.sent": "انبعت للمراجعة",
+
   "site.accounting.tab.deliveries": "التوصيل",
   "staff.role.DRIVER": "موزّع",
   "staff.roleHelp.DRIVER": "بياخد طلبات المتجر الجاهزة وبيوصّلها وبيسجّل التسليم، بدون وصول للمحاسبة.",

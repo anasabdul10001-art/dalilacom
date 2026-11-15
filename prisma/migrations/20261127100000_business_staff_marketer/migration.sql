@@ -1,0 +1,1 @@
+ALTER TYPE "BusinessStaffRole" ADD VALUE 'MARKETER';

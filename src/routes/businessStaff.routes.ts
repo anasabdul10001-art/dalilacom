@@ -31,7 +31,7 @@ businessStaffRouter.use(route(async (req, res, next) => {
   next();
 }));
 
-const roleEnum = z.enum(["CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER"]);
+const roleEnum = z.enum(["CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER", "MARKETER"]);
 const rate = z.number().int().min(0).max(staff.MAX_RATE_BP);
 const pay = z.number().int().min(0).max(2_000_000_000);
 

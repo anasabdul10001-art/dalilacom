@@ -59,4 +59,20 @@
     <string name="staff_deliver">Delivered</string>
     <string name="staff_picked_up">The order is yours and on its way</string>
     <string name="staff_delivered">Delivery recorded</string>
+    <string name="staff_role_marketer">Business marketer</string>
+    <string name="staff_help_marketer">Prepares the shop offers and sends announcements to its followers, with no access to accounting or paid ads.</string>
+    <string name="staff_marketing_title">Marketing</string>
+    <string name="staff_offer_new">New offer</string>
+    <string name="staff_offer_title">Title</string>
+    <string name="staff_offer_percent">Discount rate (percent)</string>
+    <string name="staff_offer_note">The offer is reviewed by the administration before customers see it.</string>
+    <string name="staff_offer_add">Add the offer</string>
+    <string name="staff_offer_none">No offers yet</string>
+    <string name="staff_offer_stop">Stop</string>
+    <string name="staff_offer_start">Start</string>
+    <string name="staff_announce_title">Announcement to the followers</string>
+    <string name="staff_announce_help">It reaches the followers of the business after the administration reviews it. People can switch promotional messages off in their notification settings.</string>
+    <string name="staff_announce_body">Announcement text</string>
+    <string name="staff_announce_send">Send for review</string>
+    <string name="staff_announce_sent">Sent for review</string>
 </resources>

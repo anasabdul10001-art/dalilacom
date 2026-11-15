@@ -3077,6 +3077,7 @@ enum BusinessStaffRole {
   ASSISTANT // income, expenses, payments, sales (no deleting, no export)
   MANAGER // everything in accounting
   DRIVER // takes the shop's store orders to the customers (no accounting)
+  MARKETER // the shop's offers and announcements (no money, no accounting)
 }
 
 enum BusinessStaffStatus {

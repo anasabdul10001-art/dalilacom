@@ -37,7 +37,7 @@ import com.dalilacom.app.ui.common.StatusChip
 import com.dalilacom.app.ui.i18n.AppStrings
 import kotlinx.coroutines.launch
 
-private val ROLES = listOf("CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER")
+private val ROLES = listOf("CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER", "MARKETER")
 private fun cents(c: Long, currency: String) = "%.2f %s".format(c / 100.0, currency)
 
 @Composable
@@ -47,6 +47,7 @@ fun staffRoleName(role: String): String = stringResource(
         "ASSISTANT" -> R.string.staff_role_assistant
         "MANAGER" -> R.string.staff_role_manager
         "DRIVER" -> R.string.staff_role_driver
+        "MARKETER" -> R.string.staff_role_marketer
         else -> R.string.staff_role_cashier
     },
 )
@@ -58,6 +59,7 @@ private fun staffRoleHelp(role: String): String = stringResource(
         "ASSISTANT" -> R.string.staff_help_assistant
         "MANAGER" -> R.string.staff_help_manager
         "DRIVER" -> R.string.staff_help_driver
+        "MARKETER" -> R.string.staff_help_marketer
         else -> R.string.staff_help_cashier
     },
 )
@@ -264,5 +266,62 @@ fun StaffDriverOrders(container: AppContainer, workplace: StaffWorkplaceDto) {
                 }
             }
         }
+    }
+}
+
+/** The marketer: the shop offers (new, start, stop) and an announcement to its followers. Both go to the administration for review. */
+@Composable
+fun StaffMarketing(container: AppContainer) {
+    val scope = rememberCoroutineScope()
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        com.dalilacom.app.data.network.ActingBusiness.marketing = true
+        onDispose { com.dalilacom.app.data.network.ActingBusiness.marketing = false }
+    }
+    var offers by remember { mutableStateOf<List<com.dalilacom.app.data.network.MyDiscountDto>?>(null) }
+    var message by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf("") }
+    var percent by remember { mutableStateOf("") }
+    var aTitle by remember { mutableStateOf("") }
+    var aBody by remember { mutableStateOf("") }
+    suspend fun reload() { offers = container.staffRepository.marketerOffers() }
+    LaunchedEffect(Unit) { reload() }
+    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (message.isNotBlank()) Text(message, color = MaterialTheme.colorScheme.primary)
+        Text(stringResource(R.string.staff_offer_new), style = MaterialTheme.typography.titleSmall)
+        OutlinedTextField(title, { title = it }, label = { Text(stringResource(R.string.staff_offer_title)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(percent, { percent = it }, label = { Text(stringResource(R.string.staff_offer_percent)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Text(stringResource(R.string.staff_offer_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Button(
+            onClick = {
+                val p = percent.toIntOrNull() ?: 0
+                if (title.trim().length < 2 || p !in 1..100) { message = AppStrings.get(R.string.staff_offer_title); return@Button }
+                scope.launch { container.staffRepository.marketerAddOffer(title.trim(), p).fold({ title = ""; percent = ""; message = AppStrings.get(R.string.staff_saved); reload() }, { message = it.message.orEmpty() }) }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.staff_offer_add)) }
+        val list = offers
+        if (list == null) Text("...") else if (list.isEmpty()) Text(stringResource(R.string.staff_offer_none), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        list.orEmpty().forEach { d ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(d.title, style = MaterialTheme.typography.titleSmall)
+                        Text(d.percent.toString() + "% | " + d.state, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    OutlinedButton(onClick = { scope.launch { container.staffRepository.marketerToggleOffer(d.id, !d.isActive).fold({ reload() }, { message = it.message.orEmpty() }) } }) { Text(stringResource(if (d.isActive) R.string.staff_offer_stop else R.string.staff_offer_start)) }
+                }
+            }
+        }
+        Text(stringResource(R.string.staff_announce_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+        Text(stringResource(R.string.staff_announce_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedTextField(aTitle, { aTitle = it }, label = { Text(stringResource(R.string.staff_offer_title)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(aBody, { aBody = it }, label = { Text(stringResource(R.string.staff_announce_body)) }, modifier = Modifier.fillMaxWidth())
+        Button(
+            onClick = {
+                if (aTitle.isBlank() || aBody.isBlank()) { message = AppStrings.get(R.string.staff_announce_body); return@Button }
+                scope.launch { container.staffRepository.marketerAnnounce(aTitle.trim(), aBody.trim()).fold({ aTitle = ""; aBody = ""; message = AppStrings.get(R.string.staff_announce_sent) }, { message = it.message.orEmpty() }) }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.staff_announce_send)) }
     }
 }

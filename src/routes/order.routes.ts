@@ -8,6 +8,7 @@ import { requireAuth, requireRole } from "../middleware/auth";
 import { notify } from "../services/notification.service";
 import { availablePaymentMethods, settleOnCancel } from "../services/payment.service";
 import { recordDeliveredOrder } from "../services/accounting.service";
+import { accrueTeamOrderCommissions } from "../services/businessStaff.service";
 
 /** Customer-facing wording for each order state (section 13: "تغيير حالة الطلب"). */
 const STATUS_MESSAGE: Record<OrderStatus, string> = {
@@ -149,7 +150,10 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), route(
     });
   });
 
-  if (status === "DELIVERED") await recordDeliveredOrder(order.id).catch((err) => console.error("Could not sync delivered order to accounting", err));
+  if (status === "DELIVERED") {
+    await recordDeliveredOrder(order.id).catch((err) => console.error("Could not sync delivered order to accounting", err));
+    await accrueTeamOrderCommissions(order.id).catch((err) => console.error("Could not accrue staff commissions", err));
+  }
 
   // After the transaction, best-effort (section 13): the status change is what matters, the
   // notification must never be able to roll it back.
