@@ -1,6 +1,11 @@
 // Arabic — the source language of the app. Every key here must exist in every other language's DICT.
 LANGS.ar = { name: "العربية", dir: "rtl" };
 DICT.ar = {
+  "staff.hr.link": "ربط بكشف الرواتب",
+  "staff.hr.linked": "مربوط بالرواتب: {name}",
+  "staff.hr.pick": "اختار موظف الرواتب اللي بتنضاف عمولاتو لكشف راتبو",
+  "staff.hr.none": "بدون ربط",
+
   "site.accounting.tab.marketing": "التسويق",
   "staff.role.MARKETER": "مسوّق النشاط",
   "staff.roleHelp.MARKETER": "بيجهّز عروض المتجر وبيبعت إعلانات لمتابعينو، بدون وصول للمحاسبة ولا للإعلانات المدفوعة.",

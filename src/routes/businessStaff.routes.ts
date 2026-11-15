@@ -35,6 +35,7 @@ const roleEnum = z.enum(["CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER", "
 const rate = z.number().int().min(0).max(staff.MAX_RATE_BP);
 const pay = z.number().int().min(0).max(2_000_000_000);
 
+businessStaffRouter.get("/hr-employees", route(async (req, res) => res.json(await staff.hrEmployeesFor(req.user!.id))));
 businessStaffRouter.get("/", route(async (req, res) => res.json(await staff.listStaff(req.user!.id))));
 businessStaffRouter.post("/", route(async (req, res) => {
   const parsed = z.object({ name: z.string().trim().min(2).max(80), role: roleEnum, salesRateBp: rate.optional(), fixedPayCents: pay.optional() }).safeParse(req.body);
@@ -57,3 +58,9 @@ businessStaffRouter.post("/:id/commissions/pay", route(async (req, res) => {
   res.json(await staff.payCommissions(req.user!.id, req.params.id, parsed.data.currency, req.user!.id));
 }));
 businessStaffRouter.post("/:id/salary/pay", route(async (req, res) => res.json(await staff.payFixedSalary(req.user!.id, req.params.id, req.user!.id))));
+businessStaffRouter.put("/:id/hr-employee", route(async (req, res) => {
+  const parsed = z.object({ hrEmployeeId: z.string().uuid().nullable() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await staff.linkHrEmployee(req.user!.id, req.params.id, parsed.data.hrEmployeeId);
+  res.json({ ok: true });
+}));

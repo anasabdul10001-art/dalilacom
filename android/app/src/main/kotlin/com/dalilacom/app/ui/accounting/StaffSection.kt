@@ -122,8 +122,10 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
     var removeTarget by remember { mutableStateOf<StaffDto?>(null) }
     var payTarget by remember { mutableStateOf<Pair<StaffDto, StaffAmountDto>?>(null) }
     var salaryTarget by remember { mutableStateOf<StaffDto?>(null) }
+    var hrEmps by remember { mutableStateOf<List<com.dalilacom.app.data.network.StaffHrEmployeeDto>>(emptyList()) }
+    var hrTarget by remember { mutableStateOf<StaffDto?>(null) }
     suspend fun reload() { list = container.staffRepository.list() }
-    LaunchedEffect(Unit) { reload() }
+    LaunchedEffect(Unit) { reload(); hrEmps = container.staffRepository.hrEmployees() }
     fun pct(v: String) = ((v.replace(',', '.').toDoubleOrNull() ?: 0.0) * 100).toInt()
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -175,6 +177,7 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
                     if (s.fixedPayCents > 0) OutlinedButton(onClick = { salaryTarget = s }) { Text(stringResource(R.string.staff_pay_salary)) }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (s.inviteState != "LINKED") OutlinedButton(onClick = { scope.launch { container.staffRepository.invite(s.id).fold({ code = it; reload() }, { message = it.message.orEmpty() }) } }) { Text(stringResource(R.string.staff_invite)) }
+                        if (hrEmps.isNotEmpty()) OutlinedButton(onClick = { hrTarget = s }) { Text(if (s.hrEmployeeId != null) stringResource(R.string.staff_hr_linked, hrEmps.firstOrNull { it.id == s.hrEmployeeId }?.name.orEmpty()) else stringResource(R.string.staff_hr_link)) }
                         OutlinedButton(onClick = { rateTarget = s; rateValue = (s.salesRateBp / 100.0).toString() }) { Text(stringResource(R.string.staff_edit_rate)) }
                         OutlinedButton(onClick = { removeTarget = s }) { Text(stringResource(R.string.staff_remove)) }
                     }
@@ -210,6 +213,20 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
             text = { Text(stringResource(R.string.staff_remove_confirm, s.name)) },
             confirmButton = { TextButton(onClick = { scope.launch { container.staffRepository.remove(s.id).fold({ reload() }, { message = it.message.orEmpty() }); removeTarget = null } }) { Text(stringResource(R.string.staff_remove)) } },
             dismissButton = { TextButton(onClick = { removeTarget = null }) { Text(stringResource(R.string.staff_cancel)) } },
+        )
+    }
+    hrTarget?.let { s ->
+        AlertDialog(
+            onDismissRequest = { hrTarget = null },
+            title = { Text(stringResource(R.string.staff_hr_pick)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(onClick = { scope.launch { container.staffRepository.linkHr(s.id, null).fold({ reload() }, { message = it.message.orEmpty() }); hrTarget = null } }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.staff_hr_none)) }
+                    hrEmps.forEach { e -> OutlinedButton(onClick = { scope.launch { container.staffRepository.linkHr(s.id, e.id).fold({ reload() }, { message = it.message.orEmpty() }); hrTarget = null } }, modifier = Modifier.fillMaxWidth()) { Text(e.name) } }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { hrTarget = null }) { Text(stringResource(R.string.staff_cancel)) } },
         )
     }
     salaryTarget?.let { s ->

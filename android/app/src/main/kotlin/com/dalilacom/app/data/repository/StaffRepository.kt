@@ -28,6 +28,8 @@ class StaffRepository(private val api: ApiService) {
     suspend fun marketerAddOffer(title: String, percent: Int): Result<Unit> = call({ api.createDiscount(com.dalilacom.app.data.network.DiscountInput(title = title, percent = percent)) }) { Unit }
     suspend fun marketerToggleOffer(id: String, active: Boolean): Result<Unit> = call({ api.patchDiscount(id, com.dalilacom.app.data.network.DiscountPatchRequest(isActive = active)) }) { Unit }
     suspend fun marketerAnnounce(title: String, body: String): Result<Unit> = call({ api.sendBroadcast(com.dalilacom.app.data.network.BroadcastRequest(title = title, body = body, followers = true)) }) { Unit }
+    suspend fun hrEmployees(): List<com.dalilacom.app.data.network.StaffHrEmployeeDto> = safeApiCall { api.staffHrEmployees() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    suspend fun linkHr(id: String, hrEmployeeId: String?): Result<Unit> = call({ api.staffLinkHr(id, com.dalilacom.app.data.network.StaffHrLinkRequest(hrEmployeeId)) }) { Unit }
     suspend fun accept(code: String): Result<StaffAcceptDto> = call({ api.staffAccept(StaffAcceptRequest(code)) }) { it.body()!! }
     suspend fun create(name: String, role: String, rateBp: Int, fixedPayCents: Long): Result<Unit> = call({ api.staffCreate(StaffCreateRequest(name, role, rateBp, fixedPayCents)) }) { Unit }
     suspend fun setRate(id: String, rateBp: Int): Result<Unit> = call({ api.staffPatch(id, StaffPatchRequest(rateBp)) }) { Unit }

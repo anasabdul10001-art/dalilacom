@@ -112,7 +112,7 @@ export async function processRun(actor: HrActor, id: string) {
     include: { components: { include: { component: true } } },
   });
 
-  type Draft = { employeeId: string; gross: number; deductions: number; net: number; breakdown: Prisma.InputJsonValue; installmentIds: string[]; advanceIds: string[] };
+  type Draft = { commissionIds: string[]; employeeId: string; gross: number; deductions: number; net: number; breakdown: Prisma.InputJsonValue; installmentIds: string[]; advanceIds: string[] };
   const drafts: Draft[] = [];
   // Days without a check-in are unpaid only where the company really keeps attendance: if nobody has a single check-in
   // in the period, every salary is paid in full (otherwise a company that does not track attendance would pay nothing)
@@ -140,6 +140,13 @@ export async function processRun(actor: HrActor, id: string) {
       if (ec.component.type === "EARNING") earnings += amount;
       else componentDeductions += amount;
     }
+    // the unpaid commissions of the staff member linked to this employee (business staff section) are paid with the salary
+    const commissions = await prisma.businessStaffCommission.findMany({
+      where: { ownerId: company.ownerId, status: "ACCRUED", currency: company.currency, amountCents: { gt: 0 }, createdAt: { lte: endOfDay(run.periodEnd) }, staff: { hrEmployeeId: emp.id, status: { not: "REMOVED" } } },
+      select: { id: true, amountCents: true },
+    });
+    const commissionTotal = commissions.reduce((sum, c) => sum + Number(c.amountCents), 0);
+    if (commissionTotal > 0) { lines.push({ name: "عمولات", type: "EARNING", amount: commissionTotal }); earnings += commissionTotal; }
     const gross = base + earnings;
 
     const due: HrAdvanceInstallment[] = await prisma.hrAdvanceInstallment.findMany({
@@ -156,7 +163,7 @@ export async function processRun(actor: HrActor, id: string) {
     const raw = componentDeductions + unpaidDeduction + advanceDeduction;
     const net = Math.max(0, gross - raw);
     drafts.push({
-      employeeId: emp.id, gross, deductions: gross - net, net,
+      commissionIds: commissions.map((c) => c.id), employeeId: emp.id, gross, deductions: gross - net, net,
       breakdown: {
         baseSalary: base, components: lines,
         unpaidAbsence: { workingDays: days.length, unpaidDays, dailyRate: Math.round(dailyRate), deduction: unpaidDeduction },
@@ -174,6 +181,10 @@ export async function processRun(actor: HrActor, id: string) {
     if (claimed.count !== 1) throw conflict("بتقدر تعالج دورة مسودّة بس");
     for (const d of drafts) {
       await tx.hrPayslip.create({ data: { runId: run.id, employeeId: d.employeeId, grossPay: d.gross, totalDeductions: d.deductions, netPay: d.net, breakdown: d.breakdown } });
+      if (d.commissionIds.length) {
+        const paid = await tx.businessStaffCommission.updateMany({ where: { id: { in: d.commissionIds }, status: "ACCRUED" }, data: { status: "PAID", paidAt: new Date() } });
+        if (paid.count !== d.commissionIds.length) throw conflict("عمولة انحسبت من دورة ثانية");
+      }
       if (!d.installmentIds.length) continue;
       const marked = await tx.hrAdvanceInstallment.updateMany({ where: { id: { in: d.installmentIds }, isPaid: false }, data: { isPaid: true, paidInRunId: run.id } });
       if (marked.count !== d.installmentIds.length) throw conflict("قسط سلفة انحسم من دورة ثانية");

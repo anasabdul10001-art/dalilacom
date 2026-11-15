@@ -2,6 +2,11 @@
 // PHRASES / PATTERNS / WORDS (the gettext-style table for everything else). See docs/I18N.md.
 LANGS.en = { name: "English", dir: "ltr" };
 DICT.en = {
+  "staff.hr.link": "Link to payroll",
+  "staff.hr.linked": "Linked to payroll: {name}",
+  "staff.hr.pick": "Choose the payroll employee whose payslip gets these commissions",
+  "staff.hr.none": "No link",
+
   "site.accounting.tab.marketing": "Marketing",
   "staff.role.MARKETER": "Business marketer",
   "staff.roleHelp.MARKETER": "Prepares the shop offers and sends announcements to its followers, with no access to accounting or paid ads.",

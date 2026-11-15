@@ -1400,7 +1400,7 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 
 // ---- the staff of a business owner (they work inside the owner's accounting)
 @Serializable data class StaffAmountDto(val currency: String = "EUR", val cents: Long = 0)
-@Serializable data class StaffDto(val id: String = "", val name: String = "", val role: String = "CASHIER", val salesRateBp: Int = 0, val fixedPayCents: Long = 0, val inviteState: String = "NONE", val unpaidCommissions: List<StaffAmountDto> = emptyList())
+@Serializable data class StaffDto(val id: String = "", val name: String = "", val role: String = "CASHIER", val salesRateBp: Int = 0, val fixedPayCents: Long = 0, val inviteState: String = "NONE", val hrEmployeeId: String? = null, val unpaidCommissions: List<StaffAmountDto> = emptyList())
 @Serializable data class StaffCreateRequest(val name: String, val role: String, val salesRateBp: Int = 0, val fixedPayCents: Long = 0)
 @Serializable data class StaffPatchRequest(val salesRateBp: Int)
 @Serializable data class StaffIdDto(val id: String = "")
@@ -1413,3 +1413,5 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class StaffPayDto(val paidCents: Long = 0, val count: Int = 0)
 @Serializable data class StaffOrderItemDto(val productName: String = "", val quantity: Int = 0)
 @Serializable data class StaffOrderDto(val id: String = "", val orderNumber: String = "", val status: String = "", val customerName: String? = null, val totalCents: Long = 0, val items: List<StaffOrderItemDto> = emptyList(), val paymentMethod: String? = null, val mine: Boolean = false)
+@Serializable data class StaffHrEmployeeDto(val id: String = "", val name: String = "")
+@Serializable data class StaffHrLinkRequest(@kotlinx.serialization.EncodeDefault val hrEmployeeId: String? = null)

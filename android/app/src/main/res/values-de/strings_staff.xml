@@ -75,4 +75,8 @@
     <string name="staff_announce_body">Announcement text</string>
     <string name="staff_announce_send">Send for review</string>
     <string name="staff_announce_sent">Sent for review</string>
+    <string name="staff_hr_link">Link to payroll</string>
+    <string name="staff_hr_linked" formatted="true">Linked to payroll: %1$s</string>
+    <string name="staff_hr_pick">Choose the payroll employee whose payslip gets these commissions</string>
+    <string name="staff_hr_none">No link</string>
 </resources>

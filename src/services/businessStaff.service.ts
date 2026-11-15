@@ -295,3 +295,23 @@ export async function accrueTeamOrderCommissions(orderId: string) {
     await prisma.businessStaffCommission.create({ data: { ownerId, staffId: st.id, saleId: `team:order:${orderId}:${st.id}`, baseCents: net, rateBp: st.salesRateBp, amountCents, currency } }).catch(() => undefined);
   }
 }
+
+/** The owner HR employees a staff member can be linked to (empty when the owner has no HR company: nothing to show then). */
+export async function hrEmployeesFor(ownerId: string) {
+  const company = await prisma.hrCompany.findUnique({ where: { ownerId }, select: { id: true } });
+  if (!company) return [];
+  const rows = await prisma.hrEmployee.findMany({ where: { companyId: company.id, employmentStatus: { not: "TERMINATED" } }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: "asc" } });
+  return rows.map((r) => ({ id: r.id, name: `${r.firstName} ${r.lastName}`.trim() }));
+}
+
+/** Links a staff member to an employee of the owner's payroll (or unlinks with null): their unpaid commissions then join the payslip. */
+export async function linkHrEmployee(ownerId: string, staffId: string, hrEmployeeId: string | null) {
+  const st = await prisma.businessStaff.findFirst({ where: { id: staffId, ownerId, status: { not: "REMOVED" } } });
+  if (!st) throw notFound();
+  if (hrEmployeeId) {
+    const emp = await prisma.hrEmployee.findFirst({ where: { id: hrEmployeeId, company: { ownerId }, employmentStatus: { not: "TERMINATED" } }, select: { id: true } });
+    if (!emp) throw new ApiError(404, "NOT_FOUND", "الموظف غير موجود بكشف الرواتب");
+    if (await prisma.businessStaff.count({ where: { ownerId, hrEmployeeId, status: { not: "REMOVED" }, id: { not: staffId } } })) throw new ApiError(409, "CONFLICT", "موظف الرواتب مربوط بموظف ثاني");
+  }
+  await prisma.businessStaff.update({ where: { id: staffId }, data: { hrEmployeeId } });
+}

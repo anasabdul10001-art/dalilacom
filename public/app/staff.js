@@ -77,6 +77,7 @@ async function staffAccept(btn) {
 function staffTab() {
   const st = staffState();
   if (st.list === null) { st.list = undefined; api("GET", "/business-staff").then(({ ok, data }) => { st.list = ok ? data : []; render(); }); }
+  if (st.hrEmps === undefined) { st.hrEmps = null; api("GET", "/business-staff/hr-employees").then(({ ok, data }) => { st.hrEmps = ok && Array.isArray(data) ? data : []; render(); }); }
   const list = st.list || [];
   const roleOpts = STAFF_ROLES.map((r) => `<option value="${r}">${esc(t("staff.role." + r))}</option>`).join("");
   return `<div class="card"><div class="section-title">${esc(t("staff.title"))}</div><p class="muted">${esc(t("staff.help"))}</p></div>
@@ -101,6 +102,7 @@ function staffRow(s) {
     ${owed.map((o) => `<div class="title-line"><span>${esc(t("staff.unpaid"))}: <b>${esc(staffMoney(o.cents, o.currency))}</b></span><button class="btn small" onclick="staffPay(this,'${s.id}','${o.currency}',${o.cents})">${esc(t("staff.pay"))}</button></div>`).join("")}
     <div class="btn-row">
       ${s.inviteState === "LINKED" ? "" : `<button class="btn small soft" onclick="staffInvite(this,'${s.id}')">${esc(t("staff.invite"))}</button>`}
+      ${(staffState().hrEmps || []).length ? `<button class="btn small outline" onclick="staffLinkHr('${s.id}')">${esc(s.hrEmployeeId ? t("staff.hr.linked", { name: ((staffState().hrEmps || []).find((e) => e.id === s.hrEmployeeId) || {}).name || "" }) : t("staff.hr.link"))}</button>` : ""}
       <button class="btn small outline" onclick="staffEditRate('${s.id}',${s.salesRateBp})">${esc(t("staff.editRate"))}</button>
       <button class="btn small outline" onclick="staffRemove('${s.id}')" aria-label="${esc(t("staff.remove"))}">🗑 ${esc(t("staff.remove"))}</button>
     </div></div>`;
@@ -246,4 +248,14 @@ async function staffAnnounce(btn) {
     if (!res.ok) return staffErr(res);
     toast(t("staff.announce.sent"));
   });
+}
+
+/** Links a staff member to an employee of the owner's payroll: their unpaid commissions then join the payslip. */
+async function staffLinkHr(id) {
+  const emps = staffState().hrEmps || [];
+  const pick = await uiPick(t("staff.hr.pick"), [["", t("staff.hr.none")], ...emps.map((e) => [e.id, e.name])]);
+  if (pick === null) return;
+  const res = await api("PUT", `/business-staff/${id}/hr-employee`, { hrEmployeeId: pick || null });
+  if (!res.ok) return staffErr(res);
+  toast(t("staff.saved")); staffState().list = null; render();
 }

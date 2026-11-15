@@ -4,6 +4,7 @@ import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
 import { uniqueEmail } from "./helpers";
+import { company as hrCompany, hire } from "./hrHelpers";
 
 afterAll(async () => { await prisma.$disconnect(); });
 
@@ -176,5 +177,24 @@ describe("business staff", () => {
     const order = await prisma.order.create({ data: { orderNumber: `M-${Date.now()}`, userId: customer.id, merchantId: shop.id, status: "SHIPPED", subtotalCents: 10000, totalCents: 10000 } });
     expect((await request(app).patch(`/orders/${order.id}/status`).set(boss.auth).send({ status: "DELIVERED" })).status).toBe(200);
     expect(Number((await prisma.businessStaffCommission.findFirstOrThrow({ where: { staffId: sid } })).amountCents)).toBe(300);
+  });
+
+  it("the commissions of a staff member linked to payroll join the payslip once, and are then paid", async () => {
+    const co = await hrCompany("stpay", "EUR");
+    if (!planId) planId = (await prisma.servicePlan.create({ data: { service: "ACCOUNTING", name: `Staff plan ${crypto.randomUUID().slice(0, 5)}`, durationDays: 30, priceCents: 0, currency: "EUR", priceCredits: 0 } })).id;
+    await prisma.platformSubscription.create({ data: { userId: co.id, planId, provider: "TEST", status: "ACTIVE", amountCents: 0, currency: "EUR", currentPeriodEnd: new Date(Date.now() + 30 * 86400000) } });
+    const emp = (await hire(co, { baseSalary: 100000 })).body;
+    expect((await request(app).get("/business-staff/hr-employees").set(co.auth)).body.map((e: { id: string }) => e.id)).toContain(emp.id);
+    const sid = (await request(app).post("/business-staff").set(co.auth).send({ name: "Salma", role: "CASHIER", salesRateBp: 500 })).body.id;
+    expect((await request(app).put(`/business-staff/${sid}/hr-employee`).set(co.auth).send({ hrEmployeeId: emp.id })).status).toBe(200);
+    await prisma.businessStaffCommission.create({ data: { ownerId: co.id, staffId: sid, saleId: `t-${Date.now()}`, baseCents: 20000, rateBp: 500, amountCents: 1000, currency: "EUR" } });
+    const day = (d: number) => new Date(Date.now() + d * 86400000).toISOString().slice(0, 10);
+    const run = (await request(app).post("/hr/payroll-runs").set(co.auth).send({ periodStart: day(-1), periodEnd: day(1) })).body.id;
+    const done = await request(app).post(`/hr/payroll-runs/${run}/process`).set(co.auth);
+    expect(done.status).toBe(200);
+    expect(done.body[0].grossPay).toBe(101000);
+    expect((await prisma.businessStaffCommission.findFirstOrThrow({ where: { staffId: sid } })).status).toBe("PAID");
+    // paying the commissions again by hand finds nothing due
+    expect((await request(app).post(`/business-staff/${sid}/commissions/pay`).set(co.auth).send({ currency: "EUR" })).status).toBe(409);
   });
 });
