@@ -263,6 +263,15 @@ interface ApiService {
     @retrofit2.http.PUT suspend fun hrPut(@retrofit2.http.Url path: String, @Body body: kotlinx.serialization.json.JsonObject): Response<kotlinx.serialization.json.JsonElement>
     @retrofit2.http.PATCH suspend fun hrPatch(@retrofit2.http.Url path: String, @Body body: kotlinx.serialization.json.JsonObject): Response<kotlinx.serialization.json.JsonElement>
     @retrofit2.http.DELETE suspend fun hrDelete(@retrofit2.http.Url path: String): Response<kotlinx.serialization.json.JsonElement>
+    @GET("business-staff/workplaces") suspend fun staffWorkplaces(): Response<List<StaffWorkplaceDto>>
+    @POST("business-staff/accept") suspend fun staffAccept(@Body body: StaffAcceptRequest): Response<StaffAcceptDto>
+    @GET("business-staff/me/{id}/commissions") suspend fun staffMyCommissions(@Path("id") id: String): Response<List<StaffCommissionDto>>
+    @GET("business-staff") suspend fun staffList(): Response<List<StaffDto>>
+    @POST("business-staff") suspend fun staffCreate(@Body body: StaffCreateRequest): Response<StaffIdDto>
+    @retrofit2.http.PATCH("business-staff/{id}") suspend fun staffPatch(@Path("id") id: String, @Body body: StaffPatchRequest): Response<okhttp3.ResponseBody>
+    @DELETE("business-staff/{id}") suspend fun staffRemove(@Path("id") id: String): Response<okhttp3.ResponseBody>
+    @POST("business-staff/{id}/invite") suspend fun staffInvite(@Path("id") id: String): Response<StaffInviteDto>
+    @POST("business-staff/{id}/commissions/pay") suspend fun staffPay(@Path("id") id: String, @Body body: StaffPayRequest): Response<StaffPayDto>
     @GET("accounting/summary") suspend fun accountingSummary(): Response<AccountingSummaryDto>
     @GET("accounting/products") suspend fun accountingProducts(@Query("q") query: String? = null): Response<List<AccountingProductDto>>
     @POST("accounting/products") suspend fun addAccountingProduct(@Body body: AccountingProductRequest): Response<AccountingProductDto>

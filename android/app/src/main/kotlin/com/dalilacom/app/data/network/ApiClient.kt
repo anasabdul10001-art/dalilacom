@@ -21,9 +21,13 @@ fun absoluteUrl(path: String): String = BASE_URL.trimEnd('/') + path
 private class AuthInterceptor(private val tokenStore: TokenStore) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = runBlocking { tokenStore.getToken() }
+        if (token == null && ActingBusiness.ownerId != null) ActingBusiness.set(null) // signed out: no longer working for anyone
+        val acting = ActingBusiness.ownerId
         val request = chain.request().newBuilder().apply {
             if (token != null) {
                 addHeader("Authorization", "Bearer $token")
+                // the staff member works inside the owner's accounting
+                if (acting != null && chain.request().url.encodedPath.startsWith("/accounting")) addHeader("X-Business-Owner", acting)
             }
         }.build()
         return chain.proceed(request)

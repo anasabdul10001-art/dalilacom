@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="staff_title">Business staff</string>
+    <string name="staff_my_work_title">My work</string>
+    <string name="staff_help">Invite your staff to work on your accounting, each with a set role. Every entry is recorded under the name of the person who made it, and you decide their access and commissions.</string>
+    <string name="staff_add">Add a staff member</string>
+    <string name="staff_name">Staff member name</string>
+    <string name="staff_role_cashier">Cashier</string>
+    <string name="staff_role_stock">Stock keeper</string>
+    <string name="staff_role_assistant">Assistant accountant</string>
+    <string name="staff_role_manager">Manager</string>
+    <string name="staff_help_cashier">Records sales and sees only their own invoices, with no profits or money records.</string>
+    <string name="staff_help_stock">Sees the products and edits quantities and stock counts, with no sales or money.</string>
+    <string name="staff_help_assistant">Records sales, income, expenses, payments and purchases, with no deleting, exporting or reports.</string>
+    <string name="staff_help_manager">Everything in accounting except plans and subscriptions.</string>
+    <string name="staff_rate">Commission rate on sales</string>
+    <string name="staff_rate_help">A share of the net of every sale this person records (without tax). Leave it at zero for no commission.</string>
+    <string name="staff_fixed">Fixed monthly pay (a note for you)</string>
+    <string name="staff_saved">Saved</string>
+    <string name="staff_none">You have not added any staff yet</string>
+    <string name="staff_invite">Invitation code</string>
+    <string name="staff_invite_show">Give this code to the staff member. They enter it on the accounting page with their own account. It works for 7 days.</string>
+    <string name="staff_copy">Copy code</string>
+    <string name="staff_copied">Code copied</string>
+    <string name="staff_state_pending">Waiting to accept</string>
+    <string name="staff_state_linked">Linked to an account</string>
+    <string name="staff_state_none">Not invited</string>
+    <string name="staff_edit_rate">Edit commission</string>
+    <string name="staff_remove">Remove</string>
+    <string name="staff_save">Save</string>
+    <string name="staff_cancel">Cancel</string>
+    <string name="staff_remove_confirm" formatted="true">Remove %1$s? Their access stops at once, and their records and earned commissions stay.</string>
+    <string name="staff_unpaid">Unpaid commissions</string>
+    <string name="staff_pay">Pay commissions</string>
+    <string name="staff_pay_confirm" formatted="true">Pay %1$s in commissions to %2$s? An expense is recorded in accounting.</string>
+    <string name="staff_paid">Commissions payment recorded</string>
+    <string name="staff_join_title">Did a business owner give you an invitation code?</string>
+    <string name="staff_join_help">Enter the invitation code and your workplace appears in accounting.</string>
+    <string name="staff_join_btn">Join</string>
+    <string name="staff_joined">You joined the team</string>
+    <string name="staff_switch_mine">My accounting</string>
+    <string name="staff_working_at" formatted="true">Working at %1$s</string>
+    <string name="staff_my_rate" formatted="true">Your commission is %1$.1f%% of sales</string>
+    <string name="staff_commissions">Your commissions</string>
+    <string name="staff_no_commissions">No commissions yet</string>
+    <string name="staff_status_accrued">Unpaid</string>
+    <string name="staff_status_paid">Paid</string>
+    <string name="staff_status_void">Cancelled</string>
+</resources>

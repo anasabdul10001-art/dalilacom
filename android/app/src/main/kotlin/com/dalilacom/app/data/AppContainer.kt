@@ -33,6 +33,7 @@ class AppContainer(context: Context) {
     val sessionStore = SessionStore(context.applicationContext)
     /** Fires when the server no longer accepts the stored session; the screens go back to the start (see NavGraph). */
     val sessionExpired = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val actingInit = com.dalilacom.app.data.network.ActingBusiness.init(context)
     private val api = ApiClient.create(
         tokenStore,
         languageProvider = { com.dalilacom.app.ui.i18n.AppLanguages.find(kotlinx.coroutines.runBlocking { sessionStore.getLanguage() }).code },
@@ -61,6 +62,7 @@ class AppContainer(context: Context) {
     val broadcastRepository = BroadcastRepository(api)
     val accountRepository = AccountRepository(api, tokenStore)
     val accountingRepository = AccountingRepository(api)
+    val staffRepository = com.dalilacom.app.data.repository.StaffRepository(api)
     val hrRepository = com.dalilacom.app.data.repository.HrRepository(api)
     val landmarkRepository = com.dalilacom.app.data.repository.LandmarkRepository(api)
     val shopAffiliateRepository = com.dalilacom.app.data.repository.ShopAffiliateRepository(api)

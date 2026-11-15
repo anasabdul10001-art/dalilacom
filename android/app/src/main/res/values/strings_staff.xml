@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="staff_title">موظفو النشاط</string>
+    <string name="staff_my_work_title">شغلي</string>
+    <string name="staff_help">ادعُ موظفينك ليشتغلوا على محاسبتك، كل واحد بدور محدد. كل حركة بتنسجّل باسم اللي سجّلها، وأنت اللي بتحدد صلاحياتهم وعمولاتهم.</string>
+    <string name="staff_add">إضافة موظف</string>
+    <string name="staff_name">اسم الموظف</string>
+    <string name="staff_role_cashier">كاشير</string>
+    <string name="staff_role_stock">مسؤول مخزون</string>
+    <string name="staff_role_assistant">محاسب مساعد</string>
+    <string name="staff_role_manager">مدير</string>
+    <string name="staff_help_cashier">بيسجّل مبيعات وبيشوف فواتيرو بس، بدون أرباح ولا حركات مالية.</string>
+    <string name="staff_help_stock">بيشوف المنتجات وبيعدّل الكميات والجرد، بدون مبيعات ولا مال.</string>
+    <string name="staff_help_assistant">بيسجّل مبيعات ودخل ومصاريف ودفعات ومشتريات، بدون حذف ولا تصدير ولا تقارير.</string>
+    <string name="staff_help_manager">كل شي بالمحاسبة (غير الباقات والاشتراك).</string>
+    <string name="staff_rate">نسبة العمولة من المبيعات</string>
+    <string name="staff_rate_help">نسبة من صافي كل بيعة بيسجّلها الموظف (بدون الضريبة). اتركها صفر إذا ما في عمولة.</string>
+    <string name="staff_fixed">راتب ثابت شهري (للتذكير)</string>
+    <string name="staff_saved">انحفظ</string>
+    <string name="staff_none">ما أضفت موظفين بعد</string>
+    <string name="staff_invite">رمز دعوة</string>
+    <string name="staff_invite_show">أعطي الموظف هالرمز. بيدخلو بصفحة المحاسبة بحسابو، وهو صالح 7 أيام.</string>
+    <string name="staff_copy">نسخ الرمز</string>
+    <string name="staff_copied">اننسخ الرمز</string>
+    <string name="staff_state_pending">بانتظار القبول</string>
+    <string name="staff_state_linked">مربوط بحساب</string>
+    <string name="staff_state_none">بدون دعوة</string>
+    <string name="staff_edit_rate">تعديل العمولة</string>
+    <string name="staff_remove">إزالة</string>
+    <string name="staff_save">حفظ</string>
+    <string name="staff_cancel">إلغاء</string>
+    <string name="staff_remove_confirm" formatted="true">إزالة %1$s؟ بيوقف دخولو فوراً، وبتضل حركاتو وعمولاتو المستحقة.</string>
+    <string name="staff_unpaid">عمولات مستحقة</string>
+    <string name="staff_pay">دفع العمولات</string>
+    <string name="staff_pay_confirm" formatted="true">دفع %1$s عمولات لـ %2$s؟ بينسجّل مصروف بالمحاسبة.</string>
+    <string name="staff_paid">انسجّل دفع العمولات</string>
+    <string name="staff_join_title">عندك رمز دعوة من صاحب نشاط؟</string>
+    <string name="staff_join_help">ادخل رمز الدعوة ليظهر لك مكان شغلك بالمحاسبة.</string>
+    <string name="staff_join_btn">انضمام</string>
+    <string name="staff_joined">انضميت لفريق العمل</string>
+    <string name="staff_switch_mine">محاسبتي</string>
+    <string name="staff_working_at" formatted="true">بتشتغل عند %1$s</string>
+    <string name="staff_my_rate" formatted="true">عمولتك %1$.1f%% من المبيعات</string>
+    <string name="staff_commissions">عمولاتك</string>
+    <string name="staff_no_commissions">ما في عمولات بعد</string>
+    <string name="staff_status_accrued">مستحقة</string>
+    <string name="staff_status_paid">مدفوعة</string>
+    <string name="staff_status_void">ملغاة</string>
+</resources>

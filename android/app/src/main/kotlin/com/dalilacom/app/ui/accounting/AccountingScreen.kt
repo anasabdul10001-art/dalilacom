@@ -150,26 +150,37 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var openingDialog by remember { mutableStateOf(false) }
     var openingValue by remember { mutableStateOf("") }
     var deleteEntryTarget by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingEntryDto?>(null) }
+    // staff: the businesses this account works for (empty for everybody else) and the one it works in now
+    var workplaces by remember { mutableStateOf<List<com.dalilacom.app.data.network.StaffWorkplaceDto>>(emptyList()) }
+    var actingId by remember { mutableStateOf(com.dalilacom.app.data.network.ActingBusiness.ownerId) }
+    val acting = workplaces.firstOrNull { it.ownerId == actingId }
+    fun can(tag: String) = acting == null || tag in acting.allowed
+    fun switchWorkplace(id: String?) { com.dalilacom.app.data.network.ActingBusiness.set(id); actingId = id }
 
     suspend fun reload() {
         loading = true
-        summary = container.accountingRepository.summary()
-        products = container.accountingRepository.products()
-        cash = container.accountingRepository.cash(cashDay, "EUR")
-        sales = container.accountingRepository.sales()
-        low = container.accountingRepository.lowStock()
-        partiesData = container.accountingRepository.parties()
-        purchases = container.accountingRepository.purchases()
-        recurring = container.accountingRepository.recurring()
-        taxRates = container.accountingRepository.taxRates()
+        val wps = container.staffRepository.workplaces()
+        workplaces = wps
+        if (actingId != null && wps.none { it.ownerId == actingId }) switchWorkplace(null)
+        val ag = wps.firstOrNull { it.ownerId == actingId }
+        fun ok(tag: String) = ag == null || tag in ag.allowed
+        summary = if (ok("reports")) container.accountingRepository.summary() else null
+        products = if (ok("productsRead")) container.accountingRepository.products() else emptyList()
+        cash = if (ok("money")) container.accountingRepository.cash(cashDay, "EUR") else null
+        sales = if (ok("salesRead")) container.accountingRepository.sales() else emptyList()
+        low = if (ok("productsRead")) container.accountingRepository.lowStock() else null
+        partiesData = if (ok("partiesRead")) container.accountingRepository.parties() else null
+        purchases = if (ok("money")) container.accountingRepository.purchases() else emptyList()
+        recurring = if (ok("money")) container.accountingRepository.recurring() else emptyList()
+        taxRates = if (ok("admin")) container.accountingRepository.taxRates() else emptyList()
         val stmToday = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
-        statements = container.accountingRepository.statements(stmToday.withDayOfMonth(1).toString(), stmToday.toString())
-        taxSettings = container.accountingRepository.settings() ?: taxSettings
+        statements = if (ok("reports")) container.accountingRepository.statements(stmToday.withDayOfMonth(1).toString(), stmToday.toString()) else null
+        if (ok("admin")) taxSettings = container.accountingRepository.settings() ?: taxSettings
         val todayUtc = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
-        taxReport = container.accountingRepository.taxReport(todayUtc.withDayOfMonth(1).toString(), todayUtc.toString())
+        taxReport = if (ok("reports")) container.accountingRepository.taxReport(todayUtc.withDayOfMonth(1).toString(), todayUtc.toString()) else null
         val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
         val (rf, rt) = when (reportPreset) { "today" -> today to today; "week" -> today.minusDays(6) to today; "last30" -> today.minusDays(29) to today; else -> today.withDayOfMonth(1) to today }
-        report = container.accountingRepository.report(rf.toString(), rt.toString())
+        report = if (ok("reports")) container.accountingRepository.report(rf.toString(), rt.toString()) else null
         loading = false
     }
     LaunchedEffect(Unit) { reload() }
@@ -216,7 +227,10 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { Text(stringResource(R.string.accounting_title), style = MaterialTheme.typography.headlineSmall) }
-        item {
+        item { StaffSwitcher(workplaces, actingId) { id -> switchWorkplace(id); scope.launch { reload() } } }
+        if (acting != null) item { CollapsibleCard(stringResource(R.string.staff_my_work_title), startOpen = true) { StaffMyWork(container, acting) } }
+        else item { CollapsibleCard(stringResource(R.string.staff_title)) { StaffOwnerSection(container) { id -> switchWorkplace(id); scope.launch { reload() } } } }
+        if (can("reports")) item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.accounting_summary), style = MaterialTheme.typography.titleMedium)
@@ -235,7 +249,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        cash?.let { c ->
+        if (can("money")) cash?.let { c ->
             item {
                 CollapsibleCard(stringResource(R.string.accounting_cash_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -278,7 +292,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        item {
+        if (can("sell")) item {
             val saleSub = basket.sumOf { (p, q) -> p.salePriceCents.toLong() * q }
             val dv = saleDiscount.replace(',', '.').toDoubleOrNull() ?: 0.0
             val saleDisc = if (saleDiscountPercent) Math.round(saleSub * dv.coerceIn(0.0, 100.0) / 100.0) else Math.round(dv * 100)
@@ -361,7 +375,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        item {
+        if (can("money")) item {
             CollapsibleCard(stringResource(R.string.accounting_buy_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.accounting_buy_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -434,7 +448,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        item {
+        if (can("money")) item {
             CollapsibleCard(stringResource(R.string.accounting_rec_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.accounting_rec_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -478,7 +492,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        item {
+        if (can("admin")) item {
             CollapsibleCard(stringResource(R.string.accounting_tax_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.accounting_tax_warn), style = MaterialTheme.typography.bodySmall, color = androidx.compose.ui.graphics.Color(0xFF8A6D00))
@@ -519,7 +533,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        statements?.let { st ->
+        if (can("reports")) statements?.let { st ->
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -558,7 +572,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        partiesData?.let { pd ->
+        if (can("money")) partiesData?.let { pd ->
             item {
                 CollapsibleCard(stringResource(R.string.accounting_party_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -589,7 +603,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        report?.let { rp ->
+        if (can("reports")) report?.let { rp ->
             item {
                 CollapsibleCard(stringResource(R.string.accounting_rep_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -635,7 +649,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        low?.let { lw ->
+        if (can("productsRead")) low?.let { lw ->
             item {
                 CollapsibleCard(stringResource(R.string.accounting_low_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -677,7 +691,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        item {
+        if (can("money")) item {
             CollapsibleCard(stringResource(R.string.accounting_add_entry)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -700,7 +714,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        item {
+        if (can("money")) item {
             CollapsibleCard(stringResource(R.string.accounting_invoice_photo)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.accounting_invoice_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -720,7 +734,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        item {
+        if (can("stockWrite")) item {
             CollapsibleCard(stringResource(R.string.accounting_inventory)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -742,7 +756,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         }
         if (message.isNotBlank()) item { Text(message, color = MaterialTheme.colorScheme.primary) }
         if (products.isEmpty()) item { Text(stringResource(R.string.accounting_empty_stock), color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        items(products, key = { it.id }) { p ->
+        if (can("productsRead")) items(products, key = { it.id }) { p ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(p.name, style = MaterialTheme.typography.titleMedium)
@@ -776,7 +790,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(e.description, style = MaterialTheme.typography.titleSmall)
                         Text(e.category + " · " + e.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (e.source == "PAYROLL") com.dalilacom.app.ui.common.StatusChip(stringResource(R.string.accounting_payrollLabel), "warn")
+                        if (e.source == "PAYROLL") com.dalilacom.app.ui.common.StatusChip(stringResource(if (e.payrollDue) R.string.accounting_payrollDueLabel else R.string.accounting_payrollLabel), "warn")
                         e.payMethod?.let { pm -> com.dalilacom.app.ui.common.StatusChip(stringResource(when (pm) { "BANK" -> R.string.accounting_pay_BANK; "WALLET" -> R.string.accounting_pay_WALLET; else -> R.string.accounting_pay_CASH })) }
                     }
                     Text(
