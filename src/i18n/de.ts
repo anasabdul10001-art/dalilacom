@@ -390,6 +390,7 @@ export const pack: LanguagePack = {
       "صاحب النشاط وحده بيرجّع دفعة رواتب": "Nur der Inhaber kann eine Gehaltszahlung zurücknehmen",
       "حسابك مرتبط بموظف بهالشركة من قبل": "Ihr Konto ist bereits mit einer Person in diesem Unternehmen verknüpft",
       "رواتب": "Gehälter",
+      "رواتب مستحقة": "Fällige Gehälter",
   },
   patterns: [
     [/^طلب سلفة جديد من (.+)$/, "Neuer Vorschussantrag von $1"],
@@ -400,6 +401,7 @@ export const pack: LanguagePack = {
     [/^وافق المدير على طلب إجازة (.+)$/, "Die Führungskraft hat den Urlaubsantrag von $1 genehmigt"],
     [/^دعوة للعمل مع (.+)$/, "Einladung zur Mitarbeit bei $1"],
     [/^دعاك صاحب «(.+)» لتنضم كموظف على دليلكم\. افتح قسم «وظيفتي» بحسابك وادخل رمز الدعوة: (.+)$/s, "Der Inhaber von „$1“ hat Sie eingeladen, als Mitarbeitende auf Dalilacom beizutreten. Öffnen Sie in Ihrem Konto den Bereich „Meine Stelle“ und geben Sie den Einladungscode ein: $2"],
+    [/^رواتب مستحقة للفترة من (\d{4}-\d{2}-\d{2}) إلى (\d{4}-\d{2}-\d{2}) · عدد الموظفين (\d+)$/, "Fällige Gehälter für $1 bis $2 · $3 Beschäftigte (noch nicht bezahlt)"],
     [/^رواتب الفترة من (\d{4}-\d{2}-\d{2}) إلى (\d{4}-\d{2}-\d{2}) · عدد الموظفين (\d+)$/, "Gehälter für $1 bis $2 · $3 Beschäftigte"],
     [/^«(.+)» صار على دليلكم وبيظهر للزبائن\.$/, "\"$1\" is now on Dalilacom and visible to customers."],
     [/^«(.+)»: (.+)\. بتقدر تعدّل معلوماتك وتجرّب من جديد\.$/s, "\"$1\": $2. You can edit your details and try again."],

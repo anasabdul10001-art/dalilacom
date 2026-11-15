@@ -162,7 +162,7 @@ describe("HR payroll -> the owner's accounting", () => {
     const paid = await pay(co, runId);
     expect(paid.status).toBe(200);
     expect(paid.body.expenseBooked).toBe(false);
-    expect(await expenses(co.id)).toHaveLength(0);
+    expect(await expenses(co.id)).toHaveLength(0); // a run that costs nothing books nothing, due or paid
   });
 
   it("a run paid before its period ends is booked as of today, so this month's figures show it at once", async () => {
@@ -192,7 +192,10 @@ describe("HR payroll -> the owner's accounting", () => {
     const runId = await newRun(co);
     expect((await pay(co, runId)).status).toBe(409); // not processed yet
     await process(co, runId);
-    expect(await expenses(co.id)).toHaveLength(0); // processed is not paid
+    // processed: the cost is known, so it shows in accounting as payroll due (counted in the net, not yet paid)
+    const [due] = await expenses(co.id);
+    expect(due).toMatchObject({ type: "EXPENSE", category: "رواتب مستحقة", sourceKey: `hr-run:${runId}` });
+    expect(Number(due.amountCents)).toBe(800000);
     const paid = await pay(co, runId);
     expect(paid.body.status).toBe("PAID");
     const [entry] = await expenses(co.id);
@@ -204,10 +207,14 @@ describe("HR payroll -> the owner's accounting", () => {
     expect(await expenses(co.id)).toHaveLength(1);
 
     expect((await revert(co, runId)).body.status).toBe("PROCESSED");
-    expect(await expenses(co.id)).toHaveLength(0);
+    const back = await expenses(co.id);
+    expect(back).toHaveLength(1);
+    expect(back[0].category).toBe("رواتب مستحقة"); // taken back: due again, not gone
     expect((await revert(co, runId)).status).toBe(409);
     await pay(co, runId);
-    expect(await expenses(co.id)).toHaveLength(1); // paid again: booked again, once
+    const again = await expenses(co.id);
+    expect(again).toHaveLength(1); // paid again: still one entry
+    expect(again[0].category).toBe("رواتب");
   });
 
   it("shows in the owner's accounting summary as the payroll cost, and cannot be edited or deleted there", async () => {
@@ -225,7 +232,8 @@ describe("HR payroll -> the owner's accounting", () => {
     expect((await request(app).patch(`/accounting/entries/${entry.id}`).set(co.auth).send({ amountCents: 1 })).status).toBe(409);
     expect((await request(app).delete(`/accounting/entries/${entry.id}`).set(co.auth)).status).toBe(409);
     await revert(co, runId);
-    expect((await request(app).get("/accounting/summary").query({ from: "2026-03-01", to: "2026-03-31" }).set(co.auth)).body.totals[0].payrollCents).toBeUndefined();
+    // taken back: still counted, as payroll due, until the run is paid again
+    expect((await request(app).get("/accounting/summary").query({ from: "2026-03-01", to: "2026-03-31" }).set(co.auth)).body.totals[0].payrollCents).toBe(500000);
   });
 
   it("a company's total can be wider than 32 bits while each salary fits one", async () => {

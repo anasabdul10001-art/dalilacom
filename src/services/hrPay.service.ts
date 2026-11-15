@@ -181,6 +181,8 @@ export async function processRun(actor: HrActor, id: string) {
         if ((await tx.hrAdvanceInstallment.count({ where: { advanceId, isPaid: false } })) === 0) await tx.hrAdvance.update({ where: { id: advanceId }, data: { status: "REPAID" } });
       }
     }
+    // the cost is known now: it shows in accounting as "payroll due" until the run is marked paid
+    await bookExpense(tx, company, run, false);
     await tx.hrAuditLog.create({ data: { companyId: company.id, userId: actor.userId, action: "payroll.run", entityType: "HrPayrollRun", entityId: run.id, metadata: { employeeCount: drafts.length, totalNetPay: drafts.reduce((s, d) => s + d.net, 0) } } });
   }, { timeout: 120000, maxWait: 30000 });
 
@@ -210,20 +212,25 @@ export function runCost(payslips: { netPay: number; breakdown: unknown }[]) {
 
 export const payrollSourceKey = (runId: string) => `hr-run:${runId}`;
 
-async function bookExpense(tx: Prisma.TransactionClient, company: HrCompany, run: { id: string; periodStart: Date; periodEnd: Date }) {
+/** The payroll expense in the owner's accounting. Two stages: "due" once the run is processed (the cost is known), "paid" once the money went out. */
+export const PAYROLL_CATEGORY_DUE = "رواتب مستحقة";
+export const PAYROLL_CATEGORY_PAID = "رواتب";
+
+async function bookExpense(tx: Prisma.TransactionClient, company: HrCompany, run: { id: string; periodStart: Date; periodEnd: Date }, paid: boolean) {
   const payslips = await tx.hrPayslip.findMany({ where: { runId: run.id }, select: { netPay: true, breakdown: true } });
   const total = runCost(payslips);
   if (total <= 0) return 0;
   const sourceKey = payrollSourceKey(run.id);
+  const category = paid ? PAYROLL_CATEGORY_PAID : PAYROLL_CATEGORY_DUE;
   const fields = {
-    amountCents: total, currency: company.currency,
+    amountCents: total, currency: company.currency, category,
     // the month that was worked, whenever it was paid; but never later than now, so a run paid before its period ends still shows in this month's figures
     occurredAt: new Date(Math.min(new Date(`${dateKey(run.periodEnd)}T12:00:00.000Z`).getTime(), Date.now())),
-    description: `رواتب الفترة من ${dateKey(run.periodStart)} إلى ${dateKey(run.periodEnd)} · عدد الموظفين ${payslips.length}`,
+    description: `${paid ? "رواتب الفترة" : "رواتب مستحقة للفترة"} من ${dateKey(run.periodStart)} إلى ${dateKey(run.periodEnd)} · عدد الموظفين ${payslips.length}`,
   };
   await tx.accountingEntry.upsert({
     where: { userId_sourceKey: { userId: company.ownerId, sourceKey } },
-    create: { ...fields, userId: company.ownerId, type: "EXPENSE", category: "رواتب", source: "PAYROLL", sourceKey },
+    create: { ...fields, userId: company.ownerId, type: "EXPENSE", source: "PAYROLL", sourceKey },
     update: fields,
   });
   return total;
@@ -237,7 +244,7 @@ export async function markPaid(actor: HrActor, id: string) {
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.hrPayrollRun.updateMany({ where: { id, status: "PROCESSED" }, data: { status: "PAID", paidAt: new Date() } });
     if (claimed.count !== 1) throw conflict("بتقدر تدفع دورة معالَجة بس");
-    booked = await bookExpense(tx, actor.company, run);
+    booked = await bookExpense(tx, actor.company, run, true);
     await tx.hrAuditLog.create({ data: { companyId: actor.company.id, userId: actor.userId, action: "payroll.paid", entityType: "HrPayrollRun", entityId: id } });
   });
   // expenseBooked tells the app whether an expense really reached the owner's accounting (a run that costs nothing books none)
@@ -246,14 +253,14 @@ export async function markPaid(actor: HrActor, id: string) {
   return { ...(await prisma.hrPayrollRun.findUniqueOrThrow({ where: { id } })), expenseBooked: booked > 0, accountingActive };
 }
 
-/** Takes a payment back (PAID -> PROCESSED): the expense it made is removed, in the same transaction. */
+/** Takes a payment back (PAID -> PROCESSED): the expense goes back to "payroll due", in the same transaction. */
 export async function revertPaid(actor: HrActor, id: string) {
   const run = await prisma.hrPayrollRun.findFirst({ where: { id, companyId: actor.company.id } });
   if (!run) throw notFound("دورة الرواتب غير موجودة");
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.hrPayrollRun.updateMany({ where: { id, status: "PAID" }, data: { status: "PROCESSED", paidAt: null } });
     if (claimed.count !== 1) throw conflict("بتقدر ترجّع دورة مدفوعة بس");
-    await tx.accountingEntry.deleteMany({ where: { userId: actor.company.ownerId, sourceKey: payrollSourceKey(id), source: "PAYROLL" } });
+    await bookExpense(tx, actor.company, run, false);
     await tx.hrAuditLog.create({ data: { companyId: actor.company.id, userId: actor.userId, action: "payroll.revert_paid", entityType: "HrPayrollRun", entityId: id } });
   });
   return prisma.hrPayrollRun.findUniqueOrThrow({ where: { id } });

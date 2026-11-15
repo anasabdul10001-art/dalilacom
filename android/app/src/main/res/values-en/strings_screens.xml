@@ -763,6 +763,7 @@
     <string name="hr_leave_waitManager">Waiting for the manager</string>
     <string name="hr_pay_paidTotalLabel">Total cost of paid runs</string>
     <string name="accounting_payrollLabel">Payroll</string>
+    <string name="accounting_payrollDueLabel">Payroll due</string>
     <string name="accounting_incomeLabel">Income</string>
     <string name="accounting_expensesLabel">Expenses</string>
     <string name="accounting_netLabel">Net</string>

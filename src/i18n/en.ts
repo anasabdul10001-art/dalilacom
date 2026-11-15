@@ -627,6 +627,7 @@ export const en: LanguagePack = {
     "صاحب النشاط وحده بيرجّع دفعة رواتب": "Only the business owner can take a payroll payment back",
     "حسابك مرتبط بموظف بهالشركة من قبل": "Your account is already linked to an employee in this company",
     "رواتب": "Salaries",
+    "رواتب مستحقة": "Salaries due",
   },
   patterns: [
     [/^طلب سلفة جديد من (.+)$/, "New advance request from $1"],
@@ -637,6 +638,7 @@ export const en: LanguagePack = {
     [/^وافق المدير على طلب إجازة (.+)$/, "The manager approved $1's leave request"],
     [/^دعوة للعمل مع (.+)$/, "Invitation to work with $1"],
     [/^دعاك صاحب «(.+)» لتنضم كموظف على دليلكم\. افتح قسم «وظيفتي» بحسابك وادخل رمز الدعوة: (.+)$/s, "The owner of “$1” invited you to join as an employee on Dalilacom. Open the “My job” section in your account and enter the invitation code: $2"],
+    [/^رواتب مستحقة للفترة من (\d{4}-\d{2}-\d{2}) إلى (\d{4}-\d{2}-\d{2}) · عدد الموظفين (\d+)$/, "Salaries due for $1 to $2 · $3 employees (not paid yet)"],
     [/^رواتب الفترة من (\d{4}-\d{2}-\d{2}) إلى (\d{4}-\d{2}-\d{2}) · عدد الموظفين (\d+)$/, "Salaries for $1 to $2 · $3 employees"],
     [/^هالأسبوع وصلك (\d+) رسالة ما لقت رد ثابت\. الذكاء الاصطناعي كان ممكن يرد عليها\.$/, (m) => `This week, ${m[1]} messages arrived without a matching fixed reply. AI could have replied to them.`],
     [/^خلال آخر 24 ساعة وصلك (\d+) رسالة ما لقت رد ثابت\. الذكاء الاصطناعي كان ممكن يرد عليها\.$/, (m) => `In the last 24 hours, ${m[1]} messages arrived without a matching fixed reply. AI could have replied to them.`],

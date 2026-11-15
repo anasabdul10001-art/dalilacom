@@ -2694,7 +2694,7 @@ function screenAccounting() {
     ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${accOut(e) ? 4 : 140}">${accOut(e) ? "↓" : "↑"}</span><div class="item-main">
         <div class="item-title">${esc(e.description)}</div>
         <div class="item-sub">${esc(e.category)} · <bdi>${new Date(e.occurredAt).toLocaleDateString()}</bdi></div>
-        ${e.source === "PAYROLL" || e.payMethod ? `<div class="chips">${e.source === "PAYROLL" ? uiChip(t(e.category === "رواتب مستحقة" ? "accounting.payrollDueLabel" : "accounting.payrollLabel"), "warn") : ""}${e.payMethod ? uiChip(t("accounting.pay." + e.payMethod)) : ""}</div>` : ""}
+        ${e.source === "PAYROLL" || e.payMethod ? `<div class="chips">${e.source === "PAYROLL" ? uiChip(t(e.payrollDue ? "accounting.payrollDueLabel" : "accounting.payrollLabel"), "warn") : ""}${e.payMethod ? uiChip(t("accounting.pay." + e.payMethod)) : ""}</div>` : ""}
         ${e.source === "MANUAL" || e.source === "INVOICE" ? `<div class="btn-row"><button class="btn small soft" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎ ${esc(t("accounting.edit"))}</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></div>` : ""}
       </div><div class="item-end ${accOut(e) ? "out" : "in"}">${accOut(e) ? "−" : "+"}${esc(fmt(Math.abs(e.amountCents), e.currency))}</div></div>`).join("") || uiEmpty("🧾", t("accounting.noEntries"))}`,
     entry: `

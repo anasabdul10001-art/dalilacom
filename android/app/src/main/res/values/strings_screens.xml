@@ -763,6 +763,7 @@
     <string name="hr_leave_waitManager">بانتظار المدير</string>
     <string name="hr_pay_paidTotalLabel">إجمالي كلفة الدورات المدفوعة</string>
     <string name="accounting_payrollLabel">رواتب</string>
+    <string name="accounting_payrollDueLabel">رواتب مستحقة</string>
     <string name="accounting_incomeLabel">الدخل</string>
     <string name="accounting_expensesLabel">المصاريف</string>
     <string name="accounting_netLabel">الصافي</string>

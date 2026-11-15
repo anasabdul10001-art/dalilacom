@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { PAYROLL_CATEGORY_DUE } from "../services/hrPay.service.js";
 import crypto from "crypto";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
@@ -59,7 +60,11 @@ function alertLowStock(userId: string, crossed: { name: string; before: number; 
   }
 }
 
-const plain = <T extends { amountCents: bigint }>(row: T) => ({ ...row, amountCents: Number(row.amountCents) });
+// a payroll entry whose run is processed but not paid yet is flagged, so the apps can label it without reading its (Arabic) category
+const plain = <T extends { amountCents: bigint }>(row: T) => {
+  const r = row as T & { source?: string; category?: string };
+  return { ...row, amountCents: Number(row.amountCents), ...(r.source === "PAYROLL" && r.category === PAYROLL_CATEGORY_DUE ? { payrollDue: true } : {}) };
+};
 
 export const accountingRouter = Router();
 accountingRouter.use(requireAuth, route(actAsBusinessStaff), route(async (req, res, next) => {
