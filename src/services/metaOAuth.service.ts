@@ -169,7 +169,7 @@ async function graphGet<T>(path: string, params: Record<string, string>): Promis
  * Page tokens obtained from a long-lived user token do not expire on their own, which is what makes
  * this connection durable.
  */
-export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaPage[]; skipped: { id: string; name: string }[] }> {
+export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaPage[]; skipped: { id: string; name: string }[]; diag?: string }> {
   const appId = metaAppId();
   const appSecret = metaAppSecret();
   if (!appId || !appSecret) throw new MetaOAuthError("META_NOT_CONFIGURED", "تطبيق Meta غير مضبوط", 503);
@@ -197,6 +197,7 @@ export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaP
   });
 
   let all = accounts.data ?? [];
+  let diag = "";
   // Facebook Login for Business can return an empty /me/accounts even though the person ticked a Page in the dialog (the Page
   // is granted to the app, not listed under the user). The granted Page ids are in the token's granular scopes: read them and
   // ask for each Page (and its token) directly.
@@ -211,15 +212,18 @@ export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaP
         if (["pages_show_list", "pages_messaging", "pages_manage_metadata"].includes(g.scope ?? "")) (g.target_ids ?? []).forEach((id) => ids.add(String(id)));
       }
       const found: any[] = [];
+      diag = `granted=${[...ids].join(",") || "none"}`;
       for (const id of ids) {
         try {
           found.push(await graphGet<any>(id, { fields: "id,name,access_token,instagram_business_account{id,username}", access_token: userToken }));
         } catch (err) {
+          diag += ` | ${id}: ${err instanceof Error ? err.message : String(err)}`;
           console.warn("[meta-oauth] granted Page could not be read:", id, err instanceof Error ? err.message : err);
         }
       }
       all = found;
     } catch (err) {
+      diag = `scope lookup: ${err instanceof Error ? err.message : String(err)}`;
       console.warn("[meta-oauth] granular scope lookup failed:", err instanceof Error ? err.message : err);
     }
   }
@@ -236,7 +240,7 @@ export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaP
       instagramAccountId: p.instagram_business_account?.id ? String(p.instagram_business_account.id) : undefined,
       instagramUsername: p.instagram_business_account?.username ? String(p.instagram_business_account.username) : undefined,
     }));
-  return { pages, skipped };
+  return { pages, skipped, diag: diag || undefined };
 }
 
 /* ---------------- sessions: from "just logged in" to "one Page connected" ---------------- */
