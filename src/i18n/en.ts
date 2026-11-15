@@ -564,6 +564,17 @@ export const en: LanguagePack = {
     "الطلب قديم. تحقق من ساعة الخادم": "The request is too old. Check the server clock",
     "تم إلغاء هذا الربط": "This link was cancelled",
     "طلب آخر لنفس دورة الرواتب قيد المعالجة. أعد المحاولة": "Another request for the same payroll run is being processed. Try again",
+    // ---- business staff (inside accounting) ----
+    "موظفو النشاط بيشتغلوا داخل المحاسبة، وهي تحتاج باقة فعّالة أو فترة تجربة.": "Business staff work inside accounting, which needs an active plan or a trial.",
+    "ما عندك صلاحية على محاسبة هالنشاط": "You don't have access to this business's accounting",
+    "دورك ما بيسمح لك بهالعملية": "Your role does not allow this action",
+    "هالدور ما بيسجّل مبيعات، فما في عمولة على المبيعات": "This role does not record sales, so it has no sales commission",
+    "أنت صاحب هالنشاط، ما بتنضم له كموظف": "You own this business, so you cannot join it as staff",
+    "حسابك مرتبط بهالنشاط من قبل": "Your account is already linked to this business",
+    "موظف جديد قبل دعوتك": "A new staff member accepted your invitation",
+    "ما في عمولات مستحقة لهالموظف": "This staff member has no commissions due",
+    "العمولات اندفعت من قبل": "These commissions were already paid",
+    "عمولات الموظفين": "Staff commissions",
     // ---- human resources section ----
     "ما عندك صلاحية على قسم الموارد البشرية": "You don't have access to the human resources section",
     "قسم الموارد البشرية يحتاج باقة فعّالة أو فترة تجربة. افتح صفحة الباقات من حسابك.": "The human resources section needs an active plan or a trial period. Open the plans page from your account.",
