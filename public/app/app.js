@@ -22,6 +22,7 @@ function latinDigits(text) {
 const S = {
   currency: "EUR",
   token: localStorage.getItem("dlk_token") || null,
+  _actAs: localStorage.getItem("dlk_actas") || null, // the business this account works for as staff (null: its own accounting)
   role: localStorage.getItem("dlk_role") || null,
   screen: S_initialScreen(),
   homeTab: "store", // the site opens on the store; the map and the other sections are one tap away in the bar
@@ -132,6 +133,7 @@ async function api(method, path, body) {
   // The server answers (errors, pages, names) in the app's language, not the browser's.
   const headers = { "Content-Type": "application/json", "Accept-Language": LANG };
   if (S.token) headers["Authorization"] = "Bearer " + S.token;
+  if (S._actAs && path.startsWith("/accounting")) headers["X-Business-Owner"] = S._actAs;
   try {
     const res = await fetch(API_BASE + path, {
       method,
@@ -175,6 +177,7 @@ function clearToken() {
   S.role = null;
   S._hr = null;
   localStorage.removeItem("dlk_token");
+  localStorage.removeItem("dlk_actas"); S._actAs = null; S._staff = null;
   localStorage.removeItem("dlk_role");
   if (S._discover) S._discover.favIds = [];
   S._favorites = null;
@@ -2570,10 +2573,11 @@ function setSiteTab(kind, tab) {
 }
 function siteShell(kind, active, body) {
   const cfg = SITES[kind];
-  const tabIds = kind === "hr" ? hrTabs() : cfg.tabs;
+  const tabIds = kind === "hr" ? hrTabs() : kind === "accounting" ? accTabs() : cfg.tabs;
   const tabs = [["home", t("site.tab.home")], ...tabIds.map((id) => [id, t("site." + kind + ".tab." + id)])];
   return `<div class="site site-${kind}">
     <div class="site-bar"><span class="site-logo">${cfg.icon}</span><b>${esc(t("sec." + kind + ".kicker"))}</b></div>
+    ${kind === "accounting" && S.token ? staffSwitcherHtml() : ""}
     ${tabIds.length ? `<nav class="site-tabs">${tabs.map(([id, label]) => `<button class="${id === active ? "on" : ""}" onclick="setSiteTab('${kind}','${id}')">${esc(label)}</button>`).join("")}</nav>` : ""}
     ${body}
   </div>`;
@@ -2586,7 +2590,7 @@ function siteCta(kind) {
     const first = hrTabs()[0];
     return [first ? { label: t("site.open.hr"), action: `setSiteTab('hr','${first}')` } : { label: t("hr.getPlan"), action: "S._allPlans=null;go('allPlans')" }];
   }
-  return [{ label: t("site.open." + kind), action: `setSiteTab('${kind}','${SITES[kind].tabs[0]}')` }];
+  return [{ label: t("site.open." + kind), action: `setSiteTab('${kind}','${kind === "accounting" ? accTabs()[0] : SITES[kind].tabs[0]}')` }];
 }
 const siteButtons = (list) => list.map((b) => `<button class="btn ${b.outline ? "outline" : ""}" onclick="${b.action}">${esc(b.label)}</button>`).join("");
 
@@ -2665,7 +2669,11 @@ function screenHr() {
 function screenAccounting() {
   const tab = siteTab("accounting");
   // the home page is always there (and is all a guest sees); the tools are the other tabs
-  if (tab === "home" || !S.token) return siteShell("accounting", "home", siteLanding("accounting"));
+  if (tab === "home" || !S.token) return siteShell("accounting", "home", staffJoinCard() + siteLanding("accounting"));
+  if (tab === "staff" && !S._actAs) return siteShell("accounting", tab, staffTab());
+  if (tab === "mywork") return siteShell("accounting", tab, staffMyWork());
+  if (S._actAs && !staffActing()) return siteShell("accounting", tab, skeleton("tiles")); // the workplaces are still loading
+  if (S._actAs && !accTabs().includes(tab)) return siteShell("accounting", accTabs()[0], staffMyWork());
   if (!S._accounting || S._accounting.loading) {
     if (!S._accounting) { S._accounting = { loading: true }; loadAccounting(); }
     return siteShell("accounting", tab, skeleton("tiles"));
@@ -2686,7 +2694,7 @@ function screenAccounting() {
     ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${accOut(e) ? 4 : 140}">${accOut(e) ? "↓" : "↑"}</span><div class="item-main">
         <div class="item-title">${esc(e.description)}</div>
         <div class="item-sub">${esc(e.category)} · <bdi>${new Date(e.occurredAt).toLocaleDateString()}</bdi></div>
-        ${e.source === "PAYROLL" || e.payMethod ? `<div class="chips">${e.source === "PAYROLL" ? uiChip(t("accounting.payrollLabel"), "warn") : ""}${e.payMethod ? uiChip(t("accounting.pay." + e.payMethod)) : ""}</div>` : ""}
+        ${e.source === "PAYROLL" || e.payMethod ? `<div class="chips">${e.source === "PAYROLL" ? uiChip(t(e.category === "رواتب مستحقة" ? "accounting.payrollDueLabel" : "accounting.payrollLabel"), "warn") : ""}${e.payMethod ? uiChip(t("accounting.pay." + e.payMethod)) : ""}</div>` : ""}
         ${e.source === "MANUAL" || e.source === "INVOICE" ? `<div class="btn-row"><button class="btn small soft" onclick="accountingEditEntry('${e.id}')" aria-label="${esc(t("accounting.edit"))}">✎ ${esc(t("accounting.edit"))}</button><button class="btn small outline" onclick="accountingDeleteEntry('${e.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></div>` : ""}
       </div><div class="item-end ${accOut(e) ? "out" : "in"}">${accOut(e) ? "−" : "+"}${esc(fmt(Math.abs(e.amountCents), e.currency))}</div></div>`).join("") || uiEmpty("🧾", t("accounting.noEntries"))}`,
     entry: `
@@ -2734,7 +2742,7 @@ async function loadAccounting() {
   const cashDay = S._accCashDay || new Date().toISOString().slice(0, 10);
   const [summary, products, cash, sales, low, partiesRes, purchases, recurring, taxRates, taxSettings] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low"), api("GET", "/accounting/parties"), api("GET", "/accounting/purchases"), api("GET", "/accounting/recurring"), api("GET", "/accounting/tax/rates"), api("GET", "/accounting/settings")]);
   const requiresPlan = summary.status === 402 || products.status === 402;
-  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], recurring: recurring.ok ? recurring.data : [], taxRates: taxRates.ok ? taxRates.data : [], taxSettings: taxSettings.ok ? taxSettings.data : { pricesIncludeTax: true, defaultTaxRateId: null }, error: !summary.ok && !requiresPlan ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
+  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], recurring: recurring.ok ? recurring.data : [], taxRates: taxRates.ok ? taxRates.data : [], taxSettings: taxSettings.ok ? taxSettings.data : { pricesIncludeTax: true, defaultTaxRateId: null }, error: !summary.ok && !requiresPlan && !S._actAs ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
 }
 /* ---- financial statements (experimental): the income statement of a period and a simplified financial position ---- */
