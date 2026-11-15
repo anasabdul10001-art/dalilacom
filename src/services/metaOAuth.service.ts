@@ -76,7 +76,9 @@ const COMMENT_SCOPES = ["pages_read_engagement", "pages_manage_engagement", "pag
 
 export function metaScopes(role?: string): string[] {
   const override = process.env.META_OAUTH_SCOPES?.split(/[,\s]+/).filter(Boolean);
-  if (override && override.length > 0) return override;
+  // Facebook Login for Business only lets us read a granted Page (and its token) with pages_read_engagement, so an admin
+  // (who holds a role on the Meta app, so no App Review is needed) always asks for it, even when META_OAUTH_SCOPES is set.
+  if (override && override.length > 0) return role === "ADMIN" && !override.includes("pages_read_engagement") ? [...override, "pages_read_engagement"] : override;
   return role === "ADMIN" ? [...DEFAULT_SCOPES, ...COMMENT_SCOPES] : DEFAULT_SCOPES;
 }
 
