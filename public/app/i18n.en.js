@@ -1334,6 +1334,8 @@ PHRASES.en = {
   "— اختر المحافظة —": "— Choose the governorate —",
   "— اختر المحافظة أول —": "— Choose the governorate first —",
   "الأحدث": "Newest",
+  "ربط إنستغرام عبر فيسبوك (الأسهل)": "Connect Instagram through Facebook (easiest)",
+  "بتسجّل دخول بفيسبوك وبتختار الصفحة المربوطة بحسابك على إنستغرام، ما في داعي لأي أرقام أو رموز.": "You sign in with Facebook and pick the Page linked to your Instagram account — no numbers or tokens needed.",
   "الأعلى تقييمًا": "Top rated",
   "السعر: من الأقل": "Price: low to high",
   "السعر: من الأعلى": "Price: high to low",

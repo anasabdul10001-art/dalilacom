@@ -9016,8 +9016,8 @@ function respChannels() {
       <div class="card">
         <div class="title-line"><strong>${esc(c.name)}</strong>${c.connectable ? "" : `<span class="badge neutral">قريبًا</span>`}</div>
         ${(c.driver === "FACEBOOK" || c.driver === "INSTAGRAM") && c.connectable ? `
-          <button class="btn" onclick="respMetaLink()">ربط بحساب فيسبوك (الأسهل)</button>
-          <p class="muted">بتسجّل دخول بفيسبوك وبتختار صفحتك، ما في داعي لأي أرقام أو رموز.</p>
+          <button class="btn" onclick="respMetaLink()">${c.driver === "INSTAGRAM" ? "ربط إنستغرام عبر فيسبوك (الأسهل)" : "ربط بحساب فيسبوك (الأسهل)"}</button>
+          <p class="muted">${c.driver === "INSTAGRAM" ? "بتسجّل دخول بفيسبوك وبتختار الصفحة المربوطة بحسابك على إنستغرام، ما في داعي لأي أرقام أو رموز." : "بتسجّل دخول بفيسبوك وبتختار صفحتك، ما في داعي لأي أرقام أو رموز."}</p>
           <div class="muted" style="margin:8px 0">أو يدويًا:</div>` : ""}
         ${c.connectable ? `
           ${c.fields.map((f) => `<div class="field"><label>${esc(f.label)}</label><input id="cf-${c.id}-${f.key}" ${f.secret ? 'type="password"' : ""} autocomplete="off" /></div>`).join("")}

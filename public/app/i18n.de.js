@@ -1623,6 +1623,8 @@ PHRASES.de = {
   "إذا الإيميل مسجّل رح يوصلك رابط خلال دقائق.": "If the email is registered you will get a link within minutes.",
   "ربط بحساب فيسبوك (الأسهل)": "Connect with a Facebook account (easiest)",
   "بتسجّل دخول بفيسبوك وبتختار صفحتك، ما في داعي لأي أرقام أو رموز.": "You sign in with Facebook and pick your Page — no numbers or tokens needed.",
+  "ربط إنستغرام عبر فيسبوك (الأسهل)": "Connect Instagram through Facebook (easiest)",
+  "بتسجّل دخول بفيسبوك وبتختار الصفحة المربوطة بحسابك على إنستغرام، ما في داعي لأي أرقام أو رموز.": "You sign in with Facebook and pick the Page linked to your Instagram account — no numbers or tokens needed.",
   "أو يدويًا:": "Or manually:",
   "تعذّر بدء الربط": "Could not start linking",
   "تم ربط الصفحة ✅": "Page linked ✅",
