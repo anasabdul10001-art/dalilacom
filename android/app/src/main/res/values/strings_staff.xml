@@ -46,4 +46,17 @@
     <string name="staff_status_accrued">مستحقة</string>
     <string name="staff_status_paid">مدفوعة</string>
     <string name="staff_status_void">ملغاة</string>
+    <string name="staff_role_driver">موزّع</string>
+    <string name="staff_help_driver">بياخد طلبات المتجر الجاهزة وبيوصّلها وبيسجّل التسليم، بدون وصول للمحاسبة.</string>
+    <string name="staff_pay_salary">دفع الراتب الثابت</string>
+    <string name="staff_pay_salary_confirm" formatted="true">دفع الراتب الثابت (%1$s) لـ %2$s؟ بينسجّل مصروف بالمحاسبة.</string>
+    <string name="staff_deliveries_title">التوصيل</string>
+    <string name="staff_refresh">تحديث</string>
+    <string name="staff_no_deliveries">ما في طلبات جاهزة للتوصيل هلق</string>
+    <string name="staff_order_shipped">بالطريق</string>
+    <string name="staff_order_preparing">جاهز للاستلام</string>
+    <string name="staff_pickup">استلمت الطلب</string>
+    <string name="staff_deliver">تم التسليم</string>
+    <string name="staff_picked_up">الطلب بعهدتك وبالطريق</string>
+    <string name="staff_delivered">انسجّل التسليم</string>
 </resources>

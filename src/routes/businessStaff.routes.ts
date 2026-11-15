@@ -19,6 +19,11 @@ businessStaffRouter.post("/accept", hrInviteRateLimiter, route(async (req, res) 
 }));
 businessStaffRouter.get("/me/:staffId/commissions", route(async (req, res) => res.json(await staff.myCommissions(req.user!.id, req.params.staffId))));
 
+// ---- the driver's side: the shop orders to take and deliver
+businessStaffRouter.get("/driver/:staffId/orders", route(async (req, res) => res.json(await staff.driverOrders(req.user!.id, req.params.staffId))));
+businessStaffRouter.post("/driver/:staffId/orders/:orderId/pickup", route(async (req, res) => { await staff.driverPickup(req.user!.id, req.params.staffId, req.params.orderId); res.json({ ok: true }); }));
+businessStaffRouter.post("/driver/:staffId/orders/:orderId/deliver", route(async (req, res) => { await staff.driverDeliver(req.user!.id, req.params.staffId, req.params.orderId); res.json({ ok: true }); }));
+
 // ---- the owner's side: needs the accounting plan (the staff work inside the accounting)
 businessStaffRouter.use(route(async (req, res, next) => {
   const active = await prisma.platformSubscription.findFirst({ where: { userId: req.user!.id, status: "ACTIVE", OR: [{ currentPeriodEnd: null }, { currentPeriodEnd: { gt: new Date() } }], plan: { service: "ACCOUNTING" } }, select: { id: true } });
@@ -26,7 +31,7 @@ businessStaffRouter.use(route(async (req, res, next) => {
   next();
 }));
 
-const roleEnum = z.enum(["CASHIER", "STOCK", "ASSISTANT", "MANAGER"]);
+const roleEnum = z.enum(["CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER"]);
 const rate = z.number().int().min(0).max(staff.MAX_RATE_BP);
 const pay = z.number().int().min(0).max(2_000_000_000);
 
@@ -51,3 +56,4 @@ businessStaffRouter.post("/:id/commissions/pay", route(async (req, res) => {
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await staff.payCommissions(req.user!.id, req.params.id, parsed.data.currency, req.user!.id));
 }));
+businessStaffRouter.post("/:id/salary/pay", route(async (req, res) => res.json(await staff.payFixedSalary(req.user!.id, req.params.id, req.user!.id))));

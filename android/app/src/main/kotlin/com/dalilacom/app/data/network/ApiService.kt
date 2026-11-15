@@ -266,6 +266,10 @@ interface ApiService {
     @GET("business-staff/workplaces") suspend fun staffWorkplaces(): Response<List<StaffWorkplaceDto>>
     @POST("business-staff/accept") suspend fun staffAccept(@Body body: StaffAcceptRequest): Response<StaffAcceptDto>
     @GET("business-staff/me/{id}/commissions") suspend fun staffMyCommissions(@Path("id") id: String): Response<List<StaffCommissionDto>>
+    @GET("business-staff/driver/{staff}/orders") suspend fun driverOrders(@Path("staff") staff: String): Response<List<StaffOrderDto>>
+    @POST("business-staff/driver/{staff}/orders/{order}/pickup") suspend fun driverPickup(@Path("staff") staff: String, @Path("order") order: String): Response<okhttp3.ResponseBody>
+    @POST("business-staff/driver/{staff}/orders/{order}/deliver") suspend fun driverDeliver(@Path("staff") staff: String, @Path("order") order: String): Response<okhttp3.ResponseBody>
+    @POST("business-staff/{id}/salary/pay") suspend fun staffPaySalary(@Path("id") id: String): Response<okhttp3.ResponseBody>
     @GET("business-staff") suspend fun staffList(): Response<List<StaffDto>>
     @POST("business-staff") suspend fun staffCreate(@Body body: StaffCreateRequest): Response<StaffIdDto>
     @retrofit2.http.PATCH("business-staff/{id}") suspend fun staffPatch(@Path("id") id: String, @Body body: StaffPatchRequest): Response<okhttp3.ResponseBody>

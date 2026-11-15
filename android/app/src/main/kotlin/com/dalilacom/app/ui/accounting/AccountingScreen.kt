@@ -228,6 +228,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     ) {
         item { Text(stringResource(R.string.accounting_title), style = MaterialTheme.typography.headlineSmall) }
         item { StaffSwitcher(workplaces, actingId) { id -> switchWorkplace(id); scope.launch { reload() } } }
+        if (acting?.role == "DRIVER") item { CollapsibleCard(stringResource(R.string.staff_deliveries_title), startOpen = true) { StaffDriverOrders(container, acting) } }
         if (acting != null) item { CollapsibleCard(stringResource(R.string.staff_my_work_title), startOpen = true) { StaffMyWork(container, acting) } }
         else item { CollapsibleCard(stringResource(R.string.staff_title)) { StaffOwnerSection(container) { id -> switchWorkplace(id); scope.launch { reload() } } } }
         if (can("reports")) item {
@@ -249,9 +250,9 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
-        if (can("money")) cash?.let { c ->
         // accounting + HR together: only an owner who has both gets anything (the server answers empty otherwise)
         if (acting == null) item { com.dalilacom.app.ui.common.UnifiedSummaryCard(container.hrRepository, "accounting/unified-summary") }
+        if (can("money")) cash?.let { c ->
             item {
                 CollapsibleCard(stringResource(R.string.accounting_cash_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

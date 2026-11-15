@@ -37,7 +37,7 @@ import com.dalilacom.app.ui.common.StatusChip
 import com.dalilacom.app.ui.i18n.AppStrings
 import kotlinx.coroutines.launch
 
-private val ROLES = listOf("CASHIER", "STOCK", "ASSISTANT", "MANAGER")
+private val ROLES = listOf("CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER")
 private fun cents(c: Long, currency: String) = "%.2f %s".format(c / 100.0, currency)
 
 @Composable
@@ -46,6 +46,7 @@ fun staffRoleName(role: String): String = stringResource(
         "STOCK" -> R.string.staff_role_stock
         "ASSISTANT" -> R.string.staff_role_assistant
         "MANAGER" -> R.string.staff_role_manager
+        "DRIVER" -> R.string.staff_role_driver
         else -> R.string.staff_role_cashier
     },
 )
@@ -56,6 +57,7 @@ private fun staffRoleHelp(role: String): String = stringResource(
         "STOCK" -> R.string.staff_help_stock
         "ASSISTANT" -> R.string.staff_help_assistant
         "MANAGER" -> R.string.staff_help_manager
+        "DRIVER" -> R.string.staff_help_driver
         else -> R.string.staff_help_cashier
     },
 )
@@ -117,6 +119,7 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
     var rateValue by remember { mutableStateOf("") }
     var removeTarget by remember { mutableStateOf<StaffDto?>(null) }
     var payTarget by remember { mutableStateOf<Pair<StaffDto, StaffAmountDto>?>(null) }
+    var salaryTarget by remember { mutableStateOf<StaffDto?>(null) }
     suspend fun reload() { list = container.staffRepository.list() }
     LaunchedEffect(Unit) { reload() }
     fun pct(v: String) = ((v.replace(',', '.').toDoubleOrNull() ?: 0.0) * 100).toInt()
@@ -167,6 +170,7 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
                             Button(onClick = { payTarget = s to o }) { Text(stringResource(R.string.staff_pay)) }
                         }
                     }
+                    if (s.fixedPayCents > 0) OutlinedButton(onClick = { salaryTarget = s }) { Text(stringResource(R.string.staff_pay_salary)) }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (s.inviteState != "LINKED") OutlinedButton(onClick = { scope.launch { container.staffRepository.invite(s.id).fold({ code = it; reload() }, { message = it.message.orEmpty() }) } }) { Text(stringResource(R.string.staff_invite)) }
                         OutlinedButton(onClick = { rateTarget = s; rateValue = (s.salesRateBp / 100.0).toString() }) { Text(stringResource(R.string.staff_edit_rate)) }
@@ -206,6 +210,14 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
             dismissButton = { TextButton(onClick = { removeTarget = null }) { Text(stringResource(R.string.staff_cancel)) } },
         )
     }
+    salaryTarget?.let { s ->
+        AlertDialog(
+            onDismissRequest = { salaryTarget = null },
+            text = { Text(stringResource(R.string.staff_pay_salary_confirm, "%.2f".format(s.fixedPayCents / 100.0), s.name)) },
+            confirmButton = { TextButton(onClick = { scope.launch { container.staffRepository.paySalary(s.id).fold({ message = AppStrings.get(R.string.staff_paid) }, { message = it.message.orEmpty() }); salaryTarget = null } }) { Text(stringResource(R.string.staff_pay)) } },
+            dismissButton = { TextButton(onClick = { salaryTarget = null }) { Text(stringResource(R.string.staff_cancel)) } },
+        )
+    }
     payTarget?.let { (s, o) ->
         AlertDialog(
             onDismissRequest = { payTarget = null },
@@ -213,5 +225,44 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
             confirmButton = { TextButton(onClick = { scope.launch { container.staffRepository.pay(s.id, o.currency).fold({ message = AppStrings.get(R.string.staff_paid); reload() }, { message = it.message.orEmpty() }); payTarget = null } }) { Text(stringResource(R.string.staff_pay)) } },
             dismissButton = { TextButton(onClick = { payTarget = null }) { Text(stringResource(R.string.staff_cancel)) } },
         )
+    }
+}
+
+/** The driver list: the shop orders ready to take, and the ones on the road. */
+@Composable
+fun StaffDriverOrders(container: AppContainer, workplace: StaffWorkplaceDto) {
+    val scope = rememberCoroutineScope()
+    var rows by remember(workplace.staffId) { mutableStateOf<List<com.dalilacom.app.data.network.StaffOrderDto>?>(null) }
+    var message by remember { mutableStateOf("") }
+    suspend fun reload() { rows = container.staffRepository.driverOrders(workplace.staffId) }
+    LaunchedEffect(workplace.staffId) { reload() }
+    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (message.isNotBlank()) Text(message, color = MaterialTheme.colorScheme.primary)
+        OutlinedButton(onClick = { scope.launch { reload() } }) { Text(stringResource(R.string.staff_refresh)) }
+        val list = rows
+        if (list == null) Text("...") else if (list.isEmpty()) Text(stringResource(R.string.staff_no_deliveries), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        list.orEmpty().forEach { o ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(o.orderNumber + (o.customerName?.let { " | " + it } ?: ""), style = MaterialTheme.typography.titleSmall)
+                        Text("%.2f".format(o.totalCents / 100.0))
+                    }
+                    StatusChip(stringResource(if (o.status == "SHIPPED") R.string.staff_order_shipped else R.string.staff_order_preparing), if (o.status == "SHIPPED") "warning" else "info")
+                    Text(o.items.joinToString(", ") { it.productName + " x" + it.quantity }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val picking = o.status == "PREPARING"
+                                val r = if (picking) container.staffRepository.pickup(workplace.staffId, o.id) else container.staffRepository.deliver(workplace.staffId, o.id)
+                                r.fold({ message = AppStrings.get(if (picking) R.string.staff_picked_up else R.string.staff_delivered) }, { message = it.message.orEmpty() })
+                                reload()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(if (o.status == "PREPARING") R.string.staff_pickup else R.string.staff_deliver)) }
+                }
+            }
+        }
     }
 }

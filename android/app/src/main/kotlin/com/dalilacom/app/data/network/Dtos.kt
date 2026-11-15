@@ -1411,3 +1411,5 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class StaffCommissionDto(val id: String = "", val saleId: String = "", val baseCents: Long = 0, val rateBp: Int = 0, val amountCents: Long = 0, val currency: String = "EUR", val status: String = "ACCRUED", val createdAt: String = "")
 @Serializable data class StaffPayRequest(val currency: String)
 @Serializable data class StaffPayDto(val paidCents: Long = 0, val count: Int = 0)
+@Serializable data class StaffOrderItemDto(val productName: String = "", val quantity: Int = 0)
+@Serializable data class StaffOrderDto(val id: String = "", val orderNumber: String = "", val status: String = "", val customerName: String? = null, val totalCents: Long = 0, val items: List<StaffOrderItemDto> = emptyList(), val paymentMethod: String? = null, val mine: Boolean = false)

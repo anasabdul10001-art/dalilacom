@@ -575,6 +575,11 @@ export const en: LanguagePack = {
     "ما في عمولات مستحقة لهالموظف": "This staff member has no commissions due",
     "العمولات اندفعت من قبل": "These commissions were already paid",
     "عمولات الموظفين": "Staff commissions",
+    "رواتب الموظفين": "Staff salaries",
+    "ما عندك صلاحية على التوصيل": "You don't have access to deliveries",
+    "الطلب مو جاهز للاستلام أو أخدو موزّع ثاني": "The order is not ready to take, or another driver took it",
+    "الطلب مو بعهدتك أو انسلّم من قبل": "The order is not in your hands, or it was already delivered",
+    "ما في راتب ثابت محدد لهالموظف": "No fixed salary is set for this staff member",
     // ---- human resources section ----
     "ما عندك صلاحية على قسم الموارد البشرية": "You don't have access to the human resources section",
     "قسم الموارد البشرية يحتاج باقة فعّالة أو فترة تجربة. افتح صفحة الباقات من حسابك.": "The human resources section needs an active plan or a trial period. Open the plans page from your account.",

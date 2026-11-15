@@ -4,6 +4,8 @@ import { BusinessStaff, BusinessStaffRole, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { ApiError } from "../lib/apiError";
 import { notify } from "./notification.service";
+import { recordDeliveredOrder } from "./accounting.service";
+import { marketOfUser } from "./viewerCountry.service";
 
 /**
  * The staff of a business owner. A staff member works inside the owner's accounting with the account of their own:
@@ -34,9 +36,8 @@ export const ROLE_TAGS: Record<BusinessStaffRole, Tag[]> = {
   STOCK: ["productsRead", "stockWrite"],
   ASSISTANT: ["sell", "salesRead", "productsRead", "partiesRead", "money"],
   MANAGER: ALL,
+  DRIVER: [], // works on deliveries, not in accounting
 };
-/** Roles that sell, and so can earn a commission on sales. */
-export const SELLING_ROLES: BusinessStaffRole[] = ["CASHIER", "ASSISTANT", "MANAGER"];
 
 /** What a request to the accounting router needs. Anything not listed is "money". */
 export function tagFor(method: string, path: string): Tag {
@@ -90,16 +91,12 @@ export async function listStaff(ownerId: string) {
 
 export async function createStaff(ownerId: string, input: { name: string; role: BusinessStaffRole; salesRateBp?: number; fixedPayCents?: number }) {
   const rate = input.salesRateBp ?? 0;
-  if (rate > 0 && !SELLING_ROLES.includes(input.role)) throw new ApiError(400, "BAD_REQUEST", "هالدور ما بيسجّل مبيعات، فما في عمولة على المبيعات");
   return prisma.businessStaff.create({ data: { ownerId, name: input.name, role: input.role, salesRateBp: rate, fixedPayCents: input.fixedPayCents ?? 0 }, select: { id: true } });
 }
 
 export async function updateStaff(ownerId: string, id: string, input: { name?: string; role?: BusinessStaffRole; salesRateBp?: number; fixedPayCents?: number }) {
   const cur = await prisma.businessStaff.findFirst({ where: { id, ownerId, status: { not: "REMOVED" } } });
   if (!cur) throw notFound();
-  const role = input.role ?? cur.role;
-  const rate = input.salesRateBp ?? cur.salesRateBp;
-  if (rate > 0 && !SELLING_ROLES.includes(role)) throw new ApiError(400, "BAD_REQUEST", "هالدور ما بيسجّل مبيعات، فما في عمولة على المبيعات");
   await prisma.businessStaff.update({ where: { id }, data: { ...input } });
 }
 
@@ -168,23 +165,32 @@ export async function myCommissions(userId: string, staffId: string) {
 
 type Tx = Prisma.TransactionClient;
 
-/** A sale recorded by a staff member with a rate earns them a commission on its net (without tax). One per sale. */
+/**
+ * A sale earns commissions on its net (without tax): the staff member who recorded it gets their rate, and a stock keeper
+ * with a rate gets it on every sale of the business (they sell nothing themselves). One commission per person per sale.
+ */
 export async function accrueSaleCommission(tx: Tx, input: { ownerId: string; actorUserId: string; saleId: string; netCents: number; currency: string }) {
-  if (input.actorUserId === input.ownerId || input.netCents <= 0) return;
-  const staff = await tx.businessStaff.findFirst({ where: { ownerId: input.ownerId, userId: input.actorUserId, status: "ACTIVE" } });
-  if (!staff || staff.salesRateBp <= 0) return;
-  const amountCents = Math.round((input.netCents * staff.salesRateBp) / 10000);
-  if (amountCents <= 0) return;
-  await tx.businessStaffCommission.create({ data: { ownerId: input.ownerId, staffId: staff.id, saleId: input.saleId, baseCents: input.netCents, rateBp: staff.salesRateBp, amountCents, currency: input.currency } });
+  if (input.netCents <= 0) return;
+  const staff = await tx.businessStaff.findMany({ where: { ownerId: input.ownerId, status: "ACTIVE", salesRateBp: { gt: 0 }, OR: [{ userId: input.actorUserId }, { role: "STOCK" }] } });
+  for (const st of staff) {
+    if (st.userId === input.ownerId) continue;
+    const mine = st.userId === input.actorUserId && st.role !== "STOCK";
+    if (!mine && st.role !== "STOCK") continue;
+    const amountCents = Math.round((input.netCents * st.salesRateBp) / 10000);
+    if (amountCents <= 0) continue;
+    await tx.businessStaffCommission.create({ data: { ownerId: input.ownerId, staffId: st.id, saleId: mine ? input.saleId : `team:${input.saleId}:${st.id}`, baseCents: input.netCents, rateBp: st.salesRateBp, amountCents, currency: input.currency } });
+  }
 }
 
-/** A returned part of a sale takes back its share of the commission, while that commission is still unpaid. */
+/** A returned part of a sale takes back its share of the commissions on it, while they are still unpaid. */
 export async function reduceSaleCommission(tx: Tx, saleId: string, returnedNetCents: number) {
-  const c = await tx.businessStaffCommission.findUnique({ where: { saleId } });
-  if (!c || c.status !== "ACCRUED" || returnedNetCents <= 0) return;
-  const take = Math.min(Number(c.amountCents), Math.round((returnedNetCents * c.rateBp) / 10000));
-  const left = Number(c.amountCents) - take;
-  await tx.businessStaffCommission.update({ where: { id: c.id }, data: left > 0 ? { amountCents: left } : { amountCents: 0, status: "VOID" } });
+  if (returnedNetCents <= 0) return;
+  const rows = await tx.businessStaffCommission.findMany({ where: { OR: [{ saleId }, { saleId: { startsWith: `team:${saleId}:` } }], status: "ACCRUED" } });
+  for (const c of rows) {
+    const take = Math.min(Number(c.amountCents), Math.round((returnedNetCents * c.rateBp) / 10000));
+    const left = Number(c.amountCents) - take;
+    await tx.businessStaffCommission.update({ where: { id: c.id }, data: left > 0 ? { amountCents: left } : { amountCents: 0, status: "VOID" } });
+  }
 }
 
 /** What the owner sees: per staff member and currency, the unpaid commissions. */
@@ -211,4 +217,61 @@ export async function payCommissions(ownerId: string, staffId: string, currency:
     });
     return { paidCents: total, count: due.length };
   });
+}
+
+// ---------------------------------------------------------------- the driver: the shop's store orders on their way
+
+async function driverFor(userId: string, staffId: string) {
+  const staff = await prisma.businessStaff.findFirst({ where: { id: staffId, userId, status: "ACTIVE", role: "DRIVER" } });
+  if (!staff) throw new ApiError(403, "FORBIDDEN", "ما عندك صلاحية على التوصيل");
+  const merchant = await prisma.merchantProfile.findUnique({ where: { userId: staff.ownerId }, select: { id: true } });
+  return { staff, merchantId: merchant?.id ?? null };
+}
+
+/** Orders ready to take (PREPARING), and the ones on the road (SHIPPED: this driver's own, or nobody's yet). */
+export async function driverOrders(userId: string, staffId: string) {
+  const { staff, merchantId } = await driverFor(userId, staffId);
+  if (!merchantId) return [];
+  const rows = await prisma.order.findMany({
+    where: { merchantId, OR: [{ status: "PREPARING" }, { status: "SHIPPED", OR: [{ driverStaffId: staff.id }, { driverStaffId: null }] }] },
+    include: { items: { select: { productName: true, quantity: true } }, payment: { select: { method: true, status: true } }, user: { select: { fullName: true } } },
+    orderBy: { createdAt: "asc" }, take: 100,
+  });
+  return rows.map((o) => ({ id: o.id, orderNumber: o.orderNumber, status: o.status, customerName: o.user.fullName, totalCents: o.totalCents, shippingName: o.shippingName, items: o.items, paymentMethod: o.payment?.method ?? null, paymentStatus: o.payment?.status ?? null, mine: o.driverStaffId === staff.id }));
+}
+
+/** The driver takes an order that is ready: it goes SHIPPED and is theirs. Only one driver can take it. */
+export async function driverPickup(userId: string, staffId: string, orderId: string) {
+  const { staff, merchantId } = await driverFor(userId, staffId);
+  const claimed = await prisma.order.updateMany({ where: { id: orderId, merchantId: merchantId ?? "none", status: "PREPARING" }, data: { status: "SHIPPED", driverStaffId: staff.id } });
+  if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "الطلب مو جاهز للاستلام أو أخدو موزّع ثاني");
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+  await notify({ userId: order.userId, type: "ORDER_STATUS", title: "تحديث على طلبك: SHIPPED", body: "طلبك انطلق للتوصيل 🚚", data: { orderId, orderNumber: order.orderNumber, status: "SHIPPED" } }).catch(() => undefined);
+}
+
+/** The driver delivers: DELIVERED, booked in the owner accounting like any delivered order, with the driver commission on its net. */
+export async function driverDeliver(userId: string, staffId: string, orderId: string) {
+  const { staff, merchantId } = await driverFor(userId, staffId);
+  const claimed = await prisma.order.updateMany({ where: { id: orderId, merchantId: merchantId ?? "none", status: "SHIPPED", OR: [{ driverStaffId: staff.id }, { driverStaffId: null }] }, data: { status: "DELIVERED", driverStaffId: staff.id } });
+  if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "الطلب مو بعهدتك أو انسلّم من قبل");
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+  await recordDeliveredOrder(orderId).catch((err) => console.error("Could not sync delivered order to accounting", err));
+  const net = order.subtotalCents - order.memberDiscountCents;
+  const amountCents = Math.round((net * staff.salesRateBp) / 10000);
+  if (staff.salesRateBp > 0 && amountCents > 0) {
+    const currency = await marketOfUser(staff.ownerId);
+    await prisma.businessStaffCommission.create({ data: { ownerId: staff.ownerId, staffId: staff.id, saleId: `order:${orderId}`, baseCents: net, rateBp: staff.salesRateBp, amountCents, currency } }).catch(() => undefined);
+  }
+  await notify({ userId: order.userId, type: "ORDER_STATUS", title: "تحديث على طلبك: DELIVERED", body: "طلبك وصل! منتمنى تكون التجربة حلوة ⭐", data: { orderId, orderNumber: order.orderNumber, status: "DELIVERED" } }).catch(() => undefined);
+}
+
+/** The owner pays the fixed monthly pay set for a staff member: one expense in accounting, in the owner currency. */
+export async function payFixedSalary(ownerId: string, staffId: string, actorUserId: string) {
+  const st = await prisma.businessStaff.findFirst({ where: { id: staffId, ownerId, status: { not: "REMOVED" } } });
+  if (!st) throw notFound();
+  const amountCents = Number(st.fixedPayCents);
+  if (amountCents <= 0) throw new ApiError(409, "CONFLICT", "ما في راتب ثابت محدد لهالموظف");
+  const currency = await marketOfUser(ownerId);
+  await prisma.accountingEntry.create({ data: { userId: ownerId, type: "EXPENSE", category: "رواتب الموظفين", description: `راتب ${st.name}`, amountCents, currency, source: "MANUAL", recordedById: actorUserId } });
+  return { paidCents: amountCents, currency };
 }

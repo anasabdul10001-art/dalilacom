@@ -107,10 +107,46 @@ describe("business staff", () => {
     expect((await request(app).get("/business-staff/workplaces").set(s.worker.auth)).body).toEqual([]);
   });
 
-  it("refuses a sales commission for a role that does not sell, and needs the owner's plan", async () => {
-    const boss = await owner("stboss2");
-    expect((await request(app).post("/business-staff").set(boss.auth).send({ name: "Omar", role: "STOCK", salesRateBp: 300 })).status).toBe(400);
+  it("every role can have a commission, a fixed pay, or both; a stock keeper earns on all sales of the business", async () => {
+    const s = await setup("STOCK", 200); // 2% on every sale
+    const sale = await request(app).post("/accounting/sales").set({ ...(await account("stseller")).auth, "X-Business-Owner": s.boss.id }).send({ items: [{ productId: s.product.id, quantity: 1 }] });
+    expect(sale.status).toBe(403); // a stranger cannot sell
+    const seller = await account("stcashier");
+    const cid = (await request(app).post("/business-staff").set(s.boss.auth).send({ name: "Lina", role: "CASHIER", salesRateBp: 0, fixedPayCents: 50000 })).body.id;
+    const code = (await request(app).post(`/business-staff/${cid}/invite`).set(s.boss.auth)).body.code;
+    await request(app).post("/business-staff/accept").set(seller.auth).send({ code });
+    const ok = await request(app).post("/accounting/sales").set({ ...seller.auth, "X-Business-Owner": s.boss.id }).send({ items: [{ productId: s.product.id, quantity: 3 }], payMethod: "CASH" });
+    expect(ok.status).toBe(201);
+    const c = await prisma.businessStaffCommission.findFirstOrThrow({ where: { staffId: s.staffId } });
+    expect(Number(c.amountCents)).toBe(60); // 2% of 3000
+    // a fixed pay alone: no commissions, and paying it books one expense
+    expect(await prisma.businessStaffCommission.count({ where: { staffId: cid } })).toBe(0);
+    expect((await request(app).post(`/business-staff/${cid}/salary/pay`).set(s.boss.auth)).status).toBe(200);
+    expect(await prisma.accountingEntry.count({ where: { userId: s.boss.id, category: "رواتب الموظفين" } })).toBe(1);
+    expect((await request(app).post(`/business-staff/${s.staffId}/salary/pay`).set(s.boss.auth)).status).toBe(409); // no fixed pay set
     const noPlan = await account("stnoplan");
     expect((await request(app).get("/business-staff").set(noPlan.auth)).status).toBe(402);
+  });
+
+  it("a driver takes a ready order, delivers it, and earns on its net", async () => {
+    const boss = await owner("stdboss");
+    const driver = await account("stdriver");
+    const customer = await account("stcust");
+    const category = await prisma.category.findFirstOrThrow();
+    const shop = await prisma.merchantProfile.create({ data: { userId: boss.id, businessName: "Shop", categoryId: category.id, approvalStatus: "APPROVED", address: "x", phone: "1", latitude: 1, longitude: 2 } });
+    const sid = (await request(app).post("/business-staff").set(boss.auth).send({ name: "Omar", role: "DRIVER", salesRateBp: 1000 })).body.id;
+    const code = (await request(app).post(`/business-staff/${sid}/invite`).set(boss.auth)).body.code;
+    await request(app).post("/business-staff/accept").set(driver.auth).send({ code });
+    const order = await prisma.order.create({ data: { orderNumber: `T-${Date.now()}`, userId: customer.id, merchantId: shop.id, status: "PREPARING", subtotalCents: 5000, totalCents: 5000 } });
+    const list = await request(app).get(`/business-staff/driver/${sid}/orders`).set(driver.auth);
+    expect(list.body.map((o: { id: string }) => o.id)).toContain(order.id);
+    expect((await request(app).post(`/business-staff/driver/${sid}/orders/${order.id}/deliver`).set(driver.auth)).status).toBe(409); // not picked up yet
+    expect((await request(app).post(`/business-staff/driver/${sid}/orders/${order.id}/pickup`).set(driver.auth)).status).toBe(200);
+    expect((await request(app).post(`/business-staff/driver/${sid}/orders/${order.id}/deliver`).set(driver.auth)).status).toBe(200);
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("DELIVERED");
+    expect(Number((await prisma.businessStaffCommission.findFirstOrThrow({ where: { staffId: sid } })).amountCents)).toBe(500);
+    // the driver never reaches the accounting itself, and another account cannot use the driver routes
+    expect((await request(app).get("/accounting/products").set({ ...driver.auth, "X-Business-Owner": boss.id })).status).toBe(403);
+    expect((await request(app).get(`/business-staff/driver/${sid}/orders`).set(customer.auth)).status).toBe(403);
   });
 });

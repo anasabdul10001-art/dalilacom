@@ -3,7 +3,7 @@
    invitation was accepted (AGENTS.md: no empty profession sections); then the accounting opens for them as the owner's,
    with the tabs their role allows. ---- */
 
-const STAFF_ROLES = ["CASHIER", "STOCK", "ASSISTANT", "MANAGER"];
+const STAFF_ROLES = ["CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER"];
 /** The accounting tabs each kind of permission opens (the server enforces the same list). */
 const ACC_TAB_TAG = { summary: "reports", reports: "reports", entry: "money", recurring: "money", sale: "sell", purchases: "money", parties: "partiesRead", invoices: "money", stock: "productsRead", tax: "admin", statements: "reports" };
 
@@ -35,7 +35,7 @@ function staffSwitch(ownerId) {
 function accTabs() {
   const all = SITES.accounting.tabs;
   const wp = staffActing();
-  if (wp) return [...all.filter((id) => (wp.allowed || []).includes(ACC_TAB_TAG[id])), "mywork"];
+  if (wp) return [...(wp.role === "DRIVER" ? ["deliveries"] : []), ...all.filter((id) => (wp.allowed || []).includes(ACC_TAB_TAG[id])), "mywork"];
   return S._actAs ? ["mywork"] : [...all, "staff"];
 }
 
@@ -97,6 +97,7 @@ function staffRow(s) {
   const owed = (s.unpaidCommissions || []).filter((o) => o.cents > 0);
   return `<div class="card"><div class="title-line"><div><strong>${esc(s.name)}</strong><div class="chips">${uiChip(t("staff.role." + s.role))}${uiChip(t("staff.state." + s.inviteState), s.inviteState === "LINKED" ? "" : "warn")}${s.salesRateBp > 0 ? uiChip((s.salesRateBp / 100) + "%") : ""}</div></div></div>
     ${s.fixedPayCents > 0 ? `<p class="muted">${esc(t("staff.fixed"))}: ${esc(staffMoney(s.fixedPayCents, S.currency || ""))}</p>` : ""}
+    ${s.fixedPayCents > 0 ? `<div class="btn-row"><button class="btn small soft" onclick="staffPaySalary(this,'${s.id}',${s.fixedPayCents})">${esc(t("staff.paySalary"))}</button></div>` : ""}
     ${owed.map((o) => `<div class="title-line"><span>${esc(t("staff.unpaid"))}: <b>${esc(staffMoney(o.cents, o.currency))}</b></span><button class="btn small" onclick="staffPay(this,'${s.id}','${o.currency}',${o.cents})">${esc(t("staff.pay"))}</button></div>`).join("")}
     <div class="btn-row">
       ${s.inviteState === "LINKED" ? "" : `<button class="btn small soft" onclick="staffInvite(this,'${s.id}')">${esc(t("staff.invite"))}</button>`}
@@ -166,4 +167,38 @@ function staffMyWork() {
       ${owed.map((o) => `<div class="tiles">${uiTile(t("staff.unpaid"), staffMoney(o.cents, o.currency), "income")}</div>`).join("")}</div>
     <div class="panel-title">${esc(t("staff.commissions"))}</div>
     ${rows === null ? skeleton("list", 2) : rows.length === 0 ? uiEmpty("💵", t("staff.noCommissions")) : rows.map((c) => `<div class="item"><span class="avatar" style="--h:150">💵</span><div class="item-main"><div class="item-title">${esc(staffMoney(c.amountCents, c.currency))}</div><div class="item-sub"><bdi>${esc(String(c.createdAt).slice(0, 10))}</bdi> · ${esc((c.rateBp / 100) + "%")}</div></div><div class="item-end">${uiChip(t("staff.status." + c.status), c.status === "ACCRUED" ? "warn" : "")}</div></div>`).join("")}`;
+}
+
+async function staffPaySalary(btn, id, cents) {
+  const s = (staffState().list || []).find((x) => x.id === id);
+  if (!confirm(t("staff.paySalaryConfirm", { amount: staffMoney(cents, ""), name: s ? s.name : "" }))) return;
+  await uiBusy(btn, async () => {
+    const res = await api("POST", `/business-staff/${id}/salary/pay`);
+    if (!res.ok) return staffErr(res);
+    toast(t("staff.paid")); S._accounting = null; render();
+  });
+}
+
+/* ---- the driver's tab: the shop orders ready to take, and the ones on the road ---- */
+function staffDeliveries() {
+  const wp = staffActing();
+  if (!wp) return uiEmpty("🚚", t("staff.noWorkplace"));
+  const st = staffState();
+  if (st.orders === undefined) { st.orders = null; api("GET", `/business-staff/driver/${wp.staffId}/orders`).then(({ ok, data }) => { st.orders = ok ? data : []; render(); }); }
+  const rows = st.orders;
+  if (rows === null) return skeleton("list", 3);
+  if (!rows.length) return uiEmpty("🚚", t("staff.noDeliveries")) + `<div class="btn-row"><button class="btn soft" onclick="staffState().orders=undefined;render()">${esc(t("staff.refresh"))}</button></div>`;
+  return `<div class="btn-row"><button class="btn small soft" onclick="staffState().orders=undefined;render()">${esc(t("staff.refresh"))}</button></div>` + rows.map((o) => `<div class="card">
+      <div class="title-line"><div><strong><bdi>${esc(o.orderNumber)}</bdi></strong><div class="muted">${esc(o.customerName || "")}</div></div><b>${esc(staffMoney(o.totalCents, S.currency || ""))}</b></div>
+      <div class="chips">${uiChip(t("staff.order." + o.status), o.status === "SHIPPED" ? "warn" : "")}${o.paymentMethod ? uiChip(o.paymentMethod) : ""}</div>
+      <p class="muted">${o.items.map((i) => esc(i.productName) + " × " + i.quantity).join("، ")}</p>
+      <div class="btn-row">${o.status === "PREPARING" ? `<button class="btn" onclick="staffOrderAct(this,'${wp.staffId}','${o.id}','pickup')">${esc(t("staff.pickup"))}</button>` : `<button class="btn" onclick="staffOrderAct(this,'${wp.staffId}','${o.id}','deliver')">${esc(t("staff.deliver"))}</button>`}</div></div>`).join("");
+}
+async function staffOrderAct(btn, staffId, orderId, action) {
+  await uiBusy(btn, async () => {
+    const res = await api("POST", `/business-staff/driver/${staffId}/orders/${orderId}/${action}`);
+    if (!res.ok) return staffErr(res);
+    toast(t(action === "pickup" ? "staff.pickedUp" : "staff.delivered"));
+    const st = staffState(); st.orders = undefined; st.wp = undefined; st.mine = {}; render();
+  });
 }

@@ -46,4 +46,17 @@
     <string name="staff_status_accrued">Unpaid</string>
     <string name="staff_status_paid">Paid</string>
     <string name="staff_status_void">Cancelled</string>
+    <string name="staff_role_driver">Delivery driver</string>
+    <string name="staff_help_driver">Takes the shop ready orders, delivers them and records the delivery, with no access to accounting.</string>
+    <string name="staff_pay_salary">Pay fixed salary</string>
+    <string name="staff_pay_salary_confirm" formatted="true">Pay the fixed salary (%1$s) to %2$s? An expense is recorded in accounting.</string>
+    <string name="staff_deliveries_title">Deliveries</string>
+    <string name="staff_refresh">Refresh</string>
+    <string name="staff_no_deliveries">No orders are ready for delivery right now</string>
+    <string name="staff_order_shipped">On the way</string>
+    <string name="staff_order_preparing">Ready to take</string>
+    <string name="staff_pickup">I took the order</string>
+    <string name="staff_deliver">Delivered</string>
+    <string name="staff_picked_up">The order is yours and on its way</string>
+    <string name="staff_delivered">Delivery recorded</string>
 </resources>

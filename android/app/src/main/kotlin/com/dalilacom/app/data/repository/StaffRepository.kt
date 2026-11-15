@@ -20,6 +20,10 @@ class StaffRepository(private val api: ApiService) {
     suspend fun myCommissions(staffId: String): List<StaffCommissionDto> = safeApiCall { api.staffMyCommissions(staffId) }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun list(): List<StaffDto> = safeApiCall { api.staffList() }?.takeIf { it.isSuccessful }?.body().orEmpty()
 
+    suspend fun driverOrders(staffId: String): List<com.dalilacom.app.data.network.StaffOrderDto> = safeApiCall { api.driverOrders(staffId) }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    suspend fun pickup(staffId: String, orderId: String): Result<Unit> = call({ api.driverPickup(staffId, orderId) }) { Unit }
+    suspend fun deliver(staffId: String, orderId: String): Result<Unit> = call({ api.driverDeliver(staffId, orderId) }) { Unit }
+    suspend fun paySalary(id: String): Result<Unit> = call({ api.staffPaySalary(id) }) { Unit }
     suspend fun accept(code: String): Result<StaffAcceptDto> = call({ api.staffAccept(StaffAcceptRequest(code)) }) { it.body()!! }
     suspend fun create(name: String, role: String, rateBp: Int, fixedPayCents: Long): Result<Unit> = call({ api.staffCreate(StaffCreateRequest(name, role, rateBp, fixedPayCents)) }) { Unit }
     suspend fun setRate(id: String, rateBp: Int): Result<Unit> = call({ api.staffPatch(id, StaffPatchRequest(rateBp)) }) { Unit }

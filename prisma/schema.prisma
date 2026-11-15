@@ -1295,6 +1295,7 @@ model Order {
   cancelReason        String? // required when the merchant cancels (section 59.6)
   shippingName        String? // the shipping method the customer chose (snapshot)
   shippingCents       Int         @default(0) // its cost, already inside totalCents
+  driverStaffId       String? // the delivery person (a staff member) who took the order
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
@@ -1305,6 +1306,7 @@ model Order {
 
   @@index([userId])
   @@index([merchantId])
+  @@index([driverStaffId])
 }
 
 // One payment per (sub-)order: what the customer owes and how far it has been settled.
@@ -3074,6 +3076,7 @@ enum BusinessStaffRole {
   STOCK // stock keeper
   ASSISTANT // income, expenses, payments, sales (no deleting, no export)
   MANAGER // everything in accounting
+  DRIVER // takes the shop's store orders to the customers (no accounting)
 }
 
 enum BusinessStaffStatus {

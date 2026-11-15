@@ -2672,6 +2672,7 @@ function screenAccounting() {
   if (tab === "home" || !S.token) return siteShell("accounting", "home", staffJoinCard() + siteLanding("accounting"));
   if (tab === "staff" && !S._actAs) return siteShell("accounting", tab, staffTab());
   if (tab === "mywork") return siteShell("accounting", tab, staffMyWork());
+  if (tab === "deliveries") return siteShell("accounting", tab, staffDeliveries());
   if (S._actAs && !staffActing()) return siteShell("accounting", tab, skeleton("tiles")); // the workplaces are still loading
   if (S._actAs && !accTabs().includes(tab)) return siteShell("accounting", accTabs()[0], staffMyWork());
   if (!S._accounting || S._accounting.loading) {
@@ -2690,8 +2691,8 @@ function screenAccounting() {
     ${a.low && (a.low.out + a.low.low) ? `<div class="badge warning" style="margin:6px 0;cursor:pointer" onclick="setSiteTab('accounting','stock')">${esc(t("accounting.low.title"))}: ${a.low.out ? esc(t("accounting.low.out")) + " " + a.low.out : ""}${a.low.out && a.low.low ? " · " : ""}${a.low.low ? esc(t("accounting.low.low")) + " " + a.low.low : ""}</div>` : ""}
     <div class="btn-row"><button class="btn soft" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button><button class="btn soft" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button></div>
     ${accountingCashCard(a.cash)}
-    <div class="panel-title" style="margin-top:16px">${esc(t("accounting.recent"))}</div>
     ${unifiedSummaryCard(a.unified)}
+    <div class="panel-title" style="margin-top:16px">${esc(t("accounting.recent"))}</div>
     ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${accOut(e) ? 4 : 140}">${accOut(e) ? "↓" : "↑"}</span><div class="item-main">
         <div class="item-title">${esc(e.description)}</div>
         <div class="item-sub">${esc(e.category)} · <bdi>${new Date(e.occurredAt).toLocaleDateString()}</bdi></div>
@@ -3335,7 +3336,6 @@ async function accountingSalePrint(id) {
 }
 
 /** The cash box of one day: opening + cash in - cash out = what should be in the box; counting it closes the day. */
-function accountingCashCard(c) {
 // accounting + HR together: shown only to an owner who has both (the server sends nothing otherwise), so nobody sees an empty section
 function unifiedSummaryCard(res) {
   const u = res && res.summary;
@@ -3345,6 +3345,7 @@ function unifiedSummaryCard(res) {
     ${u.totals.map((x) => `<div class="muted" style="margin:6px 2px"><b>${esc(x.currency)}</b></div>
       <div class="tiles">${uiTile(t("accounting.income"), fmt(x.incomeCents, x.currency), "income")}${uiTile(t("unified.salariesPaid"), fmt(x.payrollPaidCents, x.currency), "expense")}${uiTile(t("unified.salariesDue"), fmt(x.payrollDueCents, x.currency), "expense")}${uiTile(t("unified.net"), fmt(x.netCents, x.currency), "net", true)}</div>`).join("")}`;
 }
+function accountingCashCard(c) {
   if (!c) return "";
   const cur = c.currency;
   const diff = c.differenceCents;
