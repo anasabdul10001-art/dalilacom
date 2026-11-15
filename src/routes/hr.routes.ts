@@ -9,6 +9,7 @@ import { requireHrEmployment, requireHrManager, requireHrTeam } from "../service
 import * as core from "../services/hrCore.service";
 import * as time from "../services/hrTime.service";
 import * as pay from "../services/hrPay.service";
+import { monthRange, unifiedSummary } from "../services/unifiedSummary.service";
 
 export const hrRouter = Router();
 hrRouter.use(requireAuth);
@@ -223,6 +224,12 @@ manage.delete("/employees/:id/salary/components/:componentId", route(async (req,
 }));
 
 // ---- payroll runs (paid -> an expense in the owner's accounting; taking the payment back is the owner's alone)
+// accounting and HR together: only for an owner with both (a company where someone else is the HR person gets nothing)
+manage.get("/unified-summary", route(async (req, res) => {
+  const range = monthRange(req.query);
+  if (!range) return res.status(400).json({ error: { code: "BAD_REQUEST", message: "الفترة الزمنية غير صحيحة" } });
+  res.json({ summary: req.hr!.isOwner ? await unifiedSummary(req.hr!.company.ownerId, range.from, range.to) : null });
+}));
 manage.get("/payroll-runs", route(async (req, res) => res.json(await pay.listRuns(req.hr!.company.id))));
 manage.post("/payroll-runs", route(async (req, res) => {
   const parsed = z.object({ periodStart: isoDay, periodEnd: isoDay }).safeParse(req.body);

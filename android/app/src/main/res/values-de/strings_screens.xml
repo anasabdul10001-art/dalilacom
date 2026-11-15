@@ -392,6 +392,12 @@
     <string name="hr_pay_paidTotalLabel">Total cost of paid runs</string>
     <string name="accounting_payrollLabel">Payroll</string>
     <string name="accounting_payrollDueLabel">Payroll due</string>
+    <string name="unified_title">Accounting and HR summary</string>
+    <string name="unified_note">This month, final figures</string>
+    <string name="unified_employees">Employees</string>
+    <string name="unified_salariesPaid">Salaries paid</string>
+    <string name="unified_salariesDue">Salaries due, not paid yet</string>
+    <string name="unified_net">Final net after salaries</string>
     <string name="accounting_incomeLabel">Income</string>
     <string name="accounting_expensesLabel">Expenses</string>
     <string name="accounting_netLabel">Net</string>

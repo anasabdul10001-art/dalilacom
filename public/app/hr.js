@@ -236,7 +236,8 @@ function hrPayroll() {
   const ov = hrState().ov;
   const runs = hrData("runs", "/hr/payroll-runs");
   const advs = hrData("advances", "/hr/advances");
-  if (runs === null || advs === null) return skeleton("tiles");
+  const unified = hrData("unified", "/hr/unified-summary");
+  if (runs === null || advs === null || unified === null) return skeleton("tiles");
   const pendingAdv = advs.filter((a) => a.status === "PENDING_MANAGER" || a.status === "PENDING_HR");
   const cur = ov.manage.currency, owner = ov.manage.role === "OWNER";
   const paidCost = runs.filter((r) => r.status === "PAID").reduce((sum, r) => sum + ((r.totals && r.totals.cost) || 0), 0);
@@ -253,6 +254,7 @@ function hrPayroll() {
   return `<div class="panel-title">${esc(t("hr.pay.runs"))}</div>
     <p class="muted">${esc(t("hr.pay.note"))}</p><p class="muted">${esc(t("hr.pay.attNote"))}</p>
     ${paidCost > 0 ? `<div class="tiles">${uiTile(t("hr.pay.paidTotalLabel"), hrMoney(paidCost, cur), "payroll", true)}</div>` : ""}
+    ${unifiedSummaryCard(unified)}
     ${runCards}
     <div class="card"><h2>${esc(t("hr.pay.create"))}</h2>
       <div class="row"><div class="field"><label>${esc(t("hr.pay.from"))}</label><input id="hr-run-from" type="date" /></div><div class="field"><label>${esc(t("hr.pay.to"))}</label><input id="hr-run-to" type="date" /></div></div>

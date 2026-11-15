@@ -338,6 +338,7 @@ private fun PayrollTab(repo: com.dalilacom.app.data.repository.HrRepository, cur
             Text(stringResource(R.string.hr_pay_attNote), color = MaterialTheme.colorScheme.onSurfaceVariant)
             val paidCost = runs.filter { it.s("status") == "PAID" }.sumOf { it.o("totals")?.n("cost") ?: 0.0 }
             if (paidCost > 0) MetricTile(stringResource(R.string.hr_pay_paidTotalLabel), money(paidCost, cur), "payroll", Modifier.fillMaxWidth())
+            if (owner) com.dalilacom.app.ui.common.UnifiedSummaryCard(repo, "hr/unified-summary", version)
             if (runs.isEmpty()) EmptyHint("💵", stringResource(R.string.hr_pay_none))
             runs.forEach { r ->
                 val id = r.s("id").orEmpty(); val st = r.s("status").orEmpty()

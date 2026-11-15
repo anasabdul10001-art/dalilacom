@@ -250,6 +250,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             }
         }
         if (can("money")) cash?.let { c ->
+        // accounting + HR together: only an owner who has both gets anything (the server answers empty otherwise)
+        if (acting == null) item { com.dalilacom.app.ui.common.UnifiedSummaryCard(container.hrRepository, "accounting/unified-summary") }
             item {
                 CollapsibleCard(stringResource(R.string.accounting_cash_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

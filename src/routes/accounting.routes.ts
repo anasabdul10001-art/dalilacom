@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { PAYROLL_CATEGORY_DUE } from "../services/hrPay.service.js";
+import { monthRange, unifiedSummary } from "../services/unifiedSummary.service";
 import crypto from "crypto";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
@@ -166,6 +167,14 @@ accountingRouter.get("/summary", route(async (req, res) => {
     inventory: { products: productCount + storeProducts.length, units: (stock._sum.quantity ?? 0) + storeProducts.reduce((sum, p) => sum + p.stock, 0), outOfStock: lowStock + storeProducts.filter(p => p.stock <= 0).length },
     recent: recent.map(plain),
   });
+}));
+
+// the combined page for an owner who also has HR (null for everybody else: no empty section)
+accountingRouter.get("/unified-summary", route(async (req, res) => {
+  const range = monthRange(req.query);
+  if (!range) return sendError(res, 400, "BAD_REQUEST", "الفترة الزمنية غير صحيحة");
+  // a staff member working inside the owner's accounting never gets the owner's HR figures
+  res.json({ summary: req.staffActor ? null : await unifiedSummary(req.user!.id, range.from, range.to) });
 }));
 
 accountingRouter.get("/entries", route(async (req, res) => {

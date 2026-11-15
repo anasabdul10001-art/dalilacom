@@ -764,6 +764,12 @@
     <string name="hr_pay_paidTotalLabel">إجمالي كلفة الدورات المدفوعة</string>
     <string name="accounting_payrollLabel">رواتب</string>
     <string name="accounting_payrollDueLabel">رواتب مستحقة</string>
+    <string name="unified_title">ملخّص المحاسبة والموارد البشرية</string>
+    <string name="unified_note">هالشهر، بالأرقام النهائية</string>
+    <string name="unified_employees">عدد الموظفين</string>
+    <string name="unified_salariesPaid">رواتب مدفوعة</string>
+    <string name="unified_salariesDue">رواتب مستحقة، لم تُدفع بعد</string>
+    <string name="unified_net">الصافي النهائي بعد الرواتب</string>
     <string name="accounting_incomeLabel">الدخل</string>
     <string name="accounting_expensesLabel">المصاريف</string>
     <string name="accounting_netLabel">الصافي</string>

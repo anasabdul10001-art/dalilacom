@@ -2691,6 +2691,7 @@ function screenAccounting() {
     <div class="btn-row"><button class="btn soft" onclick="downloadAccounting()">⬇ ${esc(t("accounting.export"))}</button><button class="btn soft" onclick="printAccountingReport()">🖨 ${esc(t("accounting.print"))}</button></div>
     ${accountingCashCard(a.cash)}
     <div class="panel-title" style="margin-top:16px">${esc(t("accounting.recent"))}</div>
+    ${unifiedSummaryCard(a.unified)}
     ${(a.summary?.recent || []).map(e => `<div class="item"><span class="avatar" style="--h:${accOut(e) ? 4 : 140}">${accOut(e) ? "↓" : "↑"}</span><div class="item-main">
         <div class="item-title">${esc(e.description)}</div>
         <div class="item-sub">${esc(e.category)} · <bdi>${new Date(e.occurredAt).toLocaleDateString()}</bdi></div>
@@ -2740,9 +2741,9 @@ function screenAccounting() {
 }
 async function loadAccounting() {
   const cashDay = S._accCashDay || new Date().toISOString().slice(0, 10);
-  const [summary, products, cash, sales, low, partiesRes, purchases, recurring, taxRates, taxSettings] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low"), api("GET", "/accounting/parties"), api("GET", "/accounting/purchases"), api("GET", "/accounting/recurring"), api("GET", "/accounting/tax/rates"), api("GET", "/accounting/settings")]);
+  const [summary, products, cash, sales, low, partiesRes, purchases, recurring, taxRates, taxSettings, unified] = await Promise.all([api("GET", "/accounting/summary"), api("GET", "/accounting/products"), api("GET", `/accounting/cash?day=${cashDay}&currency=${encodeURIComponent(S.currency || "EUR")}`), api("GET", "/accounting/sales"), api("GET", "/accounting/stock/low"), api("GET", "/accounting/parties"), api("GET", "/accounting/purchases"), api("GET", "/accounting/recurring"), api("GET", "/accounting/tax/rates"), api("GET", "/accounting/settings"), api("GET", "/accounting/unified-summary")]);
   const requiresPlan = summary.status === 402 || products.status === 402;
-  S._accounting = { loading: false, requiresPlan, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], recurring: recurring.ok ? recurring.data : [], taxRates: taxRates.ok ? taxRates.data : [], taxSettings: taxSettings.ok ? taxSettings.data : { pricesIncludeTax: true, defaultTaxRateId: null }, error: !summary.ok && !requiresPlan && !S._actAs ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
+  S._accounting = { loading: false, requiresPlan, unified: unified.ok ? unified.data : null, summary: summary.ok ? summary.data : null, products: products.ok ? products.data : [], cash: cash.ok ? cash.data : null, sales: sales.ok ? sales.data : [], low: low.ok ? low.data : null, customers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "CUSTOMER") : [], suppliers: partiesRes.ok ? partiesRes.data.parties.filter((x) => x.kind === "SUPPLIER") : [], purchases: purchases.ok ? purchases.data : [], recurring: recurring.ok ? recurring.data : [], taxRates: taxRates.ok ? taxRates.data : [], taxSettings: taxSettings.ok ? taxSettings.data : { pricesIncludeTax: true, defaultTaxRateId: null }, error: !summary.ok && !requiresPlan && !S._actAs ? errMsg(summary.data, "تعذّر تحميل المحاسبة") : "" };
   render();
 }
 /* ---- financial statements (experimental): the income statement of a period and a simplified financial position ---- */
@@ -3335,6 +3336,15 @@ async function accountingSalePrint(id) {
 
 /** The cash box of one day: opening + cash in - cash out = what should be in the box; counting it closes the day. */
 function accountingCashCard(c) {
+// accounting + HR together: shown only to an owner who has both (the server sends nothing otherwise), so nobody sees an empty section
+function unifiedSummaryCard(res) {
+  const u = res && res.summary;
+  if (!u || !u.totals || !u.totals.length) return "";
+  return `<div class="panel-title" style="margin-top:16px">${esc(t("unified.title"))}</div>
+    <p class="muted">${esc(t("unified.note"))} · ${esc(t("unified.employees"))}: ${u.employees || 0}</p>
+    ${u.totals.map((x) => `<div class="muted" style="margin:6px 2px"><b>${esc(x.currency)}</b></div>
+      <div class="tiles">${uiTile(t("accounting.income"), fmt(x.incomeCents, x.currency), "income")}${uiTile(t("unified.salariesPaid"), fmt(x.payrollPaidCents, x.currency), "expense")}${uiTile(t("unified.salariesDue"), fmt(x.payrollDueCents, x.currency), "expense")}${uiTile(t("unified.net"), fmt(x.netCents, x.currency), "net", true)}</div>`).join("")}`;
+}
   if (!c) return "";
   const cur = c.currency;
   const diff = c.differenceCents;

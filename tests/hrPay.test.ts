@@ -236,6 +236,26 @@ describe("HR payroll -> the owner's accounting", () => {
     expect((await request(app).get("/accounting/summary").query({ from: "2026-03-01", to: "2026-03-31" }).set(co.auth)).body.totals[0].payrollCents).toBe(500000);
   });
 
+  it("the combined summary exists only for an owner with both services: income, salaries paid and due, one final net", async () => {
+    const co = await company("uni1", "USD");
+    await staff(co, { baseSalary: 500000 });
+    const runId = await newRun(co);
+    await process(co, runId);
+    // HR only: accounting is not active, so there is no combined page (and no accounting at all)
+    expect((await request(app).get("/hr/unified-summary").set(co.auth)).body.summary).toBeNull();
+    const plan = await prisma.servicePlan.create({ data: { service: "ACCOUNTING", name: `Acc ${crypto.randomUUID().slice(0, 5)}`, durationDays: 30, priceCents: 0, currency: "EUR", priceCredits: 0 } });
+    await prisma.platformSubscription.create({ data: { userId: co.id, planId: plan.id, provider: "TEST", status: "ACTIVE", amountCents: 0, currency: "EUR", currentPeriodEnd: new Date(Date.now() + 30 * 86400000) } });
+    await request(app).post("/accounting/entries").set(co.auth).send({ type: "INCOME", category: "Sales", description: "March sales", amountCents: 2_000_000, currency: "USD", occurredAt: "2026-03-10T10:00:00.000Z" });
+    const q = { from: "2026-03-01", to: "2026-03-31" };
+    // processed: the salaries are due, and already inside the net
+    const due = (await request(app).get("/accounting/unified-summary").query(q).set(co.auth)).body.summary;
+    expect(due.totals).toEqual([{ currency: "USD", incomeCents: 2_000_000, expensesCents: 500000, payrollPaidCents: 0, payrollDueCents: 500000, netCents: 1_500_000 }]);
+    expect(due.employees).toBe(1);
+    await pay(co, runId);
+    const paid = (await request(app).get("/hr/unified-summary").query(q).set(co.auth)).body.summary;
+    expect(paid.totals).toEqual([{ currency: "USD", incomeCents: 2_000_000, expensesCents: 500000, payrollPaidCents: 500000, payrollDueCents: 0, netCents: 1_500_000 }]);
+  });
+
   it("a company's total can be wider than 32 bits while each salary fits one", async () => {
     const co = await company("acc3", "SYP");
     for (let i = 0; i < 3; i++) await staff(co, { baseSalary: 1_500_000_000 });
