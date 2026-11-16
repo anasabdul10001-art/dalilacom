@@ -155,6 +155,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var actingId by remember { mutableStateOf(com.dalilacom.app.data.network.ActingBusiness.ownerId) }
     val acting = workplaces.firstOrNull { it.ownerId == actingId }
     fun can(tag: String) = acting == null || tag in acting.allowed
+    var workRefresh by remember { mutableStateOf(0) }
     fun switchWorkplace(id: String?) { com.dalilacom.app.data.network.ActingBusiness.set(id); actingId = id }
 
     suspend fun reload() {
@@ -164,6 +165,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         if (actingId != null && wps.none { it.ownerId == actingId }) switchWorkplace(null)
         val ag = wps.firstOrNull { it.ownerId == actingId }
         fun ok(tag: String) = ag == null || tag in ag.allowed
+        if (ag != null) container.accountingRepository.clearPlanRequired() // a staff member works on the owner's plan; the summary below sets it again when it is asked for
         summary = if (ok("reports")) container.accountingRepository.summary() else null
         products = if (ok("productsRead")) container.accountingRepository.products() else emptyList()
         cash = if (ok("money")) container.accountingRepository.cash(cashDay, "EUR") else null
@@ -218,6 +220,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             Text(stringResource(R.string.site_planNeeded), style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Button(onClick = onOpenPlans, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) { Text(stringResource(R.string.site_plans)) }
             OutlinedButton(onClick = { scope.launch { reload() } }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.billing_refresh_status)) }
+            StaffJoinCard(container) { id -> switchWorkplace(id); scope.launch { reload() } }
         }
         return
     }
@@ -229,8 +232,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         item { Text(stringResource(R.string.accounting_title), style = MaterialTheme.typography.headlineSmall) }
         item { StaffSwitcher(workplaces, actingId) { id -> switchWorkplace(id); scope.launch { reload() } } }
         if (acting?.role == "MARKETER") item { CollapsibleCard(stringResource(R.string.staff_marketing_title), startOpen = true) { StaffMarketing(container) } }
-        if (acting?.role == "DRIVER") item { CollapsibleCard(stringResource(R.string.staff_deliveries_title), startOpen = true) { StaffDriverOrders(container, acting) } }
-        if (acting != null) item { CollapsibleCard(stringResource(R.string.staff_my_work_title), startOpen = true) { StaffMyWork(container, acting) } }
+        if (acting?.role == "DRIVER") item { CollapsibleCard(stringResource(R.string.staff_deliveries_title), startOpen = true) { StaffDriverOrders(container, acting) { workRefresh++ } } }
+        if (acting != null) item { CollapsibleCard(stringResource(R.string.staff_my_work_title), startOpen = true) { StaffMyWork(container, acting, workRefresh) } }
         else item { CollapsibleCard(stringResource(R.string.staff_title)) { StaffOwnerSection(container) { id -> switchWorkplace(id); scope.launch { reload() } } } }
         if (can("reports")) item {
             Card(Modifier.fillMaxWidth()) {

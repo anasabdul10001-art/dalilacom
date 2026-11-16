@@ -21,6 +21,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class AccountingRepository(private val api: ApiService) {
     var requiresPlan: Boolean = false
         private set
+    /** A staff member works on the owner's plan: the paywall flag is cleared until a call says otherwise. */
+    fun clearPlanRequired() { requiresPlan = false }
     suspend fun summary() = safeApiCall { api.accountingSummary() }?.also { requiresPlan = it.code() == 402 }?.takeIf { it.isSuccessful }?.body()
     suspend fun planCatalog(): PlanCatalogDto? = safeApiCall { api.planCatalog() }?.takeIf { it.isSuccessful }?.body()
     suspend fun checkout(planId: String, provider: String = "STRIPE"): Result<BillingCheckoutDto> {

@@ -83,15 +83,18 @@ fun StaffSwitcher(workplaces: List<StaffWorkplaceDto>, actingId: String?, onSwit
 
 /** What a staff member sees of their own job: role, rate, and the commissions they earned. */
 @Composable
-fun StaffMyWork(container: AppContainer, workplace: StaffWorkplaceDto) {
+fun StaffMyWork(container: AppContainer, workplace: StaffWorkplaceDto, refreshKey: Int = 0) {
     var rows by remember(workplace.staffId) { mutableStateOf<List<StaffCommissionDto>?>(null) }
-    LaunchedEffect(workplace.staffId) { rows = container.staffRepository.myCommissions(workplace.staffId) }
+    LaunchedEffect(workplace.staffId, refreshKey) { rows = container.staffRepository.myCommissions(workplace.staffId) }
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatusChip(staffRoleName(workplace.role), "info")
             if (workplace.salesRateBp > 0) StatusChip(stringResource(R.string.staff_my_rate, workplace.salesRateBp / 100.0), "info")
         }
-        workplace.unpaidCommissions.filter { it.cents > 0 }.forEach { Text(stringResource(R.string.staff_unpaid) + ": " + cents(it.cents, it.currency), style = MaterialTheme.typography.titleSmall) }
+        // the unpaid total follows the list that was just loaded; the workplace figure is only the start value
+        val unpaid = rows?.filter { it.status == "ACCRUED" }?.groupBy { it.currency }?.map { it.key to it.value.sumOf { c -> c.amountCents } }
+            ?: workplace.unpaidCommissions.filter { it.cents > 0 }.map { it.currency to it.cents }
+        unpaid.filter { it.second > 0 }.forEach { Text(stringResource(R.string.staff_unpaid) + ": " + cents(it.second, it.first), style = MaterialTheme.typography.titleSmall) }
         Text(stringResource(R.string.staff_commissions), style = MaterialTheme.typography.titleSmall)
         val list = rows
         if (list == null) Text("...") else if (list.isEmpty()) Text(stringResource(R.string.staff_no_commissions), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -105,6 +108,28 @@ fun StaffMyWork(container: AppContainer, workplace: StaffWorkplaceDto) {
 }
 
 /** The owner staff list (add, invite, commission, remove, pay) and, for anybody, the field to enter an invitation code. */
+/** The invitation-code entry on its own: a person without an accounting plan (a staff member) must still be able to join a workplace. */
+@Composable
+fun StaffJoinCard(container: AppContainer, onJoined: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+    var joinCode by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    Column(Modifier.fillMaxWidth().padding(top = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.staff_join_title), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.staff_join_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedTextField(joinCode, { joinCode = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedButton(
+            onClick = {
+                scope.launch {
+                    container.staffRepository.accept(joinCode.trim()).fold({ joinCode = ""; message = AppStrings.get(R.string.staff_joined); onJoined(it.ownerId) }, { message = it.message.orEmpty() })
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.staff_join_btn)) }
+        if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
@@ -252,7 +277,7 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
 
 /** The driver list: the shop orders ready to take, and the ones on the road. */
 @Composable
-fun StaffDriverOrders(container: AppContainer, workplace: StaffWorkplaceDto) {
+fun StaffDriverOrders(container: AppContainer, workplace: StaffWorkplaceDto, onChanged: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     var rows by remember(workplace.staffId) { mutableStateOf<List<com.dalilacom.app.data.network.StaffOrderDto>?>(null) }
     var message by remember { mutableStateOf("") }
@@ -277,7 +302,7 @@ fun StaffDriverOrders(container: AppContainer, workplace: StaffWorkplaceDto) {
                             scope.launch {
                                 val picking = o.status == "PREPARING"
                                 val r = if (picking) container.staffRepository.pickup(workplace.staffId, o.id) else container.staffRepository.deliver(workplace.staffId, o.id)
-                                r.fold({ message = AppStrings.get(if (picking) R.string.staff_picked_up else R.string.staff_delivered) }, { message = it.message.orEmpty() })
+                                r.fold({ message = AppStrings.get(if (picking) R.string.staff_picked_up else R.string.staff_delivered); onChanged() }, { message = it.message.orEmpty() })
                                 reload()
                             }
                         },
