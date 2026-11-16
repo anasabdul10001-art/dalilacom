@@ -105,6 +105,7 @@ fun StaffMyWork(container: AppContainer, workplace: StaffWorkplaceDto) {
 }
 
 /** The owner staff list (add, invite, commission, remove, pay) and, for anybody, the field to enter an invitation code. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
     val scope = rememberCoroutineScope()
@@ -138,7 +139,8 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
         }
         Text(stringResource(R.string.staff_add), style = MaterialTheme.typography.titleSmall)
         OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.staff_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // six roles do not fit in one line on a phone: wrap them so none is cut off
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             ROLES.forEach { r ->
                 if (r == role) Button(onClick = { role = r }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text(staffRoleName(r), maxLines = 1) }
                 else OutlinedButton(onClick = { role = r }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text(staffRoleName(r), maxLines = 1) }
@@ -163,7 +165,7 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(s.name, style = MaterialTheme.typography.titleSmall)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         StatusChip(staffRoleName(s.role), "info")
                         StatusChip(stringResource(when (s.inviteState) { "LINKED" -> R.string.staff_state_linked; "PENDING" -> R.string.staff_state_pending; else -> R.string.staff_state_none }), if (s.inviteState == "LINKED") "info" else "warning")
                         if (s.salesRateBp > 0) StatusChip("%.1f%%".format(s.salesRateBp / 100.0), "info")
@@ -175,7 +177,8 @@ fun StaffOwnerSection(container: AppContainer, onJoined: (String) -> Unit) {
                         }
                     }
                     if (s.fixedPayCents > 0) OutlinedButton(onClick = { salaryTarget = s }) { Text(stringResource(R.string.staff_pay_salary)) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // up to four buttons: they wrap onto a second line instead of being squeezed into slivers
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (s.inviteState != "LINKED") OutlinedButton(onClick = { scope.launch { container.staffRepository.invite(s.id).fold({ code = it; reload() }, { message = it.message.orEmpty() }) } }) { Text(stringResource(R.string.staff_invite)) }
                         if (hrEmps.isNotEmpty()) OutlinedButton(onClick = { hrTarget = s }) { Text(if (s.hrEmployeeId != null) stringResource(R.string.staff_hr_linked, hrEmps.firstOrNull { it.id == s.hrEmployeeId }?.name.orEmpty()) else stringResource(R.string.staff_hr_link)) }
                         OutlinedButton(onClick = { rateTarget = s; rateValue = (s.salesRateBp / 100.0).toString() }) { Text(stringResource(R.string.staff_edit_rate)) }
