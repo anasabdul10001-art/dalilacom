@@ -62,7 +62,7 @@ describe("Facebook/Instagram linking before Meta approves the app", () => {
     expect(status.body.available).toBe(true);
   });
 
-  it("asks an admin for the comment permissions too (to test them), and a merchant for messaging only", async () => {
+  it("asks an admin for the comment permissions too (to test them), and a merchant too (every link asks for them now)", async () => {
     await request(app).post("/responder/activate").set(admin); // the Facebook start needs a running responder (trial)
     const asAdmin = await request(app).get("/responder/meta/oauth/start").set(admin);
     const adminScopes = new URL(asAdmin.body.url).searchParams.get("scope") ?? "";
@@ -76,7 +76,8 @@ describe("Facebook/Instagram linking before Meta approves the app", () => {
       const asMerchant = await request(app).get("/responder/meta/oauth/start").set(merchant);
       const merchantScopes = new URL(asMerchant.body.url).searchParams.get("scope") ?? "";
       expect(merchantScopes).toContain("pages_messaging");
-      expect(merchantScopes).not.toContain("pages_read_user_content");
+      // every link now also asks for the comment permissions, so comment replies can work
+      expect(merchantScopes).toContain("pages_read_user_content");
     } finally {
       process.env.META_PUBLIC_ACCESS = "false";
     }

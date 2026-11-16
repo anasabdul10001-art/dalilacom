@@ -50,7 +50,7 @@ describe("npm run i18n:add", () => {
     expect(registeredLanguages(root).map((l) => l.code)).toEqual(["ar", "en", "es"]);
     const index = fs.readFileSync(path.join(root, "src/i18n/index.ts"), "utf8");
     expect(index).toContain('import { pack as es } from "./es";');
-    expect(index).toMatch(/\n\s+es,\n\s+\/\/ <\/i18n-packs>/);
+    expect(index).toMatch(/\n\s+es,\r?\n\s+\/\/ <\/i18n-packs>/);
     expect(fs.readFileSync(path.join(root, "src/i18n/es.ts"), "utf8")).toContain('"الباقة غير موجودة": "Plan not found"'); // English placeholder, Arabic key
 
     // web: a self-registering file, loaded before app.js
