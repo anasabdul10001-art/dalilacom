@@ -217,7 +217,7 @@ function staffMarketing() {
       <div class="field"><label>${esc(t("staff.offer.percent"))}</label><input id="mk-percent" type="number" min="1" max="100" inputmode="numeric" /></div>
       <p class="muted">${esc(t("staff.offer.note"))}</p>
       <button class="btn" onclick="staffOfferAdd(this)">${esc(t("staff.offer.add"))}</button></div>
-    ${rows === null ? skeleton("list", 2) : rows.length === 0 ? uiEmpty("🏷️", t("staff.offer.none")) : rows.map((d) => `<div class="card"><div class="title-line"><div><strong>${esc(d.title)}</strong><div class="chips">${uiChip(d.percent + "%")}${uiChip(String(d.state || d.status || ""), d.isActive ? "" : "warn")}</div></div>
+    ${rows === null ? skeleton("list", 2) : rows.length === 0 ? uiEmpty("🏷️", t("staff.offer.none")) : rows.map((d) => `<div class="card"><div class="title-line"><div><strong>${esc(d.title)}</strong><div class="chips">${uiChip(d.percent + "%")}${uiChip((DISC_STATE[d.state || d.status] ? t(DISC_STATE[d.state || d.status]) : String(d.state || d.status || "")), d.isActive ? "" : "warn")}</div></div>
         <button class="btn small outline" onclick="staffOfferToggle('${d.id}',${d.isActive ? "false" : "true"})">${esc(t(d.isActive ? "staff.offer.stop" : "staff.offer.start"))}</button></div></div>`).join("")}
     <div class="card"><div class="section-title">${esc(t("staff.announce.title"))}</div><p class="muted">${esc(t("staff.announce.help"))}</p>
       <div class="field"><label>${esc(t("staff.offer.title"))}</label><input id="mk-a-title" maxlength="100" /></div>
