@@ -30,7 +30,7 @@ def chime(f=880,d=1.2):
     n=int(SR*d); t=np.arange(n)/SR
     return (np.sin(2*np.pi*f*t)+0.5*np.sin(2*np.pi*f*1.5*t)+0.25*np.sin(2*np.pi*f*2*t))*np.exp(-t*3.2)*0.35
 import json
-TM=json.load(open(os.path.join(HERE,"timing.json")))
+TM=json.load(open(os.path.join(HERE,sys.argv[2] if len(sys.argv)>2 else "timing.json")))
 T=TM["T"]; SB=TM["steps"]; DUR=TM["dur"]
 mix=np.zeros(int(SR*(DUR+1)))
 C=TM["cue"]

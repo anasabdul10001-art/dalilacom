@@ -10,7 +10,7 @@ const args = process.argv.slice(2);
 const stillsIdx = args.indexOf("--stills");
 const stills = stillsIdx >= 0 ? args[stillsIdx + 1].split(",").map(Number) : null;
 const out = args.find((a, i) => !a.startsWith("--") && (stillsIdx < 0 || i !== stillsIdx + 1)) || path.join(__dirname, "..", "social", "style-demo", "dalilacom-style-demo.mp4");
-const url = "file:///" + path.join(__dirname, "scene.html").split(path.sep).join("/");
+const url = "file:///" + path.join(__dirname, process.env.SCENE || "scene.html").split(path.sep).join("/");
 const prof = path.join(process.env.TEMP, "dal-style-prof-" + Date.now());
 
 (async () => {
