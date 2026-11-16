@@ -336,7 +336,7 @@
     <string name="hr_reject">Reject</string>
     <string name="hr_decided">Decision saved</string>
     <string name="hr_pay_runs">Payroll runs</string>
-    <string name="hr_pay_note">When you pay a run, DALILACOM records a payroll expense in your accounting by itself.</string>
+    <string name="hr_pay_note">When you calculate a run, DALILACOM records a «Payroll due» expense in your accounting by itself. When you mark it as paid, it becomes a «Payroll» expense.</string>
     <string name="hr_pay_none">No payroll runs yet</string>
     <string name="hr_pay_from">From</string>
     <string name="hr_pay_to">To</string>
@@ -347,7 +347,7 @@
     <string name="hr_pay_markPaid">Mark as paid</string>
     <string name="hr_pay_paidDone">Payment recorded and the expense added to accounting</string>
     <string name="hr_pay_revert">Take the payment back</string>
-    <string name="hr_pay_revertAsk">This takes the payment back and removes the payroll expense from accounting. Sure?</string>
+    <string name="hr_pay_revertAsk">This takes the payment back, and the payroll expense in accounting goes back to «Payroll due». Sure?</string>
     <string name="hr_pay_reverted">Payment taken back</string>
     <string name="hr_run_DRAFT">Draft</string>
     <string name="hr_run_PROCESSED">Calculated</string>

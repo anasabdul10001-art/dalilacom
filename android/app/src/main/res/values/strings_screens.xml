@@ -708,7 +708,7 @@
     <string name="hr_reject">ارفض</string>
     <string name="hr_decided">انحفظ القرار</string>
     <string name="hr_pay_runs">دورات الرواتب</string>
-    <string name="hr_pay_note">لما بتدفع دورة، بيسجّل دليلكم مصروف «رواتب» بمحاسبتك لحالو.</string>
+    <string name="hr_pay_note">لما بتحسب دورة، بيسجّل دليلكم مصروف «رواتب مستحقة» بمحاسبتك لحالو. ولما بتسجّل إنها اندفعت، بيصير مصروف «رواتب».</string>
     <string name="hr_pay_none">ما في دورات رواتب بعد</string>
     <string name="hr_pay_from">من</string>
     <string name="hr_pay_to">إلى</string>
@@ -719,7 +719,7 @@
     <string name="hr_pay_markPaid">سجّل إنها اندفعت</string>
     <string name="hr_pay_paidDone">انسجّلت الدفعة وانضاف المصروف للمحاسبة</string>
     <string name="hr_pay_revert">رجّع الدفعة</string>
-    <string name="hr_pay_revertAsk">بترجّع الدفعة وبيتشال مصروف الرواتب من المحاسبة. متأكد؟</string>
+    <string name="hr_pay_revertAsk">بترجّع الدفعة، وبيرجع مصروف الرواتب «رواتب مستحقة» بالمحاسبة. متأكد؟</string>
     <string name="hr_pay_reverted">انرجعت الدفعة</string>
     <string name="hr_run_DRAFT">مسودة</string>
     <string name="hr_run_PROCESSED">محسوبة</string>
