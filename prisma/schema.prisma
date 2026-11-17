@@ -2784,6 +2784,8 @@ enum HrAttendanceSource {
   WEB
   MOBILE
   MANUAL
+  DEVICE
+  IMPORT
 }
 
 enum HrLeaveStatus {
@@ -2833,6 +2835,7 @@ model HrCompany {
   employees   HrEmployee[]
   invites     HrInvite[]
   attendance  HrAttendance[]
+  devices     HrDevice[]
   leaveTypes  HrLeaveType[]
   leaves      HrLeaveRequest[]
   components  HrSalaryComponent[]
@@ -2870,6 +2873,7 @@ model HrEmployee {
   hireDate         DateTime
   employmentStatus HrEmploymentStatus @default(ACTIVE)
   baseSalary       Int?
+  deviceCode       String? // the number the employee has on the fingerprint or card readers (a user id or a card number)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -2888,10 +2892,37 @@ model HrEmployee {
   payslips           HrPayslip[]
 
   @@unique([companyId, userId])
+  @@unique([companyId, deviceCode])
   @@index([companyId])
   @@index([userId])
   @@index([departmentId])
   @@index([managerId])
+}
+
+// A fingerprint, card or face reader (or the program that collects from it) that sends its punches to the company.
+// The key is shown once and kept as a hash; the reader sends it in the X-Device-Key header.
+model HrDevice {
+  id         String          @id @default(uuid())
+  companyId  String
+  name       String
+  kind       HrDeviceKind    @default(FINGERPRINT)
+  keyHash    String          @unique
+  keyHint    String // the last characters of the key, so the owner can tell keys apart
+  active     Boolean         @default(true)
+  lastSeenAt DateTime?
+  createdAt  DateTime        @default(now())
+
+  company    HrCompany      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  attendance HrAttendance[]
+
+  @@index([companyId])
+}
+
+enum HrDeviceKind {
+  FINGERPRINT
+  CARD
+  FACE
+  OTHER
 }
 
 // An invitation to link an employee to a Dalilacom account: by the code (kept as a hash) or, when the account's
@@ -2918,12 +2949,14 @@ model HrAttendance {
   checkIn    DateTime
   checkOut   DateTime?
   source     HrAttendanceSource @default(WEB)
+  deviceId   String? // the fingerprint or card reader that recorded it
   editedById String? // set when a manager adds or corrects the record by hand
   notes      String?
   createdAt  DateTime           @default(now())
 
   company  HrCompany  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  device   HrDevice?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@index([companyId, employeeId, checkIn])
 }

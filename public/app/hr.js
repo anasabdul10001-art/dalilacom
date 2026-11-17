@@ -11,7 +11,7 @@ function hrTabs() {
   if (!S.token || !ov) return [];
   const tabs = [];
   if (ov.manage || ov.canStart) tabs.push("people");
-  if (ov.manage) tabs.push("leave", "payroll");
+  if (ov.manage) tabs.push("attendance", "leave", "payroll");
   if ((ov.jobs && ov.jobs.length) || ov.invitations) tabs.push("job");
   return tabs;
 }
@@ -57,6 +57,7 @@ function hrBody(tab) {
   const h = hrState();
   if (!h.ov) { if (!h.loading) hrLoadOverview(); return skeleton("list", 3); }
   if (tab === "people") return hrPeople();
+  if (tab === "attendance") return hrAttendance();
   if (tab === "leave") return hrLeave();
   if (tab === "payroll") return hrPayroll();
   if (tab === "job") return hrJob();
@@ -82,12 +83,12 @@ function hrPeople() {
   const list = emps.length === 0 ? uiEmpty("👥", t("hr.people.empty")) : emps.map((e) => {
     const name = hrName(e);
     const tone = e.employmentStatus === "ACTIVE" ? "ok" : e.employmentStatus === "ON_LEAVE" ? "warn" : "bad";
-    const more = `<span>${esc(t("hr.f.hire"))}: <bdi>${esc(hrDay(e.hireDate))}</bdi></span>${e.email ? `<span>${esc(t("hr.f.email"))}: <bdi>${esc(e.email)}</bdi></span>` : ""}<span>${esc(e.userId ? t("hr.linked") : t("hr.notLinked"))}</span>`;
+    const more = `<span>${esc(t("hr.f.hire"))}: <bdi>${esc(hrDay(e.hireDate))}</bdi></span>${e.email ? `<span>${esc(t("hr.f.email"))}: <bdi>${esc(e.email)}</bdi></span>` : ""}<span>${esc(e.userId ? t("hr.linked") : t("hr.notLinked"))}</span>${e.deviceCode ? `<span>${esc(t("hr.f.deviceCode"))}: <bdi>${esc(e.deviceCode)}</bdi></span>` : ""}`;
     return `<div class="item">${uiAvatar(name)}<div class="item-main">
         <div class="item-title">${esc(name)}</div><div class="item-sub">${esc(e.position || t("hr.role." + e.role))}</div>
         <div class="chips">${uiChip(t("hr.role." + e.role))}${uiChip(t("hr.status." + e.employmentStatus), tone)}${e.department ? uiChip(e.department.name) : ""}${e.userId ? uiChip(t("hr.linked"), "info") : ""}</div>
         ${uiFold(t("hr.details"), more)}
-        <div class="btn-row"><button class="btn small soft" onclick="hrSalaryOpen('${e.id}')">${esc(t("hr.sal.open"))}</button>${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button>`}</div>
+        <div class="btn-row"><button class="btn small soft" onclick="hrSalaryOpen('${e.id}')">${esc(t("hr.sal.open"))}</button><button class="btn small soft" onclick="hrSetDeviceCode('${e.id}')">${esc(t("hr.dev.setCode"))}</button>${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button>`}</div>
       </div>${e.baseSalary != null ? `<div class="item-end">${esc(hrMoney(e.baseSalary, cur))}</div>` : ""}</div>`;
   }).join("");
   const deptOpts = `<option value="">${esc(t("hr.dept.none"))}</option>` + depts.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
@@ -103,6 +104,7 @@ function hrPeople() {
       <div class="row"><div class="field"><label>${esc(t("hr.f.email"))}</label><input id="hr-e-email" type="email" /></div><div class="field"><label>${esc(t("hr.f.position"))}</label><input id="hr-e-pos" /></div></div>
       <div class="row"><div class="field"><label>${esc(t("hr.f.hire"))}</label><input id="hr-e-hire" type="date" value="${new Date().toISOString().slice(0, 10)}" /></div><div class="field"><label>${esc(t("hr.f.salary", { c: cur }))}</label><input id="hr-e-salary" inputmode="decimal" /></div></div>
       <div class="field"><label>${esc(t("hr.f.dept"))}</label><select id="hr-e-dept">${deptOpts}</select></div>
+      <div class="field"><label>${esc(t("hr.f.deviceCode"))}</label><input id="hr-e-code" maxlength="40" /></div>
       <button class="btn" onclick="hrAddEmployee(this)">${esc(t("hr.people.addBtn"))}</button>
     </div>`;
 }
@@ -115,9 +117,88 @@ async function hrAddEmployee(btn) {
   const salary = hrVal("hr-e-salary").trim();
   const body = { firstName: hrVal("hr-e-first").trim(), lastName: hrVal("hr-e-last").trim(), hireDate: hrVal("hr-e-hire"), position: hrVal("hr-e-pos").trim() || null, email: hrVal("hr-e-email").trim() || null };
   if (hrVal("hr-e-dept")) body.departmentId = hrVal("hr-e-dept");
+  if (hrVal("hr-e-code").trim()) body.deviceCode = hrVal("hr-e-code").trim();
   if (!body.firstName || !body.lastName) return toast(t("hr.f.first"));
   if (salary !== "") { const n = Math.round(parseFloat(salary) * 100); if (!Number.isFinite(n) || n < 0) return toast(t("hr.f.salary", { c: "" })); body.baseSalary = n; }
   await uiBusy(btn, () => hrDo("POST", "/hr/employees", body, "hr.people.added"));
+}
+async function hrSetDeviceCode(id) {
+  const e = ((hrState().data || {}).employees || []).find((x) => x.id === id); if (!e) return;
+  const code = await uiPrompt(t("hr.dev.codePrompt"), e.deviceCode || ""); if (code === null) return;
+  await hrDo("PATCH", `/hr/employees/${id}`, { deviceCode: code.trim() || null }, "hr.dev.codeSaved");
+}
+
+/* ---- attendance: the readers (fingerprint, card, face), a file of punches, and the latest records ---- */
+const HR_DEV_KINDS = ["FINGERPRINT", "CARD", "FACE", "OTHER"];
+function hrAttendance() {
+  const h = hrState();
+  const devs = hrData("devices", "/hr/devices");
+  const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const recs = hrData("attrec", "/hr/attendance?from=" + from);
+  if (devs === null || recs === null) return skeleton("list", 3);
+  const when = (v) => (v ? `<bdi>${esc(new Date(v).toLocaleString())}</bdi>` : "—");
+  const keyCard = h.newKey ? `<div class="card" style="border:2px solid var(--brand, #f60)"><strong>${esc(t("hr.dev.keyTitle", { n: h.newKey.name }))}</strong>
+      <p class="muted">${esc(t("hr.dev.keyNote"))}</p>
+      <input readonly onclick="this.select()" value="${esc(h.newKey.key)}" dir="ltr" style="width:100%" />
+      <p class="muted" dir="ltr">POST ${esc(location.origin)}/hr/device/punches<br>X-Device-Key: …<br>{"punches":[{"code":"17","at":"2026-03-02 08:00:00","direction":"IN"}]}</p>
+      <button class="btn small outline" onclick="hrState().newKey=null;render()">${esc(t("hr.dev.keyDone"))}</button></div>` : "";
+  const devList = devs.length === 0 ? uiEmpty("🖐️", t("hr.dev.empty")) : devs.map((d) => `<div class="item"><span class="avatar" style="--h:${hrHue(d.name)}">${esc(d.name.slice(0, 1).toUpperCase())}</span><div class="item-main">
+      <div class="item-title">${esc(d.name)}</div>
+      <div class="chips">${uiChip(t("hr.dev.kind." + d.kind))}${uiChip(d.active ? t("hr.dev.on") : t("hr.dev.off"), d.active ? "ok" : "warn")}${uiChip("…" + d.keyHint, "info")}</div>
+      <div class="item-sub">${esc(t("hr.dev.lastSeen"))}: ${d.lastSeenAt ? when(d.lastSeenAt) : esc(t("hr.dev.never"))}</div>
+      <div class="btn-row"><button class="btn small soft" onclick="hrDevToggle(this,'${d.id}',${d.active ? "false" : "true"})">${esc(t(d.active ? "hr.dev.switchOff" : "hr.dev.switchOn"))}</button>
+        <button class="btn small soft" onclick="hrDevRotate(this,'${d.id}')">${esc(t("hr.dev.rotate"))}</button>
+        <button class="btn small outline" onclick="hrDevDelete(this,'${d.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></div></div></div>`).join("");
+  const recList = recs.length === 0 ? uiEmpty("🕒", t("hr.att.empty")) : recs.slice(0, 40).map((r) => `<div class="item"><span class="avatar" style="--h:${hrHue(hrName(r.employee))}">${esc(hrName(r.employee).slice(0, 1).toUpperCase())}</span><div class="item-main">
+      <div class="item-title">${esc(hrName(r.employee))}</div>
+      <div class="item-sub">${when(r.checkIn)} → ${r.checkOut ? when(r.checkOut) : esc(t("hr.att.open"))}</div>
+      <div class="chips">${uiChip(t("hr.att.src." + r.source), r.source === "DEVICE" ? "info" : "")}</div></div></div>`).join("");
+  return `${keyCard}<div class="panel-title">${esc(t("hr.dev.title"))}</div><p class="muted">${esc(t("hr.dev.intro"))}</p>${devList}
+    <div class="card"><div class="field"><label>${esc(t("hr.dev.name"))}</label><input id="hr-dv-name" maxlength="80" /></div>
+      <div class="field"><label>${esc(t("hr.dev.kind"))}</label><select id="hr-dv-kind">${HR_DEV_KINDS.map((k) => `<option value="${k}">${esc(t("hr.dev.kind." + k))}</option>`).join("")}</select></div>
+      <button class="btn soft" onclick="hrDevAdd(this)">${esc(t("hr.dev.add"))}</button></div>
+    <div class="panel-title" style="margin-top:16px">${esc(t("hr.imp.title"))}</div>
+    <div class="card"><p class="muted">${esc(t("hr.imp.hint"))}</p>
+      <input id="hr-imp-file" type="file" accept=".csv,.txt,text/csv,text/plain" onchange="hrImportFile(this)" />
+      <div class="field"><label>${esc(t("hr.imp.paste"))}</label><textarea id="hr-imp-text" rows="5" dir="ltr" placeholder="17, 2026-03-02 08:00:00, IN"></textarea></div>
+      <button class="btn" onclick="hrImportRun(this)">${esc(t("hr.imp.run"))}</button>${h.impResult ? `<p class="muted">${esc(h.impResult)}</p>` : ""}</div>
+    <div class="panel-title" style="margin-top:16px">${esc(t("hr.att.recent"))}</div>${recList}`;
+}
+async function hrDevAdd(btn) {
+  const name = hrVal("hr-dv-name").trim();
+  if (!name) return toast(t("hr.dev.name"));
+  const data = await uiBusy(btn, () => hrDo("POST", "/hr/devices", { name, kind: hrVal("hr-dv-kind") || "FINGERPRINT" }, "hr.dev.added"));
+  if (data && data.key) { hrState().newKey = { name: data.name, key: data.key }; render(); }
+}
+async function hrDevToggle(btn, id, active) { await uiBusy(btn, () => hrDo("PATCH", `/hr/devices/${id}`, { active }, "hr.dev.saved")); }
+async function hrDevRotate(btn, id) {
+  if (!confirm(t("hr.dev.rotateConfirm"))) return;
+  const data = await uiBusy(btn, () => hrDo("PATCH", `/hr/devices/${id}`, { rotateKey: true }, "hr.dev.saved"));
+  if (data && data.key) { hrState().newKey = { name: data.name, key: data.key }; render(); }
+}
+async function hrDevDelete(btn, id) {
+  if (!confirm(t("hr.dev.deleteConfirm"))) return;
+  await uiBusy(btn, () => hrDo("DELETE", `/hr/devices/${id}`, undefined, "hr.dev.deleted"));
+}
+function hrImportFile(input) {
+  const f = input.files && input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { const ta = document.getElementById("hr-imp-text"); if (ta) ta.value = String(r.result || ""); };
+  r.readAsText(f);
+}
+async function hrImportRun(btn) {
+  const lines = hrVal("hr-imp-text").split(/\r?\n/).filter((l) => l.trim());
+  if (!lines.length) return toast(t("hr.imp.paste"));
+  const h = hrState(); let done = 0, bad = 0, skipped = 0;
+  for (let i = 0; i < lines.length; i += 1500) {
+    const res = await uiBusy(btn, () => api("POST", "/hr/attendance/import", { csv: lines.slice(i, i + 1500).join("\n") }));
+    if (!res.ok) { hrErr(res); break; }
+    const s = res.data.summary || {};
+    done += (s.CHECKED_IN || 0) + (s.CHECKED_OUT || 0); skipped += s.DUPLICATE || 0;
+    bad += res.data.lines - ((s.CHECKED_IN || 0) + (s.CHECKED_OUT || 0) + (s.DUPLICATE || 0)) + (res.data.skipped || 0);
+  }
+  h.impResult = t("hr.imp.result", { ok: done, dup: skipped, bad });
+  hrReload();
 }
 async function hrInvite(btn, id) {
   const res = await uiBusy(btn, () => api("POST", `/hr/employees/${id}/invite`));

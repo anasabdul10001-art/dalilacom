@@ -1,6 +1,11 @@
 package com.dalilacom.app.ui.hr
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +55,7 @@ import com.dalilacom.app.ui.common.StepBar
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -80,6 +86,8 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
     var failed by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var codeShown by remember { mutableStateOf<String?>(null) }
+    var deviceKey by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var note by remember { mutableStateOf("") }
     var tab by remember { mutableIntStateOf(0) }
     var salaryFor by remember { mutableStateOf<String?>(null) }
     val errorFallback = stringResource(R.string.hr_error)
@@ -116,7 +124,7 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
     val invitations = ov.n("invitations") ?: 0.0
     val tabs = buildList {
         if (manage != null || canStart) add("people")
-        if (manage != null) { add("leave"); add("payroll") }
+        if (manage != null) { add("attendance"); add("leave"); add("payroll") }
         if (jobs.isNotEmpty() || invitations > 0) add("job")
     }
     if (tabs.isEmpty()) {
@@ -128,15 +136,17 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
         return
     }
     if (tab >= tabs.size) tab = 0
-    val label = mapOf("people" to R.string.site_hr_tab_people, "leave" to R.string.site_hr_tab_leave, "payroll" to R.string.site_hr_tab_payroll, "job" to R.string.site_hr_tab_job)
+    val label = mapOf("people" to R.string.site_hr_tab_people, "attendance" to R.string.site_hr_tab_attendance, "leave" to R.string.site_hr_tab_leave, "payroll" to R.string.site_hr_tab_payroll, "job" to R.string.site_hr_tab_job)
     Column(Modifier.fillMaxSize()) {
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp, containerColor = androidx.compose.ui.graphics.Color.Transparent) {
             tabs.forEachIndexed { i, id -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(stringResource(label.getValue(id))) }) }
         }
         if (message.isNotBlank()) Text(message, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), color = MaterialTheme.colorScheme.primary)
+        if (note.isNotBlank()) Text(note, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             when (tabs[tab]) {
                 "people" -> PeopleTab(repo, manage, version, ::act, salaryFor, { salaryFor = it }) { codeShown = it }
+                "attendance" -> AttendanceTab(repo, version, ::act, { deviceKey = it }, { note = it })
                 "leave" -> LeaveTab(repo, version, ::act)
                 "payroll" -> PayrollTab(repo, manage?.s("currency").orEmpty(), manage?.s("role") == "OWNER", version, ::act)
                 else -> JobTab(repo, ov, jobs, version, ::act)
@@ -149,6 +159,16 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
             confirmButton = { TextButton(onClick = { codeShown = null }) { Text(stringResource(R.string.hr_ok)) } },
             title = { Text(stringResource(R.string.hr_invite)) },
             text = { Text(stringResource(R.string.hr_invite_code) + "\n\n" + code) },
+        )
+    }
+    deviceKey?.let { (name, key) ->
+        val clipboard = LocalClipboardManager.current
+        AlertDialog(
+            onDismissRequest = { },
+            confirmButton = { TextButton(onClick = { deviceKey = null }) { Text(stringResource(R.string.hr_dev_keyDone)) } },
+            dismissButton = { TextButton(onClick = { clipboard.setText(AnnotatedString(key)) }) { Text(stringResource(R.string.hr_dev_copy)) } },
+            title = { Text(stringResource(R.string.hr_dev_keyTitle, name)) },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { Text(stringResource(R.string.hr_dev_keyNote)); SelectionContainer { Text(key, fontWeight = FontWeight.Bold) } } },
         )
     }
 }
@@ -190,6 +210,9 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
     var renameDept by remember { mutableStateOf<JsonObject?>(null) }
     var renameValue by remember { mutableStateOf("") }
     var deleteDeptId by remember { mutableStateOf<String?>(null) }
+    var codeFor by remember { mutableStateOf<JsonObject?>(null) }
+    var codeValue by remember { mutableStateOf("") }
+    var newCode by remember { mutableStateOf("") }
     var depts by remember(version) { mutableStateOf<List<JsonObject>>(emptyList()) }
     LaunchedEffect(version) { depts = repo.get("hr/departments").getOrNull().rows() }
     Load(repo, "hr/employees", version) { data ->
@@ -217,8 +240,10 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                             Text("${stringResource(R.string.hr_f_hire)}: ${day(e.s("hireDate"))}", fontSize = 13.sp)
                             e.s("email")?.let { Text("${stringResource(R.string.hr_f_email)}: $it", fontSize = 13.sp) }
                             Text(stringResource(if (e.s("userId") != null) R.string.hr_linked else R.string.hr_notLinked), fontSize = 13.sp)
+                            e.s("deviceCode")?.let { Text("${stringResource(R.string.hr_f_deviceCode)}: $it", fontSize = 13.sp) }
                         }
                         OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { setSalaryFor(e.s("id")) }) { Text(stringResource(R.string.hr_sal_open)) }
+                        OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { codeFor = e; codeValue = e.s("deviceCode").orEmpty() }) { Text(stringResource(R.string.hr_dev_setCode)) }
                         if (e.s("userId") == null && st != "TERMINATED") OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = {
                             act(null, { repo.post("hr/employees/${e.s("id")}/invite") }) { r ->
                                 val o = r as? JsonObject
@@ -256,6 +281,15 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
             dismissButton = { TextButton(onClick = { renameDept = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
+    codeFor?.let { e ->
+        AlertDialog(
+            onDismissRequest = { codeFor = null },
+            title = { Text(stringResource(R.string.hr_dev_setCode)) },
+            text = { Field(codeValue, { codeValue = it }, stringResource(R.string.hr_dev_codePrompt)) },
+            confirmButton = { TextButton(onClick = { codeFor = null; act(R.string.hr_dev_codeSaved, { repo.patch("hr/employees/${e.s("id")}", buildJsonObject { if (codeValue.isBlank()) put("deviceCode", JsonNull) else put("deviceCode", codeValue.trim()) }) }, {}) }) { Text(stringResource(R.string.hr_sal_saveBase)) } },
+            dismissButton = { TextButton(onClick = { codeFor = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
     deleteDeptId?.let { id ->
         AlertDialog(
             onDismissRequest = { deleteDeptId = null },
@@ -268,6 +302,7 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
         Field(first, { first = it }, stringResource(R.string.hr_f_first)); Field(last, { last = it }, stringResource(R.string.hr_f_last))
         Field(email, { email = it }, stringResource(R.string.hr_f_email)); Field(position, { position = it }, stringResource(R.string.hr_f_position))
         Field(hire, { hire = it }, stringResource(R.string.hr_f_hire)); Field(salary, { salary = it }, stringResource(R.string.hr_f_salary, cur))
+        Field(newCode, { newCode = it }, stringResource(R.string.hr_f_deviceCode))
         PickList(listOf("" to stringResource(R.string.hr_dept_none)) + depts.map { (it.s("id") ?: "") to it.s("name").orEmpty() }, deptId, { deptId = it }, stringResource(R.string.hr_f_dept))
         Button(onClick = {
             val cents = salary.trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()?.let { Math.round(it * 100) }
@@ -277,9 +312,126 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                     if (position.isNotBlank()) put("position", position.trim()); if (email.isNotBlank()) put("email", email.trim())
                     if (cents != null) put("baseSalary", cents)
                     if (deptId.isNotBlank()) put("departmentId", deptId)
+                    if (newCode.isNotBlank()) put("deviceCode", newCode.trim())
                 })
-            }, { first = ""; last = ""; email = ""; position = ""; salary = "" })
+            }, { first = ""; last = ""; email = ""; position = ""; salary = ""; newCode = "" })
         }) { Text(stringResource(R.string.hr_people_addBtn)) }
+    }
+}
+
+/* ---- attendance: fingerprint / card readers, a file of punches, the latest records ---- */
+@Composable
+private fun kindLabel(k: String?): String = stringResource(when (k) { "CARD" -> R.string.hr_dev_kind_CARD; "FACE" -> R.string.hr_dev_kind_FACE; "OTHER" -> R.string.hr_dev_kind_OTHER; else -> R.string.hr_dev_kind_FINGERPRINT })
+
+@Composable
+private fun sourceLabel(k: String?): String = stringResource(when (k) { "MOBILE" -> R.string.hr_att_src_MOBILE; "MANUAL" -> R.string.hr_att_src_MANUAL; "DEVICE" -> R.string.hr_att_src_DEVICE; "IMPORT" -> R.string.hr_att_src_IMPORT; else -> R.string.hr_att_src_WEB })
+
+private fun localTime(v: String?): String = runCatching {
+    java.time.Instant.parse(v!!).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+}.getOrDefault(v.orEmpty())
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun AttendanceTab(repo: com.dalilacom.app.data.repository.HrRepository, version: Int, act: Act, showKey: (Pair<String, String>) -> Unit, setNote: (String) -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var devName by remember { mutableStateOf("") }
+    var kind by remember { mutableStateOf("FINGERPRINT") }
+    var csv by remember { mutableStateOf("") }
+    var rotateId by remember { mutableStateOf<String?>(null) }
+    var deleteId by remember { mutableStateOf<String?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) csv = runCatching { context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } }.getOrNull().orEmpty()
+    }
+    val from = java.time.LocalDate.now().minusDays(7).toString()
+    Box(stringResource(R.string.hr_dev_title)) {
+        Text(stringResource(R.string.hr_dev_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Load(repo, "hr/devices", version) { data ->
+            val devs = data.rows()
+            if (devs.isEmpty()) EmptyHint("🖐️", stringResource(R.string.hr_dev_empty))
+            devs.forEach { d ->
+                val active = (d["active"] as? JsonPrimitive)?.booleanOrNull != false
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(d.s("name").orEmpty(), fontWeight = FontWeight.ExtraBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        StatusChip(kindLabel(d.s("kind")))
+                        StatusChip(stringResource(if (active) R.string.hr_dev_on else R.string.hr_dev_off), if (active) "ok" else "warn")
+                        StatusChip("…" + d.s("keyHint").orEmpty(), "info")
+                    }
+                    Text("${stringResource(R.string.hr_dev_lastSeen)}: ${d.s("lastSeenAt")?.let { localTime(it) } ?: stringResource(R.string.hr_dev_never)}", fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { act(R.string.hr_dev_saved, { repo.patch("hr/devices/${d.s("id")}", buildJsonObject { put("active", !active) }) }, {}) }) { Text(stringResource(if (active) R.string.hr_dev_switchOff else R.string.hr_dev_switchOn)) }
+                        OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { rotateId = d.s("id") }) { Text(stringResource(R.string.hr_dev_rotate)) }
+                        TextButton(onClick = { deleteId = d.s("id") }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
+                    }
+                }
+            }
+        }
+        Field(devName, { devName = it }, stringResource(R.string.hr_dev_name))
+        PickList(listOf("FINGERPRINT", "CARD", "FACE", "OTHER").map { it to kindLabel(it) }, kind, { kind = it }, stringResource(R.string.hr_dev_kind))
+        Button(onClick = {
+            if (devName.isNotBlank()) act(R.string.hr_dev_added, { repo.post("hr/devices", buildJsonObject { put("name", devName.trim()); put("kind", kind) }) }) { r ->
+                (r as? JsonObject)?.let { showKey(it.s("name").orEmpty() to it.s("key").orEmpty()) }
+                devName = ""
+            }
+        }) { Text(stringResource(R.string.hr_dev_add)) }
+    }
+    rotateId?.let { id ->
+        AlertDialog(
+            onDismissRequest = { rotateId = null },
+            title = { Text(stringResource(R.string.hr_dev_rotateConfirm)) },
+            confirmButton = { TextButton(onClick = { rotateId = null; act(R.string.hr_dev_saved, { repo.patch("hr/devices/$id", buildJsonObject { put("rotateKey", true) }) }) { r -> (r as? JsonObject)?.let { showKey(it.s("name").orEmpty() to it.s("key").orEmpty()) } } }) { Text(stringResource(R.string.hr_dev_rotate)) } },
+            dismissButton = { TextButton(onClick = { rotateId = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    deleteId?.let { id ->
+        AlertDialog(
+            onDismissRequest = { deleteId = null },
+            title = { Text(stringResource(R.string.hr_dev_deleteConfirm)) },
+            confirmButton = { TextButton(onClick = { deleteId = null; act(R.string.hr_dev_deleted, { repo.delete("hr/devices/$id") }, {}) }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { deleteId = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    Box(stringResource(R.string.hr_imp_title)) {
+        Text(stringResource(R.string.hr_imp_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { picker.launch("*/*") }) { Text(stringResource(R.string.hr_imp_pick)) }
+        OutlinedTextField(value = csv, onValueChange = { csv = it }, label = { Text(stringResource(R.string.hr_imp_paste)) }, minLines = 4, maxLines = 8, modifier = Modifier.fillMaxWidth())
+        Button(onClick = {
+            val lines = csv.lines().filter { it.isNotBlank() }
+            if (lines.isNotEmpty()) act(null, {
+                var ok = 0; var dup = 0; var bad = 0; var failure: Throwable? = null
+                for (chunk in lines.chunked(1500)) {
+                    repo.post("hr/attendance/import", buildJsonObject { put("csv", chunk.joinToString("\n")) }).fold({ d ->
+                        val o = d as? JsonObject; val sm = o?.o("summary")
+                        val done = (sm?.n("CHECKED_IN") ?: 0.0) + (sm?.n("CHECKED_OUT") ?: 0.0); val rep = sm?.n("DUPLICATE") ?: 0.0
+                        ok += done.toInt(); dup += rep.toInt(); bad += ((o?.n("lines") ?: 0.0) - done - rep + (o?.n("skipped") ?: 0.0)).toInt()
+                    }, { failure = it })
+                    if (failure != null) break
+                }
+                val f = failure
+                if (f != null) Result.failure(f) else Result.success(buildJsonObject { put("ok", ok); put("dup", dup); put("bad", bad) })
+            }) { r ->
+                val o = r as? JsonObject
+                setNote(context.getString(R.string.hr_imp_result, (o?.n("ok") ?: 0.0).toInt(), (o?.n("dup") ?: 0.0).toInt(), (o?.n("bad") ?: 0.0).toInt()))
+                csv = ""
+            }
+        }) { Text(stringResource(R.string.hr_imp_run)) }
+    }
+    Box(stringResource(R.string.hr_att_recent)) {
+        Load(repo, "hr/attendance?from=$from", version) { data ->
+            val recs = data.rows()
+            if (recs.isEmpty()) EmptyHint("🕒", stringResource(R.string.hr_att_empty))
+            recs.take(40).forEach { r ->
+                val name = fullName(r.o("employee"))
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PersonAvatar(name)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(name, fontWeight = FontWeight.ExtraBold)
+                        Text("${localTime(r.s("checkIn"))} → ${r.s("checkOut")?.let { localTime(it) } ?: stringResource(R.string.hr_att_open)}", fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        StatusChip(sourceLabel(r.s("source")), if (r.s("source") == "DEVICE") "info" else "")
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -12,6 +12,7 @@ declare global {
   namespace Express {
     interface Request {
       hr?: HrActor;
+      hrDevice?: import("@prisma/client").HrDevice & { company: HrCompany };
       hrMe?: HrMe;
     }
   }

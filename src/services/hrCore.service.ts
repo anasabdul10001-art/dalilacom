@@ -108,11 +108,14 @@ export type EmployeeInput = {
   role?: HrRole;
   hireDate: string;
   baseSalary?: number | null;
+  deviceCode?: string | null;
   employmentStatus?: "ACTIVE" | "ON_LEAVE" | "TERMINATED";
 };
 
+const duplicateCode = (err: unknown) => err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002" && String(err.meta?.target ?? "").includes("deviceCode");
+
 const employeeSelect = {
-  id: true, firstName: true, lastName: true, email: true, position: true, role: true, hireDate: true, employmentStatus: true, baseSalary: true, userId: true,
+  id: true, firstName: true, lastName: true, email: true, position: true, role: true, hireDate: true, employmentStatus: true, baseSalary: true, userId: true, deviceCode: true,
   department: { select: { id: true, name: true } },
   manager: { select: { id: true, firstName: true, lastName: true } },
   invite: { select: { expiresAt: true, acceptedAt: true } },
@@ -153,10 +156,10 @@ export async function createEmployee(actor: HrActor, input: EmployeeInput) {
   const created = await prisma.hrEmployee.create({
     data: {
       companyId, firstName: input.firstName, lastName: input.lastName, email: input.email?.toLowerCase() ?? null, position: input.position, departmentId: input.departmentId,
-      managerId: input.managerId, role: input.role ?? "EMPLOYEE", hireDate: new Date(input.hireDate), baseSalary: input.baseSalary ?? null,
+      managerId: input.managerId, role: input.role ?? "EMPLOYEE", hireDate: new Date(input.hireDate), baseSalary: input.baseSalary ?? null, deviceCode: input.deviceCode || null,
     },
     select: { id: true },
-  });
+  }).catch((err) => { throw duplicateCode(err) ? new ApiError(409, "CONFLICT", "رقم الجهاز هاد مستخدم لموظف تاني") : err; });
   await hrAudit(companyId, actor.userId, "employee.create", "HrEmployee", created.id);
   return getEmployee(actor, created.id);
 }
@@ -174,8 +177,9 @@ export async function updateEmployee(actor: HrActor, id: string, input: Partial<
     if (input.managerId === id) throw new ApiError(400, "BAD_REQUEST", "الموظف ما بيكون مديره لنفسه");
     await assertEmployeeIn(companyId, input.managerId);
   }
-  const { hireDate, email, ...rest } = input;
-  await prisma.hrEmployee.update({ where: { id }, data: { ...rest, ...(email !== undefined ? { email: email ? email.toLowerCase() : null } : {}), ...(hireDate ? { hireDate: new Date(hireDate) } : {}) } });
+  const { hireDate, email, deviceCode, ...rest } = input;
+  await prisma.hrEmployee.update({ where: { id }, data: { ...rest, ...(email !== undefined ? { email: email ? email.toLowerCase() : null } : {}), ...(deviceCode !== undefined ? { deviceCode: deviceCode || null } : {}), ...(hireDate ? { hireDate: new Date(hireDate) } : {}) } })
+    .catch((err) => { throw duplicateCode(err) ? new ApiError(409, "CONFLICT", "رقم الجهاز هاد مستخدم لموظف تاني") : err; });
   if (input.employmentStatus && input.employmentStatus !== existing.employmentStatus) {
     await hrAudit(companyId, actor.userId, "employee.status_change", "HrEmployee", id, { from: existing.employmentStatus, to: input.employmentStatus });
   }

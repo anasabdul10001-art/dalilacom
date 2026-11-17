@@ -55,7 +55,7 @@ import { renewAllDueAiPackages } from "./services/aiQuota.service";
 import { marketplaceRouter } from "./routes/marketplace.routes";
 import { accountingRouter } from "./routes/accounting.routes";
 import { businessStaffRouter } from "./routes/businessStaff.routes";
-import { hrRouter } from "./routes/hr.routes";
+import { hrRouter, hrDeviceRouter } from "./routes/hr.routes";
 import { billingRouter } from "./routes/billing.routes";
 import { sendDueDoctorAppointmentReminders } from "./services/doctorAppointmentReminder.service";
 
@@ -218,6 +218,7 @@ app.use("/store", storeRouter);
 app.use("/marketplace", marketplaceRouter);
 app.use("/accounting", accountingRouter);
 app.use("/business-staff", businessStaffRouter);
+app.use("/hr/device", hrDeviceRouter);
 app.use("/hr", hrRouter);
 app.use("/billing", billingRouter);
 app.use("/ads", adsRouter);

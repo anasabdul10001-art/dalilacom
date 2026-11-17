@@ -9,7 +9,29 @@ import { requireHrEmployment, requireHrManager, requireHrTeam } from "../service
 import * as core from "../services/hrCore.service";
 import * as time from "../services/hrTime.service";
 import * as pay from "../services/hrPay.service";
+import * as devices from "../services/hrDevice.service";
 import { monthRange, unifiedSummary } from "../services/unifiedSummary.service";
+
+/**
+ * The readers (fingerprint, card, face, or the program that collects from them) send their punches here with their own key
+ * in X-Device-Key, not with a user login. Mounted before the signed-in HR routes.
+ */
+export const hrDeviceRouter = Router();
+const punchSchema = z.object({ code: z.string().trim().min(1).max(40), at: z.string().trim().min(16).max(40), direction: z.enum(["IN", "OUT"]).optional() });
+hrDeviceRouter.use(route(async (req, res, next) => {
+  const device = await devices.authenticateDevice(typeof req.header("x-device-key") === "string" ? req.header("x-device-key") : undefined);
+  if (!device) return void res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Unknown or switched-off device key" } });
+  req.hrDevice = device;
+  next();
+}));
+hrDeviceRouter.get("/ping", route(async (req, res) => res.json({ ok: true, device: req.hrDevice!.name, company: req.hrDevice!.company.name, timezone: req.hrDevice!.company.timezone, serverTime: new Date().toISOString() })));
+hrDeviceRouter.post("/punches", route(async (req, res) => {
+  const parsed = z.object({ punches: z.array(punchSchema).min(1).max(devices.MAX_PUNCHES) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const d = req.hrDevice!;
+  const results = await devices.processPunches(d.company, parsed.data.punches, "DEVICE", d.id);
+  res.json({ summary: devices.tally(results), results });
+}));
 
 export const hrRouter = Router();
 hrRouter.use(requireAuth);
@@ -119,6 +141,7 @@ const employeeSchema = z.object({
   role: z.enum(["HR", "MANAGER", "EMPLOYEE"]).optional(),
   hireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
   baseSalary: money.nullable().optional(),
+  deviceCode: z.string().trim().max(40).nullable().optional(),
   employmentStatus: z.enum(["ACTIVE", "ON_LEAVE", "TERMINATED"]).optional(),
 });
 
@@ -157,6 +180,28 @@ manage.patch("/attendance/:id", route(async (req, res) => {
   const parsed = z.object({ checkIn: z.string().datetime().optional(), checkOut: z.string().datetime().nullable().optional(), notes: z.string().trim().max(300).nullable().optional() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await time.updateAttendance(req.hr!, req.params.id, parsed.data));
+}));
+
+// ---- fingerprint / card readers: the devices, and a file of punches from one
+manage.get("/devices", route(async (req, res) => res.json(await devices.listDevices(req.hr!.company.id))));
+manage.post("/devices", route(async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(1).max(80), kind: z.enum(["FINGERPRINT", "CARD", "FACE", "OTHER"]).optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.status(201).json(await devices.createDevice(req.hr!, { name: parsed.data.name, kind: parsed.data.kind ?? "FINGERPRINT" }));
+}));
+manage.patch("/devices/:id", route(async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(1).max(80).optional(), active: z.boolean().optional(), rotateKey: z.boolean().optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await devices.updateDevice(req.hr!, req.params.id, parsed.data));
+}));
+manage.delete("/devices/:id", route(async (req, res) => {
+  await devices.deleteDevice(req.hr!, req.params.id);
+  res.json({ deleted: true });
+}));
+manage.post("/attendance/import", route(async (req, res) => {
+  const parsed = z.object({ csv: z.string().min(5).max(90_000) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await devices.importCsv(req.hr!, parsed.data.csv));
 }));
 
 // ---- leave

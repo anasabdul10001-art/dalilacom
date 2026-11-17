@@ -2729,7 +2729,7 @@ function screenAccounting() {
     stock: `
     ${S._count ? accountingCountCard(a) : accountingLowCard(a)}
     <div class="card"><div class="section-title">${esc(t("accounting.inventory"))} (${a.products?.length || 0})</div>
-      <div class="field"><label>${esc(t("accounting.searchBarcode"))}</label><div style="display:flex;gap:8px"><input id="acc-barcode" autocomplete="off"/><button class="btn outline" onclick="accountingScan()">${esc(t("accounting.scan"))}</button></div></div>
+      <div class="field"><label>${esc(t("accounting.searchBarcode"))}</label><div style="display:flex;gap:8px"><input id="acc-barcode" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();accountingLookupBarcode()}"/><button class="btn outline" onclick="accountingScan()">${esc(t("accounting.scan"))}</button></div></div>
       <div id="acc-scanner" hidden><video id="acc-video" playsinline style="width:100%;max-height:220px"></video><button class="btn outline" onclick="accountingStopScan()">${esc(t("accounting.stopScan"))}</button></div>
       <div class="field"><label>${esc(t("accounting.product"))}</label><input id="acc-product-name" /></div>
       <div class="field"><label>${esc(t("accounting.salePrice"))}</label><input id="acc-sale-price" type="number" min="0" step="0.01" /></div>
@@ -3255,7 +3255,7 @@ function accountingSaleCard(a) {
     <div class="row"><div class="field"><label>${esc(t("accounting.sale.product"))}</label><select id="sale-product"><option value="">${esc(t("accounting.sale.pickFirst"))}</option>${products.filter((p) => p.quantity > 0 && p.salePriceCents > 0).map((p) => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(fmt(p.salePriceCents, p.currency))} · ${esc(t("accounting.sale.stock"))}: ${p.quantity}</option>`).join("")}</select></div>
       <div class="field"><label>${esc(t("accounting.sale.qty"))}</label><input id="sale-qty" inputmode="numeric" value="1" /></div></div>
     <button class="btn soft" onclick="accountingSaleAdd()">${esc(t("accounting.sale.add"))}</button>
-    <div class="row" style="margin-top:10px"><div class="field"><label>${esc(t("accounting.sale.barcode"))}</label><input id="sale-barcode" /></div><div class="field"><label>&nbsp;</label><button class="btn small soft" onclick="accountingSaleAddBarcode()">${esc(t("accounting.sale.addBarcode"))}</button></div></div>
+    <div class="row" style="margin-top:10px"><div class="field"><label>${esc(t("accounting.sale.barcode"))}</label><input id="sale-barcode" autocomplete="off" inputmode="text" onkeydown="if(event.key==='Enter'){event.preventDefault();accountingSaleAddBarcode()}" /></div><div class="field"><label>&nbsp;</label><button class="btn small soft" onclick="accountingSaleAddBarcode()">${esc(t("accounting.sale.addBarcode"))}</button></div></div>
     <div class="panel-title" style="margin-top:12px">${esc(t("accounting.sale.title"))}</div>${lines}
     <div class="field"><label>${esc(t("accounting.sale.party"))}</label><select onchange="saleState().partyId=this.value;accountingSaleTotals()"><option value="">${esc(t("accounting.sale.noParty"))}</option>${(a.customers || []).map((c) => `<option value="${esc(c.id)}" ${st.partyId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
     <div class="field"><label>${esc(t("accounting.sale.customer"))}</label><input value="${esc(st.customer)}" oninput="saleState().customer=this.value" maxlength="120" /></div>
@@ -3298,12 +3298,24 @@ function accountingSalePush(p, qty) {
   if (have) have.qty = total; else st.items.push({ productId: p.id, name: p.name, qty, price: p.salePriceCents, currency: p.currency });
   render();
 }
+/** A short beep (a reader scan the app does not know, or cannot sell): the cashier hears it without looking at the screen. */
+function accountingBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)(), o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = 330; g.gain.value = 0.12; o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.25);
+    o.onended = () => ctx.close();
+  } catch (e) { /* no sound is fine */ }
+}
+/** A USB or Bluetooth reader types the code and presses Enter: the item is added and the field is ready for the next scan. */
 async function accountingSaleAddBarcode() {
-  const code = ((document.getElementById("sale-barcode") || {}).value || "").trim(); if (!code) return;
+  const input = document.getElementById("sale-barcode");
+  const code = ((input || {}).value || "").trim(); if (!code) return;
+  const refocus = () => setTimeout(() => { const el = document.getElementById("sale-barcode"); if (el) { el.value = ""; el.focus(); } }, 60);
   const { ok, data } = await api("GET", "/accounting/products/barcode/" + encodeURIComponent(code));
-  if (!ok || !data) return toast(t("accounting.sale.notFound"));
-  if (!(data.salePriceCents > 0) || !(data.quantity > 0)) return toast(t("accounting.sale.short", { name: data.name }));
+  if (!ok || !data) { accountingBeep(); toast(t("accounting.sale.notFound")); return refocus(); }
+  if (!(data.salePriceCents > 0) || !(data.quantity > 0)) { accountingBeep(); toast(t("accounting.sale.short", { name: data.name })); return refocus(); }
   accountingSalePush(data, 1);
+  refocus();
 }
 function accountingSaleRemove(idx) { saleState().items.splice(idx, 1); render(); }
 function accountingSaleNew() { S._sale = null; render(); }
