@@ -31,7 +31,7 @@ export async function assertOwnPhone(me: HrMe, phone: PhoneInfo) {
       create: { companyId: me.company.id, employeeId: me.employee.id, deviceId: phone.id, deviceName: phone.name },
       update: { status: "PENDING", decidedAt: null, decidedById: null, deviceName: phone.name },
     });
-    const hr = await prisma.hrEmployee.findMany({ where: { companyId: me.company.id, role: "HR", employmentStatus: { not: "TERMINATED" }, userId: { not: null } }, select: { userId: true } });
+    const hr = await prisma.hrEmployee.findMany({ where: { companyId: me.company.id, role: { in: ["HR", "SECRETARY", "ATTENDANCE_SUPERVISOR"] }, employmentStatus: { not: "TERMINATED" }, userId: { not: null } }, select: { userId: true } });
     const name = `${me.employee.firstName} ${me.employee.lastName}`.trim();
     for (const userId of new Set([me.company.ownerId, ...hr.map((h) => h.userId!)])) {
       await notify({ userId, type: "SYSTEM", title: "طلب تغيير جهاز موظف", body: `${name} حاول يسجّل من جهاز جديد${phone.name ? ` (${phone.name})` : ""}`, data: { kind: "hr.device-request", employeeId: me.employee.id }, email: false }).catch((err) => console.error("HR notification failed", err));

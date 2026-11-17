@@ -617,6 +617,7 @@ export const en: LanguagePack = {
     "الدعوة غير صحيحة أو انتهت صلاحيتها": "The invitation is not valid or has expired",
     "أنت صاحب هالشركة، ما بتنضم لها كموظف": "You own this company, you can't join it as an employee",
     "سجّلت حضورك من قبل، سجّل انصرافك أول": "You already checked in, check out first",
+    "دورك ما بيسمح بهاد الإجراء": "Your role does not allow this action",
     "حدّث تطبيق دليلكم لآخر نسخة حتى تقدر تسجّل دوامك": "Update the Dalilacom app to the latest version to record your attendance",
     "طلب تغيير جهاز موظف": "Employee phone change request",
     "هاد مو الجهاز المسجّل لحسابك. انبعت طلب لصاحب الشركة، ولما يوافق بتقدر تسجّل من هالجهاز.": "This is not the phone registered to your account. A request was sent to the company owner; once approved, you can record attendance from this phone.",

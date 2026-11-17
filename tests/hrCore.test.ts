@@ -179,3 +179,38 @@ describe("HR: the HR role", () => {
     expect((await request(app).get("/hr/employees").set(hrPerson.auth)).status).toBe(402);
   });
 });
+
+describe("HR: accountant, secretary and attendance supervisor", () => {
+  it("each role reaches only its own area, and salaries stay with payroll", async () => {
+    const o = await company("hrroles");
+    const accountant = await linkedEmployee(o, "hrrolea", { role: "ACCOUNTANT" });
+    const secretary = await linkedEmployee(o, "hrroles", { role: "SECRETARY" });
+    const supervisor = await linkedEmployee(o, "hrrolev", { role: "ATTENDANCE_SUPERVISOR" });
+    const status = async (who: { auth: Record<string, string> }, method: "get" | "post" | "patch", path: string, body: object = {}) =>
+      (await (request(app) as any)[method](path).set(who.auth).send(method === "get" ? undefined : body)).status;
+    expect((await request(app).get("/hr/overview").set(accountant.auth)).body.manage).toMatchObject({ role: "ACCOUNTANT", areas: expect.arrayContaining(["payroll", "tracking"]) });
+    // payroll: the accountant yes, the others no
+    expect(await status(accountant, "get", "/hr/payroll-runs")).toBe(200);
+    expect(await status(secretary, "get", "/hr/payroll-runs")).toBe(403);
+    expect(await status(supervisor, "get", "/hr/salary-components")).toBe(403);
+    // people: the secretary edits, the accountant and the supervisor only read
+    expect((await hire(secretary, { firstName: "By secretary", baseSalary: 90000 })).status).toBe(201);
+    expect((await hire(accountant, { firstName: "By accountant" })).status).toBe(403);
+    expect(await status(supervisor, "get", "/hr/employees")).toBe(200);
+    // salaries are hidden from whoever does not handle payroll
+    const asSecretary = (await request(app).get("/hr/employees").set(secretary.auth)).body as { firstName: string; baseSalary: number | null }[];
+    expect(asSecretary.find((e) => e.firstName === "By secretary")!.baseSalary).toBeNull();
+    const asOwner = (await request(app).get("/hr/employees").set(o.auth)).body as { firstName: string; baseSalary: number | null }[];
+    expect(asOwner.find((e) => e.firstName === "By secretary")!.baseSalary).toBeNull(); // the secretary could not set it
+    // movement and phones: the supervisor and the accountant see tracking, the secretary does not
+    expect(await status(supervisor, "get", "/hr/locations/current")).toBe(200);
+    expect(await status(accountant, "get", "/hr/locations/current")).toBe(200);
+    expect(await status(secretary, "get", "/hr/locations/current")).toBe(403);
+    expect(await status(secretary, "get", "/hr/device-requests")).toBe(200);
+    expect(await status(accountant, "get", "/hr/device-requests")).toBe(403);
+    // company settings and handing out roles stay with the owner (and HR for the settings)
+    expect(await status(supervisor, "patch", "/hr/company", { deviceLockRequired: true })).toBe(403);
+    expect((await hire(secretary, { firstName: "Another", role: "ACCOUNTANT" })).status).toBe(403);
+    expect((await hire(o, { firstName: "Owner made", role: "SECRETARY" })).status).toBe(201);
+  });
+});

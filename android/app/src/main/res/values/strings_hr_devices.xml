@@ -88,4 +88,9 @@
     <string name="hr_trk_consent">صاحب الشركة فعّل تتبّع موقعك. موقعك بيتسجّل وقت ما تكون مسجّل حضور بس، وما بيشوفو غير صاحب الشركة وموظفي الموارد البشرية. بيوقف لما تسجّل انصراف.</string>
     <string name="hr_trk_allow">تمام، فعّل</string>
     <string name="hr_trk_notifTitle">دليلكم عم يسجّل موقعك وقت الدوام</string>
+    <string name="hr_role_ACCOUNTANT">محاسب</string>
+    <string name="hr_role_SECRETARY">سكرتارية</string>
+    <string name="hr_role_ATTENDANCE_SUPERVISOR">مراقب دوام</string>
+    <string name="hr_f_role">الدور</string>
+    <string name="hr_roleDone">انغيّر دور الموظف</string>
 </resources>

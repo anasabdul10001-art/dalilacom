@@ -308,7 +308,7 @@ async function advanceApprovers(company: HrCompany, stage: "PENDING_MANAGER" | "
     const m = mid ? await prisma.hrEmployee.findUnique({ where: { id: mid }, select: { userId: true } }) : null;
     if (m?.userId) ids.add(m.userId);
   } else {
-    (await prisma.hrEmployee.findMany({ where: { companyId: company.id, role: "HR", employmentStatus: { not: "TERMINATED" }, userId: { not: null } }, select: { userId: true } })).forEach((h) => ids.add(h.userId!));
+    (await prisma.hrEmployee.findMany({ where: { companyId: company.id, role: { in: ["HR", "ACCOUNTANT"] }, employmentStatus: { not: "TERMINATED" }, userId: { not: null } }, select: { userId: true } })).forEach((h) => ids.add(h.userId!));
   }
   return [...ids];
 }

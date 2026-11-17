@@ -88,4 +88,9 @@
     <string name="hr_trk_consent">Your company turned on location tracking for you. Your position is recorded only while you are checked in, and only the company owner and HR people can see it. It stops when you check out.</string>
     <string name="hr_trk_allow">OK, turn it on</string>
     <string name="hr_trk_notifTitle">Dalilacom is recording your location during your shift</string>
+    <string name="hr_role_ACCOUNTANT">Accountant</string>
+    <string name="hr_role_SECRETARY">Secretary</string>
+    <string name="hr_role_ATTENDANCE_SUPERVISOR">Attendance supervisor</string>
+    <string name="hr_f_role">Role</string>
+    <string name="hr_roleDone">Employee role changed</string>
 </resources>

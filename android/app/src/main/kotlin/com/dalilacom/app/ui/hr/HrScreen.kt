@@ -123,9 +123,10 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
     val canStart = (ov["canStart"] as? JsonPrimitive)?.booleanOrNull == true
     val jobs = ov.list("jobs")
     val invitations = ov.n("invitations") ?: 0.0
+    val areas = ((manage?.get("areas") as? JsonArray) ?: JsonArray(emptyList())).mapNotNull { (it as? JsonPrimitive)?.content }.toSet()
     val tabs = buildList {
         if (manage != null || canStart) add("people")
-        if (manage != null) { add("attendance"); add("leave"); add("payroll") }
+        if (manage != null) { if ("attendance" in areas) add("attendance"); if ("leave" in areas) add("leave"); if ("payroll" in areas) add("payroll") }
         if (jobs.isNotEmpty() || invitations > 0) add("job")
     }
     if (tabs.isEmpty()) {
@@ -138,6 +139,7 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
     }
     if (tab >= tabs.size) tab = 0
     val label = mapOf("people" to R.string.site_hr_tab_people, "attendance" to R.string.site_hr_tab_attendance, "leave" to R.string.site_hr_tab_leave, "payroll" to R.string.site_hr_tab_payroll, "job" to R.string.site_hr_tab_job)
+    androidx.compose.runtime.CompositionLocalProvider(LocalHrAreas provides areas) {
     Column(Modifier.fillMaxSize()) {
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp, containerColor = androidx.compose.ui.graphics.Color.Transparent) {
             tabs.forEachIndexed { i, id -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(stringResource(label.getValue(id))) }) }
@@ -153,6 +155,7 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
                 else -> JobTab(repo, ov, jobs, version, ::act)
             }
         }
+    }
     }
     codeShown?.let { code ->
         AlertDialog(
@@ -173,6 +176,15 @@ fun HrScreen(container: AppContainer, onOpenPlans: () -> Unit) {
         )
     }
 }
+
+/** What the account's role may do in the company (the server sends the list; the owner has everything). */
+private val LocalHrAreas = androidx.compose.runtime.compositionLocalOf<Set<String>> { emptySet() }
+@Composable private fun hrCan(area: String) = LocalHrAreas.current.contains(area)
+private val HR_ROLES = listOf("EMPLOYEE", "MANAGER", "ACCOUNTANT", "SECRETARY", "ATTENDANCE_SUPERVISOR", "HR")
+@Composable private fun roleName(role: String?): String = stringResource(when (role) {
+    "HR" -> R.string.hr_role_HR; "MANAGER" -> R.string.hr_role_MANAGER; "ACCOUNTANT" -> R.string.hr_role_ACCOUNTANT
+    "SECRETARY" -> R.string.hr_role_SECRETARY; "ATTENDANCE_SUPERVISOR" -> R.string.hr_role_ATTENDANCE_SUPERVISOR; else -> R.string.hr_role_EMPLOYEE
+})
 
 private typealias Act = (Int?, suspend () -> Result<JsonElement>, (JsonElement) -> Unit) -> Unit
 
@@ -204,6 +216,8 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
         return
     }
     val cur = manage.s("currency").orEmpty()
+    val isOwner = manage.s("role") == "OWNER"
+    var newRole by remember { mutableStateOf("EMPLOYEE") }
     var first by remember { mutableStateOf("") }; var last by remember { mutableStateOf("") }; var email by remember { mutableStateOf("") }
     var position by remember { mutableStateOf("") }; var hire by remember { mutableStateOf(java.time.LocalDate.now().toString()) }; var salary by remember { mutableStateOf("") }
     var deptId by remember { mutableStateOf("") }
@@ -225,7 +239,7 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
             emps.forEach { e ->
                 val name = fullName(e)
                 val st = e.s("employmentStatus").orEmpty()
-                val roleLabel = stringResource(when (e.s("role")) { "HR" -> R.string.hr_role_HR; "MANAGER" -> R.string.hr_role_MANAGER; else -> R.string.hr_role_EMPLOYEE })
+                val roleLabel = roleName(e.s("role"))
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
                     PersonAvatar(name)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -243,11 +257,12 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                             Text(stringResource(if (e.s("userId") != null) R.string.hr_linked else R.string.hr_notLinked), fontSize = 13.sp)
                             e.s("deviceCode")?.let { Text("${stringResource(R.string.hr_f_deviceCode)}: $it", fontSize = 13.sp) }
                         }
-                        OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { setSalaryFor(e.s("id")) }) { Text(stringResource(R.string.hr_sal_open)) }
-                        OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { codeFor = e; codeValue = e.s("deviceCode").orEmpty() }) { Text(stringResource(R.string.hr_dev_setCode)) }
+                        if (hrCan("payroll")) OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { setSalaryFor(e.s("id")) }) { Text(stringResource(R.string.hr_sal_open)) }
+                        if (hrCan("peopleEdit")) OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { codeFor = e; codeValue = e.s("deviceCode").orEmpty() }) { Text(stringResource(R.string.hr_dev_setCode)) }
                         val tracked = (e["tracksLocation"] as? JsonPrimitive)?.booleanOrNull == true
-                        OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { act(if (tracked) R.string.hr_trk_offDone else R.string.hr_trk_onDone, { repo.patch("hr/employees/${e.s("id")}", buildJsonObject { put("tracksLocation", !tracked) }) }, {}) }) { Text(stringResource(if (tracked) R.string.hr_trk_turnOff else R.string.hr_trk_turnOn)) }
-                        if (e.s("userId") == null && st != "TERMINATED") OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = {
+                        if (hrCan("peopleEdit")) OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { act(if (tracked) R.string.hr_trk_offDone else R.string.hr_trk_onDone, { repo.patch("hr/employees/${e.s("id")}", buildJsonObject { put("tracksLocation", !tracked) }) }, {}) }) { Text(stringResource(if (tracked) R.string.hr_trk_turnOff else R.string.hr_trk_turnOn)) }
+                        if (isOwner && st != "TERMINATED") PickList(HR_ROLES.map { it to roleName(it) }, e.s("role") ?: "EMPLOYEE", { r -> if (r != e.s("role")) act(R.string.hr_roleDone, { repo.patch("hr/employees/${e.s("id")}", buildJsonObject { put("role", r) }) }, {}) }, stringResource(R.string.hr_f_role))
+                        if (hrCan("peopleEdit") && e.s("userId") == null && st != "TERMINATED") OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = {
                             act(null, { repo.post("hr/employees/${e.s("id")}/invite") }) { r ->
                                 val o = r as? JsonObject
                                 if ((o?.get("emailed") as? JsonPrimitive)?.booleanOrNull != true) o?.s("code")?.let(showCode)
@@ -268,12 +283,12 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                     Text(d.s("name").orEmpty(), fontWeight = FontWeight.ExtraBold)
                     Text(stringResource(R.string.hr_dept_count, d.o("_count")?.n("employees")?.toInt() ?: 0), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.5.sp)
                 }
-                TextButton(onClick = { renameDept = d; renameValue = d.s("name").orEmpty() }) { Text(stringResource(R.string.hr_dept_rename)) }
-                TextButton(onClick = { deleteDeptId = d.s("id") }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
+                if (hrCan("peopleEdit")) TextButton(onClick = { renameDept = d; renameValue = d.s("name").orEmpty() }) { Text(stringResource(R.string.hr_dept_rename)) }
+                if (hrCan("peopleEdit")) TextButton(onClick = { deleteDeptId = d.s("id") }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
             }
         }
-        Field(deptName, { deptName = it }, stringResource(R.string.hr_dept_name))
-        Button(onClick = { if (deptName.isNotBlank()) act(R.string.hr_dept_added, { repo.post("hr/departments", buildJsonObject { put("name", deptName.trim()) }) }, { deptName = "" }) }) { Text(stringResource(R.string.hr_dept_add)) }
+        if (hrCan("peopleEdit")) Field(deptName, { deptName = it }, stringResource(R.string.hr_dept_name))
+        if (hrCan("peopleEdit")) Button(onClick = { if (deptName.isNotBlank()) act(R.string.hr_dept_added, { repo.post("hr/departments", buildJsonObject { put("name", deptName.trim()) }) }, { deptName = "" }) }) { Text(stringResource(R.string.hr_dept_add)) }
     }
     renameDept?.let { d ->
         AlertDialog(
@@ -301,12 +316,13 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
             dismissButton = { TextButton(onClick = { deleteDeptId = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
-    Box(stringResource(R.string.hr_people_add)) {
+    if (hrCan("peopleEdit")) Box(stringResource(R.string.hr_people_add)) {
         Field(first, { first = it }, stringResource(R.string.hr_f_first)); Field(last, { last = it }, stringResource(R.string.hr_f_last))
         Field(email, { email = it }, stringResource(R.string.hr_f_email)); Field(position, { position = it }, stringResource(R.string.hr_f_position))
-        Field(hire, { hire = it }, stringResource(R.string.hr_f_hire)); Field(salary, { salary = it }, stringResource(R.string.hr_f_salary, cur))
+        Field(hire, { hire = it }, stringResource(R.string.hr_f_hire)); if (hrCan("payroll")) Field(salary, { salary = it }, stringResource(R.string.hr_f_salary, cur))
         Field(newCode, { newCode = it }, stringResource(R.string.hr_f_deviceCode))
         PickList(listOf("" to stringResource(R.string.hr_dept_none)) + depts.map { (it.s("id") ?: "") to it.s("name").orEmpty() }, deptId, { deptId = it }, stringResource(R.string.hr_f_dept))
+        if (isOwner) PickList(HR_ROLES.map { it to roleName(it) }, newRole, { newRole = it }, stringResource(R.string.hr_f_role))
         Button(onClick = {
             val cents = salary.trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()?.let { Math.round(it * 100) }
             if (first.isNotBlank() && last.isNotBlank()) act(R.string.hr_people_added, {
@@ -316,6 +332,7 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                     if (cents != null) put("baseSalary", cents)
                     if (deptId.isNotBlank()) put("departmentId", deptId)
                     if (newCode.isNotBlank()) put("deviceCode", newCode.trim())
+                    if (isOwner) put("role", newRole)
                 })
             }, { first = ""; last = ""; email = ""; position = ""; salary = ""; newCode = "" })
         }) { Text(stringResource(R.string.hr_people_addBtn)) }
@@ -347,8 +364,8 @@ private fun AttendanceTab(repo: com.dalilacom.app.data.repository.HrRepository, 
     }
     val from = java.time.LocalDate.now().minusDays(7).toString()
     ShopCodeBox(repo, version, act)
-    PhoneLockBox(repo, version, act)
-    LocationsBox(repo, version)
+    if (hrCan("devices")) PhoneLockBox(repo, version, act)
+    if (hrCan("tracking")) LocationsBox(repo, version)
     Box(stringResource(R.string.hr_dev_title)) {
         Text(stringResource(R.string.hr_dev_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Load(repo, "hr/devices", version) { data ->
@@ -461,7 +478,7 @@ private fun LeaveTab(repo: com.dalilacom.app.data.repository.HrRepository, versi
                             StatusChip(stringResource(R.string.hr_leave_days, nDays), "info")
                             StatusChip(stringResource(if (r.s("status") == "PENDING_HR") R.string.hr_leave_waitHr else R.string.hr_leave_waitManager), "warn")
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (hrCan("leaveEdit")) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(shape = RoundedCornerShape(12.dp), onClick = { act(R.string.hr_decided, { repo.post("hr/leave-requests/${r.s("id")}/decision", buildJsonObject { put("decision", "APPROVE") }) }, {}) }) { Text(stringResource(R.string.hr_approve)) }
                             OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { act(R.string.hr_decided, { repo.post("hr/leave-requests/${r.s("id")}/decision", buildJsonObject { put("decision", "REJECT") }) }, {}) }) { Text(stringResource(R.string.hr_reject)) }
                         }
@@ -475,8 +492,8 @@ private fun LeaveTab(repo: com.dalilacom.app.data.repository.HrRepository, versi
         Box(stringResource(R.string.hr_leave_types)) {
             if (types.isEmpty()) Text(stringResource(R.string.hr_leave_noTypes), color = MaterialTheme.colorScheme.onSurfaceVariant)
             types.forEach { Text("${it.s("name").orEmpty()} · ${stringResource(R.string.hr_leave_days, (it.n("defaultBalance") ?: 0.0).toInt())}") }
-            Field(typeName, { typeName = it }, stringResource(R.string.hr_leave_typeName)); Field(typeDays, { typeDays = it }, stringResource(R.string.hr_leave_typeDays))
-            Button(onClick = {
+            if (hrCan("leaveEdit")) Field(typeName, { typeName = it }, stringResource(R.string.hr_leave_typeName)); if (hrCan("leaveEdit")) Field(typeDays, { typeDays = it }, stringResource(R.string.hr_leave_typeDays))
+            if (hrCan("leaveEdit")) Button(onClick = {
                 val d = typeDays.toIntOrNull()
                 if (typeName.isNotBlank() && d != null && d >= 0) act(R.string.hr_leave_typeAdded, { repo.post("hr/leave-types", buildJsonObject { put("name", typeName.trim()); put("defaultBalance", d); put("isPaid", true) }) }, { typeName = "" })
             }) { Text(stringResource(R.string.hr_leave_addType)) }
@@ -717,7 +734,7 @@ private fun ShopCodeBox(repo: com.dalilacom.app.data.repository.HrRepository, ve
             StatusChip(stringResource(if (on) R.string.hr_code_on else R.string.hr_code_off), if (on) "ok" else "warn")
             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { showScreen = true }) { Text(stringResource(R.string.hr_code_show)) }
-                OutlinedButton(onClick = { act(if (on) R.string.hr_code_turnedOff else R.string.hr_code_turnedOn, { repo.patch("hr/company", buildJsonObject { put("attendanceCodeRequired", !on) }) }, {}) }) {
+                if (hrCan("company")) OutlinedButton(onClick = { act(if (on) R.string.hr_code_turnedOff else R.string.hr_code_turnedOn, { repo.patch("hr/company", buildJsonObject { put("attendanceCodeRequired", !on) }) }, {}) }) {
                     Text(stringResource(if (on) R.string.hr_code_turnOff else R.string.hr_code_turnOn))
                 }
             }
@@ -792,7 +809,7 @@ private fun PhoneLockBox(repo: com.dalilacom.app.data.repository.HrRepository, v
         Box(stringResource(R.string.hr_lock_title)) {
             Text(stringResource(R.string.hr_lock_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
             StatusChip(stringResource(if (on) R.string.hr_lock_on else R.string.hr_lock_off), if (on) "ok" else "warn")
-            OutlinedButton(onClick = { act(if (on) R.string.hr_lock_turnedOff else R.string.hr_lock_turnedOn, { repo.patch("hr/company", buildJsonObject { put("deviceLockRequired", !on) }) }, {}) }) {
+            if (hrCan("company")) OutlinedButton(onClick = { act(if (on) R.string.hr_lock_turnedOff else R.string.hr_lock_turnedOn, { repo.patch("hr/company", buildJsonObject { put("deviceLockRequired", !on) }) }, {}) }) {
                 Text(stringResource(if (on) R.string.hr_lock_turnOff else R.string.hr_lock_turnOn))
             }
         }

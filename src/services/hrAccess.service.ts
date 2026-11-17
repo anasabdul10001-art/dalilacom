@@ -1,10 +1,10 @@
-import { HrCompany, HrEmployee } from "@prisma/client";
+import { HrCompany, HrEmployee, HrRole } from "@prisma/client";
 import type { NextFunction, Request, Response } from "express";
 import { prisma } from "../prisma";
 import { ApiError } from "../lib/apiError";
 
 /** Who is acting inside a company: its owner, an employee with the HR role, or (for "my job") any linked employee. */
-export type HrActor = { userId: string; company: HrCompany; isOwner: boolean; role: "OWNER" | "HR"; employee: HrEmployee | null };
+export type HrActor = { userId: string; company: HrCompany; isOwner: boolean; role: "OWNER" | HrManagerRole; employee: HrEmployee | null };
 export type HrMe = { userId: string; company: HrCompany; employee: HrEmployee };
 
 declare global {
@@ -16,6 +16,40 @@ declare global {
       hrMe?: HrMe;
     }
   }
+}
+
+/** The employee roles that run part of the company (the owner always runs all of it). */
+export const HR_MANAGER_ROLES = ["HR", "ACCOUNTANT", "SECRETARY", "ATTENDANCE_SUPERVISOR"] as const satisfies readonly HrRole[];
+export type HrManagerRole = (typeof HR_MANAGER_ROLES)[number];
+
+/**
+ * What each role may do in the management screens. HR does everything the owner does (but cannot hand out the roles);
+ * the accountant owns money, the secretary owns people and paperwork, the attendance supervisor owns attendance and movement.
+ * Salaries are visible only with "payroll".
+ */
+export type HrArea = "people" | "peopleEdit" | "attendance" | "attendanceEdit" | "leave" | "leaveEdit" | "payroll" | "tracking" | "devices" | "company";
+const ALL_AREAS: HrArea[] = ["people", "peopleEdit", "attendance", "attendanceEdit", "leave", "leaveEdit", "payroll", "tracking", "devices", "company"];
+const ROLE_AREAS: Record<HrManagerRole, HrArea[]> = {
+  HR: ALL_AREAS,
+  ACCOUNTANT: ["people", "attendance", "leave", "payroll", "tracking"],
+  SECRETARY: ["people", "peopleEdit", "attendance", "attendanceEdit", "leave", "leaveEdit", "devices"],
+  ATTENDANCE_SUPERVISOR: ["people", "attendance", "attendanceEdit", "leave", "tracking", "devices"],
+};
+export const areasOf = (actor: Pick<HrActor, "role">): HrArea[] => (actor.role === "OWNER" ? ALL_AREAS : ROLE_AREAS[actor.role]);
+export const can = (actor: Pick<HrActor, "role">, area: HrArea) => areasOf(actor).includes(area);
+
+/** Which area a management request needs (anything not listed here needs the whole company: owner or HR). */
+export function areaFor(method: string, path: string): HrArea {
+  const read = method === "GET";
+  if (path === "/company") return read ? "people" : "company";
+  if (path === "/attendance-code") return "attendance";
+  if (path.startsWith("/device-requests") || /^\/employees\/[^/]+\/device$/.test(path)) return "devices";
+  if (path.startsWith("/locations")) return "tracking";
+  if (path.startsWith("/salary-components") || path.startsWith("/unified-summary") || path.startsWith("/payroll-runs") || path.startsWith("/advances") || /^\/employees\/[^/]+\/salary/.test(path)) return "payroll";
+  if (path.startsWith("/departments") || path.startsWith("/employees")) return read ? "people" : "peopleEdit";
+  if (path.startsWith("/attendance") || path.startsWith("/devices")) return read ? "attendance" : "attendanceEdit";
+  if (path.startsWith("/leave-")) return read ? "leave" : "leaveEdit";
+  return "company";
 }
 
 /** The HR plan (like accounting's): active or in its trial. */
@@ -31,10 +65,10 @@ export async function hasHrPlan(userId: string): Promise<boolean> {
 export async function managedBy(userId: string): Promise<HrActor | null> {
   const owned = await prisma.hrCompany.findUnique({ where: { ownerId: userId } });
   if (owned) return { userId, company: owned, isOwner: true, role: "OWNER", employee: null };
-  const hr = await prisma.hrEmployee.findFirst({ where: { userId, role: "HR", employmentStatus: { not: "TERMINATED" } }, include: { company: true } });
+  const hr = await prisma.hrEmployee.findFirst({ where: { userId, role: { in: [...HR_MANAGER_ROLES] }, employmentStatus: { not: "TERMINATED" } }, include: { company: true } });
   if (!hr) return null;
   const { company, ...employee } = hr;
-  return { userId, company, isOwner: false, role: "HR", employee };
+  return { userId, company, isOwner: false, role: hr.role as HrManagerRole, employee };
 }
 
 /**
@@ -45,6 +79,8 @@ export async function requireHrManager(req: Request, _res: Response, next: NextF
   const actor = await managedBy(req.user!.id);
   if (!actor) return next(new ApiError(403, "FORBIDDEN", "ما عندك صلاحية على قسم الموارد البشرية"));
   if (!(await hasHrPlan(actor.company.ownerId))) return next(new ApiError(402, "HR_PLAN_REQUIRED", "قسم الموارد البشرية يحتاج باقة فعّالة أو فترة تجربة. افتح صفحة الباقات من حسابك."));
+  const area = areaFor(req.method, req.path);
+  if (!can(actor, area)) return next(new ApiError(403, "FORBIDDEN", "دورك ما بيسمح بهاد الإجراء"));
   req.hr = actor;
   next();
 }

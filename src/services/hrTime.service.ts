@@ -37,7 +37,7 @@ async function approvers(company: HrCompany, stage: "PENDING_MANAGER" | "PENDING
       if (m?.userId) ids.add(m.userId);
     }
   } else {
-    (await prisma.hrEmployee.findMany({ where: { companyId: company.id, role: "HR", employmentStatus: { not: "TERMINATED" }, userId: { not: null } }, select: { userId: true } })).forEach((h) => ids.add(h.userId!));
+    (await prisma.hrEmployee.findMany({ where: { companyId: company.id, role: { in: ["HR", "SECRETARY"] }, employmentStatus: { not: "TERMINATED" }, userId: { not: null } }, select: { userId: true } })).forEach((h) => ids.add(h.userId!));
   }
   return [...ids];
 }

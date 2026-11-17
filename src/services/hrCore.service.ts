@@ -8,7 +8,7 @@ import { notificationEmailHtml } from "./emailTemplates";
 import { translateText } from "../i18n";
 import { notify } from "./notification.service";
 import { DEFAULT_LANGUAGE } from "../lib/languages";
-import { HrActor, hasHrPlan, hrAudit, managedBy } from "./hrAccess.service";
+import { HR_MANAGER_ROLES, HrActor, areasOf, can, hasHrPlan, hrAudit, managedBy } from "./hrAccess.service";
 
 const INVITE_DAYS = 7;
 const sha256 = (text: string) => crypto.createHash("sha256").update(text).digest("hex");
@@ -34,7 +34,7 @@ export async function overview(userId: string) {
   ]);
   const invitations = user?.isEmailVerified ? await invitationsFor(user.email) : [];
   return {
-    manage: actor ? { companyId: actor.company.id, companyName: actor.company.name, currency: actor.company.currency, role: actor.role, planActive: await hasHrPlan(actor.company.ownerId) } : null,
+    manage: actor ? { companyId: actor.company.id, companyName: actor.company.name, currency: actor.company.currency, role: actor.role, areas: areasOf(actor), planActive: await hasHrPlan(actor.company.ownerId) } : null,
     canStart: !actor && ownPlan, // an owner with a plan who has not made the company yet
     jobs: jobs.map((j) => ({ employeeId: j.id, companyId: j.company.id, companyName: j.company.name, currency: j.company.currency, role: j.role, position: j.position, status: j.employmentStatus })),
     invitations: invitations.length,
@@ -125,9 +125,16 @@ const employeeSelect = {
   invite: { select: { expiresAt: true, acceptedAt: true } },
 } satisfies Prisma.HrEmployeeSelect;
 
-/** Only the owner hands out the HR role: someone with it cannot make more of themselves. */
+const isManagerRole = (role?: HrRole) => !!role && (HR_MANAGER_ROLES as readonly string[]).includes(role);
+
+/** Only the owner hands out the roles that run the company (HR, accountant, secretary, attendance supervisor). */
 function assertMayGrant(actor: HrActor, role?: HrRole) {
-  if (role === "HR" && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "صاحب النشاط وحده بيعطي صلاحية الموارد البشرية");
+  if (isManagerRole(role) && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "صاحب النشاط وحده بيعطي صلاحية الموارد البشرية");
+}
+
+/** Salaries are for whoever handles payroll: everybody else gets the employee without them. */
+function hideSalary<T extends { baseSalary?: unknown }>(actor: HrActor, row: T): T {
+  return can(actor, "payroll") ? row : { ...row, baseSalary: null };
 }
 
 export async function listEmployees(actor: HrActor, filters: { departmentId?: string; status?: string }) {
@@ -136,13 +143,13 @@ export async function listEmployees(actor: HrActor, filters: { departmentId?: st
     select: employeeSelect,
     orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
   });
-  return rows.map(withInviteState);
+  return rows.map((r) => withInviteState(hideSalary(actor, r)));
 }
 
 export async function getEmployee(actor: HrActor, id: string) {
   const row = await prisma.hrEmployee.findFirst({ where: { id, companyId: actor.company.id }, select: employeeSelect });
   if (!row) throw notFound("الموظف غير موجود");
-  return withInviteState(row);
+  return withInviteState(hideSalary(actor, row));
 }
 
 function withInviteState<T extends { userId: string | null; invite: { expiresAt: Date; acceptedAt: Date | null } | null }>(row: T) {
@@ -154,6 +161,7 @@ function withInviteState<T extends { userId: string | null; invite: { expiresAt:
 
 export async function createEmployee(actor: HrActor, input: EmployeeInput) {
   assertMayGrant(actor, input.role);
+  if (!can(actor, "payroll")) input = { ...input, baseSalary: null };
   const companyId = actor.company.id;
   if (input.departmentId) await assertDepartmentIn(companyId, input.departmentId);
   if (input.managerId) await assertEmployeeIn(companyId, input.managerId);
@@ -169,12 +177,13 @@ export async function createEmployee(actor: HrActor, input: EmployeeInput) {
 }
 
 export async function updateEmployee(actor: HrActor, id: string, input: Partial<EmployeeInput>) {
+  if (!can(actor, "payroll")) { const { baseSalary: _salary, ...rest } = input; input = rest; }
   const companyId = actor.company.id;
   const existing = await prisma.hrEmployee.findFirst({ where: { id, companyId } });
   if (!existing) throw notFound("الموظف غير موجود");
   if (input.role !== undefined && input.role !== existing.role) {
     assertMayGrant(actor, input.role);
-    if (existing.role === "HR" && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "صاحب النشاط وحده بيعطي صلاحية الموارد البشرية");
+    if (isManagerRole(existing.role) && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "صاحب النشاط وحده بيعطي صلاحية الموارد البشرية");
   }
   if (input.departmentId) await assertDepartmentIn(companyId, input.departmentId);
   if (input.managerId) {

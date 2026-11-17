@@ -5,13 +5,20 @@
 function hrState() { return (S._hr = S._hr || { loading: false, ov: null, tab: {} }); }
 function hrReload() { const h = hrState(); h.ov = null; h.data = {}; h.loading = false; render(); }
 
+/** What the account's role lets it do in the company (the server sends the list; the owner has everything). */
+function hrCan(area) { const m = (hrState().ov || {}).manage; return !!m && (m.areas || []).includes(area); }
+
 /** The tabs this account has, from its real HR records (the first tab, "home", is always there). */
 function hrTabs() {
   const ov = hrState().ov;
   if (!S.token || !ov) return [];
   const tabs = [];
   if (ov.manage || ov.canStart) tabs.push("people");
-  if (ov.manage) tabs.push("attendance", "leave", "payroll");
+  if (ov.manage) {
+    if (hrCan("attendance")) tabs.push("attendance");
+    if (hrCan("leave")) tabs.push("leave");
+    if (hrCan("payroll")) tabs.push("payroll");
+  }
   if ((ov.jobs && ov.jobs.length) || ov.invitations) tabs.push("job");
   return tabs;
 }
@@ -80,6 +87,7 @@ function hrPeople() {
   const depts = hrData("depts", "/hr/departments");
   if (emps === null || depts === null) return skeleton("list", 3);
   const cur = ov.manage.currency;
+  const isOwner = ov.manage.role === "OWNER";
   const list = emps.length === 0 ? uiEmpty("👥", t("hr.people.empty")) : emps.map((e) => {
     const name = hrName(e);
     const tone = e.employmentStatus === "ACTIVE" ? "ok" : e.employmentStatus === "ON_LEAVE" ? "warn" : "bad";
@@ -88,26 +96,31 @@ function hrPeople() {
         <div class="item-title">${esc(name)}</div><div class="item-sub">${esc(e.position || t("hr.role." + e.role))}</div>
         <div class="chips">${uiChip(t("hr.role." + e.role))}${uiChip(t("hr.status." + e.employmentStatus), tone)}${e.department ? uiChip(e.department.name) : ""}${e.userId ? uiChip(t("hr.linked"), "info") : ""}</div>
         ${uiFold(t("hr.details"), more)}
-        <div class="btn-row"><button class="btn small soft" onclick="hrSalaryOpen('${e.id}')">${esc(t("hr.sal.open"))}</button><button class="btn small soft" onclick="hrSetDeviceCode('${e.id}')">${esc(t("hr.dev.setCode"))}</button><button class="btn small soft" onclick="hrTrackToggle(this,'${e.id}',${e.tracksLocation ? "false" : "true"})">${esc(t(e.tracksLocation ? "hr.trk.turnOff" : "hr.trk.turnOn"))}</button>${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button>`}</div>
+        <div class="btn-row">${hrCan("payroll") ? `<button class="btn small soft" onclick="hrSalaryOpen('${e.id}')">${esc(t("hr.sal.open"))}</button>` : ""}${hrCan("peopleEdit") ? `<button class="btn small soft" onclick="hrSetDeviceCode('${e.id}')">${esc(t("hr.dev.setCode"))}</button><button class="btn small soft" onclick="hrTrackToggle(this,'${e.id}',${e.tracksLocation ? "false" : "true"})">${esc(t(e.tracksLocation ? "hr.trk.turnOff" : "hr.trk.turnOn"))}</button>${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button>`}` : ""}</div>
+        ${isOwner && e.employmentStatus !== "TERMINATED" ? `<div class="field"><label>${esc(t("hr.f.role"))}</label><select onchange="hrSetRole(this,'${e.id}')">${hrRoleOptions(e.role)}</select></div>` : ""}
       </div>${e.baseSalary != null ? `<div class="item-end">${esc(hrMoney(e.baseSalary, cur))}</div>` : ""}</div>`;
   }).join("");
   const deptOpts = `<option value="">${esc(t("hr.dept.none"))}</option>` + depts.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
   const deptList = depts.length === 0 ? uiEmpty("🏷️", t("hr.dept.empty")) : depts.map((d) => `<div class="item"><span class="avatar" style="--h:${hrHue(d.name)}">${esc(d.name.slice(0, 1).toUpperCase())}</span><div class="item-main">
       <div class="item-title">${esc(d.name)}</div><div class="item-sub">${esc(t("hr.dept.count", { n: d._count ? d._count.employees : 0 }))}</div>
       <div class="btn-row"><button class="btn small soft" onclick="hrDeptRename('${d.id}')">${esc(t("hr.dept.rename"))}</button><button class="btn small outline" onclick="hrDeptDelete(this,'${d.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button></div></div></div>`).join("");
-  return `${hrSalaryCard(emps, cur)}<div class="panel-title">${esc(ov.manage.companyName)} <small>${esc(t("hr.people.count", { n: emps.length }))}</small></div>${list}
+  return `${hrCan("payroll") ? hrSalaryCard(emps, cur) : ""}<div class="panel-title">${esc(ov.manage.companyName)} <small>${esc(t("hr.people.count", { n: emps.length }))}</small></div>${list}
     <div class="panel-title" style="margin-top:16px">${esc(t("hr.dept.title"))}</div>${deptList}
-    <div class="card"><div class="field"><label>${esc(t("hr.dept.name"))}</label><input id="hr-d-name" maxlength="80" /></div>
+    ${!hrCan("peopleEdit") ? "" : `<div class="card"><div class="field"><label>${esc(t("hr.dept.name"))}</label><input id="hr-d-name" maxlength="80" /></div>
       <button class="btn soft" onclick="hrDeptAdd(this)">${esc(t("hr.dept.add"))}</button></div>
     <div class="card"><h2>${esc(t("hr.people.add"))}</h2>
       <div class="row"><div class="field"><label>${esc(t("hr.f.first"))}</label><input id="hr-e-first" /></div><div class="field"><label>${esc(t("hr.f.last"))}</label><input id="hr-e-last" /></div></div>
       <div class="row"><div class="field"><label>${esc(t("hr.f.email"))}</label><input id="hr-e-email" type="email" /></div><div class="field"><label>${esc(t("hr.f.position"))}</label><input id="hr-e-pos" /></div></div>
-      <div class="row"><div class="field"><label>${esc(t("hr.f.hire"))}</label><input id="hr-e-hire" type="date" value="${new Date().toISOString().slice(0, 10)}" /></div><div class="field"><label>${esc(t("hr.f.salary", { c: cur }))}</label><input id="hr-e-salary" inputmode="decimal" /></div></div>
+      <div class="row"><div class="field"><label>${esc(t("hr.f.hire"))}</label><input id="hr-e-hire" type="date" value="${new Date().toISOString().slice(0, 10)}" /></div>${hrCan("payroll") ? `<div class="field"><label>${esc(t("hr.f.salary", { c: cur }))}</label><input id="hr-e-salary" inputmode="decimal" /></div>` : ""}</div>
       <div class="field"><label>${esc(t("hr.f.dept"))}</label><select id="hr-e-dept">${deptOpts}</select></div>
       <div class="field"><label>${esc(t("hr.f.deviceCode"))}</label><input id="hr-e-code" maxlength="40" /></div>
+      ${isOwner ? `<div class="field"><label>${esc(t("hr.f.role"))}</label><select id="hr-e-role">${hrRoleOptions("EMPLOYEE")}</select><p class="muted">${esc(t("hr.role.hint"))}</p></div>` : ""}
       <button class="btn" onclick="hrAddEmployee(this)">${esc(t("hr.people.addBtn"))}</button>
-    </div>`;
+    </div>`}`;
 }
+const HR_ROLES = ["EMPLOYEE", "MANAGER", "ACCOUNTANT", "SECRETARY", "ATTENDANCE_SUPERVISOR", "HR"];
+const hrRoleOptions = (cur) => HR_ROLES.map((r) => `<option value="${r}"${r === cur ? " selected" : ""}>${esc(t("hr.role." + r))}</option>`).join("");
+async function hrSetRole(sel, id) { await hrDo("PATCH", `/hr/employees/${id}`, { role: sel.value }, "hr.roleDone"); }
 async function hrCreateCompany(btn) {
   const name = hrVal("hr-co-name").trim();
   if (name.length < 2) return toast(t("hr.company.name"));
@@ -118,6 +131,7 @@ async function hrAddEmployee(btn) {
   const body = { firstName: hrVal("hr-e-first").trim(), lastName: hrVal("hr-e-last").trim(), hireDate: hrVal("hr-e-hire"), position: hrVal("hr-e-pos").trim() || null, email: hrVal("hr-e-email").trim() || null };
   if (hrVal("hr-e-dept")) body.departmentId = hrVal("hr-e-dept");
   if (hrVal("hr-e-code").trim()) body.deviceCode = hrVal("hr-e-code").trim();
+  if (hrVal("hr-e-role")) body.role = hrVal("hr-e-role");
   if (!body.firstName || !body.lastName) return toast(t("hr.f.first"));
   if (salary !== "") { const n = Math.round(parseFloat(salary) * 100); if (!Number.isFinite(n) || n < 0) return toast(t("hr.f.salary", { c: "" })); body.baseSalary = n; }
   await uiBusy(btn, () => hrDo("POST", "/hr/employees", body, "hr.people.added"));
@@ -136,18 +150,18 @@ function hrAttendance() {
   const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const recs = hrData("attrec", "/hr/attendance?from=" + from);
   const co = hrData("company", "/hr/company");
-  const reqs = hrData("devreq", "/hr/device-requests?status=PENDING");
-  const locs = hrData("locs", "/hr/locations/current");
+  const reqs = hrCan("devices") ? hrData("devreq", "/hr/device-requests?status=PENDING") : [];
+  const locs = hrCan("tracking") ? hrData("locs", "/hr/locations/current") : [];
   if (devs === null || recs === null || co === null || reqs === null || locs === null) return skeleton("list", 3);
-  const locCard = `<div class="panel-title" style="margin-top:16px">${esc(t("hr.trk.title"))}</div><p class="muted">${esc(t("hr.trk.note"))}</p>
+  const locCard = !hrCan("tracking") ? "" : `<div class="panel-title" style="margin-top:16px">${esc(t("hr.trk.title"))}</div><p class="muted">${esc(t("hr.trk.note"))}</p>
     ${Array.isArray(locs) && locs.length ? locs.map((r) => `<div class="item">${uiAvatar(hrName(r.employee))}<div class="item-main"><div class="item-title">${esc(hrName(r.employee))}</div>
       <div class="chips">${uiChip(t(r.onShift ? "hr.trk.onShift" : "hr.trk.offShift"), r.onShift ? "ok" : "warn")}</div>
       <div class="item-sub">${r.latest ? esc(t("hr.trk.last", { t: new Date(r.latest.recordedAt).toLocaleString() })) : esc(t("hr.trk.noPoint"))}</div>
       <div class="btn-row"><button class="btn small soft" onclick="hrRouteMap('${r.employee.id}','${esc(hrName(r.employee)).replace(/'/g, "")}')">${esc(t("hr.trk.map"))}</button></div></div></div>`).join("") : uiEmpty("📍", t("hr.trk.none"))}`;
   const lockOn = !!(co && co.deviceLockRequired);
-  const lockCard = `<div class="panel-title" style="margin-top:16px">${esc(t("hr.lock.title"))}</div><p class="muted">${esc(t("hr.lock.intro"))}</p>
+  const lockCard = !hrCan("devices") ? "" : `<div class="panel-title" style="margin-top:16px">${esc(t("hr.lock.title"))}</div><p class="muted">${esc(t("hr.lock.intro"))}</p>
     <div class="card"><div class="chips">${uiChip(t(lockOn ? "hr.lock.on" : "hr.lock.off"), lockOn ? "ok" : "warn")}</div>
-      <div class="btn-row"><button class="btn small soft" onclick="hrLockToggle(this,${lockOn ? "false" : "true"})">${esc(t(lockOn ? "hr.lock.turnOff" : "hr.lock.turnOn"))}</button></div></div>
+      <div class="btn-row">${hrCan("company") ? `<button class="btn small soft" onclick="hrLockToggle(this,${lockOn ? "false" : "true"})">${esc(t(lockOn ? "hr.lock.turnOff" : "hr.lock.turnOn"))}</button>` : ""}</div></div>
     <div class="panel-title">${esc(t("hr.lock.reqTitle"))}</div>
     ${Array.isArray(reqs) && reqs.length ? reqs.map((r) => `<div class="item">${uiAvatar(hrName(r.employee))}<div class="item-main"><div class="item-title">${esc(hrName(r.employee))}</div>
       <div class="item-sub">${esc(r.deviceName || "—")} · ${when(r.createdAt)}</div>
@@ -156,7 +170,7 @@ function hrAttendance() {
   const codeCard = `<div class="panel-title">${esc(t("hr.code.title"))}</div><p class="muted">${esc(t("hr.code.intro"))}</p>
     <div class="card"><div class="chips">${uiChip(t(codeOn ? "hr.code.on" : "hr.code.off"), codeOn ? "ok" : "warn")}</div>
       <div class="btn-row"><button class="btn small" onclick="hrCodeScreen()">${esc(t("hr.code.show"))}</button>
-        <button class="btn small soft" onclick="hrCodeToggle(this,${codeOn ? "false" : "true"})">${esc(t(codeOn ? "hr.code.turnOff" : "hr.code.turnOn"))}</button></div></div>`;
+        ${hrCan("company") ? `<button class="btn small soft" onclick="hrCodeToggle(this,${codeOn ? "false" : "true"})">${esc(t(codeOn ? "hr.code.turnOff" : "hr.code.turnOn"))}</button>` : ""}</div></div>`;
   const when = (v) => (v ? `<bdi>${esc(new Date(v).toLocaleString())}</bdi>` : "—");
   const keyCard = h.newKey ? `<div class="card" style="border:2px solid var(--brand, #f60)"><strong>${esc(t("hr.dev.keyTitle", { n: h.newKey.name }))}</strong>
       <p class="muted">${esc(t("hr.dev.keyNote"))}</p>
@@ -391,13 +405,13 @@ function hrLeave() {
       <div class="item-sub">${esc(r.leaveType ? r.leaveType.name : "")} · ${hrRange(r.startDate, r.endDate)}</div>
       <div class="chips">${uiChip(t("hr.leave.days", { n: days(r) }), "info")}${uiChip(t(r.status === "PENDING_HR" ? "hr.leave.waitHr" : "hr.leave.waitManager"), "warn")}</div>
       ${r.reason ? `<div class="item-sub">${esc(r.reason)}</div>` : ""}
-      <div class="btn-row"><button class="btn small" onclick="hrDecide(this,'leave-requests','${r.id}','APPROVE')">${esc(t("hr.approve"))}</button><button class="btn small outline" onclick="hrDecide(this,'leave-requests','${r.id}','REJECT')">${esc(t("hr.reject"))}</button></div>
+      ${hrCan("leaveEdit") ? `<div class="btn-row"><button class="btn small" onclick="hrDecide(this,'leave-requests','${r.id}','APPROVE')">${esc(t("hr.approve"))}</button><button class="btn small outline" onclick="hrDecide(this,'leave-requests','${r.id}','REJECT')">${esc(t("hr.reject"))}</button></div>` : ""}
     </div></div>`).join("");
   return `<div class="panel-title">${esc(t("hr.leave.pending"))} <small>${open.length}</small></div>${list}
-    <div class="card"><h2>${esc(t("hr.leave.types"))}</h2>
+    ${!hrCan("leaveEdit") ? "" : `<div class="card"><h2>${esc(t("hr.leave.types"))}</h2>
       ${types.length ? `<div class="chips">${types.map((x) => uiChip(x.name + " · " + t("hr.leave.days", { n: x.defaultBalance }), "info")).join("")}</div>` : uiEmpty("📅", t("hr.leave.noTypes"))}
       <div class="row"><div class="field"><label>${esc(t("hr.leave.typeName"))}</label><input id="hr-lt-name" /></div><div class="field"><label>${esc(t("hr.leave.typeDays"))}</label><input id="hr-lt-days" inputmode="numeric" value="14" /></div></div>
-      <button class="btn small" onclick="hrAddLeaveType(this)">${esc(t("hr.leave.addType"))}</button></div>`;
+      <button class="btn small" onclick="hrAddLeaveType(this)">${esc(t("hr.leave.addType"))}</button></div>`}`;
 }
 async function hrDecide(btn, kind, id, decision) { await uiBusy(btn, () => hrDo("POST", `/hr/${kind}/${id}/decision`, { decision }, "hr.decided")); }
 async function hrAddLeaveType(btn) {

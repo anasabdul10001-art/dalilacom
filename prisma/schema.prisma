@@ -2785,6 +2785,9 @@ enum HrRole {
   HR // runs the company with the owner: employees, attendance, leave, payroll
   MANAGER // approves the leave and advances of their team
   EMPLOYEE
+  ACCOUNTANT // payroll, salaries and advances; reads people, attendance, leave and where the drivers are
+  SECRETARY // people, attendance, leave and the phone-change requests; no salaries
+  ATTENDANCE_SUPERVISOR // attendance, phone-change requests and where the drivers are; no salaries
 }
 
 enum HrEmploymentStatus {

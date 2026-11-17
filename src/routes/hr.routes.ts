@@ -165,7 +165,7 @@ const employeeSchema = z.object({
   position: z.string().trim().max(80).nullable().optional(),
   departmentId: z.string().uuid().nullable().optional(),
   managerId: z.string().uuid().nullable().optional(),
-  role: z.enum(["HR", "MANAGER", "EMPLOYEE"]).optional(),
+  role: z.enum(["HR", "MANAGER", "EMPLOYEE", "ACCOUNTANT", "SECRETARY", "ATTENDANCE_SUPERVISOR"]).optional(),
   hireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
   baseSalary: money.nullable().optional(),
   deviceCode: z.string().trim().max(40).nullable().optional(),
