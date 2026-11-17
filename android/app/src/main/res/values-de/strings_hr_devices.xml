@@ -59,4 +59,17 @@
     <string name="hr_code_ask">Type the code shown on the shop screen, or scan it</string>
     <string name="hr_code_scan">Scan the code</string>
     <string name="hr_code_ok">Confirm</string>
+    <string name="hr_lock_title">One phone per employee</string>
+    <string name="hr_lock_intro">Turn it on: an employee checks in only from their first registered phone. If they try another phone, you get a request to approve or reject.</string>
+    <string name="hr_lock_on">Lock is on</string>
+    <string name="hr_lock_off">Lock is off</string>
+    <string name="hr_lock_turnOn">Turn the lock on</string>
+    <string name="hr_lock_turnOff">Turn the lock off</string>
+    <string name="hr_lock_turnedOn">Phone lock turned on</string>
+    <string name="hr_lock_turnedOff">Phone lock turned off</string>
+    <string name="hr_lock_reqTitle">New phone requests</string>
+    <string name="hr_lock_noReq">No requests</string>
+    <string name="hr_lock_approve">Approve</string>
+    <string name="hr_lock_reject">Reject</string>
+    <string name="hr_lock_decided">Request decided</string>
 </resources>

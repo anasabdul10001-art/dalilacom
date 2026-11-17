@@ -185,3 +185,47 @@ describe("HR attendance with the shop code", () => {
     expect((await request(app).post("/hr/me/check-out").set(w.auth).send({ code: live2.code })).status).toBe(200);
   });
 });
+
+describe("HR one registered phone per employee", () => {
+  const phone = (id: string, name = "Phone " + id) => ({ "X-Device-Id": id, "X-Device-Name": name });
+  it("the first phone becomes theirs; another phone needs an approval; reset clears it", async () => {
+    const o = await company("hrlock");
+    const w = await linkedEmployee(o, "hrlockw");
+    // lock off: nothing is asked
+    expect((await request(app).post("/hr/me/check-in").set(w.auth)).status).toBe(201);
+    expect((await request(app).post("/hr/me/check-out").set(w.auth)).status).toBe(200);
+    expect((await request(app).patch("/hr/company").set(w.auth).send({ deviceLockRequired: true })).status).toBeGreaterThanOrEqual(403);
+    expect((await request(app).patch("/hr/company").set(o.auth).send({ deviceLockRequired: true })).body.deviceLockRequired).toBe(true);
+    // a phone id is required, and the first phone is registered
+    const noId = await request(app).post("/hr/me/check-in").set(w.auth);
+    expect(noId.status).toBe(403);
+    expect(noId.body.error.code).toBe("DEVICE_ID_REQUIRED");
+    expect((await request(app).post("/hr/me/check-in").set(w.auth).set(phone("A"))).status).toBe(201);
+    expect((await prisma.hrEmployee.findUniqueOrThrow({ where: { id: w.employeeId } })).boundDeviceId).toBe("A");
+    expect((await request(app).post("/hr/me/check-out").set(w.auth).set(phone("A"))).status).toBe(200);
+    // another phone: refused, one request waits (even if tried twice), the owner is told
+    const other = await request(app).post("/hr/me/check-in").set(w.auth).set(phone("B"));
+    expect(other.status).toBe(403);
+    expect(other.body.error.code).toBe("DEVICE_NOT_APPROVED");
+    await request(app).post("/hr/me/check-in").set(w.auth).set(phone("B"));
+    const pending = (await request(app).get("/hr/device-requests").query({ status: "PENDING" }).set(o.auth)).body as { id: string; deviceId: string }[];
+    expect(pending).toHaveLength(1);
+    expect(pending[0].deviceId).toBe("B");
+    expect((await prisma.notification.findMany({ where: { userId: o.id } })).some((n) => n.title.includes("جهاز"))).toBe(true);
+    // the employee cannot decide; the owner approves; B works, A no longer does
+    expect((await request(app).post(`/hr/device-requests/${pending[0].id}/decision`).set(w.auth).send({ decision: "APPROVE" })).status).toBeGreaterThanOrEqual(403);
+    expect((await request(app).post(`/hr/device-requests/${pending[0].id}/decision`).set(o.auth).send({ decision: "APPROVE" })).body.status).toBe("APPROVED");
+    expect((await request(app).post(`/hr/device-requests/${pending[0].id}/decision`).set(o.auth).send({ decision: "APPROVE" })).status).toBe(409);
+    expect((await request(app).post("/hr/me/check-in").set(w.auth).set(phone("B"))).status).toBe(201);
+    expect((await request(app).post("/hr/me/check-out").set(w.auth).set(phone("A"))).status).toBe(403);
+    // a rejected request stays refused; reset lets the next phone register
+    const c = await request(app).post("/hr/me/check-out").set(w.auth).set(phone("C"));
+    expect(c.status).toBe(403);
+    const cReq = (await request(app).get("/hr/device-requests").query({ status: "PENDING" }).set(o.auth)).body[0] as { id: string };
+    expect((await request(app).post(`/hr/device-requests/${cReq.id}/decision`).set(o.auth).send({ decision: "REJECT" })).body.status).toBe("REJECTED");
+    expect((await request(app).post("/hr/me/check-out").set(w.auth).set(phone("C"))).status).toBe(403);
+    expect((await request(app).delete(`/hr/employees/${w.employeeId}/device`).set(o.auth)).body.reset).toBe(true);
+    expect((await request(app).post("/hr/me/check-out").set(w.auth).set(phone("C"))).status).toBe(200);
+    expect((await prisma.hrEmployee.findUniqueOrThrow({ where: { id: w.employeeId } })).boundDeviceId).toBe("C");
+  });
+});

@@ -2834,30 +2834,33 @@ enum HrAdvanceStatus {
 }
 
 model HrCompany {
-  id          String   @id @default(uuid())
-  ownerId     String   @unique
-  name        String
-  currency    String // 3-letter code; every amount of the company is in it
-  timezone    String   @default("UTC")
-  workingDays Json? // e.g. ["mon","tue","wed","thu","fri"]
+  id                     String   @id @default(uuid())
+  ownerId                String   @unique
+  name                   String
+  currency               String // 3-letter code; every amount of the company is in it
+  timezone               String   @default("UTC")
+  workingDays            Json? // e.g. ["mon","tue","wed","thu","fri"]
   // When on, an employee can only check in/out by reading the live code from the shop screen (rotates every 30 s).
-  attendanceCodeRequired Boolean @default(false)
-  attendanceSecret       String  @default(dbgenerated("md5(random()::text || clock_timestamp()::text)"))
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  attendanceCodeRequired Boolean  @default(false)
+  attendanceSecret       String   @default(dbgenerated("md5(random()::text || clock_timestamp()::text)"))
+  // When on, an employee uses check-in/out and location reporting only from the one phone registered to them; a new phone needs an approval.
+  deviceLockRequired     Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
-  owner       User                @relation("HrCompanyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  departments HrDepartment[]
-  employees   HrEmployee[]
-  invites     HrInvite[]
-  attendance  HrAttendance[]
-  devices     HrDevice[]
-  leaveTypes  HrLeaveType[]
-  leaves      HrLeaveRequest[]
-  components  HrSalaryComponent[]
-  runs        HrPayrollRun[]
-  advances    HrAdvance[]
-  auditLogs   HrAuditLog[]
+  owner          User                @relation("HrCompanyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  departments    HrDepartment[]
+  employees      HrEmployee[]
+  invites        HrInvite[]
+  attendance     HrAttendance[]
+  devices        HrDevice[]
+  deviceRequests HrDeviceRequest[]
+  leaveTypes     HrLeaveType[]
+  leaves         HrLeaveRequest[]
+  components     HrSalaryComponent[]
+  runs           HrPayrollRun[]
+  advances       HrAdvance[]
+  auditLogs      HrAuditLog[]
 }
 
 model HrDepartment {
@@ -2890,6 +2893,9 @@ model HrEmployee {
   employmentStatus HrEmploymentStatus @default(ACTIVE)
   baseSalary       Int?
   deviceCode       String? // the number the employee has on the fingerprint or card readers (a user id or a card number)
+  boundDeviceId    String? // the one phone this employee may use for attendance (set by the first use, changed only by an approval)
+  boundDeviceName  String?
+  boundAt          DateTime?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -2906,6 +2912,7 @@ model HrEmployee {
   components         HrEmployeeComponent[]
   advances           HrAdvance[]
   payslips           HrPayslip[]
+  deviceRequests     HrDeviceRequest[]
 
   @@unique([companyId, userId])
   @@unique([companyId, deviceCode])
@@ -2913,6 +2920,31 @@ model HrEmployee {
   @@index([userId])
   @@index([departmentId])
   @@index([managerId])
+}
+
+enum HrDeviceRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// An employee tried to use a phone that is not the one registered to them; the owner or an HR person decides.
+model HrDeviceRequest {
+  id          String                @id @default(uuid())
+  companyId   String
+  employeeId  String
+  deviceId    String
+  deviceName  String?
+  status      HrDeviceRequestStatus @default(PENDING)
+  createdAt   DateTime              @default(now())
+  decidedAt   DateTime?
+  decidedById String?
+
+  company  HrCompany  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, deviceId])
+  @@index([companyId, status])
 }
 
 // A fingerprint, card or face reader (or the program that collects from it) that sends its punches to the company.

@@ -10,6 +10,7 @@ class DalilacomApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.dalilacom.app.data.network.PhoneIdentity.init(this)
         PushHelper.ensureChannel(this)
     }
 }

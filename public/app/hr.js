@@ -136,7 +136,16 @@ function hrAttendance() {
   const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const recs = hrData("attrec", "/hr/attendance?from=" + from);
   const co = hrData("company", "/hr/company");
-  if (devs === null || recs === null || co === null) return skeleton("list", 3);
+  const reqs = hrData("devreq", "/hr/device-requests?status=PENDING");
+  if (devs === null || recs === null || co === null || reqs === null) return skeleton("list", 3);
+  const lockOn = !!(co && co.deviceLockRequired);
+  const lockCard = `<div class="panel-title" style="margin-top:16px">${esc(t("hr.lock.title"))}</div><p class="muted">${esc(t("hr.lock.intro"))}</p>
+    <div class="card"><div class="chips">${uiChip(t(lockOn ? "hr.lock.on" : "hr.lock.off"), lockOn ? "ok" : "warn")}</div>
+      <div class="btn-row"><button class="btn small soft" onclick="hrLockToggle(this,${lockOn ? "false" : "true"})">${esc(t(lockOn ? "hr.lock.turnOff" : "hr.lock.turnOn"))}</button></div></div>
+    <div class="panel-title">${esc(t("hr.lock.reqTitle"))}</div>
+    ${Array.isArray(reqs) && reqs.length ? reqs.map((r) => `<div class="item">${uiAvatar(hrName(r.employee))}<div class="item-main"><div class="item-title">${esc(hrName(r.employee))}</div>
+      <div class="item-sub">${esc(r.deviceName || "—")} · ${when(r.createdAt)}</div>
+      <div class="btn-row"><button class="btn small" onclick="hrLockDecide(this,'${r.id}','APPROVE')">${esc(t("hr.lock.approve"))}</button><button class="btn small outline" onclick="hrLockDecide(this,'${r.id}','REJECT')">${esc(t("hr.lock.reject"))}</button></div></div></div>`).join("") : uiEmpty("📱", t("hr.lock.noReq"))}`;
   const codeOn = !!(co && co.attendanceCodeRequired);
   const codeCard = `<div class="panel-title">${esc(t("hr.code.title"))}</div><p class="muted">${esc(t("hr.code.intro"))}</p>
     <div class="card"><div class="chips">${uiChip(t(codeOn ? "hr.code.on" : "hr.code.off"), codeOn ? "ok" : "warn")}</div>
@@ -159,7 +168,7 @@ function hrAttendance() {
       <div class="item-title">${esc(hrName(r.employee))}</div>
       <div class="item-sub">${when(r.checkIn)} → ${r.checkOut ? when(r.checkOut) : esc(t("hr.att.open"))}</div>
       <div class="chips">${uiChip(t("hr.att.src." + r.source), r.source === "DEVICE" ? "info" : "")}</div></div></div>`).join("");
-  return `${keyCard}${codeCard}<div class="panel-title" style="margin-top:16px">${esc(t("hr.dev.title"))}</div><p class="muted">${esc(t("hr.dev.intro"))}</p>${devList}
+  return `${keyCard}${codeCard}${lockCard}<div class="panel-title" style="margin-top:16px">${esc(t("hr.dev.title"))}</div><p class="muted">${esc(t("hr.dev.intro"))}</p>${devList}
     <div class="card"><div class="field"><label>${esc(t("hr.dev.name"))}</label><input id="hr-dv-name" maxlength="80" /></div>
       <div class="field"><label>${esc(t("hr.dev.kind"))}</label><select id="hr-dv-kind">${HR_DEV_KINDS.map((k) => `<option value="${k}">${esc(t("hr.dev.kind." + k))}</option>`).join("")}</select></div>
       <button class="btn soft" onclick="hrDevAdd(this)">${esc(t("hr.dev.add"))}</button></div>
@@ -175,6 +184,16 @@ async function hrDevAdd(btn) {
   if (!name) return toast(t("hr.dev.name"));
   const data = await uiBusy(btn, () => hrDo("POST", "/hr/devices", { name, kind: hrVal("hr-dv-kind") || "FINGERPRINT" }, "hr.dev.added"));
   if (data && data.key) { hrState().newKey = { name: data.name, key: data.key }; render(); }
+}
+async function hrLockToggle(btn, on) {
+  const h = hrState();
+  const data = await uiBusy(btn, () => hrDo("PATCH", "/hr/company", { deviceLockRequired: on }, on ? "hr.lock.turnedOn" : "hr.lock.turnedOff"));
+  if (data) { delete h.data.company; render(); }
+}
+async function hrLockDecide(btn, id, decision) {
+  const h = hrState();
+  const data = await uiBusy(btn, () => hrDo("POST", `/hr/device-requests/${id}/decision`, { decision }, "hr.lock.decided"));
+  if (data) { delete h.data.devreq; render(); }
 }
 async function hrCodeToggle(btn, on) {
   const h = hrState();

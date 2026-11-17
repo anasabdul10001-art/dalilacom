@@ -133,6 +133,9 @@ async function api(method, path, body) {
   // The server answers (errors, pages, names) in the app's language, not the browser's.
   const headers = { "Content-Type": "application/json", "Accept-Language": LANG };
   if (S.token) headers["Authorization"] = "Bearer " + S.token;
+  if (path.startsWith("/hr/me")) { // the phone lock: this browser is one "phone" for the employee
+    try { let id = localStorage.getItem("dlc_device_id"); if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem("dlc_device_id", id); } headers["X-Device-Id"] = id; headers["X-Device-Name"] = "Web"; } catch (e) { /* storage blocked: the server asks for the id */ }
+  }
   if (S._actAs && (path.startsWith("/accounting") || (/^\/(merchant\/discounts|broadcasts)/.test(path) && S._site && S._site.accounting === "marketing"))) headers["X-Business-Owner"] = S._actAs; // offers and announcements only from the marketer tab
   try {
     const res = await fetch(API_BASE + path, {

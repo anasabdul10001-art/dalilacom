@@ -59,4 +59,17 @@
     <string name="hr_code_ask">اكتب الكود الظاهر على شاشة المحل أو امسحو</string>
     <string name="hr_code_scan">امسح الكود</string>
     <string name="hr_code_ok">سجّل</string>
+    <string name="hr_lock_title">جهاز واحد لكل موظف</string>
+    <string name="hr_lock_intro">شغّل القفل: الموظف بيسجّل حضوره من موبايلو الأول بس. إذا جرّب موبايل تاني، بيوصلك طلب وبتوافق أو بترفض.</string>
+    <string name="hr_lock_on">القفل شغّال</string>
+    <string name="hr_lock_off">القفل مطفي</string>
+    <string name="hr_lock_turnOn">شغّل القفل</string>
+    <string name="hr_lock_turnOff">طفّي القفل</string>
+    <string name="hr_lock_turnedOn">انشغّل قفل الجهاز</string>
+    <string name="hr_lock_turnedOff">انطفى قفل الجهاز</string>
+    <string name="hr_lock_reqTitle">طلبات جهاز جديد</string>
+    <string name="hr_lock_noReq">ما في طلبات</string>
+    <string name="hr_lock_approve">وافق</string>
+    <string name="hr_lock_reject">ارفض</string>
+    <string name="hr_lock_decided">انحسم الطلب</string>
 </resources>

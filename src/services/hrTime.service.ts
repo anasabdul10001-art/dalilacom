@@ -4,6 +4,7 @@ import { prisma } from "../prisma";
 import { ApiError } from "../lib/apiError";
 import { notify } from "./notification.service";
 import { HrActor, HrMe, assertCompanyActive, hrAudit } from "./hrAccess.service";
+import { PhoneInfo, assertOwnPhone } from "./hrDeviceLock.service";
 
 const DAY_MS = 86_400_000;
 const notFound = (what: string) => new ApiError(404, "NOT_FOUND", what);
@@ -67,8 +68,9 @@ function assertShopCode(company: { attendanceCodeRequired: boolean; attendanceSe
   if (!ok) throw new ApiError(403, "ATTENDANCE_CODE_REQUIRED", "اقرأ الكود من شاشة المحل وسجّل بيه. الكود بيتغيّر كل نص دقيقة.");
 }
 
-export async function checkIn(me: HrMe, code?: string) {
+export async function checkIn(me: HrMe, code?: string, phone: PhoneInfo = {}) {
   await assertCompanyActive(me.company);
+  await assertOwnPhone(me, phone);
   assertShopCode(me.company, code);
   if (me.employee.employmentStatus === "TERMINATED") throw conflict("الموظف منتهية خدمته");
   try {
@@ -79,8 +81,9 @@ export async function checkIn(me: HrMe, code?: string) {
   }
 }
 
-export async function checkOut(me: HrMe, code?: string) {
+export async function checkOut(me: HrMe, code?: string, phone: PhoneInfo = {}) {
   await assertCompanyActive(me.company);
+  await assertOwnPhone(me, phone);
   assertShopCode(me.company, code);
   // closed only while it is still open at this very moment
   const open = await prisma.hrAttendance.findFirst({ where: { employeeId: me.employee.id, checkOut: null }, orderBy: { checkIn: "desc" } });

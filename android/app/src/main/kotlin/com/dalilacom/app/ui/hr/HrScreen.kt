@@ -345,6 +345,7 @@ private fun AttendanceTab(repo: com.dalilacom.app.data.repository.HrRepository, 
     }
     val from = java.time.LocalDate.now().minusDays(7).toString()
     ShopCodeBox(repo, version, act)
+    PhoneLockBox(repo, version, act)
     Box(stringResource(R.string.hr_dev_title)) {
         Text(stringResource(R.string.hr_dev_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Load(repo, "hr/devices", version) { data ->
@@ -771,4 +772,36 @@ private fun PunchCodeDialog(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
         confirmButton = { Button(enabled = text.length == 6, onClick = { onSubmit(text) }) { Text(stringResource(R.string.hr_code_ok)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.account_cancel)) } },
     )
+}
+
+/* ---- one registered phone per employee: the switch, and the requests when another phone is tried ---- */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun PhoneLockBox(repo: com.dalilacom.app.data.repository.HrRepository, version: Int, act: Act) {
+    Load(repo, "hr/company", version) { data ->
+        val on = ((data as? JsonObject)?.get("deviceLockRequired") as? JsonPrimitive)?.booleanOrNull == true
+        Box(stringResource(R.string.hr_lock_title)) {
+            Text(stringResource(R.string.hr_lock_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusChip(stringResource(if (on) R.string.hr_lock_on else R.string.hr_lock_off), if (on) "ok" else "warn")
+            OutlinedButton(onClick = { act(if (on) R.string.hr_lock_turnedOff else R.string.hr_lock_turnedOn, { repo.patch("hr/company", buildJsonObject { put("deviceLockRequired", !on) }) }, {}) }) {
+                Text(stringResource(if (on) R.string.hr_lock_turnOff else R.string.hr_lock_turnOn))
+            }
+        }
+    }
+    Load(repo, "hr/device-requests?status=PENDING", version) { data ->
+        val reqs = data.rows()
+        Box(stringResource(R.string.hr_lock_reqTitle)) {
+            if (reqs.isEmpty()) Text(stringResource(R.string.hr_lock_noReq), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            reqs.forEach { r ->
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(fullName(r.o("employee")), fontWeight = FontWeight.ExtraBold)
+                    Text("${r.s("deviceName") ?: "—"} · ${localTime(r.s("createdAt"))}", fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { act(R.string.hr_lock_decided, { repo.post("hr/device-requests/${r.s("id")}/decision", buildJsonObject { put("decision", "APPROVE") }) }, {}) }) { Text(stringResource(R.string.hr_lock_approve)) }
+                        OutlinedButton(onClick = { act(R.string.hr_lock_decided, { repo.post("hr/device-requests/${r.s("id")}/decision", buildJsonObject { put("decision", "REJECT") }) }, {}) }) { Text(stringResource(R.string.hr_lock_reject)) }
+                    }
+                }
+            }
+        }
+    }
 }

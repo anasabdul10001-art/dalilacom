@@ -10,6 +10,7 @@ import * as core from "../services/hrCore.service";
 import * as time from "../services/hrTime.service";
 import * as pay from "../services/hrPay.service";
 import * as devices from "../services/hrDevice.service";
+import * as lock from "../services/hrDeviceLock.service";
 import { monthRange, unifiedSummary } from "../services/unifiedSummary.service";
 
 /**
@@ -64,10 +65,10 @@ const statusQuery = (req: { query: Record<string, unknown> }) => (["PENDING_MANA
 const advanceStatusQuery = (req: { query: Record<string, unknown> }) => (["PENDING_MANAGER", "PENDING_HR", "APPROVED", "REJECTED", "REPAID"].includes(String(req.query.status)) ? (req.query.status as "APPROVED") : undefined);
 const yearQuery = (req: { query: Record<string, unknown> }) => (Number(req.query.year) >= 2000 && Number(req.query.year) <= 2100 ? Number(req.query.year) : new Date().getUTCFullYear());
 
-me.get("/", route(async (req, res) => res.json({ companyId: req.hrMe!.company.id, companyName: req.hrMe!.company.name, currency: req.hrMe!.company.currency, attendanceCodeRequired: req.hrMe!.company.attendanceCodeRequired, employee: { id: req.hrMe!.employee.id, role: req.hrMe!.employee.role, position: req.hrMe!.employee.position, status: req.hrMe!.employee.employmentStatus } })));
+me.get("/", route(async (req, res) => res.json({ companyId: req.hrMe!.company.id, companyName: req.hrMe!.company.name, currency: req.hrMe!.company.currency, attendanceCodeRequired: req.hrMe!.company.attendanceCodeRequired, deviceLockRequired: req.hrMe!.company.deviceLockRequired, employee: { id: req.hrMe!.employee.id, role: req.hrMe!.employee.role, position: req.hrMe!.employee.position, status: req.hrMe!.employee.employmentStatus } })));
 const codeBody = (req: { body?: unknown }) => (typeof (req.body as { code?: unknown } | undefined)?.code === "string" ? (req.body as { code: string }).code : undefined);
-me.post("/check-in", route(async (req, res) => res.status(201).json(await time.checkIn(req.hrMe!, codeBody(req)))));
-me.post("/check-out", route(async (req, res) => res.json(await time.checkOut(req.hrMe!, codeBody(req)))));
+me.post("/check-in", route(async (req, res) => res.status(201).json(await time.checkIn(req.hrMe!, codeBody(req), lock.phoneOf(req)))));
+me.post("/check-out", route(async (req, res) => res.json(await time.checkOut(req.hrMe!, codeBody(req), lock.phoneOf(req)))));
 me.get("/attendance", route(async (req, res) => res.json(await time.myAttendance(req.hrMe!, periodQuery(req)))));
 me.get("/leave-balances", route(async (req, res) => res.json(await time.listBalances(req.hrMe!.company.id, req.hrMe!.employee.id, yearQuery(req)))));
 me.get("/leave-requests", route(async (req, res) => res.json(await time.myLeaveRequests(req.hrMe!))));
@@ -113,9 +114,21 @@ manage.get("/company", route(async (req, res) => res.json(core.publicCompany(req
 // the live shop code the employees read (shown on a screen at the shop)
 manage.get("/attendance-code", route(async (req, res) => res.json(time.currentAttendanceCode(req.hr!.company))));
 manage.patch("/company", route(async (req, res) => {
-  const parsed = z.object({ name: z.string().trim().min(2).max(120).optional(), timezone: z.string().trim().min(1).max(60).optional(), workingDays: z.array(z.enum(["sun", "mon", "tue", "wed", "thu", "fri", "sat"])).min(1).optional(), attendanceCodeRequired: z.boolean().optional() }).safeParse(req.body);
+  const parsed = z.object({ name: z.string().trim().min(2).max(120).optional(), timezone: z.string().trim().min(1).max(60).optional(), workingDays: z.array(z.enum(["sun", "mon", "tue", "wed", "thu", "fri", "sat"])).min(1).optional(), attendanceCodeRequired: z.boolean().optional(), deviceLockRequired: z.boolean().optional() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(core.publicCompany(await core.updateCompany(req.hr!, parsed.data)));
+}));
+
+// ---- one registered phone per employee: the requests when another phone is used, and a reset
+manage.get("/device-requests", route(async (req, res) => res.json(await lock.listRequests(req.hr!.company.id, ["PENDING", "APPROVED", "REJECTED"].includes(String(req.query.status)) ? (req.query.status as "PENDING") : undefined))));
+manage.post("/device-requests/:id/decision", route(async (req, res) => {
+  const parsed = z.object({ decision: z.enum(["APPROVE", "REJECT"]) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await lock.decideRequest(req.hr!, req.params.id, parsed.data.decision));
+}));
+manage.delete("/employees/:id/device", route(async (req, res) => {
+  await lock.resetEmployeePhone(req.hr!, req.params.id);
+  res.json({ reset: true });
 }));
 
 manage.get("/departments", route(async (req, res) => res.json(await core.listDepartments(req.hr!.company.id))));
