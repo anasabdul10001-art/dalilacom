@@ -926,6 +926,20 @@ DICT.en = {
   "staff.status.PAID": "Paid",
   "staff.status.VOID": "Cancelled",
   "staff.error": "Something went wrong, try again",
+  "rcpt.title": "Receiving the order",
+  "rcpt.pending": "Your order was delivered. Confirm that you received it, or reject it. If you do not answer before {date}, it counts as accepted.",
+  "rcpt.accept": "I received the order",
+  "rcpt.reject": "I did not receive it, or there is a problem",
+  "rcpt.reasonPrompt": "Write the reason for rejecting",
+  "rcpt.accepted": "You confirmed receiving the order",
+  "rcpt.acceptedAuto": "Accepted automatically after 10 days",
+  "rcpt.rejected": "You rejected the order",
+  "rcpt.reason": "Reason: {note}",
+  "rcpt.thanks": "Your answer was saved",
+  "rcpt.shop.PENDING": "Waiting for the customer to confirm receiving",
+  "rcpt.shop.ACCEPTED": "The customer confirmed receiving",
+  "rcpt.shop.ACCEPTED_AUTO": "Accepted automatically after 10 days",
+  "rcpt.shop.REJECTED": "The customer rejected the order",
 };
 
 // English phrase table for the web preview — gettext-style: each key is the Arabic text exactly as it appears on screen.

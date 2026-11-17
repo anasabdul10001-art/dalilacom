@@ -32,6 +32,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.dalilacom.app.ui.common.DocumentPrinter
 import kotlinx.coroutines.launch
@@ -113,6 +115,8 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
                     Text(AppStrings.get(R.string.fmt_saved, formatCents(order.memberDiscountCents)), style = MaterialTheme.typography.bodySmall)
                 }
 
+                ReceiptCard(order) { decision, note -> viewModel.answerReceipt(decision, note) }
+
                 val rated = order.rated
                 if (order.status == "DELIVERED" && rated != null && order.merchant != null) {
                     Spacer(Modifier.height(16.dp))
@@ -158,4 +162,38 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
             }
         }
     }
+}
+
+/** Receiving a delivered order: the customer accepts or rejects it (accepted by itself after 10 days); the shop only sees the state. */
+@Composable
+private fun ReceiptCard(order: com.dalilacom.app.data.network.OrderDto, onAnswer: (String, String?) -> Unit) {
+    val status = order.receiptStatus
+    if (order.status != "DELIVERED" || status == null) return
+    var rejecting by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf("") }
+    Spacer(Modifier.height(16.dp))
+    Text(stringResource(R.string.rcpt_title), style = MaterialTheme.typography.titleSmall)
+    val shopView = order.customer != null
+    if (shopView) {
+        val label = when {
+            status == "PENDING" -> R.string.rcpt_shop_pending
+            status == "ACCEPTED" && order.receiptAuto -> R.string.rcpt_shop_accepted_auto
+            status == "ACCEPTED" -> R.string.rcpt_shop_accepted
+            else -> R.string.rcpt_shop_rejected
+        }
+        Text(stringResource(label))
+    } else if (status == "PENDING") {
+        val due = (order.deliveredAt ?: "").take(10)
+        Text(stringResource(R.string.rcpt_pending, due), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (rejecting) {
+            OutlinedTextField(note, { note = it }, label = { Text(stringResource(R.string.rcpt_reason_prompt)) }, modifier = Modifier.fillMaxWidth())
+            Button(onClick = { onAnswer("REJECT", note.trim()) }, enabled = note.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.rcpt_reject)) }
+        } else {
+            Button(onClick = { onAnswer("ACCEPT", null) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.rcpt_accept)) }
+            OutlinedButton(onClick = { rejecting = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.rcpt_reject)) }
+        }
+    } else {
+        Text(stringResource(if (status == "ACCEPTED") (if (order.receiptAuto) R.string.rcpt_accepted_auto else R.string.rcpt_accepted) else R.string.rcpt_rejected))
+    }
+    if (!order.receiptNote.isNullOrBlank()) Text(stringResource(R.string.rcpt_reason, order.receiptNote), style = MaterialTheme.typography.bodySmall)
 }

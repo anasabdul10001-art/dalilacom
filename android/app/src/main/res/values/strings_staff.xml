@@ -79,4 +79,17 @@
     <string name="staff_hr_linked" formatted="true">مربوط بالرواتب: %1$s</string>
     <string name="staff_hr_pick">اختار موظف الرواتب اللي بتنضاف عمولاتو لكشف راتبو</string>
     <string name="staff_hr_none">بدون ربط</string>
+    <string name="rcpt_title">استلام الطلب</string>
+    <string name="rcpt_pending">انسلّم طلبك. أكّد إنك استلمتو أو ارفضو. إذا ما رديت قبل %1$s، بينحسب مقبول لحالو.</string>
+    <string name="rcpt_accept">استلمت الطلب</string>
+    <string name="rcpt_reject">ما استلمتو أو في مشكلة</string>
+    <string name="rcpt_reason_prompt">اكتب سبب الرفض</string>
+    <string name="rcpt_accepted">استلمت الطلب</string>
+    <string name="rcpt_accepted_auto">انقبل تلقائياً بعد 10 أيام</string>
+    <string name="rcpt_rejected">رفضت استلام الطلب</string>
+    <string name="rcpt_reason">السبب: %1$s</string>
+    <string name="rcpt_shop_pending">بانتظار تأكيد الزبون للاستلام</string>
+    <string name="rcpt_shop_accepted">الزبون أكّد الاستلام</string>
+    <string name="rcpt_shop_accepted_auto">انقبل تلقائياً بعد 10 أيام</string>
+    <string name="rcpt_shop_rejected">الزبون رفض الاستلام</string>
 </resources>

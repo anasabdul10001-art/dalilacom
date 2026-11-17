@@ -9,6 +9,7 @@ import { notify } from "../services/notification.service";
 import { availablePaymentMethods, settleOnCancel } from "../services/payment.service";
 import { recordDeliveredOrder } from "../services/accounting.service";
 import { accrueTeamOrderCommissions } from "../services/businessStaff.service";
+import { respondToReceipt } from "../services/orderReceipt.service";
 
 /** Customer-facing wording for each order state (section 13: "تغيير حالة الطلب"). */
 const STATUS_MESSAGE: Record<OrderStatus, string> = {
@@ -146,7 +147,7 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), route(
     }
     return tx.order.update({
       where: { id: order.id },
-      data: { status, cancelReason: status === "CANCELLED" ? cancelReason : undefined },
+      data: { status, cancelReason: status === "CANCELLED" ? cancelReason : undefined, ...(status === "DELIVERED" ? { deliveredAt: new Date(), receiptStatus: "PENDING" as const } : {}) },
     });
   });
 
@@ -169,6 +170,15 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), route(
 }));
 
 // Customer: cancel their own order before it ships (section 59.6)
+// Customer: accept or reject a delivered order (it counts as accepted by itself after 10 days)
+const receiptSchema = z.object({ decision: z.enum(["ACCEPT", "REJECT"]), note: z.string().trim().min(3).max(500).optional() })
+  .refine((v) => v.decision === "ACCEPT" || !!v.note, { message: "اكتب سبب الرفض", path: ["note"] });
+orderRouter.post("/:id/receipt", requireAuth, route(async (req, res) => {
+  const parsed = receiptSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await respondToReceipt(req.user!.id, req.params.id, parsed.data.decision, parsed.data.note));
+}));
+
 orderRouter.post("/:id/cancel", requireAuth, route(async (req, res) => {
   const order = await prisma.order.findUnique({ where: { id: req.params.id } });
   if (!order || order.userId !== req.user!.id) {

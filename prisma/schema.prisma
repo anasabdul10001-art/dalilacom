@@ -1283,6 +1283,12 @@ model CartItem {
 
 // One order per merchant — a multi-merchant cart splits into one of these per merchant at
 // checkout (section 59.5's "Sub-Orders"), each with its own status/tracking.
+enum ReceiptStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 model Order {
   id                  String      @id @default(uuid())
   orderNumber         String      @unique
@@ -1296,6 +1302,11 @@ model Order {
   shippingName        String? // the shipping method the customer chose (snapshot)
   shippingCents       Int         @default(0) // its cost, already inside totalCents
   driverStaffId       String? // the delivery person (a staff member) who took the order
+  deliveredAt         DateTime? // when the order was marked delivered
+  receiptStatus       ReceiptStatus? // the receiver's answer: PENDING until they accept or reject, accepted by itself after 10 days
+  receiptRespondedAt  DateTime?
+  receiptAuto         Boolean     @default(false) // true when it was accepted by the 10 days passing
+  receiptNote         String? // why the receiver rejected
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 

@@ -258,7 +258,7 @@ export async function driverPickup(userId: string, staffId: string, orderId: str
 /** The driver delivers: DELIVERED, booked in the owner accounting like any delivered order, with the driver commission on its net. */
 export async function driverDeliver(userId: string, staffId: string, orderId: string) {
   const { staff, merchantId } = await driverFor(userId, staffId);
-  const claimed = await prisma.order.updateMany({ where: { id: orderId, merchantId: merchantId ?? "none", status: "SHIPPED", OR: [{ driverStaffId: staff.id }, { driverStaffId: null }] }, data: { status: "DELIVERED", driverStaffId: staff.id } });
+  const claimed = await prisma.order.updateMany({ where: { id: orderId, merchantId: merchantId ?? "none", status: "SHIPPED", OR: [{ driverStaffId: staff.id }, { driverStaffId: null }] }, data: { status: "DELIVERED", driverStaffId: staff.id, deliveredAt: new Date(), receiptStatus: "PENDING" } });
   if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "الطلب مو بعهدتك أو انسلّم من قبل");
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
   await recordDeliveredOrder(orderId).catch((err) => console.error("Could not sync delivered order to accounting", err));

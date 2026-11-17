@@ -64,6 +64,15 @@ class OrderRepository(private val api: ApiService) {
         else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_9338c391))))
     }
 
+    /** The receiver accepts or rejects a delivered order (a rejection carries the reason). */
+    suspend fun receipt(id: String, decision: String, note: String?): Result<OrderDto> {
+        val response = safeApiCall { api.orderReceipt(id, com.dalilacom.app.data.network.ReceiptRequest(decision, note)) }
+            ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body)
+        else Result.failure(Exception(errorText(response, AppStrings.get(R.string.s_9338c391))))
+    }
+
     suspend fun cancel(id: String): Result<OrderDto> {
         val response = safeApiCall { api.cancelOrder(id) }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))

@@ -576,7 +576,14 @@ data class OrderDto(
     val customerRating: RatingDto? = null,
     val ratedCustomer: Boolean = false,
     val payment: PaymentDto? = null,
+    val deliveredAt: String? = null,
+    val receiptStatus: String? = null,
+    val receiptAuto: Boolean = false,
+    val receiptNote: String? = null,
 )
+
+@Serializable
+data class ReceiptRequest(val decision: String, val note: String? = null)
 
 @Serializable
 data class UpdateOrderStatusRequest(val status: String, val cancelReason: String? = null)

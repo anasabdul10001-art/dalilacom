@@ -1,5 +1,6 @@
 import { route } from "./lib/asyncRoute";
 import "dotenv/config";
+import { autoAcceptDueReceipts } from "./services/orderReceipt.service";
 import path from "path";
 import express, { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
@@ -271,6 +272,10 @@ if (process.env.NODE_ENV !== "test") {
   const appointmentReminderSweep = () => sendDueDoctorAppointmentReminders().catch((err) => console.error("Appointment reminder failed:", err instanceof Error ? err.message : err));
   setTimeout(appointmentReminderSweep, 20_000).unref();
   setInterval(appointmentReminderSweep, 5 * 60 * 1000).unref();
+  // delivered orders nobody answered for 10 days count as accepted
+  const receiptSweep = () => autoAcceptDueReceipts().catch((err) => console.error("Receipt auto-accept failed:", err instanceof Error ? err.message : err));
+  setTimeout(receiptSweep, 40_000).unref();
+  setInterval(receiptSweep, 60 * 60 * 1000).unref();
 }
 
 export { app };

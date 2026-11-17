@@ -589,6 +589,9 @@ export const en: LanguagePack = {
     "ما عندك صلاحية على التوصيل": "You don't have access to deliveries",
     "الطلب مو جاهز للاستلام أو أخدو موزّع ثاني": "The order is not ready to take, or another driver took it",
     "الطلب مو بعهدتك أو انسلّم من قبل": "The order is not in your hands, or it was already delivered",
+    "اكتب سبب الرفض": "Write the reason for rejecting",
+    "هالطلب ما بيحتاج تأكيد استلام": "This order does not need a receipt confirmation",
+    "تم الرد على هالطلب من قبل": "This order was already answered",
     "ما في راتب ثابت محدد لهالموظف": "No fixed salary is set for this staff member",
     // ---- human resources section ----
     "ما عندك صلاحية على قسم الموارد البشرية": "You don't have access to the human resources section",

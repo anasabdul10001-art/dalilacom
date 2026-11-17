@@ -79,4 +79,17 @@
     <string name="staff_hr_linked" formatted="true">Linked to payroll: %1$s</string>
     <string name="staff_hr_pick">Choose the payroll employee whose payslip gets these commissions</string>
     <string name="staff_hr_none">No link</string>
+    <string name="rcpt_title">Receiving the order</string>
+    <string name="rcpt_pending">Your order was delivered. Confirm that you received it, or reject it. If you do not answer before %1$s, it counts as accepted.</string>
+    <string name="rcpt_accept">I received the order</string>
+    <string name="rcpt_reject">I did not receive it, or there is a problem</string>
+    <string name="rcpt_reason_prompt">Write the reason for rejecting</string>
+    <string name="rcpt_accepted">You confirmed receiving the order</string>
+    <string name="rcpt_accepted_auto">Accepted automatically after 10 days</string>
+    <string name="rcpt_rejected">You rejected the order</string>
+    <string name="rcpt_reason">Reason: %1$s</string>
+    <string name="rcpt_shop_pending">Waiting for the customer to confirm receiving</string>
+    <string name="rcpt_shop_accepted">The customer confirmed receiving</string>
+    <string name="rcpt_shop_accepted_auto">Accepted automatically after 10 days</string>
+    <string name="rcpt_shop_rejected">The customer rejected the order</string>
 </resources>

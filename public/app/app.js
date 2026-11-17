@@ -5923,6 +5923,31 @@ async function addProductToCart(thenCart) {
 
 /* ================= ORDER DETAIL ================= */
 
+/** The receiver's answer for a delivered order: accept or reject, or accepted by itself after 10 days. The shop sees the state only. */
+function receiptHtml(ord) {
+  if (ord.status !== "DELIVERED" || !ord.receiptStatus) return "";
+  if (ord.customer) { // the shop's view
+    const key = ord.receiptStatus === "ACCEPTED" && ord.receiptAuto ? "ACCEPTED_AUTO" : ord.receiptStatus;
+    return `<div class="card"><div class="section-title">${esc(t("rcpt.title"))}</div><p>${esc(t("rcpt.shop." + key))}</p>${ord.receiptNote ? `<p class="muted">${esc(t("rcpt.reason", { note: ord.receiptNote }))}</p>` : ""}</div>`;
+  }
+  if (ord.receiptStatus === "PENDING") {
+    const due = new Date(new Date(ord.deliveredAt).getTime() + 10 * 86400000).toLocaleDateString();
+    return `<div class="card"><div class="section-title">${esc(t("rcpt.title"))}</div><p class="muted">${esc(t("rcpt.pending", { date: due }))}</p>
+      <div class="btn-row"><button class="btn" onclick="receiptAnswer('${ord.id}','ACCEPT',this)">${esc(t("rcpt.accept"))}</button><button class="btn outline" onclick="receiptAnswer('${ord.id}','REJECT',this)">${esc(t("rcpt.reject"))}</button></div></div>`;
+  }
+  const text = ord.receiptStatus === "ACCEPTED" ? (ord.receiptAuto ? t("rcpt.acceptedAuto") : t("rcpt.accepted")) : t("rcpt.rejected");
+  return `<div class="card"><div class="section-title">${esc(t("rcpt.title"))}</div><p>${esc(text)}</p>${ord.receiptNote ? `<p class="muted">${esc(t("rcpt.reason", { note: ord.receiptNote }))}</p>` : ""}</div>`;
+}
+async function receiptAnswer(orderId, decision, btn) {
+  let note;
+  if (decision === "REJECT") { note = await uiPrompt(t("rcpt.reasonPrompt"), ""); if (note === null || note.trim().length < 3) return; note = note.trim(); }
+  await uiBusy(btn, async () => {
+    const res = await api("POST", `/orders/${orderId}/receipt`, { decision, note });
+    if (!res.ok) return toast((res.data && res.data.error && res.data.error.message) || t("staff.error"));
+    toast(t("rcpt.thanks")); S._orderDetail = null; S._orders = null; render();
+  });
+}
+
 function screenOrderDetail() {
   if (!S._orderDetail || S._orderDetail.id !== S.params.orderId) {
     S._orderDetail = { id: S.params.orderId, loading: true };
@@ -5948,6 +5973,7 @@ function screenOrderDetail() {
     ${ord.shippingName ? `<div class="list-row" style="padding:6px 0"><span>🚚 ${esc(ord.shippingName)}</span><span class="price">${ord.shippingCents ? fmt(ord.shippingCents) : esc(t("ship.free"))}</span></div>` : ""}
     <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(ord.totalCents)}</span></div>
     ${ord.memberDiscountCents > 0 ? `<p class="muted">وفّرت ${fmt(ord.memberDiscountCents)} بسعر أعضاء دليلكم</p>` : ""}
+    ${receiptHtml(ord)}
     ${payLineHtml(ord.payment)}
     ${transferReferenceForm(ord)}
     ${ord.customer ? confirmCashButton(ord, false) : ""}

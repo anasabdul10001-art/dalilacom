@@ -85,6 +85,14 @@ class OrderDetailViewModel(
         }
     }
 
+    fun answerReceipt(decision: String, note: String?) {
+        viewModelScope.launch {
+            repository.receipt(orderId, decision, note)
+                .onSuccess { _uiState.value = _uiState.value.copy(order = repository.getOrder(orderId) ?: it, error = null) }
+                .onFailure { _uiState.value = _uiState.value.copy(error = it.message) }
+        }
+    }
+
     fun cancel() {
         _uiState.value = _uiState.value.copy(isCancelling = true, error = null)
         viewModelScope.launch {

@@ -690,6 +690,9 @@ interface ApiService {
     @PATCH("orders/{id}/status")
     suspend fun updateOrderStatus(@Path("id") id: String, @Body body: UpdateOrderStatusRequest): Response<OrderDto>
 
+    @POST("orders/{id}/receipt")
+    suspend fun orderReceipt(@Path("id") id: String, @Body body: ReceiptRequest): Response<OrderDto>
+
     @POST("orders/{id}/cancel")
     suspend fun cancelOrder(@Path("id") id: String): Response<OrderDto>
 

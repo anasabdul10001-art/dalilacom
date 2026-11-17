@@ -1,11 +1,13 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import crypto from "crypto";
 import request from "supertest";
 import { app } from "../src/server";
 import { prisma } from "../src/prisma";
 import { uniqueEmail } from "./helpers";
+import { seedCategories } from "../prisma/categories.seed";
 import { company as hrCompany, hire } from "./hrHelpers";
 
+beforeAll(async () => { await seedCategories(prisma); }, 120000);
 afterAll(async () => { await prisma.$disconnect(); });
 
 const password = "correct-horse-battery-staple";
