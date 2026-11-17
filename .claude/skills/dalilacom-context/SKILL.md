@@ -117,3 +117,5 @@ description: What DALILACOM (دليلكم) is, why it is built the way it is, th
 2. إذا المالك أخد قرار جديد (سعر، نص، قيد، حساب)، ضيفو للقسم المناسب فوق. إذا قرار قديم تغيّر، عدّلو بدل ما تكرّرو.
 3. ما تحط هون أسرار ولا بيانات شخصية للمالك (اسم كامل، رقم، عنوان، بريد، وثائق، مفاتيح). ولا الأرقام اللي بتتغيّر بسرعة (خلّيها بالكود أو لوحة الأدمن).
 4. اعمل commit بسيط (`الذاكرة: تحديث حالة المشروع`) وانشرو متل أي تعديل. الملف بالمستودع، فجلسات الكلاود بتشوفو.
+
+- 2026-11-17: video publishing blocked on channel identity. Browser 1 YouTube = channel "LamarConnect" (not DALILACOM), Browser 2 = empty personal channel "Anas Abdulaziz". Nothing uploaded. All videos will be colloquial only (no Fusha). First video ready: brand-kit/social/style-demo/dalilacom-shami-v1.mp4.
