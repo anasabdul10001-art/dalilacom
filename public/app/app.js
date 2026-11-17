@@ -2618,7 +2618,7 @@ function siteLanding(kind) {
     </div>`).join("");
   return `
     <section class="site-slider" data-i="0">${slides}<div class="site-dots">${[0, 1, 2].map((i) => `<button class="${i === 0 ? "on" : ""}" onclick="siteSlideTo(this,${i})" aria-label="${i + 1}"></button>`).join("")}</div></section>
-    ${["accounting", "responder", "hr"].includes(kind) ? `<div class="site-offer"><span aria-hidden="true">🎁</span><div><b>${esc(t("site.offerTitle"))}</b><small>${esc(t("site.offerSub"))}</small></div></div>` : ""}
+    ${!S._actAs && ["accounting", "responder", "hr"].includes(kind) ? `<div class="site-offer"><span aria-hidden="true">🎁</span><div><b>${esc(t("site.offerTitle"))}</b><small>${esc(t("site.offerSub"))}</small></div></div>` : ""}
     <div class="site-stats">${[1, 2, 3].map((n) => `<div><b>${esc(t(k + "st" + n + ".n"))}</b><span>${esc(t(k + "st" + n + ".l"))}</span></div>`).join("")}</div>
     <h2 class="site-h">${esc(t("site.featuresTitle"))}</h2>
     <div class="site-grid">${SITES[kind].features.map((icon, n) => `<div class="site-feat"><span>${icon}</span><b>${esc(t("sec." + kind + ".f" + (n + 1) + ".t"))}</b><p>${esc(t("sec." + kind + ".f" + (n + 1) + ".d"))}</p></div>`).join("")}</div>

@@ -16,12 +16,27 @@ export async function respondToReceipt(userId: string, orderId: string, decision
   });
   if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "تم الرد على هالطلب من قبل");
   if (decision === "REJECT") {
+    await reverseRejectedOrder(orderId, order.merchant.userId).catch((err) => console.error("Could not reverse a rejected order in accounting", err));
     const drivers = order.driverStaffId ? await prisma.businessStaff.findMany({ where: { id: order.driverStaffId, userId: { not: null } }, select: { userId: true } }) : [];
     for (const target of [order.merchant.userId, ...drivers.map((d) => d.userId as string)]) {
       await notify({ userId: target, type: "ORDER_STATUS", title: `الزبون رفض استلام الطلب ${order.orderNumber}`, body: note ?? "", data: { orderId, orderNumber: order.orderNumber, status: "RECEIPT_REJECTED" } }).catch(() => undefined);
     }
   }
   return prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+}
+
+/**
+ * A rejected delivery is not a sale: the sale income and goods cost booked at delivery are taken out, and the staff commissions
+ * on it that are still unpaid are voided. The delivery fee stays (it was spent) and commissions already paid stay (the owner decides).
+ */
+export async function reverseRejectedOrder(orderId: string, ownerId: string) {
+  await prisma.$transaction(async (tx) => {
+    await tx.accountingEntry.deleteMany({ where: { userId: ownerId, sourceKey: { in: [`store-order:${orderId}`, `store-order-cost:${orderId}`] } } });
+    await tx.businessStaffCommission.updateMany({
+      where: { ownerId, status: "ACCRUED", OR: [{ saleId: `order:${orderId}` }, { saleId: { startsWith: `team:order:${orderId}:` } }] },
+      data: { amountCents: 0, status: "VOID" },
+    });
+  });
 }
 
 /** Delivered orders nobody answered for RECEIPT_DAYS days count as accepted. */

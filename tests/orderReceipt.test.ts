@@ -5,6 +5,7 @@ import { prisma } from "../src/prisma";
 import { uniqueEmail } from "./helpers";
 import { seedCategories } from "../prisma/categories.seed";
 import { autoAcceptDueReceipts } from "../src/services/orderReceipt.service";
+import { recordDeliveredOrder } from "../src/services/accounting.service";
 
 beforeAll(async () => { await seedCategories(prisma); }, 120000);
 afterAll(async () => { await prisma.$disconnect(); });
@@ -59,6 +60,20 @@ describe("receipt of a delivered order", () => {
     expect(res.body.receiptStatus).toBe("REJECTED");
     expect(res.body.receiptNote).toBe("The box was empty");
     expect(await prisma.notification.count({ where: { userId: boss.id, type: "ORDER_STATUS", title: { contains: order.orderNumber } } })).toBeGreaterThan(0);
+  });
+
+  it("a rejection takes the sale income out and voids the unpaid commission", async () => {
+    const { boss, customer, order } = await shopWithOrder("DELIVERED");
+    await recordDeliveredOrder(order.id);
+    expect(await prisma.accountingEntry.count({ where: { userId: boss.id, sourceKey: `store-order:${order.id}` } })).toBe(1);
+    const staff = await prisma.businessStaff.create({ data: { ownerId: boss.id, name: "Driver", role: "DRIVER", status: "ACTIVE", salesRateBp: 500 } });
+    const make = (saleId: string, status: "ACCRUED" | "PAID") => prisma.businessStaffCommission.create({ data: { ownerId: boss.id, staffId: staff.id, saleId, baseCents: 1000, rateBp: 500, amountCents: 50, currency: "USD", status } });
+    const unpaid = await make(`order:${order.id}`, "ACCRUED");
+    const paid = await make(`team:order:${order.id}:${staff.id}`, "PAID");
+    expect((await request(app).post(`/orders/${order.id}/receipt`).set(customer.auth).send({ decision: "REJECT", note: "Wrong item" })).status).toBe(200);
+    expect(await prisma.accountingEntry.count({ where: { userId: boss.id, sourceKey: { in: [`store-order:${order.id}`, `store-order-cost:${order.id}`] } } })).toBe(0);
+    expect((await prisma.businessStaffCommission.findUniqueOrThrow({ where: { id: unpaid.id } })).status).toBe("VOID");
+    expect((await prisma.businessStaffCommission.findUniqueOrThrow({ where: { id: paid.id } })).status).toBe("PAID");
   });
 
   it("an order that is not delivered has nothing to answer", async () => {
