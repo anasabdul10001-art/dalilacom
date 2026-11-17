@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -343,6 +344,7 @@ private fun AttendanceTab(repo: com.dalilacom.app.data.repository.HrRepository, 
         if (uri != null) csv = runCatching { context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } }.getOrNull().orEmpty()
     }
     val from = java.time.LocalDate.now().minusDays(7).toString()
+    ShopCodeBox(repo, version, act)
     Box(stringResource(R.string.hr_dev_title)) {
         Text(stringResource(R.string.hr_dev_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Load(repo, "hr/devices", version) { data ->
@@ -569,14 +571,24 @@ private fun JobTab(repo: com.dalilacom.app.data.repository.HrRepository, ov: Jso
         return
     }
     val job = jobs.first(); val cur = job.s("currency").orEmpty()
+    // when the owner turned the shop code on, check-in/out asks for the code read from the screen at the shop
+    var punch by remember { mutableStateOf<String?>(null) }
+    var codeNeeded by remember { mutableStateOf(false) }
+    LaunchedEffect(version) { codeNeeded = ((repo.get("hr/me").getOrNull() as? JsonObject)?.get("attendanceCodeRequired") as? JsonPrimitive)?.booleanOrNull == true }
+    punch?.let { p ->
+        PunchCodeDialog(onDismiss = { punch = null }) { c ->
+            punch = null
+            act(if (p == "check-in") R.string.hr_job_inDone else R.string.hr_job_outDone, { repo.post("hr/me/$p", buildJsonObject { put("code", c) }) }, {})
+        }
+    }
     Load(repo, "hr/me/attendance", version) { data ->
         val open = data.rows().firstOrNull { it["checkOut"] == null || it["checkOut"] is kotlinx.serialization.json.JsonNull }
         Box(job.s("companyName").orEmpty()) {
             Text(job.s("position").orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (open != null) {
                 Text(stringResource(R.string.hr_job_in, open.s("checkIn").orEmpty().drop(11).take(5)))
-                Button(onClick = { act(R.string.hr_job_outDone, { repo.post("hr/me/check-out") }, {}) }) { Text(stringResource(R.string.hr_job_out)) }
-            } else Button(onClick = { act(R.string.hr_job_inDone, { repo.post("hr/me/check-in") }, {}) }) { Text(stringResource(R.string.hr_job_inBtn)) }
+                Button(onClick = { if (codeNeeded) punch = "check-out" else act(R.string.hr_job_outDone, { repo.post("hr/me/check-out") }, {}) }) { Text(stringResource(R.string.hr_job_out)) }
+            } else Button(onClick = { if (codeNeeded) punch = "check-in" else act(R.string.hr_job_inDone, { repo.post("hr/me/check-in") }, {}) }) { Text(stringResource(R.string.hr_job_inBtn)) }
         }
     }
     var typeId by remember { mutableStateOf("") }; var from by remember { mutableStateOf("") }; var to by remember { mutableStateOf("") }
@@ -680,4 +692,83 @@ private fun SalaryBox(repo: com.dalilacom.app.data.repository.HrRepository, emp:
         }
         OutlinedButton(onClick = onClose) { Text(stringResource(R.string.hr_sal_close)) }
     }
+}
+
+
+/* ---- the shop code: the owner shows a live code on a screen at the shop; employees read or scan it to check in/out ---- */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ShopCodeBox(repo: com.dalilacom.app.data.repository.HrRepository, version: Int, act: Act) {
+    var showScreen by remember { mutableStateOf(false) }
+    Load(repo, "hr/company", version) { data ->
+        val on = ((data as? JsonObject)?.get("attendanceCodeRequired") as? JsonPrimitive)?.booleanOrNull == true
+        Box(stringResource(R.string.hr_code_title)) {
+            Text(stringResource(R.string.hr_code_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusChip(stringResource(if (on) R.string.hr_code_on else R.string.hr_code_off), if (on) "ok" else "warn")
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { showScreen = true }) { Text(stringResource(R.string.hr_code_show)) }
+                OutlinedButton(onClick = { act(if (on) R.string.hr_code_turnedOff else R.string.hr_code_turnedOn, { repo.patch("hr/company", buildJsonObject { put("attendanceCodeRequired", !on) }) }, {}) }) {
+                    Text(stringResource(if (on) R.string.hr_code_turnOff else R.string.hr_code_turnOn))
+                }
+            }
+        }
+    }
+    if (showScreen) ShopCodeDialog(repo) { showScreen = false }
+}
+
+@Composable
+private fun ShopCodeDialog(repo: com.dalilacom.app.data.repository.HrRepository, onClose: () -> Unit) {
+    var code by remember { mutableStateOf("") }
+    var left by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val r = repo.get("hr/attendance-code").getOrNull() as? JsonObject
+            if (r == null) { onClose(); return@LaunchedEffect }
+            code = r.s("code").orEmpty()
+            val exp = runCatching { java.time.Instant.parse(r.s("expiresAt")).toEpochMilli() }.getOrDefault(System.currentTimeMillis() + 30_000)
+            while (System.currentTimeMillis() < exp) { left = ((exp - System.currentTimeMillis()) / 1000 + 1).toInt(); kotlinx.coroutines.delay(1000) }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(stringResource(R.string.hr_code_screenTitle)) },
+        text = {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (code.isEmpty()) SkeletonList(1) else {
+                    com.dalilacom.app.ui.common.QrCodeImage("dlc-att:$code", 512, Modifier.size(220.dp))
+                    Text(code, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 8.sp)
+                    Text(stringResource(R.string.hr_code_left, left), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.account_cancel)) } },
+    )
+}
+
+@Composable
+private fun PunchCodeDialog(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var text by remember { mutableStateOf("") }
+    val scanLauncher = rememberLauncherForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
+        result.contents?.let { text = it.filter(Char::isDigit).takeLast(6) }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) scanLauncher.launch(com.dalilacom.app.ui.common.qrScanOptions())
+    }
+    fun scan() {
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted) scanLauncher.launch(com.dalilacom.app.ui.common.qrScanOptions()) else permissionLauncher.launch(android.Manifest.permission.CAMERA)
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.hr_code_ask)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Field(text, { text = it.filter(Char::isDigit).take(6) }, stringResource(R.string.hr_code_title))
+                OutlinedButton(onClick = { scan() }) { Text(stringResource(R.string.hr_code_scan)) }
+            }
+        },
+        confirmButton = { Button(enabled = text.length == 6, onClick = { onSubmit(text) }) { Text(stringResource(R.string.hr_code_ok)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.account_cancel)) } },
+    )
 }

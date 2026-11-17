@@ -135,7 +135,13 @@ function hrAttendance() {
   const devs = hrData("devices", "/hr/devices");
   const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const recs = hrData("attrec", "/hr/attendance?from=" + from);
-  if (devs === null || recs === null) return skeleton("list", 3);
+  const co = hrData("company", "/hr/company");
+  if (devs === null || recs === null || co === null) return skeleton("list", 3);
+  const codeOn = !!(co && co.attendanceCodeRequired);
+  const codeCard = `<div class="panel-title">${esc(t("hr.code.title"))}</div><p class="muted">${esc(t("hr.code.intro"))}</p>
+    <div class="card"><div class="chips">${uiChip(t(codeOn ? "hr.code.on" : "hr.code.off"), codeOn ? "ok" : "warn")}</div>
+      <div class="btn-row"><button class="btn small" onclick="hrCodeScreen()">${esc(t("hr.code.show"))}</button>
+        <button class="btn small soft" onclick="hrCodeToggle(this,${codeOn ? "false" : "true"})">${esc(t(codeOn ? "hr.code.turnOff" : "hr.code.turnOn"))}</button></div></div>`;
   const when = (v) => (v ? `<bdi>${esc(new Date(v).toLocaleString())}</bdi>` : "—");
   const keyCard = h.newKey ? `<div class="card" style="border:2px solid var(--brand, #f60)"><strong>${esc(t("hr.dev.keyTitle", { n: h.newKey.name }))}</strong>
       <p class="muted">${esc(t("hr.dev.keyNote"))}</p>
@@ -153,7 +159,7 @@ function hrAttendance() {
       <div class="item-title">${esc(hrName(r.employee))}</div>
       <div class="item-sub">${when(r.checkIn)} → ${r.checkOut ? when(r.checkOut) : esc(t("hr.att.open"))}</div>
       <div class="chips">${uiChip(t("hr.att.src." + r.source), r.source === "DEVICE" ? "info" : "")}</div></div></div>`).join("");
-  return `${keyCard}<div class="panel-title">${esc(t("hr.dev.title"))}</div><p class="muted">${esc(t("hr.dev.intro"))}</p>${devList}
+  return `${keyCard}${codeCard}<div class="panel-title" style="margin-top:16px">${esc(t("hr.dev.title"))}</div><p class="muted">${esc(t("hr.dev.intro"))}</p>${devList}
     <div class="card"><div class="field"><label>${esc(t("hr.dev.name"))}</label><input id="hr-dv-name" maxlength="80" /></div>
       <div class="field"><label>${esc(t("hr.dev.kind"))}</label><select id="hr-dv-kind">${HR_DEV_KINDS.map((k) => `<option value="${k}">${esc(t("hr.dev.kind." + k))}</option>`).join("")}</select></div>
       <button class="btn soft" onclick="hrDevAdd(this)">${esc(t("hr.dev.add"))}</button></div>
@@ -169,6 +175,40 @@ async function hrDevAdd(btn) {
   if (!name) return toast(t("hr.dev.name"));
   const data = await uiBusy(btn, () => hrDo("POST", "/hr/devices", { name, kind: hrVal("hr-dv-kind") || "FINGERPRINT" }, "hr.dev.added"));
   if (data && data.key) { hrState().newKey = { name: data.name, key: data.key }; render(); }
+}
+async function hrCodeToggle(btn, on) {
+  const h = hrState();
+  const data = await uiBusy(btn, () => hrDo("PATCH", "/hr/company", { attendanceCodeRequired: on }, on ? "hr.code.turnedOn" : "hr.code.turnedOff"));
+  if (data) { delete h.data.company; render(); }
+}
+// a full-screen page for a screen at the shop: the live code as numbers and a QR, refreshed every 30 s
+let hrCodeTimer = null;
+async function hrCodeScreen() {
+  const box = document.createElement("div");
+  box.className = "ui-ask";
+  box.style.cssText = "background:#fff;flex-direction:column;gap:18px;text-align:center";
+  box.innerHTML = `<div style="font-weight:800;font-size:22px">${esc(t("hr.code.screenTitle"))}</div><div id="hr-code-qr" style="display:flex;justify-content:center"></div>
+    <div id="hr-code-num" dir="ltr" style="font-size:64px;font-weight:900;letter-spacing:10px">······</div><div id="hr-code-left" class="muted"></div>
+    <button class="btn small outline" id="hr-code-close">${esc(t("adr.cancel"))}</button>`;
+  document.body.appendChild(box);
+  let expires = 0, alive = true;
+  const close = () => { alive = false; clearTimeout(hrCodeTimer); box.remove(); };
+  box.querySelector("#hr-code-close").onclick = close;
+  const tick = async () => {
+    if (!alive) return;
+    if (Date.now() >= expires) {
+      const res = await api("GET", "/hr/attendance-code");
+      if (!alive) return;
+      if (!res.ok) { hrErr(res); return close(); }
+      expires = new Date(res.data.expiresAt).getTime();
+      box.querySelector("#hr-code-num").textContent = res.data.code;
+      const qr = box.querySelector("#hr-code-qr"); qr.innerHTML = "";
+      if (window.QRCode) new QRCode(qr, { text: "dlc-att:" + res.data.code, width: 240, height: 240, colorDark: "#1c1413", colorLight: "#ffffff" });
+    }
+    box.querySelector("#hr-code-left").textContent = t("hr.code.left", { n: Math.max(0, Math.ceil((expires - Date.now()) / 1000)) });
+    hrCodeTimer = setTimeout(tick, 1000);
+  };
+  tick();
 }
 async function hrDevToggle(btn, id, active) { await uiBusy(btn, () => hrDo("PATCH", `/hr/devices/${id}`, { active }, "hr.dev.saved")); }
 async function hrDevRotate(btn, id) {
@@ -374,8 +414,8 @@ function hrJob() {
   const slipList = Array.isArray(slips) ? slips : [];
   return `${invHtml}<div class="card" style="text-align:center">
       <div class="panel-title" style="justify-content:center">${esc(ov.jobs[0].companyName)}</div><div class="item-sub">${esc(ov.jobs[0].position || "")}</div>
-      ${openIn ? `<p><span class="pulse-dot" style="display:inline-block;margin-inline-end:8px"></span>${esc(t("hr.job.in", { t: new Date(openIn.checkIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }))}</p><button class="btn" onclick="hrJobDo(this,'POST','/hr/me/check-out','hr.job.outDone')">${esc(t("hr.job.out"))}</button>`
-        : `<button class="btn" style="margin-top:12px" onclick="hrJobDo(this,'POST','/hr/me/check-in','hr.job.inDone')">${esc(t("hr.job.inBtn"))}</button>`}</div>
+      ${openIn ? `<p><span class="pulse-dot" style="display:inline-block;margin-inline-end:8px"></span>${esc(t("hr.job.in", { t: new Date(openIn.checkIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }))}</p><button class="btn" onclick="hrJobPunch(this,'out')">${esc(t("hr.job.out"))}</button>`
+        : `<button class="btn" style="margin-top:12px" onclick="hrJobPunch(this,'in')">${esc(t("hr.job.inBtn"))}</button>`}</div>
     <div class="panel-title">${esc(t("hr.job.leave"))}</div>
     ${balances.length ? `<div class="tiles">${balances.map((b) => uiTile((b.leaveType && b.leaveType.name) || "", t("hr.leave.days", { n: b.balanceDays }), "income")).join("")}</div>
       <div class="card"><div class="field"><label>${esc(t("hr.job.leaveType"))}</label><select id="hr-lr-type">${balances.map((b) => `<option value="${b.leaveTypeId || (b.leaveType && b.leaveType.id)}">${esc((b.leaveType && b.leaveType.name) || "")}</option>`).join("")}</select></div>
@@ -388,6 +428,21 @@ function hrJob() {
       </div><div class="item-end in">${esc(hrMoney(s.netPay, cur))}</div></div>`).join("")}`;
 }
 async function hrJobDo(btn, method, path, doneKey) { await uiBusy(btn, () => hrDo(method, path, undefined, doneKey)); }
+// check in/out: if the owner turned the shop code on, ask for the code read from the screen at the shop and send it again
+async function hrJobPunch(btn, kind) {
+  const path = kind === "in" ? "/hr/me/check-in" : "/hr/me/check-out", doneKey = kind === "in" ? "hr.job.inDone" : "hr.job.outDone";
+  await uiBusy(btn, async () => {
+    let res = await api("POST", path, {});
+    if (!res.ok && res.data && res.data.error && res.data.error.code === "ATTENDANCE_CODE_REQUIRED") {
+      const code = await uiPrompt(t("hr.code.ask"), "", { numeric: true });
+      if (code === null) return;
+      res = await api("POST", path, { code: code.trim() });
+    }
+    if (!res.ok) return hrErr(res);
+    toast(t(doneKey));
+    hrReload();
+  });
+}
 async function hrAcceptCode(btn) {
   const code = hrVal("hr-code").trim();
   if (code.length < 10) return toast(t("hr.job.haveCode"));

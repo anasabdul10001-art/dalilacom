@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { HrCompany, HrEmployee, HrLeaveStatus, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { ApiError } from "../lib/apiError";
@@ -48,8 +49,27 @@ async function tell(userIds: (string | null)[], title: string, body: string | un
 
 // ---------------------------------------------------------------- attendance
 
-export async function checkIn(me: HrMe) {
+// ---- the shop code: 6 digits from the company secret, changes every 30 s; the previous one is still accepted so a scan at the edge works
+export const CODE_STEP_SECONDS = 30;
+const codeAt = (secret: string, step: number) => {
+  const h = crypto.createHmac("sha256", secret).update(String(step)).digest();
+  return String(h.readUInt32BE(0) % 1_000_000).padStart(6, "0");
+};
+export function currentAttendanceCode(company: { attendanceSecret: string }, now = Date.now()) {
+  const step = Math.floor(now / 1000 / CODE_STEP_SECONDS);
+  return { code: codeAt(company.attendanceSecret, step), expiresAt: new Date((step + 1) * CODE_STEP_SECONDS * 1000).toISOString(), stepSeconds: CODE_STEP_SECONDS };
+}
+function assertShopCode(company: { attendanceCodeRequired: boolean; attendanceSecret: string }, code: string | undefined, now = Date.now()) {
+  if (!company.attendanceCodeRequired) return;
+  const digits = (code ?? "").replace(/\D/g, "");
+  const step = Math.floor(now / 1000 / CODE_STEP_SECONDS);
+  const ok = digits.length === 6 && [step, step - 1].some((st) => crypto.timingSafeEqual(Buffer.from(codeAt(company.attendanceSecret, st)), Buffer.from(digits)));
+  if (!ok) throw new ApiError(403, "ATTENDANCE_CODE_REQUIRED", "اقرأ الكود من شاشة المحل وسجّل بيه. الكود بيتغيّر كل نص دقيقة.");
+}
+
+export async function checkIn(me: HrMe, code?: string) {
   await assertCompanyActive(me.company);
+  assertShopCode(me.company, code);
   if (me.employee.employmentStatus === "TERMINATED") throw conflict("الموظف منتهية خدمته");
   try {
     return await prisma.hrAttendance.create({ data: { companyId: me.company.id, employeeId: me.employee.id, checkIn: new Date(), source: "MOBILE" } });
@@ -59,8 +79,9 @@ export async function checkIn(me: HrMe) {
   }
 }
 
-export async function checkOut(me: HrMe) {
+export async function checkOut(me: HrMe, code?: string) {
   await assertCompanyActive(me.company);
+  assertShopCode(me.company, code);
   // closed only while it is still open at this very moment
   const open = await prisma.hrAttendance.findFirst({ where: { employeeId: me.employee.id, checkOut: null }, orderBy: { checkIn: "desc" } });
   if (!open) throw conflict("ما في تسجيل حضور مفتوح");

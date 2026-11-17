@@ -56,7 +56,10 @@ export async function createCompany(userId: string, input: { name: string; curre
   }
 }
 
-export async function updateCompany(actor: HrActor, input: { name?: string; timezone?: string; workingDays?: string[] }) {
+/** The company as the apps see it: never the secret the shop code is made from. */
+export const publicCompany = <C extends { attendanceSecret: string }>({ attendanceSecret: _secret, ...rest }: C) => rest;
+
+export async function updateCompany(actor: HrActor, input: { name?: string; timezone?: string; workingDays?: string[]; attendanceCodeRequired?: boolean }) {
   return prisma.hrCompany.update({ where: { id: actor.company.id }, data: input });
 }
 

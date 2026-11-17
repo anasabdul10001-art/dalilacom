@@ -45,4 +45,18 @@
     <string name="hr_att_src_IMPORT">من ملف</string>
     <string name="hr_dev_copy">نسخ المفتاح</string>
     <string name="hr_imp_pick">اختيار ملف</string>
+    <string name="hr_code_title">كود الحضور من شاشة المحل</string>
+    <string name="hr_code_intro">شغّل الكود: الموظف ما بيسجّل حضوره أو انصرافو إلا إذا قرأ كود بيتغيّر كل نص دقيقة من شاشة بالمحل. بدون جهاز بصمة.</string>
+    <string name="hr_code_on">الكود شغّال</string>
+    <string name="hr_code_off">الكود مطفي</string>
+    <string name="hr_code_show">اعرض شاشة الكود</string>
+    <string name="hr_code_turnOn">شغّل الكود</string>
+    <string name="hr_code_turnOff">طفّي الكود</string>
+    <string name="hr_code_turnedOn">انشغّل كود الحضور</string>
+    <string name="hr_code_turnedOff">انطفى كود الحضور</string>
+    <string name="hr_code_screenTitle">كود الحضور: اقرأو من تطبيقك</string>
+    <string name="hr_code_left">بيتغيّر بعد %1$d ثانية</string>
+    <string name="hr_code_ask">اكتب الكود الظاهر على شاشة المحل أو امسحو</string>
+    <string name="hr_code_scan">امسح الكود</string>
+    <string name="hr_code_ok">سجّل</string>
 </resources>

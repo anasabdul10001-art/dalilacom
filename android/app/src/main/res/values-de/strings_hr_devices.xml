@@ -45,4 +45,18 @@
     <string name="hr_att_src_IMPORT">From a file</string>
     <string name="hr_dev_copy">Copy key</string>
     <string name="hr_imp_pick">Choose a file</string>
+    <string name="hr_code_title">Attendance code from the shop screen</string>
+    <string name="hr_code_intro">Turn it on: employees can only check in or out by reading a code that changes every 30 seconds from a screen at the shop. No fingerprint device needed.</string>
+    <string name="hr_code_on">Code is on</string>
+    <string name="hr_code_off">Code is off</string>
+    <string name="hr_code_show">Show the code screen</string>
+    <string name="hr_code_turnOn">Turn the code on</string>
+    <string name="hr_code_turnOff">Turn the code off</string>
+    <string name="hr_code_turnedOn">Attendance code turned on</string>
+    <string name="hr_code_turnedOff">Attendance code turned off</string>
+    <string name="hr_code_screenTitle">Attendance code: read it in your app</string>
+    <string name="hr_code_left">Changes in %1$d s</string>
+    <string name="hr_code_ask">Type the code shown on the shop screen, or scan it</string>
+    <string name="hr_code_scan">Scan the code</string>
+    <string name="hr_code_ok">Confirm</string>
 </resources>

@@ -2840,6 +2840,9 @@ model HrCompany {
   currency    String // 3-letter code; every amount of the company is in it
   timezone    String   @default("UTC")
   workingDays Json? // e.g. ["mon","tue","wed","thu","fri"]
+  // When on, an employee can only check in/out by reading the live code from the shop screen (rotates every 30 s).
+  attendanceCodeRequired Boolean @default(false)
+  attendanceSecret       String  @default(dbgenerated("md5(random()::text || clock_timestamp()::text)"))
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

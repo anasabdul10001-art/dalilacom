@@ -64,9 +64,10 @@ const statusQuery = (req: { query: Record<string, unknown> }) => (["PENDING_MANA
 const advanceStatusQuery = (req: { query: Record<string, unknown> }) => (["PENDING_MANAGER", "PENDING_HR", "APPROVED", "REJECTED", "REPAID"].includes(String(req.query.status)) ? (req.query.status as "APPROVED") : undefined);
 const yearQuery = (req: { query: Record<string, unknown> }) => (Number(req.query.year) >= 2000 && Number(req.query.year) <= 2100 ? Number(req.query.year) : new Date().getUTCFullYear());
 
-me.get("/", route(async (req, res) => res.json({ companyId: req.hrMe!.company.id, companyName: req.hrMe!.company.name, currency: req.hrMe!.company.currency, employee: { id: req.hrMe!.employee.id, role: req.hrMe!.employee.role, position: req.hrMe!.employee.position, status: req.hrMe!.employee.employmentStatus } })));
-me.post("/check-in", route(async (req, res) => res.status(201).json(await time.checkIn(req.hrMe!))));
-me.post("/check-out", route(async (req, res) => res.json(await time.checkOut(req.hrMe!))));
+me.get("/", route(async (req, res) => res.json({ companyId: req.hrMe!.company.id, companyName: req.hrMe!.company.name, currency: req.hrMe!.company.currency, attendanceCodeRequired: req.hrMe!.company.attendanceCodeRequired, employee: { id: req.hrMe!.employee.id, role: req.hrMe!.employee.role, position: req.hrMe!.employee.position, status: req.hrMe!.employee.employmentStatus } })));
+const codeBody = (req: { body?: unknown }) => (typeof (req.body as { code?: unknown } | undefined)?.code === "string" ? (req.body as { code: string }).code : undefined);
+me.post("/check-in", route(async (req, res) => res.status(201).json(await time.checkIn(req.hrMe!, codeBody(req)))));
+me.post("/check-out", route(async (req, res) => res.json(await time.checkOut(req.hrMe!, codeBody(req)))));
 me.get("/attendance", route(async (req, res) => res.json(await time.myAttendance(req.hrMe!, periodQuery(req)))));
 me.get("/leave-balances", route(async (req, res) => res.json(await time.listBalances(req.hrMe!.company.id, req.hrMe!.employee.id, yearQuery(req)))));
 me.get("/leave-requests", route(async (req, res) => res.json(await time.myLeaveRequests(req.hrMe!))));
@@ -101,18 +102,20 @@ team.post("/leave-requests/:id/decision", route(async (req, res) => {
 hrRouter.post("/company", route(async (req, res) => {
   const parsed = z.object({ name: z.string().trim().min(2).max(120), currency: currencyCode.optional() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  res.status(201).json(await core.createCompany(req.user!.id, parsed.data));
+  res.status(201).json(core.publicCompany(await core.createCompany(req.user!.id, parsed.data)));
 }));
 
 // ---- everything below is for the owner and the HR people, and needs the owner's active plan
 const manage = Router();
 hrRouter.use(route(async (req, res, next) => requireHrManager(req, res, next)), manage);
 
-manage.get("/company", route(async (req, res) => res.json(req.hr!.company)));
+manage.get("/company", route(async (req, res) => res.json(core.publicCompany(req.hr!.company))));
+// the live shop code the employees read (shown on a screen at the shop)
+manage.get("/attendance-code", route(async (req, res) => res.json(time.currentAttendanceCode(req.hr!.company))));
 manage.patch("/company", route(async (req, res) => {
-  const parsed = z.object({ name: z.string().trim().min(2).max(120).optional(), timezone: z.string().trim().min(1).max(60).optional(), workingDays: z.array(z.enum(["sun", "mon", "tue", "wed", "thu", "fri", "sat"])).min(1).optional() }).safeParse(req.body);
+  const parsed = z.object({ name: z.string().trim().min(2).max(120).optional(), timezone: z.string().trim().min(1).max(60).optional(), workingDays: z.array(z.enum(["sun", "mon", "tue", "wed", "thu", "fri", "sat"])).min(1).optional(), attendanceCodeRequired: z.boolean().optional() }).safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  res.json(await core.updateCompany(req.hr!, parsed.data));
+  res.json(core.publicCompany(await core.updateCompany(req.hr!, parsed.data)));
 }));
 
 manage.get("/departments", route(async (req, res) => res.json(await core.listDepartments(req.hr!.company.id))));

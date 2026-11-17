@@ -153,3 +153,35 @@ describe("HR leave", () => {
     expect((await request(app).post("/hr/leave-types").set(o.auth).send({ name: "x", defaultBalance: -1 })).status).toBe(400);
   });
 });
+
+describe("HR attendance with the shop code", () => {
+  it("when the owner turns it on, check-in/out needs the live code; a wrong or old code is refused; the secret never leaves", async () => {
+    const o = await company("hrcode");
+    const w = await linkedEmployee(o, "hrcodew");
+    // off by default: works as before
+    expect((await request(app).get("/hr/me").set(w.auth)).body.attendanceCodeRequired).toBe(false);
+    expect((await request(app).post("/hr/me/check-in").set(w.auth)).status).toBe(201);
+    expect((await request(app).post("/hr/me/check-out").set(w.auth)).status).toBe(200);
+    // the employee cannot turn it on or read the code
+    expect((await request(app).patch("/hr/company").set(w.auth).send({ attendanceCodeRequired: true })).status).toBeGreaterThanOrEqual(403);
+    expect((await request(app).get("/hr/attendance-code").set(w.auth)).status).toBeGreaterThanOrEqual(403);
+    const on = await request(app).patch("/hr/company").set(o.auth).send({ attendanceCodeRequired: true });
+    expect(on.body.attendanceCodeRequired).toBe(true);
+    expect(on.body.attendanceSecret).toBeUndefined();
+    expect((await request(app).get("/hr/company").set(o.auth)).body.attendanceSecret).toBeUndefined();
+    expect((await request(app).get("/hr/me").set(w.auth)).body.attendanceCodeRequired).toBe(true);
+    // without / with a wrong code: refused
+    const none = await request(app).post("/hr/me/check-in").set(w.auth);
+    expect(none.status).toBe(403);
+    expect(none.body.error.code).toBe("ATTENDANCE_CODE_REQUIRED");
+    expect((await request(app).post("/hr/me/check-in").set(w.auth).send({ code: "000000" })).status).toBe(403);
+    // the owner's screen shows the live code; using it works (the scan text "dlc-att:123456" too)
+    const live = (await request(app).get("/hr/attendance-code").set(o.auth)).body as { code: string; stepSeconds: number };
+    expect(live.code).toMatch(/^\d{6}$/);
+    expect(live.stepSeconds).toBe(30);
+    expect((await request(app).post("/hr/me/check-in").set(w.auth).send({ code: `dlc-att:${live.code}` })).status).toBe(201);
+    expect((await request(app).post("/hr/me/check-out").set(w.auth)).status).toBe(403); // out needs it too
+    const live2 = (await request(app).get("/hr/attendance-code").set(o.auth)).body as { code: string };
+    expect((await request(app).post("/hr/me/check-out").set(w.auth).send({ code: live2.code })).status).toBe(200);
+  });
+});
