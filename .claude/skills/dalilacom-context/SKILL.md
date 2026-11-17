@@ -119,3 +119,4 @@ description: What DALILACOM (دليلكم) is, why it is built the way it is, th
 4. اعمل commit بسيط (`الذاكرة: تحديث حالة المشروع`) وانشرو متل أي تعديل. الملف بالمستودع، فجلسات الكلاود بتشوفو.
 
 - 2026-11-17: video publishing blocked on channel identity. Browser 1 YouTube = channel "LamarConnect" (not DALILACOM), Browser 2 = empty personal channel "Anas Abdulaziz". Nothing uploaded. All videos will be colloquial only (no Fusha). First video ready: brand-kit/social/style-demo/dalilacom-shami-v1.mp4.
+- DALILACOM YouTube channel (from dalilacom.com footer): https://www.youtube.com/channel/UCd1KpNVkv1Lrw4cAW1Rb8gw . Browser 1 is NOT authorized for its Studio (2026-11-17); needs the dalilaconsy account signed in.
