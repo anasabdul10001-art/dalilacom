@@ -2423,6 +2423,7 @@ function tabCart() {
     ${items.length > 0 ? `
       ${(c.shipping || []).filter((x) => x.methods.length).map((x) => shipChoiceHtml(x, items)).join("")}
       ${(c.payments || []).map((x) => payChoiceHtml(x, items)).join("")}
+      ${needsAddress(c) ? addressFormHtml() : ""}
       <div class="divider"></div>
       ${shipTotal(c) > 0 ? `<div class="title-line"><span>${esc(t("ship.title"))}</span><span class="price">${fmt(shipTotal(c))}</span></div>` : ""}
       <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(c.totalCents + shipTotal(c))}</span></div>
@@ -2432,6 +2433,31 @@ function tabCart() {
     ` : ""}
     ${errorBanner()}
   `;
+}
+
+/** True unless every shop in the cart was chosen as a pickup: then the order needs an address to go to. */
+function needsAddress(c) {
+  const pick = S._shipPick || {};
+  const shops = [...new Set((c.items || []).map((i) => i.product.merchant.id))];
+  return shops.some((id) => {
+    const group = (c.shipping || []).find((x) => x.merchantId === id);
+    const m = group && group.methods.find((mm) => mm.id === pick[id]);
+    return !m || m.kind !== "PICKUP";
+  });
+}
+function addrGet() {
+  if (!S._addr) { try { S._addr = JSON.parse(localStorage.getItem("dlk-addr") || "null"); } catch (e) { S._addr = null; } }
+  return S._addr || { text: "", phone: "" };
+}
+function addrSet(k, v) {
+  S._addr = Object.assign(addrGet(), { [k]: v });
+  try { localStorage.setItem("dlk-addr", JSON.stringify(S._addr)); } catch (e) { /* only a convenience */ }
+}
+function addressFormHtml() {
+  const a = addrGet();
+  return `<div class="card"><div class="section-title" style="margin-top:0">📍 ${esc(t("addr.title"))}</div>
+    <textarea rows="2" placeholder="${esc(t("addr.ph"))}" oninput="addrSet('text',this.value)">${esc(a.text)}</textarea>
+    <input type="tel" inputmode="tel" placeholder="${esc(t("addr.phone"))}" value="${esc(a.phone)}" oninput="addrSet('phone',this.value)" style="margin-top:8px"></div>`;
 }
 
 /** What the chosen shipping methods cost, all shops together. */
@@ -2514,12 +2540,15 @@ async function doCheckout() {
   const pick = S._shipPick || {};
   const missing = ((S._cart && S._cart.shipping) || []).some((x) => x.methods.length && !x.methods.some((m) => m.id === pick[x.merchantId]));
   if (missing) { S.error = t("ship.pickAll"); return render(); }
+  const addr = addrGet();
+  const withAddress = needsAddress(S._cart || {});
+  if (withAddress && (addr.text.trim().length < 5 || addr.phone.trim().length < 6)) { S.error = t("addr.need"); return render(); }
   const shipping = {};
   ((S._cart && S._cart.shipping) || []).forEach((x) => { if (pick[x.merchantId]) shipping[x.merchantId] = pick[x.merchantId]; });
   S.busy = true; render();
   const paymentMethods = {};
   ((S._cart && S._cart.payments) || []).forEach((x) => { paymentMethods[x.merchantId] = (S._paymentPick || {})[x.merchantId] || "COD"; });
-  const { ok, data } = await api("POST", "/cart/checkout", { shipping, paymentMethods });
+  const { ok, data } = await api("POST", "/cart/checkout", withAddress ? { shipping, paymentMethods, address: addr.text.trim(), phone: addr.phone.trim() } : { shipping, paymentMethods });
   S.busy = false;
   if (ok) {
     S._cart = null;
@@ -5982,6 +6011,7 @@ function screenOrderDetail() {
         <span class="price">${fmt(it.unitPriceCents * it.quantity)}</span>
       </div>`).join("")}
     <div class="divider"></div>
+    ${orderDeliveryHtml(ord)}
     ${ord.shippingName ? `<div class="list-row" style="padding:6px 0"><span>🚚 ${esc(ord.shippingName)}</span><span class="price">${ord.shippingCents ? fmt(ord.shippingCents) : esc(t("ship.free"))}</span></div>` : ""}
     <div class="title-line"><strong>الإجمالي</strong><span class="price" style="color:var(--primary)">${fmt(ord.totalCents)}</span></div>
     ${ord.memberDiscountCents > 0 ? `<p class="muted">وفّرت ${fmt(ord.memberDiscountCents)} بسعر أعضاء دليلكم</p>` : ""}
@@ -6004,6 +6034,14 @@ function screenOrderDetail() {
     ${canCancel ? `<div style="height:16px"></div><button class="btn danger" ${S.busy ? "disabled" : ""} onclick="cancelOrder()">إلغاء الطلب</button>` : ""}
     ${errorBanner()}
   `;
+}
+
+/** Where the order goes (or that the customer collects it), the phone, and the outside courier with its tracking number. */
+function orderDeliveryHtml(ord) {
+  const line = (k, v) => `<div class="list-row" style="padding:4px 0"><span class="muted">${esc(t(k))}</span><span>${esc(v)}</span></div>`;
+  if (ord.shippingKind === "PICKUP") return `<p class="muted">🏪 ${esc(t("ship.kind.PICKUP"))}</p>`;
+  return (ord.deliveryAddress ? line("ord.addr", ord.deliveryAddress) : "") + (ord.deliveryPhone ? line("ord.phone", ord.deliveryPhone) : "")
+    + (ord.courierCompany ? line("ord.courier", ord.courierCompany) : "") + (ord.trackingNumber ? line("ord.tracking", ord.trackingNumber) : "");
 }
 
 async function loadOrderDetail(id) {
@@ -7903,7 +7941,7 @@ async function openShipping() {
   go("shippingMethods");
   const { ok, data } = await api("GET", "/merchant/shipping-methods");
   S._ship.loading = false;
-  S._ship.rows = ok && data.length ? data.map((m) => ({ name: m.name, cost: String(m.costCents / 100) })) : [{ name: "", cost: "" }];
+  S._ship.rows = ok && data.length ? data.map((m) => ({ kind: m.kind || "DELIVERY", name: m.name, cost: String(m.costCents / 100) })) : [{ kind: "DELIVERY", name: "", cost: "" }];
   render();
 }
 
@@ -7921,7 +7959,7 @@ function screenShipping() {
   const f = S._ship;
   if (f.loading) return `${backRow()}<h1 class="screen-title">${esc(t("ship.title"))}</h1>${spinner()}`;
   const cur = S.currency === "USD" ? "$" : S.currency === "EUR" ? "€" : S.currency || "";
-  const presets = ["ship.pickup", "ship.local", "ship.country"];
+  const presets = ["ship.pickup", "ship.local", "ship.country", "ship.courier"];
   return `
     ${backRow()}
     <h1 class="screen-title">${esc(t("ship.title"))}</h1>
@@ -7929,11 +7967,12 @@ function screenShipping() {
     <div class="chips-row">${presets.map((k) => `<button class="chip" onclick="shipAddPreset('${k}')">+ ${esc(t(k))}</button>`).join("")}</div>
     ${f.rows.map((r, i) => `
       <div class="ship-row">
+        <select onchange="S._ship.rows[${i}].kind=this.value">${["DELIVERY", "PICKUP", "COURIER"].map((k) => `<option value="${k}" ${r.kind === k ? "selected" : ""}>${esc(t("ship.kind." + k))}</option>`).join("")}</select>
         <input value="${esc(r.name)}" oninput="S._ship.rows[${i}].name=this.value" placeholder="${esc(t("ship.namePh"))}">
         <input type="number" inputmode="decimal" min="0" step="0.01" value="${esc(r.cost)}" oninput="S._ship.rows[${i}].cost=this.value" placeholder="${esc(t("ship.costPh", { cur }))}">
         <button class="link-btn" onclick="S._ship.rows.splice(${i},1);render()" aria-label="x">✕</button>
       </div>`).join("")}
-    ${f.rows.length < 8 ? `<button class="link-btn" onclick="S._ship.rows.push({name:'',cost:''});render()">+ ${esc(t("ship.add"))}</button>` : ""}
+    ${f.rows.length < 8 ? `<button class="link-btn" onclick="S._ship.rows.push({kind:'DELIVERY',name:'',cost:''});render()">+ ${esc(t("ship.add"))}</button>` : ""}
     <p class="muted">${esc(t("ship.freeNote"))}</p>
     ${f.error ? `<div class="error-banner">${esc(f.error)}</div>` : ""}
     <button class="btn" ${f.busy ? "disabled" : ""} onclick="saveShipping()">${esc(f.busy ? t("ship.saving") : t("ship.save"))}</button>`;
@@ -7943,14 +7982,14 @@ function shipAddPreset(k) {
   const f = S._ship;
   const name = t(k);
   if (f.rows.length === 1 && !f.rows[0].name && !f.rows[0].cost) f.rows = [];
-  if (!f.rows.some((r) => r.name === name) && f.rows.length < 8) f.rows.push({ name, cost: k === "ship.pickup" ? "0" : "" });
+  if (!f.rows.some((r) => r.name === name) && f.rows.length < 8) f.rows.push({ kind: { "ship.pickup": "PICKUP", "ship.courier": "COURIER" }[k] || "DELIVERY", name, cost: k === "ship.pickup" ? "0" : "" });
   render();
 }
 
 async function saveShipping() {
   const f = S._ship;
   const rows = f.rows.filter((r) => r.name.trim() || String(r.cost).trim());
-  const methods = rows.map((r) => ({ name: r.name.trim(), costCents: Math.round(Number(String(latinDigits(r.cost) || "0").replace(",", ".")) * 100) }));
+  const methods = rows.map((r) => ({ kind: r.kind || "DELIVERY", name: r.name.trim(), costCents: Math.round(Number(String(latinDigits(r.cost) || "0").replace(",", ".")) * 100) }));
   if (!methods.length || methods.some((m) => m.name.length < 2 || !(m.costCents >= 0))) { f.error = t("ship.invalid"); return render(); }
   f.busy = true; f.error = null; render();
   const { ok, data } = await api("PUT", "/merchant/shipping-methods", { methods });
@@ -8491,13 +8530,15 @@ function tabMerchantOrders() {
   return `
     <h1 class="screen-title">طلبات واردة</h1>
     ${list.length === 0 ? `<div class="empty-state">ما في طلبات بعد</div>` : list.map((ord) => {
-      const next = (ORDER_TRANSITIONS[ord.status] || []).filter((s) => s !== "CANCELLED");
+      let next = (ORDER_TRANSITIONS[ord.status] || []).filter((s) => s !== "CANCELLED");
+      if (ord.shippingKind === "PICKUP" && ord.status === "PREPARING") next = ["DELIVERED"]; // handed over at the shop
       const canCancel = (ORDER_TRANSITIONS[ord.status] || []).includes("CANCELLED");
       return `
       <div class="card">
         <div class="title-line"><strong>${esc(ord.orderNumber)}</strong>${orderBadge(ord.status)}</div>
         <p class="muted">${esc(ord.user ? ord.user.fullName : "")}${ord.customerRating && ord.customerRating.ratingCount ? ` · <span class="star">★ ${ord.customerRating.rating.toFixed(1)}</span> (${ord.customerRating.ratingCount})` : ""}</p>
         <p class="price">${fmt(ord.totalCents)}</p>
+        ${orderDeliveryHtml(ord)}
         ${payLineHtml(ord.payment)}
         ${confirmTransferButton(ord)}
         ${confirmCashButton(ord, true)}
@@ -8519,7 +8560,16 @@ async function loadMerchantOrders() {
 }
 
 async function advanceMerchantOrder(id, status) {
-  await api("PATCH", `/orders/${id}/status`, { status });
+  const body = { status };
+  const ord = ((S._mOrders && S._mOrders.list) || []).find((o) => o.id === id);
+  if (status === "SHIPPED" && ord && ord.shippingKind === "COURIER") {
+    const company = prompt(t("ord.askCourier"));
+    if (!company || company.trim().length < 2) return;
+    const tracking = prompt(t("ord.askTracking"));
+    if (!tracking || tracking.trim().length < 2) return;
+    body.courierCompany = company.trim(); body.trackingNumber = tracking.trim();
+  }
+  await api("PATCH", `/orders/${id}/status`, body);
   S._mOrders = null;
   render();
   loadMerchantOrders();

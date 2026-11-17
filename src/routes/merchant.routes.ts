@@ -449,7 +449,7 @@ async function ownApprovedShop(userId: string) {
 
 const shippingSchema = z.object({
   methods: z
-    .array(z.object({ name: z.string().trim().min(2).max(40), costCents: z.number().int().min(0).max(100_000_00) }))
+    .array(z.object({ kind: z.enum(["DELIVERY", "PICKUP", "COURIER"]).default("DELIVERY"), name: z.string().trim().min(2).max(40), costCents: z.number().int().min(0).max(100_000_00) }))
     .min(1)
     .max(8),
 });
@@ -458,7 +458,7 @@ merchantRouter.get("/shipping-methods", requireAuth, requireRole(Role.MERCHANT),
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
   if (!merchant) return sendError(res, 404, "NOT_FOUND", "Merchant profile not found");
   const rows = await prisma.shippingMethod.findMany({ where: { merchantId: merchant.id, isActive: true }, orderBy: { createdAt: "asc" } });
-  res.json(rows.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })));
+  res.json(rows.map((m) => ({ id: m.id, kind: m.kind, name: m.name, costCents: m.costCents })));
 }));
 
 // The whole list at once (the form sends what it shows): the shop needs at least one method.
@@ -472,10 +472,10 @@ merchantRouter.put("/shipping-methods", requireAuth, requireRole(Role.MERCHANT),
     await tx.shippingMethod.deleteMany({ where: { merchantId } }); // orders keep their own copy of the name and cost
     let at = Date.now();
     const created = [];
-    for (const m of parsed.data.methods) created.push(await tx.shippingMethod.create({ data: { merchantId, name: m.name, costCents: m.costCents, createdAt: new Date(at++) } }));
+    for (const m of parsed.data.methods) created.push(await tx.shippingMethod.create({ data: { merchantId, kind: m.kind, name: m.name, costCents: m.costCents, createdAt: new Date(at++) } }));
     return created;
   });
-  res.json(rows.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })));
+  res.json(rows.map((m) => ({ id: m.id, kind: m.kind, name: m.name, costCents: m.costCents })));
 }));
 
 /* ---------------- the shop's store plan: the store opens when a plan is chosen ---------------- */
@@ -631,7 +631,7 @@ merchantRouter.get("/:id", route(async (req, res) => {
     id: d.id, title: d.title, percent: d.percent, description: d.description, endDate: d.endDate, perCustomerLimit: d.perCustomerLimit, maxCustomers: d.maxCustomers,
     peopleLeft: placesLeft.get(d.id) ?? null, myTimesLeft: timesLeft.get(d.id) ?? null, ...scopeOf(d),
   }));
-  const shippingMethods = merchant.shippingMethods.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents }));
+  const shippingMethods = merchant.shippingMethods.map((m) => ({ id: m.id, kind: m.kind, name: m.name, costCents: m.costCents }));
   const branches = merchant.branches.map(branchJson);
   const isDoctor = merchant.category.slug === "health-doctors" || merchant.category.slug.startsWith("health-doctors-");
   const isFitnessProvider = await isFitnessProviderCategory(merchant.categoryId);

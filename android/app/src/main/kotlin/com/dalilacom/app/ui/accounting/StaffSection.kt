@@ -296,6 +296,8 @@ fun StaffDriverOrders(container: AppContainer, workplace: StaffWorkplaceDto, onC
                         Text("%.2f".format(o.totalCents / 100.0))
                     }
                     StatusChip(stringResource(if (o.status == "SHIPPED") R.string.staff_order_shipped else R.string.staff_order_preparing), if (o.status == "SHIPPED") "warning" else "info")
+                    o.deliveryAddress?.let { Text("\uD83D\uDCCD " + it, style = MaterialTheme.typography.bodyMedium) }
+                    o.deliveryPhone?.let { Text("\u260E " + it, style = MaterialTheme.typography.bodyMedium) }
                     Text(o.items.joinToString(", ") { it.productName + " x" + it.quantity }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Button(
                         onClick = {

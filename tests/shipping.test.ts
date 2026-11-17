@@ -128,3 +128,53 @@ describe("improving a product photo", () => {
     expect((await request(app).post(`/products/photos/${crypto.randomUUID()}/enhance`).set(s.owner.auth)).status).toBe(404);
   });
 });
+
+describe("delivery kinds and the customer address", () => {
+  async function order(kind: "DELIVERY" | "PICKUP" | "COURIER", body: Record<string, unknown> = {}) {
+    const s = await shop();
+    const put = await request(app).put("/merchant/shipping-methods").set(s.owner.auth).send({ methods: [{ kind, name: "طريقة", costCents: 100 }] });
+    expect(put.body[0].kind).toBe(kind);
+    const customer = await account("kindcust");
+    await request(app).post("/cart/items").set(customer.auth).send({ productId: s.productId, quantity: 1 });
+    const cart = (await request(app).get("/cart").set(customer.auth)).body;
+    expect(cart.shipping[0].methods[0].kind).toBe(kind);
+    const done = await request(app).post("/cart/checkout").set(customer.auth).send({ shipping: { [s.id]: cart.shipping[0].methods[0].id }, ...body });
+    expect(done.status).toBe(201);
+    return { s, customer, order: done.body[0] };
+  }
+  const to = { address: "دمشق، المزة، شارع الفيحاء، بناء 4", phone: "0933000111" };
+
+  it("a delivery keeps the address; a pickup drops it; the merchant sees it", async () => {
+    const d = await order("DELIVERY", to);
+    expect(d.order).toMatchObject({ shippingKind: "DELIVERY", deliveryAddress: to.address, deliveryPhone: to.phone });
+    const seen = (await request(app).get("/orders/merchant").set(d.s.owner.auth)).body[0];
+    expect(seen.deliveryAddress).toBe(to.address);
+    const p = await order("PICKUP", to);
+    expect(p.order).toMatchObject({ shippingKind: "PICKUP", deliveryAddress: null });
+  });
+
+  it("a pickup goes straight from PREPARING to DELIVERED, and the driver never sees it", async () => {
+    const p = await order("PICKUP");
+    const patch = (status: string) => request(app).patch(`/orders/${p.order.id}/status`).set(p.s.owner.auth).send({ status });
+    expect((await patch("CONFIRMED")).status).toBe(200);
+    expect((await patch("PREPARING")).status).toBe(200);
+    const done = await patch("DELIVERED");
+    expect(done.status).toBe(200);
+    expect(done.body.receiptStatus).toBe("PENDING");
+    // a home delivery cannot skip the road
+    const d = await order("DELIVERY", to);
+    const patchD = (status: string) => request(app).patch(`/orders/${d.order.id}/status`).set(d.s.owner.auth).send({ status });
+    await patchD("CONFIRMED"); await patchD("PREPARING");
+    expect((await patchD("DELIVERED")).status).toBe(409);
+  });
+
+  it("an outside courier order keeps the company and tracking number when it ships", async () => {
+    const c = await order("COURIER", to);
+    const patch = (body: Record<string, unknown>) => request(app).patch(`/orders/${c.order.id}/status`).set(c.s.owner.auth).send(body);
+    await patch({ status: "CONFIRMED" }); await patch({ status: "PREPARING" });
+    const shipped = await patch({ status: "SHIPPED", courierCompany: "شركة الأمان", trackingNumber: "AM-12345" });
+    expect(shipped.body).toMatchObject({ courierCompany: "شركة الأمان", trackingNumber: "AM-12345" });
+    const mine = (await request(app).get(`/orders/${c.order.id}`).set(c.customer.auth)).body;
+    expect(mine.trackingNumber).toBe("AM-12345");
+  });
+});

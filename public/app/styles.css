@@ -1440,9 +1440,10 @@ html[dir="rtl"] .store-slide.has-img::before { background: linear-gradient(270de
 @keyframes dealsFade { from { opacity: 0; } to { opacity: 1; } }
 
 /* shipping methods, stock and photo improvement */
-.ship-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
-.ship-row input:first-child { flex: 2; }
-.ship-row input:nth-child(2) { flex: 1; min-width: 80px; }
+.ship-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.ship-row select { flex: 1 1 100%; }
+.ship-row input:nth-child(2) { flex: 2; }
+.ship-row input:nth-child(3) { flex: 1; min-width: 80px; }
 .ship-choice .ship-opt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 6px 0; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
 .ship-choice .ship-opt span { flex: 1; }
 .ship-choice .ship-opt.on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }

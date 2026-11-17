@@ -104,7 +104,7 @@ orderRouter.get("/:id", requireAuth, route(async (req, res) => {
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PENDING: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["PREPARING", "CANCELLED"],
-  PREPARING: ["SHIPPED", "CANCELLED"],
+  PREPARING: ["SHIPPED", "CANCELLED"], // a pickup goes straight to DELIVERED when the customer collects it
   SHIPPED: ["DELIVERED"],
   DELIVERED: [],
   CANCELLED: [],
@@ -113,6 +113,8 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 const updateStatusSchema = z.object({
   status: z.nativeEnum(OrderStatus),
   cancelReason: z.string().min(3).optional(),
+  courierCompany: z.string().trim().min(2).max(60).optional(),
+  trackingNumber: z.string().trim().min(2).max(60).optional(),
 });
 
 // Merchant: move an order through its lifecycle (section 6/59.6)
@@ -128,8 +130,9 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), route(
     return sendError(res, 404, "NOT_FOUND", "Order not found");
   }
 
-  const { status, cancelReason } = parsed.data;
-  if (!ALLOWED_TRANSITIONS[order.status].includes(status)) {
+  const { status, cancelReason, courierCompany, trackingNumber } = parsed.data;
+  const allowed = ALLOWED_TRANSITIONS[order.status].includes(status) || (order.status === "PREPARING" && status === "DELIVERED" && order.shippingKind === "PICKUP");
+  if (!allowed) {
     return sendError(res, 409, "CONFLICT", `Cannot move an order from ${order.status} to ${status}`);
   }
   if (status === "CANCELLED" && !cancelReason) {
@@ -147,7 +150,7 @@ orderRouter.patch("/:id/status", requireAuth, requireRole(Role.MERCHANT), route(
     }
     return tx.order.update({
       where: { id: order.id },
-      data: { status, cancelReason: status === "CANCELLED" ? cancelReason : undefined, ...(status === "DELIVERED" ? { deliveredAt: new Date(), receiptStatus: "PENDING" as const } : {}) },
+      data: { status, cancelReason: status === "CANCELLED" ? cancelReason : undefined, ...(status === "SHIPPED" && order.shippingKind === "COURIER" ? { courierCompany: courierCompany ?? null, trackingNumber: trackingNumber ?? null } : {}), ...(status === "DELIVERED" ? { deliveredAt: new Date(), receiptStatus: "PENDING" as const } : {}) },
     });
   });
 

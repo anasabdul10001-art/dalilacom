@@ -68,7 +68,7 @@ fun MerchantOrdersScreen(factory: ViewModelFactory) {
                 items(state.orders, key = { it.id }) { order ->
                     MerchantOrderRow(
                         order = order,
-                        onAdvance = { status -> viewModel.advance(order.id, status) },
+                        onAdvance = { status, c, n -> viewModel.advance(order.id, status, c, n) },
                         onRequestCancel = { cancellingOrderId = order.id; cancelReason = "" },
                         onRateCustomer = { order.user?.let { viewModel.openReview(it.id, it.fullName) } },
                         onConfirmCash = { viewModel.confirmCash(order.id) },
@@ -112,7 +112,24 @@ fun MerchantOrdersScreen(factory: ViewModelFactory) {
 }
 
 @Composable
-private fun MerchantOrderRow(order: OrderDto, onAdvance: (String) -> Unit, onRequestCancel: () -> Unit, onRateCustomer: () -> Unit, onConfirmCash: () -> Unit) {
+private fun MerchantOrderRow(order: OrderDto, onAdvance: (String, String?, String?) -> Unit, onRequestCancel: () -> Unit, onRateCustomer: () -> Unit, onConfirmCash: () -> Unit) {
+    var askCourier by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var company by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var tracking by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    if (askCourier) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { askCourier = false },
+            title = { Text(androidx.compose.ui.res.stringResource(R.string.ord_courier)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.OutlinedTextField(value = company, onValueChange = { company = it.take(60) }, singleLine = true, placeholder = { Text(androidx.compose.ui.res.stringResource(R.string.ord_ask_courier)) })
+                    androidx.compose.material3.OutlinedTextField(value = tracking, onValueChange = { tracking = it.take(60) }, singleLine = true, placeholder = { Text(androidx.compose.ui.res.stringResource(R.string.ord_ask_tracking)) })
+                }
+            },
+            confirmButton = { TextButton(onClick = { if (company.trim().length >= 2 && tracking.trim().length >= 2) { askCourier = false; onAdvance("SHIPPED", company.trim(), tracking.trim()) } }) { Text(AppStrings.get(R.string.s_911aafd4)) } },
+            dismissButton = { TextButton(onClick = { askCourier = false }) { Text(AppStrings.get(R.string.s_98df46fb)) } },
+        )
+    }
     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Column(Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -125,15 +142,17 @@ private fun MerchantOrderRow(order: OrderDto, onAdvance: (String) -> Unit, onReq
                 OutlinedButton(onClick = onRateCustomer) { Text("⭐  " + androidx.compose.ui.res.stringResource(if (order.ratedCustomer) R.string.rv_edit else R.string.rv_rate_customer)) }
             }
             Text(formatCents(order.totalCents), style = MaterialTheme.typography.bodyMedium)
+            com.dalilacom.app.ui.common.OrderDeliveryInfo(order)
             com.dalilacom.app.ui.common.PaymentLine(order)
             com.dalilacom.app.ui.common.ConfirmCashButton(order, onConfirmCash)
 
-            val nextStatuses = ORDER_STATUS_TRANSITIONS[order.status].orEmpty()
+            var nextStatuses = ORDER_STATUS_TRANSITIONS[order.status].orEmpty()
+            if (order.shippingKind == "PICKUP" && order.status == "PREPARING") nextStatuses = listOf("DELIVERED", "CANCELLED") // handed over at the shop
             if (nextStatuses.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     nextStatuses.filter { it != "CANCELLED" }.forEach { next ->
-                        Button(onClick = { onAdvance(next) }) { Text(orderActionLabel(next)) }
+                        Button(onClick = { if (next == "SHIPPED" && order.shippingKind == "COURIER") askCourier = true else onAdvance(next, null, null) }) { Text(orderActionLabel(next)) }
                     }
                     if (nextStatuses.contains("CANCELLED")) {
                         OutlinedButton(onClick = onRequestCancel) { Text(AppStrings.get(R.string.s_e776b020)) }

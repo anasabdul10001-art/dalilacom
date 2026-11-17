@@ -28,8 +28,8 @@ class OrderRepository(private val api: ApiService) {
         return if (response.isSuccessful) response.body() else null
     }
 
-    suspend fun updateStatus(id: String, status: String, cancelReason: String? = null): Result<OrderDto> {
-        val response = safeApiCall { api.updateOrderStatus(id, UpdateOrderStatusRequest(status, cancelReason)) }
+    suspend fun updateStatus(id: String, status: String, cancelReason: String? = null, courierCompany: String? = null, trackingNumber: String? = null): Result<OrderDto> {
+        val response = safeApiCall { api.updateOrderStatus(id, UpdateOrderStatusRequest(status, cancelReason, courierCompany, trackingNumber)) }
             ?: return Result.failure(Exception(AppStrings.get(R.string.s_d556272b)))
         val body = response.body()
         return if (response.isSuccessful && body != null) {

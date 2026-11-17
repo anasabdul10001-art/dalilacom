@@ -82,6 +82,7 @@ fun OrderDetailScreen(container: AppContainer, orderId: String, onBack: () -> Un
                 }
 
                 Spacer(Modifier.height(12.dp))
+                com.dalilacom.app.ui.common.OrderDeliveryInfo(order)
                 order.shippingName?.let { name ->
                     Row(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("🚚 $name")

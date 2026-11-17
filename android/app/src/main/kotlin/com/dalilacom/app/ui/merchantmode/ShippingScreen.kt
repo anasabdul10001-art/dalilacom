@@ -42,7 +42,8 @@ import com.dalilacom.app.data.AppContainer
 import com.dalilacom.app.data.network.ShippingItemRequest
 import kotlinx.coroutines.launch
 
-private class ShipRow(name: String = "", cost: String = "") {
+private class ShipRow(name: String = "", cost: String = "", kind: String = "DELIVERY") {
+    var kind by mutableStateOf(kind)
     var name by mutableStateOf(name)
     var cost by mutableStateOf(cost)
 }
@@ -57,12 +58,13 @@ fun ShippingScreen(container: AppContainer, onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val invalid = stringResource(R.string.ship_invalid)
-    val presets = listOf(stringResource(R.string.ship_pickup) to "0", stringResource(R.string.ship_local) to "", stringResource(R.string.ship_country) to "")
+    val presets = listOf(Triple(stringResource(R.string.ship_pickup), "0", "PICKUP"), Triple(stringResource(R.string.ship_local), "", "DELIVERY"), Triple(stringResource(R.string.ship_country), "", "DELIVERY"), Triple(stringResource(R.string.ship_courier), "", "COURIER"))
+    val kindLabels = mapOf("DELIVERY" to stringResource(R.string.ship_kind_delivery), "PICKUP" to stringResource(R.string.ship_kind_pickup), "COURIER" to stringResource(R.string.ship_kind_courier))
 
     LaunchedEffect(Unit) {
         val current = container.merchantRepository.shippingMethods()
         rows.clear()
-        if (current.isEmpty()) rows.add(ShipRow()) else current.forEach { rows.add(ShipRow(it.name, (it.costCents / 100.0).toString().removeSuffix(".0"))) }
+        if (current.isEmpty()) rows.add(ShipRow()) else current.forEach { rows.add(ShipRow(it.name, (it.costCents / 100.0).toString().removeSuffix(".0"), it.kind)) }
         loading = false
     }
 
@@ -75,15 +77,20 @@ fun ShippingScreen(container: AppContainer, onBack: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         if (loading) { CircularProgressIndicator(); return@Column }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            presets.forEach { (label, cost) ->
+            presets.forEach { (label, cost, kind) ->
                 AssistChip(onClick = {
                     if (rows.size == 1 && rows[0].name.isBlank() && rows[0].cost.isBlank()) rows.clear()
-                    if (rows.none { it.name == label } && rows.size < 8) rows.add(ShipRow(label, cost))
+                    if (rows.none { it.name == label } && rows.size < 8) rows.add(ShipRow(label, cost, kind))
                 }, label = { Text("+ $label") })
             }
         }
         rows.forEachIndexed { i, row ->
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("DELIVERY", "PICKUP", "COURIER").forEach { k ->
+                    androidx.compose.material3.FilterChip(selected = row.kind == k, onClick = { row.kind = k }, label = { Text(kindLabels[k].orEmpty()) })
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(value = row.name, onValueChange = { row.name = it.take(40) }, singleLine = true, placeholder = { Hint(stringResource(R.string.ship_name_ph)) }, modifier = Modifier.weight(2f))
                 OutlinedTextField(
                     value = row.cost, onValueChange = { row.cost = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(9) }, singleLine = true,
@@ -99,7 +106,7 @@ fun ShippingScreen(container: AppContainer, onBack: () -> Unit) {
         Button(
             onClick = {
                 val filled = rows.filter { it.name.isNotBlank() || it.cost.isNotBlank() }
-                val methods = filled.map { ShippingItemRequest(it.name.trim(), Math.round((it.cost.replace(",", ".").toDoubleOrNull() ?: 0.0) * 100).toInt()) }
+                val methods = filled.map { ShippingItemRequest(it.name.trim(), Math.round((it.cost.replace(",", ".").toDoubleOrNull() ?: 0.0) * 100).toInt(), it.kind) }
                 if (methods.isEmpty() || methods.any { it.name.length < 2 }) { error = invalid; return@Button }
                 busy = true; error = null
                 scope.launch {

@@ -1290,25 +1290,30 @@ enum ReceiptStatus {
 }
 
 model Order {
-  id                  String      @id @default(uuid())
-  orderNumber         String      @unique
+  id                  String         @id @default(uuid())
+  orderNumber         String         @unique
   userId              String
   merchantId          String
-  status              OrderStatus @default(PENDING)
+  status              OrderStatus    @default(PENDING)
   subtotalCents       Int
-  memberDiscountCents Int         @default(0)
+  memberDiscountCents Int            @default(0)
   totalCents          Int
   cancelReason        String? // required when the merchant cancels (section 59.6)
+  shippingKind        ShippingKind   @default(DELIVERY) // how it reaches the customer (snapshot of the method's kind)
+  deliveryAddress     String? // where to bring it (not for a pickup)
+  deliveryPhone       String? // who to call on arrival
+  courierCompany      String? // the outside courier the shop handed it to
+  trackingNumber      String? // that courier's tracking number
   shippingName        String? // the shipping method the customer chose (snapshot)
-  shippingCents       Int         @default(0) // its cost, already inside totalCents
+  shippingCents       Int            @default(0) // its cost, already inside totalCents
   driverStaffId       String? // the delivery person (a staff member) who took the order
   deliveredAt         DateTime? // when the order was marked delivered
   receiptStatus       ReceiptStatus? // the receiver's answer: PENDING until they accept or reject, accepted by itself after 10 days
   receiptRespondedAt  DateTime?
-  receiptAuto         Boolean     @default(false) // true when it was accepted by the 10 days passing
+  receiptAuto         Boolean        @default(false) // true when it was accepted by the 10 days passing
   receiptNote         String? // why the receiver rejected
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   user     User            @relation(fields: [userId], references: [id])
   merchant MerchantProfile @relation(fields: [merchantId], references: [id])
@@ -2445,14 +2450,22 @@ enum DiscountApproval {
   REJECTED
 }
 
+/// DELIVERY: the shop's own driver brings it. PICKUP: the customer collects it at the shop. COURIER: the shop hands it to an outside courier company.
+enum ShippingKind {
+  DELIVERY
+  PICKUP
+  COURIER
+}
+
 /// How a shop sends its orders and what that costs; the customer picks one at checkout.
 model ShippingMethod {
-  id         String   @id @default(uuid())
+  id         String       @id @default(uuid())
   merchantId String
+  kind       ShippingKind @default(DELIVERY)
   name       String
-  costCents  Int      @default(0)
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
+  costCents  Int          @default(0)
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
 
   merchant MerchantProfile @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
@@ -2902,15 +2915,15 @@ model HrEmployee {
 // A fingerprint, card or face reader (or the program that collects from it) that sends its punches to the company.
 // The key is shown once and kept as a hash; the reader sends it in the X-Device-Key header.
 model HrDevice {
-  id         String          @id @default(uuid())
+  id         String       @id @default(uuid())
   companyId  String
   name       String
-  kind       HrDeviceKind    @default(FINGERPRINT)
-  keyHash    String          @unique
+  kind       HrDeviceKind @default(FINGERPRINT)
+  keyHash    String       @unique
   keyHint    String // the last characters of the key, so the owner can tell keys apart
-  active     Boolean         @default(true)
+  active     Boolean      @default(true)
   lastSeenAt DateTime?
-  createdAt  DateTime        @default(now())
+  createdAt  DateTime     @default(now())
 
   company    HrCompany      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   attendance HrAttendance[]

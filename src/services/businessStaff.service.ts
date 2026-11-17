@@ -239,11 +239,11 @@ export async function driverOrders(userId: string, staffId: string) {
   const { staff, merchantId } = await driverFor(userId, staffId);
   if (!merchantId) return [];
   const rows = await prisma.order.findMany({
-    where: { merchantId, OR: [{ status: "PREPARING" }, { status: "SHIPPED", OR: [{ driverStaffId: staff.id }, { driverStaffId: null }] }] },
+    where: { merchantId, shippingKind: "DELIVERY", OR: [{ status: "PREPARING" }, { status: "SHIPPED", OR: [{ driverStaffId: staff.id }, { driverStaffId: null }] }] },
     include: { items: { select: { productName: true, quantity: true } }, payment: { select: { method: true, status: true } }, user: { select: { fullName: true } } },
     orderBy: { createdAt: "asc" }, take: 100,
   });
-  return rows.map((o) => ({ id: o.id, orderNumber: o.orderNumber, status: o.status, customerName: o.user.fullName, totalCents: o.totalCents, shippingName: o.shippingName, items: o.items, paymentMethod: o.payment?.method ?? null, paymentStatus: o.payment?.status ?? null, mine: o.driverStaffId === staff.id }));
+  return rows.map((o) => ({ id: o.id, orderNumber: o.orderNumber, status: o.status, customerName: o.user.fullName, totalCents: o.totalCents, shippingName: o.shippingName, deliveryAddress: o.deliveryAddress, deliveryPhone: o.deliveryPhone, items: o.items, paymentMethod: o.payment?.method ?? null, paymentStatus: o.payment?.status ?? null, mine: o.driverStaffId === staff.id }));
 }
 
 /** The driver takes an order that is ready: it goes SHIPPED and is theirs. Only one driver can take it. */

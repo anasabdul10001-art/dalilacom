@@ -23,6 +23,8 @@ data class CartUiState(
     val picks: Map<String, String> = emptyMap(), // shop id -> chosen shipping method id
     val payments: List<CartPaymentDto> = emptyList(),
     val paymentPicks: Map<String, String> = emptyMap(),
+    val address: String = "",
+    val phone: String = "",
     val error: String? = null,
     val checkoutOrders: List<OrderDto>? = null,
 )
@@ -81,6 +83,16 @@ class CartViewModel(private val repository: CartRepository) : ViewModel() {
         _uiState.value = _uiState.value.copy(paymentPicks = _uiState.value.paymentPicks + (merchantId to method), error = null)
     }
 
+    fun setAddress(text: String) { _uiState.value = _uiState.value.copy(address = text.take(300)) }
+    fun setPhone(text: String) { _uiState.value = _uiState.value.copy(phone = text.take(30)) }
+
+    /** True unless every shop in the cart was chosen as a pickup: then the order needs an address to go to. */
+    fun needsAddress(state: CartUiState): Boolean =
+        state.items.map { it.product.merchant.id }.distinct().any { shop ->
+            val chosen = state.shipping.firstOrNull { it.merchantId == shop }?.methods?.firstOrNull { it.id == state.picks[shop] }
+            chosen == null || chosen.kind != "PICKUP"
+        }
+
     /** What the chosen shipping methods cost, all shops together. */
     fun shippingTotal(state: CartUiState): Int =
         state.shipping.sumOf { s -> s.methods.firstOrNull { it.id == state.picks[s.merchantId] }?.costCents ?: 0 }
@@ -91,9 +103,14 @@ class CartViewModel(private val repository: CartRepository) : ViewModel() {
             _uiState.value = state.copy(error = AppStrings.get(R.string.ship_pick_all))
             return
         }
+        val withAddress = needsAddress(state)
+        if (withAddress && (state.address.trim().length < 5 || state.phone.trim().length < 6)) {
+            _uiState.value = state.copy(error = AppStrings.get(R.string.addr_need_order))
+            return
+        }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            repository.checkout(state.picks, state.paymentPicks)
+            repository.checkout(state.picks, state.paymentPicks, if (withAddress) state.address.trim() else null, if (withAddress) state.phone.trim() else null)
                 .onSuccess { orders ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

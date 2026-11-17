@@ -507,10 +507,10 @@ data class CartItemDto(
 )
 
 @Serializable
-data class ShippingMethodDto(val id: String, val name: String, val costCents: Int = 0)
+data class ShippingMethodDto(val id: String, val name: String, val costCents: Int = 0, val kind: String = "DELIVERY")
 
 @Serializable
-data class ShippingItemRequest(val name: String, val costCents: Int)
+data class ShippingItemRequest(val name: String, val costCents: Int, val kind: String = "DELIVERY")
 
 @Serializable
 data class ShippingPutRequest(val methods: List<ShippingItemRequest>)
@@ -524,7 +524,7 @@ data class CartPaymentDto(val merchantId: String, val methods: List<String> = em
 
 /** The shipping method chosen for each shop, by shop id. */
 @Serializable
-data class CheckoutRequest(val shipping: Map<String, String> = emptyMap(), val paymentMethods: Map<String, String> = emptyMap())
+data class CheckoutRequest(val shipping: Map<String, String> = emptyMap(), val paymentMethods: Map<String, String> = emptyMap(), val address: String? = null, val phone: String? = null)
 
 @Serializable
 data class CartViewDto(val items: List<CartItemDto> = emptyList(), val shipping: List<CartShippingDto> = emptyList(), val payments: List<CartPaymentDto> = emptyList(), val totalCents: Int = 0)
@@ -567,6 +567,11 @@ data class OrderDto(
     val cancelReason: String? = null,
     val shippingName: String? = null,
     val shippingCents: Int = 0,
+    val shippingKind: String = "DELIVERY",
+    val deliveryAddress: String? = null,
+    val deliveryPhone: String? = null,
+    val courierCompany: String? = null,
+    val trackingNumber: String? = null,
     val createdAt: String,
     val merchant: MerchantSummaryDto? = null,
     val user: UserNameDto? = null,
@@ -586,7 +591,7 @@ data class OrderDto(
 data class ReceiptRequest(val decision: String, val note: String? = null)
 
 @Serializable
-data class UpdateOrderStatusRequest(val status: String, val cancelReason: String? = null)
+data class UpdateOrderStatusRequest(val status: String, val cancelReason: String? = null, val courierCompany: String? = null, val trackingNumber: String? = null)
 
 @Serializable
 data class RegisterMerchantRequest(
@@ -1419,6 +1424,6 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class StaffPayRequest(val currency: String)
 @Serializable data class StaffPayDto(val paidCents: Long = 0, val count: Int = 0)
 @Serializable data class StaffOrderItemDto(val productName: String = "", val quantity: Int = 0)
-@Serializable data class StaffOrderDto(val id: String = "", val orderNumber: String = "", val status: String = "", val customerName: String? = null, val totalCents: Long = 0, val items: List<StaffOrderItemDto> = emptyList(), val paymentMethod: String? = null, val mine: Boolean = false)
+@Serializable data class StaffOrderDto(val id: String = "", val orderNumber: String = "", val status: String = "", val customerName: String? = null, val totalCents: Long = 0, val items: List<StaffOrderItemDto> = emptyList(), val paymentMethod: String? = null, val mine: Boolean = false, val deliveryAddress: String? = null, val deliveryPhone: String? = null)
 @Serializable data class StaffHrEmployeeDto(val id: String = "", val name: String = "")
 @Serializable data class StaffHrLinkRequest(@kotlinx.serialization.EncodeDefault val hrEmployeeId: String? = null)

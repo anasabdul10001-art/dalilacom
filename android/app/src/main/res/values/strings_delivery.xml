@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ship_kind_delivery">توصيل من المحل</string>
+    <string name="ship_kind_pickup">استلام من المحل</string>
+    <string name="ship_kind_courier">شركة توصيل خارجية</string>
+    <string name="ship_courier">شحن عبر شركة توصيل</string>
+    <string name="addr_title">عنوان التوصيل</string>
+    <string name="addr_ph">المدينة، الحي، الشارع، رقم البناء</string>
+    <string name="addr_phone">رقم هاتف للتواصل</string>
+    <string name="addr_need_order">اكتب عنوان التوصيل ورقم هاتفك</string>
+    <string name="ord_addr">العنوان</string>
+    <string name="ord_phone">الهاتف</string>
+    <string name="ord_courier">شركة التوصيل</string>
+    <string name="ord_tracking">رقم التتبع</string>
+    <string name="ord_ask_courier">شو اسم شركة التوصيل؟</string>
+    <string name="ord_ask_tracking">شو رقم التتبع؟</string>
+</resources>

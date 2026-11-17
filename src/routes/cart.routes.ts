@@ -54,7 +54,7 @@ async function buildCartView(userId: string) {
   const methods = merchantIds.length ? await prisma.shippingMethod.findMany({ where: { merchantId: { in: merchantIds }, isActive: true }, orderBy: { createdAt: "asc" } }) : [];
   const shipping = merchantIds.map((merchantId) => ({
     merchantId,
-    methods: methods.filter((m) => m.merchantId === merchantId).map((m) => ({ id: m.id, name: m.name, costCents: m.costCents })),
+    methods: methods.filter((m) => m.merchantId === merchantId).map((m) => ({ id: m.id, kind: m.kind, name: m.name, costCents: m.costCents })),
   }));
   const sellers = merchantIds.length ? await prisma.merchantProfile.findMany({ where: { id: { in: merchantIds } }, select: { id: true, userId: true } }) : [];
   const sellerMethods = sellers.length ? await prisma.sellerPaymentMethod.findMany({ where: { userId: { in: sellers.map((seller) => seller.userId) }, isEnabled: true }, select: { userId: true, provider: true } }) : [];
@@ -145,6 +145,8 @@ const checkoutSchema = z.object({
   shipping: z.record(z.string().uuid(), z.string()).optional(),
   paymentMethods: z.record(z.string().uuid(), z.nativeEnum(PaymentMethod)).optional(),
   paymentMethod: z.nativeEnum(PaymentMethod).optional(), // older app versions use one method for the whole cart
+  address: z.string().trim().min(5).max(300).optional(), // where to bring the order (the apps ask for it unless every shop is a pickup; older app versions send none)
+  phone: z.string().trim().min(6).max(30).optional(),
 }); // per-shop choices; old clients continue to default to cash on delivery
 
 cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
@@ -208,6 +210,7 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
         const picked = offered.find((m) => m.id === chosenShipping[merchantId]);
         if (offered.length > 0 && !picked) throw new Error(`SHIPPING_REQUIRED:${merchantId}`);
         const shippingCents = picked?.costCents ?? 0;
+        const kind = picked?.kind ?? "DELIVERY";
         let subtotalCents = 0;
         let totalCents = 0;
         const orderItemsData = [];
@@ -242,6 +245,9 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
             subtotalCents,
             memberDiscountCents: subtotalCents - totalCents,
             shippingName: picked?.name ?? null,
+            shippingKind: kind,
+            deliveryAddress: kind === "PICKUP" ? null : checkoutBody.data.address ?? null,
+            deliveryPhone: checkoutBody.data.phone ?? null,
             shippingCents,
             totalCents: totalCents + shippingCents,
             items: { create: orderItemsData },

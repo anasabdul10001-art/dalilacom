@@ -79,7 +79,7 @@ fun CartScreen(factory: ViewModelFactory, onCheckoutSuccess: () -> Unit) {
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     androidx.compose.material3.RadioButton(selected = state.picks[group.merchantId] == m.id, onClick = { viewModel.pick(group.merchantId, m.id) })
-                                    Text(m.name, Modifier.weight(1f))
+                                    Text(m.name + if (m.kind == "PICKUP") "  \uD83C\uDFEA" else "", Modifier.weight(1f))
                                     Text(if (m.costCents > 0) formatCents(m.costCents) else stringResource(R.string.ship_free), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                                 }
                             }
@@ -98,6 +98,15 @@ fun CartScreen(factory: ViewModelFactory, onCheckoutSuccess: () -> Unit) {
                                     Text(labels[method] ?: method)
                                 }
                             }
+                        }
+                    }
+                }
+                if (viewModel.needsAddress(state)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("\uD83D\uDCCD " + stringResource(R.string.addr_title), style = MaterialTheme.typography.titleSmall)
+                            androidx.compose.material3.OutlinedTextField(value = state.address, onValueChange = viewModel::setAddress, placeholder = { Text(stringResource(R.string.addr_ph)) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                            androidx.compose.material3.OutlinedTextField(value = state.phone, onValueChange = viewModel::setPhone, singleLine = true, placeholder = { Text(stringResource(R.string.addr_phone)) }, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), modifier = Modifier.fillMaxWidth())
                         }
                     }
                 }

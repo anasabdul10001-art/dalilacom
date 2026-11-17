@@ -57,9 +57,9 @@ class MerchantOrdersViewModel(private val repository: OrderRepository, private v
         }
     }
 
-    fun advance(orderId: String, status: String) {
+    fun advance(orderId: String, status: String, courierCompany: String? = null, trackingNumber: String? = null) {
         viewModelScope.launch {
-            repository.updateStatus(orderId, status)
+            repository.updateStatus(orderId, status, null, courierCompany, trackingNumber)
                 .onSuccess { refresh() }
                 .onFailure { _uiState.value = _uiState.value.copy(error = it.message) }
         }
