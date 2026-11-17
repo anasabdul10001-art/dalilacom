@@ -41,7 +41,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:var(--cream);fon
 <!-- 1: hook -->
 <div class="scene light" id="s1">
   <div class="badge"><i></i>dalilacom</div>
-  <div class="cap" id="s1cap">سؤال بسيط لكل صاحب نشاط</div>
+  <div class="cap" id="s1cap">جاوب بصراحة</div>
   <div id="s1cards"></div>
   <div class="h1" style="top:420px"><span class="w s1w">قدّيش</span> <span class="w s1w">ربحت</span><br><span class="w s1w o">هالشهر؟</span></div>
 </div>
@@ -192,8 +192,8 @@ function seek(t){
   // 1
   lt=sceneFrame($("#s1"),0,t);
   if(lt>=0){
-    wordReveal(".s1w",lt,0.14,0.45);
-    $("#s1cap").style.opacity=eo((lt-0.15)/0.5);
+    wordReveal(".s1w",lt,0.09,0.0);
+    $("#s1cap").style.opacity=1;
     [0,1,2].forEach(i=>{
       const c=$("#c1_"+i);
       const sp=eo(lt/2.6); // 0->1 slow down
