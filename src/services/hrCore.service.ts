@@ -102,6 +102,7 @@ export async function deleteDepartment(companyId: string, id: string) {
 // ---------------------------------------------------------------- employees
 
 export type EmployeeInput = {
+  tracksLocation?: boolean;
   firstName: string;
   lastName: string;
   email?: string | null;
@@ -118,7 +119,7 @@ export type EmployeeInput = {
 const duplicateCode = (err: unknown) => err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002" && String(err.meta?.target ?? "").includes("deviceCode");
 
 const employeeSelect = {
-  id: true, firstName: true, lastName: true, email: true, position: true, role: true, hireDate: true, employmentStatus: true, baseSalary: true, userId: true, deviceCode: true,
+  id: true, firstName: true, lastName: true, email: true, position: true, role: true, hireDate: true, employmentStatus: true, baseSalary: true, userId: true, deviceCode: true, tracksLocation: true, boundDeviceName: true,
   department: { select: { id: true, name: true } },
   manager: { select: { id: true, firstName: true, lastName: true } },
   invite: { select: { expiresAt: true, acceptedAt: true } },

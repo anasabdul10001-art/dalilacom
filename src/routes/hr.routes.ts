@@ -11,6 +11,7 @@ import * as time from "../services/hrTime.service";
 import * as pay from "../services/hrPay.service";
 import * as devices from "../services/hrDevice.service";
 import * as lock from "../services/hrDeviceLock.service";
+import * as track from "../services/hrTrack.service";
 import { monthRange, unifiedSummary } from "../services/unifiedSummary.service";
 
 /**
@@ -65,10 +66,15 @@ const statusQuery = (req: { query: Record<string, unknown> }) => (["PENDING_MANA
 const advanceStatusQuery = (req: { query: Record<string, unknown> }) => (["PENDING_MANAGER", "PENDING_HR", "APPROVED", "REJECTED", "REPAID"].includes(String(req.query.status)) ? (req.query.status as "APPROVED") : undefined);
 const yearQuery = (req: { query: Record<string, unknown> }) => (Number(req.query.year) >= 2000 && Number(req.query.year) <= 2100 ? Number(req.query.year) : new Date().getUTCFullYear());
 
-me.get("/", route(async (req, res) => res.json({ companyId: req.hrMe!.company.id, companyName: req.hrMe!.company.name, currency: req.hrMe!.company.currency, attendanceCodeRequired: req.hrMe!.company.attendanceCodeRequired, deviceLockRequired: req.hrMe!.company.deviceLockRequired, employee: { id: req.hrMe!.employee.id, role: req.hrMe!.employee.role, position: req.hrMe!.employee.position, status: req.hrMe!.employee.employmentStatus } })));
+me.get("/", route(async (req, res) => res.json({ companyId: req.hrMe!.company.id, companyName: req.hrMe!.company.name, currency: req.hrMe!.company.currency, attendanceCodeRequired: req.hrMe!.company.attendanceCodeRequired, deviceLockRequired: req.hrMe!.company.deviceLockRequired, employee: { tracksLocation: req.hrMe!.employee.tracksLocation, id: req.hrMe!.employee.id, role: req.hrMe!.employee.role, position: req.hrMe!.employee.position, status: req.hrMe!.employee.employmentStatus } })));
 const codeBody = (req: { body?: unknown }) => (typeof (req.body as { code?: unknown } | undefined)?.code === "string" ? (req.body as { code: string }).code : undefined);
 me.post("/check-in", route(async (req, res) => res.status(201).json(await time.checkIn(req.hrMe!, codeBody(req), lock.phoneOf(req)))));
 me.post("/check-out", route(async (req, res) => res.json(await time.checkOut(req.hrMe!, codeBody(req), lock.phoneOf(req)))));
+me.post("/locations", route(async (req, res) => {
+  const parsed = z.object({ points: z.array(z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), accuracy: z.number().min(0).max(100000).optional(), speed: z.number().min(0).max(500).optional(), at: z.string().trim().min(16).max(40) })).min(1).max(track.MAX_POINTS) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.status(201).json(await track.reportPoints(req.hrMe!, parsed.data.points, lock.phoneOf(req)));
+}));
 me.get("/attendance", route(async (req, res) => res.json(await time.myAttendance(req.hrMe!, periodQuery(req)))));
 me.get("/leave-balances", route(async (req, res) => res.json(await time.listBalances(req.hrMe!.company.id, req.hrMe!.employee.id, yearQuery(req)))));
 me.get("/leave-requests", route(async (req, res) => res.json(await time.myLeaveRequests(req.hrMe!))));
@@ -131,6 +137,10 @@ manage.delete("/employees/:id/device", route(async (req, res) => {
   res.json({ reset: true });
 }));
 
+// ---- where the drivers and distributors are, and where they went (the owner and the HR people)
+manage.get("/locations/current", route(async (req, res) => res.json(await track.currentLocations(req.hr!))));
+manage.get("/locations/:employeeId", route(async (req, res) => res.json(await track.route(req.hr!, req.params.employeeId, typeof req.query.from === "string" ? req.query.from : undefined, typeof req.query.to === "string" ? req.query.to : undefined))));
+
 manage.get("/departments", route(async (req, res) => res.json(await core.listDepartments(req.hr!.company.id))));
 manage.post("/departments", route(async (req, res) => {
   const parsed = z.object({ name: z.string().trim().min(1).max(80), managerId: z.string().uuid().optional() }).safeParse(req.body);
@@ -148,6 +158,7 @@ manage.delete("/departments/:id", route(async (req, res) => {
 }));
 
 const employeeSchema = z.object({
+  tracksLocation: z.boolean().optional(),
   firstName: z.string().trim().min(1).max(60),
   lastName: z.string().trim().min(1).max(60),
   email: z.string().trim().email().max(160).nullable().optional(),

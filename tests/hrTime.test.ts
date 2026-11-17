@@ -229,3 +229,57 @@ describe("HR one registered phone per employee", () => {
     expect((await prisma.hrEmployee.findUniqueOrThrow({ where: { id: w.employeeId } })).boundDeviceId).toBe("C");
   });
 });
+
+describe("HR tracking of drivers and distributors", () => {
+  const pt = (lat: number, lng: number, minsAgo: number) => ({ latitude: lat, longitude: lng, accuracy: 10, speed: 5, at: new Date(Date.now() - minsAgo * 60_000).toISOString() });
+  it("only a tracked employee, only while checked in; the owner sees where they are and their path", async () => {
+    const o = await company("hrtrk");
+    const w = await linkedEmployee(o, "hrtrkw");
+    const plain = await linkedEmployee(o, "hrtrkp");
+    // not tracked: refused
+    expect((await request(app).post("/hr/me/locations").set(w.auth).send({ points: [pt(33.5, 36.3, 1)] })).body.error.code).toBe("TRACKING_OFF");
+    // only the owner/HR turns it on
+    expect((await request(app).patch(`/hr/employees/${w.employeeId}`).set(w.auth).send({ tracksLocation: true })).status).toBeGreaterThanOrEqual(403);
+    expect((await request(app).patch(`/hr/employees/${w.employeeId}`).set(o.auth).send({ tracksLocation: true })).body.tracksLocation).toBe(true);
+    expect((await request(app).get("/hr/me").set(w.auth)).body.employee.tracksLocation).toBe(true);
+    // not checked in: refused
+    const off = await request(app).post("/hr/me/locations").set(w.auth).send({ points: [pt(33.5, 36.3, 1)] });
+    expect(off.status).toBe(409);
+    expect(off.body.error.code).toBe("NOT_CHECKED_IN");
+    await request(app).post("/hr/me/check-in").set(w.auth);
+    // bad points and old/future points are not saved
+    expect((await request(app).post("/hr/me/locations").set(w.auth).send({ points: [{ latitude: 95, longitude: 0, at: new Date().toISOString() }] })).status).toBe(400);
+    const mixed = await request(app).post("/hr/me/locations").set(w.auth).send({ points: [pt(33.5, 36.3, 30), pt(33.51, 36.31, 20), pt(33.52, 36.32, 10), pt(33.52, 36.32, 3 * 24 * 60), pt(33.6, 36.4, -60)] });
+    expect(mixed.status).toBe(201);
+    expect(mixed.body.saved).toBe(3);
+    // the owner sees the tracked employee (not the plain one), on shift, with the latest point
+    const cur = (await request(app).get("/hr/locations/current").set(o.auth)).body as { employee: { id: string }; onShift: boolean; latest: { latitude: number } }[];
+    expect(cur.map((c) => c.employee.id)).toEqual([w.employeeId]);
+    expect(cur[0].onShift).toBe(true);
+    expect(cur[0].latest.latitude).toBeCloseTo(33.52, 5);
+    // the path, oldest first, with a distance
+    const r = (await request(app).get(`/hr/locations/${w.employeeId}`).set(o.auth)).body as { points: { latitude: number }[]; distanceKm: number };
+    expect(r.points.map((p) => p.latitude)).toEqual([33.5, 33.51, 33.52]);
+    expect(r.distanceKm).toBeGreaterThan(2);
+    expect(r.distanceKm).toBeLessThan(6);
+    // employees cannot read it; after check-out nothing more is accepted
+    expect((await request(app).get("/hr/locations/current").set(w.auth)).status).toBeGreaterThanOrEqual(403);
+    expect((await request(app).get("/hr/locations/current").set(plain.auth)).status).toBeGreaterThanOrEqual(403);
+    await request(app).post("/hr/me/check-out").set(w.auth);
+    expect((await request(app).post("/hr/me/locations").set(w.auth).send({ points: [pt(33.5, 36.3, 1)] })).status).toBe(409);
+    expect((await request(app).get("/hr/locations/current").set(o.auth)).body[0].onShift).toBe(false);
+  });
+
+  it("with the phone lock on, another phone cannot report positions", async () => {
+    const o = await company("hrtrk2");
+    const w = await linkedEmployee(o, "hrtrk2w", {});
+    await request(app).patch(`/hr/employees/${w.employeeId}`).set(o.auth).send({ tracksLocation: true });
+    await request(app).patch("/hr/company").set(o.auth).send({ deviceLockRequired: true });
+    const A = { "X-Device-Id": "A", "X-Device-Name": "A" };
+    expect((await request(app).post("/hr/me/check-in").set(w.auth).set(A)).status).toBe(201);
+    expect((await request(app).post("/hr/me/locations").set(w.auth).set(A).send({ points: [pt(33.5, 36.3, 1)] })).status).toBe(201);
+    const other = await request(app).post("/hr/me/locations").set(w.auth).set({ "X-Device-Id": "B" }).send({ points: [pt(33.5, 36.3, 1)] });
+    expect(other.status).toBe(403);
+    expect(other.body.error.code).toBe("DEVICE_NOT_APPROVED");
+  });
+});

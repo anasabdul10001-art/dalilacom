@@ -72,4 +72,20 @@
     <string name="hr_lock_approve">Approve</string>
     <string name="hr_lock_reject">Reject</string>
     <string name="hr_lock_decided">Request decided</string>
+    <string name="hr_trk_title">Where drivers and distributors are</string>
+    <string name="hr_trk_none">No one is tracked. Turn it on from the employee list.</string>
+    <string name="hr_trk_onShift">On shift</string>
+    <string name="hr_trk_offShift">Off shift</string>
+    <string name="hr_trk_noPoint">No position received yet</string>
+    <string name="hr_trk_last">Last position: %1$s</string>
+    <string name="hr_trk_map">Show the route on the map</string>
+    <string name="hr_trk_dist">Distance today: %1$s km</string>
+    <string name="hr_trk_turnOn">Turn location tracking on</string>
+    <string name="hr_trk_turnOff">Turn location tracking off</string>
+    <string name="hr_trk_onDone">Location tracking turned on</string>
+    <string name="hr_trk_offDone">Location tracking turned off</string>
+    <string name="hr_trk_consentTitle">Location tracking</string>
+    <string name="hr_trk_consent">Your company turned on location tracking for you. Your position is recorded only while you are checked in, and only the company owner and HR people can see it. It stops when you check out.</string>
+    <string name="hr_trk_allow">OK, turn it on</string>
+    <string name="hr_trk_notifTitle">Dalilacom is recording your location during your shift</string>
 </resources>

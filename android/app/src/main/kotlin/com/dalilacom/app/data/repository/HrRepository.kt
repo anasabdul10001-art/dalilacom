@@ -23,6 +23,9 @@ class HrRepository(private val api: ApiService) {
         return if (response.isSuccessful && data != null) Result.success(data) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.hr_error))))
     }
 
+    /** A POST that only says how it went: 0 when the phone could not reach the server, else the HTTP status. */
+    suspend fun postStatus(path: String, body: JsonObject): Int = safeApiCall { api.hrPost(path, body) }?.code() ?: 0
+
     suspend fun put(path: String, body: JsonObject): Result<JsonElement> = send { api.hrPut(path, body) }
     suspend fun patch(path: String, body: JsonObject): Result<JsonElement> = send { api.hrPatch(path, body) }
     suspend fun delete(path: String): Result<JsonElement> = send { api.hrDelete(path) }

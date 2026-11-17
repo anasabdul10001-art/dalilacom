@@ -72,4 +72,20 @@
     <string name="hr_lock_approve">وافق</string>
     <string name="hr_lock_reject">ارفض</string>
     <string name="hr_lock_decided">انحسم الطلب</string>
+    <string name="hr_trk_title">أين الموزّعون والسائقون</string>
+    <string name="hr_trk_none">ما في موظفين بتتبّع الموقع. فعّلو من قائمة الموظفين.</string>
+    <string name="hr_trk_onShift">على الدوام</string>
+    <string name="hr_trk_offShift">خارج الدوام</string>
+    <string name="hr_trk_noPoint">ما وصل موقع بعد</string>
+    <string name="hr_trk_last">آخر موقع: %1$s</string>
+    <string name="hr_trk_map">اعرض المسار على الخريطة</string>
+    <string name="hr_trk_dist">المسافة اليوم: %1$s كم</string>
+    <string name="hr_trk_turnOn">فعّل تتبّع الموقع</string>
+    <string name="hr_trk_turnOff">أوقف تتبّع الموقع</string>
+    <string name="hr_trk_onDone">انفعّل تتبّع الموقع</string>
+    <string name="hr_trk_offDone">انوقف تتبّع الموقع</string>
+    <string name="hr_trk_consentTitle">تتبّع الموقع</string>
+    <string name="hr_trk_consent">صاحب الشركة فعّل تتبّع موقعك. موقعك بيتسجّل وقت ما تكون مسجّل حضور بس، وما بيشوفو غير صاحب الشركة وموظفي الموارد البشرية. بيوقف لما تسجّل انصراف.</string>
+    <string name="hr_trk_allow">تمام، فعّل</string>
+    <string name="hr_trk_notifTitle">دليلكم عم يسجّل موقعك وقت الدوام</string>
 </resources>

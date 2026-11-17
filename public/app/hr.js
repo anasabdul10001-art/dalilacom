@@ -88,7 +88,7 @@ function hrPeople() {
         <div class="item-title">${esc(name)}</div><div class="item-sub">${esc(e.position || t("hr.role." + e.role))}</div>
         <div class="chips">${uiChip(t("hr.role." + e.role))}${uiChip(t("hr.status." + e.employmentStatus), tone)}${e.department ? uiChip(e.department.name) : ""}${e.userId ? uiChip(t("hr.linked"), "info") : ""}</div>
         ${uiFold(t("hr.details"), more)}
-        <div class="btn-row"><button class="btn small soft" onclick="hrSalaryOpen('${e.id}')">${esc(t("hr.sal.open"))}</button><button class="btn small soft" onclick="hrSetDeviceCode('${e.id}')">${esc(t("hr.dev.setCode"))}</button>${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button>`}</div>
+        <div class="btn-row"><button class="btn small soft" onclick="hrSalaryOpen('${e.id}')">${esc(t("hr.sal.open"))}</button><button class="btn small soft" onclick="hrSetDeviceCode('${e.id}')">${esc(t("hr.dev.setCode"))}</button><button class="btn small soft" onclick="hrTrackToggle(this,'${e.id}',${e.tracksLocation ? "false" : "true"})">${esc(t(e.tracksLocation ? "hr.trk.turnOff" : "hr.trk.turnOn"))}</button>${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button>`}</div>
       </div>${e.baseSalary != null ? `<div class="item-end">${esc(hrMoney(e.baseSalary, cur))}</div>` : ""}</div>`;
   }).join("");
   const deptOpts = `<option value="">${esc(t("hr.dept.none"))}</option>` + depts.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
@@ -137,7 +137,13 @@ function hrAttendance() {
   const recs = hrData("attrec", "/hr/attendance?from=" + from);
   const co = hrData("company", "/hr/company");
   const reqs = hrData("devreq", "/hr/device-requests?status=PENDING");
-  if (devs === null || recs === null || co === null || reqs === null) return skeleton("list", 3);
+  const locs = hrData("locs", "/hr/locations/current");
+  if (devs === null || recs === null || co === null || reqs === null || locs === null) return skeleton("list", 3);
+  const locCard = `<div class="panel-title" style="margin-top:16px">${esc(t("hr.trk.title"))}</div><p class="muted">${esc(t("hr.trk.note"))}</p>
+    ${Array.isArray(locs) && locs.length ? locs.map((r) => `<div class="item">${uiAvatar(hrName(r.employee))}<div class="item-main"><div class="item-title">${esc(hrName(r.employee))}</div>
+      <div class="chips">${uiChip(t(r.onShift ? "hr.trk.onShift" : "hr.trk.offShift"), r.onShift ? "ok" : "warn")}</div>
+      <div class="item-sub">${r.latest ? esc(t("hr.trk.last", { t: new Date(r.latest.recordedAt).toLocaleString() })) : esc(t("hr.trk.noPoint"))}</div>
+      <div class="btn-row"><button class="btn small soft" onclick="hrRouteMap('${r.employee.id}','${esc(hrName(r.employee)).replace(/'/g, "")}')">${esc(t("hr.trk.map"))}</button></div></div></div>`).join("") : uiEmpty("📍", t("hr.trk.none"))}`;
   const lockOn = !!(co && co.deviceLockRequired);
   const lockCard = `<div class="panel-title" style="margin-top:16px">${esc(t("hr.lock.title"))}</div><p class="muted">${esc(t("hr.lock.intro"))}</p>
     <div class="card"><div class="chips">${uiChip(t(lockOn ? "hr.lock.on" : "hr.lock.off"), lockOn ? "ok" : "warn")}</div>
@@ -168,7 +174,7 @@ function hrAttendance() {
       <div class="item-title">${esc(hrName(r.employee))}</div>
       <div class="item-sub">${when(r.checkIn)} → ${r.checkOut ? when(r.checkOut) : esc(t("hr.att.open"))}</div>
       <div class="chips">${uiChip(t("hr.att.src." + r.source), r.source === "DEVICE" ? "info" : "")}</div></div></div>`).join("");
-  return `${keyCard}${codeCard}${lockCard}<div class="panel-title" style="margin-top:16px">${esc(t("hr.dev.title"))}</div><p class="muted">${esc(t("hr.dev.intro"))}</p>${devList}
+  return `${keyCard}${codeCard}${lockCard}${locCard}<div class="panel-title" style="margin-top:16px">${esc(t("hr.dev.title"))}</div><p class="muted">${esc(t("hr.dev.intro"))}</p>${devList}
     <div class="card"><div class="field"><label>${esc(t("hr.dev.name"))}</label><input id="hr-dv-name" maxlength="80" /></div>
       <div class="field"><label>${esc(t("hr.dev.kind"))}</label><select id="hr-dv-kind">${HR_DEV_KINDS.map((k) => `<option value="${k}">${esc(t("hr.dev.kind." + k))}</option>`).join("")}</select></div>
       <button class="btn soft" onclick="hrDevAdd(this)">${esc(t("hr.dev.add"))}</button></div>
@@ -184,6 +190,35 @@ async function hrDevAdd(btn) {
   if (!name) return toast(t("hr.dev.name"));
   const data = await uiBusy(btn, () => hrDo("POST", "/hr/devices", { name, kind: hrVal("hr-dv-kind") || "FINGERPRINT" }, "hr.dev.added"));
   if (data && data.key) { hrState().newKey = { name: data.name, key: data.key }; render(); }
+}
+async function hrTrackToggle(btn, id, on) {
+  const h = hrState();
+  const data = await uiBusy(btn, () => hrDo("PATCH", `/hr/employees/${id}`, { tracksLocation: on }, on ? "hr.trk.onDone" : "hr.trk.offDone"));
+  if (data) { delete h.data.locs; render(); }
+}
+// the route of one tracked employee today, on a map (Leaflet is already on the page for the shop map)
+async function hrRouteMap(id, name) {
+  const res = await api("GET", `/hr/locations/${id}`);
+  if (!res.ok) return hrErr(res);
+  const pts = (res.data.points || []).map((p) => [p.latitude, p.longitude]);
+  const box = document.createElement("div");
+  box.className = "ui-ask";
+  box.innerHTML = `<div class="ui-ask-card" style="width:min(640px,100%)"><label>${esc(name)}</label>
+    <p class="muted">${esc(pts.length ? t("hr.trk.dist", { n: res.data.distanceKm }) : t("hr.trk.noPoint"))}</p>
+    ${pts.length ? `<div id="hr-route-map" style="height:340px;border-radius:14px"></div>` : ""}
+    <div class="btn-row"><button class="btn small outline" data-no>${esc(t("adr.cancel"))}</button></div></div>`;
+  document.body.appendChild(box);
+  let map = null;
+  const close = () => { if (map) map.remove(); box.remove(); };
+  box.querySelector("[data-no]").onclick = close;
+  box.addEventListener("click", (e) => { if (e.target === box) close(); });
+  if (pts.length && window.L) {
+    map = L.map("hr-route-map");
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+    L.polyline(pts, { weight: 5 }).addTo(map);
+    L.marker(pts[pts.length - 1]).addTo(map);
+    pts.length > 1 ? map.fitBounds(L.latLngBounds(pts), { padding: [30, 30] }) : map.setView(pts[0], 16);
+  }
 }
 async function hrLockToggle(btn, on) {
   const h = hrState();

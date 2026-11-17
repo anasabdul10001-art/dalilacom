@@ -2855,6 +2855,7 @@ model HrCompany {
   attendance     HrAttendance[]
   devices        HrDevice[]
   deviceRequests HrDeviceRequest[]
+  locationPoints HrLocationPoint[]
   leaveTypes     HrLeaveType[]
   leaves         HrLeaveRequest[]
   components     HrSalaryComponent[]
@@ -2896,6 +2897,7 @@ model HrEmployee {
   boundDeviceId    String? // the one phone this employee may use for attendance (set by the first use, changed only by an approval)
   boundDeviceName  String?
   boundAt          DateTime?
+  tracksLocation   Boolean            @default(false) // a driver or distributor whose phone reports its position while they are checked in
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -2913,6 +2915,7 @@ model HrEmployee {
   advances           HrAdvance[]
   payslips           HrPayslip[]
   deviceRequests     HrDeviceRequest[]
+  locationPoints     HrLocationPoint[]
 
   @@unique([companyId, userId])
   @@unique([companyId, deviceCode])
@@ -2920,6 +2923,25 @@ model HrEmployee {
   @@index([userId])
   @@index([departmentId])
   @@index([managerId])
+}
+
+// One reported position of a tracked employee (a driver or distributor), only while checked in. Kept 30 days.
+model HrLocationPoint {
+  id         String   @id @default(uuid())
+  companyId  String
+  employeeId String
+  latitude   Float
+  longitude  Float
+  accuracy   Float? // metres
+  speed      Float? // metres per second
+  recordedAt DateTime
+  createdAt  DateTime @default(now())
+
+  company  HrCompany  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, recordedAt])
+  @@index([companyId, recordedAt])
 }
 
 enum HrDeviceRequestStatus {

@@ -245,6 +245,8 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                         }
                         OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { setSalaryFor(e.s("id")) }) { Text(stringResource(R.string.hr_sal_open)) }
                         OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { codeFor = e; codeValue = e.s("deviceCode").orEmpty() }) { Text(stringResource(R.string.hr_dev_setCode)) }
+                        val tracked = (e["tracksLocation"] as? JsonPrimitive)?.booleanOrNull == true
+                        OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { act(if (tracked) R.string.hr_trk_offDone else R.string.hr_trk_onDone, { repo.patch("hr/employees/${e.s("id")}", buildJsonObject { put("tracksLocation", !tracked) }) }, {}) }) { Text(stringResource(if (tracked) R.string.hr_trk_turnOff else R.string.hr_trk_turnOn)) }
                         if (e.s("userId") == null && st != "TERMINATED") OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = {
                             act(null, { repo.post("hr/employees/${e.s("id")}/invite") }) { r ->
                                 val o = r as? JsonObject
@@ -346,6 +348,7 @@ private fun AttendanceTab(repo: com.dalilacom.app.data.repository.HrRepository, 
     val from = java.time.LocalDate.now().minusDays(7).toString()
     ShopCodeBox(repo, version, act)
     PhoneLockBox(repo, version, act)
+    LocationsBox(repo, version)
     Box(stringResource(R.string.hr_dev_title)) {
         Text(stringResource(R.string.hr_dev_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Load(repo, "hr/devices", version) { data ->
@@ -575,7 +578,12 @@ private fun JobTab(repo: com.dalilacom.app.data.repository.HrRepository, ov: Jso
     // when the owner turned the shop code on, check-in/out asks for the code read from the screen at the shop
     var punch by remember { mutableStateOf<String?>(null) }
     var codeNeeded by remember { mutableStateOf(false) }
-    LaunchedEffect(version) { codeNeeded = ((repo.get("hr/me").getOrNull() as? JsonObject)?.get("attendanceCodeRequired") as? JsonPrimitive)?.booleanOrNull == true }
+    var tracks by remember { mutableStateOf(false) }
+    LaunchedEffect(version) {
+        val me = repo.get("hr/me").getOrNull() as? JsonObject
+        codeNeeded = (me?.get("attendanceCodeRequired") as? JsonPrimitive)?.booleanOrNull == true
+        tracks = ((me?.get("employee") as? JsonObject)?.get("tracksLocation") as? JsonPrimitive)?.booleanOrNull == true
+    }
     punch?.let { p ->
         PunchCodeDialog(onDismiss = { punch = null }) { c ->
             punch = null
@@ -584,6 +592,7 @@ private fun JobTab(repo: com.dalilacom.app.data.repository.HrRepository, ov: Jso
     }
     Load(repo, "hr/me/attendance", version) { data ->
         val open = data.rows().firstOrNull { it["checkOut"] == null || it["checkOut"] is kotlinx.serialization.json.JsonNull }
+        TrackingStarter(tracks, open != null)
         Box(job.s("companyName").orEmpty()) {
             Text(job.s("position").orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (open != null) {
@@ -804,4 +813,107 @@ private fun PhoneLockBox(repo: com.dalilacom.app.data.repository.HrRepository, v
             }
         }
     }
+}
+
+/* ---- tracking of drivers and distributors: the employee's phone reports (only while checked in, after agreeing), the owner sees it ---- */
+@Composable
+private fun TrackingStarter(tracks: Boolean, onShift: Boolean) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { context.getSharedPreferences("hr_tracking", android.content.Context.MODE_PRIVATE) }
+    var ask by remember { mutableStateOf(false) }
+    val permissions = remember {
+        val list = arrayListOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (android.os.Build.VERSION.SDK_INT >= 33) list.add(android.Manifest.permission.POST_NOTIFICATIONS)
+        list.toTypedArray()
+    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r[android.Manifest.permission.ACCESS_FINE_LOCATION] == true) com.dalilacom.app.hr.LocationReportService.start(context)
+    }
+    fun go() {
+        val fine = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (fine) com.dalilacom.app.hr.LocationReportService.start(context) else launcher.launch(permissions)
+    }
+    LaunchedEffect(tracks, onShift) {
+        if (tracks && onShift) { if (prefs.getBoolean("consent", false)) go() else ask = true }
+        else if (tracks) com.dalilacom.app.hr.LocationReportService.stop(context)
+    }
+    if (ask) AlertDialog(
+        onDismissRequest = { ask = false },
+        title = { Text(stringResource(R.string.hr_trk_consentTitle)) },
+        text = { Text(stringResource(R.string.hr_trk_consent)) },
+        confirmButton = { Button(onClick = { prefs.edit().putBoolean("consent", true).apply(); ask = false; go() }) { Text(stringResource(R.string.hr_trk_allow)) } },
+        dismissButton = { TextButton(onClick = { ask = false }) { Text(stringResource(R.string.account_cancel)) } },
+    )
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun LocationsBox(repo: com.dalilacom.app.data.repository.HrRepository, version: Int) {
+    var mapFor by remember { mutableStateOf<Pair<String, String>?>(null) }
+    Load(repo, "hr/locations/current", version) { data ->
+        val rows = data.rows()
+        Box(stringResource(R.string.hr_trk_title)) {
+            if (rows.isEmpty()) Text(stringResource(R.string.hr_trk_none), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            rows.forEach { r ->
+                val emp = r.o("employee")
+                val on = (r["onShift"] as? JsonPrimitive)?.booleanOrNull == true
+                val latest = r.o("latest")
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(fullName(emp), fontWeight = FontWeight.ExtraBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { StatusChip(stringResource(if (on) R.string.hr_trk_onShift else R.string.hr_trk_offShift), if (on) "ok" else "warn") }
+                    Text(if (latest == null) stringResource(R.string.hr_trk_noPoint) else stringResource(R.string.hr_trk_last, localTime(latest.s("recordedAt"))), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(onClick = { mapFor = (emp?.s("id").orEmpty()) to fullName(emp) }) { Text(stringResource(R.string.hr_trk_map)) }
+                }
+            }
+        }
+    }
+    mapFor?.let { (id, name) -> RouteMapDialog(repo, id, name) { mapFor = null } }
+}
+
+@Composable
+private fun RouteMapDialog(repo: com.dalilacom.app.data.repository.HrRepository, employeeId: String, name: String, onClose: () -> Unit) {
+    var data by remember { mutableStateOf<JsonObject?>(null) }
+    LaunchedEffect(employeeId) { data = repo.get("hr/locations/$employeeId").getOrNull() as? JsonObject ?: JsonObject(emptyMap()) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val mapView = remember {
+        org.osmdroid.config.Configuration.getInstance().apply {
+            userAgentValue = context.packageName
+            osmdroidBasePath = java.io.File(context.cacheDir, "osmdroid")
+            osmdroidTileCache = java.io.File(context.cacheDir, "osmdroid/tiles")
+        }
+        org.osmdroid.views.MapView(context).apply {
+            setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            minZoomLevel = 4.0
+        }
+    }
+    androidx.compose.runtime.DisposableEffect(mapView) { onDispose { mapView.onDetach() } }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(name) },
+        text = {
+            val d = data
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (d == null) SkeletonList(1) else {
+                    val pts = d.list("points").mapNotNull { p -> val la = p.n("latitude"); val lo = p.n("longitude"); if (la != null && lo != null) org.osmdroid.util.GeoPoint(la, lo) else null }
+                    if (pts.isEmpty()) Text(stringResource(R.string.hr_trk_noPoint), color = MaterialTheme.colorScheme.onSurfaceVariant) else {
+                        Text(stringResource(R.string.hr_trk_dist, "%.2f".format(d.n("distanceKm") ?: 0.0)))
+                        androidx.compose.ui.viewinterop.AndroidView(
+                            modifier = Modifier.fillMaxWidth().height(320.dp),
+                            factory = { mapView },
+                            update = { map ->
+                                map.overlays.clear()
+                                map.overlays.add(org.osmdroid.views.overlay.Polyline().apply { setPoints(pts); outlinePaint.strokeWidth = 8f })
+                                map.overlays.add(org.osmdroid.views.overlay.Marker(map).apply { position = pts.last(); setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM) })
+                                if (pts.size > 1) map.post { map.zoomToBoundingBox(org.osmdroid.util.BoundingBox.fromGeoPoints(pts), false, 80) }
+                                else { map.controller.setZoom(16.0); map.controller.setCenter(pts.last()) }
+                                map.invalidate()
+                            },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.account_cancel)) } },
+    )
 }
