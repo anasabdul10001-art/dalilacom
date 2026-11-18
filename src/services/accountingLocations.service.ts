@@ -115,10 +115,25 @@ export async function setStoreShare(userId: string, accountingProductId: string,
   });
 }
 
-/** Cut the link; what the store holds stays in the store, on its own. */
-export async function unlinkStore(userId: string, accountingProductId: string) {
-  const r = await prisma.product.updateMany({ where: { accountingProductId, merchant: { userId } }, data: { accountingProductId: null } });
-  if (!r.count) throw notFound("المنتج مو مربوط بالمتجر");
+/** Cut the link. By default what the store still holds goes back to the warehouse (the listing stays, at zero); with returnUnits false it stays in the store. */
+export async function unlinkStore(userId: string, accountingProductId: string, returnUnits = true) {
+  await prisma.$transaction(async (tx) => {
+    const product = await tx.accountingProduct.findFirst({ where: { id: accountingProductId, userId }, select: { id: true, costCents: true } });
+    const listings = await tx.product.findMany({ where: { accountingProductId, merchant: { userId } }, select: { id: true, stock: true } });
+    if (!product || !listings.length) throw notFound("المنتج مو مربوط بالمتجر");
+    for (const l of listings) {
+      let back = 0;
+      if (returnUnits && l.stock > 0) {
+        const took = await tx.product.updateMany({ where: { id: l.id, stock: { gte: l.stock } }, data: { stock: { decrement: l.stock } } });
+        if (took.count) back = l.stock;
+      }
+      await tx.product.update({ where: { id: l.id }, data: { accountingProductId: null } });
+      if (back > 0) {
+        await tx.accountingProduct.update({ where: { id: product.id }, data: { quantity: { increment: back } } });
+        await tx.accountingStockMovement.create({ data: { userId, productId: product.id, action: "STOCK_IN", quantity: back, unitCostCents: product.costCents, note: "رجوع من المتجر الإلكتروني" } });
+      }
+    }
+  });
 }
 
 /** The location a staff member sells from (a distributor has one of his own). */

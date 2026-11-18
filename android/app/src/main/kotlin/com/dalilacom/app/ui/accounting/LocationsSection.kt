@@ -102,6 +102,7 @@ fun LocationsSection(
                     val target = p?.storeProductId ?: ss?.id?.removePrefix("store:")
                     if (p != null && target != null && q >= 0) run { container.accountingRepository.setStoreShare(p.id, target, q) }
                 }) { Text(stringResource(R.string.accounting_store_save)) }
+                if (sp?.storeProductId != null) OutlinedButton(onClick = { val p = sp; if (p != null) run { container.accountingRepository.unlinkStore(p.id).also { if (it.isSuccess) sp = null } } }) { Text(stringResource(R.string.accounting_store_unlink)) }
             }
         }
         Text(stringResource(R.string.accounting_loc_title), style = MaterialTheme.typography.titleSmall)

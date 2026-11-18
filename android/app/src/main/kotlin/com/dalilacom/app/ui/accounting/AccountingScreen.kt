@@ -280,6 +280,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                             MetricTile(stringResource(R.string.accounting_cash_in), money((c.cashInCents).toInt()), "income", Modifier.weight(1f))
                             MetricTile(stringResource(R.string.accounting_cash_out), money((c.cashOutCents).toInt()), "expense", Modifier.weight(1f))
                         }
+                        if (c.withDistributorsCents != 0L || c.handedOverCents != 0L) Text(stringResource(R.string.accounting_cash_withdist) + ": " + money((c.withDistributorsCents).toInt()) + "  ·  " + stringResource(R.string.accounting_cash_handedtoday) + ": " + money((c.handedOverCents).toInt()), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (c.openingSource == "previous") com.dalilacom.app.ui.common.StatusChip(stringResource(R.string.accounting_cash_opening_prev), "info")
                         if (c.closed) {
                             val diff = c.differenceCents ?: 0L

@@ -819,6 +819,8 @@
     <string name="accounting_cash_in">مقبوض نقداً</string>
     <string name="accounting_cash_out">مدفوع نقداً</string>
     <string name="accounting_cash_expected">المتوقع بالصندوق</string>
+    <string name="accounting_cash_withdist">عند الموزّعين (لسا ما وصل للصندوق)</string>
+    <string name="accounting_cash_handedtoday">استلمتو منهم اليوم</string>
     <string name="accounting_cash_counted">المبلغ المعدود فعلياً</string>
     <string name="accounting_cash_close">إقفال اليوم</string>
     <string name="accounting_cash_closed">النهار مقفول</string>

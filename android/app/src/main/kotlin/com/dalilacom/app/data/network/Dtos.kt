@@ -1407,7 +1407,7 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 /** The cash box of one day in one currency. */
 @Serializable data class AccountingCashDto(
     val day: String = "", val currency: String = "EUR", val openingCents: Long = 0, val openingSource: String = "none",
-    val cashInCents: Long = 0, val cashOutCents: Long = 0, val expectedCents: Long = 0,
+    val cashInCents: Long = 0, val cashOutCents: Long = 0, val expectedCents: Long = 0, val withDistributorsCents: Long = 0, val handedOverCents: Long = 0,
     val closed: Boolean = false, val countedCents: Long? = null, val differenceCents: Long? = null,
     val methods: List<AccountingCashMethodDto> = emptyList(), val unspecified: AccountingCashUnspecifiedDto = AccountingCashUnspecifiedDto(),
 )

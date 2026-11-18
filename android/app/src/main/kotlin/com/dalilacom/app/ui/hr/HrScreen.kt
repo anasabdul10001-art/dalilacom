@@ -225,6 +225,7 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
     var renameDept by remember { mutableStateOf<JsonObject?>(null) }
     var renameValue by remember { mutableStateOf("") }
     var deleteDeptId by remember { mutableStateOf<String?>(null) }
+    var resetPhoneId by remember { mutableStateOf<String?>(null) }
     var codeFor by remember { mutableStateOf<JsonObject?>(null) }
     var codeValue by remember { mutableStateOf("") }
     var newCode by remember { mutableStateOf("") }
@@ -261,6 +262,7 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
                         if (hrCan("peopleEdit")) OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { codeFor = e; codeValue = e.s("deviceCode").orEmpty() }) { Text(stringResource(R.string.hr_dev_setCode)) }
                         val tracked = (e["tracksLocation"] as? JsonPrimitive)?.booleanOrNull == true
                         if (hrCan("peopleEdit")) OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { act(if (tracked) R.string.hr_trk_offDone else R.string.hr_trk_onDone, { repo.patch("hr/employees/${e.s("id")}", buildJsonObject { put("tracksLocation", !tracked) }) }, {}) }) { Text(stringResource(if (tracked) R.string.hr_trk_turnOff else R.string.hr_trk_turnOn)) }
+                        if (hrCan("peopleEdit") && e.s("userId") != null && st != "TERMINATED") OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = { resetPhoneId = e.s("id") }) { Text(stringResource(R.string.hr_lock_reset)) }
                         if (isOwner && st != "TERMINATED") PickList(HR_ROLES.map { it to roleName(it) }, e.s("role") ?: "EMPLOYEE", { r -> if (r != e.s("role")) act(R.string.hr_roleDone, { repo.patch("hr/employees/${e.s("id")}", buildJsonObject { put("role", r) }) }, {}) }, stringResource(R.string.hr_f_role))
                         if (hrCan("peopleEdit") && e.s("userId") == null && st != "TERMINATED") OutlinedButton(shape = RoundedCornerShape(12.dp), onClick = {
                             act(null, { repo.post("hr/employees/${e.s("id")}/invite") }) { r ->
@@ -306,6 +308,14 @@ private fun PeopleTab(repo: com.dalilacom.app.data.repository.HrRepository, mana
             text = { Field(codeValue, { codeValue = it }, stringResource(R.string.hr_dev_codePrompt)) },
             confirmButton = { TextButton(onClick = { codeFor = null; act(R.string.hr_dev_codeSaved, { repo.patch("hr/employees/${e.s("id")}", buildJsonObject { if (codeValue.isBlank()) put("deviceCode", JsonNull) else put("deviceCode", codeValue.trim()) }) }, {}) }) { Text(stringResource(R.string.hr_sal_saveBase)) } },
             dismissButton = { TextButton(onClick = { codeFor = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+    resetPhoneId?.let { id ->
+        AlertDialog(
+            onDismissRequest = { resetPhoneId = null },
+            title = { Text(stringResource(R.string.hr_lock_resetConfirm)) },
+            confirmButton = { TextButton(onClick = { resetPhoneId = null; act(R.string.hr_lock_resetDone, { repo.delete("hr/employees/$id/device") }, {}) }) { Text(stringResource(R.string.hr_lock_reset)) } },
+            dismissButton = { TextButton(onClick = { resetPhoneId = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
     deleteDeptId?.let { id ->

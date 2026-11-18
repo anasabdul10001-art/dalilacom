@@ -94,6 +94,10 @@ describe("accounting: goods at branches and distributors", () => {
     expect(ov).toMatchObject({ inMainStore: 17, inOnlineStore: 3 });
     // the store page cannot change the quantity of a linked listing by itself
     expect((await request(app).patch(`/products/${listing.id}`).set(boss.auth).send({ stock: 50 })).status).toBe(409);
+    // unlinking brings the store's units back to the warehouse and frees the listing
+    expect((await request(app).post(`/accounting/products/${p.id}/store/unlink`).set(boss.auth).send({})).status).toBe(200);
+    expect((await prisma.accountingProduct.findUniqueOrThrow({ where: { id: p.id } })).quantity).toBe(20);
+    expect(await prisma.product.findUniqueOrThrow({ where: { id: listing.id } })).toMatchObject({ stock: 0, accountingProductId: null });
   });
 
   it("a distributor sells only from his own location; who may hand goods out follows the role", async () => {
@@ -134,6 +138,9 @@ describe("accounting: goods at branches and distributors", () => {
     expect(ok.status).toBe(201);
     expect(ok.body.currencies[0]).toMatchObject({ handedOverCents: 3000, heldCents: 1000 });
     expect((await request(app).post(`/accounting/locations/${van.id}/handover`).set(boss.auth).send({ currency: "EUR", amountCents: 2000 })).status).toBe(409);
+    // the shop's cash box counts only what is really in the box: 4000 sold by the distributor, 3000 of it handed over
+    const box = (await request(app).get("/accounting/cash").query({ currency: "EUR" }).set(boss.auth)).body;
+    expect(box).toMatchObject({ cashInCents: 4000, withDistributorsCents: 4000, handedOverCents: 3000, expectedCents: 3000 });
     // the owner also sells in the shop and a delivered online order counts as its own channel
     await request(app).post("/accounting/sales").set(boss.auth).send({ items: [{ productId: p.id, quantity: 1 }] });
     await prisma.user.update({ where: { id: boss.id }, data: { role: "MERCHANT" } });

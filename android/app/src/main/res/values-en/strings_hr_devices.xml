@@ -72,6 +72,9 @@
     <string name="hr_lock_approve">Approve</string>
     <string name="hr_lock_reject">Reject</string>
     <string name="hr_lock_decided">Request decided</string>
+    <string name="hr_lock_reset">Unlink phone</string>
+    <string name="hr_lock_resetConfirm">Unlink this employee\'s phone?</string>
+    <string name="hr_lock_resetDone">Phone unlinked</string>
     <string name="hr_trk_title">Where drivers and distributors are</string>
     <string name="hr_trk_none">No one is tracked. Turn it on from the employee list.</string>
     <string name="hr_trk_onShift">On shift</string>
@@ -126,6 +129,7 @@
     <string name="accounting_store_pick">Store product</string>
     <string name="accounting_store_qty">Units in the store</string>
     <string name="accounting_store_save">Save</string>
+    <string name="accounting_store_unlink">Unlink</string>
     <string name="accounting_cashloc_title">Cash at this location</string>
     <string name="accounting_cash_sold">Sales</string>
     <string name="accounting_cash_collected">Cash collected</string>

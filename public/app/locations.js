@@ -154,7 +154,7 @@ function accountingLocationsCard(a) {
       <div class="field"><label>${esc(t("loc.product"))}</label><select id="loc-sp">${own.map((p) => `<option value="${esc(p.id)}" data-store="${esc(p.storeProductId || "")}" data-units="${p.storeUnits || 0}">${esc(p.name)}${p.storeProductId ? " · " + esc(t("loc.inOnline")) + ": " + (p.storeUnits || 0) : ""}</option>`).join("")}</select></div>
       <div class="field"><label>${esc(t("loc.storeProduct"))}</label><select id="loc-ss"><option value="">—</option>${free.map((p) => `<option value="${esc(p.id.slice(6))}">${esc(p.name)}</option>`).join("")}</select></div>
       <div class="field"><label>${esc(t("loc.storeQty"))}</label><input id="loc-sq" inputmode="numeric" value="1" /></div>
-      <button class="btn" onclick="locStoreSave(this)">${esc(t("loc.storeSave"))}</button></div>`
+      <div class="btn-row"><button class="btn" onclick="locStoreSave(this)">${esc(t("loc.storeSave"))}</button><button class="btn outline" onclick="locStoreUnlink(this)">${esc(t("loc.storeUnlink"))}</button></div></div>`
     : (own.length && !S._actAs ? uiEmpty("🛒", t("loc.storeNone")) : "");
   return `<div class="panel-title">${esc(t("loc.overview"))}</div><p class="muted">${esc(t("loc.overviewHint"))}</p>${overview}
     <div class="panel-title" style="margin-top:16px">${esc(t("loc.onlineStore"))}</div>${storeForm}
@@ -178,6 +178,15 @@ async function locMove(btn, id, kind) {
   const res = await uiBusy(btn, () => api("POST", `/accounting/locations/${id}/${kind}`, { productId, quantity }));
   if (!res.ok) return toast(errMsg(res.data, t("loc.failed")));
   toast(t(kind === "give" ? "loc.gave" : "loc.returned")); locReload();
+}
+async function locStoreUnlink(btn) {
+  const sel = document.getElementById("loc-sp");
+  const opt = sel.options[sel.selectedIndex];
+  if (!sel.value || !(opt && opt.dataset.store)) return toast(t("loc.storeNotLinked"));
+  if (!confirm(t("loc.storeUnlinkAsk"))) return;
+  const res = await uiBusy(btn, () => api("POST", `/accounting/products/${sel.value}/store/unlink`, {}));
+  if (!res.ok) return toast(errMsg(res.data, t("loc.failed")));
+  toast(t("loc.storeUnlinked")); locReload();
 }
 async function locStoreSave(btn) {
   const sel = document.getElementById("loc-sp");

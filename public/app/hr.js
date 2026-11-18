@@ -96,7 +96,7 @@ function hrPeople() {
         <div class="item-title">${esc(name)}</div><div class="item-sub">${esc(e.position || t("hr.role." + e.role))}</div>
         <div class="chips">${uiChip(t("hr.role." + e.role))}${uiChip(t("hr.status." + e.employmentStatus), tone)}${e.department ? uiChip(e.department.name) : ""}${e.userId ? uiChip(t("hr.linked"), "info") : ""}</div>
         ${uiFold(t("hr.details"), more)}
-        <div class="btn-row">${hrCan("payroll") ? `<button class="btn small soft" onclick="hrSalaryOpen('${e.id}')">${esc(t("hr.sal.open"))}</button>` : ""}${hrCan("peopleEdit") ? `<button class="btn small soft" onclick="hrSetDeviceCode('${e.id}')">${esc(t("hr.dev.setCode"))}</button><button class="btn small soft" onclick="hrTrackToggle(this,'${e.id}',${e.tracksLocation ? "false" : "true"})">${esc(t(e.tracksLocation ? "hr.trk.turnOff" : "hr.trk.turnOn"))}</button>${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button>`}` : ""}</div>
+        <div class="btn-row">${hrCan("payroll") ? `<button class="btn small soft" onclick="hrSalaryOpen('${e.id}')">${esc(t("hr.sal.open"))}</button>` : ""}${hrCan("peopleEdit") ? `<button class="btn small soft" onclick="hrSetDeviceCode('${e.id}')">${esc(t("hr.dev.setCode"))}</button><button class="btn small soft" onclick="hrTrackToggle(this,'${e.id}',${e.tracksLocation ? "false" : "true"})">${esc(t(e.tracksLocation ? "hr.trk.turnOff" : "hr.trk.turnOn"))}</button>${e.userId && e.employmentStatus !== "TERMINATED" ? `<button class="btn small soft" onclick="hrPhoneReset(this,'${e.id}')">${esc(t("hr.lock.reset"))}</button>` : ""}${e.userId || e.employmentStatus === "TERMINATED" ? "" : `<button class="btn small soft" onclick="hrInvite(this,'${e.id}')">${esc(t("hr.invite"))}</button>`}` : ""}</div>
         ${isOwner && e.employmentStatus !== "TERMINATED" ? `<div class="field"><label>${esc(t("hr.f.role"))}</label><select onchange="hrSetRole(this,'${e.id}')">${hrRoleOptions(e.role)}</select></div>` : ""}
       </div>${e.baseSalary != null ? `<div class="item-end">${esc(hrMoney(e.baseSalary, cur))}</div>` : ""}</div>`;
   }).join("");
@@ -238,6 +238,12 @@ async function hrLockToggle(btn, on) {
   const h = hrState();
   const data = await uiBusy(btn, () => hrDo("PATCH", "/hr/company", { deviceLockRequired: on }, on ? "hr.lock.turnedOn" : "hr.lock.turnedOff"));
   if (data) { delete h.data.company; render(); }
+}
+// forget the registered phone of an employee (lost or changed phone): the next phone he signs in on becomes his registered one
+async function hrPhoneReset(btn, id) {
+  if (!confirm(t("hr.lock.resetConfirm"))) return;
+  const data = await uiBusy(btn, () => hrDo("DELETE", `/hr/employees/${id}/device`, undefined, "hr.lock.resetDone"));
+  if (data) render();
 }
 async function hrLockDecide(btn, id, decision) {
   const h = hrState();

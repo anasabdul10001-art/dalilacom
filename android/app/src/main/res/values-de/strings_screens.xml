@@ -447,6 +447,8 @@
     <string name="accounting_cash_in">Cash received</string>
     <string name="accounting_cash_out">Cash paid out</string>
     <string name="accounting_cash_expected">Expected in the box</string>
+    <string name="accounting_cash_withdist">With distributors (not in the box yet)</string>
+    <string name="accounting_cash_handedtoday">Received from them today</string>
     <string name="accounting_cash_counted">Amount actually counted</string>
     <string name="accounting_cash_close">Close the day</string>
     <string name="accounting_cash_closed">This day is closed</string>

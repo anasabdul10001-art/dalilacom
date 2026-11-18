@@ -1236,7 +1236,7 @@ accountingRouter.post("/products/:id/store", route(async (req, res) => {
   res.json({ ok: true });
 }));
 accountingRouter.post("/products/:id/store/unlink", route(async (req, res) => {
-  await locs.unlinkStore(req.user!.id, req.params.id);
+  await locs.unlinkStore(req.user!.id, req.params.id, req.body?.returnUnits !== false);
   res.json({ ok: true });
 }));
 // per product: in the main store, at the locations (not sold yet), sold
@@ -1261,19 +1261,29 @@ accountingRouter.get("/cash", route(async (req, res) => {
   const { day, currency } = parsed.data;
   const userId = req.user!.id;
   const from = new Date(`${day}T00:00:00.000Z`), to = new Date(`${day}T23:59:59.999Z`);
-  const [byMethod, opening] = await Promise.all([
+  const [byMethod, opening, distLocs] = await Promise.all([
     prisma.accountingEntry.groupBy({ by: ["payMethod", "type"], where: { userId, currency, occurredAt: { gte: from, lte: to } }, _sum: { amountCents: true } }),
     cashOpening(userId, day, currency),
+    prisma.accountingLocation.findMany({ where: { userId, kind: "DISTRIBUTOR" }, select: { id: true } }),
   ]);
   const sum = (m: string | null, t: string) => Number(byMethod.find((x) => x.payMethod === m && x.type === t)?._sum.amountCents ?? 0);
   const cashIn = sum("CASH", "INCOME") + sum("CASH", "RECEIPT"), cashOut = sum("CASH", "EXPENSE") + sum("CASH", "PAYOUT");
-  const expected = opening.cents + cashIn - cashOut;
+  // a distributor's cash sale is booked as income at once, but the money is in his pocket until he hands it over: it is not in the shop's box yet
+  const distIds = distLocs.map((l) => l.id);
+  const [distSales, distReturns, distHandovers] = distIds.length ? await Promise.all([
+    prisma.accountingSale.findMany({ where: { userId, locationId: { in: distIds }, currency, payMethod: "CASH", occurredAt: { gte: from, lte: to } }, select: { paidCents: true } }),
+    prisma.accountingSaleReturn.findMany({ where: { userId, currency, payMethod: "CASH", occurredAt: { gte: from, lte: to }, saleId: { in: (await prisma.accountingSale.findMany({ where: { userId, locationId: { in: distIds } }, select: { id: true } })).map((s) => s.id) } }, select: { refundCents: true } }),
+    prisma.accountingHandover.findMany({ where: { userId, locationId: { in: distIds }, currency, createdAt: { gte: from, lte: to } }, select: { amountCents: true } }),
+  ]) : [[], [], []];
+  const withDistributorsCents = distSales.reduce((a, s) => a + Number(s.paidCents), 0) - distReturns.reduce((a, r) => a + Number(r.refundCents), 0);
+  const handedCents = distHandovers.reduce((a, h) => a + Number(h.amountCents), 0);
+  const expected = opening.cents + cashIn - cashOut - withDistributorsCents + handedCents;
   const row = opening.row;
   const counted = row?.closedAt && row.countedCents != null ? Number(row.countedCents) : null;
   res.json({
     day, currency,
     openingCents: opening.cents, openingSource: opening.source,
-    cashInCents: cashIn, cashOutCents: cashOut, expectedCents: expected,
+    cashInCents: cashIn, cashOutCents: cashOut, expectedCents: expected, withDistributorsCents, handedOverCents: handedCents,
     closed: !!row?.closedAt, closedAt: row?.closedAt ?? null, countedCents: counted, differenceCents: counted == null ? null : counted - expected, note: row?.note ?? null,
     methods: ["CASH", "BANK", "WALLET"].map((m) => ({ payMethod: m, incomeCents: sum(m, "INCOME") + sum(m, "RECEIPT"), expensesCents: sum(m, "EXPENSE") + sum(m, "PAYOUT") })),
     unspecified: { incomeCents: sum(null, "INCOME") + sum(null, "RECEIPT"), expensesCents: sum(null, "EXPENSE") + sum(null, "PAYOUT") },
