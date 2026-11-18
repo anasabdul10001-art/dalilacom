@@ -2,9 +2,10 @@
    (src/services/accountingLocations.service.ts). The main store is the product's own quantity: giving goods out takes them
    from it, returning puts them back, and a sale made from a location takes them from that location only. ---- */
 
-function locState() { return (S._loc = S._loc || { ov: null, staff: null, loadingOv: false }); }
+function locState() { return (S._loc = S._loc || { ov: null, staff: null, loadingOv: false, settle: {}, rep: null, repFrom: "", repTo: "" }); }
 function locReload() {
-  S._loc = { ov: null, staff: null, loadingOv: false };
+  const keep = locState();
+  S._loc = { ov: null, staff: null, loadingOv: false, settle: {}, rep: keep.rep, repFrom: keep.repFrom, repTo: keep.repTo };
   S._accounting = { ...S._accounting, loading: true };
   loadAccounting();
 }
@@ -60,6 +61,67 @@ function locStaffList() {
   return h.staff;
 }
 
+/** What this account may do besides handing goods out: receive cash (money) and read the sales report (reports). */
+function locAllows(tag) {
+  if (!S._actAs) return true;
+  const wp = typeof staffActing === "function" ? staffActing() : null;
+  return !!(wp && (wp.allowed || []).includes(tag));
+}
+
+function locSettle(id) {
+  const h = locState();
+  if (h.settle[id] === undefined) {
+    h.settle[id] = null;
+    api("GET", `/accounting/locations/${id}/settlement`).then(({ ok, data }) => { h.settle[id] = ok ? data : false; render(); });
+  }
+  return h.settle[id];
+}
+function locSettleBlock(l) {
+  const sd = locSettle(l.id);
+  if (!sd || !sd.currencies || !sd.currencies.length) return "";
+  const canReceive = locAllows("money");
+  return `<div class="panel-title" style="margin-top:10px">${esc(t("loc.settle.title"))}</div>` + sd.currencies.map((c) => `
+    <table class="plain-table" style="width:100%"><tbody>
+      <tr><td>${esc(t("loc.rep.total"))}</td><td>${fmt(c.soldCents, c.currency)}</td></tr>
+      <tr><td>${esc(t("loc.settle.cash"))}</td><td>${fmt(c.cashCents - c.refundedCents, c.currency)}</td></tr>
+      <tr><td>${esc(t("loc.settle.credit"))}</td><td>${fmt(c.creditCents, c.currency)}</td></tr>
+      <tr><td>${esc(t("loc.settle.handed"))}</td><td>${fmt(c.handedOverCents, c.currency)}</td></tr>
+      <tr><td><b>${esc(t("loc.settle.held"))}</b></td><td><b>${fmt(c.heldCents, c.currency)}</b></td></tr>
+      <tr><td class="muted">${esc(t("loc.settle.today"))}</td><td class="muted">${fmt(c.today.soldCents, c.currency)} · ${fmt(c.today.handedOverCents, c.currency)}</td></tr>
+    </tbody></table>
+    ${canReceive && c.heldCents > 0 ? `<div class="row"><div class="field"><label>${esc(t("loc.settle.amount"))} (${esc(c.currency)})</label><input id="loc-h-${esc(l.id)}-${esc(c.currency)}" inputmode="decimal" value="${(c.heldCents / 100).toFixed(2)}" /></div></div>
+      <div class="btn-row"><button class="btn small" onclick="locHandover(this,'${esc(l.id)}','${esc(c.currency)}')">${esc(t("loc.settle.receive"))}</button></div>` : ""}`).join("");
+}
+async function locHandover(btn, id, currency) {
+  const amountCents = Math.round(Number(String(document.getElementById(`loc-h-${id}-${currency}`).value).replace(",", ".")) * 100);
+  if (!(amountCents > 0)) return toast(t("accounting.invalidAmount"));
+  const res = await uiBusy(btn, () => api("POST", `/accounting/locations/${id}/handover`, { currency, amountCents }));
+  if (!res.ok) return toast(errMsg(res.data, t("loc.failed")));
+  toast(t("loc.settle.received")); locState().settle = {}; render();
+}
+
+/** Sales per channel and per seller for a period. */
+function locReportCard() {
+  if (!locAllows("reports")) return "";
+  const h = locState();
+  const rep = h.rep;
+  const channels = !rep ? "" : rep.channels.length === 0 ? `<p class="muted">${esc(t("loc.rep.empty"))}</p>` :
+    `<div class="panel-title">${esc(t("loc.rep.channels"))}</div><table class="plain-table" style="width:100%"><thead><tr><th>${esc(t("loc.rep.channel"))}</th><th>${esc(t("loc.rep.count"))}</th><th>${esc(t("loc.rep.total"))}</th><th>${esc(t("loc.rep.credit"))}</th><th>${esc(t("loc.rep.returned"))}</th></tr></thead><tbody>${rep.channels.map((c) => `<tr><td>${esc(t("accounting.channel." + c.channel))}</td><td>${c.count}</td><td>${fmt(c.totalCents, c.currency)}</td><td>${fmt(c.creditCents, c.currency)}</td><td>${fmt(c.returnedCents, c.currency)}</td></tr>`).join("")}</tbody></table>`;
+  const sellers = !rep || !rep.sellers.length ? "" :
+    `<div class="panel-title" style="margin-top:12px">${esc(t("loc.rep.sellers"))}</div><table class="plain-table" style="width:100%"><thead><tr><th>${esc(t("loc.rep.seller"))}</th><th>${esc(t("loc.rep.count"))}</th><th>${esc(t("loc.rep.total"))}</th><th>${esc(t("loc.rep.commission"))}</th><th>${esc(t("loc.rep.commissionPaid"))}</th><th>${esc(t("loc.rep.held"))}</th></tr></thead><tbody>${rep.sellers.map((r) => `<tr><td>${esc(r.isOwner ? t("loc.rep.owner") : r.name || "—")}</td><td>${r.count}</td><td>${fmt(r.totalCents, r.currency)}</td><td>${fmt(r.commissionAccruedCents, r.currency)}</td><td>${fmt(r.commissionPaidCents, r.currency)}</td><td>${fmt(r.cashHeldCents, r.currency)}</td></tr>`).join("")}</tbody></table>`;
+  return `<div class="card"><h2>${esc(t("loc.rep.title"))}</h2>
+    <div class="row"><div class="field"><label>${esc(t("loc.rep.from"))}</label><input id="loc-rf" type="date" value="${esc(h.repFrom)}" /></div><div class="field"><label>${esc(t("loc.rep.to"))}</label><input id="loc-rt" type="date" value="${esc(h.repTo)}" /></div></div>
+    <button class="btn small" onclick="locReportLoad(this)">${esc(t("loc.rep.show"))}</button>${channels}${sellers}</div>`;
+}
+async function locReportLoad(btn) {
+  const h = locState();
+  h.repFrom = document.getElementById("loc-rf").value; h.repTo = document.getElementById("loc-rt").value;
+  const q = new URLSearchParams(); if (h.repFrom) q.set("from", h.repFrom); if (h.repTo) q.set("to", h.repTo);
+  const res = await uiBusy(btn, () => api("GET", "/accounting/reports/sellers?" + q.toString()));
+  if (!res.ok) return toast(errMsg(res.data, t("loc.failed")));
+  h.rep = res.data; render();
+}
+
 function accountingLocationsCard(a) {
   const ov = locOverview();
   const staff = locStaffList();
@@ -75,6 +137,7 @@ function accountingLocationsCard(a) {
       ${l.items.length ? `<table class="plain-table" style="width:100%"><thead><tr><th>${esc(t("loc.product"))}</th><th>${esc(t("loc.onHand"))}</th><th>${esc(t("loc.sold"))}</th></tr></thead><tbody>${l.items.map((i) => `<tr><td>${esc(i.name)}</td><td>${i.onHand}</td><td>${i.sold}</td></tr>`).join("")}</tbody></table>` : ""}
       ${canMove && l.isActive ? `<div class="row"><div class="field"><label>${esc(t("loc.product"))}</label><select id="loc-p-${esc(l.id)}">${productOpts}</select></div><div class="field"><label>${esc(t("loc.qty"))}</label><input id="loc-q-${esc(l.id)}" inputmode="numeric" value="1" /></div></div>
         <div class="btn-row"><button class="btn small" onclick="locMove(this,'${esc(l.id)}','give')">${esc(t("loc.give"))}</button><button class="btn small outline" onclick="locMove(this,'${esc(l.id)}','return')">${esc(t("loc.return"))}</button></div>` : ""}
+      ${locSettleBlock(l)}
       ${!S._actAs ? `<div class="btn-row"><button class="btn small soft" onclick="locToggle(this,'${esc(l.id)}',${l.isActive ? "false" : "true"})">${esc(t(l.isActive ? "loc.switchOff" : "loc.switchOn"))}</button></div>` : ""}
     </div>`).join("");
   const staffOpts = `<option value="">${esc(t("loc.noStaff"))}</option>` + staff.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
@@ -95,7 +158,7 @@ function accountingLocationsCard(a) {
     : (own.length && !S._actAs ? uiEmpty("🛒", t("loc.storeNone")) : "");
   return `<div class="panel-title">${esc(t("loc.overview"))}</div><p class="muted">${esc(t("loc.overviewHint"))}</p>${overview}
     <div class="panel-title" style="margin-top:16px">${esc(t("loc.onlineStore"))}</div>${storeForm}
-    <div class="panel-title" style="margin-top:16px">${esc(t("loc.title"))}</div>${list}${form}`;
+    <div class="panel-title" style="margin-top:16px">${esc(t("loc.title"))}</div>${list}${form}${locReportCard()}`;
 }
 
 async function locCreate(btn) {

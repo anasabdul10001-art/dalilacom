@@ -48,8 +48,9 @@ export function tagFor(method: string, path: string): Tag {
   const m = method.toUpperCase();
   if (m === "DELETE") return "destructive";
   // branches and distributors: anyone who may see products reads them; handing goods out or back needs "distribute"
+  if (/^\/locations\/[^/]+\/handover$/.test(p)) return "money";
   if (/^\/locations(\/|$)/.test(p) || p === "/stock/overview" || /^\/products\/[^/]+\/store(\/|$)/.test(p)) return m === "GET" ? "productsRead" : "distribute";
-  if (/^\/(summary|reports|statements|tax\/report|export\.csv)$/.test(p)) return "reports";
+  if (/^\/(summary|reports|reports\/sellers|statements|tax\/report|export\.csv)$/.test(p)) return "reports";
   if (/^\/(sales|purchases)\/[^/]+\/returns$/.test(p) || /^\/(settings|tax)(\/|$)/.test(p)) return "admin";
   if (m === "POST" && (p === "/sales" || /^\/products\/[^/]+\/sell$/.test(p))) return "sell";
   if (m === "GET" && (p === "/sales" || /^\/sales\/[^/]+$/.test(p))) return "salesRead";

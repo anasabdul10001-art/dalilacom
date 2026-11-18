@@ -126,4 +126,24 @@
     <string name="accounting_store_pick">منتج المتجر</string>
     <string name="accounting_store_qty">الكمية بالمتجر</string>
     <string name="accounting_store_save">حفظ</string>
+    <string name="accounting_cashloc_title">الكاش عند الموقع</string>
+    <string name="accounting_cash_sold">المبيعات</string>
+    <string name="accounting_cash_collected">كاش قبضو</string>
+    <string name="accounting_cash_credit">ديون عالزبائن</string>
+    <string name="accounting_cash_handed">سلّم</string>
+    <string name="accounting_cash_held">لسا معو</string>
+    <string name="accounting_cash_amount">المبلغ المستلم</string>
+    <string name="accounting_cash_receive">استلام</string>
+    <string name="accounting_sellerrep_title">تقرير المبيعات</string>
+    <string name="accounting_rep_from">من (YYYY-MM-DD)</string>
+    <string name="accounting_rep_to">إلى (YYYY-MM-DD)</string>
+    <string name="accounting_rep_show">عرض</string>
+    <string name="accounting_rep_channels">حسب القناة</string>
+    <string name="accounting_rep_sellers">حسب البائع</string>
+    <string name="accounting_rep_owner">صاحب الشركة</string>
+    <string name="accounting_rep_commission">عمولة مستحقة</string>
+    <string name="accounting_rep_commission_paid">عمولة مدفوعة</string>
+    <string name="accounting_rep_held">كاش معو</string>
+    <string name="accounting_sellerrep_empty">ما في مبيعات بهالفترة</string>
+    <string name="accounting_rep_count">الفواتير</string>
 </resources>

@@ -116,4 +116,40 @@ describe("accounting: goods at branches and distributors", () => {
     // and the shop's own sale from the main store still works for the owner
     expect((await request(app).post("/accounting/sales").set(boss.auth).send({ items: [{ productId: p.id, quantity: 1 }], channel: "WHOLESALE" })).body.channel).toBe("WHOLESALE");
   });
+
+  it("settlement: a distributor's cash is held until handed over; the report shows sales per seller and channel", async () => {
+    const boss = await owner("locsettle");
+    const p = await tea(boss);
+    const dist = await staffMember(boss, "CASHIER", "Ali");
+    const van = await place(boss, { name: "Van S", kind: "DISTRIBUTOR", staffId: dist.id });
+    await request(app).post(`/accounting/locations/${van.id}/give`).set(boss.auth).send({ productId: p.id, quantity: 6 });
+    expect((await request(app).post("/accounting/sales").set(dist.as).send({ items: [{ productId: p.id, quantity: 4 }] })).status).toBe(201); // 4 x 1000 in cash
+    const st = (await request(app).get(`/accounting/locations/${van.id}/settlement`).set(boss.auth)).body;
+    expect(st.currencies[0]).toMatchObject({ soldCents: 4000, cashCents: 4000, handedOverCents: 0, heldCents: 4000 });
+    expect(st.goods[0].onHand).toBe(2);
+    // the distributor may look but not receive money
+    expect((await request(app).get(`/accounting/locations/${van.id}/settlement`).set(dist.as)).status).toBe(200);
+    expect((await request(app).post(`/accounting/locations/${van.id}/handover`).set(dist.as).send({ currency: "EUR", amountCents: 100 })).status).toBe(403);
+    const ok = await request(app).post(`/accounting/locations/${van.id}/handover`).set(boss.auth).send({ currency: "EUR", amountCents: 3000 });
+    expect(ok.status).toBe(201);
+    expect(ok.body.currencies[0]).toMatchObject({ handedOverCents: 3000, heldCents: 1000 });
+    expect((await request(app).post(`/accounting/locations/${van.id}/handover`).set(boss.auth).send({ currency: "EUR", amountCents: 2000 })).status).toBe(409);
+    // the owner also sells in the shop and a delivered online order counts as its own channel
+    await request(app).post("/accounting/sales").set(boss.auth).send({ items: [{ productId: p.id, quantity: 1 }] });
+    await prisma.user.update({ where: { id: boss.id }, data: { role: "MERCHANT" } });
+    const category = await prisma.category.findFirstOrThrow();
+    const shop = await prisma.merchantProfile.create({ data: { userId: boss.id, businessName: "S", categoryId: category.id, approvalStatus: "APPROVED", address: "x", phone: "1", latitude: 1, longitude: 2 } });
+    const buyer = await account("locbuyer");
+    await prisma.order.create({ data: { orderNumber: `T-${Date.now()}`, userId: buyer.id, merchantId: shop.id, status: "DELIVERED", subtotalCents: 5000, totalCents: 5000 } });
+    const rep = (await request(app).get("/accounting/reports/sellers").set(boss.auth)).body;
+    const ch = (name: string) => rep.channels.find((c: { channel: string }) => c.channel === name);
+    expect(ch("DISTRIBUTOR")).toMatchObject({ count: 1, totalCents: 4000 });
+    expect(ch("SHOP")).toMatchObject({ count: 1, totalCents: 1000 });
+    expect(ch("ONLINE")).toMatchObject({ count: 1, totalCents: 5000 });
+    const ali = rep.sellers.find((x: { name: string | null }) => x.name === "Ali");
+    expect(ali).toMatchObject({ count: 1, totalCents: 4000, cashHeldCents: 1000 });
+    expect(rep.sellers.find((x: { isOwner: boolean }) => x.isOwner)).toMatchObject({ count: 1, totalCents: 1000 });
+    // a cashier cannot read the report
+    expect((await request(app).get("/accounting/reports/sellers").set(dist.as)).status).toBe(403);
+  });
 });

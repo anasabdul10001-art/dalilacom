@@ -911,9 +911,27 @@ model AccountingLocation {
   user  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   stock AccountingLocationStock[]
   moves AccountingLocationMove[]
+  handovers AccountingHandover[]
 
   @@index([userId])
   @@index([staffId])
+}
+
+// Cash a distributor or branch handed over to the owner: what they collected in cash, less this, is what they still hold.
+model AccountingHandover {
+  id           String   @id @default(uuid())
+  userId       String
+  locationId   String
+  currency     String
+  amountCents  BigInt
+  note         String?
+  recordedById String?
+  createdAt    DateTime @default(now())
+
+  location AccountingLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId, createdAt])
+  @@index([userId, createdAt])
 }
 
 // What one location holds of one product: given - sold - returned = onHand.

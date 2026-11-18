@@ -627,6 +627,7 @@ export const en: LanguagePack = {
     "الكمية الموجودة بالمتجر تغيّرت، جرّب مرة تانية": "The quantity in the store has changed, try again",
     "توزيع على المتجر الإلكتروني": "Given to the online store",
     "رجوع من المتجر الإلكتروني": "Returned from the online store",
+    "المبلغ أكبر من الكاش المسجّل عند هالموقع": "The amount is more than the cash recorded at this location",
     "المنتج مو مربوط بالمتجر": "This product is not linked to the store",
     "كمية هالمنتج بتنحدد من المحاسبة (المستودع)": "This product's quantity is set from accounting (the warehouse)",
     "الكمية الموجودة بالمستودع ما بتكفي": "The main store does not have enough",

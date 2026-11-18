@@ -126,4 +126,24 @@
     <string name="accounting_store_pick">Store product</string>
     <string name="accounting_store_qty">Units in the store</string>
     <string name="accounting_store_save">Save</string>
+    <string name="accounting_cashloc_title">Cash at this location</string>
+    <string name="accounting_cash_sold">Sales</string>
+    <string name="accounting_cash_collected">Cash collected</string>
+    <string name="accounting_cash_credit">Owed by customers</string>
+    <string name="accounting_cash_handed">Handed over</string>
+    <string name="accounting_cash_held">Still held</string>
+    <string name="accounting_cash_amount">Amount received</string>
+    <string name="accounting_cash_receive">Receive</string>
+    <string name="accounting_sellerrep_title">Sales report</string>
+    <string name="accounting_rep_from">From (YYYY-MM-DD)</string>
+    <string name="accounting_rep_to">To (YYYY-MM-DD)</string>
+    <string name="accounting_rep_show">Show</string>
+    <string name="accounting_rep_channels">By channel</string>
+    <string name="accounting_rep_sellers">By seller</string>
+    <string name="accounting_rep_owner">Owner</string>
+    <string name="accounting_rep_commission">Commission due</string>
+    <string name="accounting_rep_commission_paid">Commission paid</string>
+    <string name="accounting_rep_held">Cash held</string>
+    <string name="accounting_sellerrep_empty">No sales in this period</string>
+    <string name="accounting_rep_count">Invoices</string>
 </resources>

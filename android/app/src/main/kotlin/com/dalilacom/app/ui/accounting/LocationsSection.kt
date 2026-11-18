@@ -45,6 +45,8 @@ fun LocationsSection(
     locations: List<AccountingLocationDto>,
     canMove: Boolean,
     isOwner: Boolean,
+    canReceive: Boolean = false,
+    canReport: Boolean = false,
     onChanged: () -> Unit,
     setMessage: (String) -> Unit,
 ) {
@@ -116,6 +118,7 @@ fun LocationsSection(
                 }
                 Text(stringResource(R.string.accounting_loc_held, l.onHandUnits) + "  ·  " + stringResource(R.string.accounting_loc_sold) + ": " + l.soldUnits, fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 l.items.forEach { i -> Text(i.name + "  ·  " + stringResource(R.string.accounting_loc_onhand) + ": " + i.onHand + "  ·  " + stringResource(R.string.accounting_loc_sold) + ": " + i.sold, fontSize = 13.sp) }
+                LocationCashBlock(container, l.id, canReceive, locations, setMessage)
                 if (canMove && l.isActive) {
                     androidx.compose.foundation.layout.Box {
                         OutlinedButton(onClick = { pickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(pick?.name ?: stringResource(R.string.accounting_loc_pick)) }
@@ -142,5 +145,6 @@ fun LocationsSection(
             }
             Button(onClick = { if (newName.isNotBlank()) run { container.accountingRepository.createLocation(newName.trim(), newKind).also { if (it.isSuccess) newName = "" } } }) { Text(stringResource(R.string.accounting_loc_add_btn)) }
         }
+        if (canReport) SellerReportCard(container)
     }
 }

@@ -14,6 +14,7 @@ import { extractInvoiceFromPhoto, visionAvailable } from "../services/ai.service
 import * as locs from "../services/accountingLocations.service";
 import { marketOfUser } from "../services/viewerCountry.service";
 import { notify } from "../services/notification.service";
+import * as settle from "../services/accountingSettlement.service";
 import { actAsBusinessStaff, actorOf, accrueSaleCommission, reduceSaleCommission } from "../services/businessStaff.service";
 /** The largest single accounting entry, in minor units. Far below 2^53, so sums of many entries stay exact as JSON numbers. */
 const MAX_ENTRY_CENTS = 9_000_000_000_000;
@@ -1203,6 +1204,30 @@ accountingRouter.post("/locations/:id/return", route(async (req, res) => {
   await locs.returnStock(req.user!.id, actorOf(req), req.params.id, parsed.data.productId, parsed.data.quantity, parsed.data.note);
   res.json({ ok: true });
 }));
+// ---- settlement with a distributor / branch: cash collected, handed over, still held
+accountingRouter.get("/locations/:id/settlement", route(async (req, res) => {
+  if (req.staffActor?.staff.role === "CASHIER") {
+    const own = await locs.locationOfStaff(req.user!.id, req.staffActor.staff.id);
+    if (!own || own.id !== req.params.id) return sendError(res, 403, "FORBIDDEN", "هاد الموقع مو إلك");
+  }
+  const day = typeof req.query.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.day) ? req.query.day : undefined;
+  res.json(await settle.settlement(req.user!.id, req.params.id, day));
+}));
+accountingRouter.post("/locations/:id/handover", route(async (req, res) => {
+  const parsed = z.object({ currency: currencyCode, amountCents: z.number().int().positive().max(1_000_000_000_000), note: z.string().trim().max(240).optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await settle.recordHandover(req.user!.id, actorOf(req), req.params.id, parsed.data.currency, parsed.data.amountCents, parsed.data.note);
+  res.status(201).json(await settle.settlement(req.user!.id, req.params.id));
+}));
+// who sold what: per seller and per channel, with commissions and the cash each distributor still holds
+accountingRouter.get("/reports/sellers", route(async (req, res) => {
+  const d = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T00:00:00.000Z`) : null);
+  const now = new Date();
+  const from = d(req.query.from) ?? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const to = d(req.query.to) ? new Date(d(req.query.to)!.getTime() + 86400000) : new Date(now.getTime() + 86400000);
+  res.json(await settle.sellerReport(req.user!.id, from, to));
+}));
+
 // the online store as a place goods sit: how many units of this product the store offers (the rest stays in the warehouse)
 accountingRouter.post("/products/:id/store", route(async (req, res) => {
   const parsed = z.object({ storeProductId: z.string().uuid(), quantity: z.number().int().min(0).max(1_000_000) }).safeParse(req.body);

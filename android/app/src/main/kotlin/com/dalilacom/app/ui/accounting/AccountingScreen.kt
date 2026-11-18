@@ -307,7 +307,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         }
         if (can("productsRead") && (acting == null || locations.isNotEmpty())) item {
             CollapsibleCard(stringResource(R.string.accounting_loc_title)) {
-                LocationsSection(container, products, locations, canMove = acting == null || "distribute" in acting.allowed, isOwner = acting == null, onChanged = { scope.launch { basket = emptyList(); reload() } }, setMessage = { message = it })
+                LocationsSection(container, products, locations, canMove = acting == null || "distribute" in acting.allowed, isOwner = acting == null, canReceive = acting == null || "money" in acting.allowed, canReport = acting == null || "reports" in acting.allowed, onChanged = { scope.launch { basket = emptyList(); reload() } }, setMessage = { message = it })
             }
         }
         if (can("sell")) item {
