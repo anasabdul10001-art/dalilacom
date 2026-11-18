@@ -26,7 +26,7 @@ const CURSOR_JS = `(() => {
 
 async function launch(opts = {}) {
   const port = opts.port || 9333;
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "dlk-rec-"));
+  const keepProfile = !!opts.profile; const profile = opts.profile || fs.mkdtempSync(path.join(os.tmpdir(), "dlk-rec-"));
   const proc = spawn(CHROME, [
     "--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
     "--window-size=1920,1080", "--force-device-scale-factor=1", "--hide-scrollbars", "--lang=ar", "--no-first-run",
@@ -51,7 +51,7 @@ async function launch(opts = {}) {
   await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await send("Page.addScriptToEvaluateOnNewDocument", { source: CURSOR_JS });
 
-  const ev = async (expr) => { const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.text + " " + (r.exceptionDetails.exception && r.exceptionDetails.exception.description || "")); return r.result.value; };
+  const ev = async (expr) => { const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.text + " " + (r.exceptionDetails.exception && r.exceptionDetails.exception.description || "").split(String.fromCharCode(10))[0] + " IN: " + expr.replace(/\s+/g, " ").slice(0, 260)); return r.result.value; };
   const goto = async (url) => { await send("Page.navigate", { url }); await sleep(2500); await ev(CURSOR_JS); };
 
   // ---- recorder (screencast: a frame whenever the screen changes)
@@ -65,6 +65,8 @@ async function launch(opts = {}) {
       send("Page.screencastFrameAck", { sessionId }).catch(() => {});
     }
   });
+  // native confirm()/alert() dialogs would freeze the page: accept them (the video shows the app's own dialogs)
+  listeners.push((msg) => { if (msg.method === "Page.javascriptDialogOpening") send("Page.handleJavaScriptDialog", { accept: true, promptText: "" }).catch(() => {}); });
   const startRec = async () => {
     rec = { dir: fs.mkdtempSync(path.join(os.tmpdir(), "dlk-frames-")), n: 0, frames: [] };
     await send("Page.startScreencast", { format: "jpeg", quality: 92, maxWidth: 1920, maxHeight: 1080, everyNthFrame: 1 });
@@ -101,15 +103,15 @@ async function launch(opts = {}) {
   const click = async (expr) => { const p = await rectOf(expr); if (!p) throw new Error("not found: " + expr); await sleep(300); await clickAt(p); };
   const clickText = (t, sel) => click(byText(t, sel));
   const type = async (text, delay = 85) => { for (const ch of text) { await send("Input.insertText", { text: ch }); await sleep(delay); } };
-  const fillBy = async (expr, text) => { await click(expr); await type(text); await sleep(300); };
+  const fillBy = async (expr, text) => { await click(expr); await ev(`(()=>{const e=document.activeElement; if(e&&e.select) try{e.select()}catch(_){}})()`); await type(text); await sleep(300); };
   const setSelect = async (expr, label) => {
     const p = await rectOf(expr); await sleep(250); await ev(`window.__moveCursor(${p.x}, ${p.y})`); await sleep(900); await ev(`window.__ripple(${p.x}, ${p.y})`); await sleep(300);
-    await ev(`(() => { const s = (${expr}); const o = [...s.options].find(o => o.text.trim() === ${JSON.stringify(label)}); s.value = o.value; s.dispatchEvent(new Event('input',{bubbles:true})); s.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+    await ev(`(() => { const s = (${expr}); const o = [...s.options].find(o => o.text.trim() === ${JSON.stringify(label)} || o.text.trim().startsWith(${JSON.stringify(label)} + ' ')); s.value = o.value; s.dispatchEvent(new Event('input',{bubbles:true})); s.dispatchEvent(new Event('change',{bubbles:true})); })()`);
     await sleep(700);
   };
   const scrollBy = async (dy, ms = 1400) => { await ev(`window.scrollBy({top:${dy},behavior:'smooth'})`); await sleep(ms); };
   const waitFor = async (expr, ms = 20000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await ev(`!!(${expr})`)) return true; } catch {} await sleep(300); } throw new Error('timeout waiting for: ' + expr.slice(0, 80)); };
-  const close = async () => { try { ws.close(); } catch {} proc.kill(); await sleep(500); try { fs.rmSync(profile, { recursive: true, force: true }); } catch {} };
+  const close = async () => { if (keepProfile) { try { await send("Browser.close"); } catch {} await sleep(1500); } try { ws.close(); } catch {} proc.kill(); await sleep(500); if (!keepProfile) try { fs.rmSync(profile, { recursive: true, force: true }); } catch {} };
   return { send, ev, goto, startRec, stopRec, click, clickText, clickAt, rectOf, byText, type, fillBy, setSelect, scrollBy, sleep, waitFor, close };
 }
 module.exports = { launch, sleep };

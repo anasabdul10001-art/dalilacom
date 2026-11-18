@@ -966,6 +966,9 @@ img.avatar { object-fit: cover; background: var(--surface-alt); }
   /* the section sites (accounting, HR, ...) are work screens: use the whole width next to the rail */
   .screen-body:not(.map-mode) > *:not(.tabbar):not(.scan-fab):has(> .site) { max-width: none; }
   .screen-body .site { max-width: none; }
+  /* forms inside a wide work screen: fields side by side instead of one very long line each */
+  .screen-body .site .card:has(> .field) { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2px 18px; align-items: end; }
+  .screen-body .site .card:has(> .field) > :not(.field) { grid-column: 1 / -1; }
   .deals-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr)); gap: 14px; }
 
   /* the discover screen: results panel on the starting edge, map on the rest */
