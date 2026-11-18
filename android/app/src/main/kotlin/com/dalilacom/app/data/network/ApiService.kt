@@ -309,6 +309,12 @@ interface ApiService {
     @GET("accounting/products/{id}/movements") suspend fun accountingMovements(@Path("id") id: String): Response<List<AccountingMovementDto>>
     @POST("accounting/stock/count") suspend fun accountingStockCount(@Body body: AccountingCountRequest): Response<AccountingCountResultDto>
     @retrofit2.http.PATCH("accounting/products/{id}") suspend fun setAccountingProductMin(@Path("id") id: String, @Body body: AccountingMinRequest): Response<okhttp3.ResponseBody>
+    @GET("accounting/locations") suspend fun accountingLocations(): Response<List<AccountingLocationDto>>
+    @POST("accounting/locations") suspend fun createAccountingLocation(@Body body: AccountingLocationRequest): Response<okhttp3.ResponseBody>
+    @PATCH("accounting/locations/{id}") suspend fun patchAccountingLocation(@Path("id") id: String, @Body body: AccountingLocationPatch): Response<okhttp3.ResponseBody>
+    @POST("accounting/locations/{id}/give") suspend fun giveAccountingStock(@Path("id") id: String, @Body body: AccountingMoveRequest): Response<okhttp3.ResponseBody>
+    @POST("accounting/locations/{id}/return") suspend fun returnAccountingStock(@Path("id") id: String, @Body body: AccountingMoveRequest): Response<okhttp3.ResponseBody>
+    @GET("accounting/stock/overview") suspend fun accountingStockOverview(): Response<List<AccountingOverviewRowDto>>
     @POST("accounting/sales") suspend fun createAccountingSale(@Body body: AccountingSaleRequest): Response<AccountingSaleDto>
     @GET("accounting/sales") suspend fun accountingSales(): Response<List<AccountingSaleDto>>
     @GET("accounting/cash") suspend fun accountingCash(@retrofit2.http.Query("day") day: String, @retrofit2.http.Query("currency") currency: String): Response<AccountingCashDto>

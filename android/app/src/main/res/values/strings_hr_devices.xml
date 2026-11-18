@@ -98,4 +98,26 @@
     <string name="accounting_channel_STREET">بيع بالشارع</string>
     <string name="accounting_channel_DISTRIBUTOR">موزّع</string>
     <string name="accounting_channel_ONLINE">المتجر الإلكتروني</string>
+    <string name="accounting_loc_title">الفروع والموزّعين</string>
+    <string name="accounting_loc_overview">أين البضاعة</string>
+    <string name="accounting_loc_main">المستودع</string>
+    <string name="accounting_loc_distributed">موزّع وما انباع</string>
+    <string name="accounting_loc_sold">انباع</string>
+    <string name="accounting_loc_none">ما أضفت فرع أو موزّع بعد</string>
+    <string name="accounting_loc_kind_BRANCH">فرع</string>
+    <string name="accounting_loc_kind_DISTRIBUTOR">موزّع</string>
+    <string name="accounting_loc_held">عندو %1$d قطعة</string>
+    <string name="accounting_loc_onhand">الموجود</string>
+    <string name="accounting_loc_qty">الكمية</string>
+    <string name="accounting_loc_give">وزّع عليه</string>
+    <string name="accounting_loc_return">رجّع للمستودع</string>
+    <string name="accounting_loc_switch_off">أوقف الموقع</string>
+    <string name="accounting_loc_switch_on">شغّل الموقع</string>
+    <string name="accounting_loc_add">إضافة فرع أو موزّع</string>
+    <string name="accounting_loc_name">الاسم</string>
+    <string name="accounting_loc_add_btn">أضف</string>
+    <string name="accounting_loc_pick">اختر المنتج</string>
+    <string name="accounting_loc_sell_from">البيع من</string>
+    <string name="accounting_loc_main_store">المستودع الرئيسي</string>
+    <string name="accounting_channel_WHOLESALE">سحب تاجر</string>
 </resources>

@@ -31,11 +31,11 @@ export const MAX_RATE_BP = 5000; // a commission above 50% of a sale is a typing
 
 // ---------------------------------------------------------------- what each role may do in accounting
 
-type Tag = "sell" | "salesRead" | "productsRead" | "partiesRead" | "stockWrite" | "money" | "reports" | "admin" | "destructive";
-const ALL: Tag[] = ["sell", "salesRead", "productsRead", "partiesRead", "stockWrite", "money", "reports", "admin", "destructive"];
+type Tag = "distribute" | "sell" | "salesRead" | "productsRead" | "partiesRead" | "stockWrite" | "money" | "reports" | "admin" | "destructive";
+const ALL: Tag[] = ["distribute", "sell", "salesRead", "productsRead", "partiesRead", "stockWrite", "money", "reports", "admin", "destructive"];
 export const ROLE_TAGS: Record<BusinessStaffRole, Tag[]> = {
   CASHIER: ["sell", "salesRead", "productsRead", "partiesRead"],
-  STOCK: ["productsRead", "stockWrite"],
+  STOCK: ["productsRead", "stockWrite", "distribute"],
   ASSISTANT: ["sell", "salesRead", "productsRead", "partiesRead", "money"],
   MANAGER: ALL,
   DRIVER: [], // works on deliveries, not in accounting
@@ -47,6 +47,8 @@ export function tagFor(method: string, path: string): Tag {
   const p = path.replace(/\/+$/, "") || "/";
   const m = method.toUpperCase();
   if (m === "DELETE") return "destructive";
+  // branches and distributors: anyone who may see products reads them; handing goods out or back needs "distribute"
+  if (/^\/locations(\/|$)/.test(p) || p === "/stock/overview") return m === "GET" ? "productsRead" : "distribute";
   if (/^\/(summary|reports|statements|tax\/report|export\.csv)$/.test(p)) return "reports";
   if (/^\/(sales|purchases)\/[^/]+\/returns$/.test(p) || /^\/(settings|tax)(\/|$)/.test(p)) return "admin";
   if (m === "POST" && (p === "/sales" || /^\/products\/[^/]+\/sell$/.test(p))) return "sell";

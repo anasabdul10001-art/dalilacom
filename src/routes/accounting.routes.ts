@@ -11,6 +11,7 @@ import { sendError, sendValidationError } from "../lib/apiError";
 import express from "express";
 import { sniffImageMime } from "../lib/image";
 import { extractInvoiceFromPhoto, visionAvailable } from "../services/ai.service";
+import * as locs from "../services/accountingLocations.service";
 import { marketOfUser } from "../services/viewerCountry.service";
 import { notify } from "../services/notification.service";
 import { actAsBusinessStaff, actorOf, accrueSaleCommission, reduceSaleCommission } from "../services/businessStaff.service";
@@ -732,7 +733,12 @@ accountingRouter.post("/sales/:id/returns", route(async (req, res) => {
       const key = p.line.productId;
       if (key) {
         if (key.startsWith("store:")) await tx.product.updateMany({ where: { id: key.slice(6) }, data: { stock: { increment: p.quantity }, soldCount: { decrement: p.quantity } } });
-        else await tx.accountingProduct.updateMany({ where: { id: key, userId }, data: { quantity: { increment: p.quantity } } });
+        else if (sale.locationId) {
+          // goods sold from a location come back to that location
+          await tx.accountingLocationStock.updateMany({ where: { locationId: sale.locationId, productId: key }, data: { onHand: { increment: p.quantity }, sold: { decrement: p.quantity } } });
+          await tx.accountingLocationMove.create({ data: { locationId: sale.locationId, productId: key, kind: "SOLD_BACK", quantity: p.quantity, saleId: sale.id, recordedById: actorOf(req), note: `مرتجع فاتورة بيع #${sale.number}` } });
+          continue;
+        } else await tx.accountingProduct.updateMany({ where: { id: key, userId }, data: { quantity: { increment: p.quantity } } });
         await tx.accountingStockMovement.create({ data: { userId, ...(key.startsWith("store:") ? { storeProductId: key.slice(6) } : { productId: key }), action: "STOCK_IN", quantity: p.quantity, unitCostCents: Number(p.line.unitCostCents), note: `مرتجع فاتورة بيع #${sale.number}` } }).catch(() => undefined);
       }
     }
@@ -993,7 +999,8 @@ accountingRouter.get("/statements", route(async (req, res) => {
   const cashTotal = cash.reduce((a, x) => a + x.cents, 0);
   const owed = (kind: string) => partyRows.filter((r) => r.party.kind === kind).reduce((a, r) => a + (r.kind === "CHARGE" ? 1 : -1) * Number(r.amountCents), 0);
   const receivables = Math.max(owed("CUSTOMER"), 0), payables = Math.max(owed("SUPPLIER"), 0);
-  const inventory = products.reduce((a, x) => a + x.quantity * x.costCents, 0) + (shopCurrency === currency ? shop.reduce((a, x) => a + x.stock * x.costPriceCents, 0) : 0);
+  const atLocations = await prisma.accountingLocationStock.findMany({ where: { onHand: { gt: 0 }, location: { userId }, product: { currency } }, select: { onHand: true, product: { select: { costCents: true } } } });
+  const inventory = products.reduce((a, x) => a + x.quantity * x.costCents, 0) + atLocations.reduce((a, x) => a + x.onHand * x.product.costCents, 0) + (shopCurrency === currency ? shop.reduce((a, x) => a + x.stock * x.costPriceCents, 0) : 0);
   type TaxRow = { tax: bigint };
   const [outS, outR, inP, inR] = await Promise.all([
     prisma.$queryRaw<TaxRow[]>`SELECT COALESCE(SUM(l."taxCents"), 0) AS tax FROM "AccountingSaleLine" l JOIN "AccountingSale" s ON s."id" = l."saleId" WHERE s."userId" = ${userId} AND s."currency" = ${currency}`,
@@ -1026,11 +1033,12 @@ const saleSchema = z.object({
   occurredAt: z.string().datetime().optional(),
   partyId: z.string().uuid().optional(),
   paidCents: z.number().int().nonnegative().max(MAX_ENTRY_CENTS).optional(),
-  channel: z.enum(["SHOP", "STREET", "DISTRIBUTOR"]).default("SHOP"), // the online store has its own orders
+  channel: z.enum(["SHOP", "STREET", "DISTRIBUTOR", "WHOLESALE"]).default("SHOP"), // the online store has its own orders
+  locationId: z.string().uuid().optional(), // sell out of a branch or a distributor's own stock
 });
-type SaleRow = { channel?: string; returned?: Record<string, number>; taxCents?: bigint; pricesIncludeTax?: boolean; id: string; number: number; partyId?: string | null; paidCents?: bigint; customerName: string | null; note: string | null; currency: string; subtotalCents: bigint; discountCents: bigint; totalCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitPriceCents: bigint; unitCostCents: bigint; lineTotalCents: bigint; discountCents?: bigint; taxRateBp?: number; taxCents?: bigint }[] };
+type SaleRow = { locationId?: string | null; channel?: string; returned?: Record<string, number>; taxCents?: bigint; pricesIncludeTax?: boolean; id: string; number: number; partyId?: string | null; paidCents?: bigint; customerName: string | null; note: string | null; currency: string; subtotalCents: bigint; discountCents: bigint; totalCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitPriceCents: bigint; unitCostCents: bigint; lineTotalCents: bigint; discountCents?: bigint; taxRateBp?: number; taxCents?: bigint }[] };
 const plainSale = (r: SaleRow) => ({
-  id: r.id, number: r.number, channel: r.channel ?? "SHOP", partyId: r.partyId ?? null, paidCents: Number(r.paidCents ?? r.totalCents), customerName: r.customerName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt,
+  id: r.id, number: r.number, channel: r.channel ?? "SHOP", locationId: r.locationId ?? null, partyId: r.partyId ?? null, paidCents: Number(r.paidCents ?? r.totalCents), customerName: r.customerName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt,
   subtotalCents: Number(r.subtotalCents), discountCents: Number(r.discountCents), totalCents: Number(r.totalCents), taxCents: Number(r.taxCents ?? 0), pricesIncludeTax: r.pricesIncludeTax ?? true,
   lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, returnedQuantity: r.returned?.[l.id] ?? 0, unitPriceCents: Number(l.unitPriceCents), unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents), discountCents: Number(l.discountCents ?? 0), taxRateBp: l.taxRateBp ?? 0, taxCents: Number(l.taxCents ?? 0) })),
 });
@@ -1066,6 +1074,9 @@ async function createSaleInvoice(userId: string, d: SaleInput, actorId: string =
   if (lines.some((l) => l.unitPrice <= 0)) return fail(400, "BAD_REQUEST", "أدخل سعر البيع أولاً");
   const currency = lines[0].currency;
   if (lines.some((l) => l.currency !== currency)) return fail(400, "BAD_REQUEST", "كل أصناف الفاتورة لازم تكون بنفس العملة");
+  const location = d.locationId ? await prisma.accountingLocation.findFirst({ where: { id: d.locationId, userId, isActive: true } }) : null;
+  if (d.locationId && !location) return fail(404, "NOT_FOUND", "الموقع غير موجود");
+  if (location && lines.some((l) => l.store)) return fail(400, "BAD_REQUEST", "البيع من فرع أو موزّع بيكون من منتجات المحاسبة بس");
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const discount = d.discountPercent != null ? Math.round(subtotal * d.discountPercent / 100) : d.discountCents ?? 0;
   if (discount > subtotal) return fail(400, "BAD_REQUEST", "الحسم أكبر من مجموع الفاتورة");
@@ -1089,17 +1100,23 @@ async function createSaleInvoice(userId: string, d: SaleInput, actorId: string =
       const sale = await prisma.$transaction(async (tx) => {
         // the stock is taken only while enough is left at this very moment: one short line cancels the whole sale
         for (const l of lines) {
-          const took = l.store
+          const took = location
+            ? await tx.accountingLocationStock.updateMany({ where: { locationId: location.id, productId: l.id, onHand: { gte: l.quantity } }, data: { onHand: { decrement: l.quantity }, sold: { increment: l.quantity } } })
+            : l.store
             ? await tx.product.updateMany({ where: { id: l.id, stock: { gte: l.quantity } }, data: { stock: { decrement: l.quantity }, soldCount: { increment: l.quantity } } })
             : await tx.accountingProduct.updateMany({ where: { id: l.id, quantity: { gte: l.quantity } }, data: { quantity: { decrement: l.quantity } } });
           if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي", { productId: l.key, name: l.name });
         }
         const created = await tx.accountingSale.create({
-          data: { userId, number: await nextSaleNumber(tx, userId), customerName: customerLabel || null, partyId: party?.id ?? null, paidCents: paid, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, taxCents: taxTotal, pricesIncludeTax: tax.include, payMethod: d.payMethod, occurredAt: when, recordedById: actorId, channel: d.channel ?? "SHOP",
+          data: { userId, number: await nextSaleNumber(tx, userId), customerName: customerLabel || null, partyId: party?.id ?? null, paidCents: paid, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, taxCents: taxTotal, pricesIncludeTax: tax.include, payMethod: d.payMethod, occurredAt: when, recordedById: actorId, locationId: location?.id ?? null, channel: location ? (location.kind === "DISTRIBUTOR" ? "DISTRIBUTOR" : "SHOP") : d.channel ?? "SHOP",
             lines: { create: lines.map((l, i) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitPriceCents: l.unitPrice, unitCostCents: l.unitCost, lineTotalCents: l.unitPrice * l.quantity, discountCents: calc[i].discount, taxRateBp: l.rateBp, taxCents: calc[i].tax })) } },
           include: { lines: true },
         });
-        for (const l of lines) await tx.accountingStockMovement.create({ data: { userId, ...(l.store ? { storeProductId: l.id } : { productId: l.id }), action: "STOCK_OUT", quantity: l.quantity, unitCostCents: l.unitCost, note: `فاتورة بيع #${created.number}` } });
+        // a sale from a location leaves the main store untouched (the goods left it when they were given out)
+        for (const l of lines) {
+          if (location) await tx.accountingLocationMove.create({ data: { locationId: location.id, productId: l.id, kind: "SOLD", quantity: l.quantity, saleId: created.id, recordedById: actorId, note: `فاتورة بيع #${created.number}` } });
+          else await tx.accountingStockMovement.create({ data: { userId, ...(l.store ? { storeProductId: l.id } : { productId: l.id }), action: "STOCK_OUT", quantity: l.quantity, unitCostCents: l.unitCost, note: `فاتورة بيع #${created.number}` } });
+        }
         const label = `فاتورة بيع #${created.number}${customerLabel ? ` — ${customerLabel}` : ""}`;
         const onCredit = paid < total;
         const net = total - taxTotal;
@@ -1117,7 +1134,7 @@ async function createSaleInvoice(userId: string, d: SaleInput, actorId: string =
         await accrueSaleCommission(tx, { ownerId: userId, actorUserId: actorId, saleId: created.id, netCents: net, currency });
         return created;
       });
-      alertLowStock(userId, lines.map((l) => { const before = l.store ? shop.find((x) => x.id === l.id)!.stock : own.find((x) => x.id === l.id)!.quantity; const min = l.store ? 0 : own.find((x) => x.id === l.id)!.lowStockAt; return { name: l.name, before, after: before - l.quantity, min }; }));
+      if (!location) alertLowStock(userId, lines.map((l) => { const before = l.store ? shop.find((x) => x.id === l.id)!.stock : own.find((x) => x.id === l.id)!.quantity; const min = l.store ? 0 : own.find((x) => x.id === l.id)!.lowStockAt; return { name: l.name, before, after: before - l.quantity, min }; }));
       return { ok: true, sale: plainSale(sale), costCents: cost, netCents: total - taxTotal - cost };
     } catch (err) {
       if (err instanceof SaleError) return fail(err.status, err.code, err.message, err.details);
@@ -1131,7 +1148,14 @@ async function createSaleInvoice(userId: string, d: SaleInput, actorId: string =
 accountingRouter.post("/sales", route(async (req, res) => {
   const parsed = saleSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const out = await createSaleInvoice(req.user!.id, parsed.data, actorOf(req));
+  // a distributor (a cashier who has a location of his own) sells only from that location
+  const body = { ...parsed.data };
+  if (req.staffActor?.staff.role === "CASHIER") {
+    const own = await locs.locationOfStaff(req.user!.id, req.staffActor.staff.id);
+    if (own) body.locationId = own.id;
+    else if (body.locationId) return sendError(res, 403, "FORBIDDEN", "هاد الموقع مو إلك");
+  }
+  const out = await createSaleInvoice(req.user!.id, body, actorOf(req));
   if (!out.ok) return sendError(res, out.status, out.code, out.message, out.details);
   res.status(201).json({ ...out.sale, costCents: out.costCents, netCents: out.netCents });
 }));
@@ -1147,6 +1171,37 @@ accountingRouter.get("/sales/:id", route(async (req, res) => {
   if (!row) return sendError(res, 404, "NOT_FOUND", "الفاتورة غير موجودة");
   res.json(plainSale({ ...row, returned: await returnedBySaleLine(row.lines.map((l) => l.id)) }));
 }));
+
+// ---- goods outside the main store: shop branches and distributors (see accountingLocations.service.ts)
+accountingRouter.get("/locations", route(async (req, res) => {
+  // a distributor sees only his own
+  res.json(await locs.listLocations(req.user!.id, req.staffActor?.staff.role === "CASHIER" ? req.staffActor.staff.id : undefined));
+}));
+accountingRouter.post("/locations", route(async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(1).max(80), kind: z.enum(["BRANCH", "DISTRIBUTOR"]), staffId: z.string().uuid().nullable().optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.status(201).json(await locs.createLocation(req.user!.id, parsed.data));
+}));
+accountingRouter.patch("/locations/:id", route(async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(1).max(80).optional(), staffId: z.string().uuid().nullable().optional(), isActive: z.boolean().optional() }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await locs.updateLocation(req.user!.id, req.params.id, parsed.data));
+}));
+const moveSchema = z.object({ productId: z.string().uuid(), quantity: z.number().int().positive().max(1_000_000), note: z.string().trim().max(240).optional() });
+accountingRouter.post("/locations/:id/give", route(async (req, res) => {
+  const parsed = moveSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await locs.giveStock(req.user!.id, actorOf(req), req.params.id, parsed.data.productId, parsed.data.quantity, parsed.data.note);
+  res.status(201).json({ ok: true });
+}));
+accountingRouter.post("/locations/:id/return", route(async (req, res) => {
+  const parsed = moveSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await locs.returnStock(req.user!.id, actorOf(req), req.params.id, parsed.data.productId, parsed.data.quantity, parsed.data.note);
+  res.json({ ok: true });
+}));
+// per product: in the main store, at the locations (not sold yet), sold
+accountingRouter.get("/stock/overview", route(async (req, res) => res.json(await locs.stockOverview(req.user!.id))));
 
 // ---- the cash box of a day: what came in and went out in cash, against what was counted when the day was closed
 const cashDayStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

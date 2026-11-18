@@ -98,6 +98,17 @@ class AccountingRepository(private val api: ApiService) {
         api.confirmAccountingInvoice(id, AccountingInvoiceConfirmRequest(description = description, amountCents = amountCents, currency = currency))
     }
 
+    suspend fun locations(): List<com.dalilacom.app.data.network.AccountingLocationDto> = safeApiCall { api.accountingLocations() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    suspend fun stockOverview(): List<com.dalilacom.app.data.network.AccountingOverviewRowDto> = safeApiCall { api.accountingStockOverview() }?.takeIf { it.isSuccessful }?.body().orEmpty()
+    suspend fun createLocation(name: String, kind: String): Result<Unit> = resultMsg { api.createAccountingLocation(com.dalilacom.app.data.network.AccountingLocationRequest(name, kind)) }
+    suspend fun setLocationActive(id: String, active: Boolean): Result<Unit> = resultMsg { api.patchAccountingLocation(id, com.dalilacom.app.data.network.AccountingLocationPatch(active)) }
+    suspend fun giveStock(id: String, productId: String, quantity: Int): Result<Unit> = resultMsg { api.giveAccountingStock(id, com.dalilacom.app.data.network.AccountingMoveRequest(productId, quantity)) }
+    suspend fun returnStock(id: String, productId: String, quantity: Int): Result<Unit> = resultMsg { api.returnAccountingStock(id, com.dalilacom.app.data.network.AccountingMoveRequest(productId, quantity)) }
+    /** Like result(), but a refusal carries the server's own message. */
+    private suspend fun resultMsg(call: suspend () -> retrofit2.Response<*>): Result<Unit> {
+        val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(com.dalilacom.app.data.network.errorText(response, AppStrings.get(R.string.s_0a2edd30))))
+    }
     private suspend fun result(call: suspend () -> retrofit2.Response<*>): Result<Unit> {
         val response = safeApiCall { call() } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
         return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(AppStrings.get(R.string.s_0a2edd30)))

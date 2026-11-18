@@ -129,6 +129,7 @@ model User {
   accountingEntries         AccountingEntry[]
   accountingCashDays        AccountingCashDay[]
   accountingSales           AccountingSale[]
+  accountingLocations       AccountingLocation[]
   businessStaff             BusinessStaff[]            @relation("BusinessStaffOwner")
   staffOf                   BusinessStaff[]            @relation("BusinessStaffUser")
   accountingParties         AccountingParty[]
@@ -880,10 +881,75 @@ model AccountingProduct {
 
   user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   movements AccountingStockMovement[]
+  atLocations AccountingLocationStock[]
 
   @@unique([userId, barcode])
   @@index([userId, name])
   @@index([userId, sku])
+}
+
+// Where goods are besides the main store: a shop branch, or a distributor carrying stock. The main store is the product's own quantity.
+enum AccountingLocationKind {
+  BRANCH
+  DISTRIBUTOR
+}
+
+model AccountingLocation {
+  id        String                 @id @default(uuid())
+  userId    String
+  name      String
+  kind      AccountingLocationKind
+  staffId   String? // the staff member who sells from it (a distributor sells only from his own)
+  isActive  Boolean                @default(true)
+  createdAt DateTime               @default(now())
+
+  user  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stock AccountingLocationStock[]
+  moves AccountingLocationMove[]
+
+  @@index([userId])
+  @@index([staffId])
+}
+
+// What one location holds of one product: given - sold - returned = onHand.
+model AccountingLocationStock {
+  id         String   @id @default(uuid())
+  locationId String
+  productId  String
+  onHand     Int      @default(0)
+  given      Int      @default(0)
+  sold       Int      @default(0)
+  returned   Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  location AccountingLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  product  AccountingProduct  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, productId])
+  @@index([productId])
+}
+
+enum AccountingLocationMoveKind {
+  GIVE
+  RETURN
+  SOLD
+  SOLD_BACK
+}
+
+model AccountingLocationMove {
+  id           String                     @id @default(uuid())
+  locationId   String
+  productId    String
+  kind         AccountingLocationMoveKind
+  quantity     Int
+  saleId       String?
+  recordedById String?
+  note         String?
+  createdAt    DateTime                   @default(now())
+
+  location AccountingLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId, createdAt])
 }
 
 enum AccountingPayMethod {
@@ -1147,9 +1213,11 @@ enum AccountingSaleChannel {
   STREET
   DISTRIBUTOR
   ONLINE
+  WHOLESALE // goods taken by another trader (usually on credit)
 }
 
 model AccountingSale {
+  locationId       String? // sold out of a branch or a distributor's own stock instead of the main stock
   channel          AccountingSaleChannel @default(SHOP)
   taxCents         BigInt              @default(0)
   pricesIncludeTax Boolean             @default(true)

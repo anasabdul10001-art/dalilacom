@@ -98,4 +98,26 @@
     <string name="accounting_channel_STREET">Street sale</string>
     <string name="accounting_channel_DISTRIBUTOR">Distributor</string>
     <string name="accounting_channel_ONLINE">Online store</string>
+    <string name="accounting_loc_title">Branches and distributors</string>
+    <string name="accounting_loc_overview">Where the goods are</string>
+    <string name="accounting_loc_main">In the store</string>
+    <string name="accounting_loc_distributed">Out, not sold</string>
+    <string name="accounting_loc_sold">Sold</string>
+    <string name="accounting_loc_none">No branch or distributor added yet</string>
+    <string name="accounting_loc_kind_BRANCH">Branch</string>
+    <string name="accounting_loc_kind_DISTRIBUTOR">Distributor</string>
+    <string name="accounting_loc_held">Holds %1$d units</string>
+    <string name="accounting_loc_onhand">On hand</string>
+    <string name="accounting_loc_qty">Quantity</string>
+    <string name="accounting_loc_give">Give goods</string>
+    <string name="accounting_loc_return">Return to store</string>
+    <string name="accounting_loc_switch_off">Switch off</string>
+    <string name="accounting_loc_switch_on">Switch on</string>
+    <string name="accounting_loc_add">Add a branch or distributor</string>
+    <string name="accounting_loc_name">Name</string>
+    <string name="accounting_loc_add_btn">Add</string>
+    <string name="accounting_loc_pick">Pick a product</string>
+    <string name="accounting_loc_sell_from">Sell from</string>
+    <string name="accounting_loc_main_store">Main store</string>
+    <string name="accounting_channel_WHOLESALE">Trader pickup</string>
 </resources>

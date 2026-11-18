@@ -142,6 +142,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var saleDiscountPercent by remember { mutableStateOf(false) }
     var salePayMethod by remember { mutableStateOf("CASH") }
     var saleChannel by remember { mutableStateOf("SHOP") }
+    var locations by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingLocationDto>>(emptyList()) }
+    var saleLocation by remember { mutableStateOf<String?>(null) }
     var savedSale by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingSaleDto?>(null) }
     var entryPay by remember { mutableStateOf("CASH") }
     var cashDay by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
@@ -172,6 +174,9 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         cash = if (ok("money")) container.accountingRepository.cash(cashDay, "EUR") else null
         sales = if (ok("salesRead")) container.accountingRepository.sales() else emptyList()
         low = if (ok("productsRead")) container.accountingRepository.lowStock() else null
+        locations = if (ok("productsRead")) container.accountingRepository.locations() else emptyList()
+        // a distributor has just his own location: he sells from it
+        if (ag != null && locations.size == 1) saleLocation = locations.first().id
         partiesData = if (ok("partiesRead")) container.accountingRepository.parties() else null
         purchases = if (ok("money")) container.accountingRepository.purchases() else emptyList()
         recurring = if (ok("money")) container.accountingRepository.recurring() else emptyList()
@@ -300,13 +305,26 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 }
             }
         }
+        if (can("productsRead") && (acting == null || locations.isNotEmpty())) item {
+            CollapsibleCard(stringResource(R.string.accounting_loc_title)) {
+                LocationsSection(container, products, locations, canMove = acting == null || "distribute" in acting.allowed, isOwner = acting == null, onChanged = { scope.launch { basket = emptyList(); reload() } }, setMessage = { message = it })
+            }
+        }
         if (can("sell")) item {
             val saleSub = basket.sumOf { (p, q) -> p.salePriceCents.toLong() * q }
             val dv = saleDiscount.replace(',', '.').toDoubleOrNull() ?: 0.0
             val saleDisc = if (saleDiscountPercent) Math.round(saleSub * dv.coerceIn(0.0, 100.0) / 100.0) else Math.round(dv * 100)
             CollapsibleCard(stringResource(R.string.accounting_sale_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val sellable = products.filter { it.quantity > 0 && it.salePriceCents > 0 }
+                    val here = locations.firstOrNull { it.id == saleLocation && it.isActive }
+                    val sellable = (if (here == null) products else here.items.mapNotNull { i -> products.firstOrNull { it.id == i.productId }?.copy(quantity = i.onHand) }).filter { it.quantity > 0 && it.salePriceCents > 0 }
+                    if (locations.any { it.isActive }) {
+                        Text(stringResource(R.string.accounting_loc_sell_from), style = MaterialTheme.typography.labelMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (acting == null) { if (saleLocation == null) Button(onClick = { }) { Text(stringResource(R.string.accounting_loc_main_store)) } else OutlinedButton(onClick = { saleLocation = null; basket = emptyList(); salePick = null }) { Text(stringResource(R.string.accounting_loc_main_store)) } }
+                            locations.filter { it.isActive }.forEach { l -> if (saleLocation == l.id) Button(onClick = { }) { Text(l.name) } else OutlinedButton(onClick = { saleLocation = l.id; basket = emptyList(); salePick = null }) { Text(l.name) } }
+                        }
+                    }
                     androidx.compose.foundation.layout.Box {
                         OutlinedButton(onClick = { salePickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(salePick?.let { it.name + " · " + money(it.salePriceCents) + " · " + stringResource(R.string.accounting_sale_stock) + ": " + it.quantity } ?: stringResource(R.string.accounting_sale_pick)) }
                         androidx.compose.material3.DropdownMenu(expanded = salePickOpen, onDismissRequest = { salePickOpen = false }) {
@@ -366,7 +384,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                     items = basket.map { com.dalilacom.app.data.network.AccountingSaleItemRequest(it.first.id, it.second) },
                                     discountCents = if (!saleDiscountPercent && dv > 0) Math.round(dv * 100) else null,
                                     discountPercent = if (saleDiscountPercent && dv > 0) dv.coerceIn(0.0, 100.0) else null,
-                                    customerName = saleCustomer.trim().ifEmpty { null }, payMethod = salePayMethod, channel = saleChannel, partyId = salePartyId, paidCents = salePaid.trim().takeIf { it.isNotEmpty() }?.let { cents(it).toLong() },
+                                    customerName = saleCustomer.trim().ifEmpty { null }, payMethod = salePayMethod, channel = saleChannel, locationId = saleLocation, partyId = salePartyId, paidCents = salePaid.trim().takeIf { it.isNotEmpty() }?.let { cents(it).toLong() },
                                 )
                                 container.accountingRepository.createSale(req).fold({ sale ->
                                     savedSale = sale; basket = emptyList(); saleCustomer = ""; saleDiscount = ""; salePaid = ""; salePartyId = null; salePick = null; reload()

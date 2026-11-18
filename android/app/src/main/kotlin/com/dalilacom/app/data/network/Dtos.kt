@@ -1382,10 +1382,17 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingCountResultDto(val changed: List<kotlinx.serialization.json.JsonElement> = emptyList(), val unchanged: Int = 0, val skipped: List<kotlinx.serialization.json.JsonElement> = emptyList())
 @Serializable data class AccountingMinRequest(val lowStockAt: Int)
 @Serializable data class AccountingSaleItemRequest(val productId: String, val quantity: Int)
-@Serializable data class AccountingSaleRequest(val items: List<AccountingSaleItemRequest>, val discountCents: Long? = null, val discountPercent: Double? = null, val customerName: String? = null, val payMethod: String = "CASH", val partyId: String? = null, val paidCents: Long? = null, val channel: String = "SHOP")
+@Serializable data class AccountingSaleRequest(val items: List<AccountingSaleItemRequest>, val discountCents: Long? = null, val discountPercent: Double? = null, val customerName: String? = null, val payMethod: String = "CASH", val partyId: String? = null, val paidCents: Long? = null, val channel: String = "SHOP", val locationId: String? = null)
+/** Goods at a branch or a distributor (the main store is the product's own quantity). */
+@Serializable data class AccountingLocationItemDto(val productId: String = "", val name: String = "", val unit: String = "", val onHand: Int = 0, val given: Int = 0, val sold: Int = 0, val returned: Int = 0)
+@Serializable data class AccountingLocationDto(val id: String = "", val name: String = "", val kind: String = "BRANCH", val staffId: String? = null, val staffName: String? = null, val isActive: Boolean = true, val onHandUnits: Int = 0, val soldUnits: Int = 0, val items: List<AccountingLocationItemDto> = emptyList())
+@Serializable data class AccountingLocationRequest(val name: String, val kind: String, val staffId: String? = null)
+@Serializable data class AccountingLocationPatch(val isActive: Boolean)
+@Serializable data class AccountingMoveRequest(val productId: String, val quantity: Int)
+@Serializable data class AccountingOverviewRowDto(val productId: String = "", val name: String = "", val inMainStore: Int = 0, val distributed: Int = 0, val sold: Int = 0)
 @Serializable data class AccountingSaleLineDto(val id: String = "", val name: String = "", val quantity: Int = 0, val returnedQuantity: Int = 0, val unitPriceCents: Long = 0, val lineTotalCents: Long = 0)
 @Serializable data class AccountingSaleDto(
-    val id: String = "", val number: Int = 0, val customerName: String? = null, val currency: String = "EUR", val payMethod: String = "CASH", val channel: String = "SHOP",
+    val id: String = "", val number: Int = 0, val customerName: String? = null, val currency: String = "EUR", val payMethod: String = "CASH", val channel: String = "SHOP", val locationId: String? = null,
     val occurredAt: String = "", val subtotalCents: Long = 0, val discountCents: Long = 0, val totalCents: Long = 0, val taxCents: Long = 0, val pricesIncludeTax: Boolean = true, val lines: List<AccountingSaleLineDto> = emptyList(),
 )
 @Serializable data class AccountingCashMethodDto(val payMethod: String = "", val incomeCents: Long = 0, val expensesCents: Long = 0)

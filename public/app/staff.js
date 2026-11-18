@@ -5,7 +5,7 @@
 
 const STAFF_ROLES = ["CASHIER", "STOCK", "ASSISTANT", "MANAGER", "DRIVER", "MARKETER"];
 /** The accounting tabs each kind of permission opens (the server enforces the same list). */
-const ACC_TAB_TAG = { summary: "reports", reports: "reports", entry: "money", recurring: "money", sale: "sell", purchases: "money", parties: "partiesRead", invoices: "money", stock: "productsRead", tax: "admin", statements: "reports" };
+const ACC_TAB_TAG = { summary: "reports", reports: "reports", entry: "money", recurring: "money", sale: "sell", purchases: "money", parties: "partiesRead", invoices: "money", stock: "productsRead", locations: "productsRead", tax: "admin", statements: "reports" };
 
 function staffState() { return (S._staff = S._staff || { list: null, code: null, wp: undefined, mine: {} }); }
 /** The workplace this session works in right now (null: the account's own accounting). */
