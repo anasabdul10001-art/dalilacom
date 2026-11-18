@@ -1,5 +1,6 @@
 import { AccountingLocationKind, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
+import { cashHeld, heldOf } from "./accountingSettlement.service";
 import { ApiError } from "../lib/apiError";
 
 /**
@@ -153,5 +154,24 @@ export async function stockOverview(userId: string) {
     const distributed = atLocations.find((a) => a.productId === p.id)?._sum.onHand ?? 0;
     const listing = storeRows.find((s) => s.accountingProductId === p.id);
     return { productId: p.id, name: p.name, unit: p.unit, currency: p.currency, inMainStore: p.quantity, distributed, storeProductId: listing?.id ?? null, inOnlineStore: listing?.stock ?? 0, soldOnline: listing?.soldCount ?? 0, sold: num(soldRows, p.id) - num(backRows, p.id), costCents: p.costCents };
+  });
+}
+
+/** Remove a branch or distributor: refused while it still holds cash; its goods go back to the main store; past sales keep their record (without the place). */
+export async function deleteLocation(userId: string, id: string) {
+  const loc = await prisma.accountingLocation.findFirst({ where: { id, userId }, include: { stock: true } });
+  if (!loc) throw notFound("الموقع غير موجود");
+  const held = (await cashHeld(userId, [id])).get(id) ?? new Map();
+  for (const c of held.values()) if (heldOf(c) > 0) throw new ApiError(409, "CONFLICT", "لسا عند هالموقع كاش ما انستلم. استلمو أول وبعدين احذفو.");
+  await prisma.$transaction(async (tx) => {
+    for (const st of loc.stock) {
+      if (st.onHand <= 0) continue;
+      const product = await tx.accountingProduct.findFirst({ where: { id: st.productId, userId }, select: { id: true, costCents: true } });
+      if (!product) continue;
+      await tx.accountingProduct.update({ where: { id: product.id }, data: { quantity: { increment: st.onHand } } });
+      await tx.accountingStockMovement.create({ data: { userId, productId: product.id, action: "STOCK_IN", quantity: st.onHand, unitCostCents: product.costCents, note: `رجوع من ${loc.name} (حذف الموقع)` } });
+    }
+    await tx.accountingSale.updateMany({ where: { userId, locationId: id }, data: { locationId: null } });
+    await tx.accountingLocation.delete({ where: { id } });
   });
 }

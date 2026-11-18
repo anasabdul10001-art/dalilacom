@@ -55,11 +55,20 @@ fun LocationsSection(
     LaunchedEffect(locations, products) { overview = container.accountingRepository.stockOverview() }
     var newName by remember { mutableStateOf("") }
     var newKind by remember { mutableStateOf("DISTRIBUTOR") }
+    var deleteLocId by remember { mutableStateOf<String?>(null) }
 
     fun run(call: suspend () -> Result<Unit>) {
         scope.launch { call().fold({ setMessage(""); onChanged() }, { setMessage(it.message.orEmpty()) }) }
     }
 
+    deleteLocId?.let { id ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { deleteLocId = null },
+            title = { Text(stringResource(R.string.accounting_loc_deleteAsk)) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { deleteLocId = null; run { container.accountingRepository.deleteLocation(id) } }) { Text(stringResource(R.string.accounting_loc_delete), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { deleteLocId = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.accounting_loc_overview), style = MaterialTheme.typography.titleSmall)
         overview.orEmpty().filter { it.inMainStore > 0 || it.distributed > 0 || it.sold > 0 || it.inOnlineStore > 0 || it.soldOnline > 0 }.forEach { r ->
@@ -133,7 +142,10 @@ fun LocationsSection(
                         OutlinedButton(onClick = { val p = pick; val q = qty.toIntOrNull() ?: 0; if (p != null && q > 0) run { container.accountingRepository.returnStock(l.id, p.id, q) } }) { Text(stringResource(R.string.accounting_loc_return)) }
                     }
                 }
-                if (isOwner) OutlinedButton(onClick = { run { container.accountingRepository.setLocationActive(l.id, !l.isActive) } }) { Text(stringResource(if (l.isActive) R.string.accounting_loc_switch_off else R.string.accounting_loc_switch_on)) }
+                if (isOwner) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { run { container.accountingRepository.setLocationActive(l.id, !l.isActive) } }) { Text(stringResource(if (l.isActive) R.string.accounting_loc_switch_off else R.string.accounting_loc_switch_on)) }
+                    OutlinedButton(onClick = { deleteLocId = l.id }) { Text(stringResource(R.string.accounting_loc_delete), color = MaterialTheme.colorScheme.error) }
+                }
             }
         }
         if (isOwner) {

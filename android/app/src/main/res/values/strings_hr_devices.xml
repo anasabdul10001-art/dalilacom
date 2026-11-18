@@ -130,6 +130,8 @@
     <string name="accounting_store_qty">الكمية بالمتجر</string>
     <string name="accounting_store_save">حفظ</string>
     <string name="accounting_store_unlink">فك الربط</string>
+    <string name="accounting_loc_delete">احذف الموقع</string>
+    <string name="accounting_loc_deleteAsk">بدك تحذف هالموقع؟ البضاعة بترجع للمستودع.</string>
     <string name="accounting_cashloc_title">الكاش عند الموقع</string>
     <string name="accounting_cash_sold">المبيعات</string>
     <string name="accounting_cash_collected">كاش قبضو</string>

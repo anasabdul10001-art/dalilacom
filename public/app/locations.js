@@ -138,7 +138,7 @@ function accountingLocationsCard(a) {
       ${canMove && l.isActive ? `<div class="row"><div class="field"><label>${esc(t("loc.product"))}</label><select id="loc-p-${esc(l.id)}">${productOpts}</select></div><div class="field"><label>${esc(t("loc.qty"))}</label><input id="loc-q-${esc(l.id)}" inputmode="numeric" value="1" /></div></div>
         <div class="btn-row"><button class="btn small" onclick="locMove(this,'${esc(l.id)}','give')">${esc(t("loc.give"))}</button><button class="btn small outline" onclick="locMove(this,'${esc(l.id)}','return')">${esc(t("loc.return"))}</button></div>` : ""}
       ${locSettleBlock(l)}
-      ${!S._actAs ? `<div class="btn-row"><button class="btn small soft" onclick="locToggle(this,'${esc(l.id)}',${l.isActive ? "false" : "true"})">${esc(t(l.isActive ? "loc.switchOff" : "loc.switchOn"))}</button></div>` : ""}
+      ${!S._actAs ? `<div class="btn-row"><button class="btn small soft" onclick="locToggle(this,'${esc(l.id)}',${l.isActive ? "false" : "true"})">${esc(t(l.isActive ? "loc.switchOff" : "loc.switchOn"))}</button><button class="btn small outline" onclick="locDelete(this,'${esc(l.id)}')">${esc(t("loc.delete"))}</button></div>` : ""}
     </div>`).join("");
   const staffOpts = `<option value="">${esc(t("loc.noStaff"))}</option>` + staff.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
   const form = S._actAs ? "" : `<div class="card"><h2>${esc(t("loc.add"))}</h2>
@@ -178,6 +178,12 @@ async function locMove(btn, id, kind) {
   const res = await uiBusy(btn, () => api("POST", `/accounting/locations/${id}/${kind}`, { productId, quantity }));
   if (!res.ok) return toast(errMsg(res.data, t("loc.failed")));
   toast(t(kind === "give" ? "loc.gave" : "loc.returned")); locReload();
+}
+async function locDelete(btn, id) {
+  if (!confirm(t("loc.deleteAsk"))) return;
+  const res = await uiBusy(btn, () => api("DELETE", `/accounting/locations/${id}`));
+  if (!res.ok) return toast(errMsg(res.data, t("loc.failed")));
+  toast(t("loc.deleted")); locReload();
 }
 async function locStoreUnlink(btn) {
   const sel = document.getElementById("loc-sp");

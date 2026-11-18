@@ -155,6 +155,13 @@ describe("accounting: goods at branches and distributors", () => {
     expect(ch("ONLINE")).toMatchObject({ count: 1, totalCents: 5000 });
     const ali = rep.sellers.find((x: { name: string | null }) => x.name === "Ali");
     expect(ali).toMatchObject({ count: 1, totalCents: 4000, cashHeldCents: 1000 });
+    // a location still holding cash cannot be deleted; after the handover it goes, its goods return and the sale stays
+    expect((await request(app).delete(`/accounting/locations/${van.id}`).set(boss.auth)).status).toBe(409);
+    expect((await request(app).post(`/accounting/locations/${van.id}/handover`).set(boss.auth).send({ currency: "EUR", amountCents: 1000 })).status).toBe(201);
+    expect((await request(app).delete(`/accounting/locations/${van.id}`).set(boss.auth)).status).toBe(200);
+    expect((await prisma.accountingProduct.findUniqueOrThrow({ where: { id: p.id } })).quantity).toBe(15);
+    expect(await prisma.accountingLocation.count({ where: { id: van.id } })).toBe(0);
+    expect(await prisma.accountingSale.count({ where: { userId: boss.id, locationId: null, channel: "DISTRIBUTOR" } })).toBe(1);
     expect(rep.sellers.find((x: { isOwner: boolean }) => x.isOwner)).toMatchObject({ count: 1, totalCents: 1000 });
     // a cashier cannot read the report
     expect((await request(app).get("/accounting/reports/sellers").set(dist.as)).status).toBe(403);

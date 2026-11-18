@@ -1191,6 +1191,10 @@ accountingRouter.patch("/locations/:id", route(async (req, res) => {
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await locs.updateLocation(req.user!.id, req.params.id, parsed.data));
 }));
+accountingRouter.delete("/locations/:id", route(async (req, res) => {
+  await locs.deleteLocation(req.user!.id, req.params.id);
+  res.json({ ok: true });
+}));
 const moveSchema = z.object({ productId: z.string().uuid(), quantity: z.number().int().positive().max(1_000_000), note: z.string().trim().max(240).optional() });
 accountingRouter.post("/locations/:id/give", route(async (req, res) => {
   const parsed = moveSchema.safeParse(req.body);

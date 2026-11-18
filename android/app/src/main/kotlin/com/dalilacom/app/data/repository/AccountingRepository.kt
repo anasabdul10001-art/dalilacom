@@ -105,6 +105,7 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun settlement(id: String): com.dalilacom.app.data.network.SettlementDto? = safeApiCall { api.accountingSettlement(id) }?.takeIf { it.isSuccessful }?.body()
     suspend fun handover(id: String, currency: String, amountCents: Long): Result<Unit> = resultMsg { api.accountingHandover(id, com.dalilacom.app.data.network.HandoverRequest(currency, amountCents)) }
     suspend fun sellerReport(from: String?, to: String?): com.dalilacom.app.data.network.SellerReportDto? = safeApiCall { api.accountingSellerReport(from, to) }?.takeIf { it.isSuccessful }?.body()
+    suspend fun deleteLocation(id: String): Result<Unit> = resultMsg { api.deleteAccountingLocation(id) }
     suspend fun unlinkStore(productId: String): Result<Unit> = resultMsg { api.unlinkAccountingStore(productId, mapOf("returnUnits" to true)) }
     suspend fun setStoreShare(productId: String, storeProductId: String, quantity: Int): Result<Unit> = resultMsg { api.setAccountingStoreShare(productId, com.dalilacom.app.data.network.AccountingStoreShareRequest(storeProductId, quantity)) }
     suspend fun giveStock(id: String, productId: String, quantity: Int): Result<Unit> = resultMsg { api.giveAccountingStock(id, com.dalilacom.app.data.network.AccountingMoveRequest(productId, quantity)) }
