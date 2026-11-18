@@ -93,4 +93,9 @@
     <string name="hr_role_ATTENDANCE_SUPERVISOR">Attendance supervisor</string>
     <string name="hr_f_role">Role</string>
     <string name="hr_roleDone">Employee role changed</string>
+    <string name="accounting_sale_channel">Where it was sold</string>
+    <string name="accounting_channel_SHOP">Shop</string>
+    <string name="accounting_channel_STREET">Street sale</string>
+    <string name="accounting_channel_DISTRIBUTOR">Distributor</string>
+    <string name="accounting_channel_ONLINE">Online store</string>
 </resources>

@@ -1026,17 +1026,18 @@ const saleSchema = z.object({
   occurredAt: z.string().datetime().optional(),
   partyId: z.string().uuid().optional(),
   paidCents: z.number().int().nonnegative().max(MAX_ENTRY_CENTS).optional(),
+  channel: z.enum(["SHOP", "STREET", "DISTRIBUTOR"]).default("SHOP"), // the online store has its own orders
 });
-type SaleRow = { returned?: Record<string, number>; taxCents?: bigint; pricesIncludeTax?: boolean; id: string; number: number; partyId?: string | null; paidCents?: bigint; customerName: string | null; note: string | null; currency: string; subtotalCents: bigint; discountCents: bigint; totalCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitPriceCents: bigint; unitCostCents: bigint; lineTotalCents: bigint; discountCents?: bigint; taxRateBp?: number; taxCents?: bigint }[] };
+type SaleRow = { channel?: string; returned?: Record<string, number>; taxCents?: bigint; pricesIncludeTax?: boolean; id: string; number: number; partyId?: string | null; paidCents?: bigint; customerName: string | null; note: string | null; currency: string; subtotalCents: bigint; discountCents: bigint; totalCents: bigint; payMethod: string; occurredAt: Date; lines: { id: string; productId: string | null; name: string; quantity: number; unitPriceCents: bigint; unitCostCents: bigint; lineTotalCents: bigint; discountCents?: bigint; taxRateBp?: number; taxCents?: bigint }[] };
 const plainSale = (r: SaleRow) => ({
-  id: r.id, number: r.number, partyId: r.partyId ?? null, paidCents: Number(r.paidCents ?? r.totalCents), customerName: r.customerName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt,
+  id: r.id, number: r.number, channel: r.channel ?? "SHOP", partyId: r.partyId ?? null, paidCents: Number(r.paidCents ?? r.totalCents), customerName: r.customerName, note: r.note, currency: r.currency, payMethod: r.payMethod, occurredAt: r.occurredAt,
   subtotalCents: Number(r.subtotalCents), discountCents: Number(r.discountCents), totalCents: Number(r.totalCents), taxCents: Number(r.taxCents ?? 0), pricesIncludeTax: r.pricesIncludeTax ?? true,
   lines: r.lines.map((l) => ({ id: l.id, productId: l.productId, name: l.name, quantity: l.quantity, returnedQuantity: r.returned?.[l.id] ?? 0, unitPriceCents: Number(l.unitPriceCents), unitCostCents: Number(l.unitCostCents), lineTotalCents: Number(l.lineTotalCents), discountCents: Number(l.discountCents ?? 0), taxRateBp: l.taxRateBp ?? 0, taxCents: Number(l.taxCents ?? 0) })),
 });
 class SaleError extends Error { constructor(public status: number, public code: string, message: string, public details?: unknown) { super(message); } }
 
 type SaleOutcome = { ok: true; sale: ReturnType<typeof plainSale>; costCents: number; netCents: number } | { ok: false; status: number; code: string; message: string; details?: unknown };
-type SaleInput = z.infer<typeof saleSchema>;
+type SaleInput = Omit<z.infer<typeof saleSchema>, "channel"> & { channel?: z.infer<typeof saleSchema>["channel"] };
 
 /** The sales invoice: stock out, the tax of each line, the income (without the tax), the cost, the debt of a credit sale. */
 async function createSaleInvoice(userId: string, d: SaleInput, actorId: string = userId): Promise<SaleOutcome> {
@@ -1094,7 +1095,7 @@ async function createSaleInvoice(userId: string, d: SaleInput, actorId: string =
           if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي", { productId: l.key, name: l.name });
         }
         const created = await tx.accountingSale.create({
-          data: { userId, number: await nextSaleNumber(tx, userId), customerName: customerLabel || null, partyId: party?.id ?? null, paidCents: paid, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, taxCents: taxTotal, pricesIncludeTax: tax.include, payMethod: d.payMethod, occurredAt: when, recordedById: actorId,
+          data: { userId, number: await nextSaleNumber(tx, userId), customerName: customerLabel || null, partyId: party?.id ?? null, paidCents: paid, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, taxCents: taxTotal, pricesIncludeTax: tax.include, payMethod: d.payMethod, occurredAt: when, recordedById: actorId, channel: d.channel ?? "SHOP",
             lines: { create: lines.map((l, i) => ({ productId: l.key, name: l.name, quantity: l.quantity, unitPriceCents: l.unitPrice, unitCostCents: l.unitCost, lineTotalCents: l.unitPrice * l.quantity, discountCents: calc[i].discount, taxRateBp: l.rateBp, taxCents: calc[i].tax })) } },
           include: { lines: true },
         });

@@ -141,6 +141,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var saleDiscount by remember { mutableStateOf("") }
     var saleDiscountPercent by remember { mutableStateOf(false) }
     var salePayMethod by remember { mutableStateOf("CASH") }
+    var saleChannel by remember { mutableStateOf("SHOP") }
     var savedSale by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingSaleDto?>(null) }
     var entryPay by remember { mutableStateOf("CASH") }
     var cashDay by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
@@ -350,6 +351,12 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                             if (salePayMethod == code) Button(onClick = { salePayMethod = code }) { Text(stringResource(label)) } else OutlinedButton(onClick = { salePayMethod = code }) { Text(stringResource(label)) }
                         }
                     }
+                    Text(stringResource(R.string.accounting_sale_channel), style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("SHOP" to R.string.accounting_channel_SHOP, "STREET" to R.string.accounting_channel_STREET, "DISTRIBUTOR" to R.string.accounting_channel_DISTRIBUTOR).forEach { (code, label) ->
+                            if (saleChannel == code) Button(onClick = { saleChannel = code }) { Text(stringResource(label)) } else OutlinedButton(onClick = { saleChannel = code }) { Text(stringResource(label)) }
+                        }
+                    }
                     Text(stringResource(R.string.accounting_sale_subtotal) + ": " + money(saleSub.toInt()) + "   ·   " + stringResource(R.string.accounting_sale_total) + ": " + money(kotlin.math.max(saleSub - saleDisc, 0L).toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
                     Button(
                         enabled = basket.isNotEmpty(),
@@ -359,7 +366,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                     items = basket.map { com.dalilacom.app.data.network.AccountingSaleItemRequest(it.first.id, it.second) },
                                     discountCents = if (!saleDiscountPercent && dv > 0) Math.round(dv * 100) else null,
                                     discountPercent = if (saleDiscountPercent && dv > 0) dv.coerceIn(0.0, 100.0) else null,
-                                    customerName = saleCustomer.trim().ifEmpty { null }, payMethod = salePayMethod, partyId = salePartyId, paidCents = salePaid.trim().takeIf { it.isNotEmpty() }?.let { cents(it).toLong() },
+                                    customerName = saleCustomer.trim().ifEmpty { null }, payMethod = salePayMethod, channel = saleChannel, partyId = salePartyId, paidCents = salePaid.trim().takeIf { it.isNotEmpty() }?.let { cents(it).toLong() },
                                 )
                                 container.accountingRepository.createSale(req).fold({ sale ->
                                     savedSale = sale; basket = emptyList(); saleCustomer = ""; saleDiscount = ""; salePaid = ""; salePartyId = null; salePick = null; reload()
@@ -372,7 +379,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         Text(stringResource(R.string.accounting_sale_recent), style = MaterialTheme.typography.titleSmall)
                         sales.take(5).forEach { sl ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) { Text("#" + sl.number + (sl.customerName?.let { " · $it" } ?: ""), style = MaterialTheme.typography.titleSmall); Text(sl.occurredAt.take(10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                Column(Modifier.weight(1f)) { Text("#" + sl.number + (sl.customerName?.let { " · $it" } ?: ""), style = MaterialTheme.typography.titleSmall); Text(sl.occurredAt.take(10) + (if (sl.channel != "SHOP") " · " + stringResource(when (sl.channel) { "STREET" -> R.string.accounting_channel_STREET; "DISTRIBUTOR" -> R.string.accounting_channel_DISTRIBUTOR; else -> R.string.accounting_channel_ONLINE }) else ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 Text(money(sl.totalCents.toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
                                 TextButton(onClick = { savedSale = sl }) { Text(stringResource(R.string.accounting_sale_share)) }
                                 TextButton(onClick = { returnQty.clear(); returnMethod = sl.payMethod; returnSale = sl }) { Text(stringResource(R.string.accounting_ret_btn)) }

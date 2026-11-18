@@ -1141,7 +1141,16 @@ model AccountingPurchaseLine {
   @@index([purchaseId])
 }
 
+// Where a sale happened: at the shop, by a street seller, by a distributor, or through the online store.
+enum AccountingSaleChannel {
+  SHOP
+  STREET
+  DISTRIBUTOR
+  ONLINE
+}
+
 model AccountingSale {
+  channel          AccountingSaleChannel @default(SHOP)
   taxCents         BigInt              @default(0)
   pricesIncludeTax Boolean             @default(true)
   id               String              @id @default(uuid())
@@ -1165,6 +1174,7 @@ model AccountingSale {
 
   @@unique([userId, number])
   @@index([userId, occurredAt])
+  @@index([userId, channel])
 }
 
 model AccountingSaleLine {

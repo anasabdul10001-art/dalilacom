@@ -86,3 +86,17 @@ describe("accounting: sales invoice", () => {
     expect((await request(app).patch(`/accounting/entries/${entry.id}`).set(a.auth).send({ description: "changed" })).status).toBe(409);
   });
 });
+
+describe("accounting: where a sale happened", () => {
+  it("a sale is from the shop unless it says street or distributor, and the list shows it", async () => {
+    const a = await subscriber("salech");
+    const tea = await product(a, { name: "Tea ch", quantity: 10 });
+    expect((await sale(a, { items: [{ productId: tea.id, quantity: 1 }] })).body.channel).toBe("SHOP");
+    expect((await sale(a, { items: [{ productId: tea.id, quantity: 1 }], channel: "STREET" })).body.channel).toBe("STREET");
+    expect((await sale(a, { items: [{ productId: tea.id, quantity: 1 }], channel: "DISTRIBUTOR" })).body.channel).toBe("DISTRIBUTOR");
+    // the online store has its own orders: a manual sale cannot claim it
+    expect((await sale(a, { items: [{ productId: tea.id, quantity: 1 }], channel: "ONLINE" })).status).toBe(400);
+    const list = await request(app).get("/accounting/sales").set(a.auth);
+    expect(list.body.map((x: { channel: string }) => x.channel).sort()).toEqual(["DISTRIBUTOR", "SHOP", "STREET"]);
+  });
+});

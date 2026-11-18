@@ -1382,10 +1382,10 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingCountResultDto(val changed: List<kotlinx.serialization.json.JsonElement> = emptyList(), val unchanged: Int = 0, val skipped: List<kotlinx.serialization.json.JsonElement> = emptyList())
 @Serializable data class AccountingMinRequest(val lowStockAt: Int)
 @Serializable data class AccountingSaleItemRequest(val productId: String, val quantity: Int)
-@Serializable data class AccountingSaleRequest(val items: List<AccountingSaleItemRequest>, val discountCents: Long? = null, val discountPercent: Double? = null, val customerName: String? = null, val payMethod: String = "CASH", val partyId: String? = null, val paidCents: Long? = null)
+@Serializable data class AccountingSaleRequest(val items: List<AccountingSaleItemRequest>, val discountCents: Long? = null, val discountPercent: Double? = null, val customerName: String? = null, val payMethod: String = "CASH", val partyId: String? = null, val paidCents: Long? = null, val channel: String = "SHOP")
 @Serializable data class AccountingSaleLineDto(val id: String = "", val name: String = "", val quantity: Int = 0, val returnedQuantity: Int = 0, val unitPriceCents: Long = 0, val lineTotalCents: Long = 0)
 @Serializable data class AccountingSaleDto(
-    val id: String = "", val number: Int = 0, val customerName: String? = null, val currency: String = "EUR", val payMethod: String = "CASH",
+    val id: String = "", val number: Int = 0, val customerName: String? = null, val currency: String = "EUR", val payMethod: String = "CASH", val channel: String = "SHOP",
     val occurredAt: String = "", val subtotalCents: Long = 0, val discountCents: Long = 0, val totalCents: Long = 0, val taxCents: Long = 0, val pricesIncludeTax: Boolean = true, val lines: List<AccountingSaleLineDto> = emptyList(),
 )
 @Serializable data class AccountingCashMethodDto(val payMethod: String = "", val incomeCents: Long = 0, val expensesCents: Long = 0)

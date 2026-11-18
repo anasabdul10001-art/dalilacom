@@ -93,4 +93,9 @@
     <string name="hr_role_ATTENDANCE_SUPERVISOR">مراقب دوام</string>
     <string name="hr_f_role">الدور</string>
     <string name="hr_roleDone">انغيّر دور الموظف</string>
+    <string name="accounting_sale_channel">وين انباعت</string>
+    <string name="accounting_channel_SHOP">المحل</string>
+    <string name="accounting_channel_STREET">بيع بالشارع</string>
+    <string name="accounting_channel_DISTRIBUTOR">موزّع</string>
+    <string name="accounting_channel_ONLINE">المتجر الإلكتروني</string>
 </resources>

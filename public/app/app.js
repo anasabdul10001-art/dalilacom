@@ -3295,6 +3295,7 @@ function accountingSaleCard(a) {
     <div class="row"><div class="field"><label>${esc(t("accounting.sale.discount"))}</label><input id="sale-discount" inputmode="decimal" value="${esc(st.discount)}" oninput="saleState().discount=this.value;accountingSaleTotals()" /></div>
       <div class="field"><label>&nbsp;</label><select onchange="saleState().mode=this.value;accountingSaleTotals()"><option value="amount" ${st.mode === "amount" ? "selected" : ""}>${esc(t("accounting.sale.discountAmount"))}</option><option value="percent" ${st.mode === "percent" ? "selected" : ""}>${esc(t("accounting.sale.discountPercent"))}</option></select></div></div>
     <div class="field"><label>${esc(t("accounting.pay"))}</label><select onchange="saleState().pay=this.value">${["CASH", "BANK", "WALLET"].map((m) => `<option value="${m}" ${st.pay === m ? "selected" : ""}>${esc(t("accounting.pay." + m))}</option>`).join("")}</select></div>
+    <div class="field"><label>${esc(t("accounting.sale.channel"))}</label><select onchange="saleState().channel=this.value">${["SHOP", "STREET", "DISTRIBUTOR"].map((m) => `<option value="${m}" ${(st.channel || "SHOP") === m ? "selected" : ""}>${esc(t("accounting.channel." + m))}</option>`).join("")}</select></div>
     <div class="tiles">${uiTile(t("accounting.sale.subtotal"), fmt(sub, cur), "net")}<div id="sale-total-tile">${uiTile(t("accounting.sale.total"), fmt(taxView.total || Math.max(sub - disc, 0), cur), "income")}${taxView.tax ? uiTile(t((a.taxSettings || {}).pricesIncludeTax !== false ? "accounting.tax.inInvoice" : "accounting.tax.onTop"), fmt(taxView.tax, cur), "payroll") : ""}</div></div>
     <button class="btn" style="margin-top:10px" onclick="accountingSaleSave(this)" ${st.items.length ? "" : "disabled"}>${esc(t("accounting.sale.save"))}</button></div>${accountingSaleRecent(a)}`;
 }
@@ -3313,7 +3314,7 @@ function accountingSaleLines(d) {
 }
 function accountingSaleRecent(a) {
   const list = a.sales || [];
-  return `<div class="panel-title" style="margin-top:16px">${esc(t("accounting.sale.recent"))}</div>` + (list.length === 0 ? uiEmpty("🧾", t("accounting.sale.noRecent")) : list.slice(0, 8).map((s) => `<div class="item"><span class="avatar" style="--h:140">#${s.number}</span><div class="item-main"><div class="item-title">${esc(s.customerName || t("accounting.sale.number", { n: s.number }))}</div><div class="item-sub"><bdi>${esc(new Date(s.occurredAt).toLocaleDateString())}</bdi> · ${esc(t("accounting.pay." + s.payMethod))}</div><div class="btn-row"><button class="btn small soft" onclick="accountingSalePrint('${s.id}')">🖨 ${esc(t("accounting.sale.print"))}</button><button class="btn small outline" onclick="accountingReturnOpen('sales','${s.id}')">${esc(t("accounting.ret.btn"))}</button></div></div><div class="item-end in">${esc(fmt(s.totalCents, s.currency))}</div></div>`).join(""));
+  return `<div class="panel-title" style="margin-top:16px">${esc(t("accounting.sale.recent"))}</div>` + (list.length === 0 ? uiEmpty("🧾", t("accounting.sale.noRecent")) : list.slice(0, 8).map((s) => `<div class="item"><span class="avatar" style="--h:140">#${s.number}</span><div class="item-main"><div class="item-title">${esc(s.customerName || t("accounting.sale.number", { n: s.number }))}</div><div class="item-sub"><bdi>${esc(new Date(s.occurredAt).toLocaleDateString())}</bdi> · ${esc(t("accounting.pay." + s.payMethod))}${s.channel && s.channel !== "SHOP" ? " · " + esc(t("accounting.channel." + s.channel)) : ""}</div><div class="btn-row"><button class="btn small soft" onclick="accountingSalePrint('${s.id}')">🖨 ${esc(t("accounting.sale.print"))}</button><button class="btn small outline" onclick="accountingReturnOpen('sales','${s.id}')">${esc(t("accounting.ret.btn"))}</button></div></div><div class="item-end in">${esc(fmt(s.totalCents, s.currency))}</div></div>`).join(""));
 }
 function accountingSaleAdd() {
   const id = (document.getElementById("sale-product") || {}).value; const qty = Math.floor(Number((document.getElementById("sale-qty") || {}).value));
@@ -3354,7 +3355,7 @@ function accountingSaleNew() { S._sale = null; render(); }
 async function accountingSaleSave(btn) {
   const st = saleState(); if (!st.items.length) return;
   const sub = saleSubtotal(st);
-  const body = { items: st.items.map((i) => ({ productId: i.productId, quantity: i.qty })), payMethod: st.pay, customerName: st.customer.trim() || undefined };
+  const body = { items: st.items.map((i) => ({ productId: i.productId, quantity: i.qty })), payMethod: st.pay, channel: st.channel || "SHOP", customerName: st.customer.trim() || undefined };
   if (st.partyId) body.partyId = st.partyId;
   const paidRaw = String(st.paid || "").replace(",", ".").trim();
   if (paidRaw !== "") { const pc = Math.round(Number(paidRaw) * 100); if (!(pc >= 0)) return toast(t("accounting.invalidAmount")); body.paidCents = pc; }
@@ -3366,7 +3367,7 @@ async function accountingSaleSave(btn) {
     const d = res.data && res.data.error && res.data.error.details;
     return toast(d && d.name ? t("accounting.sale.short", { name: d.name }) : errMsg(res.data, t("accounting.deleteFailed")));
   }
-  S._sale = { items: [], customer: "", discount: "", mode: "amount", pay: "CASH", partyId: "", paid: "", done: res.data };
+  S._sale = { items: [], customer: "", discount: "", mode: "amount", pay: "CASH", channel: st.channel || "SHOP", partyId: "", paid: "", done: res.data };
   toast(t("accounting.sale.saved", { n: res.data.number }));
   S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
 }
