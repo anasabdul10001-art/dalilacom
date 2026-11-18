@@ -19,6 +19,7 @@
     <string name="accounting_amount">Amount</string>
     <string name="accounting_save">Save transaction</string>
     <string name="accounting_inventory">Inventory</string>
+    <string name="accounting_add_product_title">Add a product</string>
     <string name="accounting_barcode">Barcode number</string>
     <string name="accounting_scan">Scan</string>
     <string name="accounting_product_name">Product name</string>
@@ -32,7 +33,7 @@
     <string name="accounting_sell_one">Sell one</string>
     <string name="accounting_footer">Online store sales are recorded when an order is delivered.</string>
     <string name="accounting_totals_line">%1$s · Income %2$s · Expenses %3$s · Net %4$s</string>
-    <string name="accounting_stock_summary">%1$d products · %2$d units</string>
+    <string name="accounting_stock_summary">Products: %1$d · Units: %2$d</string>
     <string name="accounting_scan_prompt">Point the camera at the barcode</string>
     <string name="accounting_missing_entry">Enter a category, details, and amount</string>
     <string name="accounting_missing_name">Enter the product name</string>

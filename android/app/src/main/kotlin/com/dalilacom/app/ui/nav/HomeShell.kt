@@ -283,7 +283,8 @@ onOpenDoctorCare = { rootNavController.navigate("doctorCare") },
             }
         }
         // the other tabs: the buttons stand in the corner (the map tabs draw theirs above the locate button)
-        if (selectedTab != HomeTab.Discover && selectedTab != HomeTab.Deals) homeButtons(this, 16.dp)
+        // the work tools (accounting, HR) are dense forms and lists: the round buttons would sit on top of their fields and buttons, so they are not drawn there
+        if (selectedTab != HomeTab.Discover && selectedTab != HomeTab.Deals && selectedTab != HomeTab.Accounting && selectedTab != HomeTab.Hr) homeButtons(this, 16.dp)
         SocialDock()
         }
     }

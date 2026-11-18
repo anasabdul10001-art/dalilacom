@@ -23,6 +23,7 @@
     <string name="accounting_amount">المبلغ</string>
     <string name="accounting_save">حفظ الحركة</string>
     <string name="accounting_inventory">جرد البضاعة</string>
+    <string name="accounting_add_product_title">إضافة منتج</string>
     <string name="accounting_barcode">رقم الباركود</string>
     <string name="accounting_scan">مسح</string>
     <string name="accounting_product_name">اسم المنتج</string>
@@ -36,7 +37,7 @@
     <string name="accounting_sell_one">بيع قطعة</string>
     <string name="accounting_footer">مبيعات المتجر تُضاف تلقائيًا بعد تسليم الطلب.</string>
     <string name="accounting_totals_line">%1$s · الدخل %2$s · المصاريف %3$s · الصافي %4$s</string>
-    <string name="accounting_stock_summary">%1$d منتجات · %2$d قطعة</string>
+    <string name="accounting_stock_summary">عدد المنتجات: %1$d · عدد القطع: %2$d</string>
     <string name="accounting_scan_prompt">وجّه الكاميرا نحو الباركود</string>
     <string name="accounting_missing_entry">اكتب التصنيف والتفاصيل والمبلغ</string>
     <string name="accounting_missing_name">اكتب اسم المنتج</string>

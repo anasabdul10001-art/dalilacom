@@ -20,6 +20,7 @@
     <string name="accounting_amount">Betrag</string>
     <string name="accounting_save">Buchung speichern</string>
     <string name="accounting_inventory">Lagerbestand</string>
+    <string name="accounting_add_product_title">Produkt hinzufügen</string>
     <string name="accounting_barcode">Barcode</string>
     <string name="accounting_scan">Scannen</string>
     <string name="accounting_product_name">Produktname</string>
@@ -33,7 +34,7 @@
     <string name="accounting_sell_one">Ein Stück verkaufen</string>
     <string name="accounting_footer">Shopverkäufe werden nach der Zustellung automatisch erfasst.</string>
     <string name="accounting_totals_line">%1$s · Einnahmen %2$s · Ausgaben %3$s · Saldo %4$s</string>
-    <string name="accounting_stock_summary">%1$d Produkte · %2$d Einheiten</string>
+    <string name="accounting_stock_summary">Produkte: %1$d · Einheiten: %2$d</string>
     <string name="accounting_scan_prompt">Kamera auf den Barcode richten</string>
     <string name="accounting_missing_entry">Kategorie, Beschreibung und Betrag eingeben</string>
     <string name="accounting_missing_name">Produktnamen eingeben</string>

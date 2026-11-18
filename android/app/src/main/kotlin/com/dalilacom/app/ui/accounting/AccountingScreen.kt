@@ -56,6 +56,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var loading by remember { mutableStateOf(true) }
+    var loadedOnce by remember { mutableStateOf(false) } // after the first load, later reloads refresh in place (the page keeps its scroll position and open sections)
     var summary by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingSummaryDto?>(null) }
     var products by remember { mutableStateOf<List<AccountingProductDto>>(emptyList()) }
     var barcode by remember { mutableStateOf("") }
@@ -162,7 +163,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     fun switchWorkplace(id: String?) { com.dalilacom.app.data.network.ActingBusiness.set(id); actingId = id }
 
     suspend fun reload() {
-        loading = true
+        if (!loadedOnce || container.accountingRepository.requiresPlan) loading = true
         val wps = container.staffRepository.workplaces()
         workplaces = wps
         if (actingId != null && wps.none { it.ownerId == actingId }) switchWorkplace(null)
@@ -190,6 +191,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         val (rf, rt) = when (reportPreset) { "today" -> today to today; "week" -> today.minusDays(6) to today; "last30" -> today.minusDays(29) to today; else -> today.withDayOfMonth(1) to today }
         report = if (ok("reports")) container.accountingRepository.report(rf.toString(), rt.toString()) else null
         loading = false
+        loadedOnce = true
     }
     LaunchedEffect(Unit) { reload() }
     val scanner = rememberLauncherForActivityResult(ScanContract()) { result ->
@@ -768,7 +770,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             }
         }
         if (can("stockWrite")) item {
-            CollapsibleCard(stringResource(R.string.accounting_inventory)) {
+            CollapsibleCard(stringResource(R.string.accounting_add_product_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(barcode, { barcode = it }, label = { Text(stringResource(R.string.accounting_barcode)) }, singleLine = true, modifier = Modifier.weight(1f))
