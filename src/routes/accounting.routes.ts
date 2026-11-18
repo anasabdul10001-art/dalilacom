@@ -221,11 +221,14 @@ accountingRouter.delete("/entries/:id", route(async (req, res) => {
 
 accountingRouter.get("/products", route(async (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
-  const [products, storeProducts, currency] = await Promise.all([prisma.accountingProduct.findMany({
+  const [products, allStore, currency] = await Promise.all([prisma.accountingProduct.findMany({
     where: { userId: req.user!.id, ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { barcode: { contains: q } }, { sku: { contains: q, mode: "insensitive" } }] } : {}) },
     orderBy: [{ quantity: "asc" }, { name: "asc" }], take: 300,
-  }), prisma.product.findMany({ where: { merchant: { userId: req.user!.id }, isActive: true, ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { barcode: { contains: q } }, { sku: { contains: q, mode: "insensitive" } }] } : {}) }, select: { id: true, name: true, barcode: true, sku: true, stock: true, priceCents: true, costPriceCents: true }, take: 300 }), marketOfUser(req.user!.id)]);
-  res.json([...products, ...storeProducts.map(p => ({ id: `store:${p.id}`, name: p.name, barcode: p.barcode, sku: p.sku, quantity: p.stock, salePriceCents: p.priceCents, costCents: p.costPriceCents, currency, unit: "قطعة", lowStockAt: 0, isStoreProduct: true }))]);
+  }), prisma.product.findMany({ where: { merchant: { userId: req.user!.id }, isActive: true, ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { barcode: { contains: q } }, { sku: { contains: q, mode: "insensitive" } }] } : {}) }, select: { id: true, name: true, barcode: true, sku: true, stock: true, priceCents: true, costPriceCents: true, accountingProductId: true }, take: 300 }), marketOfUser(req.user!.id)]);
+  // a store listing fed from the warehouse is shown on its accounting product (storeUnits), not as a second product to sell
+  const storeProducts = allStore.filter((p) => !p.accountingProductId);
+  const linked = new Map(allStore.filter((p) => p.accountingProductId).map((p) => [p.accountingProductId!, p]));
+  res.json([...products.map((p) => ({ ...p, storeProductId: linked.get(p.id)?.id ?? null, storeUnits: linked.get(p.id)?.stock ?? 0 })), ...storeProducts.map(p => ({ id: `store:${p.id}`, name: p.name, barcode: p.barcode, sku: p.sku, quantity: p.stock, salePriceCents: p.priceCents, costCents: p.costPriceCents, currency, unit: "قطعة", lowStockAt: 0, isStoreProduct: true }))]);
 }));
 
 accountingRouter.get("/products/barcode/:barcode", route(async (req, res) => {
@@ -443,7 +446,7 @@ accountingRouter.get("/stock/low", route(async (req, res) => {
   const userId = req.user!.id;
   const [own, shop] = await Promise.all([
     prisma.accountingProduct.findMany({ where: { userId }, select: { id: true, name: true, unit: true, quantity: true, lowStockAt: true, currency: true } }),
-    prisma.product.findMany({ where: { merchant: { userId }, isActive: true, stock: { lte: 0 } }, select: { id: true, name: true, stock: true } }),
+    prisma.product.findMany({ where: { merchant: { userId }, isActive: true, stock: { lte: 0 }, accountingProductId: null }, select: { id: true, name: true, stock: true } }),
   ]);
   const items = [
     ...own.filter((p) => p.quantity <= 0 || (p.lowStockAt > 0 && p.quantity <= p.lowStockAt)).map((p) => ({ id: p.id, name: p.name, unit: p.unit, quantity: p.quantity, lowStockAt: p.lowStockAt, currency: p.currency, isStoreProduct: false, level: p.quantity <= 0 ? "OUT" : "LOW" })),
@@ -1198,6 +1201,17 @@ accountingRouter.post("/locations/:id/return", route(async (req, res) => {
   const parsed = moveSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   await locs.returnStock(req.user!.id, actorOf(req), req.params.id, parsed.data.productId, parsed.data.quantity, parsed.data.note);
+  res.json({ ok: true });
+}));
+// the online store as a place goods sit: how many units of this product the store offers (the rest stays in the warehouse)
+accountingRouter.post("/products/:id/store", route(async (req, res) => {
+  const parsed = z.object({ storeProductId: z.string().uuid(), quantity: z.number().int().min(0).max(1_000_000) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  await locs.setStoreShare(req.user!.id, req.params.id, parsed.data.storeProductId, parsed.data.quantity);
+  res.json({ ok: true });
+}));
+accountingRouter.post("/products/:id/store/unlink", route(async (req, res) => {
+  await locs.unlinkStore(req.user!.id, req.params.id);
   res.json({ ok: true });
 }));
 // per product: in the main store, at the locations (not sold yet), sold

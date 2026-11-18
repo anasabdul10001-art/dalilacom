@@ -120,4 +120,10 @@
     <string name="accounting_loc_sell_from">البيع من</string>
     <string name="accounting_loc_main_store">المستودع الرئيسي</string>
     <string name="accounting_channel_WHOLESALE">سحب تاجر</string>
+    <string name="accounting_store_title">المتجر الإلكتروني</string>
+    <string name="accounting_store_hint">حدّد كم قطعة بدك تعرض بمتجرك بدليلكم. بتنقص من المستودع، وإذا خفّضتها بترجع للمستودع.</string>
+    <string name="accounting_store_in">بالمتجر الإلكتروني</string>
+    <string name="accounting_store_pick">منتج المتجر</string>
+    <string name="accounting_store_qty">الكمية بالمتجر</string>
+    <string name="accounting_store_save">حفظ</string>
 </resources>

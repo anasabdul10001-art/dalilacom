@@ -1337,7 +1337,7 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingInventoryDto(val products: Int = 0, val units: Int = 0, val outOfStock: Int = 0)
 @Serializable data class AccountingEntryDto(val id: String = "", val type: String = "", val category: String = "", val description: String = "", val amountCents: Int = 0, val currency: String = "EUR", val occurredAt: String = "", val source: String = "MANUAL", val hasReceipt: Boolean = false, val payMethod: String? = null, val payrollDue: Boolean = false)
 @Serializable data class AccountingSummaryDto(val totals: List<AccountingCurrencyTotalDto> = emptyList(), val inventory: AccountingInventoryDto = AccountingInventoryDto(), val recent: List<AccountingEntryDto> = emptyList())
-@Serializable data class AccountingProductDto(val id: String, val name: String, val barcode: String? = null, val sku: String? = null, val unit: String = DataLabels.UNIT_PIECE, val costCents: Int = 0, val salePriceCents: Int = 0, val quantity: Int = 0, val lowStockAt: Int = 0, val currency: String = "EUR")
+@Serializable data class AccountingProductDto(val id: String, val name: String, val barcode: String? = null, val sku: String? = null, val unit: String = DataLabels.UNIT_PIECE, val costCents: Int = 0, val salePriceCents: Int = 0, val quantity: Int = 0, val lowStockAt: Int = 0, val currency: String = "EUR", val storeProductId: String? = null, val storeUnits: Int = 0)
 @Serializable data class AccountingProductRequest(val name: String, val barcode: String? = null, val sku: String? = null, val unit: String = DataLabels.UNIT_PIECE, val costCents: Int = 0, val salePriceCents: Int = 0, val quantity: Int = 0, val lowStockAt: Int = 0, val currency: String = "EUR")
 @Serializable data class AccountingEntryRequest(val type: String, val category: String, val description: String, val amountCents: Int, val currency: String = "EUR", val payMethod: String? = null)
 @Serializable data class AccountingEntryEditRequest(val description: String, val amountCents: Int)
@@ -1389,7 +1389,8 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingLocationRequest(val name: String, val kind: String, val staffId: String? = null)
 @Serializable data class AccountingLocationPatch(val isActive: Boolean)
 @Serializable data class AccountingMoveRequest(val productId: String, val quantity: Int)
-@Serializable data class AccountingOverviewRowDto(val productId: String = "", val name: String = "", val inMainStore: Int = 0, val distributed: Int = 0, val sold: Int = 0)
+@Serializable data class AccountingStoreShareRequest(val storeProductId: String, val quantity: Int)
+@Serializable data class AccountingOverviewRowDto(val productId: String = "", val name: String = "", val inMainStore: Int = 0, val distributed: Int = 0, val inOnlineStore: Int = 0, val soldOnline: Int = 0, val sold: Int = 0)
 @Serializable data class AccountingSaleLineDto(val id: String = "", val name: String = "", val quantity: Int = 0, val returnedQuantity: Int = 0, val unitPriceCents: Long = 0, val lineTotalCents: Long = 0)
 @Serializable data class AccountingSaleDto(
     val id: String = "", val number: Int = 0, val customerName: String? = null, val currency: String = "EUR", val payMethod: String = "CASH", val channel: String = "SHOP", val locationId: String? = null,

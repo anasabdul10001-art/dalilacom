@@ -312,6 +312,7 @@ interface ApiService {
     @GET("accounting/locations") suspend fun accountingLocations(): Response<List<AccountingLocationDto>>
     @POST("accounting/locations") suspend fun createAccountingLocation(@Body body: AccountingLocationRequest): Response<okhttp3.ResponseBody>
     @PATCH("accounting/locations/{id}") suspend fun patchAccountingLocation(@Path("id") id: String, @Body body: AccountingLocationPatch): Response<okhttp3.ResponseBody>
+    @POST("accounting/products/{id}/store") suspend fun setAccountingStoreShare(@Path("id") id: String, @Body body: AccountingStoreShareRequest): Response<okhttp3.ResponseBody>
     @POST("accounting/locations/{id}/give") suspend fun giveAccountingStock(@Path("id") id: String, @Body body: AccountingMoveRequest): Response<okhttp3.ResponseBody>
     @POST("accounting/locations/{id}/return") suspend fun returnAccountingStock(@Path("id") id: String, @Body body: AccountingMoveRequest): Response<okhttp3.ResponseBody>
     @GET("accounting/stock/overview") suspend fun accountingStockOverview(): Response<List<AccountingOverviewRowDto>>

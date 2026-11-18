@@ -70,6 +70,32 @@ describe("accounting: goods at branches and distributors", () => {
     expect(stock).toMatchObject({ onHand: 3, sold: 3, given: 6 });
   });
 
+  it("the merchant decides how many units the online store offers; they leave the warehouse and the two always add up", async () => {
+    const boss = await owner("locstore");
+    const p = await tea(boss);
+    const category = await prisma.category.findFirstOrThrow();
+    await prisma.user.update({ where: { id: boss.id }, data: { role: "MERCHANT" } });
+    const shop = await prisma.merchantProfile.create({ data: { userId: boss.id, businessName: "Store", categoryId: category.id, approvalStatus: "APPROVED", address: "x", phone: "1", latitude: 1, longitude: 2 } });
+    const listing = await prisma.product.create({ data: { merchantId: shop.id, name: "Tea online", priceCents: 1200, stock: 0 } });
+    const share = (quantity: number) => request(app).post(`/accounting/products/${p.id}/store`).set(boss.auth).send({ storeProductId: listing.id, quantity });
+    const storeStock = async () => (await prisma.product.findUniqueOrThrow({ where: { id: listing.id } })).stock;
+    expect((await share(8)).status).toBe(200);
+    expect(await stockOf(p.id)).toBe(12);
+    expect(await storeStock()).toBe(8);
+    expect((await share(99)).status).toBe(409); // the warehouse does not have that much
+    expect((await share(3)).status).toBe(200); // lowering it sends units back to the warehouse
+    expect(await stockOf(p.id)).toBe(17);
+    expect(await storeStock()).toBe(3);
+    // the linked listing is no longer a second product in accounting; it shows on its own product
+    const list = (await request(app).get("/accounting/products").set(boss.auth)).body;
+    expect(list.find((x: { id: string }) => x.id === `store:${listing.id}`)).toBeUndefined();
+    expect(list.find((x: { id: string }) => x.id === p.id)).toMatchObject({ storeProductId: listing.id, storeUnits: 3 });
+    const ov = (await request(app).get("/accounting/stock/overview").set(boss.auth)).body.find((x: { productId: string }) => x.productId === p.id);
+    expect(ov).toMatchObject({ inMainStore: 17, inOnlineStore: 3 });
+    // the store page cannot change the quantity of a linked listing by itself
+    expect((await request(app).patch(`/products/${listing.id}`).set(boss.auth).send({ stock: 50 })).status).toBe(409);
+  });
+
   it("a distributor sells only from his own location; who may hand goods out follows the role", async () => {
     const boss = await owner("locstaff");
     const p = await tea(boss);

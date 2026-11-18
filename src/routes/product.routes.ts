@@ -323,6 +323,8 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), route(async
     const [settings, quota] = await Promise.all([getSettings(), sellerListingQuota(req.user!.id)]);
     if (!quota.paid && !settings.marketplace.allowNewProducts) return sendError(res, 403, "NEW_PRODUCTS_CLOSED", "الباقة المجانية الحالية تسمح بالمنتجات المستعملة فقط");
   }
+  // a listing fed from the accounting warehouse gets its quantity from there, so the two never disagree
+  if (existing.accountingProductId && parsed.data.stock !== undefined && parsed.data.stock !== existing.stock) return sendError(res, 409, "CONFLICT", "كمية هالمنتج بتنحدد من المحاسبة (المستودع)");
 
   // the photos: each must be one this shop uploaded; the first is the main one
   const { images, ...rest } = parsed.data;

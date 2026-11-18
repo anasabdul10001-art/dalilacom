@@ -65,9 +65,9 @@ function accountingLocationsCard(a) {
   const staff = locStaffList();
   const locs = a.locations || [];
   const canMove = locCanMove();
-  const rows = (ov || []).filter((r) => r.inMainStore || r.distributed || r.sold);
+  const rows = (ov || []).filter((r) => r.inMainStore || r.distributed || r.sold || r.inOnlineStore || r.soldOnline);
   const overview = ov === null ? skeleton("list", 2) : rows.length === 0 ? uiEmpty("📦", t("loc.noProducts")) :
-    `<table class="plain-table" style="width:100%"><thead><tr><th>${esc(t("loc.product"))}</th><th>${esc(t("loc.inMain"))}</th><th>${esc(t("loc.distributed"))}</th><th>${esc(t("loc.sold"))}</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${esc(r.name)}</td><td>${r.inMainStore}</td><td>${r.distributed}</td><td>${r.sold}</td></tr>`).join("")}</tbody></table>`;
+    `<table class="plain-table" style="width:100%"><thead><tr><th>${esc(t("loc.product"))}</th><th>${esc(t("loc.inMain"))}</th><th>${esc(t("loc.distributed"))}</th><th>${esc(t("loc.inOnline"))}</th><th>${esc(t("loc.sold"))}</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${esc(r.name)}</td><td>${r.inMainStore}</td><td>${r.distributed}</td><td>${r.inOnlineStore || 0}</td><td>${r.sold + (r.soldOnline || 0)}</td></tr>`).join("")}</tbody></table>`;
   const productOpts = (a.products || []).map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
   const list = locs.length === 0 ? uiEmpty("🏬", t("loc.none")) : locs.map((l) => `<div class="card" style="margin-top:10px">
       <div class="item-title">${esc(l.name)} ${uiChip(t("loc.kind." + l.kind), l.isActive ? "info" : "warn")}${l.staffName ? " " + uiChip(l.staffName) : ""}</div>
@@ -83,7 +83,18 @@ function accountingLocationsCard(a) {
       <div class="row"><div class="field"><label>${esc(t("loc.kindLabel"))}</label><select id="loc-kind"><option value="BRANCH">${esc(t("loc.kind.BRANCH"))}</option><option value="DISTRIBUTOR">${esc(t("loc.kind.DISTRIBUTOR"))}</option></select></div>
         <div class="field"><label>${esc(t("loc.staff"))}</label><select id="loc-staff">${staffOpts}</select></div></div>
       <button class="btn" onclick="locCreate(this)">${esc(t("loc.addBtn"))}</button></div>`;
+  // the online store: how many units of a warehouse product the store offers (the rest stays in the warehouse)
+  const own = (a.products || []).filter((p) => !p.isStoreProduct);
+  const free = (a.products || []).filter((p) => p.isStoreProduct);
+  const storeForm = S._actAs && !canMove ? "" : (own.length && (free.length || own.some((p) => p.storeProductId)))
+    ? `<div class="card"><h2>${esc(t("loc.onlineStore"))}</h2><p class="muted">${esc(t("loc.onlineHint"))}</p>
+      <div class="field"><label>${esc(t("loc.product"))}</label><select id="loc-sp">${own.map((p) => `<option value="${esc(p.id)}" data-store="${esc(p.storeProductId || "")}" data-units="${p.storeUnits || 0}">${esc(p.name)}${p.storeProductId ? " · " + esc(t("loc.inOnline")) + ": " + (p.storeUnits || 0) : ""}</option>`).join("")}</select></div>
+      <div class="field"><label>${esc(t("loc.storeProduct"))}</label><select id="loc-ss"><option value="">—</option>${free.map((p) => `<option value="${esc(p.id.slice(6))}">${esc(p.name)}</option>`).join("")}</select></div>
+      <div class="field"><label>${esc(t("loc.storeQty"))}</label><input id="loc-sq" inputmode="numeric" value="1" /></div>
+      <button class="btn" onclick="locStoreSave(this)">${esc(t("loc.storeSave"))}</button></div>`
+    : (own.length && !S._actAs ? uiEmpty("🛒", t("loc.storeNone")) : "");
   return `<div class="panel-title">${esc(t("loc.overview"))}</div><p class="muted">${esc(t("loc.overviewHint"))}</p>${overview}
+    <div class="panel-title" style="margin-top:16px">${esc(t("loc.onlineStore"))}</div>${storeForm}
     <div class="panel-title" style="margin-top:16px">${esc(t("loc.title"))}</div>${list}${form}`;
 }
 
@@ -104,6 +115,16 @@ async function locMove(btn, id, kind) {
   const res = await uiBusy(btn, () => api("POST", `/accounting/locations/${id}/${kind}`, { productId, quantity }));
   if (!res.ok) return toast(errMsg(res.data, t("loc.failed")));
   toast(t(kind === "give" ? "loc.gave" : "loc.returned")); locReload();
+}
+async function locStoreSave(btn) {
+  const sel = document.getElementById("loc-sp");
+  const opt = sel.options[sel.selectedIndex];
+  const storeProductId = (opt && opt.dataset.store) || document.getElementById("loc-ss").value;
+  const quantity = Math.floor(Number(document.getElementById("loc-sq").value));
+  if (!sel.value || !storeProductId || !(quantity >= 0)) return toast(t("accounting.invalidAmount"));
+  const res = await uiBusy(btn, () => api("POST", `/accounting/products/${sel.value}/store`, { storeProductId, quantity }));
+  if (!res.ok) return toast(errMsg(res.data, t("loc.failed")));
+  toast(t("loc.storeSaved")); locReload();
 }
 async function locToggle(btn, id, on) {
   const res = await uiBusy(btn, () => api("PATCH", `/accounting/locations/${id}`, { isActive: on }));

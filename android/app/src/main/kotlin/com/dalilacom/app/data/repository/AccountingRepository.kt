@@ -102,6 +102,7 @@ class AccountingRepository(private val api: ApiService) {
     suspend fun stockOverview(): List<com.dalilacom.app.data.network.AccountingOverviewRowDto> = safeApiCall { api.accountingStockOverview() }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun createLocation(name: String, kind: String): Result<Unit> = resultMsg { api.createAccountingLocation(com.dalilacom.app.data.network.AccountingLocationRequest(name, kind)) }
     suspend fun setLocationActive(id: String, active: Boolean): Result<Unit> = resultMsg { api.patchAccountingLocation(id, com.dalilacom.app.data.network.AccountingLocationPatch(active)) }
+    suspend fun setStoreShare(productId: String, storeProductId: String, quantity: Int): Result<Unit> = resultMsg { api.setAccountingStoreShare(productId, com.dalilacom.app.data.network.AccountingStoreShareRequest(storeProductId, quantity)) }
     suspend fun giveStock(id: String, productId: String, quantity: Int): Result<Unit> = resultMsg { api.giveAccountingStock(id, com.dalilacom.app.data.network.AccountingMoveRequest(productId, quantity)) }
     suspend fun returnStock(id: String, productId: String, quantity: Int): Result<Unit> = resultMsg { api.returnAccountingStock(id, com.dalilacom.app.data.network.AccountingMoveRequest(productId, quantity)) }
     /** Like result(), but a refusal carries the server's own message. */

@@ -60,13 +60,46 @@ fun LocationsSection(
 
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.accounting_loc_overview), style = MaterialTheme.typography.titleSmall)
-        overview.orEmpty().filter { it.inMainStore > 0 || it.distributed > 0 || it.sold > 0 }.forEach { r ->
+        overview.orEmpty().filter { it.inMainStore > 0 || it.distributed > 0 || it.sold > 0 || it.inOnlineStore > 0 || it.soldOnline > 0 }.forEach { r ->
             Column {
                 Text(r.name, fontWeight = FontWeight.ExtraBold)
                 Text(
-                    stringResource(R.string.accounting_loc_main) + ": " + r.inMainStore + "  ·  " + stringResource(R.string.accounting_loc_distributed) + ": " + r.distributed + "  ·  " + stringResource(R.string.accounting_loc_sold) + ": " + r.sold,
+                    stringResource(R.string.accounting_loc_main) + ": " + r.inMainStore + "  ·  " + stringResource(R.string.accounting_loc_distributed) + ": " + r.distributed + "  ·  " + stringResource(R.string.accounting_store_in) + ": " + r.inOnlineStore + "  ·  " + stringResource(R.string.accounting_loc_sold) + ": " + (r.sold + r.soldOnline),
                     fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+        val own = products.filter { !it.id.startsWith("store:") }
+        val free = products.filter { it.id.startsWith("store:") }
+        if (canMove && own.isNotEmpty() && (free.isNotEmpty() || own.any { it.storeProductId != null })) {
+            var sp by remember { mutableStateOf<AccountingProductDto?>(null) }
+            var spOpen by remember { mutableStateOf(false) }
+            var ss by remember { mutableStateOf<AccountingProductDto?>(null) }
+            var ssOpen by remember { mutableStateOf(false) }
+            var sq by remember { mutableStateOf("1") }
+            Text(stringResource(R.string.accounting_store_title), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.accounting_store_hint), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.foundation.layout.Box {
+                OutlinedButton(onClick = { spOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(sp?.name ?: stringResource(R.string.accounting_loc_pick)) }
+                DropdownMenu(expanded = spOpen, onDismissRequest = { spOpen = false }) {
+                    own.forEach { p -> DropdownMenuItem(text = { Text(p.name + if (p.storeProductId != null) " · " + stringResource(R.string.accounting_store_in) + ": " + p.storeUnits else "") }, onClick = { sp = p; spOpen = false }) }
+                }
+            }
+            if (sp?.storeProductId == null) {
+                androidx.compose.foundation.layout.Box {
+                    OutlinedButton(onClick = { ssOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(ss?.name ?: stringResource(R.string.accounting_store_pick)) }
+                    DropdownMenu(expanded = ssOpen, onDismissRequest = { ssOpen = false }) {
+                        free.forEach { p -> DropdownMenuItem(text = { Text(p.name) }, onClick = { ss = p; ssOpen = false }) }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(sq, { sq = it }, label = { Text(stringResource(R.string.accounting_store_qty)) }, singleLine = true, modifier = Modifier.weight(1f))
+                Button(onClick = {
+                    val p = sp; val q = sq.toIntOrNull() ?: -1
+                    val target = p?.storeProductId ?: ss?.id?.removePrefix("store:")
+                    if (p != null && target != null && q >= 0) run { container.accountingRepository.setStoreShare(p.id, target, q) }
+                }) { Text(stringResource(R.string.accounting_store_save)) }
             }
         }
         Text(stringResource(R.string.accounting_loc_title), style = MaterialTheme.typography.titleSmall)
@@ -87,7 +120,7 @@ fun LocationsSection(
                     androidx.compose.foundation.layout.Box {
                         OutlinedButton(onClick = { pickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(pick?.name ?: stringResource(R.string.accounting_loc_pick)) }
                         DropdownMenu(expanded = pickOpen, onDismissRequest = { pickOpen = false }) {
-                            products.forEach { p -> DropdownMenuItem(text = { Text(p.name + " · " + p.quantity) }, onClick = { pick = p; pickOpen = false }) }
+                            products.filter { !it.id.startsWith("store:") }.forEach { p -> DropdownMenuItem(text = { Text(p.name + " · " + p.quantity) }, onClick = { pick = p; pickOpen = false }) }
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

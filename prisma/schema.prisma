@@ -842,8 +842,12 @@ model Product {
   adBookings          AdBooking[]
   productCategory     ProductCategory?          @relation(fields: [productCategoryId], references: [id])
   accountingMovements AccountingStockMovement[]
+  // The accounting product whose warehouse this store listing draws from: `stock` is the share of it the merchant put on the store.
+  accountingProductId String?
+  accountingProduct   AccountingProduct?        @relation(fields: [accountingProductId], references: [id], onDelete: SetNull)
 
   @@index([merchantId])
+  @@index([accountingProductId])
   @@index([storeSection])
   @@index([productCategoryId])
 }
@@ -882,6 +886,7 @@ model AccountingProduct {
   user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   movements AccountingStockMovement[]
   atLocations AccountingLocationStock[]
+  storeListings Product[]
 
   @@unique([userId, barcode])
   @@index([userId, name])

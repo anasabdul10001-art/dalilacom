@@ -82,20 +82,61 @@ export async function returnStock(userId: string, actorId: string, locationId: s
   });
 }
 
+/**
+ * The online store as a place goods sit: the merchant says how many units of an accounting product are offered in the store
+ * (an absolute number); the difference moves between the warehouse and the store listing, so the two always add up.
+ */
+export async function setStoreShare(userId: string, accountingProductId: string, storeProductId: string, target: number) {
+  const [product, listing] = await Promise.all([
+    prisma.accountingProduct.findFirst({ where: { id: accountingProductId, userId }, select: { id: true, costCents: true } }),
+    prisma.product.findFirst({ where: { id: storeProductId, merchant: { userId } }, select: { id: true, stock: true, accountingProductId: true } }),
+  ]);
+  if (!product) throw notFound("المنتج غير موجود");
+  if (!listing) throw notFound("منتج المتجر غير موجود");
+  if (listing.accountingProductId && listing.accountingProductId !== product.id) throw new ApiError(409, "CONFLICT", "منتج المتجر هاد مربوط بمنتج تاني بالمحاسبة");
+  const other = await prisma.product.findFirst({ where: { accountingProductId: product.id, id: { not: listing.id } }, select: { id: true } });
+  if (other) throw new ApiError(409, "CONFLICT", "هالمنتج مربوط أصلاً بمنتج تاني بالمتجر");
+  await prisma.$transaction(async (tx) => {
+    // read the store's stock inside the transaction: an order may have taken some a moment ago
+    const now = await tx.product.findUniqueOrThrow({ where: { id: listing.id }, select: { stock: true } });
+    const delta = target - now.stock;
+    if (delta > 0) {
+      const took = await tx.accountingProduct.updateMany({ where: { id: product.id, quantity: { gte: delta } }, data: { quantity: { decrement: delta } } });
+      if (!took.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة بالمستودع ما بتكفي");
+      await tx.product.update({ where: { id: listing.id }, data: { stock: { increment: delta }, accountingProductId: product.id } });
+    } else if (delta < 0) {
+      const back = await tx.product.updateMany({ where: { id: listing.id, stock: { gte: -delta } }, data: { stock: { decrement: -delta }, accountingProductId: product.id } });
+      if (!back.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة بالمتجر تغيّرت، جرّب مرة تانية");
+      await tx.accountingProduct.update({ where: { id: product.id }, data: { quantity: { increment: -delta } } });
+    } else {
+      await tx.product.update({ where: { id: listing.id }, data: { accountingProductId: product.id } });
+    }
+    if (delta !== 0) await tx.accountingStockMovement.create({ data: { userId, productId: product.id, action: delta > 0 ? "STOCK_OUT" : "STOCK_IN", quantity: Math.abs(delta), unitCostCents: product.costCents, note: delta > 0 ? "توزيع على المتجر الإلكتروني" : "رجوع من المتجر الإلكتروني" } });
+  });
+}
+
+/** Cut the link; what the store holds stays in the store, on its own. */
+export async function unlinkStore(userId: string, accountingProductId: string) {
+  const r = await prisma.product.updateMany({ where: { accountingProductId, merchant: { userId } }, data: { accountingProductId: null } });
+  if (!r.count) throw notFound("المنتج مو مربوط بالمتجر");
+}
+
 /** The location a staff member sells from (a distributor has one of his own). */
 export const locationOfStaff = (userId: string, staffId: string) => prisma.accountingLocation.findFirst({ where: { userId, staffId, isActive: true }, orderBy: { createdAt: "asc" } });
 
 /** For each product: in the main store, at the locations (not sold yet), and sold in all channels (minus what came back). */
 export async function stockOverview(userId: string) {
-  const [products, atLocations, soldRows, backRows] = await Promise.all([
+  const [products, atLocations, soldRows, backRows, storeRows] = await Promise.all([
     prisma.accountingProduct.findMany({ where: { userId }, select: { id: true, name: true, unit: true, quantity: true, costCents: true, currency: true }, orderBy: { name: "asc" } }),
     prisma.accountingLocationStock.groupBy({ by: ["productId"], where: { location: { userId } }, _sum: { onHand: true } }),
     prisma.$queryRaw<{ productId: string; qty: bigint }[]>(Prisma.sql`SELECT l."productId", COALESCE(SUM(l."quantity"), 0) AS qty FROM "AccountingSaleLine" l JOIN "AccountingSale" s ON s."id" = l."saleId" WHERE s."userId" = ${userId} AND l."productId" IS NOT NULL GROUP BY l."productId"`),
     prisma.$queryRaw<{ productId: string; qty: bigint }[]>(Prisma.sql`SELECT l."productId", COALESCE(SUM(l."quantity"), 0) AS qty FROM "AccountingSaleReturnLine" l JOIN "AccountingSaleReturn" r ON r."id" = l."returnId" WHERE r."userId" = ${userId} AND l."productId" IS NOT NULL GROUP BY l."productId"`),
+    prisma.product.findMany({ where: { accountingProductId: { not: null }, merchant: { userId } }, select: { id: true, accountingProductId: true, stock: true, soldCount: true } }),
   ]);
   const num = (rows: { productId: string; qty: bigint }[], id: string) => Number(rows.find((r) => r.productId === id)?.qty ?? 0);
   return products.map((p) => {
     const distributed = atLocations.find((a) => a.productId === p.id)?._sum.onHand ?? 0;
-    return { productId: p.id, name: p.name, unit: p.unit, currency: p.currency, inMainStore: p.quantity, distributed, sold: num(soldRows, p.id) - num(backRows, p.id), costCents: p.costCents };
+    const listing = storeRows.find((s) => s.accountingProductId === p.id);
+    return { productId: p.id, name: p.name, unit: p.unit, currency: p.currency, inMainStore: p.quantity, distributed, storeProductId: listing?.id ?? null, inOnlineStore: listing?.stock ?? 0, soldOnline: listing?.soldCount ?? 0, sold: num(soldRows, p.id) - num(backRows, p.id), costCents: p.costCents };
   });
 }

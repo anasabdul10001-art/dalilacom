@@ -120,4 +120,10 @@
     <string name="accounting_loc_sell_from">Sell from</string>
     <string name="accounting_loc_main_store">Main store</string>
     <string name="accounting_channel_WHOLESALE">Trader pickup</string>
+    <string name="accounting_store_title">Online store</string>
+    <string name="accounting_store_hint">Choose how many units to offer in your Dalilacom store. They leave the warehouse, and lowering the number sends them back.</string>
+    <string name="accounting_store_in">In the online store</string>
+    <string name="accounting_store_pick">Store product</string>
+    <string name="accounting_store_qty">Units in the store</string>
+    <string name="accounting_store_save">Save</string>
 </resources>
