@@ -9343,6 +9343,19 @@ async function cityGateOpen() {
   const city = guess.city && guess.city.country === country.isoCode2 ? guess.city : null;
   S._cityGate = { countries: list.slice().sort((a, b) => geoName(a).localeCompare(geoName(b), LANG)), country, detected: city, mode: city ? "confirm" : "search", query: "", results: [], searched: false, searching: false, busy: false, error: null };
   render();
+  cityGateAutoGps(S._cityGate);
+}
+
+/** The device's own position is the default guess: asked automatically, and it replaces the connection's guess unless the person already started choosing. */
+function cityGateAutoGps(g) {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { ok, data } = await api("GET", "/geo/detect?" + new URLSearchParams({ lat: pos.coords.latitude, lng: pos.coords.longitude }));
+    if (S._cityGate !== g || !ok || !data.city || g.query || g.busy) return;
+    g.country = g.countries.find((c) => c.isoCode2 === data.city.country) || g.country;
+    g.detected = data.city; g.mode = "confirm";
+    render();
+  }, () => {}, { timeout: 15000, maximumAge: 600000 });
 }
 
 function cityGateHtml() {

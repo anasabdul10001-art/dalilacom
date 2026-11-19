@@ -16,7 +16,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalContext
+import com.dalilacom.app.ui.discover.LocationHelper
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,8 +61,12 @@ fun CityGate(container: AppContainer, signedInKey: Boolean) {
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val again = CityGateRequest.count
+    val context = LocalContext.current
+    var permTick by remember { mutableIntStateOf(0) }
+    var asked by remember { mutableStateOf(false) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permTick++ }
 
-    LaunchedEffect(signedInKey, again) {
+    LaunchedEffect(signedInKey, again, permTick) {
         val store = container.sessionStore
         val mine = store.getCityId()
         var profileCountry: String? = null
@@ -79,7 +88,10 @@ fun CityGate(container: AppContainer, signedInKey: Boolean) {
         }
         val list = container.accountRepository.countries()
         if (list.isEmpty()) return@LaunchedEffect
-        val guess = container.accountRepository.detectPlace()
+        // the phone's own position is the default guess (asked once); the connection is the fallback
+        if (!LocationHelper.hasPermission(context) && !asked) { asked = true; permission.launch(LocationHelper.PERMISSIONS); return@LaunchedEffect }
+        val pos = LocationHelper.current(context)
+        val guess = (pos?.let { container.accountRepository.detectPlace(it.first, it.second) }?.takeIf { it.city != null }) ?: container.accountRepository.detectPlace()
         val code = profileCountry ?: guess?.country ?: store.getCityCountry()
         val c = list.firstOrNull { it.isoCode2 == code } ?: list.first()
         countries = list.sortedBy { if (AppStrings.language == "ar") (it.nameArabic ?: it.name) else (it.nameEnglish ?: it.name) }

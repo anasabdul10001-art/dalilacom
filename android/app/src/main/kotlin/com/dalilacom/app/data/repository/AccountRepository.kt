@@ -27,7 +27,7 @@ class AccountRepository(private val api: ApiService, private val tokenStore: Tok
         safeApiCall { api.geoChildren(countryId, level, parentId) }?.takeIf { it.isSuccessful }?.body().orEmpty()
 
     /** A guess of the country and town from the connection; the person confirms or changes it. */
-    suspend fun detectPlace(): com.dalilacom.app.data.network.DetectedPlaceDto? = safeApiCall { api.geoDetect() }?.takeIf { it.isSuccessful }?.body()
+    suspend fun detectPlace(lat: Double? = null, lng: Double? = null): com.dalilacom.app.data.network.DetectedPlaceDto? = safeApiCall { api.geoDetect(lat, lng) }?.takeIf { it.isSuccessful }?.body()
 
     suspend fun searchCities(country: String, query: String): List<com.dalilacom.app.data.network.PlaceDto> =
         safeApiCall { api.geoPlaces(country, query) }?.takeIf { it.isSuccessful }?.body().orEmpty()
