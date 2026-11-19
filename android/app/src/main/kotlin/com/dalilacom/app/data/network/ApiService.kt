@@ -137,6 +137,15 @@ interface ApiService {
     @GET("geo/countries")
     suspend fun geoCountries(): Response<List<GeoUnitDto>>
 
+    @GET("geo/detect")
+    suspend fun geoDetect(@Query("lat") lat: Double? = null, @Query("lng") lng: Double? = null): Response<DetectedPlaceDto>
+
+    @GET("geo/places")
+    suspend fun geoPlaces(@Query("country") country: String, @Query("q") q: String): Response<List<PlaceDto>>
+
+    @POST("geo/city")
+    suspend fun geoPickCity(@Body body: PickCityRequest): Response<PickedCityDto>
+
     @GET("addresses")
     suspend fun getAddresses(): Response<List<AddressDto>>
 

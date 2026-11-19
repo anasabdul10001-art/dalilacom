@@ -1760,6 +1760,11 @@ html[dir="ltr"] .setup-step .s-go { transform: scaleX(-1); }
 .city-gate .city-ico { font-size: 38px; margin-bottom: 4px; }
 .city-gate h3 { margin: 0 0 6px; }
 .city-gate select { width: 100%; margin-top: 10px; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface, #fff); color: inherit; font: inherit; }
+.city-gate .city-label { display: block; text-align: start; font-size: 12.5px; font-weight: 700; margin-top: 8px; }
+.city-gate .city-q { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface, #fff); color: inherit; font: inherit; }
+.city-gate .city-guess { font-weight: 800; font-size: 16px; margin: 10px 0 12px; }
+.city-gate .city-results { max-height: 190px; overflow-y: auto; margin-top: 6px; }
+.city-gate .city-result { display: block; width: 100%; text-align: start; padding: 10px 12px; margin-top: 6px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface, #fff); color: inherit; font: inherit; cursor: pointer; }
 .loc-saved { margin: 8px 0 0; color: #1e8e3e; font-weight: 700; font-size: 13px; }
 
 /* what a search found on the map: the places drawn bigger with their name; the best one has a ring that pulses */

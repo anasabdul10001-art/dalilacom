@@ -1145,6 +1145,14 @@
     <string name="city_choose">اختر المدينة…</string>
     <string name="city_confirm">تأكيد</string>
     <string name="city_failed">تعذّر حفظ المدينة، جرّب مرة ثانية</string>
+    <string name="city_detected">هل مكانك هو: %1$s؟</string>
+    <string name="city_yes">نعم، هذا مكاني</string>
+    <string name="city_change">لا، بدي غيّر</string>
+    <string name="city_country">الدولة</string>
+    <string name="city_search">ابحث عن مدينتك أو بلدتك</string>
+    <string name="city_searching">عم نبحث…</string>
+    <string name="city_none">ما لقينا نتيجة، جرّب تكتب الاسم بطريقة تانية</string>
+    <string name="city_later">لاحقاً</string>
     <string name="loc_title">حدّد موقعك</string>
     <string name="loc_hint">اضغط على الخريطة أو اسحب الدبوس لمكانك، ثم اضغط «تحديد». المتاجر القريبة بتعرف موقعك التقريبي فقط (نحو كيلومتر).</string>
     <string name="loc_set">تحديد</string>

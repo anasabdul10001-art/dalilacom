@@ -24,6 +24,7 @@ private class AuthInterceptor(private val tokenStore: TokenStore) : Interceptor 
         if (token == null && ActingBusiness.ownerId != null) ActingBusiness.set(null) // signed out: no longer working for anyone
         val acting = ActingBusiness.ownerId
         val request = chain.request().newBuilder().apply {
+            ViewerCountry.code?.let { addHeader("X-Viewer-Country", it) }
             if (token != null) {
                 addHeader("Authorization", "Bearer $token")
                 if (chain.request().url.encodedPath.startsWith("/hr/me")) PhoneIdentity.id?.let { addHeader("X-Device-Id", it); addHeader("X-Device-Name", PhoneIdentity.name) }

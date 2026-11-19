@@ -323,6 +323,7 @@ fun AccountSettingsScreen(factory: ViewModelFactory, onBack: () -> Unit, isDark:
                     PlaceDropdown(AppStrings.get(R.string.account_country), state.countries, countryId) { viewModel.pickProfileCountry(it.isoCode2) }
                     if (state.profileRegions.isNotEmpty()) PlaceDropdown(AppStrings.get(R.string.account_region), state.profileRegions, state.profileRegionId) { viewModel.pickProfileRegion(it.id) }
                     PlaceDropdown(AppStrings.get(R.string.account_city), state.profileCities, profile.cityId) { viewModel.pickProfileCity(it.id) }
+                    OutlinedButton(onClick = { com.dalilacom.app.data.network.CityGateRequest.ask() }, modifier = Modifier.fillMaxWidth()) { Text("🔎  " + AppStrings.get(R.string.city_search)) }
                     OutlinedTextField(vat, { vat = it }, label = { Text(AppStrings.get(R.string.account_vat)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Hint(stringResource(R.string.ph_vat)) })
                     Button(onClick = { viewModel.saveLocation(vat) }) { Text(AppStrings.get(R.string.account_save)) }
                 }

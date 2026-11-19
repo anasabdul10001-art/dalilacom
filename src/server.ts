@@ -1,3 +1,4 @@
+import { ensureWorldCountries } from "./services/worldGeo.service";
 import { route } from "./lib/asyncRoute";
 import "dotenv/config";
 import { autoAcceptDueReceipts } from "./services/orderReceipt.service";
@@ -266,6 +267,8 @@ if (process.env.NODE_ENV !== "test") {
   app.listen(port, () => {
     console.log(`DALILACOM API listening on :${port}`);
   });
+  // every country of the world is listed from the start; cities are added as people pick them
+  ensureWorldCountries().then((n) => { if (n) console.log(`Listed ${n} new countries`); }).catch((err) => console.error("Listing countries failed:", err instanceof Error ? err.message : err));
   // AI packages that ended are renewed from the shop's wallet (also done at the moment a shop looks, for a service that slept)
   const sweep = () => renewAllDueAiPackages().catch((err) => console.error("AI package renewal failed:", err instanceof Error ? err.message : err));
   setTimeout(sweep, 30_000).unref();

@@ -1057,6 +1057,14 @@
     <string name="city_choose">Choose the city…</string>
     <string name="city_confirm">Confirm</string>
     <string name="city_failed">Could not save the city, try again</string>
+    <string name="city_detected">Is this your place: %1$s?</string>
+    <string name="city_yes">Yes, this is my place</string>
+    <string name="city_change">No, change it</string>
+    <string name="city_country">Country</string>
+    <string name="city_search">Search for your city or town</string>
+    <string name="city_searching">Searching…</string>
+    <string name="city_none">No result found, try writing the name another way</string>
+    <string name="city_later">Later</string>
     <string name="loc_title">Set your location</string>
     <string name="loc_hint">Tap the map or drag the pin to your place, then press “Set”. Nearby shops only learn your approximate position (about a kilometre).</string>
     <string name="loc_set">Set</string>

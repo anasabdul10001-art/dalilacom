@@ -26,6 +26,16 @@ class AccountRepository(private val api: ApiService, private val tokenStore: Tok
     suspend fun units(countryId: String? = null, level: String? = null, parentId: String? = null): List<GeoUnitDto> =
         safeApiCall { api.geoChildren(countryId, level, parentId) }?.takeIf { it.isSuccessful }?.body().orEmpty()
 
+    /** A guess of the country and town from the connection; the person confirms or changes it. */
+    suspend fun detectPlace(): com.dalilacom.app.data.network.DetectedPlaceDto? = safeApiCall { api.geoDetect() }?.takeIf { it.isSuccessful }?.body()
+
+    suspend fun searchCities(country: String, query: String): List<com.dalilacom.app.data.network.PlaceDto> =
+        safeApiCall { api.geoPlaces(country, query) }?.takeIf { it.isSuccessful }?.body().orEmpty()
+
+    /** The picked place becomes a city of the platform (an existing one is reused). */
+    suspend fun pickCity(token: String): com.dalilacom.app.data.network.PickedCityDto? =
+        safeApiCall { api.geoPickCity(com.dalilacom.app.data.network.PickCityRequest(token)) }?.takeIf { it.isSuccessful }?.body()
+
     suspend fun addresses(): List<AddressDto> = safeApiCall { api.getAddresses() }?.takeIf { it.isSuccessful }?.body().orEmpty()
 
     /** Only what is passed is sent; an empty phone clears it. */

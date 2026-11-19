@@ -89,6 +89,18 @@ data class ResendVerificationRequest(val email: String)
 data class AuthResponse(val token: String, val user: UserDto)
 
 @Serializable
+data class PlaceDto(val name: String, val detail: String? = null, val country: String, val latitude: Double, val longitude: Double, val token: String)
+
+@Serializable
+data class DetectedPlaceDto(val country: String? = null, val city: PlaceDto? = null)
+
+@Serializable
+data class PickCityRequest(val token: String)
+
+@Serializable
+data class PickedCityDto(val country: GeoUnitDto, val city: GeoUnitDto)
+
+@Serializable
 data class GeoUnitDto(val id: String, val name: String, val nameArabic: String? = null, val nameEnglish: String? = null, val isoCode2: String? = null, val parentId: String? = null)
 
 @Serializable

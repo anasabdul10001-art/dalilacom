@@ -11,6 +11,7 @@ class DalilacomApp : Application() {
     override fun onCreate() {
         super.onCreate()
         com.dalilacom.app.data.network.PhoneIdentity.init(this)
+        com.dalilacom.app.data.network.ViewerCountry.code = kotlinx.coroutines.runBlocking { container.sessionStore.getCityCountry() }?.takeIf { it.length == 2 }
         PushHelper.ensureChannel(this)
     }
 }

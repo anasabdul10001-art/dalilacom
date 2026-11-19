@@ -133,6 +133,8 @@ async function api(method, path, body) {
   // The server answers (errors, pages, names) in the app's language, not the browser's.
   const headers = { "Content-Type": "application/json", "Accept-Language": LANG };
   if (S.token) headers["Authorization"] = "Bearer " + S.token;
+  const picked = localCity(); // a visitor's chosen country decides the shops and the money they see
+  if (picked && picked.countryCode) headers["X-Viewer-Country"] = picked.countryCode;
   if (path.startsWith("/hr/me")) { // the phone lock: this browser is one "phone" for the employee
     try { let id = localStorage.getItem("dlc_device_id"); if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem("dlc_device_id", id); } headers["X-Device-Id"] = id; headers["X-Device-Name"] = "Web"; } catch (e) { /* storage blocked: the server asks for the id */ }
   }
@@ -7028,6 +7030,7 @@ function screenAccount() {
         <select id="ac-region" onchange="acctPickProfileRegion(this.value)">${opt("", "— اختر —", a.regionId)}${a.regions.map((c) => opt(c.id, unitName(c), a.regionId)).join("")}</select></div>` : ""}
       <div class="field"><label>المدينة</label>
         <select id="ac-city">${opt("", "— اختر —", p.cityId)}${a.cities.map((c) => opt(c.id, unitName(c), p.cityId)).join("")}</select></div>
+      <button class="btn small outline" style="margin-bottom:10px" onclick="cityGateReopen()">🔎 ${esc(t("city.search"))}</button>
       <div class="field"><label>الرقم الضريبي (اختياري)</label><input id="ac-vat" placeholder="مثال: DE123456789" dir="ltr" value="${esc(p.vatNumber || "")}" /></div>
       <button class="btn small" onclick="acctSaveLocation()">حفظ</button>
     </div>
@@ -9329,49 +9332,118 @@ async function ensureCity() {
 }
 
 async function cityGateOpen() {
-  const market = await api("GET", "/geo/market"); // the country is told from the account or the connection, never asked
-  const countries = await api("GET", "/geo/countries");
+  if (S._citySkipped) return;
+  // the country and town are guessed from the connection (the person confirms or changes them); the full list of countries is always there
+  const [det, countries, market] = await Promise.all([api("GET", "/geo/detect"), api("GET", "/geo/countries"), api("GET", "/geo/market")]);
   const list = countries.ok ? countries.data : [];
-  const country = list.find((c) => market.ok && c.isoCode2 === market.data.country) || list[0];
-  if (!country) return;
-  const cities = await api("GET", "/geo/units?" + new URLSearchParams({ countryId: country.id, level: "CITY" }));
-  if (!cities.ok || !cities.data.length) return; // no cities set up yet: nothing to choose from
-  S._cityGate = { country, cities: cities.data, picked: "", busy: false, error: null };
+  if (!list.length) return;
+  const guess = det.ok ? det.data : {};
+  const code = (S.token ? market.ok && market.data.country : guess.country) || (market.ok && market.data.country) || "";
+  const country = list.find((c) => c.isoCode2 === code) || list[0];
+  const city = guess.city && guess.city.country === country.isoCode2 ? guess.city : null;
+  S._cityGate = { countries: list.slice().sort((a, b) => geoName(a).localeCompare(geoName(b), LANG)), country, detected: city, mode: city ? "confirm" : "search", query: "", results: [], searched: false, searching: false, busy: false, error: null };
   render();
 }
 
 function cityGateHtml() {
   const g = S._cityGate;
   if (!g) return "";
+  const place = (c) => esc(c.name + (c.detail ? " (" + c.detail + ")" : ""));
+  let body;
+  if (g.mode === "confirm" && g.detected) {
+    body = `<p class="city-guess">${esc(t("city.detected", { place: g.detected.name + " - " + geoName(g.country) }))}</p>
+      <button class="btn" ${g.busy ? "disabled" : ""} onclick="cityGatePick('${g.detected.token}')">${esc(t("city.yes"))}</button>
+      <button class="btn outline" style="margin-top:8px" onclick="S._cityGate.mode='search';render()">${esc(t("city.change"))}</button>`;
+  } else {
+    body = `<label class="city-label">${esc(t("city.country"))}</label>
+      <select id="city-country" onchange="cityGateCountry(this.value)">${g.countries.map((c) => `<option value="${c.isoCode2}" ${c.isoCode2 === g.country.isoCode2 ? "selected" : ""}>${esc(geoName(c))}</option>`).join("")}</select>
+      <input id="city-q" class="city-q" autocomplete="off" placeholder="${esc(t("city.search"))}" value="${esc(g.query)}" oninput="cityGateType(this.value)" />
+      <div class="city-results">${g.searching ? `<p class="muted">${esc(t("city.searching"))}</p>` : g.results.length ? g.results.map((r) => `<button class="city-result" ${g.busy ? "disabled" : ""} onclick="cityGatePick('${r.token}')">📍 ${place(r)}</button>`).join("") : g.searched ? `<p class="muted">${esc(t("city.none"))}</p>` : ""}</div>
+      <button class="btn outline" style="margin-top:8px" onclick="cityGateGps()">🎯 ${esc(t("city.useGps"))}</button>`;
+  }
   return `<div class="deals-intro">
     <div class="deals-box city-gate">
       <div class="city-ico">📍</div>
       <h3>${esc(t("city.title"))}</h3>
       <p class="muted">${esc(t("city.sub"))}</p>
       ${S.token ? "" : langChipsHtml()}
-      <select id="city-pick" onchange="S._cityGate.picked=this.value;render()">
-        <option value="">${esc(t("city.choose"))}</option>
-        ${g.cities.map((c) => `<option value="${c.id}" ${g.picked === c.id ? "selected" : ""}>${esc(geoName(c))}</option>`).join("")}
-      </select>
+      ${body}
       ${g.error ? `<div class="error-banner" style="margin-top:8px">${esc(g.error)}</div>` : ""}
-      <button class="btn" style="margin-top:12px" ${g.picked && !g.busy ? "" : "disabled"} onclick="cityGateConfirm()">${esc(t("city.confirm"))}</button>
+      <button class="link-btn" style="margin-top:10px" onclick="S._citySkipped=true;S._cityGate=null;render()">${esc(t("city.later"))}</button>
     </div>
   </div>`;
 }
 
-async function cityGateConfirm() {
+function cityGateCountry(iso) {
   const g = S._cityGate;
-  if (!g || !g.picked) return;
-  const city = g.cities.find((c) => c.id === g.picked);
+  g.country = g.countries.find((c) => c.isoCode2 === iso) || g.country;
+  g.query = ""; g.results = []; g.searched = false; g.error = null;
+  render();
+  const q = qs("city-q"); if (q) q.focus();
+}
+
+let _cityTimer = null;
+function cityGateType(value) {
+  const g = S._cityGate;
+  g.query = value;
+  clearTimeout(_cityTimer);
+  if (value.trim().length < 2) { g.results = []; g.searched = false; g.searching = false; return cityGateRefreshList(); }
+  _cityTimer = setTimeout(async () => {
+    const mine = value, iso = g.country.isoCode2;
+    g.searching = true; cityGateRefreshList();
+    const { ok, data } = await api("GET", "/geo/places?" + new URLSearchParams({ country: iso, q: value.trim() }));
+    if (g.query !== mine || g.country.isoCode2 !== iso) return; // the person kept typing: this answer is old
+    g.searching = false; g.searched = true; g.results = ok && Array.isArray(data) ? data : [];
+    cityGateRefreshList();
+  }, 400);
+}
+
+/** Only the result list is redrawn while typing, so the keyboard and the cursor stay where they are. */
+function cityGateRefreshList() {
+  const box = document.querySelector(".city-results");
+  if (!box) return render();
+  const tmp = document.createElement("div");
+  tmp.innerHTML = cityGateHtml();
+  const fresh = tmp.querySelector(".city-results");
+  if (fresh) box.innerHTML = fresh.innerHTML;
+}
+
+function cityGateGps() {
+  const g = S._cityGate;
+  if (!navigator.geolocation) { g.error = t("city.gpsFailed"); return render(); }
+  g.error = null; g.searching = true; cityGateRefreshList();
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { ok, data } = await api("GET", "/geo/detect?" + new URLSearchParams({ lat: pos.coords.latitude, lng: pos.coords.longitude }));
+    g.searching = false;
+    if (!ok || !data.city) { g.error = t("city.gpsFailed"); return render(); }
+    g.country = g.countries.find((c) => c.isoCode2 === data.city.country) || g.country;
+    g.detected = data.city; g.mode = "confirm";
+    render();
+  }, () => { g.searching = false; g.error = t("city.gpsFailed"); render(); }, { timeout: 10000, maximumAge: 600000 });
+}
+
+async function cityGatePick(token) {
+  const g = S._cityGate;
+  if (!g || g.busy) return;
   g.busy = true; g.error = null; render();
+  const made = await api("POST", "/geo/city", { token });
+  if (!made.ok) { g.busy = false; g.error = errMsg(made.data, t("city.failed")); return render(); }
+  const { country, city } = made.data;
   if (S.token) {
-    const { ok, data } = await api("PATCH", "/profile/me", { countryCode: g.country.isoCode2, cityId: city.id });
+    const { ok, data } = await api("PATCH", "/profile/me", { countryCode: country.isoCode2, cityId: city.id });
     if (!ok) { g.busy = false; g.error = errMsg(data, t("city.failed")); return render(); }
   }
-  cityRemember({ id: city.id, name: geoName(city), countryCode: g.country.isoCode2 });
+  cityRemember({ id: city.id, name: geoName(city), countryCode: country.isoCode2 });
   S._cityGate = null;
   S._store = null; // another city: another shops list
+  loadMarket(); // the country decides the money and the shops
   render();
+}
+
+/** From the account screen: the same question again, to move to another city or country. */
+async function cityGateReopen() {
+  S._citySkipped = false;
+  await cityGateOpen();
 }
 
 /* ---- the place the person sets for nearby offers: a map under the switch and a "set" button ---- */

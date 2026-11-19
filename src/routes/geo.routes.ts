@@ -10,6 +10,7 @@ import { reverseGeocode } from "../services/reverseGeocode.service";
 import { suggestAddresses } from "../services/addressSuggest.service";
 import { resolveLanguage } from "../lib/languages";
 import { route } from "../lib/asyncRoute";
+import { cityForPlace, detectPlace, placeAt, searchCities } from "../services/worldGeo.service";
 
 export const geoRouter = Router();
 
@@ -67,7 +68,8 @@ const listUnitsSchema = z.object({
 geoRouter.get("/reverse", reverseGeocodeRateLimiter, route(async (req, res) => {
   const parsed = z.object({ lat: z.coerce.number().min(-90).max(90), lng: z.coerce.number().min(-180).max(180) }).safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  res.json(await reverseGeocode(parsed.data.lat, parsed.data.lng, resolveLanguage(req)));
+  const { address, city } = await reverseGeocode(parsed.data.lat, parsed.data.lng, resolveLanguage(req));
+  res.json({ address, city });
 }));
 
 // Search-as-you-type address lookup. Photon supports autocomplete; the public Nominatim API does not.
@@ -75,6 +77,34 @@ geoRouter.get("/suggest", addressSuggestRateLimiter, route(async (req, res) => {
   const parsed = z.object({ q: z.string().trim().min(3).max(120) }).safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   res.json(await suggestAddresses(parsed.data.q));
+}));
+
+// First-open onboarding: a guess of the visitor's country and town from the connection (they confirm or change it).
+geoRouter.get("/detect", addressSuggestRateLimiter, route(async (req, res) => {
+  const parsed = z.object({ lat: z.coerce.number().min(-90).max(90).optional(), lng: z.coerce.number().min(-180).max(180).optional() }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  // the phone's own position (when the person allowed it) is more exact than the connection
+  if (parsed.data.lat != null && parsed.data.lng != null) {
+    const here = await placeAt(parsed.data.lat, parsed.data.lng, resolveLanguage(req));
+    if (here.country) return res.json(here);
+  }
+  res.json(await detectPlace(req.ip ?? ""));
+}));
+
+// Towns and cities of a country by name (any country of the world).
+geoRouter.get("/places", addressSuggestRateLimiter, route(async (req, res) => {
+  const parsed = z.object({ country: z.string().length(2), q: z.string().trim().min(2).max(80) }).safeParse(req.query);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  res.json(await searchCities(parsed.data.q, parsed.data.country, resolveLanguage(req)));
+}));
+
+// The picked place becomes a city of the platform (existing one reused). Only places that came out of the search above are accepted.
+geoRouter.post("/city", addressSuggestRateLimiter, route(async (req, res) => {
+  const parsed = z.object({ token: z.string().min(10).max(600) }).safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+  const found = await cityForPlace(parsed.data.token);
+  if (!found) return sendError(res, 400, "INVALID_PLACE", "This place cannot be used");
+  res.json(found);
 }));
 
 // Public browse — e.g. "cities in Syria" (countryId + level=CITY) or "children of this region"
