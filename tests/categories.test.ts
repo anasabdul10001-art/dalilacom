@@ -61,7 +61,10 @@ describe("Language resolution", () => {
     expect(resolveLanguage(req({ lang: "en" }))).toBe("en");
     expect(resolveLanguage(req({}, "en-US,en;q=0.9,ar;q=0.8"))).toBe("en");
     expect(resolveLanguage(req({}, "fr;q=0.9,ar;q=0.4"))).toBe("ar");
-    expect(resolveLanguage(req({ lang: "xx" }, "de"))).toBe("ar"); // German is hidden until its translations are complete
+    expect(resolveLanguage(req({ lang: "xx" }, "fr"))).toBe("ar"); // a language the platform does not have
+    expect(resolveLanguage(req({ lang: "xx" }, "de"))).toBe("de"); // German, Russian and Ukrainian are served
+    expect(resolveLanguage(req({}, "uk-UA,uk;q=0.9,en;q=0.5"))).toBe("uk");
+    expect(resolveLanguage(req({}, "ru-RU,ru;q=0.9"))).toBe("ru");
     expect(resolveLanguage(req({}))).toBe("ar");
   });
 });

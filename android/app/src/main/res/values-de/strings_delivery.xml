@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ship_kind_delivery">Delivery by the shop</string>
-    <string name="ship_kind_pickup">Pick up at the shop</string>
-    <string name="ship_kind_courier">Outside courier company</string>
-    <string name="ship_courier">Shipping with a courier company</string>
-    <string name="addr_title">Delivery address</string>
-    <string name="addr_ph">City, area, street, building number</string>
-    <string name="addr_phone">A phone number to reach you</string>
-    <string name="addr_need_order">Write the delivery address and your phone number</string>
-    <string name="ord_addr">Address</string>
-    <string name="ord_phone">Phone</string>
-    <string name="ord_courier">Courier company</string>
-    <string name="ord_tracking">Tracking number</string>
-    <string name="ord_ask_courier">What is the courier company\'s name?</string>
-    <string name="ord_ask_tracking">What is the tracking number?</string>
+    <string name="ship_kind_delivery">Lieferung durch den Shop</string>
+    <string name="ship_kind_pickup">Abholung im Shop</string>
+    <string name="ship_kind_courier">Externer Kurierdienst</string>
+    <string name="ship_courier">Versand per Kurierdienst</string>
+    <string name="addr_title">Lieferadresse</string>
+    <string name="addr_ph">Stadt, Gebiet, Straße, Hausnummer</string>
+    <string name="addr_phone">Eine Telefonnummer, unter der wir Sie erreichen</string>
+    <string name="addr_need_order">Schreiben Sie die Lieferadresse und Ihre Telefonnummer</string>
+    <string name="ord_addr">Adresse</string>
+    <string name="ord_phone">Telefon</string>
+    <string name="ord_courier">Kurierdienst</string>
+    <string name="ord_tracking">Sendungsnummer</string>
+    <string name="ord_ask_courier">Wie heißt der Kurierdienst?</string>
+    <string name="ord_ask_tracking">Wie lautet die Sendungsnummer?</string>
 </resources>

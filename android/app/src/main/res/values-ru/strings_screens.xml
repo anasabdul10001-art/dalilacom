@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Русский: scaffolded by npm run i18n:add. The values are still ENGLISH placeholders — translate them (keep the keys and %1$s / %1$d markers). -->
 <!-- Texts of the screens, keyed by a hash of the Arabic source. Same keys in every language; rename a key when you next touch its screen. (English) -->
 <resources>
     <string name="s_00246e91" formatted="false">Мои заказы</string>

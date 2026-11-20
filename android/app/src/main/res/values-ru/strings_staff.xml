@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Русский: scaffolded by npm run i18n:add. The values are still ENGLISH placeholders — translate them (keep the keys and %1$s / %1$d markers). -->
 <resources>
     <string name="staff_title">Персонал бизнеса</string>
     <string name="staff_my_work_title">Моя работа</string>

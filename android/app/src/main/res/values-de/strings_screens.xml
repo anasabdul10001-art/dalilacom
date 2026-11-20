@@ -1,612 +1,984 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Deutsch: scaffolded by npm run i18n:add. The values are still ENGLISH placeholders — translate them (keep the keys and %1$s / %1$d markers). -->
 <!-- Texts of the screens, keyed by a hash of the Arabic source. Same keys in every language; rename a key when you next touch its screen. (English) -->
 <resources>
-    <string name="s_00246e91" formatted="false">My orders</string>
-    <string name="s_004f489c" formatted="false">Set your opening hours</string>
-    <string name="s_01f05ae9" formatted="false">You have no orders yet</string>
-    <string name="s_0224de46" formatted="false">Channel connected</string>
-    <string name="s_02cdc94a" formatted="false">Connect Instagram</string>
-    <string name="s_04230bfd" formatted="false">Business description</string>
-    <string name="s_04c5e56f" formatted="false">Set your shop\'s location on the map</string>
-    <string name="s_064be38d" formatted="false">📄 Export receipt (PDF)</string>
-    <string name="s_06a4e0cc" formatted="false">Couldn\'t load the wallet</string>
-    <string name="s_073f5f4b" formatted="false">Phone (optional)</string>
-    <string name="s_0a2bc37f" formatted="false">Top-up request received — waiting for admin confirmation</string>
+    <string name="s_00246e91" formatted="false">Meine Bestellungen</string>
+    <string name="s_004f489c" formatted="false">Legen Sie Ihre Öffnungszeiten fest</string>
+    <string name="s_01f05ae9" formatted="false">Sie haben noch keine Bestellungen</string>
+    <string name="s_0224de46" formatted="false">Kanal verbunden</string>
+    <string name="s_02cdc94a" formatted="false">Instagram verbinden</string>
+    <string name="s_04230bfd" formatted="false">Beschreibung des Betriebs</string>
+    <string name="s_04c5e56f" formatted="false">Legen Sie den Standort Ihres Shops auf der Karte fest</string>
+    <string name="s_064be38d" formatted="false">📄 Beleg exportieren (PDF)</string>
+    <string name="s_06a4e0cc" formatted="false">Die Wallet konnte nicht geladen werden</string>
+    <string name="s_073f5f4b" formatted="false">Telefon (optional)</string>
+    <string name="s_0a2bc37f" formatted="false">Aufladeanfrage erhalten – wartet auf die Bestätigung des Admins</string>
     <string name="s_0a92494e" formatted="false">Name</string>
-    <string name="s_0b149b76" formatted="false">Confirm discount</string>
-    <string name="s_0b9aea6f" formatted="false">Couldn\'t change the quantity</string>
-    <string name="s_0be90459" formatted="false">Opening hours</string>
-    <string name="s_0c05c599" formatted="false">Couldn\'t send the reply</string>
-    <string name="s_0c6c1d53" formatted="false">Get your shop ready to appear to customers</string>
-    <string name="s_0ccab856" formatted="false">Location permission wasn\'t granted — tap the map to set the shop\'s location</string>
-    <string name="s_0e1bedb9" formatted="false">My saved places</string>
-    <string name="s_10ceb09f" formatted="false">Register as:</string>
-    <string name="s_14293463" formatted="false">Currently unavailable</string>
-    <string name="s_14737605" formatted="false">Rule added</string>
-    <string name="s_153612e1" formatted="false">Discount receipt</string>
-    <string name="s_1699cdea" formatted="false">Add discount</string>
-    <string name="s_18d994f4" formatted="false">New product</string>
-    <string name="s_1aa879ba" formatted="false">Member price</string>
-    <string name="s_1b98cbb3" formatted="false">No discounts yet</string>
-    <string name="s_1be55892" formatted="false">My connected channels</string>
-    <string name="s_1bef7f7d" formatted="false">WhatsApp (with country code, e.g. 9639xxxxxxxx)</string>
-    <string name="s_1dbf1d4a" formatted="false">Enter your email and password</string>
-    <string name="s_1e3477e2" formatted="false">We\'ll ask for your shop\'s details after you create the account</string>
-    <string name="s_21019a65" formatted="false">Connect the page</string>
-    <string name="s_2136e58d" formatted="false">Auto-responder</string>
-    <string name="s_21a1bc3f" formatted="false">Description (optional)</string>
-    <string name="s_221bae78" formatted="false">Couldn\'t load the status</string>
-    <string name="s_222d012d" formatted="false">Save opening hours</string>
-    <string name="s_23e47d75" formatted="false">Your shop\'s place on the map</string>
-    <string name="s_249b177e" formatted="false">The complete guide to your city</string>
-    <string name="s_261429f0" formatted="false">+ New product</string>
-    <string name="s_2a837234" formatted="false">Connect the channel</string>
-    <string name="s_2d2bbdc2" formatted="false">Delete</string>
+    <string name="s_0b149b76" formatted="false">Rabatt bestätigen</string>
+    <string name="s_0b9aea6f" formatted="false">Die Menge konnte nicht geändert werden</string>
+    <string name="s_0be90459" formatted="false">Öffnungszeiten</string>
+    <string name="s_0c05c599" formatted="false">Die Antwort konnte nicht gesendet werden</string>
+    <string name="s_0c6c1d53" formatted="false">Machen Sie Ihren Shop bereit, damit er bei Kunden erscheint</string>
+    <string name="s_0ccab856" formatted="false">Die Standortberechtigung wurde nicht erteilt – tippen Sie auf die Karte, um den Standort des Shops festzulegen</string>
+    <string name="s_0e1bedb9" formatted="false">Meine gespeicherten Orte</string>
+    <string name="s_10ceb09f" formatted="false">Registrieren als:</string>
+    <string name="s_14293463" formatted="false">Derzeit nicht verfügbar</string>
+    <string name="s_14737605" formatted="false">Regel hinzugefügt</string>
+    <string name="s_153612e1" formatted="false">Rabattbeleg</string>
+    <string name="s_1699cdea" formatted="false">Rabatt hinzufügen</string>
+    <string name="s_18d994f4" formatted="false">Neues Produkt</string>
+    <string name="s_1aa879ba" formatted="false">Mitgliederpreis</string>
+    <string name="s_1b98cbb3" formatted="false">Noch keine Rabatte</string>
+    <string name="s_1be55892" formatted="false">Meine verbundenen Kanäle</string>
+    <string name="s_1bef7f7d" formatted="false">WhatsApp (mit Ländervorwahl, z. B. 9639xxxxxxxx)</string>
+    <string name="s_1dbf1d4a" formatted="false">Geben Sie Ihre E-Mail und Ihr Passwort ein</string>
+    <string name="s_1e3477e2" formatted="false">Nach dem Erstellen des Kontos fragen wir nach den Angaben zu Ihrem Shop</string>
+    <string name="s_21019a65" formatted="false">Seite verbinden</string>
+    <string name="s_2136e58d" formatted="false">Autoresponder</string>
+    <string name="s_21a1bc3f" formatted="false">Beschreibung (optional)</string>
+    <string name="s_221bae78" formatted="false">Der Status konnte nicht geladen werden</string>
+    <string name="s_222d012d" formatted="false">Öffnungszeiten speichern</string>
+    <string name="s_23e47d75" formatted="false">Der Ort Ihres Shops auf der Karte</string>
+    <string name="s_249b177e" formatted="false">Der komplette Führer durch Ihre Stadt</string>
+    <string name="s_261429f0" formatted="false">+ Neues Produkt</string>
+    <string name="s_2a837234" formatted="false">Kanal verbinden</string>
+    <string name="s_2d2bbdc2" formatted="false">Löschen</string>
     <string name="s_2e1a34c3" formatted="false">,</string>
-    <string name="s_2e3f9ed4" formatted="false">Transfer USDT (TRC20 network) to this address, then paste the transaction ID (txid) — the server verifies it automatically:</string>
-    <string name="s_2f1a3ab7" formatted="false">Set your working days and hours — customers see \"Open now\" or \"Closed\". If you close after midnight, pick a closing time earlier than the opening time (for example 6:00 PM – 2:00 AM).</string>
-    <string name="s_305fe0fc" formatted="false">Subscribe to a plan to activate your digital card</string>
-    <string name="s_328ddce5" formatted="false">Back</string>
-    <string name="s_33093b21" formatted="false">Enter a valid bill amount</string>
-    <string name="s_341d926d" formatted="false">Couldn\'t save the product</string>
-    <string name="s_347c4ba8" formatted="false">Couldn\'t remove the photo</string>
-    <string name="s_38ceca24" formatted="false">Fixed reply</string>
-    <string name="s_3bb9ad91" formatted="false">Sign in first to continue</string>
-    <string name="s_3ea19382" formatted="false">Incorrect sign-in details</string>
-    <string name="s_3f8e51fe" formatted="false">My card</string>
-    <string name="s_3fc7c056" formatted="false">My cart</string>
-    <string name="s_41066d88" formatted="false">Register</string>
-    <string name="s_413c51af" formatted="false">Total</string>
-    <string name="s_41b05461" formatted="false">Active</string>
-    <string name="s_42186a14" formatted="false">Remove photo</string>
-    <string name="s_424fa77c" formatted="false">Couldn\'t delete the product</string>
-    <string name="s_43010e9c" formatted="false">Couldn\'t save the shop details</string>
-    <string name="s_432dc00c" formatted="false">Couldn\'t load the product</string>
-    <string name="s_439b0d4e" formatted="false">Not activated</string>
-    <string name="s_44048fac" formatted="false">Confirmed</string>
-    <string name="s_46242623" formatted="false">Enter your name</string>
-    <string name="s_471a369e" formatted="false">Couldn\'t add the rule</string>
-    <string name="s_47228890" formatted="false">Couldn\'t delete</string>
-    <string name="s_47352f90" formatted="false">Add your first product</string>
-    <string name="s_47428e01" formatted="false">Write your reply</string>
-    <string name="s_48e7fe4b" formatted="false">Enter the membership number and the 6-digit code</string>
-    <string name="s_4a3ccec5" formatted="false">🕒 Opening hours</string>
-    <string name="s_4b028e52" formatted="false">Waiting for your reply</string>
-    <string name="s_4b860f78" formatted="false">Password (at least 8 characters)</string>
-    <string name="s_4d977cf7" formatted="false">Transaction ID (txid)</string>
-    <string name="s_4e387930" formatted="false">Free trial</string>
-    <string name="s_5059c36f" formatted="false">WhatsApp (optional, with country code)</string>
-    <string name="s_51963665" formatted="false">Current code</string>
-    <string name="s_51ed1058" formatted="false">Choose the payment method and enter the transaction number</string>
-    <string name="s_53655660" formatted="false">Channels</string>
-    <string name="s_53bd39b7" formatted="false">Available channels</string>
-    <string name="s_54b49c02" formatted="false">Instructions for the AI</string>
-    <string name="s_55cf1553" formatted="false">Couldn\'t start connecting to Facebook</string>
-    <string name="s_56be3fdb" formatted="false">Enter a rule name and at least one keyword</string>
-    <string name="s_56ee6e0d" formatted="false">Save</string>
-    <string name="s_571d102a" formatted="false">You haven\'t set the location yet</string>
-    <string name="s_57833160" formatted="false">No connected channels yet</string>
-    <string name="s_58c8a282" formatted="false">Visitor</string>
-    <string name="s_59539fc9" formatted="false">Shop name</string>
-    <string name="s_5bf826c5" formatted="false">Close</string>
-    <string name="s_5f05466a" formatted="false">Cancelled</string>
-    <string name="s_5f10f855" formatted="false">Couldn\'t load the payment methods</string>
-    <string name="s_5ffc2bb8" formatted="false">Rule name</string>
-    <string name="s_60e251d0" formatted="false">Don\'t have an account? Create one</string>
-    <string name="s_615e65ba" formatted="false">SKU (optional)</string>
-    <string name="s_621e568d" formatted="false">Top up</string>
-    <string name="s_625e3fc7" formatted="false">Business</string>
-    <string name="s_6310b20d" formatted="false">Choose the page</string>
-    <string name="s_64cf6641" formatted="false">My profile</string>
-    <string name="s_6617ed19" formatted="false">We couldn\'t get your location — tap the map to set it by hand</string>
-    <string name="s_66414100" formatted="false">Topped up and balance added</string>
-    <string name="s_67636cc3" formatted="false">Send top-up request</string>
-    <string name="s_676f8348" formatted="false">Couldn\'t register the business account</string>
-    <string name="s_6793a69f" formatted="false">Products</string>
-    <string name="s_69bbe90d" formatted="false">No products yet</string>
-    <string name="s_69c86923" formatted="false">‹ Back</string>
-    <string name="s_6c21e27c" formatted="false">Something went wrong</string>
-    <string name="s_6d05e053" formatted="false">Reply tone (for example: friendly and brief)</string>
-    <string name="s_6e274458" formatted="false">Couldn\'t connect the page</string>
-    <string name="s_6e3a209c" formatted="false">Order not found</string>
+    <string name="s_2e3f9ed4" formatted="false">Überweisen Sie USDT (TRC20-Netzwerk) an diese Adresse und fügen Sie dann die Transaktions-ID (txid) ein – der Server prüft sie automatisch:</string>
+    <string name="s_2f1a3ab7" formatted="false">Legen Sie Ihre Arbeitstage und -zeiten fest – Kunden sehen „Jetzt geöffnet“ oder „Geschlossen“. Wenn Sie nach Mitternacht schließen, wählen Sie eine Schließzeit vor der Öffnungszeit (zum Beispiel 18:00 – 02:00 Uhr).</string>
+    <string name="s_305fe0fc" formatted="false">Abonnieren Sie einen Tarif, um Ihre digitale Karte zu aktivieren</string>
+    <string name="s_328ddce5" formatted="false">Zurück</string>
+    <string name="s_33093b21" formatted="false">Geben Sie einen gültigen Rechnungsbetrag ein</string>
+    <string name="s_341d926d" formatted="false">Das Produkt konnte nicht gespeichert werden</string>
+    <string name="s_347c4ba8" formatted="false">Das Foto konnte nicht entfernt werden</string>
+    <string name="s_38ceca24" formatted="false">Feste Antwort</string>
+    <string name="s_3bb9ad91" formatted="false">Melden Sie sich zuerst an, um fortzufahren</string>
+    <string name="s_3ea19382" formatted="false">Falsche Anmeldedaten</string>
+    <string name="s_3f8e51fe" formatted="false">Meine Karte</string>
+    <string name="s_3fc7c056" formatted="false">Mein Warenkorb</string>
+    <string name="s_41066d88" formatted="false">Registrieren</string>
+    <string name="s_413c51af" formatted="false">Gesamt</string>
+    <string name="s_41b05461" formatted="false">Aktiv</string>
+    <string name="s_42186a14" formatted="false">Foto entfernen</string>
+    <string name="s_424fa77c" formatted="false">Das Produkt konnte nicht gelöscht werden</string>
+    <string name="s_43010e9c" formatted="false">Die Shop-Angaben konnten nicht gespeichert werden</string>
+    <string name="s_432dc00c" formatted="false">Das Produkt konnte nicht geladen werden</string>
+    <string name="s_439b0d4e" formatted="false">Nicht aktiviert</string>
+    <string name="s_44048fac" formatted="false">Bestätigt</string>
+    <string name="s_46242623" formatted="false">Geben Sie Ihren Namen ein</string>
+    <string name="s_471a369e" formatted="false">Die Regel konnte nicht hinzugefügt werden</string>
+    <string name="s_47228890" formatted="false">Löschen nicht möglich</string>
+    <string name="s_47352f90" formatted="false">Fügen Sie Ihr erstes Produkt hinzu</string>
+    <string name="s_47428e01" formatted="false">Schreiben Sie Ihre Antwort</string>
+    <string name="s_48e7fe4b" formatted="false">Geben Sie die Mitgliedsnummer und den 6-stelligen Code ein</string>
+    <string name="s_4a3ccec5" formatted="false">🕒 Öffnungszeiten</string>
+    <string name="s_4b028e52" formatted="false">Wartet auf Ihre Antwort</string>
+    <string name="s_4b860f78" formatted="false">Passwort (mindestens 8 Zeichen)</string>
+    <string name="s_4d977cf7" formatted="false">Transaktions-ID (txid)</string>
+    <string name="s_4e387930" formatted="false">Kostenlose Testphase</string>
+    <string name="s_5059c36f" formatted="false">WhatsApp (optional, mit Ländervorwahl)</string>
+    <string name="s_51963665" formatted="false">Aktueller Code</string>
+    <string name="s_51ed1058" formatted="false">Wählen Sie die Zahlungsmethode und geben Sie die Transaktionsnummer ein</string>
+    <string name="s_53655660" formatted="false">Kanäle</string>
+    <string name="s_53bd39b7" formatted="false">Verfügbare Kanäle</string>
+    <string name="s_54b49c02" formatted="false">Anweisungen für die KI</string>
+    <string name="s_55cf1553" formatted="false">Die Verbindung zu Facebook konnte nicht gestartet werden</string>
+    <string name="s_56be3fdb" formatted="false">Geben Sie einen Regelnamen und mindestens ein Stichwort ein</string>
+    <string name="s_56ee6e0d" formatted="false">Speichern</string>
+    <string name="s_571d102a" formatted="false">Sie haben den Standort noch nicht festgelegt</string>
+    <string name="s_57833160" formatted="false">Noch keine verbundenen Kanäle</string>
+    <string name="s_58c8a282" formatted="false">Besucher</string>
+    <string name="s_59539fc9" formatted="false">Name des Shops</string>
+    <string name="s_5bf826c5" formatted="false">Schließen</string>
+    <string name="s_5f05466a" formatted="false">Storniert</string>
+    <string name="s_5f10f855" formatted="false">Die Zahlungsmethoden konnten nicht geladen werden</string>
+    <string name="s_5ffc2bb8" formatted="false">Name der Regel</string>
+    <string name="s_60e251d0" formatted="false">Noch kein Konto? Erstellen Sie eines</string>
+    <string name="s_615e65ba" formatted="false">Artikelnummer (optional)</string>
+    <string name="s_621e568d" formatted="false">Aufladen</string>
+    <string name="s_625e3fc7" formatted="false">Betrieb</string>
+    <string name="s_6310b20d" formatted="false">Seite wählen</string>
+    <string name="s_64cf6641" formatted="false">Mein Profil</string>
+    <string name="s_6617ed19" formatted="false">Wir konnten Ihren Standort nicht ermitteln – tippen Sie auf die Karte, um ihn von Hand festzulegen</string>
+    <string name="s_66414100" formatted="false">Aufgeladen und Guthaben hinzugefügt</string>
+    <string name="s_67636cc3" formatted="false">Aufladeanfrage senden</string>
+    <string name="s_676f8348" formatted="false">Das Geschäftskonto konnte nicht registriert werden</string>
+    <string name="s_6793a69f" formatted="false">Produkte</string>
+    <string name="s_69bbe90d" formatted="false">Noch keine Produkte</string>
+    <string name="s_69c86923" formatted="false">‹ Zurück</string>
+    <string name="s_6c21e27c" formatted="false">Etwas ist schiefgelaufen</string>
+    <string name="s_6d05e053" formatted="false">Tonfall der Antworten (zum Beispiel: freundlich und kurz)</string>
+    <string name="s_6e274458" formatted="false">Die Seite konnte nicht verbunden werden</string>
+    <string name="s_6e3a209c" formatted="false">Bestellung nicht gefunden</string>
     <string name="s_7009c3b0" formatted="false">%1$.5f, %2$.5f</string>
-    <string name="s_70a771db" formatted="false">Couldn\'t confirm the discount</string>
-    <string name="s_7121fbcc" formatted="false">Facebook connected ✅</string>
-    <string name="s_746ec1bd" formatted="false">The member price must be lower than the regular price</string>
+    <string name="s_70a771db" formatted="false">Der Rabatt konnte nicht bestätigt werden</string>
+    <string name="s_7121fbcc" formatted="false">Facebook verbunden ✅</string>
+    <string name="s_746ec1bd" formatted="false">Der Mitgliederpreis muss niedriger als der reguläre Preis sein</string>
     <string name="s_749f9cfe" formatted="false">Register as a business</string>
-    <string name="s_760c65a1" formatted="false">Phone</string>
-    <string name="s_77eb6cfd" formatted="false">About you or your shop (shown to customers and on invoices)</string>
-    <string name="s_79e32d1f" formatted="false">⏳ Your request is waiting for admin approval — your shop won\'t appear on the map before that.</string>
-    <string name="s_79e3c383" formatted="false">Couldn\'t save the opening hours</string>
-    <string name="s_7b3296cc" formatted="false">No messages yet</string>
-    <string name="s_7c75fec5" formatted="false">Category</string>
-    <string name="s_7d943798" formatted="false">No orders yet</string>
-    <string name="s_7ef9f7a4" formatted="false">Added to the cart ✓</string>
-    <string name="s_7f9255f4" formatted="false">Add rule</string>
+    <string name="s_760c65a1" formatted="false">Telefon</string>
+    <string name="s_77eb6cfd" formatted="false">Über Sie oder Ihren Shop (wird Kunden und auf Rechnungen angezeigt)</string>
+    <string name="s_79e32d1f" formatted="false">⏳ Ihre Anfrage wartet auf die Genehmigung des Admins – bis dahin erscheint Ihr Shop nicht auf der Karte.</string>
+    <string name="s_79e3c383" formatted="false">Die Öffnungszeiten konnten nicht gespeichert werden</string>
+    <string name="s_7b3296cc" formatted="false">Noch keine Nachrichten</string>
+    <string name="s_7c75fec5" formatted="false">Kategorie</string>
+    <string name="s_7d943798" formatted="false">Noch keine Bestellungen</string>
+    <string name="s_7ef9f7a4" formatted="false">In den Warenkorb gelegt ✓</string>
+    <string name="s_7f9255f4" formatted="false">Regel hinzufügen</string>
     <string name="s_7feb59f4" formatted="false">Dalilacom</string>
-    <string name="s_8008e7e0" formatted="false">📍 Shop details &amp; location</string>
-    <string name="s_8522fb76" formatted="false">Membership number</string>
-    <string name="s_8562adb5" formatted="false">Couldn\'t sign in</string>
-    <string name="s_860f094a" formatted="false">Couldn\'t place the order</string>
-    <string name="s_864c0780" formatted="false">Product name</string>
-    <string name="s_8970aed0" formatted="false">The scanned code isn\'t valid</string>
-    <string name="s_89a4c18a" formatted="false">Active</string>
-    <string name="s_8a3cd750" formatted="false">Start preparing</string>
-    <string name="s_8a942763" formatted="false">📷 Add a photo</string>
-    <string name="s_8aed060f" formatted="false">Pending</string>
-    <string name="s_8bf6ddd2" formatted="false">Subscribe</string>
-    <string name="s_8c6117b6" formatted="false">Sign in</string>
-    <string name="s_8c7eace2" formatted="false">Sign in with Facebook and choose the page the auto-responder will work on — no token copying.</string>
-    <string name="s_8c7ec7a1" formatted="false">Use my current location</string>
-    <string name="s_8c818f60" formatted="false">Couldn\'t load the status — go back and try again</string>
-    <string name="s_8d0496d3" formatted="false">Check the product name, price and stock</string>
-    <string name="s_8f2679b1" formatted="false">Top-up methods aren\'t enabled right now — contact the admin</string>
-    <string name="s_90a91c96" formatted="false">Overview</string>
-    <string name="s_90cf87a4" formatted="false">Send</string>
-    <string name="s_911aafd4" formatted="false">Confirm</string>
-    <string name="s_92dc656f" formatted="false">Couldn\'t prepare the document</string>
-    <string name="s_935d8234" formatted="false">Reason for cancelling</string>
-    <string name="s_937c3091" formatted="false">Subscription renewed</string>
-    <string name="s_93a7f5f0" formatted="false">Go to the cart</string>
-    <string name="s_96a2838a" formatted="false">Enter a discount title and a percentage between 1 and 100</string>
-    <string name="s_97b1b92d" formatted="false">This is how customers find you — tap the map to drop the pin where your shop is.</string>
-    <string name="s_9855a904" formatted="false">Add a member discount</string>
-    <string name="s_98bd1e1e" formatted="false">Couldn\'t save</string>
-    <string name="s_98df46fb" formatted="false">Undo</string>
-    <string name="s_997f9752" formatted="false">✅ Shop details saved</string>
-    <string name="s_99ca558f" formatted="false">Couldn\'t subscribe to the membership</string>
-    <string name="s_9a2547dd" formatted="false">Or enter the membership details by hand</string>
-    <string name="s_9a40a38b" formatted="false">Place order</string>
-    <string name="s_9aa19dc9" formatted="false">Connect Facebook</string>
-    <string name="s_9b30f06e" formatted="false">Percentage %</string>
-    <string name="s_9b5be5df" formatted="false">Couldn\'t add the product</string>
-    <string name="s_9cb17c57" formatted="false">No transactions yet</string>
-    <string name="s_a0b697cb" formatted="false">Edit product</string>
-    <string name="s_a1ec84ae" formatted="false">Business details saved</string>
-    <string name="s_a24110f8" formatted="false">‹ Back to customer account</string>
-    <string name="s_a26cb7f2" formatted="false">It\'s best to connect with the \"Connect Facebook\" button above — no token pasting. The fields below are for manual connection if you need them.</string>
-    <string name="s_a2750cc7" formatted="false">Your balance</string>
-    <string name="s_a2daab91" formatted="false">Product is active</string>
-    <string name="s_a2e93da9" formatted="false">Reason</string>
-    <string name="s_a3836012" formatted="false">Once it\'s active, this button opens the Facebook page directly.</string>
-    <string name="s_a3ac8fb2" formatted="false">Couldn\'t read the photo — try another one</string>
-    <string name="s_a3e249b8" formatted="false">Couldn\'t load the rules</string>
-    <string name="s_a3e7dfc4" formatted="false">Inbox</string>
-    <string name="s_a40a6e99" formatted="false">Create account</string>
-    <string name="s_a4409754" formatted="false">Couldn\'t load the Facebook connection status</string>
-    <string name="s_a549b16b" formatted="false">Replied</string>
-    <string name="s_a5e584ae" formatted="false">Reply text (use {name} for the customer\'s name)</string>
-    <string name="s_a5f6da27" formatted="false">Couldn\'t fetch the posts</string>
-    <string name="s_a652e16c" formatted="false">This product isn\'t available</string>
-    <string name="s_a6a44b5b" formatted="false">Preparing</string>
-    <string name="s_a6ed2a71" formatted="false">Expired</string>
-    <string name="s_a6f73674" formatted="false">Incoming messages</string>
-    <string name="s_a860cf2b" formatted="false">My location</string>
-    <string name="s_ab03953f" formatted="false">Admin approval</string>
-    <string name="s_ac634572" formatted="false">✅ Your profile was saved</string>
-    <string name="s_ada6e57a" formatted="false">Couldn\'t load your profile</string>
-    <string name="s_af7715dd" formatted="false">Discount confirmed ✓</string>
-    <string name="s_afabc0f2" formatted="false">Couldn\'t send the top-up request</string>
-    <string name="s_b045d443" formatted="false">My rules</string>
-    <string name="s_b257b4e1" formatted="false">Remove</string>
-    <string name="s_b4bbf18b" formatted="false">Cancel order</string>
-    <string name="s_b4f76c3a" formatted="false">Edit</string>
-    <string name="s_b6066a1e" formatted="false">Transfer transaction number</string>
-    <string name="s_b642dd5a" formatted="false">Rules</string>
-    <string name="s_b6aa0c7d" formatted="false">Price</string>
-    <string name="s_b89a6549" formatted="false">Facebook connection isn\'t enabled on the server yet (it needs a Meta app and permission approval).</string>
-    <string name="s_baffa49c" formatted="false">Address</string>
-    <string name="s_bb31982c" formatted="false">Copy the first open day to all days</string>
-    <string name="s_bb6cc0f4" formatted="false">Create a new account</string>
-    <string name="s_bb8520e6" formatted="false">Discounts</string>
-    <string name="s_bc12337c" formatted="false">Couldn\'t load the connections</string>
-    <string name="s_bdb567d9" formatted="false">Couldn\'t cancel the order</string>
-    <string name="s_beb6f577" formatted="false">The code is invalid or expired</string>
+    <string name="s_8008e7e0" formatted="false">📍 Shop-Angaben und Standort</string>
+    <string name="s_8522fb76" formatted="false">Mitgliedsnummer</string>
+    <string name="s_8562adb5" formatted="false">Anmeldung nicht möglich</string>
+    <string name="s_860f094a" formatted="false">Die Bestellung konnte nicht aufgegeben werden</string>
+    <string name="s_864c0780" formatted="false">Produktname</string>
+    <string name="s_8970aed0" formatted="false">Der gescannte Code ist ungültig</string>
+    <string name="s_89a4c18a" formatted="false">Aktiv</string>
+    <string name="s_8a3cd750" formatted="false">Mit der Vorbereitung beginnen</string>
+    <string name="s_8a942763" formatted="false">📷 Foto hinzufügen</string>
+    <string name="s_8aed060f" formatted="false">Ausstehend</string>
+    <string name="s_8bf6ddd2" formatted="false">Abonnieren</string>
+    <string name="s_8c6117b6" formatted="false">Anmelden</string>
+    <string name="s_8c7eace2" formatted="false">Melden Sie sich mit Facebook an und wählen Sie die Seite, auf der der Autoresponder arbeiten soll – kein Kopieren von Tokens.</string>
+    <string name="s_8c7ec7a1" formatted="false">Meinen aktuellen Standort verwenden</string>
+    <string name="s_8c818f60" formatted="false">Der Status konnte nicht geladen werden – gehen Sie zurück und versuchen Sie es erneut</string>
+    <string name="s_8d0496d3" formatted="false">Prüfen Sie Produktname, Preis und Bestand</string>
+    <string name="s_8f2679b1" formatted="false">Auflademethoden sind derzeit nicht aktiviert – wenden Sie sich an den Admin</string>
+    <string name="s_90a91c96" formatted="false">Übersicht</string>
+    <string name="s_90cf87a4" formatted="false">Senden</string>
+    <string name="s_911aafd4" formatted="false">Bestätigen</string>
+    <string name="s_92dc656f" formatted="false">Das Dokument konnte nicht vorbereitet werden</string>
+    <string name="s_935d8234" formatted="false">Grund der Stornierung</string>
+    <string name="s_937c3091" formatted="false">Abonnement verlängert</string>
+    <string name="s_93a7f5f0" formatted="false">Zum Warenkorb</string>
+    <string name="s_96a2838a" formatted="false">Geben Sie einen Rabatttitel und einen Prozentsatz zwischen 1 und 100 ein</string>
+    <string name="s_97b1b92d" formatted="false">So finden Kunden Sie – tippen Sie auf die Karte, um die Nadel dort zu setzen, wo Ihr Shop ist.</string>
+    <string name="s_9855a904" formatted="false">Mitgliederrabatt hinzufügen</string>
+    <string name="s_98bd1e1e" formatted="false">Speichern nicht möglich</string>
+    <string name="s_98df46fb" formatted="false">Rückgängig</string>
+    <string name="s_997f9752" formatted="false">✅ Shop-Angaben gespeichert</string>
+    <string name="s_99ca558f" formatted="false">Die Mitgliedschaft konnte nicht abgeschlossen werden</string>
+    <string name="s_9a2547dd" formatted="false">Oder geben Sie die Mitgliedsdaten von Hand ein</string>
+    <string name="s_9a40a38b" formatted="false">Bestellung aufgeben</string>
+    <string name="s_9aa19dc9" formatted="false">Facebook verbinden</string>
+    <string name="s_9b30f06e" formatted="false">Prozentsatz %</string>
+    <string name="s_9b5be5df" formatted="false">Das Produkt konnte nicht hinzugefügt werden</string>
+    <string name="s_9cb17c57" formatted="false">Noch keine Transaktionen</string>
+    <string name="s_a0b697cb" formatted="false">Produkt bearbeiten</string>
+    <string name="s_a1ec84ae" formatted="false">Betriebsdaten gespeichert</string>
+    <string name="s_a24110f8" formatted="false">‹ Zurück zum Kundenkonto</string>
+    <string name="s_a26cb7f2" formatted="false">Am besten verbinden Sie sich mit der Schaltfläche „Facebook verbinden“ oben – ohne Token einzufügen. Die Felder unten sind für die manuelle Verbindung, falls Sie sie brauchen.</string>
+    <string name="s_a2750cc7" formatted="false">Ihr Guthaben</string>
+    <string name="s_a2daab91" formatted="false">Produkt ist aktiv</string>
+    <string name="s_a2e93da9" formatted="false">Grund</string>
+    <string name="s_a3836012" formatted="false">Sobald er aktiv ist, öffnet diese Schaltfläche direkt die Facebook-Seite.</string>
+    <string name="s_a3ac8fb2" formatted="false">Das Foto konnte nicht gelesen werden – versuchen Sie ein anderes</string>
+    <string name="s_a3e249b8" formatted="false">Die Regeln konnten nicht geladen werden</string>
+    <string name="s_a3e7dfc4" formatted="false">Posteingang</string>
+    <string name="s_a40a6e99" formatted="false">Konto erstellen</string>
+    <string name="s_a4409754" formatted="false">Der Status der Facebook-Verbindung konnte nicht geladen werden</string>
+    <string name="s_a549b16b" formatted="false">Beantwortet</string>
+    <string name="s_a5e584ae" formatted="false">Antworttext (verwenden Sie {name} für den Namen des Kunden)</string>
+    <string name="s_a5f6da27" formatted="false">Die Beiträge konnten nicht abgerufen werden</string>
+    <string name="s_a652e16c" formatted="false">Dieses Produkt ist nicht verfügbar</string>
+    <string name="s_a6a44b5b" formatted="false">In Vorbereitung</string>
+    <string name="s_a6ed2a71" formatted="false">Abgelaufen</string>
+    <string name="s_a6f73674" formatted="false">Eingehende Nachrichten</string>
+    <string name="s_a860cf2b" formatted="false">Mein Standort</string>
+    <string name="s_ab03953f" formatted="false">Genehmigung durch den Admin</string>
+    <string name="s_ac634572" formatted="false">✅ Ihr Profil wurde gespeichert</string>
+    <string name="s_ada6e57a" formatted="false">Ihr Profil konnte nicht geladen werden</string>
+    <string name="s_af7715dd" formatted="false">Rabatt bestätigt ✓</string>
+    <string name="s_afabc0f2" formatted="false">Die Aufladeanfrage konnte nicht gesendet werden</string>
+    <string name="s_b045d443" formatted="false">Meine Regeln</string>
+    <string name="s_b257b4e1" formatted="false">Entfernen</string>
+    <string name="s_b4bbf18b" formatted="false">Bestellung stornieren</string>
+    <string name="s_b4f76c3a" formatted="false">Bearbeiten</string>
+    <string name="s_b6066a1e" formatted="false">Transaktionsnummer der Überweisung</string>
+    <string name="s_b642dd5a" formatted="false">Regeln</string>
+    <string name="s_b6aa0c7d" formatted="false">Preis</string>
+    <string name="s_b89a6549" formatted="false">Die Facebook-Verbindung ist auf dem Server noch nicht aktiviert (sie benötigt eine Meta-App und die Genehmigung der Berechtigungen).</string>
+    <string name="s_baffa49c" formatted="false">Adresse</string>
+    <string name="s_bb31982c" formatted="false">Ersten geöffneten Tag auf alle Tage kopieren</string>
+    <string name="s_bb6cc0f4" formatted="false">Neues Konto erstellen</string>
+    <string name="s_bb8520e6" formatted="false">Rabatte</string>
+    <string name="s_bc12337c" formatted="false">Die Verbindungen konnten nicht geladen werden</string>
+    <string name="s_bdb567d9" formatted="false">Die Bestellung konnte nicht storniert werden</string>
+    <string name="s_beb6f577" formatted="false">Der Code ist ungültig oder abgelaufen</string>
     <string name="s_c03965c6" formatted="false">Your account becomes a business account after admin approval, then your shop appears on the map</string>
-    <string name="s_c2cbfa91" formatted="false">📄 Export invoice (PDF)</string>
-    <string name="s_c31663d5" formatted="false">My wallet</string>
-    <string name="s_c33c7465" formatted="false">You have no rules yet</string>
-    <string name="s_c4973dca" formatted="false">Couldn\'t add the discount</string>
-    <string name="s_c5324447" formatted="false">Fill in every field first</string>
-    <string name="s_c5822564" formatted="false">Subscription</string>
-    <string name="s_c5ffc332" formatted="false">Incoming orders</string>
-    <string name="s_c758841f" formatted="false">The page wasn\'t connected — try again</string>
-    <string name="s_c7a401f5" formatted="false">Couldn\'t fetch the code</string>
-    <string name="s_c89ae688" formatted="false">Bill amount</string>
-    <string name="s_c91b0e1d" formatted="false">Connect</string>
-    <string name="s_c9cbc8b2" formatted="false">Sign in</string>
-    <string name="s_c9fbbd3c" formatted="false">New reply rule</string>
-    <string name="s_ca575cfb" formatted="false">Couldn\'t save the profile</string>
-    <string name="s_ca70f840" formatted="false">Specific posts (Facebook / Instagram)</string>
-    <string name="s_cbc18737" formatted="false">Inactive</string>
-    <string name="s_cc6b3855" formatted="false">Email</string>
-    <string name="s_cd1c71a4" formatted="false">Activate the auto-responder first (trial or subscription), then it can connect.</string>
-    <string name="s_cdffc53b" formatted="false">Couldn\'t update the order status</string>
-    <string name="s_d036d6bd" formatted="false">Couldn\'t load the connection status — try refreshing.</string>
-    <string name="s_d12fa511" formatted="false">Add to cart</string>
+    <string name="s_c2cbfa91" formatted="false">📄 Rechnung exportieren (PDF)</string>
+    <string name="s_c31663d5" formatted="false">Meine Wallet</string>
+    <string name="s_c33c7465" formatted="false">Sie haben noch keine Regeln</string>
+    <string name="s_c4973dca" formatted="false">Der Rabatt konnte nicht hinzugefügt werden</string>
+    <string name="s_c5324447" formatted="false">Füllen Sie zuerst alle Felder aus</string>
+    <string name="s_c5822564" formatted="false">Abonnement</string>
+    <string name="s_c5ffc332" formatted="false">Eingehende Bestellungen</string>
+    <string name="s_c758841f" formatted="false">Die Seite wurde nicht verbunden – versuchen Sie es erneut</string>
+    <string name="s_c7a401f5" formatted="false">Der Code konnte nicht abgerufen werden</string>
+    <string name="s_c89ae688" formatted="false">Rechnungsbetrag</string>
+    <string name="s_c91b0e1d" formatted="false">Verbinden</string>
+    <string name="s_c9cbc8b2" formatted="false">Anmelden</string>
+    <string name="s_c9fbbd3c" formatted="false">Neue Antwortregel</string>
+    <string name="s_ca575cfb" formatted="false">Das Profil konnte nicht gespeichert werden</string>
+    <string name="s_ca70f840" formatted="false">Bestimmte Beiträge (Facebook / Instagram)</string>
+    <string name="s_cbc18737" formatted="false">Inaktiv</string>
+    <string name="s_cc6b3855" formatted="false">E-Mail</string>
+    <string name="s_cd1c71a4" formatted="false">Aktivieren Sie zuerst den Autoresponder (Testphase oder Abonnement), dann kann er sich verbinden.</string>
+    <string name="s_cdffc53b" formatted="false">Der Bestellstatus konnte nicht aktualisiert werden</string>
+    <string name="s_d036d6bd" formatted="false">Der Verbindungsstatus konnte nicht geladen werden – versuchen Sie zu aktualisieren.</string>
+    <string name="s_d12fa511" formatted="false">In den Warenkorb</string>
     <string name="s_d14862b0" formatted="false">\?</string>
-    <string name="s_d1feb875" formatted="false">Confirm order</string>
-    <string name="s_d2cbe1d2" formatted="false">Back to the map without an account</string>
-    <string name="s_d3f3e653" formatted="false">Rule deleted</string>
-    <string name="s_d556272b" formatted="false">Couldn\'t reach the server — check your internet connection</string>
-    <string name="s_d59687ba" formatted="false">Closed</string>
-    <string name="s_d5a3c41f" formatted="false">Enter the shop name and choose a category</string>
-    <string name="s_d685576e" formatted="false">Couldn\'t load your pages</string>
-    <string name="s_d697a2b1" formatted="false">Stock</string>
-    <string name="s_d7359b3c" formatted="false">Ignored</string>
-    <string name="s_d766cb06" formatted="false">Catalogue</string>
-    <string name="s_d82b4deb" formatted="false">Keywords (comma-separated)</string>
-    <string name="s_d9724d06" formatted="false">Confirm discount</string>
-    <string name="s_d97a32ee" formatted="false">Already have an account? Sign in</string>
-    <string name="s_da0717d9" formatted="false">Couldn\'t activate</string>
-    <string name="s_da1e9875" formatted="false">Top up balance</string>
-    <string name="s_daaa4ebe" formatted="false">Couldn\'t renew</string>
-    <string name="s_db4175ae" formatted="false">Password</string>
-    <string name="s_dc09c826" formatted="false">About your business (the AI uses it when replying)</string>
-    <string name="s_dc26b57d" formatted="false">Your cart is empty</string>
-    <string name="s_ddb9dbdc" formatted="false">Address</string>
-    <string name="s_de747706" formatted="false">Discount title</string>
-    <string name="s_e0501ddf" formatted="false">Leave it empty to apply the rule to everything, or pick posts so it only replies to comments on them.</string>
-    <string name="s_e172f208" formatted="false">✅ Opening hours saved</string>
-    <string name="s_e19b16bd" formatted="false">Full name</string>
-    <string name="s_e2e9f99a" formatted="false">Shop details &amp; location</string>
-    <string name="s_e470027c" formatted="false">Reply sent</string>
-    <string name="s_e50b0785" formatted="false">Amount you transferred</string>
-    <string name="s_e51fe37e" formatted="false">Couldn\'t load the channels</string>
-    <string name="s_e644dc4b" formatted="false">New transaction</string>
-    <string name="s_e776b020" formatted="false">Cancel</string>
-    <string name="s_e78265a1" formatted="false">Couldn\'t upload the photo</string>
-    <string name="s_e7e5f1a0" formatted="false">You don\'t have a membership yet</string>
-    <string name="s_e947849f" formatted="false">Couldn\'t calculate the route</string>
-    <string name="s_ea16c0e6" formatted="false">Delivered</string>
-    <string name="s_eb92a991" formatted="false">Couldn\'t add the product to the cart</string>
-    <string name="s_ec6d9289" formatted="false">AI</string>
-    <string name="s_ed8f478b" formatted="false">Code (6 digits)</string>
-    <string name="s_ee5aea07" formatted="false">Sending failed</string>
-    <string name="s_eecf189f" formatted="false">Sign in first</string>
-    <string name="s_ef73b75f" formatted="false">Page connected ✅</string>
-    <string name="s_ef8d4234" formatted="false">✅ Photo saved</string>
-    <string name="s_f008af11" formatted="false">Coming soon</string>
-    <string name="s_f1b27ce2" formatted="false">Turn on at least one day first</string>
-    <string name="s_f353c2e2" formatted="false">Scan the code 📷</string>
-    <string name="s_f542f592" formatted="false">Complaints are never answered automatically — they show up here for you to reply.</string>
-    <string name="s_f5f6d8c4" formatted="false">Couldn\'t connect the channel</string>
-    <string name="s_f6b288e4" formatted="false">Dalilacom member discount</string>
-    <string name="s_f79140d3" formatted="false">Shipped</string>
-    <string name="s_f835f24d" formatted="false">Enter the shop name</string>
-    <string name="s_f85fd2a4" formatted="false">Top up wallet</string>
-    <string name="s_f90416a9" formatted="false">📷 Change photo</string>
-    <string name="s_f90ad780" formatted="false">You haven\'t saved any place yet — tap ♡ on any shop on the map.</string>
-    <string name="s_f96a754e" formatted="false">Balance</string>
-    <string name="s_faa866bc" formatted="false">Fallback reply if the AI isn\'t available (optional)</string>
-    <string name="s_fd85c447" formatted="false">Activated</string>
-    <string name="s_fd98f999" formatted="false">Couldn\'t edit</string>
-    <string name="s_fdc54283" formatted="false">Couldn\'t load the inbox</string>
-    <string name="s_fe29f439" formatted="false">Recent transactions</string>
-    <string name="s_fe79250b" formatted="false">Verify</string>
+    <string name="s_d1feb875" formatted="false">Bestellung bestätigen</string>
+    <string name="s_d2cbe1d2" formatted="false">Zurück zur Karte ohne Konto</string>
+    <string name="s_d3f3e653" formatted="false">Regel gelöscht</string>
+    <string name="s_d556272b" formatted="false">Der Server ist nicht erreichbar – prüfen Sie Ihre Internetverbindung</string>
+    <string name="s_d59687ba" formatted="false">Geschlossen</string>
+    <string name="s_d5a3c41f" formatted="false">Geben Sie den Shop-Namen ein und wählen Sie eine Kategorie</string>
+    <string name="s_d685576e" formatted="false">Ihre Seiten konnten nicht geladen werden</string>
+    <string name="s_d697a2b1" formatted="false">Bestand</string>
+    <string name="s_d7359b3c" formatted="false">Ignoriert</string>
+    <string name="s_d766cb06" formatted="false">Katalog</string>
+    <string name="s_d82b4deb" formatted="false">Stichwörter (durch Komma getrennt)</string>
+    <string name="s_d9724d06" formatted="false">Rabatt bestätigen</string>
+    <string name="s_d97a32ee" formatted="false">Schon ein Konto? Anmelden</string>
+    <string name="s_da0717d9" formatted="false">Aktivieren nicht möglich</string>
+    <string name="s_da1e9875" formatted="false">Guthaben aufladen</string>
+    <string name="s_daaa4ebe" formatted="false">Verlängern nicht möglich</string>
+    <string name="s_db4175ae" formatted="false">Passwort</string>
+    <string name="s_dc09c826" formatted="false">Über Ihren Betrieb (die KI nutzt es beim Antworten)</string>
+    <string name="s_dc26b57d" formatted="false">Ihr Warenkorb ist leer</string>
+    <string name="s_ddb9dbdc" formatted="false">Adresse</string>
+    <string name="s_de747706" formatted="false">Rabatttitel</string>
+    <string name="s_e0501ddf" formatted="false">Lassen Sie es leer, um die Regel auf alles anzuwenden, oder wählen Sie Beiträge, damit sie nur auf Kommentare dazu antwortet.</string>
+    <string name="s_e172f208" formatted="false">✅ Öffnungszeiten gespeichert</string>
+    <string name="s_e19b16bd" formatted="false">Vollständiger Name</string>
+    <string name="s_e2e9f99a" formatted="false">Shop-Angaben und Standort</string>
+    <string name="s_e470027c" formatted="false">Antwort gesendet</string>
+    <string name="s_e50b0785" formatted="false">Von Ihnen überwiesener Betrag</string>
+    <string name="s_e51fe37e" formatted="false">Die Kanäle konnten nicht geladen werden</string>
+    <string name="s_e644dc4b" formatted="false">Neue Transaktion</string>
+    <string name="s_e776b020" formatted="false">Abbrechen</string>
+    <string name="s_e78265a1" formatted="false">Das Foto konnte nicht hochgeladen werden</string>
+    <string name="s_e7e5f1a0" formatted="false">Sie haben noch keine Mitgliedschaft</string>
+    <string name="s_e947849f" formatted="false">Die Route konnte nicht berechnet werden</string>
+    <string name="s_ea16c0e6" formatted="false">Geliefert</string>
+    <string name="s_eb92a991" formatted="false">Das Produkt konnte nicht in den Warenkorb gelegt werden</string>
+    <string name="s_ec6d9289" formatted="false">KI</string>
+    <string name="s_ed8f478b" formatted="false">Code (6 Stellen)</string>
+    <string name="s_ee5aea07" formatted="false">Senden fehlgeschlagen</string>
+    <string name="s_eecf189f" formatted="false">Melden Sie sich zuerst an</string>
+    <string name="s_ef73b75f" formatted="false">Seite verbunden ✅</string>
+    <string name="s_ef8d4234" formatted="false">✅ Foto gespeichert</string>
+    <string name="s_f008af11" formatted="false">Demnächst</string>
+    <string name="s_f1b27ce2" formatted="false">Schalten Sie zuerst mindestens einen Tag ein</string>
+    <string name="s_f353c2e2" formatted="false">Code scannen 📷</string>
+    <string name="s_f542f592" formatted="false">Beschwerden werden nie automatisch beantwortet – sie erscheinen hier, damit Sie antworten.</string>
+    <string name="s_f5f6d8c4" formatted="false">Der Kanal konnte nicht verbunden werden</string>
+    <string name="s_f6b288e4" formatted="false">Dalilacom-Mitgliederrabatt</string>
+    <string name="s_f79140d3" formatted="false">Versendet</string>
+    <string name="s_f835f24d" formatted="false">Geben Sie den Shop-Namen ein</string>
+    <string name="s_f85fd2a4" formatted="false">Wallet aufladen</string>
+    <string name="s_f90416a9" formatted="false">📷 Foto ändern</string>
+    <string name="s_f90ad780" formatted="false">Sie haben noch keinen Ort gespeichert – tippen Sie bei einem Shop auf der Karte auf ♡.</string>
+    <string name="s_f96a754e" formatted="false">Saldo</string>
+    <string name="s_faa866bc" formatted="false">Ersatzantwort, falls die KI nicht verfügbar ist (optional)</string>
+    <string name="s_fd85c447" formatted="false">Aktiviert</string>
+    <string name="s_fd98f999" formatted="false">Bearbeiten nicht möglich</string>
+    <string name="s_fdc54283" formatted="false">Der Posteingang konnte nicht geladen werden</string>
+    <string name="s_fe29f439" formatted="false">Letzte Transaktionen</string>
+    <string name="s_fe79250b" formatted="false">Prüfen</string>
     <string name="site_hr_st1_l" formatted="false">Mitarbeitende stempeln mit dem Handy ein</string>
     <string name="site_hr_st2_l" formatted="false">Das Gehalt wird jeden Monat automatisch berechnet</string>
     <string name="site_hr_st3_l" formatted="false">Die Daten jeder Firma sind getrennt und geschützt</string>
 
     <!-- Human resources inside DALILACOM -->
-    <string name="site_hr_tab_people">Employees</string>
-    <string name="site_hr_tab_leave">Leave</string>
-    <string name="site_hr_tab_payroll">Payroll</string>
-    <string name="site_hr_tab_job">My job</string>
-    <string name="hr_getPlan">Get the HR plan</string>
-    <string name="hr_error">Something went wrong, try again</string>
-    <string name="hr_company_create">Start your company</string>
-    <string name="hr_company_createHint">Name your company once, then add your staff.</string>
-    <string name="hr_company_name">Company name</string>
-    <string name="hr_company_createBtn">Create the company</string>
-    <string name="hr_company_done">Company created</string>
-    <string name="hr_people_count">Employees: %1$s</string>
-    <string name="hr_people_empty">No employees yet. Add the first one below.</string>
-    <string name="hr_people_add">New employee</string>
-    <string name="hr_people_addBtn">Add the employee</string>
-    <string name="hr_people_added">Employee added</string>
-    <string name="hr_f_first">First name</string>
-    <string name="hr_f_last">Last name</string>
-    <string name="hr_f_email">Email (for the invitation)</string>
-    <string name="hr_f_position">Job title</string>
-    <string name="hr_f_hire">Hire date</string>
-    <string name="hr_f_salary">Base salary (%1$s)</string>
-    <string name="hr_role_HR">HR</string>
-    <string name="hr_role_MANAGER">Manager</string>
-    <string name="hr_role_EMPLOYEE">Employee</string>
-    <string name="hr_role_OWNER">Owner</string>
-    <string name="hr_status_ACTIVE">Active</string>
-    <string name="hr_status_ON_LEAVE">On leave</string>
-    <string name="hr_status_TERMINATED">Left the company</string>
-    <string name="hr_linked">linked to an account</string>
-    <string name="hr_invite">Invite to their account</string>
-    <string name="hr_invite_emailed">The invitation was emailed.</string>
-    <string name="hr_invite_code">Copy this code and send it to the employee. It is shown once:</string>
-    <string name="hr_leave_pending">Leave requests waiting for you</string>
-    <string name="hr_leave_none">No leave requests</string>
-    <string name="hr_leave_types">Leave types</string>
-    <string name="hr_leave_noTypes">No leave types yet. Add one so employees can ask for leave.</string>
-    <string name="hr_leave_days">%1$s days</string>
-    <string name="hr_leave_typeName">Type name</string>
-    <string name="hr_leave_typeDays">Balance in days</string>
-    <string name="hr_leave_addType">Add the type</string>
-    <string name="hr_leave_typeAdded">Leave type added</string>
-    <string name="hr_approve">Approve</string>
-    <string name="hr_reject">Reject</string>
-    <string name="hr_decided">Decision saved</string>
-    <string name="hr_pay_runs">Payroll runs</string>
-    <string name="hr_pay_note">When you calculate a run, DALILACOM records a «Payroll due» expense in your accounting by itself. When you mark it as paid, it becomes a «Payroll» expense.</string>
-    <string name="hr_pay_none">No payroll runs yet</string>
-    <string name="hr_pay_from">From</string>
-    <string name="hr_pay_to">To</string>
-    <string name="hr_pay_create">New run</string>
-    <string name="hr_pay_created">Run created</string>
-    <string name="hr_pay_process">Calculate payroll</string>
-    <string name="hr_pay_processed">Payroll calculated</string>
-    <string name="hr_pay_markPaid">Mark as paid</string>
-    <string name="hr_pay_paidDone">Payment recorded and the expense added to accounting</string>
-    <string name="hr_pay_revert">Take the payment back</string>
-    <string name="hr_pay_revertAsk">This takes the payment back, and the payroll expense in accounting goes back to «Payroll due». Sure?</string>
-    <string name="hr_pay_reverted">Payment taken back</string>
-    <string name="hr_run_DRAFT">Draft</string>
-    <string name="hr_run_PROCESSED">Calculated</string>
-    <string name="hr_run_PAID">Paid</string>
-    <string name="hr_adv_pending">Advances waiting for you</string>
-    <string name="hr_adv_installments">%1$s installments</string>
-    <string name="hr_job_invites">Invitations for you</string>
-    <string name="hr_job_accept">Accept</string>
-    <string name="hr_job_accepted">Your account is linked to the company</string>
-    <string name="hr_job_haveCode">Have an invitation code?</string>
-    <string name="hr_job_in">You checked in at %1$s</string>
-    <string name="hr_job_inBtn">Check in</string>
-    <string name="hr_job_inDone">Checked in</string>
-    <string name="hr_job_out">Check out</string>
-    <string name="hr_job_outDone">Checked out</string>
-    <string name="hr_job_leave">Leave</string>
-    <string name="hr_job_noBalances">No leave balance yet</string>
-    <string name="hr_job_leaveType">Leave type</string>
-    <string name="hr_job_request">Send the request</string>
-    <string name="hr_job_requested">Leave request sent</string>
-    <string name="hr_job_slips">Payslips</string>
-    <string name="hr_job_noSlips">No payslips yet</string>
-    <string name="hr_retry">Try again</string>
+    <string name="site_hr_tab_people">Mitarbeiter</string>
+    <string name="site_hr_tab_leave">Urlaub</string>
+    <string name="site_hr_tab_payroll">Lohnabrechnung</string>
+    <string name="site_hr_tab_job">Mein Job</string>
+    <string name="hr_getPlan">Den HR-Tarif holen</string>
+    <string name="hr_error">Etwas ist schiefgelaufen, versuchen Sie es erneut</string>
+    <string name="hr_company_create">Gründen Sie Ihr Unternehmen</string>
+    <string name="hr_company_createHint">Benennen Sie Ihr Unternehmen einmal, dann fügen Sie Ihr Personal hinzu.</string>
+    <string name="hr_company_name">Firmenname</string>
+    <string name="hr_company_createBtn">Unternehmen erstellen</string>
+    <string name="hr_company_done">Unternehmen erstellt</string>
+    <string name="hr_people_count">Mitarbeiter: %1$s</string>
+    <string name="hr_people_empty">Noch keine Mitarbeiter. Fügen Sie unten den ersten hinzu.</string>
+    <string name="hr_people_add">Neuer Mitarbeiter</string>
+    <string name="hr_people_addBtn">Mitarbeiter hinzufügen</string>
+    <string name="hr_people_added">Mitarbeiter hinzugefügt</string>
+    <string name="hr_f_first">Vorname</string>
+    <string name="hr_f_last">Nachname</string>
+    <string name="hr_f_email">E-Mail (für die Einladung)</string>
+    <string name="hr_f_position">Berufsbezeichnung</string>
+    <string name="hr_f_hire">Eintrittsdatum</string>
+    <string name="hr_f_salary">Grundgehalt (%1$s)</string>
+    <string name="hr_role_HR">Personal</string>
+    <string name="hr_role_MANAGER">Führungskraft</string>
+    <string name="hr_role_EMPLOYEE">Mitarbeiter</string>
+    <string name="hr_role_OWNER">Inhaber</string>
+    <string name="hr_status_ACTIVE">Aktiv</string>
+    <string name="hr_status_ON_LEAVE">Im Urlaub</string>
+    <string name="hr_status_TERMINATED">Hat das Unternehmen verlassen</string>
+    <string name="hr_linked">mit einem Konto verknüpft</string>
+    <string name="hr_invite">In sein Konto einladen</string>
+    <string name="hr_invite_emailed">Die Einladung wurde per E-Mail gesendet.</string>
+    <string name="hr_invite_code">Kopieren Sie diesen Code und senden Sie ihn dem Mitarbeiter. Er wird nur einmal angezeigt:</string>
+    <string name="hr_leave_pending">Urlaubsanträge, die auf Sie warten</string>
+    <string name="hr_leave_none">Keine Urlaubsanträge</string>
+    <string name="hr_leave_types">Urlaubsarten</string>
+    <string name="hr_leave_noTypes">Noch keine Urlaubsarten. Fügen Sie eine hinzu, damit Mitarbeiter Urlaub beantragen können.</string>
+    <string name="hr_leave_days">%1$s Tage</string>
+    <string name="hr_leave_typeName">Name der Art</string>
+    <string name="hr_leave_typeDays">Guthaben in Tagen</string>
+    <string name="hr_leave_addType">Art hinzufügen</string>
+    <string name="hr_leave_typeAdded">Urlaubsart hinzugefügt</string>
+    <string name="hr_approve">Genehmigen</string>
+    <string name="hr_reject">Ablehnen</string>
+    <string name="hr_decided">Entscheidung gespeichert</string>
+    <string name="hr_pay_runs">Lohnabrechnungen</string>
+    <string name="hr_pay_note">Wenn Sie eine Abrechnung berechnen, erfasst DALILACOM von selbst eine Ausgabe „Fällige Löhne“ in Ihrer Buchhaltung. Wenn Sie sie als bezahlt markieren, wird daraus eine Ausgabe „Löhne“.</string>
+    <string name="hr_pay_none">Noch keine Lohnabrechnungen</string>
+    <string name="hr_pay_from">Von</string>
+    <string name="hr_pay_to">Bis</string>
+    <string name="hr_pay_create">Neue Abrechnung</string>
+    <string name="hr_pay_created">Abrechnung erstellt</string>
+    <string name="hr_pay_process">Lohn berechnen</string>
+    <string name="hr_pay_processed">Lohn berechnet</string>
+    <string name="hr_pay_markPaid">Als bezahlt markieren</string>
+    <string name="hr_pay_paidDone">Zahlung erfasst und Ausgabe in der Buchhaltung ergänzt</string>
+    <string name="hr_pay_revert">Zahlung zurücknehmen</string>
+    <string name="hr_pay_revertAsk">Dadurch wird die Zahlung zurückgenommen, und die Lohnausgabe in der Buchhaltung geht zurück auf „Fällige Löhne“. Sicher?</string>
+    <string name="hr_pay_reverted">Zahlung zurückgenommen</string>
+    <string name="hr_run_DRAFT">Entwurf</string>
+    <string name="hr_run_PROCESSED">Berechnet</string>
+    <string name="hr_run_PAID">Bezahlt</string>
+    <string name="hr_adv_pending">Vorschüsse, die auf Sie warten</string>
+    <string name="hr_adv_installments">%1$s Raten</string>
+    <string name="hr_job_invites">Einladungen für Sie</string>
+    <string name="hr_job_accept">Annehmen</string>
+    <string name="hr_job_accepted">Ihr Konto ist mit dem Unternehmen verknüpft</string>
+    <string name="hr_job_haveCode">Haben Sie einen Einladungscode?</string>
+    <string name="hr_job_in">Sie haben um %1$s eingestempelt</string>
+    <string name="hr_job_inBtn">Einstempeln</string>
+    <string name="hr_job_inDone">Eingestempelt</string>
+    <string name="hr_job_out">Ausstempeln</string>
+    <string name="hr_job_outDone">Ausgestempelt</string>
+    <string name="hr_job_leave">Urlaub</string>
+    <string name="hr_job_noBalances">Noch kein Urlaubsguthaben</string>
+    <string name="hr_job_leaveType">Urlaubsart</string>
+    <string name="hr_job_request">Antrag senden</string>
+    <string name="hr_job_requested">Urlaubsantrag gesendet</string>
+    <string name="hr_job_slips">Gehaltsabrechnungen</string>
+    <string name="hr_job_noSlips">Noch keine Gehaltsabrechnungen</string>
+    <string name="hr_retry">Erneut versuchen</string>
     <string name="hr_ok">OK</string>
-    <string name="hr_cancel">Cancel</string>
-    <string name="hr_plan_required">The HR section needs an active plan or a free trial.</string>
-    <string name="hr_pay_paidNoExpense">Payment recorded. No expense was added to accounting because the payroll total is zero.</string>
-    <string name="hr_pay_attNote">Days with no check-in are deducted from the salary. If nobody in the company records attendance, salaries are paid in full.</string>
-    <string name="hr_pay_paidNoAccounting">Payment recorded. The expense is kept and shows in accounting once you subscribe to it.</string>
-    <string name="hr_pay_gross">Gross salary</string>
-    <string name="hr_pay_deductions">Deductions</string>
-    <string name="hr_pay_net">Net to employees</string>
-    <string name="hr_pay_cost">Run cost</string>
-    <string name="hr_pay_paidTotal">Total cost of paid runs: %1$s</string>
-    <string name="accounting_payrollShare">of which payroll: %1$s</string>
-    <string name="site_offerTitle">Launch offer: 3 months free</string>
-    <string name="site_offerSub">For a limited time. No payment card, and nothing is charged on its own.</string>
-    <string name="hr_notLinked">not linked to an account</string>
+    <string name="hr_cancel">Abbrechen</string>
+    <string name="hr_plan_required">Für den Bereich Personalwesen ist ein aktiver Tarif oder eine kostenlose Testphase nötig.</string>
+    <string name="hr_pay_paidNoExpense">Zahlung erfasst. Es wurde keine Ausgabe in der Buchhaltung ergänzt, da die Lohnsumme null ist.</string>
+    <string name="hr_pay_attNote">Tage ohne Einstempeln werden vom Gehalt abgezogen. Wenn im Unternehmen niemand die Anwesenheit erfasst, werden die Gehälter in voller Höhe gezahlt.</string>
+    <string name="hr_pay_paidNoAccounting">Zahlung erfasst. Die Ausgabe bleibt erhalten und erscheint in der Buchhaltung, sobald Sie diese abonnieren.</string>
+    <string name="hr_pay_gross">Bruttogehalt</string>
+    <string name="hr_pay_deductions">Abzüge</string>
+    <string name="hr_pay_net">Netto an die Mitarbeiter</string>
+    <string name="hr_pay_cost">Kosten der Abrechnung</string>
+    <string name="hr_pay_paidTotal">Gesamtkosten der bezahlten Abrechnungen: %1$s</string>
+    <string name="accounting_payrollShare">davon Löhne: %1$s</string>
+    <string name="site_offerTitle">Einführungsangebot: 3 Monate kostenlos</string>
+    <string name="site_offerSub">Für begrenzte Zeit. Keine Zahlungskarte nötig, und es wird nichts von selbst abgebucht.</string>
+    <string name="hr_notLinked">nicht mit einem Konto verknüpft</string>
     <string name="hr_details">Details</string>
-    <string name="hr_leave_waitHr">Waiting for HR</string>
-    <string name="hr_leave_waitManager">Waiting for the manager</string>
-    <string name="hr_pay_paidTotalLabel">Total cost of paid runs</string>
-    <string name="accounting_payrollLabel">Payroll</string>
-    <string name="accounting_payrollDueLabel">Payroll due</string>
-    <string name="unified_title">Accounting and HR summary</string>
-    <string name="unified_note">This month, final figures</string>
-    <string name="unified_employees">Employees</string>
-    <string name="unified_salariesPaid">Salaries paid</string>
-    <string name="unified_salariesDue">Salaries due, not paid yet</string>
-    <string name="unified_net">Final net after salaries</string>
-    <string name="accounting_incomeLabel">Income</string>
-    <string name="accounting_expensesLabel">Expenses</string>
-    <string name="accounting_netLabel">Net</string>
-    <string name="hr_dept_title">Departments</string>
-    <string name="hr_dept_empty">No departments yet. Add the first one.</string>
-    <string name="hr_dept_name">Department name</string>
-    <string name="hr_dept_add">Add department</string>
-    <string name="hr_dept_added">Department added</string>
-    <string name="hr_dept_renamed">Name saved</string>
-    <string name="hr_dept_deleted">Department deleted</string>
-    <string name="hr_dept_confirmDelete">Delete this department?</string>
-    <string name="hr_dept_rename">Rename</string>
-    <string name="hr_dept_count">Employees: %1$s</string>
-    <string name="hr_f_dept">Department</string>
-    <string name="hr_dept_none">No department</string>
-    <string name="hr_sal_open">Salary structure</string>
-    <string name="hr_sal_title">Salary structure</string>
-    <string name="hr_sal_base">Base salary (%1$s)</string>
-    <string name="hr_sal_saveBase">Save base salary</string>
-    <string name="hr_sal_saved">Salary saved</string>
-    <string name="hr_sal_items">Salary items</string>
-    <string name="hr_sal_empty">This employee has no salary items.</string>
-    <string name="hr_sal_earning">Addition to the salary</string>
-    <string name="hr_sal_deduction">Deduction from the salary</string>
-    <string name="hr_sal_fixed">Fixed amount</string>
-    <string name="hr_sal_percent">Percentage of the base salary</string>
-    <string name="hr_sal_comp">Item</string>
-    <string name="hr_sal_amount">Amount or percentage</string>
-    <string name="hr_sal_addItem">Add the item to the employee</string>
-    <string name="hr_sal_itemAdded">Item added</string>
-    <string name="hr_sal_newComp">New item</string>
-    <string name="hr_sal_compName">Item name</string>
-    <string name="hr_sal_createComp">Create the item</string>
-    <string name="hr_sal_compCreated">Item created</string>
-    <string name="hr_sal_remove">Remove</string>
-    <string name="hr_sal_removed">Item removed</string>
-    <string name="hr_sal_close">Close</string>
-    <string name="hr_sal_pickComp">Pick an item</string>
-    <string name="accounting_pay">Payment method</string>
-    <string name="accounting_pay_CASH">Cash</string>
+    <string name="hr_leave_waitHr">Wartet auf das Personalwesen</string>
+    <string name="hr_leave_waitManager">Wartet auf die Führungskraft</string>
+    <string name="hr_pay_paidTotalLabel">Gesamtkosten der bezahlten Abrechnungen</string>
+    <string name="accounting_payrollLabel">Lohnabrechnung</string>
+    <string name="accounting_payrollDueLabel">Fällige Löhne</string>
+    <string name="unified_title">Übersicht Buchhaltung und Personal</string>
+    <string name="unified_note">Dieser Monat, endgültige Zahlen</string>
+    <string name="unified_employees">Mitarbeiter</string>
+    <string name="unified_salariesPaid">Gezahlte Gehälter</string>
+    <string name="unified_salariesDue">Fällige Gehälter, noch nicht gezahlt</string>
+    <string name="unified_net">Endergebnis nach Gehältern</string>
+    <string name="accounting_incomeLabel">Einnahmen</string>
+    <string name="accounting_expensesLabel">Ausgaben</string>
+    <string name="accounting_netLabel">Netto</string>
+    <string name="hr_dept_title">Abteilungen</string>
+    <string name="hr_dept_empty">Noch keine Abteilungen. Fügen Sie die erste hinzu.</string>
+    <string name="hr_dept_name">Name der Abteilung</string>
+    <string name="hr_dept_add">Abteilung hinzufügen</string>
+    <string name="hr_dept_added">Abteilung hinzugefügt</string>
+    <string name="hr_dept_renamed">Name gespeichert</string>
+    <string name="hr_dept_deleted">Abteilung gelöscht</string>
+    <string name="hr_dept_confirmDelete">Diese Abteilung löschen?</string>
+    <string name="hr_dept_rename">Umbenennen</string>
+    <string name="hr_dept_count">Mitarbeiter: %1$s</string>
+    <string name="hr_f_dept">Abteilung</string>
+    <string name="hr_dept_none">Keine Abteilung</string>
+    <string name="hr_sal_open">Gehaltsstruktur</string>
+    <string name="hr_sal_title">Gehaltsstruktur</string>
+    <string name="hr_sal_base">Grundgehalt (%1$s)</string>
+    <string name="hr_sal_saveBase">Grundgehalt speichern</string>
+    <string name="hr_sal_saved">Gehalt gespeichert</string>
+    <string name="hr_sal_items">Gehaltsposten</string>
+    <string name="hr_sal_empty">Dieser Mitarbeiter hat keine Gehaltsposten.</string>
+    <string name="hr_sal_earning">Zuschlag zum Gehalt</string>
+    <string name="hr_sal_deduction">Abzug vom Gehalt</string>
+    <string name="hr_sal_fixed">Fester Betrag</string>
+    <string name="hr_sal_percent">Prozentsatz des Grundgehalts</string>
+    <string name="hr_sal_comp">Posten</string>
+    <string name="hr_sal_amount">Betrag oder Prozentsatz</string>
+    <string name="hr_sal_addItem">Posten zum Mitarbeiter hinzufügen</string>
+    <string name="hr_sal_itemAdded">Posten hinzugefügt</string>
+    <string name="hr_sal_newComp">Neuer Posten</string>
+    <string name="hr_sal_compName">Name des Postens</string>
+    <string name="hr_sal_createComp">Posten erstellen</string>
+    <string name="hr_sal_compCreated">Posten erstellt</string>
+    <string name="hr_sal_remove">Entfernen</string>
+    <string name="hr_sal_removed">Posten entfernt</string>
+    <string name="hr_sal_close">Schließen</string>
+    <string name="hr_sal_pickComp">Posten wählen</string>
+    <string name="accounting_pay">Zahlungsmethode</string>
+    <string name="accounting_pay_CASH">Bar</string>
     <string name="accounting_pay_BANK">Bank</string>
     <string name="accounting_pay_WALLET">Wallet</string>
-    <string name="accounting_sell_pay">How was it paid?</string>
-    <string name="accounting_cash_title">Cash box for the day</string>
-    <string name="accounting_cash_help">The cash box counts cash entries only. Bank and wallet entries are shown on their own below.</string>
-    <string name="accounting_cash_opening">Opening amount</string>
-    <string name="accounting_cash_in">Cash received</string>
-    <string name="accounting_cash_out">Cash paid out</string>
-    <string name="accounting_cash_expected">Expected in the box</string>
-    <string name="accounting_cash_withdist">With distributors (not in the box yet)</string>
-    <string name="accounting_cash_handedtoday">Received from them today</string>
-    <string name="accounting_cash_counted">Amount actually counted</string>
-    <string name="accounting_cash_close">Close the day</string>
-    <string name="accounting_cash_closed">This day is closed</string>
-    <string name="accounting_cash_reopen">Open the day again</string>
-    <string name="accounting_cash_diff">Difference</string>
-    <string name="accounting_cash_diff_ok">The box matches</string>
-    <string name="accounting_cash_set_opening">Change the opening amount</string>
-    <string name="accounting_cash_opening_prev">From the closing of the previous day</string>
-    <string name="accounting_cash_other">Bank and wallet (not in the box)</string>
-    <string name="accounting_cash_unspecified">Entries with no payment method (older or automatic), not counted in the box</string>
-    <string name="accounting_sale_title">New sales invoice</string>
-    <string name="accounting_sale_pick">Pick a product</string>
-    <string name="accounting_sale_qty">Quantity</string>
-    <string name="accounting_sale_add">Add to the invoice</string>
-    <string name="accounting_sale_empty">No items on the invoice yet.</string>
-    <string name="accounting_sale_subtotal">Subtotal</string>
-    <string name="accounting_sale_discount">Discount</string>
-    <string name="accounting_sale_discount_amount">As an amount</string>
-    <string name="accounting_sale_discount_percent">As a percent %</string>
-    <string name="accounting_sale_customer">Customer name (optional)</string>
-    <string name="accounting_sale_total">Total after the discount</string>
-    <string name="accounting_sale_save">Save the invoice</string>
-    <string name="accounting_sale_saved">Invoice number %1$d saved</string>
-    <string name="accounting_sale_share">Share the invoice</string>
-    <string name="accounting_sale_recent">Recent invoices</string>
-    <string name="accounting_sale_number">Sales invoice number %1$d</string>
-    <string name="accounting_sale_remove">Remove</string>
-    <string name="accounting_sale_close">Done</string>
-    <string name="accounting_sale_stock">In stock</string>
-    <string name="accounting_sale_item">Item</string>
-    <string name="accounting_low_title">Stock alerts</string>
-    <string name="accounting_low_none">Nothing is running low. All good.</string>
-    <string name="accounting_low_out">Out</string>
-    <string name="accounting_low_low">Running low</string>
-    <string name="accounting_low_left">In stock: %1$d</string>
-    <string name="accounting_low_min">Alert level</string>
-    <string name="accounting_low_min_prompt">Alert me when the quantity falls to (0 = no alert)</string>
-    <string name="accounting_moves">Movements</string>
-    <string name="accounting_moves_none">No movements for this product yet.</string>
-    <string name="accounting_move_STOCK_IN">In</string>
-    <string name="accounting_move_STOCK_OUT">Out</string>
-    <string name="accounting_move_ADJUSTMENT">Set by a count</string>
-    <string name="accounting_count_start">Physical count</string>
-    <string name="accounting_count_help">Type the quantity you counted on the shelf for each product. Any difference is kept in the movements.</string>
-    <string name="accounting_count_apply">Apply the count</string>
-    <string name="accounting_count_cancel">Cancel the count</string>
-    <string name="accounting_count_book">In the books</string>
-    <string name="accounting_count_counted">Counted</string>
-    <string name="accounting_count_done">Count done: %1$d products changed</string>
-    <string name="accounting_count_same">No differences, the books match</string>
-    <string name="accounting_rep_title">Profit report</string>
-    <string name="accounting_rep_today">Today</string>
-    <string name="accounting_rep_week">7 days</string>
-    <string name="accounting_rep_month">This month</string>
-    <string name="accounting_rep_last30">30 days</string>
-    <string name="accounting_rep_sales">Sales</string>
-    <string name="accounting_rep_cogs">Cost of goods</string>
-    <string name="accounting_rep_gross">Gross profit</string>
-    <string name="accounting_rep_series">Net per period</string>
-    <string name="accounting_rep_by_product">Profit by product</string>
-    <string name="accounting_rep_qty">Quantity</string>
-    <string name="accounting_rep_profit">Profit</string>
-    <string name="accounting_rep_empty">No entries in this period.</string>
-    <string name="accounting_party_title">Customers and suppliers</string>
-    <string name="accounting_party_customers">Customers</string>
-    <string name="accounting_party_suppliers">Suppliers</string>
-    <string name="accounting_party_receivable">Owed to us by customers</string>
-    <string name="accounting_party_payable">Owed by us to suppliers</string>
+    <string name="accounting_sell_pay">Wie wurde bezahlt?</string>
+    <string name="accounting_cash_title">Tageskasse</string>
+    <string name="accounting_cash_help">Die Kasse zählt nur Bareinträge. Bank- und Wallet-Einträge werden unten gesondert angezeigt.</string>
+    <string name="accounting_cash_opening">Anfangsbestand</string>
+    <string name="accounting_cash_in">Bar erhalten</string>
+    <string name="accounting_cash_out">Bar ausgezahlt</string>
+    <string name="accounting_cash_expected">Erwartet in der Kasse</string>
+    <string name="accounting_cash_withdist">Bei Vertriebspartnern (noch nicht in der Kasse)</string>
+    <string name="accounting_cash_handedtoday">Heute von ihnen erhalten</string>
+    <string name="accounting_cash_counted">Tatsächlich gezählter Betrag</string>
+    <string name="accounting_cash_close">Tag abschließen</string>
+    <string name="accounting_cash_closed">Dieser Tag ist abgeschlossen</string>
+    <string name="accounting_cash_reopen">Tag wieder öffnen</string>
+    <string name="accounting_cash_diff">Differenz</string>
+    <string name="accounting_cash_diff_ok">Die Kasse stimmt</string>
+    <string name="accounting_cash_set_opening">Anfangsbestand ändern</string>
+    <string name="accounting_cash_opening_prev">Aus dem Abschluss des Vortags</string>
+    <string name="accounting_cash_other">Bank und Wallet (nicht in der Kasse)</string>
+    <string name="accounting_cash_unspecified">Einträge ohne Zahlungsmethode (älter oder automatisch), nicht in der Kasse gezählt</string>
+    <string name="accounting_sale_title">Neue Verkaufsrechnung</string>
+    <string name="accounting_sale_pick">Produkt wählen</string>
+    <string name="accounting_sale_qty">Menge</string>
+    <string name="accounting_sale_add">Zur Rechnung hinzufügen</string>
+    <string name="accounting_sale_empty">Noch keine Positionen auf der Rechnung.</string>
+    <string name="accounting_sale_subtotal">Zwischensumme</string>
+    <string name="accounting_sale_discount">Rabatt</string>
+    <string name="accounting_sale_discount_amount">Als Betrag</string>
+    <string name="accounting_sale_discount_percent">In Prozent %</string>
+    <string name="accounting_sale_customer">Name des Kunden (optional)</string>
+    <string name="accounting_sale_total">Gesamt nach Rabatt</string>
+    <string name="accounting_sale_save">Rechnung speichern</string>
+    <string name="accounting_sale_saved">Rechnung Nr. %1$d gespeichert</string>
+    <string name="accounting_sale_share">Rechnung teilen</string>
+    <string name="accounting_sale_recent">Letzte Rechnungen</string>
+    <string name="accounting_sale_number">Verkaufsrechnung Nr. %1$d</string>
+    <string name="accounting_sale_remove">Entfernen</string>
+    <string name="accounting_sale_close">Fertig</string>
+    <string name="accounting_sale_stock">Auf Lager</string>
+    <string name="accounting_sale_item">Posten</string>
+    <string name="accounting_low_title">Bestandswarnungen</string>
+    <string name="accounting_low_none">Nichts wird knapp. Alles in Ordnung.</string>
+    <string name="accounting_low_out">Ausverkauft</string>
+    <string name="accounting_low_low">Wird knapp</string>
+    <string name="accounting_low_left">Auf Lager: %1$d</string>
+    <string name="accounting_low_min">Warnschwelle</string>
+    <string name="accounting_low_min_prompt">Warnen, wenn die Menge sinkt auf (0 = keine Warnung)</string>
+    <string name="accounting_moves">Bewegungen</string>
+    <string name="accounting_moves_none">Noch keine Bewegungen für dieses Produkt.</string>
+    <string name="accounting_move_STOCK_IN">Zugang</string>
+    <string name="accounting_move_STOCK_OUT">Ausverkauft</string>
+    <string name="accounting_move_ADJUSTMENT">Durch Zählung festgelegt</string>
+    <string name="accounting_count_start">Inventur</string>
+    <string name="accounting_count_help">Geben Sie für jedes Produkt die Menge ein, die Sie im Regal gezählt haben. Jede Differenz wird in den Bewegungen festgehalten.</string>
+    <string name="accounting_count_apply">Zählung übernehmen</string>
+    <string name="accounting_count_cancel">Zählung abbrechen</string>
+    <string name="accounting_count_book">In den Büchern</string>
+    <string name="accounting_count_counted">Gezählt</string>
+    <string name="accounting_count_done">Zählung abgeschlossen: %1$d Produkte geändert</string>
+    <string name="accounting_count_same">Keine Differenzen, die Bücher stimmen</string>
+    <string name="accounting_rep_title">Gewinnbericht</string>
+    <string name="accounting_rep_today">Heute</string>
+    <string name="accounting_rep_week">7 Tage</string>
+    <string name="accounting_rep_month">Dieser Monat</string>
+    <string name="accounting_rep_last30">30 Tage</string>
+    <string name="accounting_rep_sales">Verkäufe</string>
+    <string name="accounting_rep_cogs">Wareneinsatz</string>
+    <string name="accounting_rep_gross">Rohgewinn</string>
+    <string name="accounting_rep_series">Ergebnis pro Zeitraum</string>
+    <string name="accounting_rep_by_product">Gewinn nach Produkt</string>
+    <string name="accounting_rep_qty">Menge</string>
+    <string name="accounting_rep_profit">Gewinn</string>
+    <string name="accounting_rep_empty">Keine Einträge in diesem Zeitraum.</string>
+    <string name="accounting_party_title">Kunden und Lieferanten</string>
+    <string name="accounting_party_customers">Kunden</string>
+    <string name="accounting_party_suppliers">Lieferanten</string>
+    <string name="accounting_party_receivable">Uns von Kunden geschuldet</string>
+    <string name="accounting_party_payable">Von uns Lieferanten geschuldet</string>
     <string name="accounting_party_name">Name</string>
-    <string name="accounting_party_add">Add</string>
-    <string name="accounting_party_empty">Nothing registered yet.</string>
-    <string name="accounting_party_balance">Balance</string>
-    <string name="accounting_party_settled">Settled</string>
-    <string name="accounting_party_statement">Statement</string>
-    <string name="accounting_party_pay">Record a payment</string>
-    <string name="accounting_party_charge">A debt or an old balance</string>
-    <string name="accounting_party_amount">Amount</string>
-    <string name="accounting_party_book">Record it as an entry in the accounts</string>
-    <string name="accounting_party_payment_row">Payment</string>
-    <string name="accounting_party_charge_row">Debt</string>
-    <string name="accounting_party_after">Balance after</string>
-    <string name="accounting_party_close">Close</string>
-    <string name="accounting_sale_party">Customer (for a sale on credit)</string>
-    <string name="accounting_sale_no_party">No registered customer</string>
-    <string name="accounting_sale_paid_now">Amount paid now (empty = in full)</string>
-    <string name="accounting_buy_title">New purchase invoice</string>
-    <string name="accounting_buy_help">The goods come into the stock and the cost of the product is updated by a weighted average. The money paid leaves the cash box and is not booked as an expense.</string>
-    <string name="accounting_buy_cost">Cost of one unit</string>
-    <string name="accounting_buy_supplier">Supplier (for a purchase on credit)</string>
-    <string name="accounting_buy_no_supplier">No registered supplier</string>
-    <string name="accounting_buy_paid_now">Amount paid now (empty = in full)</string>
-    <string name="accounting_buy_total">Invoice total</string>
-    <string name="accounting_buy_save">Save the purchase invoice</string>
-    <string name="accounting_buy_saved">Purchase invoice number %1$d saved</string>
-    <string name="accounting_buy_recent">Recent purchase invoices</string>
-    <string name="accounting_buy_empty">No items on the invoice yet.</string>
-    <string name="accounting_ret_btn">Return</string>
-    <string name="accounting_ret_title">Record a return</string>
-    <string name="accounting_ret_max">Up to %1$d</string>
-    <string name="accounting_ret_method">How is the money paid back?</string>
-    <string name="accounting_ret_save">Record the return</string>
-    <string name="accounting_ret_done">Return recorded</string>
-    <string name="accounting_ret_none">Type a quantity for at least one line</string>
-    <string name="accounting_ret_all">Everything was returned already</string>
-    <string name="accounting_rec_title">Recurring expenses and income</string>
-    <string name="accounting_rec_help">Rent, electricity, subscriptions: they are recorded by themselves on their day. You can pause them or change the amount.</string>
-    <string name="accounting_rec_empty">No recurring entries yet.</string>
-    <string name="accounting_rec_next">Next one</string>
-    <string name="accounting_rec_paused">Paused</string>
-    <string name="accounting_rec_WEEKLY">Every week</string>
-    <string name="accounting_rec_MONTHLY">Every month</string>
-    <string name="accounting_rec_YEARLY">Every year</string>
-    <string name="accounting_rec_add">Add a recurring entry</string>
-    <string name="accounting_rec_pause">Pause</string>
-    <string name="accounting_rec_resume">Resume</string>
-    <string name="accounting_rec_delete">Delete</string>
-    <string name="accounting_rec_amount">Change the amount</string>
-    <string name="accounting_rec_start">Start date (YYYY-MM-DD)</string>
-    <string name="accounting_rec_backfill">Also record the ones missed since the start date</string>
-    <string name="accounting_tax_title">Tax (experimental)</string>
-    <string name="accounting_tax_warn">An experimental feature: the numbers are for your own follow-up. Check them with your accountant before you rely on them in any tax return.</string>
-    <string name="accounting_tax_incl">The price has the tax inside</string>
-    <string name="accounting_tax_excl">The tax is added on top of the price</string>
-    <string name="accounting_tax_default">Default rate</string>
-    <string name="accounting_tax_none">No tax</string>
-    <string name="accounting_tax_rates">Tax rates</string>
-    <string name="accounting_tax_rate_name">Rate name</string>
-    <string name="accounting_tax_rate_pct">Rate %</string>
-    <string name="accounting_tax_add_rate">Add a rate</string>
-    <string name="accounting_tax_off">Switch off</string>
-    <string name="accounting_tax_on">Switch on</string>
-    <string name="accounting_tax_no_rates">No tax rates. Without rates, invoices carry no tax.</string>
-    <string name="accounting_tax_output">Sales tax collected</string>
-    <string name="accounting_tax_input">Purchase tax paid</string>
-    <string name="accounting_tax_payable">Owed to the tax office</string>
-    <string name="accounting_tax_claim">Can be claimed back</string>
-    <string name="accounting_tax_product">Tax</string>
-    <string name="accounting_tax_in_invoice">of which tax</string>
-    <string name="accounting_tax_on_top">Tax added</string>
-    <string name="accounting_tax_report">Tax report for this month</string>
-    <string name="accounting_stm_title">Financial statements (experimental)</string>
-    <string name="accounting_stm_warn">An experimental feature: simplified statements from the entries you recorded, not an approved balance sheet. Check them with your accountant before you rely on them in a return, a loan or any official report.</string>
-    <string name="accounting_stm_income">Income statement for this month</string>
-    <string name="accounting_stm_position">Simplified financial position (as of today)</string>
-    <string name="accounting_stm_sales">Sales</string>
-    <string name="accounting_stm_returns">Less: returns</string>
-    <string name="accounting_stm_revenue">Total income</string>
-    <string name="accounting_stm_cogs">Less: cost of goods sold</string>
-    <string name="accounting_stm_gross">Gross profit</string>
-    <string name="accounting_stm_opex">Total expenses</string>
-    <string name="accounting_stm_net">Net profit</string>
-    <string name="accounting_stm_cash">Cash, bank and wallets</string>
-    <string name="accounting_stm_receivables">Customers owe us</string>
-    <string name="accounting_stm_inventory">Stock at cost</string>
-    <string name="accounting_stm_total_assets">Total assets</string>
-    <string name="accounting_stm_payables">We owe suppliers</string>
-    <string name="accounting_stm_tax_payable">Tax collected and owed</string>
-    <string name="accounting_stm_total_liabilities">Total liabilities</string>
-    <string name="accounting_stm_equity">Equity of the owner</string>
-    <string name="accounting_stm_balancing">Capital, withdrawals and the first stock (the difference)</string>
+    <string name="accounting_party_add">Hinzufügen</string>
+    <string name="accounting_party_empty">Noch nichts registriert.</string>
+    <string name="accounting_party_balance">Saldo</string>
+    <string name="accounting_party_settled">Ausgeglichen</string>
+    <string name="accounting_party_statement">Kontoauszug</string>
+    <string name="accounting_party_pay">Zahlung erfassen</string>
+    <string name="accounting_party_charge">Eine Schuld oder ein alter Saldo</string>
+    <string name="accounting_party_amount">Betrag</string>
+    <string name="accounting_party_book">Als Eintrag in der Buchhaltung erfassen</string>
+    <string name="accounting_party_payment_row">Zahlung</string>
+    <string name="accounting_party_charge_row">Schuld</string>
+    <string name="accounting_party_after">Saldo danach</string>
+    <string name="accounting_party_close">Schließen</string>
+    <string name="accounting_sale_party">Kunde (für einen Verkauf auf Rechnung)</string>
+    <string name="accounting_sale_no_party">Kein registrierter Kunde</string>
+    <string name="accounting_sale_paid_now">Jetzt gezahlter Betrag (leer = vollständig)</string>
+    <string name="accounting_buy_title">Neue Einkaufsrechnung</string>
+    <string name="accounting_buy_help">Die Ware kommt ins Lager, und die Kosten des Produkts werden per gewichtetem Durchschnitt aktualisiert. Das gezahlte Geld verlässt die Kasse und wird nicht als Ausgabe gebucht.</string>
+    <string name="accounting_buy_cost">Kosten pro Einheit</string>
+    <string name="accounting_buy_supplier">Lieferant (für einen Einkauf auf Rechnung)</string>
+    <string name="accounting_buy_no_supplier">Kein registrierter Lieferant</string>
+    <string name="accounting_buy_paid_now">Jetzt gezahlter Betrag (leer = vollständig)</string>
+    <string name="accounting_buy_total">Rechnungssumme</string>
+    <string name="accounting_buy_save">Einkaufsrechnung speichern</string>
+    <string name="accounting_buy_saved">Einkaufsrechnung Nr. %1$d gespeichert</string>
+    <string name="accounting_buy_recent">Letzte Einkaufsrechnungen</string>
+    <string name="accounting_buy_empty">Noch keine Positionen auf der Rechnung.</string>
+    <string name="accounting_ret_btn">Rückgabe</string>
+    <string name="accounting_ret_title">Rückgabe erfassen</string>
+    <string name="accounting_ret_max">Bis zu %1$d</string>
+    <string name="accounting_ret_method">Wie wird das Geld zurückgezahlt?</string>
+    <string name="accounting_ret_save">Rückgabe erfassen</string>
+    <string name="accounting_ret_done">Rückgabe erfasst</string>
+    <string name="accounting_ret_none">Geben Sie für mindestens eine Zeile eine Menge ein</string>
+    <string name="accounting_ret_all">Alles wurde bereits zurückgegeben</string>
+    <string name="accounting_rec_title">Wiederkehrende Ausgaben und Einnahmen</string>
+    <string name="accounting_rec_help">Miete, Strom, Abonnements: Sie werden an ihrem Tag von selbst erfasst. Sie können sie pausieren oder den Betrag ändern.</string>
+    <string name="accounting_rec_empty">Noch keine wiederkehrenden Einträge.</string>
+    <string name="accounting_rec_next">Nächster</string>
+    <string name="accounting_rec_paused">Pausiert</string>
+    <string name="accounting_rec_WEEKLY">Jede Woche</string>
+    <string name="accounting_rec_MONTHLY">Jeden Monat</string>
+    <string name="accounting_rec_YEARLY">Jedes Jahr</string>
+    <string name="accounting_rec_add">Wiederkehrenden Eintrag hinzufügen</string>
+    <string name="accounting_rec_pause">Pausieren</string>
+    <string name="accounting_rec_resume">Fortsetzen</string>
+    <string name="accounting_rec_delete">Löschen</string>
+    <string name="accounting_rec_amount">Betrag ändern</string>
+    <string name="accounting_rec_start">Startdatum (JJJJ-MM-TT)</string>
+    <string name="accounting_rec_backfill">Auch die seit dem Startdatum versäumten erfassen</string>
+    <string name="accounting_tax_title">Steuer (experimentell)</string>
+    <string name="accounting_tax_warn">Eine experimentelle Funktion: Die Zahlen dienen Ihrer eigenen Nachverfolgung. Prüfen Sie sie mit Ihrem Steuerberater, bevor Sie sich in einer Steuererklärung darauf verlassen.</string>
+    <string name="accounting_tax_incl">Der Preis enthält die Steuer</string>
+    <string name="accounting_tax_excl">Die Steuer wird auf den Preis aufgeschlagen</string>
+    <string name="accounting_tax_default">Standardsatz</string>
+    <string name="accounting_tax_none">Keine Steuer</string>
+    <string name="accounting_tax_rates">Steuersätze</string>
+    <string name="accounting_tax_rate_name">Name des Satzes</string>
+    <string name="accounting_tax_rate_pct">Satz %</string>
+    <string name="accounting_tax_add_rate">Satz hinzufügen</string>
+    <string name="accounting_tax_off">Ausschalten</string>
+    <string name="accounting_tax_on">Einschalten</string>
+    <string name="accounting_tax_no_rates">Keine Steuersätze. Ohne Sätze enthalten Rechnungen keine Steuer.</string>
+    <string name="accounting_tax_output">Eingenommene Umsatzsteuer</string>
+    <string name="accounting_tax_input">Gezahlte Vorsteuer</string>
+    <string name="accounting_tax_payable">Dem Finanzamt geschuldet</string>
+    <string name="accounting_tax_claim">Kann zurückgefordert werden</string>
+    <string name="accounting_tax_product">Steuer</string>
+    <string name="accounting_tax_in_invoice">davon Steuer</string>
+    <string name="accounting_tax_on_top">Steuer hinzugefügt</string>
+    <string name="accounting_tax_report">Steuerbericht für diesen Monat</string>
+    <string name="accounting_stm_title">Finanzabschlüsse (experimentell)</string>
+    <string name="accounting_stm_warn">Eine experimentelle Funktion: vereinfachte Abschlüsse aus den von Ihnen erfassten Einträgen, keine genehmigte Bilanz. Prüfen Sie sie mit Ihrem Steuerberater, bevor Sie sich in einer Erklärung, einem Kredit oder einem offiziellen Bericht darauf verlassen.</string>
+    <string name="accounting_stm_income">Gewinn- und Verlustrechnung für diesen Monat</string>
+    <string name="accounting_stm_position">Vereinfachte Vermögenslage (Stand heute)</string>
+    <string name="accounting_stm_sales">Verkäufe</string>
+    <string name="accounting_stm_returns">Abzüglich: Rückgaben</string>
+    <string name="accounting_stm_revenue">Gesamteinnahmen</string>
+    <string name="accounting_stm_cogs">Abzüglich: Wareneinsatz</string>
+    <string name="accounting_stm_gross">Rohgewinn</string>
+    <string name="accounting_stm_opex">Gesamtausgaben</string>
+    <string name="accounting_stm_net">Nettogewinn</string>
+    <string name="accounting_stm_cash">Bargeld, Bank und Wallets</string>
+    <string name="accounting_stm_receivables">Kunden schulden uns</string>
+    <string name="accounting_stm_inventory">Lagerbestand zu Kosten</string>
+    <string name="accounting_stm_total_assets">Summe Aktiva</string>
+    <string name="accounting_stm_payables">Wir schulden Lieferanten</string>
+    <string name="accounting_stm_tax_payable">Eingenommene und geschuldete Steuer</string>
+    <string name="accounting_stm_total_liabilities">Summe Verbindlichkeiten</string>
+    <string name="accounting_stm_equity">Eigenkapital des Inhabers</string>
+    <string name="accounting_stm_balancing">Kapital, Entnahmen und der erste Bestand (die Differenz)</string>
+    <string name="fit_auto_fd107e2a">Foto eines Zertifikats oder Erfolgs</string>
+    <string name="fit_auto_31d9b741">Syriatel Cash</string>
+    <string name="fit_auto_d79941c7">MTN Cash</string>
+    <string name="fit_auto_098683e9">Sham Cash</string>
+    <string name="fit_auto_13595e7a">💳 Verfügbare Zahlungsmethoden</string>
+    <string name="fit_auto_5b0421bf">Die Zahlung erfolgt direkt an den Trainer außerhalb der App.</string>
+    <string name="fit_auto_7a73da43">Kontoinhaber: %1$s</string>
+    <string name="fit_auto_27503bf2">🎯 Monatliche Trainingspakete</string>
+    <string name="fit_auto_4a0b14c3"> Monat ·</string>
+    <string name="fit_auto_8e0d8542">Ihre Teilnahmeanfrage wurde an den Trainer gesendet</string>
+    <string name="fit_auto_aa2fb742">Die Anfrage konnte nicht gesendet werden</string>
+    <string name="fit_auto_0c38fd67">Warten auf die Antwort des Trainers</string>
+    <string name="fit_auto_19837e3e">Angenommen</string>
+    <string name="fit_auto_58d8f68d">Teilnahme anfragen</string>
+    <string name="fit_auto_1eaa192f">Melden Sie sich an, um die Teilnahme anzufragen</string>
+    <string name="fit_auto_514b56ff">Die Zahlung wird nicht in der App eingezogen; sprechen Sie mit dem Trainer, um sie zu vereinbaren.</string>
+    <string name="fit_auto_11e83767">Zurück</string>
+    <string name="fit_auto_f7175997">Trainierende und ihre Pläne</string>
+    <string name="fit_auto_cd78b295">Meine Fitness- und Ernährungspläne</string>
+    <string name="fit_auto_ec4ef902">Pläne sind zwischen Trainer und Trainierendem privat.</string>
+    <string name="fit_auto_0d1a0f67">Plan bearbeiten · %1$s</string>
+    <string name="fit_auto_7ce78f07">Registrierte E-Mail des Trainierenden</string>
+    <string name="fit_auto_5e657e68">Training</string>
+    <string name="fit_auto_2a48b04e">Ernährung</string>
+    <string name="fit_auto_384df087">Name des Plans</string>
+    <string name="fit_auto_6a2e4995">Details, eine Übung oder Mahlzeit pro Zeile</string>
+    <string name="fit_auto_3c4208fe">Notizen</string>
+    <string name="fit_auto_7625f9c4">Startdatum des Plans (JJJJ-MM-TT, optional)</string>
+    <string name="fit_auto_44a5a9a7">Enddatum des Plans (JJJJ-MM-TT, optional)</string>
+    <string name="fit_auto_61ec5484">Wochenplan (optional)</string>
+    <string name="fit_auto_70cbbabf">Montag</string>
+    <string name="fit_auto_b38d7fc2">Dienstag</string>
+    <string name="fit_auto_2e5bdec0">Mittwoch</string>
+    <string name="fit_auto_a6828d5b">Donnerstag</string>
+    <string name="fit_auto_66e535ba">Freitag</string>
+    <string name="fit_auto_3cf0f7a6">Samstag</string>
+    <string name="fit_auto_86aad79c">Sonntag</string>
+    <string name="fit_auto_715af372"> · Übungen oder Mahlzeiten, ein Eintrag pro Zeile</string>
+    <string name="fit_auto_0da9f8a8">Wird gespeichert…</string>
+    <string name="fit_auto_ea76b8bc">Änderungen speichern</string>
+    <string name="fit_auto_e1b96d0a">Plan senden</string>
+    <string name="fit_auto_c5f60175">Bearbeitung abbrechen</string>
+    <string name="fit_auto_c66cd2de">Trainierende (%1$d)</string>
+    <string name="fit_auto_6d08f196">Alle</string>
+    <string name="fit_auto_eec3db7f">Trainingsplan</string>
+    <string name="fit_auto_ed87a68b">Ernährungsplan</string>
+    <string name="fit_auto_49215294">Beginn: %1$s</string>
+    <string name="fit_auto_bf43e2f7">Ende: %1$s</string>
+    <string name="fit_auto_6b100af3">📄 Plan als PDF speichern</string>
+    <string name="fit_auto_4eb10593">Plan bearbeiten</string>
+    <string name="fit_auto_df38da5b"> kg ·</string>
+    <string name="fit_auto_943bdb85">Gewicht in Kilogramm</string>
+    <string name="fit_auto_1d47217e">Notiz zum Fortschritt</string>
+    <string name="fit_auto_6a2fcb7c">Fortschritt erfassen</string>
+    <string name="fit_auto_35db8764">Fortschritt des Trainierenden</string>
+    <string name="fit_auto_d7644cdb">Aktuell gibt es keine Pläne zum Anzeigen.</string>
+    <string name="fit_auto_80861134">Teilnahmeanfragen für Pakete</string>
+    <string name="fit_auto_458c9253">Meine Trainingspakete</string>
+    <string name="fit_auto_dff8acbb">Es gibt noch keine Anfragen oder Trainingspakete.</string>
+    <string name="fit_auto_4f4865b2">Status:</string>
+    <string name="fit_auto_ab579793">Abgelehnt</string>
+    <string name="fit_auto_f5eb0776">Storniert</string>
+    <string name="fit_auto_28cbdf83">Beendet</string>
+    <string name="fit_auto_c5a1a374">Zeitraum: %1$s – %2$s</string>
+    <string name="fit_auto_d7e02c92">Annehmen</string>
+    <string name="fit_auto_b7dee974">Ablehnen</string>
+    <string name="fit_auto_dfdf1a42">Abonnement beenden</string>
+    <string name="fit_auto_e06a23ff">Anfrage zurückziehen</string>
+    <string name="fit_auto_817bd7c2">Bis zu 12 Fotos</string>
+    <string name="fit_auto_77aa4468">Zertifikate und Erfolge</string>
+    <string name="fit_auto_712ba737">Besucher sehen diese Fotos. Dalilacom hat die Zertifikate nicht geprüft.</string>
+    <string name="fit_auto_1b963ebd">📷 Foto eines Zertifikats oder Erfolgs hinzufügen</string>
+    <string name="fit_auto_4b431162">📜 Foto Nr.</string>
+    <string name="fit_auto_3b9854e1">Löschen</string>
+    <string name="fit_auto_1a8b3258">Zahlungsmethoden und Entgegennahme von Gebühren</string>
+    <string name="fit_auto_6cbcb21f">Fügen Sie Ihre Zahlungsangaben hinzu, damit Trainierende Sie bezahlen können. Besucher sehen sie auf Ihrer Trainerseite; die Zahlung erfolgt außerhalb der App.</string>
+    <string name="fit_auto_909db8ed">Name des Kontoinhabers</string>
+    <string name="fit_auto_6ff1570f">Nummer bei Syriatel Cash</string>
+    <string name="fit_auto_9bb5492f">Nummer bei MTN Cash</string>
+    <string name="fit_auto_04e0bcce">Konto bei Sham Cash</string>
+    <string name="fit_auto_043d5776">Monatliche Trainingspakete</string>
+    <string name="fit_auto_b2007fb0">Fügen Sie einen klaren Preis und eine Dauer hinzu, damit Besucher Ihre Pakete sehen.</string>
+    <string name="fit_auto_9e1fb97e">Paket löschen</string>
+    <string name="fit_auto_650b87df">Was ist enthalten?</string>
+    <string name="fit_auto_ae92351c">Dauer in Monaten</string>
+    <string name="fit_auto_fa59c355">Preis</string>
+    <string name="fit_auto_72908aa4">Paket hinzufügen</string>
+    <string name="fit_auto_c2ed8d0d">📋  Pläne der Trainierenden</string>
+    <string name="fit_auto_d141a0e3">🏋️  Meine Fitness- und Ernährungspläne</string>
+    <string name="fit_auto_b6b55b3a">Name des Pakets</string>
+    <string name="s_89f995b3">Wir konnten den Dienst nicht erreichen</string>
+    <string name="s_f03c2218">Die Online-Zahlung konnte nicht gestartet werden</string>
+    <string name="s_f1f017e4">Die Rechnung konnte nicht gelesen werden</string>
+    <string name="s_0a2edd30">Wir konnten den Eintrag nicht speichern</string>
+    <string name="s_364be4bc">Der Eintrag konnte nicht veröffentlicht werden</string>
+    <string name="s_37f81884">Der Tarif konnte nicht gekauft werden</string>
+    <string name="s_cf802fc0">Die Überweisungsnummer konnte nicht gespeichert werden</string>
+    <string name="s_9338c391">Die Überweisung konnte nicht bestätigt werden</string>
+    <string name="s_9179029e">Die Zahlungsmethoden konnten nicht gespeichert werden</string>
+    <string name="s_7b9c60b6">Gespeichert</string>
+    <string name="s_11bc7d18">💳 Zahlungsmethode · %1$s</string>
+    <string name="s_20f44d7f">Bank Al Sham</string>
+    <string name="s_66c40d1d">Senden Sie nach der Überweisung die Transaktionsnummer von der Bestellseite. Der Shop-Inhaber bestätigt den Eingang, nachdem er sein Konto geprüft hat.</string>
+    <string name="s_cc3ae185">%1$s Produkte pro Monat · %2$s</string>
+    <string name="s_6152db49">gebraucht und neu</string>
+    <string name="s_7d192e2b">nur gebrauchte Artikel</string>
+    <string name="s_4a6a560a">Empfänger: %1$s</string>
+    <string name="s_2c0bca89">Überweisungsnummer: %1$s</string>
+    <string name="s_16765e8a">Transaktionsnummer gesendet: %1$s</string>
+    <string name="s_d701f388">Zahlungsmethode:</string>
+    <string name="s_6a069c95">Transaktionsnummer nach der Überweisung</string>
+    <string name="s_9c976ca3">Ich habe die Überweisung gesendet</string>
+    <string name="s_f5c962b6">Warten auf die Bestätigung des Shop-Inhabers, dass die Überweisung eingegangen ist.</string>
+    <string name="s_6b666b63">Eingang der Überweisung bestätigen</string>
+    <string name="s_b179bf25">Wie erhalten Sie das Geld aus Ihren Verkäufen?</string>
+    <string name="s_2ace6138">Wählen Sie die Methoden, die Sie haben. Der Kunde sieht sie erst, nachdem er ein Produkt bei Ihnen bestellt hat.</string>
+    <string name="s_01a85ddc">Name auf dem Konto</string>
+    <string name="s_54744a3d">Konto- oder Wallet-Nummer</string>
+    <string name="s_4816f255">Zahlungsmethoden gespeichert</string>
+    <string name="s_40c2c372">Zahlungsmethoden speichern</string>
+    <string name="sec_why">Das erhalten Sie</string>
+    <string name="sec_how">So funktioniert es</string>
+    <string name="sec_about">ⓘ Über diesen Bereich</string>
+    <string name="sec_back">Zurück</string>
+    <string name="sec_start">Loslegen</string>
+    <string name="sec_login">Zum Starten anmelden</string>
+    <string name="sec_register">Konto erstellen</string>
+    <string name="sec_acc_kicker">🧮 Buchhaltung</string>
+    <string name="sec_acc_title">Die Bücher Ihres Shops an einem Ort</string>
+    <string name="sec_acc_sub">Erfassen Sie Einnahmen und Ausgaben, behalten Sie Ihren Bestand im Blick und sehen Sie Ihren Gewinn, ganz ohne Buchhaltungskenntnisse.</string>
+    <string name="sec_acc_f1t">Einnahmen und Ausgaben</string>
+    <string name="sec_acc_f1d">Erfassen Sie jeden Vorgang in Sekunden und sehen Sie das Ergebnis pro Währung und Zeitraum.</string>
+    <string name="sec_acc_f2t">Bestand und Barcodes</string>
+    <string name="sec_acc_f2d">Verfolgen Sie die Menge jedes Produkts, suchen Sie per Barcode und sehen Sie, was knapp wird.</string>
+    <string name="sec_acc_f3t">Rechnungsscan</string>
+    <string name="sec_acc_f3d">Fotografieren Sie die Rechnung, die KI liest Betrag und Lieferant aus, und Sie prüfen und bestätigen.</string>
+    <string name="sec_acc_f4t">Berichte und Export</string>
+    <string name="sec_acc_f4d">Laden Sie alle Einträge als CSV-Datei herunter oder drucken Sie einen fertigen Bericht für Ihren Steuerberater.</string>
+    <string name="sec_acc_s1">Tarif wählen oder Testphase starten</string>
+    <string name="sec_acc_s2">Produkte und Einträge hinzufügen</string>
+    <string name="sec_acc_s3">Gewinn verfolgen und Berichte exportieren</string>
+    <string name="sec_resp_kicker">🤖 Autoresponder</string>
+    <string name="sec_resp_title">Antworten Sie Ihren Kunden, auch wenn Sie schlafen</string>
+    <string name="sec_resp_sub">Verbinden Sie Ihren Telegram-Bot, und der Autoresponder beantwortet Nachrichten für Ihren Shop. Facebook und Instagram folgen bald.</string>
+    <string name="sec_resp_f1t">Nachrichten und Kommentare</string>
+    <string name="sec_resp_f1d">Aktuell beantwortet er Telegram-Nachrichten. Messenger und Instagram folgen bald.</string>
+    <string name="sec_resp_f2t">Regeln in Ihren Worten</string>
+    <string name="sec_resp_f2d">Legen Sie Stichwörter und fertige Antworten fest (Preise, Adresse, Öffnungszeiten), und sie werden sofort gesendet.</string>
+    <string name="sec_resp_f3t">Künstliche Intelligenz</string>
+    <string name="sec_resp_f3d">Wenn keine Regel passt, schreibt sie eine passende Antwort, nur anhand der von Ihnen eingegebenen Informationen.</string>
+    <string name="sec_resp_f4t">Posteingang</string>
+    <string name="sec_resp_f4d">Sehen Sie alle Unterhaltungen, greifen Sie jederzeit von Hand ein und verfolgen Sie die Wochenübersichten.</string>
+    <string name="sec_resp_s1">Kanäle verbinden</string>
+    <string name="sec_resp_s2">Regeln schreiben oder KI einschalten</string>
+    <string name="sec_resp_s3">Laufen lassen und den Posteingang verfolgen</string>
+    <string name="tab_hr">Personal</string>
+    <string name="profile_my_cart">🛒 Mein Warenkorb</string>
+    <string name="sec_hr_open">Personalwesen öffnen</string>
+    <string name="sec_hr_kicker">👥 Personalwesen (HR)</string>
+    <string name="sec_hr_title">Verwalten Sie Ihr Personal an einem Ort</string>
+    <string name="sec_hr_sub">Anwesenheit, Urlaub, Lohnabrechnung und Gehaltsvorschüsse für die Mitarbeiter Ihres Unternehmens, einfach und mit fertigen Berichten.</string>
+    <string name="sec_hr_f1t">Anwesenheit</string>
+    <string name="sec_hr_f1d">Mitarbeiter stempeln ein und aus, und Sie verfolgen die Arbeitszeit und korrigieren jeden Eintrag.</string>
+    <string name="sec_hr_f2t">Urlaub</string>
+    <string name="sec_hr_f2d">Ein Mitarbeiter beantragt Urlaub, der Antrag geht an die Führungskraft und dann an das Personalwesen, und der Resturlaub wird für Sie berechnet.</string>
+    <string name="sec_hr_f3t">Lohnabrechnung</string>
+    <string name="sec_hr_f3d">Monatliche Gehaltsabrechnungen, bei denen Fehlzeiten und Vorschussraten automatisch abgezogen werden.</string>
+    <string name="sec_hr_f4t">Gehaltsvorschüsse</string>
+    <string name="sec_hr_f4d">Vorschuss beantragen, genehmigen und auf die Gehälter verteilen, ohne Papier und ohne manuelles Rechnen.</string>
+    <string name="sec_hr_s1">Unternehmen registrieren</string>
+    <string name="sec_hr_s2">Abteilungen und Mitarbeiter hinzufügen</string>
+    <string name="sec_hr_s3">Lohnabrechnung durchführen und Berichte verfolgen</string>
+    <string name="prof_sec_buy">Meine Einkäufe</string>
+    <string name="prof_sec_buy_sub">Warenkorb, Bestellungen und Favoriten</string>
+    <string name="prof_sec_wallet">Meine Wallet</string>
+    <string name="prof_sec_wallet_sub">Guthaben und Auszahlung</string>
+    <string name="prof_sec_business">Mein Betrieb</string>
+    <string name="prof_sec_business_sub">Shop, Karteneintrag und Werbung</string>
+    <string name="prof_sec_marketing">Marketing</string>
+    <string name="prof_sec_marketing_sub">Provision für Empfehlungen verdienen</string>
+    <string name="prof_sec_services">Meine Dienste</string>
+    <string name="prof_sec_services_sub">Termine und Training</string>
+    <string name="prof_sec_privacy">Standort</string>
+    <string name="prof_sec_privacy_sub">Meinen Standort und meinen Ort auf der Karte teilen</string>
+    <string name="prof_sec_admin">Verwaltung</string>
+    <string name="prof_sec_admin_sub">Werbung und Anfragen prüfen</string>
+    <string name="prof_sec_account">Mein Konto und Sicherheit</string>
+    <string name="prof_sec_account_sub">Meine Daten, Benachrichtigungen, Abmelden</string>
+    <string name="store_visit_shop">Shop besuchen</string>
+    <string name="site_tab_home">Startseite</string>
+    <string name="site_why">Warum nutzen</string>
+    <string name="site_faq">Häufige Fragen</string>
+    <string name="site_stepsTitle">So funktioniert es</string>
+    <string name="site_featuresTitle">Alles an einem Ort</string>
+    <string name="site_detailsTitle">Im Detail</string>
+    <string name="site_accounting_d1_t">Einnahmen und Ausgaben</string>
+    <string name="site_accounting_d1_b1">Erfassen Sie jeden Eintrag mit Art (Einnahme oder Ausgabe), Kategorie, Details und Betrag.</string>
+    <string name="site_accounting_d1_b2">Die Übersicht berechnet Einnahmen, Ausgaben und das Ergebnis für jede Währung und jeden Zeitraum.</string>
+    <string name="site_accounting_d1_b3">Bearbeiten oder löschen Sie jeden fehlerhaften Eintrag.</string>
+    <string name="site_accounting_d2_t">Bestand und Barcodes</string>
+    <string name="site_accounting_d2_b1">Fügen Sie ein Produkt mit Name, Verkaufspreis, Kosten und vorhandener Menge hinzu.</string>
+    <string name="site_accounting_d2_b2">Suchen Sie einen Barcode mit der Handykamera (sofern Ihr Gerät das unterstützt) oder geben Sie ihn ein.</string>
+    <string name="site_accounting_d2_b3">Jeder Verkauf verringert die Menge und erfasst Einnahme und Kosten der verkauften Ware von selbst.</string>
+    <string name="site_accounting_d3_t">Rechnungsscan</string>
+    <string name="site_accounting_d3_b1">Machen Sie ein klares Foto der Einkaufsrechnung.</string>
+    <string name="site_accounting_d3_b2">Die App liest Betrag, Lieferant und Beschreibung aus, und Sie prüfen und bearbeiten vor dem Speichern.</string>
+    <string name="site_accounting_d3_b3">Es wird nichts gespeichert, bis Sie bestätigen. Für Fotos gibt es ein Tageslimit, und eine Rechnung können Sie immer auch eintippen.</string>
+    <string name="site_accounting_d4_t">Berichte und Shop-Verknüpfung</string>
+    <string name="site_accounting_d4_b1">Laden Sie jederzeit alle Einträge als CSV-Datei herunter.</string>
+    <string name="site_accounting_d4_b2">Drucken Sie den Übersichtsbericht und übergeben Sie Ihrem Steuerberater die fertigen Zahlen.</string>
+    <string name="site_accounting_d4_b3">Wenn Sie einen Shop bei Dalilacom haben, werden Ihre gelieferten Bestellungen von selbst erfasst: Einnahmen, Kosten und Liefergebühren.</string>
+    <string name="site_responder_d1_t">Nachrichten</string>
+    <string name="site_responder_d1_b1">Fügen Sie das Token Ihres eigenen Telegram-Bots ein, und er verbindet sich von selbst.</string>
+    <string name="site_responder_d1_b2">Er beantwortet Textnachrichten. Fotos und Sprachnachrichten beantwortet er nicht.</string>
+    <string name="site_responder_d1_b3">Den gesamten Autoresponder können Sie in Ihren Einstellungen mit einer Schaltfläche ausschalten.</string>
+    <string name="site_responder_d2_t">Regeln</string>
+    <string name="site_responder_d2_b1">Schreiben Sie Stichwörter, und wenn eine Nachricht eines davon enthält, wird die von Ihnen gewählte Antwort gesendet.</string>
+    <string name="site_responder_d2_b2">Sie können den Namen des Kunden in eine Antwort einfügen, und er wird von selbst ausgefüllt.</string>
+    <string name="site_responder_d2_b3">Eine Nachricht, die zu keiner Regel passt, erhält eine Ersatzantwort: einen festen Text, KI oder gar keine Antwort.</string>
+    <string name="site_responder_d3_t">Künstliche Intelligenz</string>
+    <string name="site_responder_d3_b1">Sie schreibt die Antwort anhand Ihrer Geschäftsbeschreibung und des in den Einstellungen festgelegten Tonfalls.</string>
+    <string name="site_responder_d3_b2">Ihr ist vorgegeben, keine Preise, Verfügbarkeiten oder Bedingungen zu erfinden. Wenn sie unsicher ist, sagt sie, dass sich das Team melden wird.</string>
+    <string name="site_responder_d3_b3">KI gehört zu den Tarifen, die sie enthalten, und hat ein Antwortkontingent. Ist das Kontingent aufgebraucht, laufen Regeln und feste Antworten weiter.</string>
+    <string name="site_responder_d4_t">Posteingang</string>
+    <string name="site_responder_d4_b1">Jede Nachricht und ihre Antwort werden mit ihrem Status im Posteingang gespeichert: beantwortet, wartet auf Sie, fehlgeschlagen oder übersprungen.</string>
+    <string name="site_responder_d4_b2">Wenn eine Nachricht wie eine Beschwerde aussieht, erhält der Kunde sofort eine Entschuldigung und Sie eine Benachrichtigung.</string>
+    <string name="site_responder_d4_b3">Sie können jede Nachricht, die auf Sie wartet oder deren Versand fehlgeschlagen ist, von Hand beantworten.</string>
+    <string name="site_ctaTitle">Bereit zum Start?</string>
+    <string name="site_ctaSub">Ein paar einfache Schritte, und Sie sehen den Unterschied vom ersten Tag an.</string>
+    <string name="site_open_responder">Autoresponder öffnen</string>
+    <string name="site_open_accounting">Buchhaltungsübersicht öffnen</string>
+    <string name="site_open_hr">Das HR-System öffnen</string>
+    <string name="site_login">Zum Starten anmelden</string>
+    <string name="site_register">Konto erstellen</string>
+    <string name="site_plans">Tarife ansehen</string>
+    <string name="site_learn">Mehr erfahren</string>
+    <string name="site_planNeeded">Für die Buchhaltung ist ein aktiver Tarif oder eine Testphase nötig.</string>
+    <string name="site_responder_tab_overview">Status</string>
+    <string name="site_responder_tab_channels">Kanäle</string>
+    <string name="site_responder_tab_rules">Regeln</string>
+    <string name="site_responder_tab_inbox">Posteingang</string>
+    <string name="site_accounting_tab_summary">Übersicht</string>
+    <string name="site_accounting_tab_entry">Eintrag hinzufügen</string>
+    <string name="site_accounting_tab_invoices">Rechnungen</string>
+    <string name="site_accounting_tab_stock">Bestand</string>
+    <string name="site_art_chat1">Wie viel kostet dieses Produkt?</string>
+    <string name="site_art_chat2">$25, und die Lieferung ist kostenlos 🚚</string>
+    <string name="site_art_chat3">Wo befinden Sie sich?</string>
+    <string name="site_art_chat4">In Damaskus, geöffnet von 9 bis 21 Uhr ✅</string>
+    <string name="site_art_kw1">Preise</string>
+    <string name="site_art_kw2">Öffnungszeiten</string>
+    <string name="site_art_kw3">Adresse</string>
+    <string name="site_art_income">Einnahmen</string>
+    <string name="site_art_expense">Ausgaben</string>
+    <string name="site_art_net">Nettogewinn</string>
+    <string name="site_art_invoice">Einkaufsrechnung</string>
+    <string name="site_art_total">Gesamt</string>
+    <string name="site_art_low">Wird knapp</string>
+    <string name="site_art_item1">Baumwollhemd</string>
+    <string name="site_art_item2">Sportschuhe</string>
+    <string name="site_art_item3">Ledertasche</string>
+    <string name="site_art_payslip">Gehaltsabrechnung</string>
+    <string name="site_art_netpay">Nettogehalt</string>
+    <string name="site_art_leave">Urlaub</string>
+    <string name="site_art_present">Anwesend</string>
+    <string name="site_responder_slide1_t">Eine sofortige Antwort auf jede Nachricht</string>
+    <string name="site_responder_slide1_d">Ein Kunde fragt um 3 Uhr nachts? Der Autoresponder antwortet in Sekunden, in Ihrem Stil.</string>
+    <string name="site_responder_slide2_t">Jetzt Telegram, bald mehr</string>
+    <string name="site_responder_slide2_d">Verbinden Sie Ihren Telegram-Bot einmal, und jede Nachricht landet an einem Ort. Facebook und Instagram folgen bald.</string>
+    <string name="site_responder_slide3_t">KI, die Ihren Shop kennt</string>
+    <string name="site_responder_slide3_d">Sie antwortet nur anhand dessen, was Sie geschrieben haben: Preise, Öffnungszeiten und Adresse, ohne etwas zu erfinden.</string>
+    <string name="site_responder_st1_l">Immer an</string>
+    <string name="site_responder_st2_n">Sekunden</string>
+    <string name="site_responder_st2_l">Zeit bis zur Antwort an einen Kunden</string>
+    <string name="site_responder_st3_l">Aus Ihren eigenen Informationen</string>
+    <string name="site_responder_s1_d">Tippen Sie auf „Verbinden“ und wählen Sie Ihre Seite: kein Code, kein Aufwand.</string>
+    <string name="site_responder_s2_d">Schreiben Sie Stichwörter und fertige Antworten oder schalten Sie KI für den Rest ein.</string>
+    <string name="site_responder_s3_d">Jede Unterhaltung liegt im Posteingang, und Sie können jederzeit eingreifen.</string>
+    <string name="site_responder_faq1_q">Welche Kanäle unterstützt er?</string>
+    <string name="site_responder_faq1_a">Heute Telegram. Facebook Messenger und Instagram folgen bald.</string>
+    <string name="site_responder_faq2_q">Erfindet er Antworten?</string>
+    <string name="site_responder_faq2_a">Nein. Er antwortet nur anhand der von Ihnen eingegebenen Informationen und übergibt den Chat an Sie, wenn er etwas nicht weiß.</string>
+    <string name="site_responder_faq3_q">Kann ich in eine Unterhaltung eingreifen?</string>
+    <string name="site_responder_faq3_a">Natürlich. Im Posteingang sehen Sie alles und können jederzeit selbst antworten.</string>
+    <string name="site_responder_faq4_q">Was kostet es?</string>
+    <string name="site_responder_faq4_a">Es gibt Tarife für Betriebe jeder Größe, mit einer Testphase. Sie sehen sie im Bereich selbst.</string>
+    <string name="site_accounting_slide1_t">Ihre Bücher auf einen Blick</string>
+    <string name="site_accounting_slide1_d">Einnahmen, Ausgaben und Nettogewinn pro Währung, ohne Tabellen.</string>
+    <string name="site_accounting_slide2_t">Rechnung fotografieren, und fertig</string>
+    <string name="site_accounting_slide2_d">Die KI liest Betrag und Lieferant aus, und Sie prüfen und bestätigen mit einem Tipp.</string>
+    <string name="site_accounting_slide3_t">Ihr Bestand unter Kontrolle</string>
+    <string name="site_accounting_slide3_d">Verfolgen Sie Mengen, suchen Sie per Barcode und bemerken Sie jedes Produkt, das knapp wird.</string>
+    <string name="site_accounting_st1_l">Ihr Nettogewinn, live</string>
+    <string name="site_accounting_st2_l">Rechnungen per Foto</string>
+    <string name="site_accounting_st3_l">Bestand per Barcode</string>
+    <string name="site_accounting_s1_d">Starten Sie mit einer Testphase oder einem Tarif, und die Buchhaltungsübersicht öffnet sich.</string>
+    <string name="site_accounting_s2_d">Erfassen Sie Ihre Einträge und fügen Sie Ihre Produkte hinzu oder fotografieren Sie Rechnungen.</string>
+    <string name="site_accounting_s3_d">Sehen Sie das Ergebnis und laden Sie Ihre Berichte als CSV herunter oder drucken Sie sie.</string>
+    <string name="site_accounting_faq1_q">Muss ich Buchhaltung können?</string>
+    <string name="site_accounting_faq1_a">Nein. Erfassen Sie Ihre Einnahmen und Ausgaben, und der Rest wird für Sie berechnet.</string>
+    <string name="site_accounting_faq2_q">Ist es mit meinem Shop verknüpft?</string>
+    <string name="site_accounting_faq2_a">Ja. Gelieferte Bestellungen werden für Sie erfasst: Einnahmen, Kosten und Liefergebühren.</string>
+    <string name="site_accounting_faq3_q">Kann ich meine Daten exportieren?</string>
+    <string name="site_accounting_faq3_a">Sie können jederzeit alle Einträge als CSV-Datei herunterladen.</string>
+    <string name="site_accounting_faq4_q">Brauche ich ein Abonnement?</string>
+    <string name="site_accounting_faq4_a">Für die Buchhaltung ist ein aktiver Tarif oder eine Testphase nötig, und die Schaltfläche zeigt die Tarife.</string>
+    <string name="site_hr_slide1_t">Ihr Personal an einem Ort</string>
+    <string name="site_hr_slide1_d">Profile, Abteilungen und Berechtigungen, wobei die Daten jedes Unternehmens getrennt und sicher aufbewahrt werden.</string>
+    <string name="site_hr_slide2_t">Lohnabrechnung mit einem Klick</string>
+    <string name="site_hr_slide2_d">Monatliche Gehaltsabrechnungen, bei denen Fehlzeiten und Vorschussraten automatisch abgezogen werden.</string>
+    <string name="site_hr_slide3_t">Urlaub und Vorschüsse ohne Papier</string>
+    <string name="site_hr_slide3_d">Anträge und Genehmigungen in einer Kette (Führungskraft, dann Personalwesen), mit berechnetem Guthaben.</string>
+    <string name="site_hr_s1_d">Registrieren Sie Ihr Unternehmen und wählen Sie seine Währung.</string>
+    <string name="site_hr_s2_d">Fügen Sie Ihre Abteilungen und Mitarbeiter hinzu und legen Sie deren Berechtigungen fest.</string>
+    <string name="site_hr_s3_d">Führen Sie die Lohnabrechnung durch und verfolgen Sie Berichte und Übersichten.</string>
+    <string name="site_hr_faq1_q">Brauche ich eine andere Website oder App?</string>
+    <string name="site_hr_faq1_a">Nein. Das Personalwesen ist in DALILACOM enthalten: Sie öffnen es von hier aus, ohne andere Website und ohne zweite Anmeldung.</string>
+    <string name="site_hr_faq2_q">Sind meine Daten sicher?</string>
+    <string name="site_hr_faq2_a">Die Daten jedes Unternehmens sind vollständig von den anderen getrennt, und die Berechtigungen werden pro Rolle festgelegt.</string>
+    <string name="site_hr_faq3_q">Wer darf was?</string>
+    <string name="site_hr_faq3_a">Es gibt Rollen: Unternehmensadmin, Personalwesen, Abteilungsleiter und Mitarbeiter, jede mit eigenen Berechtigungen.</string>
+    <string name="site_hr_faq4_q">Was kostet es?</string>
+    <string name="site_hr_faq4_a">Es gibt Tarife und eine Testphase, die Sie im System sehen.</string>
+    <string name="s_55270d0e">باقة متجرك المجانية</string>
+    <string name="s_e4b4c234">سوق المستخدمين</string>
+    <string name="s_29c83806">تم إرفاق الصورة</string>
+    <string name="s_4810cb93">تعذّر رفع الصورة</string>
+    <string name="s_fa9309cd">← رجوع</string>
+    <string name="s_ac6aac42">افتح متجرك الخاص</string>
+    <string name="s_d4d43912">اختر اسماً لمتجرك، وبعدها أضف منتجاتك وشارك صفحته مع الناس.</string>
+    <string name="s_e72dca5d">اسم المتجر</string>
+    <string name="s_886333f5">وصف المتجر (اختياري)</string>
+    <string name="s_2203e3d9">تم إنشاء متجرك</string>
+    <string name="s_01b266ff">تعذّر إنشاء المتجر</string>
+    <string name="s_13adebab">إنشاء المتجر</string>
+    <string name="s_d7e8f7da">عرض متجري</string>
+    <string name="s_0ee0b71f">أضف منتج للبيع</string>
+    <string name="s_23a79f17">الإعلانات المجانية المتبقية هذا الشهر: %1$s من %2$s</string>
+    <string name="s_df644ae1">اسم المنتج</string>
+    <string name="s_b5a7adde">وصف المنتج</string>
+    <string name="s_3601146c">السعر</string>
+    <string name="s_5e7ac625">رقم للتواصل (اختياري)</string>
+    <string name="s_fe3ac683">الصورة مرفقة ✓</string>
+    <string name="s_c5cd4e00">إضافة صورة للمنتج</string>
+    <string name="s_019d1ca7">مستعمل</string>
+    <string name="s_03c2e7e4">جديد</string>
+    <string name="s_9cd5d5cd">وصلت للحد المجاني. اختر باقة من باقات المتجر للمتابعة.</string>
+    <string name="s_a1272e5c">تم تفعيل الباقة</string>
+    <string name="s_928735d6">رصيد</string>
+    <string name="s_43b0c75a">تم إرسال إعلانك للمراجعة</string>
+    <string name="s_0b9aa735">إرسال للمراجعة</string>
+    <string name="s_985b09fd">إعلاناتي</string>
+    <string name="s_92e97e03">بانتظار المراجعة</string>
+    <string name="s_bae1ccce">مرفوض بعد مراجعة الذكاء الاصطناعي</string>
+    <string name="s_9b9d8a97">منشور</string>
+    <string name="s_d85a8a38">مباع</string>
+    <string name="s_94f37dcd">السبب: </string>
+    <string name="s_9a7d8a0f">سجّل دخولك لتضيف إعلاناً</string>
+    <string name="s_b6d4223e">تسجيل الدخول</string>
+    <string name="s_318421e6">أحدث المنتجات</string>
+    <string name="s_72608e10">المتجر: </string>
+    <string name="s_698d3436">للتواصل: </string>
+    <string name="s_1bf1c6ab">ما في إعلانات منشورة حالياً</string>
+    <string name="s_e767f75b">عم نحمل المتجر…</string>
+    <string name="s_9aba83cd">ما في منتجات منشورة بهالمتجر حالياً</string>
+    <string name="site_responder_st1_n">24/7</string>
+    <string name="site_responder_st3_n">100%</string>
+    <string name="site_accounting_st1_n">📊</string>
+    <string name="site_accounting_st2_n">🧾</string>
+    <string name="site_accounting_st3_n">📦</string>
+    <string name="site_hr_st1_n">🕒</string>
+    <string name="site_hr_st2_n">💵</string>
+    <string name="site_hr_st3_n">🔒</string>
 </resources>
