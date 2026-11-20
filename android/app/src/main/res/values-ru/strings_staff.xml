@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Русский: scaffolded by npm run i18n:add. The values are still ENGLISH placeholders — translate them (keep the keys and %1$s / %1$d markers). -->
+<resources>
+    <string name="staff_title">Персонал бизнеса</string>
+    <string name="staff_my_work_title">Моя работа</string>
+    <string name="staff_help">Приглашайте сотрудников работать с вашей бухгалтерией, каждому со своей ролью. Каждая запись фиксируется на имя того, кто её сделал, а вы решаете их доступ и комиссии.</string>
+    <string name="staff_add">Добавить сотрудника</string>
+    <string name="staff_name">Имя сотрудника</string>
+    <string name="staff_role_cashier">Кассир</string>
+    <string name="staff_role_stock">Кладовщик</string>
+    <string name="staff_role_assistant">Помощник бухгалтера</string>
+    <string name="staff_role_manager">Руководитель</string>
+    <string name="staff_help_cashier">Записывает продажи и видит только свои накладные, без прибыли и записей о деньгах.</string>
+    <string name="staff_help_stock">Видит товары и изменяет количество и подсчёты склада, без продаж и денег.</string>
+    <string name="staff_help_assistant">Записывает продажи, доходы, расходы, платежи и закупки, без удаления, экспорта и отчётов.</string>
+    <string name="staff_help_manager">Всё в бухгалтерии, кроме тарифов и подписок.</string>
+    <string name="staff_rate">Ставка комиссии с продаж</string>
+    <string name="staff_rate_help">Доля от чистой суммы каждой продажи, которую записывает этот человек (без налога). Оставьте ноль, если комиссии нет.</string>
+    <string name="staff_fixed">Фиксированная месячная оплата (заметка для вас)</string>
+    <string name="staff_saved">Сохранено</string>
+    <string name="staff_none">Вы пока не добавили сотрудников</string>
+    <string name="staff_invite">Код приглашения</string>
+    <string name="staff_invite_show">Передайте этот код сотруднику. Он вводит его на странице бухгалтерии со своего аккаунта. Действует 7 дней.</string>
+    <string name="staff_copy">Скопировать код</string>
+    <string name="staff_copied">Код скопирован</string>
+    <string name="staff_state_pending">Ожидает принятия</string>
+    <string name="staff_state_linked">Привязан к аккаунту</string>
+    <string name="staff_state_none">Не приглашён</string>
+    <string name="staff_edit_rate">Изменить комиссию</string>
+    <string name="staff_remove">Убрать</string>
+    <string name="staff_save">Сохранить</string>
+    <string name="staff_cancel">Отмена</string>
+    <string name="staff_remove_confirm" formatted="true">Убрать сотрудника %1$s? Его доступ прекратится сразу, а его записи и заработанные комиссии останутся.</string>
+    <string name="staff_unpaid">Невыплаченные комиссии</string>
+    <string name="staff_pay">Выплатить комиссии</string>
+    <string name="staff_pay_confirm" formatted="true">Выплатить %1$s комиссий сотруднику %2$s? В бухгалтерии будет записан расход.</string>
+    <string name="staff_paid">Выплата комиссий записана</string>
+    <string name="staff_join_title">Владелец бизнеса дал вам код приглашения?</string>
+    <string name="staff_join_help">Введите код приглашения, и ваше место работы появится в бухгалтерии.</string>
+    <string name="staff_join_btn">Присоединиться</string>
+    <string name="staff_joined">Вы присоединились к команде</string>
+    <string name="staff_switch_mine">Моя бухгалтерия</string>
+    <string name="staff_working_at" formatted="true">Работа в %1$s</string>
+    <string name="staff_my_rate" formatted="true">Ваша комиссия — %1$.1f%% от продаж</string>
+    <string name="staff_commissions">Ваши комиссии</string>
+    <string name="staff_no_commissions">Комиссий пока нет</string>
+    <string name="staff_status_accrued">Не выплачено</string>
+    <string name="staff_status_paid">Выплачено</string>
+    <string name="staff_status_void">Отменена</string>
+    <string name="staff_role_driver">Курьер</string>
+    <string name="staff_help_driver">Забирает готовые заказы магазина, доставляет их и отмечает доставку, без доступа к бухгалтерии.</string>
+    <string name="staff_pay_salary">Выплатить фиксированную зарплату</string>
+    <string name="staff_pay_salary_confirm" formatted="true">Выплатить фиксированную зарплату (%1$s) сотруднику %2$s? В бухгалтерии будет записан расход.</string>
+    <string name="staff_deliveries_title">Доставки</string>
+    <string name="staff_refresh">Обновить</string>
+    <string name="staff_no_deliveries">Сейчас нет заказов, готовых к доставке</string>
+    <string name="staff_order_shipped">В пути</string>
+    <string name="staff_order_preparing">Готов к выдаче</string>
+    <string name="staff_pickup">Я забрал заказ</string>
+    <string name="staff_deliver">Доставлено</string>
+    <string name="staff_picked_up">Заказ за вами и уже в пути</string>
+    <string name="staff_delivered">Доставка отмечена</string>
+    <string name="staff_role_marketer">Маркетолог бизнеса</string>
+    <string name="staff_help_marketer">Готовит предложения магазина и рассылает объявления его подписчикам, без доступа к бухгалтерии и платной рекламе.</string>
+    <string name="staff_marketing_title">Маркетинг</string>
+    <string name="staff_offer_new">Новое предложение</string>
+    <string name="staff_offer_title">Название</string>
+    <string name="staff_offer_percent">Размер скидки (процент)</string>
+    <string name="staff_offer_note">Предложение проверяет администрация, прежде чем его увидят клиенты.</string>
+    <string name="staff_offer_add">Добавить предложение</string>
+    <string name="staff_offer_none">Предложений пока нет</string>
+    <string name="staff_offer_stop">Остановить</string>
+    <string name="staff_offer_start">Запустить</string>
+    <string name="staff_announce_title">Объявление для подписчиков</string>
+    <string name="staff_announce_help">Оно дойдёт до подписчиков бизнеса после проверки администрацией. В настройках уведомлений можно отключить рекламные сообщения.</string>
+    <string name="staff_announce_body">Текст объявления</string>
+    <string name="staff_announce_send">Отправить на проверку</string>
+    <string name="staff_announce_sent">Отправлено на проверку</string>
+    <string name="staff_hr_link">Привязка к расчёту зарплаты</string>
+    <string name="staff_hr_linked" formatted="true">Привязан к расчёту зарплаты: %1$s</string>
+    <string name="staff_hr_pick">Выберите сотрудника, чей расчётный лист получит эти комиссии</string>
+    <string name="staff_hr_none">Без привязки</string>
+    <string name="rcpt_title">Получение заказа</string>
+    <string name="rcpt_pending">Ваш заказ доставлен. Подтвердите, что вы его получили, или отклоните. Если вы не ответите до %1$s, он считается принятым.</string>
+    <string name="rcpt_accept">Я получил заказ</string>
+    <string name="rcpt_reject">Я не получил его или есть проблема</string>
+    <string name="rcpt_reason_prompt">Напишите причину отказа</string>
+    <string name="rcpt_accepted">Вы подтвердили получение заказа</string>
+    <string name="rcpt_accepted_auto">Принято автоматически через 10 дней</string>
+    <string name="rcpt_rejected">Вы отклонили заказ</string>
+    <string name="rcpt_reason">Причина: %1$s</string>
+    <string name="rcpt_shop_pending">Ожидается подтверждение получения клиентом</string>
+    <string name="rcpt_shop_accepted">Клиент подтвердил получение</string>
+    <string name="rcpt_shop_accepted_auto">Принято автоматически через 10 дней</string>
+    <string name="rcpt_shop_rejected">Клиент отклонил заказ</string>
+</resources>

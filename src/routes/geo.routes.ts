@@ -22,8 +22,18 @@ geoRouter.get("/market", route(async (req, res) => {
   res.json({ country, currencyCode: await currencyOf(country) });
 }));
 
-geoRouter.get("/countries", route(async (_req, res) => {
-  res.json(await prisma.country.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }));
+geoRouter.get("/countries", route(async (req, res) => {
+  const rows = await prisma.country.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
+  const lang = resolveLanguage(req);
+  // the clients show `nameEnglish` for every language but Arabic, so for another language it carries the country's name in it
+  if (lang === "ar" || lang === "en") return res.json(rows);
+  let names: Intl.DisplayNames | null = null;
+  try { names = new Intl.DisplayNames([lang], { type: "region" }); } catch { names = null; }
+  res.json(rows.map((c) => {
+    let own: string | undefined;
+    try { own = names?.of(c.isoCode2); } catch { own = undefined; }
+    return own && own !== c.isoCode2 ? { ...c, nameEnglish: own } : c;
+  }));
 }));
 
 const countrySchema = z.object({

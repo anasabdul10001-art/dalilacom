@@ -2,6 +2,7 @@ import { prisma } from "../prisma";
 import { DEFAULT_LANGUAGE } from "../lib/languages";
 import { isStoreSection } from "../lib/storeSections";
 import { normalizeText, scoreHaystack, words } from "./category.service";
+import { PRODUCT_CATEGORY_TR } from "../data/localNames";
 
 /** The categories products are filed under (departments > categories > kinds), cached briefly like the professions. */
 export interface ProductCategoryNode {
@@ -28,7 +29,8 @@ export async function loadProductCategories() {
   for (const r of rows) {
     const names: Record<string, string> = { [DEFAULT_LANGUAGE]: r.name };
     if (r.nameEn) names.en = r.nameEn;
-    const haystack = [...new Set([r.name, r.nameEn ?? "", ...r.synonyms].map(normalizeText).filter(Boolean))];
+    Object.assign(names, PRODUCT_CATEGORY_TR[r.slug] ?? {}); // the names in the other languages
+    const haystack = [...new Set([r.name, r.nameEn ?? "", ...r.synonyms, ...Object.values(PRODUCT_CATEGORY_TR[r.slug] ?? {})].map(normalizeText).filter(Boolean))];
     byId.set(r.id, { id: r.id, slug: r.slug, parentId: r.parentId, icon: r.icon, section: r.section, isCustom: r.isCustom, sortOrder: r.sortOrder, names, haystack, children: [] });
   }
   const roots: ProductCategoryNode[] = [];
@@ -40,7 +42,7 @@ export async function loadProductCategories() {
   return cache;
 }
 
-const nameOf = (n: ProductCategoryNode, lang: string) => n.names[lang] ?? n.names[DEFAULT_LANGUAGE];
+const nameOf = (n: ProductCategoryNode, lang: string) => n.names[lang] ?? (lang !== DEFAULT_LANGUAGE ? n.names.en : undefined) ?? n.names[DEFAULT_LANGUAGE];
 
 export interface ProductCategoryShape {
   id: string;

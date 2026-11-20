@@ -88,7 +88,7 @@ export async function loadCategoryTree() {
 }
 
 export function localizedName(node: CategoryNode, lang: string): string {
-  return node.names[lang] ?? node.names[DEFAULT_LANGUAGE] ?? node.slug;
+  return node.names[lang] ?? (lang !== DEFAULT_LANGUAGE ? node.names.en : undefined) ?? node.names[DEFAULT_LANGUAGE] ?? node.slug;
 }
 
 /** The category itself plus everything beneath it — "doctors" must include every specialty. */

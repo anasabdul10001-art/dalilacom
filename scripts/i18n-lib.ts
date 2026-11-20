@@ -232,8 +232,20 @@ export async function checkLanguages(root: string): Promise<CheckReport> {
   const enPack = (await import(pathToFileURL(path.join(root, "src/i18n/en.ts")).href)).en as { phrases: Record<string, string>; patterns: [RegExp, string | ((m: RegExpMatchArray) => string)][] };
   const arAndroid = androidStrings(root, "values");
   const enAndroid = androidStrings(root, "values-en");
+  // the whole section / profession tree (every node); its translations live in prisma/categories.tr.ts (or inline as `tr:` on a node)
+  const categorySlugs: string[] = [];
+  if (fs.existsSync(path.join(root, "prisma/categories.data.ts"))) {
+    const tree = (await import(pathToFileURL(path.join(root, "prisma/categories.data.ts")).href)).CATEGORY_TREE as { slug: string; children?: unknown[] }[];
+    const walk = (nodes: { slug: string; children?: unknown[] }[]) => {
+      for (const n of nodes) {
+        categorySlugs.push(n.slug);
+        if (n.children) walk(n.children as { slug: string; children?: unknown[] }[]);
+      }
+    };
+    walk(tree);
+  }
   const categoriesSource = fs.existsSync(path.join(root, "prisma/categories.data.ts")) ? read(path.join(root, "prisma/categories.data.ts")).text : "";
-  const categorySlugs = [...categoriesSource.matchAll(/\bc\("([a-z0-9-]+)"/g)].map((m) => m[1]);
+  const categoryTrSource = fs.existsSync(path.join(root, "prisma/categories.tr.ts")) ? read(path.join(root, "prisma/categories.tr.ts")).text : "";
 
   const languages: LanguageReport[] = [];
   for (const { code } of langs) {
@@ -271,7 +283,7 @@ export async function checkLanguages(root: string): Promise<CheckReport> {
     }
 
     // category names: English comes with the seed; every other language adds `tr: { <code>: ... }` to the nodes
-    const missingCategories = code === "en" ? [] : categorySlugs.filter((slug) => !new RegExp(`c\\("${slug}"[\\s\\S]*?tr:\\s*\\{[^}]*\\b${code}:`).test(categoriesSource));
+    const missingCategories = code === "en" ? [] : categorySlugs.filter((slug) => !new RegExp(`"${slug}": \\{[^\\n]*\\b${code}: \\{ name:`).test(categoryTrSource) && !new RegExp(`c\\("${slug}"[\\s\\S]*?tr:\\s*\\{[^}]*\\b${code}:`).test(categoriesSource));
     languages.push({
       code,
       missing: { web: missingWeb, android: missingAndroid, server: missingServer, categories: missingCategories },

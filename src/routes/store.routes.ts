@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { sendError, sendValidationError } from "../lib/apiError";
-import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
+import { STORE_SECTIONS, isStoreSection, localizeSection, localizeViewSections } from "../lib/storeSections";
 import { altView, displayCurrencyOf } from "../lib/pricing";
 import { DEFAULT_COUNTRY, currencyOf, onlyCountry, viewerCountry } from "../services/viewerCountry.service";
 import { AD_SLOTS, liveAds } from "../services/ads.service";
@@ -113,10 +113,10 @@ const sorts: Record<string, Prisma.ProductOrderByWithRelationInput[]> = {
   price_desc: [{ priceCents: "desc" }],
 };
 
-async function sectionsWithCounts(visible: Prisma.ProductWhereInput) {
+async function sectionsWithCounts(visible: Prisma.ProductWhereInput, lang: string) {
   const grouped = await prisma.product.groupBy({ by: ["storeSection"], where: { ...visible, storeSection: { not: null } }, _count: { _all: true } });
   const counts = new Map(grouped.map((g) => [g.storeSection, g._count._all]));
-  return STORE_SECTIONS.map((s) => ({ ...s, count: counts.get(s.id) ?? 0 })).filter((s) => s.count > 0);
+  return STORE_SECTIONS.map((s) => ({ ...localizeSection(s, lang), count: counts.get(s.id) ?? 0 })).filter((s) => s.count > 0);
 }
 
 // The store's front page in one call: departments, best sellers, deals for members, newest.
@@ -125,7 +125,7 @@ storeRouter.get("/home", route(async (req, res) => {
   const visible = await visibleFor(req.query, country);
   const market = await currencyOf(country);
   const [sections, best, deals, newest] = await Promise.all([
-    sectionsWithCounts(visible),
+    sectionsWithCounts(visible, resolveLanguage(req)),
     prisma.product.findMany({ where: visible, include, orderBy: sorts.popular, take: 12 }),
     prisma.product.findMany({ where: { ...visible, memberDiscountEnabled: true, memberPriceCents: { not: null } }, include, orderBy: sorts.popular, take: 12 }),
     prisma.product.findMany({ where: visible, include, orderBy: sorts.new, take: 12 }),
@@ -151,6 +151,7 @@ storeRouter.get("/home", route(async (req, res) => {
   const bestSellers = best.map((p) => view(p, market));
   const dealViews = deals.map((p) => view(p, market));
   const newViews = newest.map((p) => view(p, market));
+  localizeViewSections([...bestSellers, ...dealViews, ...newViews, ...slots.map((x) => x!.product)], resolveLanguage(req));
   await translateProducts(resolveLanguage(req), [...bestSellers, ...dealViews, ...newViews, ...slots.map((x) => x!.product)]); // the reader's language
   res.json({ country, currency: await currencyOf(country), sections, slots, adOffer, bestSellers, deals: dealViews, newest: newViews });
 }));
@@ -187,14 +188,15 @@ storeRouter.get("/products", route(async (req, res) => {
   ]);
   const market = await currencyOf(country);
   const views = items.map((p) => view(p, market));
+  localizeViewSections(views, resolveLanguage(req));
   await translateProducts(resolveLanguage(req), views);
   res.json({ total, currency: await currencyOf(country), items: views });
 }));
 
 storeRouter.get("/sections", route(async (req, res) => {
   // ?all=1: every section, sold in yet or not (a shop choosing where to list a product)
-  if (req.query.all === "1") return res.json(STORE_SECTIONS.map((s) => ({ ...s, count: 0 })));
-  res.json(await sectionsWithCounts(await visibleFor(req.query, await viewerCountry(req))));
+  if (req.query.all === "1") return res.json(STORE_SECTIONS.map((s) => ({ ...localizeSection(s, resolveLanguage(req)), count: 0 })));
+  res.json(await sectionsWithCounts(await visibleFor(req.query, await viewerCountry(req)), resolveLanguage(req)));
 }));
 
 storeRouter.get("/products/:id", route(async (req, res) => {
@@ -214,6 +216,7 @@ storeRouter.get("/products/:id", route(async (req, res) => {
   const main = view(product, market);
   const relatedViews = related.map((p) => view(p, market));
   const shippingViews = shipping.map((m) => ({ id: m.id, name: m.name, costCents: m.costCents }));
+  localizeViewSections([main, ...relatedViews], resolveLanguage(req));
   await translateProducts(resolveLanguage(req), [main, ...relatedViews]);
   await translateRecords(resolveLanguage(req), shippingViews, ["name"]);
   res.json({ ...main, currency: await currencyOf(country), shipping: shippingViews, related: relatedViews });

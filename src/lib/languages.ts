@@ -12,6 +12,8 @@ export const SUPPORTED_LANGUAGES = [
   // German is hidden until its translations are complete (npm run i18n:check lists what is missing). To show it again:
   // uncomment this line, the Android line in AppLanguages.kt, and the i18n.de.js <script> in public/app/index.html.
   // { code: "de", name: "Deutsch", dir: "ltr" },
+  { code: "ru", name: "Русский", dir: "ltr" },
+  { code: "uk", name: "Українська", dir: "ltr" },
   // </languages>
 ] as const;
 

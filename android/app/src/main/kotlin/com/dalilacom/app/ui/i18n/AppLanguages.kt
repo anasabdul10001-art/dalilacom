@@ -23,6 +23,8 @@ object AppLanguages {
         AppLanguage("en", "English", rtl = false),
         // German is hidden until its translations are complete (see src/lib/languages.ts)
         // AppLanguage("de", "Deutsch", rtl = false),
+        AppLanguage("ru", "Русский", rtl = false),
+        AppLanguage("uk", "Українська", rtl = false),
         // </languages>
     )
 

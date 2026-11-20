@@ -1,0 +1,985 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Українська: scaffolded by npm run i18n:add. The values are still ENGLISH placeholders — translate them (keep the keys and %1$s / %1$d markers). -->
+<!-- Texts of the screens, keyed by a hash of the Arabic source. Same keys in every language; rename a key when you next touch its screen. (English) -->
+<resources>
+    <string name="s_00246e91" formatted="false">Мої замовлення</string>
+    <string name="s_004f489c" formatted="false">Задайте години роботи</string>
+    <string name="s_01f05ae9" formatted="false">У вас поки немає замовлень</string>
+    <string name="s_0224de46" formatted="false">Канал підключено</string>
+    <string name="s_02cdc94a" formatted="false">Підключити Instagram</string>
+    <string name="s_04230bfd" formatted="false">Опис бізнесу</string>
+    <string name="s_04c5e56f" formatted="false">Вкажіть місцезнаходження вашого магазину на мапі</string>
+    <string name="s_064be38d" formatted="false">📄 Експорт квитанції (PDF)</string>
+    <string name="s_06a4e0cc" formatted="false">Не вдалося завантажити гаманець</string>
+    <string name="s_073f5f4b" formatted="false">Телефон (необовʼязково)</string>
+    <string name="s_0a2bc37f" formatted="false">Запит на поповнення отримано — очікується підтвердження адміністратора</string>
+    <string name="s_0a92494e" formatted="false">Імʼя</string>
+    <string name="s_0b149b76" formatted="false">Підтвердити знижку</string>
+    <string name="s_0b9aea6f" formatted="false">Не вдалося змінити кількість</string>
+    <string name="s_0be90459" formatted="false">Години роботи</string>
+    <string name="s_0c05c599" formatted="false">Не вдалося надіслати відповідь</string>
+    <string name="s_0c6c1d53" formatted="false">Підготуйте магазин, щоб він зʼявився в клієнтів</string>
+    <string name="s_0ccab856" formatted="false">Дозвіл на геопозицію не отримано — торкніться мапи, щоб задати місцезнаходження магазину</string>
+    <string name="s_0e1bedb9" formatted="false">Мої збережені місця</string>
+    <string name="s_10ceb09f" formatted="false">Зареєструватися як:</string>
+    <string name="s_14293463" formatted="false">Зараз недоступно</string>
+    <string name="s_14737605" formatted="false">Правило додано</string>
+    <string name="s_153612e1" formatted="false">Квитанція про знижку</string>
+    <string name="s_1699cdea" formatted="false">Додати знижку</string>
+    <string name="s_18d994f4" formatted="false">Новий товар</string>
+    <string name="s_1aa879ba" formatted="false">Ціна для учасників</string>
+    <string name="s_1b98cbb3" formatted="false">Знижок поки немає</string>
+    <string name="s_1be55892" formatted="false">Мої підключені канали</string>
+    <string name="s_1bef7f7d" formatted="false">WhatsApp (з кодом країни, напр.: 9639xxxxxxxx)</string>
+    <string name="s_1dbf1d4a" formatted="false">Введіть ел. пошту та пароль</string>
+    <string name="s_1e3477e2" formatted="false">Ми запитаємо дані вашого магазину після створення акаунта</string>
+    <string name="s_21019a65" formatted="false">Підключити сторінку</string>
+    <string name="s_2136e58d" formatted="false">Автовідповідач</string>
+    <string name="s_21a1bc3f" formatted="false">Опис (необовʼязково)</string>
+    <string name="s_221bae78" formatted="false">Не вдалося завантажити статус</string>
+    <string name="s_222d012d" formatted="false">Зберегти години роботи</string>
+    <string name="s_23e47d75" formatted="false">Місце вашого магазину на мапі</string>
+    <string name="s_249b177e" formatted="false">Повний путівник вашим містом</string>
+    <string name="s_261429f0" formatted="false">+ Новий товар</string>
+    <string name="s_2a837234" formatted="false">Підключити канал</string>
+    <string name="s_2d2bbdc2" formatted="false">Видалити</string>
+    <string name="s_2e1a34c3" formatted="false">,</string>
+    <string name="s_2e3f9ed4" formatted="false">Переведіть USDT (мережа TRC20) на цю адресу, потім вставте ID переказу (txid) — сервер перевірить його автоматично:</string>
+    <string name="s_2f1a3ab7" formatted="false">Задайте робочі дні та години — клієнти бачать «Відкрито зараз» або «Зачинено». Якщо ви зачиняєтеся після опівночі, оберіть час закриття раніше за час відкриття (наприклад 18:00 – 02:00).</string>
+    <string name="s_305fe0fc" formatted="false">Оформіть тариф, щоб активувати цифрову картку</string>
+    <string name="s_328ddce5" formatted="false">Назад</string>
+    <string name="s_33093b21" formatted="false">Введіть коректну суму чека</string>
+    <string name="s_341d926d" formatted="false">Не вдалося зберегти товар</string>
+    <string name="s_347c4ba8" formatted="false">Не вдалося прибрати фото</string>
+    <string name="s_38ceca24" formatted="false">Фіксована відповідь</string>
+    <string name="s_3bb9ad91" formatted="false">Спершу увійдіть, щоб продовжити</string>
+    <string name="s_3ea19382" formatted="false">Неправильні дані для входу</string>
+    <string name="s_3f8e51fe" formatted="false">Моя картка</string>
+    <string name="s_3fc7c056" formatted="false">Мій кошик</string>
+    <string name="s_41066d88" formatted="false">Зареєструватися</string>
+    <string name="s_413c51af" formatted="false">Разом</string>
+    <string name="s_41b05461" formatted="false">Активно</string>
+    <string name="s_42186a14" formatted="false">Прибрати фото</string>
+    <string name="s_424fa77c" formatted="false">Не вдалося видалити товар</string>
+    <string name="s_43010e9c" formatted="false">Не вдалося зберегти дані магазину</string>
+    <string name="s_432dc00c" formatted="false">Не вдалося завантажити товар</string>
+    <string name="s_439b0d4e" formatted="false">Не активовано</string>
+    <string name="s_44048fac" formatted="false">Підтверджено</string>
+    <string name="s_46242623" formatted="false">Введіть своє імʼя</string>
+    <string name="s_471a369e" formatted="false">Не вдалося додати правило</string>
+    <string name="s_47228890" formatted="false">Не вдалося видалити</string>
+    <string name="s_47352f90" formatted="false">Додайте перший товар</string>
+    <string name="s_47428e01" formatted="false">Напишіть вашу відповідь</string>
+    <string name="s_48e7fe4b" formatted="false">Введіть номер членства та 6-значний код</string>
+    <string name="s_4a3ccec5" formatted="false">🕒 Години роботи</string>
+    <string name="s_4b028e52" formatted="false">Чекає на вашу відповідь</string>
+    <string name="s_4b860f78" formatted="false">Пароль (не менше 8 символів)</string>
+    <string name="s_4d977cf7" formatted="false">ID переказу (txid)</string>
+    <string name="s_4e387930" formatted="false">Безкоштовний пробний період</string>
+    <string name="s_5059c36f" formatted="false">WhatsApp (необовʼязково, з кодом країни)</string>
+    <string name="s_51963665" formatted="false">Поточний код</string>
+    <string name="s_51ed1058" formatted="false">Оберіть спосіб оплати та введіть номер операції</string>
+    <string name="s_53655660" formatted="false">Канали</string>
+    <string name="s_53bd39b7" formatted="false">Доступні канали</string>
+    <string name="s_54b49c02" formatted="false">Інструкції для ШІ</string>
+    <string name="s_55cf1553" formatted="false">Не вдалося почати підключення до Facebook</string>
+    <string name="s_56be3fdb" formatted="false">Введіть назву правила та хоча б одне ключове слово</string>
+    <string name="s_56ee6e0d" formatted="false">Зберегти</string>
+    <string name="s_571d102a" formatted="false">Ви ще не задали місцезнаходження</string>
+    <string name="s_57833160" formatted="false">Підключених каналів поки немає</string>
+    <string name="s_58c8a282" formatted="false">Відвідувач</string>
+    <string name="s_59539fc9" formatted="false">Назва магазину</string>
+    <string name="s_5bf826c5" formatted="false">Закрити</string>
+    <string name="s_5f05466a" formatted="false">Скасовано</string>
+    <string name="s_5f10f855" formatted="false">Не вдалося завантажити способи оплати</string>
+    <string name="s_5ffc2bb8" formatted="false">Назва правила</string>
+    <string name="s_60e251d0" formatted="false">Немає акаунта? Створіть</string>
+    <string name="s_615e65ba" formatted="false">Артикул (необовʼязково)</string>
+    <string name="s_621e568d" formatted="false">Поповнити</string>
+    <string name="s_625e3fc7" formatted="false">Бізнес</string>
+    <string name="s_6310b20d" formatted="false">Оберіть сторінку</string>
+    <string name="s_64cf6641" formatted="false">Мій профіль</string>
+    <string name="s_6617ed19" formatted="false">Не вдалося отримати ваше місцезнаходження — торкніться мапи, щоб задати його вручну</string>
+    <string name="s_66414100" formatted="false">Баланс поповнено</string>
+    <string name="s_67636cc3" formatted="false">Надіслати запит на поповнення</string>
+    <string name="s_676f8348" formatted="false">Не вдалося зареєструвати бізнес-акаунт</string>
+    <string name="s_6793a69f" formatted="false">Товари</string>
+    <string name="s_69bbe90d" formatted="false">Товарів поки немає</string>
+    <string name="s_69c86923" formatted="false">‹ Назад</string>
+    <string name="s_6c21e27c" formatted="false">Щось пішло не так</string>
+    <string name="s_6d05e053" formatted="false">Тон відповідей (наприклад: дружньо й коротко)</string>
+    <string name="s_6e274458" formatted="false">Не вдалося підключити сторінку</string>
+    <string name="s_6e3a209c" formatted="false">Замовлення не знайдено</string>
+    <string name="s_7009c3b0" formatted="false">%1$.5f, %2$.5f</string>
+    <string name="s_70a771db" formatted="false">Не вдалося підтвердити знижку</string>
+    <string name="s_7121fbcc" formatted="false">Facebook підключено ✅</string>
+    <string name="s_746ec1bd" formatted="false">Ціна для учасників має бути нижчою за звичайну ціну</string>
+    <string name="s_749f9cfe" formatted="false">Додайте свій бізнес на мапу</string>
+    <string name="s_760c65a1" formatted="false">Телефон</string>
+    <string name="s_77eb6cfd" formatted="false">Про вас або ваш магазин (показується клієнтам і в накладних)</string>
+    <string name="s_79e32d1f" formatted="false">⏳ Ваша заявка очікує схвалення адміністратора — до цього ваш магазин не зʼявиться на мапі.</string>
+    <string name="s_79e3c383" formatted="false">Не вдалося зберегти години роботи</string>
+    <string name="s_7b3296cc" formatted="false">Повідомлень поки немає</string>
+    <string name="s_7c75fec5" formatted="false">Категорія</string>
+    <string name="s_7d943798" formatted="false">Замовлень поки немає</string>
+    <string name="s_7ef9f7a4" formatted="false">Додано до кошика ✓</string>
+    <string name="s_7f9255f4" formatted="false">Додати правило</string>
+    <string name="s_7feb59f4" formatted="false">Dalilacom</string>
+    <string name="s_8008e7e0" formatted="false">📍 Дані та місцезнаходження магазину</string>
+    <string name="s_8522fb76" formatted="false">Номер членства</string>
+    <string name="s_8562adb5" formatted="false">Не вдалося увійти</string>
+    <string name="s_860f094a" formatted="false">Не вдалося оформити замовлення</string>
+    <string name="s_864c0780" formatted="false">Назва товару</string>
+    <string name="s_8970aed0" formatted="false">Зчитаний код недійсний</string>
+    <string name="s_89a4c18a" formatted="false">Активно</string>
+    <string name="s_8a3cd750" formatted="false">Почати підготовку</string>
+    <string name="s_8a942763" formatted="false">📷 Додати фото</string>
+    <string name="s_8aed060f" formatted="false">Очікує</string>
+    <string name="s_8bf6ddd2" formatted="false">Підписатися</string>
+    <string name="s_8c6117b6" formatted="false">Увійти</string>
+    <string name="s_8c7eace2" formatted="false">Увійдіть через Facebook і оберіть сторінку, на якій працюватиме автовідповідач — без копіювання токенів.</string>
+    <string name="s_8c7ec7a1" formatted="false">Використати моє поточне місцезнаходження</string>
+    <string name="s_8c818f60" formatted="false">Не вдалося завантажити статус — поверніться й спробуйте ще раз</string>
+    <string name="s_8d0496d3" formatted="false">Перевірте назву, ціну та залишок товару</string>
+    <string name="s_8f2679b1" formatted="false">Способи поповнення зараз не ввімкнено — зверніться до адміністратора</string>
+    <string name="s_90a91c96" formatted="false">Огляд</string>
+    <string name="s_90cf87a4" formatted="false">Надіслати</string>
+    <string name="s_911aafd4" formatted="false">Підтвердити</string>
+    <string name="s_92dc656f" formatted="false">Не вдалося підготувати документ</string>
+    <string name="s_935d8234" formatted="false">Причина скасування</string>
+    <string name="s_937c3091" formatted="false">Підписку продовжено</string>
+    <string name="s_93a7f5f0" formatted="false">Перейти до кошика</string>
+    <string name="s_96a2838a" formatted="false">Введіть назву знижки та відсоток від 1 до 100</string>
+    <string name="s_97b1b92d" formatted="false">Так вас знаходять клієнти — торкніться мапи, щоб поставити маркер там, де ваш магазин.</string>
+    <string name="s_9855a904" formatted="false">Додайте знижку для учасників</string>
+    <string name="s_98bd1e1e" formatted="false">Не вдалося зберегти</string>
+    <string name="s_98df46fb" formatted="false">Скасувати дію</string>
+    <string name="s_997f9752" formatted="false">✅ Дані магазину збережено</string>
+    <string name="s_99ca558f" formatted="false">Не вдалося оформити членство</string>
+    <string name="s_9a2547dd" formatted="false">Або введіть дані членства вручну</string>
+    <string name="s_9a40a38b" formatted="false">Оформити замовлення</string>
+    <string name="s_9aa19dc9" formatted="false">Підключити Facebook</string>
+    <string name="s_9b30f06e" formatted="false">Відсоток %</string>
+    <string name="s_9b5be5df" formatted="false">Не вдалося додати товар</string>
+    <string name="s_9cb17c57" formatted="false">Операцій поки немає</string>
+    <string name="s_a0b697cb" formatted="false">Змінити товар</string>
+    <string name="s_a1ec84ae" formatted="false">Дані бізнесу збережено</string>
+    <string name="s_a24110f8" formatted="false">‹ Назад до акаунта клієнта</string>
+    <string name="s_a26cb7f2" formatted="false">Найкраще підключатися кнопкою «Підключити Facebook» вище — без вставки токенів. Поля нижче потрібні для ручного підключення, якщо знадобиться.</string>
+    <string name="s_a2750cc7" formatted="false">Ваш баланс</string>
+    <string name="s_a2daab91" formatted="false">Товар активний</string>
+    <string name="s_a2e93da9" formatted="false">Причина</string>
+    <string name="s_a3836012" formatted="false">Коли він стане активним, ця кнопка відкриє сторінку Facebook напряму.</string>
+    <string name="s_a3ac8fb2" formatted="false">Не вдалося прочитати фото — спробуйте інше</string>
+    <string name="s_a3e249b8" formatted="false">Не вдалося завантажити правила</string>
+    <string name="s_a3e7dfc4" formatted="false">Вхідні</string>
+    <string name="s_a40a6e99" formatted="false">Створити акаунт</string>
+    <string name="s_a4409754" formatted="false">Не вдалося завантажити статус підключення Facebook</string>
+    <string name="s_a549b16b" formatted="false">Відповіли</string>
+    <string name="s_a5e584ae" formatted="false">Текст відповіді (використовуйте {name} для імені клієнта)</string>
+    <string name="s_a5f6da27" formatted="false">Не вдалося отримати публікації</string>
+    <string name="s_a652e16c" formatted="false">Цей товар недоступний</string>
+    <string name="s_a6a44b5b" formatted="false">Готується</string>
+    <string name="s_a6ed2a71" formatted="false">Минув</string>
+    <string name="s_a6f73674" formatted="false">Вхідні повідомлення</string>
+    <string name="s_a860cf2b" formatted="false">Моє місцезнаходження</string>
+    <string name="s_ab03953f" formatted="false">Схвалення адміністратора</string>
+    <string name="s_ac634572" formatted="false">✅ Ваш профіль збережено</string>
+    <string name="s_ada6e57a" formatted="false">Не вдалося завантажити ваш профіль</string>
+    <string name="s_af7715dd" formatted="false">Знижку підтверджено ✓</string>
+    <string name="s_afabc0f2" formatted="false">Не вдалося надіслати запит на поповнення</string>
+    <string name="s_b045d443" formatted="false">Мої правила</string>
+    <string name="s_b257b4e1" formatted="false">Прибрати</string>
+    <string name="s_b4bbf18b" formatted="false">Скасувати замовлення</string>
+    <string name="s_b4f76c3a" formatted="false">Змінити</string>
+    <string name="s_b6066a1e" formatted="false">Номер операції переказу</string>
+    <string name="s_b642dd5a" formatted="false">Правила</string>
+    <string name="s_b6aa0c7d" formatted="false">Ціна</string>
+    <string name="s_b89a6549" formatted="false">Підключення Facebook на сервері поки не ввімкнено (потрібен застосунок Meta та схвалення дозволів).</string>
+    <string name="s_baffa49c" formatted="false">Адреса</string>
+    <string name="s_bb31982c" formatted="false">Скопіювати перший робочий день на всі дні</string>
+    <string name="s_bb6cc0f4" formatted="false">Створити новий акаунт</string>
+    <string name="s_bb8520e6" formatted="false">Знижки</string>
+    <string name="s_bc12337c" formatted="false">Не вдалося завантажити підключення</string>
+    <string name="s_bdb567d9" formatted="false">Не вдалося скасувати замовлення</string>
+    <string name="s_beb6f577" formatted="false">Код недійсний або минув</string>
+    <string name="s_c03965c6" formatted="false">Використовуйте це для магазину, клініки, офісу чи будь-якого місця, яке люди мають знаходити на мапі. Оберіть його тип і додайте адресу. Відкриття інтернет-магазину — окрема можливість.</string>
+    <string name="s_c2cbfa91" formatted="false">📄 Експорт накладної (PDF)</string>
+    <string name="s_c31663d5" formatted="false">Мій гаманець</string>
+    <string name="s_c33c7465" formatted="false">У вас поки немає правил</string>
+    <string name="s_c4973dca" formatted="false">Не вдалося додати знижку</string>
+    <string name="s_c5324447" formatted="false">Спершу заповніть усі поля</string>
+    <string name="s_c5822564" formatted="false">Підписка</string>
+    <string name="s_c5ffc332" formatted="false">Вхідні замовлення</string>
+    <string name="s_c758841f" formatted="false">Сторінку не підключено — спробуйте ще раз</string>
+    <string name="s_c7a401f5" formatted="false">Не вдалося отримати код</string>
+    <string name="s_c89ae688" formatted="false">Сума чека</string>
+    <string name="s_c91b0e1d" formatted="false">Підключити</string>
+    <string name="s_c9cbc8b2" formatted="false">Увійти</string>
+    <string name="s_c9fbbd3c" formatted="false">Нове правило відповіді</string>
+    <string name="s_ca575cfb" formatted="false">Не вдалося зберегти профіль</string>
+    <string name="s_ca70f840" formatted="false">Конкретні публікації (Facebook / Instagram)</string>
+    <string name="s_cbc18737" formatted="false">Неактивно</string>
+    <string name="s_cc6b3855" formatted="false">Ел. пошта</string>
+    <string name="s_cd1c71a4" formatted="false">Спершу активуйте автовідповідач (пробний період або підписка), потім його можна підключити.</string>
+    <string name="s_cdffc53b" formatted="false">Не вдалося оновити статус замовлення</string>
+    <string name="s_d036d6bd" formatted="false">Не вдалося завантажити статус підключення — спробуйте оновити.</string>
+    <string name="s_d12fa511" formatted="false">До кошика</string>
+    <string name="s_d14862b0" formatted="false">\?</string>
+    <string name="s_d1feb875" formatted="false">Підтвердити замовлення</string>
+    <string name="s_d2cbe1d2" formatted="false">Повернутися до мапи без акаунта</string>
+    <string name="s_d3f3e653" formatted="false">Правило видалено</string>
+    <string name="s_d556272b" formatted="false">Не вдалося звʼязатися із сервером — перевірте підключення до інтернету</string>
+    <string name="s_d59687ba" formatted="false">Зачинено</string>
+    <string name="s_d5a3c41f" formatted="false">Введіть назву магазину та оберіть категорію</string>
+    <string name="s_d685576e" formatted="false">Не вдалося завантажити ваші сторінки</string>
+    <string name="s_d697a2b1" formatted="false">Склад</string>
+    <string name="s_d7359b3c" formatted="false">Проігноровано</string>
+    <string name="s_d766cb06" formatted="false">Каталог</string>
+    <string name="s_d82b4deb" formatted="false">Ключові слова (через кому)</string>
+    <string name="s_d9724d06" formatted="false">Підтвердити знижку</string>
+    <string name="s_d97a32ee" formatted="false">Уже маєте акаунт? Увійти</string>
+    <string name="s_da0717d9" formatted="false">Не вдалося активувати</string>
+    <string name="s_da1e9875" formatted="false">Поповнити баланс</string>
+    <string name="s_daaa4ebe" formatted="false">Не вдалося продовжити</string>
+    <string name="s_db4175ae" formatted="false">Пароль</string>
+    <string name="s_dc09c826" formatted="false">Про ваш бізнес (ШІ використовує це під час відповідей)</string>
+    <string name="s_dc26b57d" formatted="false">Ваш кошик порожній</string>
+    <string name="s_ddb9dbdc" formatted="false">Адреса</string>
+    <string name="s_de747706" formatted="false">Назва знижки</string>
+    <string name="s_e0501ddf" formatted="false">Залиште порожнім, щоб застосувати правило до всього, або оберіть публікації, щоб воно відповідало лише на коментарі до них.</string>
+    <string name="s_e172f208" formatted="false">✅ Години роботи збережено</string>
+    <string name="s_e19b16bd" formatted="false">Повне імʼя</string>
+    <string name="s_e2e9f99a" formatted="false">Дані та місцезнаходження магазину</string>
+    <string name="s_e470027c" formatted="false">Відповідь надіслано</string>
+    <string name="s_e50b0785" formatted="false">Сума, яку ви переказали</string>
+    <string name="s_e51fe37e" formatted="false">Не вдалося завантажити канали</string>
+    <string name="s_e644dc4b" formatted="false">Нова операція</string>
+    <string name="s_e776b020" formatted="false">Скасувати</string>
+    <string name="s_e78265a1" formatted="false">Не вдалося завантажити фото</string>
+    <string name="s_e7e5f1a0" formatted="false">У вас ще немає членства</string>
+    <string name="s_e947849f" formatted="false">Не вдалося розрахувати маршрут</string>
+    <string name="s_ea16c0e6" formatted="false">Доставлено</string>
+    <string name="s_eb92a991" formatted="false">Не вдалося додати товар до кошика</string>
+    <string name="s_ec6d9289" formatted="false">ШІ</string>
+    <string name="s_ed8f478b" formatted="false">Код (6 цифр)</string>
+    <string name="s_ee5aea07" formatted="false">Не вдалося надіслати</string>
+    <string name="s_eecf189f" formatted="false">Спершу увійдіть</string>
+    <string name="s_ef73b75f" formatted="false">Сторінку підключено ✅</string>
+    <string name="s_ef8d4234" formatted="false">✅ Фото збережено</string>
+    <string name="s_f008af11" formatted="false">Незабаром</string>
+    <string name="s_f1b27ce2" formatted="false">Спершу ввімкніть хоча б один день</string>
+    <string name="s_f353c2e2" formatted="false">Відскануйте код 📷</string>
+    <string name="s_f542f592" formatted="false">На скарги ніколи не відповідають автоматично — вони зʼявляються тут, щоб ви відповіли.</string>
+    <string name="s_f5f6d8c4" formatted="false">Не вдалося підключити канал</string>
+    <string name="s_f6b288e4" formatted="false">Знижка для учасників Dalilacom</string>
+    <string name="s_f79140d3" formatted="false">Відправлено</string>
+    <string name="s_f835f24d" formatted="false">Введіть назву магазину</string>
+    <string name="s_f85fd2a4" formatted="false">Поповнити гаманець</string>
+    <string name="s_f90416a9" formatted="false">📷 Змінити фото</string>
+    <string name="s_f90ad780" formatted="false">Ви поки не зберегли жодного місця — торкніться ♡ біля будь-якого магазину на мапі.</string>
+    <string name="s_f96a754e" formatted="false">Баланс</string>
+    <string name="s_faa866bc" formatted="false">Запасна відповідь, якщо ШІ недоступний (необовʼязково)</string>
+    <string name="s_fd85c447" formatted="false">Активовано</string>
+    <string name="s_fd98f999" formatted="false">Не вдалося змінити</string>
+    <string name="s_fdc54283" formatted="false">Не вдалося завантажити вхідні</string>
+    <string name="s_fe29f439" formatted="false">Останні операції</string>
+    <string name="s_fe79250b" formatted="false">Перевірити</string>
+    <string name="fit_auto_fd107e2a" formatted="false">Фото сертифіката або досягнення</string>
+    <string name="fit_auto_31d9b741" formatted="false">Syriatel Cash</string>
+    <string name="fit_auto_d79941c7" formatted="false">MTN Cash</string>
+    <string name="fit_auto_098683e9" formatted="false">Sham Cash</string>
+    <string name="fit_auto_13595e7a" formatted="false">💳 Доступні способи оплати</string>
+    <string name="fit_auto_5b0421bf" formatted="false">Оплата здійснюється напряму тренерові поза застосунком.</string>
+    <string name="fit_auto_7a73da43" formatted="false">Власник рахунку: %1$s</string>
+    <string name="fit_auto_27503bf2" formatted="false">🎯 Місячні тренувальні пакети</string>
+    <string name="fit_auto_4a0b14c3" formatted="false"> міс. ·</string>
+    <string name="fit_auto_8e0d8542" formatted="false">Вашу заявку на участь надіслано тренерові</string>
+    <string name="fit_auto_aa2fb742" formatted="false">Не вдалося надіслати заявку</string>
+    <string name="fit_auto_0c38fd67" formatted="false">Чекаємо на відповідь тренера</string>
+    <string name="fit_auto_19837e3e" formatted="false">Прийнято</string>
+    <string name="fit_auto_58d8f68d" formatted="false">Запросити участь</string>
+    <string name="fit_auto_1eaa192f" formatted="false">Увійдіть, щоб запросити участь</string>
+    <string name="fit_auto_514b56ff" formatted="false">Оплата в застосунку не приймається; звʼяжіться з тренером, щоб домовитися.</string>
+    <string name="fit_auto_11e83767" formatted="false">Назад</string>
+    <string name="fit_auto_f7175997" formatted="false">Підопічні та їхні плани</string>
+    <string name="fit_auto_cd78b295" formatted="false">Мої плани фітнесу та харчування</string>
+    <string name="fit_auto_ec4ef902" formatted="false">Плани доступні лише тренерові та підопічному.</string>
+    <string name="fit_auto_0d1a0f67" formatted="false">Змінити план · %1$s</string>
+    <string name="fit_auto_7ce78f07" formatted="false">Зареєстрована ел. пошта підопічного</string>
+    <string name="fit_auto_5e657e68" formatted="false">Тренування</string>
+    <string name="fit_auto_2a48b04e" formatted="false">Харчування</string>
+    <string name="fit_auto_384df087" formatted="false">Назва плану</string>
+    <string name="fit_auto_6a2e4995" formatted="false">Подробиці: одна вправа або прийом їжі в рядку</string>
+    <string name="fit_auto_3c4208fe" formatted="false">Нотатки</string>
+    <string name="fit_auto_7625f9c4" formatted="false">Дата початку плану (РРРР-ММ-ДД, необовʼязково)</string>
+    <string name="fit_auto_44a5a9a7" formatted="false">Дата завершення плану (РРРР-ММ-ДД, необовʼязково)</string>
+    <string name="fit_auto_61ec5484" formatted="false">Розклад на тиждень (необовʼязково)</string>
+    <string name="fit_auto_70cbbabf" formatted="false">Понеділок</string>
+    <string name="fit_auto_b38d7fc2" formatted="false">Вівторок</string>
+    <string name="fit_auto_2e5bdec0" formatted="false">Середа</string>
+    <string name="fit_auto_a6828d5b" formatted="false">Четвер</string>
+    <string name="fit_auto_66e535ba" formatted="false">Пʼятниця</string>
+    <string name="fit_auto_3cf0f7a6" formatted="false">Субота</string>
+    <string name="fit_auto_86aad79c" formatted="false">Неділя</string>
+    <string name="fit_auto_715af372" formatted="false"> · вправи або прийоми їжі, по одному в рядку</string>
+    <string name="fit_auto_0da9f8a8" formatted="false">Зберігаємо…</string>
+    <string name="fit_auto_ea76b8bc" formatted="false">Зберегти зміни</string>
+    <string name="fit_auto_e1b96d0a" formatted="false">Надіслати план</string>
+    <string name="fit_auto_c5f60175" formatted="false">Скасувати редагування</string>
+    <string name="fit_auto_c66cd2de" formatted="false">Підопічні (%1$d)</string>
+    <string name="fit_auto_6d08f196" formatted="false">Усі</string>
+    <string name="fit_auto_eec3db7f" formatted="false">План тренувань</string>
+    <string name="fit_auto_ed87a68b" formatted="false">План харчування</string>
+    <string name="fit_auto_49215294" formatted="false">Початок: %1$s</string>
+    <string name="fit_auto_bf43e2f7" formatted="false">Завершення: %1$s</string>
+    <string name="fit_auto_6b100af3" formatted="false">📄 Зберегти план у PDF</string>
+    <string name="fit_auto_4eb10593" formatted="false">Змінити план</string>
+    <string name="fit_auto_df38da5b" formatted="false"> кг ·</string>
+    <string name="fit_auto_943bdb85" formatted="false">Вага в кілограмах</string>
+    <string name="fit_auto_1d47217e" formatted="false">Нотатка про прогрес</string>
+    <string name="fit_auto_6a2fcb7c" formatted="false">Записати прогрес</string>
+    <string name="fit_auto_35db8764" formatted="false">Прогрес підопічного</string>
+    <string name="fit_auto_d7644cdb" formatted="false">Наразі немає планів для показу.</string>
+    <string name="fit_auto_80861134" formatted="false">Заявки на участь у пакетах</string>
+    <string name="fit_auto_458c9253" formatted="false">Мої тренувальні пакети</string>
+    <string name="fit_auto_dff8acbb" formatted="false">Заявок і тренувальних пакетів поки немає.</string>
+    <string name="fit_auto_4f4865b2" formatted="false">Статус:</string>
+    <string name="fit_auto_ab579793" formatted="false">Відхилено</string>
+    <string name="fit_auto_f5eb0776" formatted="false">Скасовано</string>
+    <string name="fit_auto_28cbdf83" formatted="false">Завершено</string>
+    <string name="fit_auto_c5a1a374" formatted="false">Період: %1$s – %2$s</string>
+    <string name="fit_auto_d7e02c92" formatted="false">Прийняти</string>
+    <string name="fit_auto_b7dee974" formatted="false">Відхилити</string>
+    <string name="fit_auto_dfdf1a42" formatted="false">Завершити підписку</string>
+    <string name="fit_auto_e06a23ff" formatted="false">Скасувати заявку</string>
+    <string name="fit_auto_817bd7c2" formatted="false">До 12 фото</string>
+    <string name="fit_auto_77aa4468" formatted="false">Сертифікати та досягнення</string>
+    <string name="fit_auto_712ba737" formatted="false">Відвідувачі бачать ці фото. Dalilacom не перевіряв сертифікати.</string>
+    <string name="fit_auto_1b963ebd" formatted="false">📷 Додати фото сертифіката або досягнення</string>
+    <string name="fit_auto_4b431162" formatted="false">📜 Фото №</string>
+    <string name="fit_auto_3b9854e1" formatted="false">Видалити</string>
+    <string name="fit_auto_1a8b3258" formatted="false">Способи оплати та отримання плати</string>
+    <string name="fit_auto_6cbcb21f" formatted="false">Додайте свої платіжні дані, щоб підопічні могли вам платити. Відвідувачі побачать їх на сторінці тренера; оплата відбувається поза застосунком.</string>
+    <string name="fit_auto_909db8ed" formatted="false">Імʼя власника рахунку</string>
+    <string name="fit_auto_6ff1570f" formatted="false">Номер Syriatel Cash</string>
+    <string name="fit_auto_9bb5492f" formatted="false">Номер MTN Cash</string>
+    <string name="fit_auto_04e0bcce" formatted="false">Рахунок Sham Cash</string>
+    <string name="fit_auto_043d5776" formatted="false">Місячні тренувальні пакети</string>
+    <string name="fit_auto_b2007fb0" formatted="false">Додайте зрозумілу ціну та строк, щоб відвідувачі бачили ваші пакети.</string>
+    <string name="fit_auto_9e1fb97e" formatted="false">Видалити пакет</string>
+    <string name="fit_auto_650b87df" formatted="false">Що входить?</string>
+    <string name="fit_auto_ae92351c" formatted="false">Тривалість у місяцях</string>
+    <string name="fit_auto_fa59c355" formatted="false">Ціна</string>
+    <string name="fit_auto_72908aa4" formatted="false">Додати пакет</string>
+    <string name="fit_auto_c2ed8d0d" formatted="false">📋  Плани підопічних</string>
+    <string name="fit_auto_d141a0e3" formatted="false">🏋️  Мої плани фітнесу та харчування</string>
+    <string name="fit_auto_b6b55b3a" formatted="false">Назва пакета</string>
+    <string name="s_89f995b3" formatted="false">Не вдалося звʼязатися із сервісом</string>
+    <string name="s_f03c2218" formatted="false">Не вдалося почати онлайн-оплату</string>
+    <string name="s_f1f017e4" formatted="false">Не вдалося прочитати накладну</string>
+    <string name="s_0a2edd30" formatted="false">Не вдалося зберегти запис</string>
+    <string name="s_364be4bc" formatted="false">Не вдалося опублікувати оголошення</string>
+    <string name="s_37f81884" formatted="false">Не вдалося купити тариф</string>
+    <string name="s_cf802fc0" formatted="false">Не вдалося зберегти номер переказу</string>
+    <string name="s_9338c391" formatted="false">Не вдалося підтвердити переказ</string>
+    <string name="s_9179029e" formatted="false">Не вдалося зберегти способи оплати</string>
+    <string name="s_7b9c60b6" formatted="false">Збережено</string>
+    <string name="s_11bc7d18">💳 Спосіб оплати · %1$s</string>
+    <string name="s_20f44d7f" formatted="false">Bank Al Sham</string>
+    <string name="s_66c40d1d" formatted="false">Після переказу надішліть номер операції зі сторінки замовлення. Власник магазину підтвердить отримання після перевірки свого рахунку.</string>
+    <string name="s_cc3ae185">Товарів на місяць: %1$s · %2$s</string>
+    <string name="s_6152db49" formatted="false">вживані та нові</string>
+    <string name="s_7d192e2b" formatted="false">лише вживані товари</string>
+    <string name="s_55270d0e" formatted="false">باقة متجرك المجانية</string>
+    <string name="s_4a6a560a">Одержувач: %1$s</string>
+    <string name="s_2c0bca89">Номер переказу: %1$s</string>
+    <string name="s_16765e8a">Номер операції надіслано: %1$s</string>
+    <string name="s_d701f388" formatted="false">Спосіб оплати:</string>
+    <string name="s_6a069c95" formatted="false">Номер операції після переказу</string>
+    <string name="s_9c976ca3" formatted="false">Я надіслав переказ</string>
+    <string name="s_f5c962b6" formatted="false">Очікується підтвердження власника магазину, що переказ надійшов.</string>
+    <string name="s_6b666b63" formatted="false">Підтвердити, що переказ надійшов</string>
+    <string name="s_e4b4c234" formatted="false">سوق المستخدمين</string>
+    <string name="s_b179bf25" formatted="false">Як ви отримуєте гроші за свої продажі?</string>
+    <string name="s_2ace6138" formatted="false">Оберіть наявні у вас способи. Клієнт бачить їх лише після замовлення вашого товару.</string>
+    <string name="s_01a85ddc" formatted="false">Імʼя на рахунку</string>
+    <string name="s_54744a3d" formatted="false">Номер рахунку або гаманця</string>
+    <string name="s_4816f255" formatted="false">Способи оплати збережено</string>
+    <string name="s_40c2c372" formatted="false">Зберегти способи оплати</string>
+    <string name="s_29c83806" formatted="false">تم إرفاق الصورة</string>
+    <string name="s_4810cb93" formatted="false">تعذّر رفع الصورة</string>
+    <string name="s_fa9309cd" formatted="false">← رجوع</string>
+    <string name="s_ac6aac42" formatted="false">افتح متجرك الخاص</string>
+    <string name="s_d4d43912" formatted="false">اختر اسماً لمتجرك، وبعدها أضف منتجاتك وشارك صفحته مع الناس.</string>
+    <string name="s_e72dca5d" formatted="false">اسم المتجر</string>
+    <string name="s_886333f5" formatted="false">وصف المتجر (اختياري)</string>
+    <string name="s_2203e3d9" formatted="false">تم إنشاء متجرك</string>
+    <string name="s_01b266ff" formatted="false">تعذّر إنشاء المتجر</string>
+    <string name="s_13adebab" formatted="false">إنشاء المتجر</string>
+    <string name="s_d7e8f7da" formatted="false">عرض متجري</string>
+    <string name="s_0ee0b71f" formatted="false">أضف منتج للبيع</string>
+    <string name="s_23a79f17">الإعلانات المجانية المتبقية هذا الشهر: %1$s من %2$s</string>
+    <string name="s_df644ae1" formatted="false">اسم المنتج</string>
+    <string name="s_b5a7adde" formatted="false">وصف المنتج</string>
+    <string name="s_3601146c" formatted="false">السعر</string>
+    <string name="s_5e7ac625" formatted="false">رقم للتواصل (اختياري)</string>
+    <string name="s_fe3ac683" formatted="false">الصورة مرفقة ✓</string>
+    <string name="s_c5cd4e00" formatted="false">إضافة صورة للمنتج</string>
+    <string name="s_019d1ca7" formatted="false">مستعمل</string>
+    <string name="s_03c2e7e4" formatted="false">جديد</string>
+    <string name="s_9cd5d5cd" formatted="false">وصلت للحد المجاني. اختر باقة من باقات المتجر للمتابعة.</string>
+    <string name="s_a1272e5c" formatted="false">تم تفعيل الباقة</string>
+    <string name="s_928735d6" formatted="false">رصيد</string>
+    <string name="s_43b0c75a" formatted="false">تم إرسال إعلانك للمراجعة</string>
+    <string name="s_0b9aa735" formatted="false">إرسال للمراجعة</string>
+    <string name="s_985b09fd" formatted="false">إعلاناتي</string>
+    <string name="s_92e97e03" formatted="false">بانتظار المراجعة</string>
+    <string name="s_bae1ccce" formatted="false">مرفوض بعد مراجعة الذكاء الاصطناعي</string>
+    <string name="s_9b9d8a97" formatted="false">منشور</string>
+    <string name="s_d85a8a38" formatted="false">مباع</string>
+    <string name="s_94f37dcd" formatted="false">السبب: </string>
+    <string name="s_9a7d8a0f" formatted="false">سجّل دخولك لتضيف إعلاناً</string>
+    <string name="s_b6d4223e" formatted="false">تسجيل الدخول</string>
+    <string name="s_318421e6" formatted="false">أحدث المنتجات</string>
+    <string name="s_72608e10" formatted="false">المتجر: </string>
+    <string name="s_698d3436" formatted="false">للتواصل: </string>
+    <string name="s_1bf1c6ab" formatted="false">ما في إعلانات منشورة حالياً</string>
+    <string name="s_e767f75b" formatted="false">عم نحمل المتجر…</string>
+    <string name="s_9aba83cd" formatted="false">ما في منتجات منشورة بهالمتجر حالياً</string>
+    <string name="sec_why" formatted="false">Що ви отримаєте</string>
+    <string name="sec_how" formatted="false">Як це працює</string>
+    <string name="sec_about" formatted="false">ⓘ Про цей розділ</string>
+    <string name="sec_back" formatted="false">Назад</string>
+    <string name="sec_start" formatted="false">Почати</string>
+    <string name="sec_login" formatted="false">Увійдіть, щоб почати</string>
+    <string name="sec_register" formatted="false">Створити акаунт</string>
+    <string name="sec_acc_kicker" formatted="false">🧮 Бухгалтерія</string>
+    <string name="sec_acc_title" formatted="false">Облік вашого магазину в одному місці</string>
+    <string name="sec_acc_sub" formatted="false">Записуйте доходи й витрати, стежте за складом і бачте прибуток, не маючи бухгалтерських знань.</string>
+    <string name="sec_acc_f1t" formatted="false">Доходи та витрати</string>
+    <string name="sec_acc_f1d" formatted="false">Записуйте кожну операцію за секунди й дивіться підсумок за кожною валютою та за будь-який період.</string>
+    <string name="sec_acc_f2t" formatted="false">Склад і штрихкоди</string>
+    <string name="sec_acc_f2d" formatted="false">Стежте за кількістю кожного товару, шукайте за штрихкодом і бачте, що закінчується.</string>
+    <string name="sec_acc_f3t" formatted="false">Сканування накладних</string>
+    <string name="sec_acc_f3d" formatted="false">Сфотографуйте накладну, ШІ зчитає суму та постачальника, а ви перевірите й підтвердите.</string>
+    <string name="sec_acc_f4t" formatted="false">Звіти й експорт</string>
+    <string name="sec_acc_f4d" formatted="false">Завантажте всі записи у вигляді файлу CSV або роздрукуйте готовий звіт для бухгалтера.</string>
+    <string name="sec_acc_s1" formatted="false">Оберіть тариф або почніть пробний період</string>
+    <string name="sec_acc_s2" formatted="false">Додайте товари й записи</string>
+    <string name="sec_acc_s3" formatted="false">Стежте за прибутком і експортуйте звіти</string>
+    <string name="sec_resp_kicker" formatted="false">🤖 Автовідповідач</string>
+    <string name="sec_resp_title" formatted="false">Відповідайте клієнтам, навіть коли спите</string>
+    <string name="sec_resp_sub" formatted="false">Підключіть свого Telegram-бота, і автовідповідач відповідатиме на повідомлення вашого магазину. Facebook та Instagram скоро зʼявляться.</string>
+    <string name="sec_resp_f1t" formatted="false">Повідомлення та коментарі</string>
+    <string name="sec_resp_f1d" formatted="false">Наразі він відповідає на повідомлення в Telegram. Messenger та Instagram скоро зʼявляться.</string>
+    <string name="sec_resp_f2t" formatted="false">Правила вашими словами</string>
+    <string name="sec_resp_f2d" formatted="false">Задайте ключові слова та готові відповіді (ціни, адреса, години роботи), і вони надсилатимуться одразу.</string>
+    <string name="sec_resp_f3t" formatted="false">Штучний інтелект</string>
+    <string name="sec_resp_f3d" formatted="false">Коли жодне правило не підходить, він пише відповідну відповідь, використовуючи лише введену вами інформацію.</string>
+    <string name="sec_resp_f4t" formatted="false">Вхідні</string>
+    <string name="sec_resp_f4d" formatted="false">Дивіться всі розмови, втручайтеся вручну, коли захочете, і стежте за щотижневими зведеннями.</string>
+    <string name="sec_resp_s1" formatted="false">Підключіть свої канали</string>
+    <string name="sec_resp_s2" formatted="false">Напишіть правила або ввімкніть ШІ</string>
+    <string name="sec_resp_s3" formatted="false">Запустіть і стежте за вхідними</string>
+    <string name="tab_hr" formatted="false">Кадри</string>
+    <string name="profile_my_cart" formatted="false">🛒 Мій кошик</string>
+    <string name="sec_hr_open" formatted="false">Відкрити «Кадри»</string>
+    <string name="sec_hr_kicker" formatted="false">👥 Кадри (HR)</string>
+    <string name="sec_hr_title" formatted="false">Керуйте персоналом в одному місці</string>
+    <string name="sec_hr_sub" formatted="false">Відвідуваність, відпустки, зарплата та аванси для працівників вашої компанії — просто й з готовими звітами.</string>
+    <string name="sec_hr_f1t" formatted="false">Відвідуваність</string>
+    <string name="sec_hr_f1d" formatted="false">Працівники відмічають прихід і догляд, а ви стежите за робочим часом і виправляєте будь-який запис.</string>
+    <string name="sec_hr_f2t" formatted="false">Відпустки</string>
+    <string name="sec_hr_f2d" formatted="false">Працівник просить відпустку, заявка йде його керівникові, потім до кадрів, а залишок днів рахується за вас.</string>
+    <string name="sec_hr_f3t" formatted="false">Розрахунок зарплати</string>
+    <string name="sec_hr_f3d" formatted="false">Готові щомісячні розрахункові листки, де пропуски та внески за авансами утримуються автоматично.</string>
+    <string name="sec_hr_f4t" formatted="false">Аванси</string>
+    <string name="sec_hr_f4d" formatted="false">Запросіть аванс, схваліть його й розподіліть по зарплатах — без паперів і ручних підрахунків.</string>
+    <string name="sec_hr_s1" formatted="false">Зареєструйте компанію</string>
+    <string name="sec_hr_s2" formatted="false">Додайте відділи та працівників</string>
+    <string name="sec_hr_s3" formatted="false">Проводьте розрахунок зарплати й стежте за звітами</string>
+    <string name="prof_sec_buy" formatted="false">Мої покупки</string>
+    <string name="prof_sec_buy_sub" formatted="false">Кошик, замовлення та обране</string>
+    <string name="prof_sec_wallet" formatted="false">Мій гаманець</string>
+    <string name="prof_sec_wallet_sub" formatted="false">Баланс і способи отримання оплати</string>
+    <string name="prof_sec_business" formatted="false">Мій бізнес</string>
+    <string name="prof_sec_business_sub" formatted="false">Магазин, картка на мапі та реклама</string>
+    <string name="prof_sec_marketing" formatted="false">Маркетинг</string>
+    <string name="prof_sec_marketing_sub" formatted="false">Заробляйте комісію за запрошення</string>
+    <string name="prof_sec_services" formatted="false">Мої послуги</string>
+    <string name="prof_sec_services_sub" formatted="false">Записи та навчання</string>
+    <string name="prof_sec_privacy" formatted="false">Місцезнаходження</string>
+    <string name="prof_sec_privacy_sub" formatted="false">Поділитися моїм місцезнаходженням і місцем на мапі</string>
+    <string name="prof_sec_admin" formatted="false">Адміністрування</string>
+    <string name="prof_sec_admin_sub" formatted="false">Перевірка реклами та заявок</string>
+    <string name="prof_sec_account" formatted="false">Мій акаунт і безпека</string>
+    <string name="prof_sec_account_sub" formatted="false">Мої дані, сповіщення, вихід</string>
+    <string name="store_visit_shop" formatted="false">Перейти до магазину</string>
+    <string name="site_tab_home" formatted="false">Головна</string>
+    <string name="site_why" formatted="false">Навіщо це потрібно</string>
+    <string name="site_faq" formatted="false">Поширені запитання</string>
+    <string name="site_stepsTitle" formatted="false">Як це працює</string>
+    <string name="site_featuresTitle" formatted="false">Усе в одному місці</string>
+    <string name="site_detailsTitle" formatted="false">Докладніше</string>
+    <string name="site_accounting_d1_t" formatted="false">Доходи та витрати</string>
+    <string name="site_accounting_d1_b1" formatted="false">Записуйте кожну операцію з типом (дохід чи витрата), категорією, описом і сумою.</string>
+    <string name="site_accounting_d1_b2" formatted="false">Зведення рахує доходи, витрати та підсумок за кожною валютою й за будь-який період.</string>
+    <string name="site_accounting_d1_b3" formatted="false">Змінюйте або видаляйте будь-який помилковий запис.</string>
+    <string name="site_accounting_d2_t" formatted="false">Склад і штрихкоди</string>
+    <string name="site_accounting_d2_b1" formatted="false">Додайте товар із назвою, ціною продажу, собівартістю та наявною кількістю.</string>
+    <string name="site_accounting_d2_b2" formatted="false">Зчитайте штрихкод камерою телефона (якщо пристрій це підтримує) або введіть його вручну.</string>
+    <string name="site_accounting_d2_b3" formatted="false">Кожен продаж зменшує кількість і сам записує дохід та собівартість проданого товару.</string>
+    <string name="site_accounting_d3_t" formatted="false">Сканування накладних</string>
+    <string name="site_accounting_d3_b1" formatted="false">Зробіть чітке фото закупівельної накладної.</string>
+    <string name="site_accounting_d3_b2" formatted="false">Застосунок зчитує суму, постачальника та опис, а ви перевіряєте й виправляєте перед збереженням.</string>
+    <string name="site_accounting_d3_b3" formatted="false">Нічого не зберігається, доки ви не підтвердите. Є денний ліміт на фото, а накладну завжди можна ввести вручну.</string>
+    <string name="site_accounting_d4_t" formatted="false">Звіти та посилання на магазин</string>
+    <string name="site_accounting_d4_b1" formatted="false">У будь-який момент завантажте всі записи у вигляді файлу CSV.</string>
+    <string name="site_accounting_d4_b2" formatted="false">Роздрукуйте зведений звіт і передайте бухгалтерові готові цифри.</string>
+    <string name="site_accounting_d4_b3" formatted="false">Якщо у вас є магазин на Dalilacom, доставлені замовлення записуються самі: дохід, собівартість і плата за доставку.</string>
+    <string name="site_responder_d1_t" formatted="false">Повідомлення</string>
+    <string name="site_responder_d1_b1" formatted="false">Вставте токен свого Telegram-бота, і він підключиться сам.</string>
+    <string name="site_responder_d1_b2" formatted="false">Він відповідає на текстові повідомлення. На фото та голосові повідомлення він не відповідає.</string>
+    <string name="site_responder_d1_b3" formatted="false">Весь автовідповідач можна вимкнути однією кнопкою в налаштуваннях.</string>
+    <string name="site_responder_d2_t" formatted="false">Правила</string>
+    <string name="site_responder_d2_b1" formatted="false">Напишіть ключові слова, і коли в повідомленні трапиться одне з них, буде надіслано обрану вами відповідь.</string>
+    <string name="site_responder_d2_b2" formatted="false">У відповідь можна підставити імʼя клієнта, і воно заповниться само.</string>
+    <string name="site_responder_d2_b3" formatted="false">Повідомлення, що не підходить під жодне правило, отримує запасну відповідь: фіксований текст, ШІ або жодної відповіді.</string>
+    <string name="site_responder_d3_t" formatted="false">Штучний інтелект</string>
+    <string name="site_responder_d3_b1" formatted="false">Він пише відповідь за описом вашого бізнесу та тоном спілкування, заданим у налаштуваннях.</string>
+    <string name="site_responder_d3_b2" formatted="false">Йому заборонено вигадувати ціни, наявність і правила. Якщо він не впевнений, то каже, що команда звʼяжеться пізніше.</string>
+    <string name="site_responder_d3_b3" formatted="false">ШІ входить до тарифів, які його включають, і має квоту відповідей. Коли квоту вичерпано, правила та фіксовані відповіді продовжують працювати.</string>
+    <string name="site_responder_d4_t" formatted="false">Вхідні</string>
+    <string name="site_responder_d4_b1" formatted="false">Кожне повідомлення та відповідь на нього зберігаються у вхідних зі статусом: відповіли, чекає на вас, помилка або пропущено.</string>
+    <string name="site_responder_d4_b2" formatted="false">Якщо повідомлення схоже на скаргу, клієнт одразу отримує вибачення, а ви — сповіщення.</string>
+    <string name="site_responder_d4_b3" formatted="false">Ви можете вручну відповісти на будь-яке повідомлення, що чекає на вас або надсилання якого не вдалося.</string>
+    <string name="site_ctaTitle" formatted="false">Готові почати?</string>
+    <string name="site_ctaSub" formatted="false">Кілька простих кроків — і ви відчуєте різницю з першого дня.</string>
+    <string name="site_open_responder" formatted="false">Відкрити автовідповідач</string>
+    <string name="site_open_accounting" formatted="false">Відкрити панель бухгалтерії</string>
+    <string name="site_open_hr" formatted="false">Відкрити систему «Кадри»</string>
+    <string name="site_login" formatted="false">Увійдіть, щоб почати</string>
+    <string name="site_register" formatted="false">Створити акаунт</string>
+    <string name="site_plans" formatted="false">Переглянути тарифи</string>
+    <string name="site_learn" formatted="false">Дізнатися більше</string>
+    <string name="site_planNeeded" formatted="false">Для бухгалтерії потрібен активний тариф або пробний період.</string>
+    <string name="site_responder_tab_overview" formatted="false">Статус</string>
+    <string name="site_responder_tab_channels" formatted="false">Канали</string>
+    <string name="site_responder_tab_rules" formatted="false">Правила</string>
+    <string name="site_responder_tab_inbox" formatted="false">Вхідні</string>
+    <string name="site_accounting_tab_summary" formatted="false">Зведення</string>
+    <string name="site_accounting_tab_entry" formatted="false">Додати запис</string>
+    <string name="site_accounting_tab_invoices" formatted="false">Накладні</string>
+    <string name="site_accounting_tab_stock" formatted="false">Склад</string>
+    <string name="site_art_chat1" formatted="false">Скільки коштує цей товар?</string>
+    <string name="site_art_chat2" formatted="false">$25, доставка безкоштовна 🚚</string>
+    <string name="site_art_chat3" formatted="false">Де ви знаходитесь?</string>
+    <string name="site_art_chat4" formatted="false">У Дамаску, відкрито з 9 до 9 ✅</string>
+    <string name="site_art_kw1" formatted="false">Ціни</string>
+    <string name="site_art_kw2" formatted="false">Години роботи</string>
+    <string name="site_art_kw3" formatted="false">Адреса</string>
+    <string name="site_art_income" formatted="false">Доходи</string>
+    <string name="site_art_expense" formatted="false">Витрати</string>
+    <string name="site_art_net" formatted="false">Чистий прибуток</string>
+    <string name="site_art_invoice" formatted="false">Закупівельна накладна</string>
+    <string name="site_art_total" formatted="false">Разом</string>
+    <string name="site_art_low" formatted="false">Закінчується</string>
+    <string name="site_art_item1" formatted="false">Бавовняна сорочка</string>
+    <string name="site_art_item2" formatted="false">Спортивні кросівки</string>
+    <string name="site_art_item3" formatted="false">Шкіряна сумка</string>
+    <string name="site_art_payslip" formatted="false">Розрахунковий листок</string>
+    <string name="site_art_netpay" formatted="false">До виплати</string>
+    <string name="site_art_leave" formatted="false">Відпустка</string>
+    <string name="site_art_present" formatted="false">Присутній</string>
+    <string name="site_responder_slide1_t" formatted="false">Миттєва відповідь на кожне повідомлення</string>
+    <string name="site_responder_slide1_d" formatted="false">Клієнт питає о 3-й ночі? Автовідповідач відповідає за секунди, у вашому стилі.</string>
+    <string name="site_responder_slide2_t" formatted="false">Зараз Telegram, незабаром зʼявляться інші</string>
+    <string name="site_responder_slide2_d" formatted="false">Підключіть свого Telegram-бота один раз, і всі повідомлення збиратимуться в одному місці. Facebook та Instagram скоро зʼявляться.</string>
+    <string name="site_responder_slide3_t" formatted="false">ШІ, який знає ваш магазин</string>
+    <string name="site_responder_slide3_d" formatted="false">Він відповідає лише на основі написаного вами: ціни, години роботи й адреса, нічого не вигадуючи.</string>
+    <string name="site_responder_st1_n" formatted="false">24/7</string>
+    <string name="site_responder_st1_l" formatted="false">Завжди ввімкнений</string>
+    <string name="site_responder_st2_n" formatted="false">Секунди</string>
+    <string name="site_responder_st2_l" formatted="false">Час відповіді клієнтові</string>
+    <string name="site_responder_st3_n" formatted="false">100%</string>
+    <string name="site_responder_st3_l" formatted="false">З вашої власної інформації</string>
+    <string name="site_responder_s1_d" formatted="false">Натисніть «Підключити» та оберіть свою сторінку: без коду й клопоту.</string>
+    <string name="site_responder_s2_d" formatted="false">Напишіть ключові слова та готові відповіді або ввімкніть ШІ для решти.</string>
+    <string name="site_responder_s3_d" formatted="false">Усі розмови лежать у вхідних, і ви можете втрутитися, коли захочете.</string>
+    <string name="site_responder_faq1_q" formatted="false">Які канали підтримуються?</string>
+    <string name="site_responder_faq1_a" formatted="false">Сьогодні Telegram. Facebook Messenger та Instagram скоро зʼявляться.</string>
+    <string name="site_responder_faq2_q" formatted="false">Він вигадує відповіді?</string>
+    <string name="site_responder_faq2_a" formatted="false">Ні. Він відповідає лише на основі введеної вами інформації, а коли не знає — передає розмову вам.</string>
+    <string name="site_responder_faq3_q" formatted="false">Чи можу я втрутитися в розмову?</string>
+    <string name="site_responder_faq3_a" formatted="false">Звісно. У вхідних ви бачите все й можете відповісти самі в будь-який момент.</string>
+    <string name="site_responder_faq4_q" formatted="false">Скільки це коштує?</string>
+    <string name="site_responder_faq4_a" formatted="false">Є тарифи для бізнесу будь-якого розміру, з пробним періодом. Їх можна побачити всередині розділу.</string>
+    <string name="site_accounting_slide1_t" formatted="false">Ваш облік з першого погляду</string>
+    <string name="site_accounting_slide1_d" formatted="false">Доходи, витрати й чистий прибуток за кожною валютою, без таблиць.</string>
+    <string name="site_accounting_slide2_t" formatted="false">Сфотографуйте накладну — і готово</string>
+    <string name="site_accounting_slide2_d" formatted="false">ШІ зчитує суму та постачальника, а ви перевіряєте й підтверджуєте одним дотиком.</string>
+    <string name="site_accounting_slide3_t" formatted="false">Склад під контролем</string>
+    <string name="site_accounting_slide3_d" formatted="false">Стежте за кількістю, шукайте за штрихкодом і помічайте товар, що закінчується.</string>
+    <string name="site_accounting_st1_n" formatted="false">📊</string>
+    <string name="site_accounting_st1_l" formatted="false">Ваш чистий прибуток у реальному часі</string>
+    <string name="site_accounting_st2_n" formatted="false">🧾</string>
+    <string name="site_accounting_st2_l" formatted="false">Накладні за фото</string>
+    <string name="site_accounting_st3_n" formatted="false">📦</string>
+    <string name="site_accounting_st3_l" formatted="false">Склад за штрихкодом</string>
+    <string name="site_accounting_s1_d" formatted="false">Почніть із пробного періоду або тарифу — і відкриється панель бухгалтерії.</string>
+    <string name="site_accounting_s2_d" formatted="false">Записуйте операції й додавайте товари або фотографуйте накладні.</string>
+    <string name="site_accounting_s3_d" formatted="false">Дивіться підсумок і завантажуйте звіти в CSV або друкуйте їх.</string>
+    <string name="site_accounting_faq1_q" formatted="false">Чи потрібно мені знати бухгалтерію?</string>
+    <string name="site_accounting_faq1_a" formatted="false">Ні. Записуйте доходи й витрати, а решта порахується за вас.</string>
+    <string name="site_accounting_faq2_q" formatted="false">Чи повʼязано це з моїм магазином?</string>
+    <string name="site_accounting_faq2_a" formatted="false">Так. Доставлені замовлення записуються за вас: дохід, собівартість і плата за доставку.</string>
+    <string name="site_accounting_faq3_q" formatted="false">Чи можна експортувати мої дані?</string>
+    <string name="site_accounting_faq3_a" formatted="false">Ви можете в будь-який момент завантажити всі записи у вигляді файлу CSV.</string>
+    <string name="site_accounting_faq4_q" formatted="false">Чи потрібна мені підписка?</string>
+    <string name="site_accounting_faq4_a" formatted="false">Для бухгалтерії потрібен активний тариф або пробний період, а кнопка покаже тарифи.</string>
+    <string name="site_hr_slide1_t" formatted="false">Ваш персонал в одному місці</string>
+    <string name="site_hr_slide1_d" formatted="false">Профілі, відділи та права доступу, а дані кожної компанії зберігаються окремо й надійно.</string>
+    <string name="site_hr_slide2_t" formatted="false">Зарплата в один клік</string>
+    <string name="site_hr_slide2_d" formatted="false">Щомісячні розрахункові листки, де пропуски та внески за авансами утримуються автоматично.</string>
+    <string name="site_hr_slide3_t" formatted="false">Відпустки й аванси без паперів</string>
+    <string name="site_hr_slide3_d" formatted="false">Заявки та погодження за ланцюжком (керівник, потім кадри), а залишок рахується за вас.</string>
+    <string name="site_hr_st1_n" formatted="false">🕒</string>
+    <string name="site_hr_st1_l" formatted="false">Працівники відмічаються з телефонів</string>
+    <string name="site_hr_st2_n" formatted="false">💵</string>
+    <string name="site_hr_st2_l" formatted="false">Зарплата рахується за вас щомісяця</string>
+    <string name="site_hr_st3_n" formatted="false">🔒</string>
+    <string name="site_hr_st3_l" formatted="false">Дані кожної компанії зберігаються окремо й захищені</string>
+    <string name="site_hr_s1_d" formatted="false">Зареєструйте компанію та оберіть її валюту.</string>
+    <string name="site_hr_s2_d" formatted="false">Додайте відділи та працівників і задайте їхні права.</string>
+    <string name="site_hr_s3_d" formatted="false">Проводьте розрахунок зарплати й стежте за звітами та панелями.</string>
+    <string name="site_hr_faq1_q" formatted="false">Чи потрібен мені інший сайт або застосунок?</string>
+    <string name="site_hr_faq1_a" formatted="false">Ні. «Кадри» перебувають усередині DALILACOM: ви відкриваєте їх звідси, без іншого сайту й без повторного входу.</string>
+    <string name="site_hr_faq2_q" formatted="false">Чи безпечні мої дані?</string>
+    <string name="site_hr_faq2_a" formatted="false">Дані кожної компанії повністю відокремлені від інших, а права задаються за ролями.</string>
+    <string name="site_hr_faq3_q" formatted="false">Хто що може?</string>
+    <string name="site_hr_faq3_a" formatted="false">Є ролі: адміністратор компанії, кадри, керівник відділу та працівник, у кожної свої права.</string>
+    <string name="site_hr_faq4_q" formatted="false">Скільки це коштує?</string>
+    <string name="site_hr_faq4_a" formatted="false">Є тарифи та пробний період, їх можна побачити всередині системи.</string>
+
+    <!-- Human resources inside DALILACOM -->
+    <string name="site_hr_tab_people">Працівники</string>
+    <string name="site_hr_tab_leave">Відпустки</string>
+    <string name="site_hr_tab_payroll">Розрахунок зарплати</string>
+    <string name="site_hr_tab_job">Моя робота</string>
+    <string name="hr_getPlan">Підключити тариф «Кадри»</string>
+    <string name="hr_error">Щось пішло не так, спробуйте ще раз</string>
+    <string name="hr_company_create">Створіть свою компанію</string>
+    <string name="hr_company_createHint">Один раз назвіть компанію, потім додайте працівників.</string>
+    <string name="hr_company_name">Назва компанії</string>
+    <string name="hr_company_createBtn">Створити компанію</string>
+    <string name="hr_company_done">Компанію створено</string>
+    <string name="hr_people_count">Працівників: %1$s</string>
+    <string name="hr_people_empty">Працівників поки немає. Додайте першого нижче.</string>
+    <string name="hr_people_add">Новий працівник</string>
+    <string name="hr_people_addBtn">Додати працівника</string>
+    <string name="hr_people_added">Працівника додано</string>
+    <string name="hr_f_first">Імʼя</string>
+    <string name="hr_f_last">Прізвище</string>
+    <string name="hr_f_email">Ел. пошта (для запрошення)</string>
+    <string name="hr_f_position">Посада</string>
+    <string name="hr_f_hire">Дата прийняття на роботу</string>
+    <string name="hr_f_salary">Базова зарплата (%1$s)</string>
+    <string name="hr_role_HR">Кадри</string>
+    <string name="hr_role_MANAGER">Керівник</string>
+    <string name="hr_role_EMPLOYEE">Працівник</string>
+    <string name="hr_role_OWNER">Власник</string>
+    <string name="hr_status_ACTIVE">Активний</string>
+    <string name="hr_status_ON_LEAVE">У відпустці</string>
+    <string name="hr_status_TERMINATED">Залишив компанію</string>
+    <string name="hr_linked">привʼязаний до акаунта</string>
+    <string name="hr_invite">Запросити до акаунта</string>
+    <string name="hr_invite_emailed">Запрошення надіслано електронною поштою.</string>
+    <string name="hr_invite_code">Скопіюйте цей код і надішліть працівникові. Він показується один раз:</string>
+    <string name="hr_leave_pending">Заявки на відпустку, що чекають на вас</string>
+    <string name="hr_leave_none">Заявок на відпустку немає</string>
+    <string name="hr_leave_types">Типи відпусток</string>
+    <string name="hr_leave_noTypes">Типів відпусток поки немає. Додайте один, щоб працівники могли просити відпустку.</string>
+    <string name="hr_leave_days">%1$s дн.</string>
+    <string name="hr_leave_typeName">Назва типу</string>
+    <string name="hr_leave_typeDays">Залишок у днях</string>
+    <string name="hr_leave_addType">Додати тип</string>
+    <string name="hr_leave_typeAdded">Тип відпустки додано</string>
+    <string name="hr_approve">Схвалити</string>
+    <string name="hr_reject">Відхилити</string>
+    <string name="hr_decided">Рішення збережено</string>
+    <string name="hr_pay_runs">Розрахунки зарплати</string>
+    <string name="hr_pay_note">Коли ви розраховуєте зарплату, DALILACOM сам записує у вашу бухгалтерію витрату «До виплати із зарплати». Коли ви позначите її виплаченою, вона стане витратою «Зарплата».</string>
+    <string name="hr_pay_none">Розрахунків зарплати поки немає</string>
+    <string name="hr_pay_from">З</string>
+    <string name="hr_pay_to">До</string>
+    <string name="hr_pay_create">Новий розрахунок</string>
+    <string name="hr_pay_created">Розрахунок створено</string>
+    <string name="hr_pay_process">Розрахувати зарплату</string>
+    <string name="hr_pay_processed">Зарплату розраховано</string>
+    <string name="hr_pay_markPaid">Позначити виплаченою</string>
+    <string name="hr_pay_paidDone">Виплату записано, витрату додано до бухгалтерії</string>
+    <string name="hr_pay_revert">Скасувати виплату</string>
+    <string name="hr_pay_revertAsk">Виплату буде скасовано, а витрата із зарплати в бухгалтерії повернеться в «До виплати із зарплати». Впевнені?</string>
+    <string name="hr_pay_reverted">Виплату скасовано</string>
+    <string name="hr_run_DRAFT">Чернетка</string>
+    <string name="hr_run_PROCESSED">Розраховано</string>
+    <string name="hr_run_PAID">Виплачено</string>
+    <string name="hr_adv_pending">Аванси, що чекають на вас</string>
+    <string name="hr_adv_installments">Внесків: %1$s</string>
+    <string name="hr_job_invites">Запрошення для вас</string>
+    <string name="hr_job_accept">Прийняти</string>
+    <string name="hr_job_accepted">Ваш акаунт привʼязано до компанії</string>
+    <string name="hr_job_haveCode">Маєте код запрошення?</string>
+    <string name="hr_job_in">Ви відмітилися о %1$s</string>
+    <string name="hr_job_inBtn">Відмітити прихід</string>
+    <string name="hr_job_inDone">Прихід відмічено</string>
+    <string name="hr_job_out">Відмітити догляд</string>
+    <string name="hr_job_outDone">Догляд відмічено</string>
+    <string name="hr_job_leave">Відпустки</string>
+    <string name="hr_job_noBalances">Залишку відпустки поки немає</string>
+    <string name="hr_job_leaveType">Тип відпустки</string>
+    <string name="hr_job_request">Надіслати заявку</string>
+    <string name="hr_job_requested">Заявку на відпустку надіслано</string>
+    <string name="hr_job_slips">Розрахункові листки</string>
+    <string name="hr_job_noSlips">Розрахункових листків поки немає</string>
+    <string name="hr_retry">Повторити</string>
+    <string name="hr_ok">OK</string>
+    <string name="hr_cancel">Скасувати</string>
+    <string name="hr_plan_required">Для розділу «Кадри» потрібен активний тариф або безкоштовний пробний період.</string>
+    <string name="hr_pay_paidNoExpense">Виплату записано. Витрату до бухгалтерії не додано, бо підсумок із зарплати дорівнює нулю.</string>
+    <string name="hr_pay_attNote">Дні без відмітки приходу віднімаються із зарплати. Якщо в компанії ніхто не відмічає відвідуваність, зарплата виплачується повністю.</string>
+    <string name="hr_pay_paidNoAccounting">Виплату записано. Витрату збережено, і вона зʼявиться в бухгалтерії після того, як ви її підключите.</string>
+    <string name="hr_pay_gross">Нараховано</string>
+    <string name="hr_pay_deductions">Утримання</string>
+    <string name="hr_pay_net">До виплати працівникам</string>
+    <string name="hr_pay_cost">Вартість розрахунку</string>
+    <string name="hr_pay_paidTotal">Загальна вартість виплачених розрахунків: %1$s</string>
+    <string name="accounting_payrollShare">зокрема зарплата: %1$s</string>
+    <string name="site_offerTitle">Пропозиція до запуску: 3 місяці безкоштовно</string>
+    <string name="site_offerSub">Обмежено в часі. Без банківської картки, і нічого не списується само.</string>
+    <string name="hr_notLinked">не привʼязаний до акаунта</string>
+    <string name="hr_details">Подробиці</string>
+    <string name="hr_leave_waitHr">Чекає на кадри</string>
+    <string name="hr_leave_waitManager">Чекає на керівника</string>
+    <string name="hr_pay_paidTotalLabel">Загальна вартість виплачених розрахунків</string>
+    <string name="accounting_payrollLabel">Розрахунок зарплати</string>
+    <string name="accounting_payrollDueLabel">До виплати із зарплати</string>
+    <string name="unified_title">Зведення з бухгалтерії та кадрів</string>
+    <string name="unified_note">Цей місяць, підсумкові цифри</string>
+    <string name="unified_employees">Працівники</string>
+    <string name="unified_salariesPaid">Виплачені зарплати</string>
+    <string name="unified_salariesDue">Зарплати до виплати, ще не виплачені</string>
+    <string name="unified_net">Підсумок після зарплат</string>
+    <string name="accounting_incomeLabel">Доходи</string>
+    <string name="accounting_expensesLabel">Витрати</string>
+    <string name="accounting_netLabel">Підсумок</string>
+    <string name="hr_dept_title">Відділи</string>
+    <string name="hr_dept_empty">Відділів поки немає. Додайте перший.</string>
+    <string name="hr_dept_name">Назва відділу</string>
+    <string name="hr_dept_add">Додати відділ</string>
+    <string name="hr_dept_added">Відділ додано</string>
+    <string name="hr_dept_renamed">Назву збережено</string>
+    <string name="hr_dept_deleted">Відділ видалено</string>
+    <string name="hr_dept_confirmDelete">Видалити цей відділ?</string>
+    <string name="hr_dept_rename">Перейменувати</string>
+    <string name="hr_dept_count">Працівників: %1$s</string>
+    <string name="hr_f_dept">Відділ</string>
+    <string name="hr_dept_none">Без відділу</string>
+    <string name="hr_sal_open">Структура зарплати</string>
+    <string name="hr_sal_title">Структура зарплати</string>
+    <string name="hr_sal_base">Базова зарплата (%1$s)</string>
+    <string name="hr_sal_saveBase">Зберегти базову зарплату</string>
+    <string name="hr_sal_saved">Зарплату збережено</string>
+    <string name="hr_sal_items">Статті зарплати</string>
+    <string name="hr_sal_empty">У цього працівника немає статей зарплати.</string>
+    <string name="hr_sal_earning">Надбавка до зарплати</string>
+    <string name="hr_sal_deduction">Утримання із зарплати</string>
+    <string name="hr_sal_fixed">Фіксована сума</string>
+    <string name="hr_sal_percent">Відсоток від базової зарплати</string>
+    <string name="hr_sal_comp">Стаття</string>
+    <string name="hr_sal_amount">Сума або відсоток</string>
+    <string name="hr_sal_addItem">Додати статтю працівникові</string>
+    <string name="hr_sal_itemAdded">Статтю додано</string>
+    <string name="hr_sal_newComp">Нова стаття</string>
+    <string name="hr_sal_compName">Назва статті</string>
+    <string name="hr_sal_createComp">Створити статтю</string>
+    <string name="hr_sal_compCreated">Статтю створено</string>
+    <string name="hr_sal_remove">Прибрати</string>
+    <string name="hr_sal_removed">Статтю прибрано</string>
+    <string name="hr_sal_close">Закрити</string>
+    <string name="hr_sal_pickComp">Оберіть статтю</string>
+    <string name="accounting_pay">Спосіб оплати</string>
+    <string name="accounting_pay_CASH">Готівка</string>
+    <string name="accounting_pay_BANK">Банк</string>
+    <string name="accounting_pay_WALLET">Гаманець</string>
+    <string name="accounting_sell_pay">Як сплачено?</string>
+    <string name="accounting_cash_title">Каса за день</string>
+    <string name="accounting_cash_help">Каса враховує лише готівкові операції. Банк і гаманець показано нижче окремо.</string>
+    <string name="accounting_cash_opening">Початкова сума</string>
+    <string name="accounting_cash_in">Отримано готівкою</string>
+    <string name="accounting_cash_out">Виплачено готівкою</string>
+    <string name="accounting_cash_expected">Має бути в касі</string>
+    <string name="accounting_cash_withdist">У дистрибʼюторів (ще не в касі)</string>
+    <string name="accounting_cash_handedtoday">Отримано від них сьогодні</string>
+    <string name="accounting_cash_counted">Фактично підрахована сума</string>
+    <string name="accounting_cash_close">Закрити день</string>
+    <string name="accounting_cash_closed">Цей день закрито</string>
+    <string name="accounting_cash_reopen">Відкрити день знову</string>
+    <string name="accounting_cash_diff">Різниця</string>
+    <string name="accounting_cash_diff_ok">Каса сходиться</string>
+    <string name="accounting_cash_set_opening">Змінити початкову суму</string>
+    <string name="accounting_cash_opening_prev">За закриттям попереднього дня</string>
+    <string name="accounting_cash_other">Банк і гаманець (не в касі)</string>
+    <string name="accounting_cash_unspecified">Записи без способу оплати (старі або автоматичні), у касі не враховуються</string>
+    <string name="accounting_sale_title">Нова видаткова накладна</string>
+    <string name="accounting_sale_pick">Оберіть товар</string>
+    <string name="accounting_sale_qty">Кількість</string>
+    <string name="accounting_sale_add">Додати до накладної</string>
+    <string name="accounting_sale_empty">У накладній поки немає позицій.</string>
+    <string name="accounting_sale_subtotal">Проміжний підсумок</string>
+    <string name="accounting_sale_discount">Знижка</string>
+    <string name="accounting_sale_discount_amount">Сумою</string>
+    <string name="accounting_sale_discount_percent">У відсотках %</string>
+    <string name="accounting_sale_customer">Імʼя клієнта (необовʼязково)</string>
+    <string name="accounting_sale_total">Разом зі знижкою</string>
+    <string name="accounting_sale_save">Зберегти накладну</string>
+    <string name="accounting_sale_saved">Накладну № %1$d збережено</string>
+    <string name="accounting_sale_share">Поділитися накладною</string>
+    <string name="accounting_sale_recent">Останні накладні</string>
+    <string name="accounting_sale_number">Видаткова накладна № %1$d</string>
+    <string name="accounting_sale_remove">Прибрати</string>
+    <string name="accounting_sale_close">Готово</string>
+    <string name="accounting_sale_stock">На складі</string>
+    <string name="accounting_sale_item">Стаття</string>
+    <string name="accounting_low_title">Сповіщення про запаси</string>
+    <string name="accounting_low_none">Нічого не закінчується. Усе гаразд.</string>
+    <string name="accounting_low_out">Немає</string>
+    <string name="accounting_low_low">Закінчується</string>
+    <string name="accounting_low_left">На складі: %1$d</string>
+    <string name="accounting_low_min">Поріг сповіщення</string>
+    <string name="accounting_low_min_prompt">Сповістити, коли кількість впаде до (0 = без сповіщень)</string>
+    <string name="accounting_moves">Рухи</string>
+    <string name="accounting_moves_none">Рухів за цим товаром поки немає.</string>
+    <string name="accounting_move_STOCK_IN">Прихід</string>
+    <string name="accounting_move_STOCK_OUT">Немає</string>
+    <string name="accounting_move_ADJUSTMENT">Встановлено за підрахунком</string>
+    <string name="accounting_count_start">Фактичний підрахунок</string>
+    <string name="accounting_count_help">Введіть кількість, яку ви нарахували на полиці за кожним товаром. Будь-яка різниця збережеться в рухах.</string>
+    <string name="accounting_count_apply">Застосувати підрахунок</string>
+    <string name="accounting_count_cancel">Скасувати підрахунок</string>
+    <string name="accounting_count_book">За обліком</string>
+    <string name="accounting_count_counted">Нараховано</string>
+    <string name="accounting_count_done">Підрахунок завершено: змінено товарів — %1$d</string>
+    <string name="accounting_count_same">Розбіжностей немає, облік сходиться</string>
+    <string name="accounting_rep_title">Звіт про прибуток</string>
+    <string name="accounting_rep_today">Сьогодні</string>
+    <string name="accounting_rep_week">7 днів</string>
+    <string name="accounting_rep_month">Цей місяць</string>
+    <string name="accounting_rep_last30">30 днів</string>
+    <string name="accounting_rep_sales">Продажі</string>
+    <string name="accounting_rep_cogs">Собівартість товарів</string>
+    <string name="accounting_rep_gross">Валовий прибуток</string>
+    <string name="accounting_rep_series">Підсумок за періодами</string>
+    <string name="accounting_rep_by_product">Прибуток за товарами</string>
+    <string name="accounting_rep_qty">Кількість</string>
+    <string name="accounting_rep_profit">Прибуток</string>
+    <string name="accounting_rep_empty">За цей період записів немає.</string>
+    <string name="accounting_party_title">Клієнти та постачальники</string>
+    <string name="accounting_party_customers">Клієнти</string>
+    <string name="accounting_party_suppliers">Постачальники</string>
+    <string name="accounting_party_receivable">Винні нам клієнти</string>
+    <string name="accounting_party_payable">Винні ми постачальникам</string>
+    <string name="accounting_party_name">Імʼя</string>
+    <string name="accounting_party_add">Додати</string>
+    <string name="accounting_party_empty">Поки нічого не зареєстровано.</string>
+    <string name="accounting_party_balance">Баланс</string>
+    <string name="accounting_party_settled">Розрахунок закрито</string>
+    <string name="accounting_party_statement">Виписка</string>
+    <string name="accounting_party_pay">Записати платіж</string>
+    <string name="accounting_party_charge">Борг або старий залишок</string>
+    <string name="accounting_party_amount">Сума</string>
+    <string name="accounting_party_book">Записати як операцію в обліку</string>
+    <string name="accounting_party_payment_row">Платіж</string>
+    <string name="accounting_party_charge_row">Борг</string>
+    <string name="accounting_party_after">Баланс після</string>
+    <string name="accounting_party_close">Закрити</string>
+    <string name="accounting_sale_party">Клієнт (для продажу в кредит)</string>
+    <string name="accounting_sale_no_party">Немає зареєстрованого клієнта</string>
+    <string name="accounting_sale_paid_now">Сума, сплачена зараз (порожньо = повністю)</string>
+    <string name="accounting_buy_title">Нова закупівельна накладна</string>
+    <string name="accounting_buy_help">Товар надходить на склад, а вартість товару оновлюється за середньозваженою. Виплачені гроші йдуть із каси й не записуються як витрата.</string>
+    <string name="accounting_buy_cost">Вартість однієї одиниці</string>
+    <string name="accounting_buy_supplier">Постачальник (для закупівлі в кредит)</string>
+    <string name="accounting_buy_no_supplier">Немає зареєстрованого постачальника</string>
+    <string name="accounting_buy_paid_now">Сума, сплачена зараз (порожньо = повністю)</string>
+    <string name="accounting_buy_total">Разом за накладною</string>
+    <string name="accounting_buy_save">Зберегти закупівельну накладну</string>
+    <string name="accounting_buy_saved">Закупівельну накладну № %1$d збережено</string>
+    <string name="accounting_buy_recent">Останні закупівельні накладні</string>
+    <string name="accounting_buy_empty">У накладній поки немає позицій.</string>
+    <string name="accounting_ret_btn">Повернення</string>
+    <string name="accounting_ret_title">Записати повернення</string>
+    <string name="accounting_ret_max">До %1$d</string>
+    <string name="accounting_ret_method">Як повертаються гроші?</string>
+    <string name="accounting_ret_save">Записати повернення</string>
+    <string name="accounting_ret_done">Повернення записано</string>
+    <string name="accounting_ret_none">Введіть кількість хоча б для одного рядка</string>
+    <string name="accounting_ret_all">Усе вже повернуто</string>
+    <string name="accounting_rec_title">Регулярні витрати й доходи</string>
+    <string name="accounting_rec_help">Оренда, електрика, підписки: вони записуються самі в потрібний день. Їх можна призупинити або змінити суму.</string>
+    <string name="accounting_rec_empty">Регулярних записів поки немає.</string>
+    <string name="accounting_rec_next">Наступна</string>
+    <string name="accounting_rec_paused">Призупинена</string>
+    <string name="accounting_rec_WEEKLY">Щотижня</string>
+    <string name="accounting_rec_MONTHLY">Щомісяця</string>
+    <string name="accounting_rec_YEARLY">Щороку</string>
+    <string name="accounting_rec_add">Додати регулярний запис</string>
+    <string name="accounting_rec_pause">Призупинити</string>
+    <string name="accounting_rec_resume">Відновити</string>
+    <string name="accounting_rec_delete">Видалити</string>
+    <string name="accounting_rec_amount">Змінити суму</string>
+    <string name="accounting_rec_start">Дата початку (РРРР-ММ-ДД)</string>
+    <string name="accounting_rec_backfill">Також записати пропущені від дати початку</string>
+    <string name="accounting_tax_title">Податок (експериментально)</string>
+    <string name="accounting_tax_warn">Експериментальна функція: цифри призначені для вашого власного обліку. Звірте їх із бухгалтером, перш ніж покладатися на них у будь-якій податковій декларації.</string>
+    <string name="accounting_tax_incl">Податок уже включено в ціну</string>
+    <string name="accounting_tax_excl">Податок додається зверху до ціни</string>
+    <string name="accounting_tax_default">Ставка за замовчуванням</string>
+    <string name="accounting_tax_none">Без податку</string>
+    <string name="accounting_tax_rates">Податкові ставки</string>
+    <string name="accounting_tax_rate_name">Назва ставки</string>
+    <string name="accounting_tax_rate_pct">Ставка %</string>
+    <string name="accounting_tax_add_rate">Додати ставку</string>
+    <string name="accounting_tax_off">Вимкнути</string>
+    <string name="accounting_tax_on">Увімкнути</string>
+    <string name="accounting_tax_no_rates">Податкових ставок немає. Без ставок накладні не містять податку.</string>
+    <string name="accounting_tax_output">Зібраний податок із продажів</string>
+    <string name="accounting_tax_input">Сплачений податок із закупівель</string>
+    <string name="accounting_tax_payable">До сплати до податкової</string>
+    <string name="accounting_tax_claim">Можна повернути</string>
+    <string name="accounting_tax_product">Податок</string>
+    <string name="accounting_tax_in_invoice">зокрема податок</string>
+    <string name="accounting_tax_on_top">Податок додано</string>
+    <string name="accounting_tax_report">Податковий звіт за цей місяць</string>
+    <string name="accounting_stm_title">Фінансова звітність (експериментально)</string>
+    <string name="accounting_stm_warn">Експериментальна функція: спрощені звіти за записаними вами операціями, а не затверджений баланс. Звірте їх із бухгалтером, перш ніж покладатися на них у декларації, кредиті чи будь-якому офіційному звіті.</string>
+    <string name="accounting_stm_income">Звіт про доходи за цей місяць</string>
+    <string name="accounting_stm_position">Спрощений фінансовий стан (на сьогодні)</string>
+    <string name="accounting_stm_sales">Продажі</string>
+    <string name="accounting_stm_returns">За вирахуванням: повернення</string>
+    <string name="accounting_stm_revenue">Усього доходів</string>
+    <string name="accounting_stm_cogs">За вирахуванням: собівартість проданого</string>
+    <string name="accounting_stm_gross">Валовий прибуток</string>
+    <string name="accounting_stm_opex">Усього витрат</string>
+    <string name="accounting_stm_net">Чистий прибуток</string>
+    <string name="accounting_stm_cash">Готівка, банк і гаманці</string>
+    <string name="accounting_stm_receivables">Клієнти винні нам</string>
+    <string name="accounting_stm_inventory">Запаси за собівартістю</string>
+    <string name="accounting_stm_total_assets">Усього активів</string>
+    <string name="accounting_stm_payables">Ми винні постачальникам</string>
+    <string name="accounting_stm_tax_payable">Зібраний і належний податок</string>
+    <string name="accounting_stm_total_liabilities">Усього зобовʼязань</string>
+    <string name="accounting_stm_equity">Власний капітал власника</string>
+    <string name="accounting_stm_balancing">Капітал, вилучення та перший запас (різниця)</string>
+</resources>

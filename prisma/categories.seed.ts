@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { CATEGORY_TREE, CategorySeed } from "./categories.data";
+import { CATEGORY_TR } from "./categories.tr";
 
 const words = (list?: string) => (list ? list.split("|").map((w) => w.trim()).filter(Boolean) : []);
 
@@ -25,7 +26,7 @@ export async function seedCategories(prisma: PrismaClient): Promise<number> {
         update: { name: node.en, synonyms: words(node.synEn) },
         create: { categoryId: category.id, lang: "en", name: node.en, synonyms: words(node.synEn) },
       });
-      for (const [lang, entry] of Object.entries(node.tr ?? {})) {
+      for (const [lang, entry] of Object.entries({ ...(node.tr ?? {}), ...(CATEGORY_TR[node.slug] ?? {}) })) {
         await prisma.categoryTranslation.upsert({
           where: { categoryId_lang: { categoryId: category.id, lang } },
           update: { name: entry.name, synonyms: words(entry.syn) },

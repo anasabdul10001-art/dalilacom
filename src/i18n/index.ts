@@ -2,6 +2,8 @@ import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from "../lib/languages";
 // <i18n-imports>
 import { en } from "./en";
 import { pack as de } from "./de";
+import { pack as ru } from "./ru";
+import { pack as uk } from "./uk";
 // </i18n-imports>
 
 /**
@@ -22,6 +24,8 @@ const PACKS: Record<string, LanguagePack> = {
   // <i18n-packs> — `npm run i18n:add` inserts new languages here
   en,
   de,
+  ru,
+  uk,
   // </i18n-packs>
 };
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Русский: scaffolded by npm run i18n:add. The values are still ENGLISH placeholders — translate them (keep the keys and %1$s / %1$d markers). -->
+<resources>
+    <string name="ship_kind_delivery">Доставка магазином</string>
+    <string name="ship_kind_pickup">Самовывоз из магазина</string>
+    <string name="ship_kind_courier">Сторонняя курьерская компания</string>
+    <string name="ship_courier">Доставка курьерской компанией</string>
+    <string name="addr_title">Адрес доставки</string>
+    <string name="addr_ph">Город, район, улица, номер дома</string>
+    <string name="addr_phone">Номер телефона для связи с вами</string>
+    <string name="addr_need_order">Напишите адрес доставки и свой номер телефона</string>
+    <string name="ord_addr">Адрес</string>
+    <string name="ord_phone">Телефон</string>
+    <string name="ord_courier">Курьерская компания</string>
+    <string name="ord_tracking">Номер отслеживания</string>
+    <string name="ord_ask_courier">Как называется курьерская компания?</string>
+    <string name="ord_ask_tracking">Какой номер отслеживания?</string>
+</resources>

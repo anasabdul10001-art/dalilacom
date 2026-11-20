@@ -24,6 +24,8 @@ function copyProject(name: string): string {
   copy("android/app/src/main/res/values-en");
   copy("android/app/src/main/kotlin/com/dalilacom/app/ui/i18n/AppLanguages.kt");
   copy("prisma/categories.data.ts");
+  copy("prisma/categories.more.ts");
+  copy("prisma/categories.tr.ts");
   return target;
 }
 
@@ -43,11 +45,12 @@ describe("The project's own translations (a guard for every future change)", () 
 describe("npm run i18n:add", () => {
   it("scaffolds a language on the server, the web and Android — and the checker then lists what is left", async () => {
     const root = copyProject("add");
+    const before = registeredLanguages(root).map((l) => l.code); // the languages the project has already
     const done = await addLanguage(root, { code: "es", name: "Español", dir: "ltr" });
     expect(done).toHaveLength(3);
 
     // server
-    expect(registeredLanguages(root).map((l) => l.code)).toEqual(["ar", "en", "es"]);
+    expect(registeredLanguages(root).map((l) => l.code)).toEqual([...before, "es"]);
     const index = fs.readFileSync(path.join(root, "src/i18n/index.ts"), "utf8");
     expect(index).toContain('import { pack as es } from "./es";');
     expect(index).toMatch(/\n\s+es,\r?\n\s+\/\/ <\/i18n-packs>/);

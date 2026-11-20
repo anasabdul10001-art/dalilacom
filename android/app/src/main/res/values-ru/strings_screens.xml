@@ -1,0 +1,985 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Русский: scaffolded by npm run i18n:add. The values are still ENGLISH placeholders — translate them (keep the keys and %1$s / %1$d markers). -->
+<!-- Texts of the screens, keyed by a hash of the Arabic source. Same keys in every language; rename a key when you next touch its screen. (English) -->
+<resources>
+    <string name="s_00246e91" formatted="false">Мои заказы</string>
+    <string name="s_004f489c" formatted="false">Задайте часы работы</string>
+    <string name="s_01f05ae9" formatted="false">У вас пока нет заказов</string>
+    <string name="s_0224de46" formatted="false">Канал подключён</string>
+    <string name="s_02cdc94a" formatted="false">Подключить Instagram</string>
+    <string name="s_04230bfd" formatted="false">Описание бизнеса</string>
+    <string name="s_04c5e56f" formatted="false">Укажите местоположение вашего магазина на карте</string>
+    <string name="s_064be38d" formatted="false">📄 Экспорт квитанции (PDF)</string>
+    <string name="s_06a4e0cc" formatted="false">Не удалось загрузить кошелёк</string>
+    <string name="s_073f5f4b" formatted="false">Телефон (необязательно)</string>
+    <string name="s_0a2bc37f" formatted="false">Запрос на пополнение получен — ожидается подтверждение администратора</string>
+    <string name="s_0a92494e" formatted="false">Имя</string>
+    <string name="s_0b149b76" formatted="false">Подтвердить скидку</string>
+    <string name="s_0b9aea6f" formatted="false">Не удалось изменить количество</string>
+    <string name="s_0be90459" formatted="false">Часы работы</string>
+    <string name="s_0c05c599" formatted="false">Не удалось отправить ответ</string>
+    <string name="s_0c6c1d53" formatted="false">Подготовьте магазин, чтобы он появился у клиентов</string>
+    <string name="s_0ccab856" formatted="false">Разрешение на геопозицию не получено — нажмите на карту, чтобы задать местоположение магазина</string>
+    <string name="s_0e1bedb9" formatted="false">Мои сохранённые места</string>
+    <string name="s_10ceb09f" formatted="false">Зарегистрироваться как:</string>
+    <string name="s_14293463" formatted="false">Сейчас недоступно</string>
+    <string name="s_14737605" formatted="false">Правило добавлено</string>
+    <string name="s_153612e1" formatted="false">Квитанция о скидке</string>
+    <string name="s_1699cdea" formatted="false">Добавить скидку</string>
+    <string name="s_18d994f4" formatted="false">Новый товар</string>
+    <string name="s_1aa879ba" formatted="false">Цена для участников</string>
+    <string name="s_1b98cbb3" formatted="false">Скидок пока нет</string>
+    <string name="s_1be55892" formatted="false">Мои подключённые каналы</string>
+    <string name="s_1bef7f7d" formatted="false">WhatsApp (с кодом страны, напр.: 9639xxxxxxxx)</string>
+    <string name="s_1dbf1d4a" formatted="false">Введите эл. почту и пароль</string>
+    <string name="s_1e3477e2" formatted="false">Мы спросим данные вашего магазина после создания аккаунта</string>
+    <string name="s_21019a65" formatted="false">Подключить страницу</string>
+    <string name="s_2136e58d" formatted="false">Автоответчик</string>
+    <string name="s_21a1bc3f" formatted="false">Описание (необязательно)</string>
+    <string name="s_221bae78" formatted="false">Не удалось загрузить статус</string>
+    <string name="s_222d012d" formatted="false">Сохранить часы работы</string>
+    <string name="s_23e47d75" formatted="false">Место вашего магазина на карте</string>
+    <string name="s_249b177e" formatted="false">Полный путеводитель по вашему городу</string>
+    <string name="s_261429f0" formatted="false">+ Новый товар</string>
+    <string name="s_2a837234" formatted="false">Подключить канал</string>
+    <string name="s_2d2bbdc2" formatted="false">Удалить</string>
+    <string name="s_2e1a34c3" formatted="false">,</string>
+    <string name="s_2e3f9ed4" formatted="false">Переведите USDT (сеть TRC20) на этот адрес, затем вставьте ID перевода (txid) — сервер проверит его автоматически:</string>
+    <string name="s_2f1a3ab7" formatted="false">Задайте рабочие дни и часы — клиенты видят «Открыто сейчас» или «Закрыто». Если вы закрываетесь после полуночи, выберите время закрытия раньше времени открытия (например 18:00 – 02:00).</string>
+    <string name="s_305fe0fc" formatted="false">Оформите тариф, чтобы активировать цифровую карту</string>
+    <string name="s_328ddce5" formatted="false">Назад</string>
+    <string name="s_33093b21" formatted="false">Введите корректную сумму чека</string>
+    <string name="s_341d926d" formatted="false">Не удалось сохранить товар</string>
+    <string name="s_347c4ba8" formatted="false">Не удалось убрать фото</string>
+    <string name="s_38ceca24" formatted="false">Фиксированный ответ</string>
+    <string name="s_3bb9ad91" formatted="false">Сначала войдите, чтобы продолжить</string>
+    <string name="s_3ea19382" formatted="false">Неверные данные для входа</string>
+    <string name="s_3f8e51fe" formatted="false">Моя карта</string>
+    <string name="s_3fc7c056" formatted="false">Моя корзина</string>
+    <string name="s_41066d88" formatted="false">Зарегистрироваться</string>
+    <string name="s_413c51af" formatted="false">Итого</string>
+    <string name="s_41b05461" formatted="false">Активно</string>
+    <string name="s_42186a14" formatted="false">Убрать фото</string>
+    <string name="s_424fa77c" formatted="false">Не удалось удалить товар</string>
+    <string name="s_43010e9c" formatted="false">Не удалось сохранить данные магазина</string>
+    <string name="s_432dc00c" formatted="false">Не удалось загрузить товар</string>
+    <string name="s_439b0d4e" formatted="false">Не активировано</string>
+    <string name="s_44048fac" formatted="false">Подтверждено</string>
+    <string name="s_46242623" formatted="false">Введите своё имя</string>
+    <string name="s_471a369e" formatted="false">Не удалось добавить правило</string>
+    <string name="s_47228890" formatted="false">Не удалось удалить</string>
+    <string name="s_47352f90" formatted="false">Добавьте первый товар</string>
+    <string name="s_47428e01" formatted="false">Напишите ваш ответ</string>
+    <string name="s_48e7fe4b" formatted="false">Введите номер членства и 6-значный код</string>
+    <string name="s_4a3ccec5" formatted="false">🕒 Часы работы</string>
+    <string name="s_4b028e52" formatted="false">Ждёт вашего ответа</string>
+    <string name="s_4b860f78" formatted="false">Пароль (не менее 8 символов)</string>
+    <string name="s_4d977cf7" formatted="false">ID перевода (txid)</string>
+    <string name="s_4e387930" formatted="false">Бесплатный пробный период</string>
+    <string name="s_5059c36f" formatted="false">WhatsApp (необязательно, с кодом страны)</string>
+    <string name="s_51963665" formatted="false">Текущий код</string>
+    <string name="s_51ed1058" formatted="false">Выберите способ оплаты и введите номер операции</string>
+    <string name="s_53655660" formatted="false">Каналы</string>
+    <string name="s_53bd39b7" formatted="false">Доступные каналы</string>
+    <string name="s_54b49c02" formatted="false">Инструкции для ИИ</string>
+    <string name="s_55cf1553" formatted="false">Не удалось начать подключение к Facebook</string>
+    <string name="s_56be3fdb" formatted="false">Введите название правила и хотя бы одно ключевое слово</string>
+    <string name="s_56ee6e0d" formatted="false">Сохранить</string>
+    <string name="s_571d102a" formatted="false">Вы ещё не задали местоположение</string>
+    <string name="s_57833160" formatted="false">Подключённых каналов пока нет</string>
+    <string name="s_58c8a282" formatted="false">Посетитель</string>
+    <string name="s_59539fc9" formatted="false">Название магазина</string>
+    <string name="s_5bf826c5" formatted="false">Закрыть</string>
+    <string name="s_5f05466a" formatted="false">Отменено</string>
+    <string name="s_5f10f855" formatted="false">Не удалось загрузить способы оплаты</string>
+    <string name="s_5ffc2bb8" formatted="false">Название правила</string>
+    <string name="s_60e251d0" formatted="false">Нет аккаунта? Создайте</string>
+    <string name="s_615e65ba" formatted="false">Артикул (необязательно)</string>
+    <string name="s_621e568d" formatted="false">Пополнить</string>
+    <string name="s_625e3fc7" formatted="false">Бизнес</string>
+    <string name="s_6310b20d" formatted="false">Выберите страницу</string>
+    <string name="s_64cf6641" formatted="false">Мой профиль</string>
+    <string name="s_6617ed19" formatted="false">Не удалось получить ваше местоположение — нажмите на карту, чтобы задать его вручную</string>
+    <string name="s_66414100" formatted="false">Баланс пополнен</string>
+    <string name="s_67636cc3" formatted="false">Отправить запрос на пополнение</string>
+    <string name="s_676f8348" formatted="false">Не удалось зарегистрировать бизнес-аккаунт</string>
+    <string name="s_6793a69f" formatted="false">Товары</string>
+    <string name="s_69bbe90d" formatted="false">Товаров пока нет</string>
+    <string name="s_69c86923" formatted="false">‹ Назад</string>
+    <string name="s_6c21e27c" formatted="false">Что-то пошло не так</string>
+    <string name="s_6d05e053" formatted="false">Тон ответов (например: дружелюбно и кратко)</string>
+    <string name="s_6e274458" formatted="false">Не удалось подключить страницу</string>
+    <string name="s_6e3a209c" formatted="false">Заказ не найден</string>
+    <string name="s_7009c3b0" formatted="false">%1$.5f, %2$.5f</string>
+    <string name="s_70a771db" formatted="false">Не удалось подтвердить скидку</string>
+    <string name="s_7121fbcc" formatted="false">Facebook подключён ✅</string>
+    <string name="s_746ec1bd" formatted="false">Цена для участников должна быть ниже обычной цены</string>
+    <string name="s_749f9cfe" formatted="false">Добавьте свой бизнес на карту</string>
+    <string name="s_760c65a1" formatted="false">Телефон</string>
+    <string name="s_77eb6cfd" formatted="false">О вас или вашем магазине (показывается клиентам и в накладных)</string>
+    <string name="s_79e32d1f" formatted="false">⏳ Ваша заявка ожидает одобрения администратора — до этого ваш магазин не появится на карте.</string>
+    <string name="s_79e3c383" formatted="false">Не удалось сохранить часы работы</string>
+    <string name="s_7b3296cc" formatted="false">Сообщений пока нет</string>
+    <string name="s_7c75fec5" formatted="false">Категория</string>
+    <string name="s_7d943798" formatted="false">Заказов пока нет</string>
+    <string name="s_7ef9f7a4" formatted="false">Добавлено в корзину ✓</string>
+    <string name="s_7f9255f4" formatted="false">Добавить правило</string>
+    <string name="s_7feb59f4" formatted="false">Dalilacom</string>
+    <string name="s_8008e7e0" formatted="false">📍 Данные и местоположение магазина</string>
+    <string name="s_8522fb76" formatted="false">Номер членства</string>
+    <string name="s_8562adb5" formatted="false">Не удалось войти</string>
+    <string name="s_860f094a" formatted="false">Не удалось оформить заказ</string>
+    <string name="s_864c0780" formatted="false">Название товара</string>
+    <string name="s_8970aed0" formatted="false">Считанный код недействителен</string>
+    <string name="s_89a4c18a" formatted="false">Активно</string>
+    <string name="s_8a3cd750" formatted="false">Начать подготовку</string>
+    <string name="s_8a942763" formatted="false">📷 Добавить фото</string>
+    <string name="s_8aed060f" formatted="false">В ожидании</string>
+    <string name="s_8bf6ddd2" formatted="false">Подписаться</string>
+    <string name="s_8c6117b6" formatted="false">Войти</string>
+    <string name="s_8c7eace2" formatted="false">Войдите через Facebook и выберите страницу, на которой будет работать автоответчик — без копирования токенов.</string>
+    <string name="s_8c7ec7a1" formatted="false">Использовать моё текущее местоположение</string>
+    <string name="s_8c818f60" formatted="false">Не удалось загрузить статус — вернитесь и попробуйте ещё раз</string>
+    <string name="s_8d0496d3" formatted="false">Проверьте название, цену и остаток товара</string>
+    <string name="s_8f2679b1" formatted="false">Способы пополнения сейчас не включены — свяжитесь с администратором</string>
+    <string name="s_90a91c96" formatted="false">Обзор</string>
+    <string name="s_90cf87a4" formatted="false">Отправить</string>
+    <string name="s_911aafd4" formatted="false">Подтвердить</string>
+    <string name="s_92dc656f" formatted="false">Не удалось подготовить документ</string>
+    <string name="s_935d8234" formatted="false">Причина отмены</string>
+    <string name="s_937c3091" formatted="false">Подписка продлена</string>
+    <string name="s_93a7f5f0" formatted="false">Перейти в корзину</string>
+    <string name="s_96a2838a" formatted="false">Введите название скидки и процент от 1 до 100</string>
+    <string name="s_97b1b92d" formatted="false">Так вас находят клиенты — нажмите на карту, чтобы поставить маркер там, где ваш магазин.</string>
+    <string name="s_9855a904" formatted="false">Добавьте скидку для участников</string>
+    <string name="s_98bd1e1e" formatted="false">Не удалось сохранить</string>
+    <string name="s_98df46fb" formatted="false">Отменить</string>
+    <string name="s_997f9752" formatted="false">✅ Данные магазина сохранены</string>
+    <string name="s_99ca558f" formatted="false">Не удалось оформить членство</string>
+    <string name="s_9a2547dd" formatted="false">Или введите данные членства вручную</string>
+    <string name="s_9a40a38b" formatted="false">Оформить заказ</string>
+    <string name="s_9aa19dc9" formatted="false">Подключить Facebook</string>
+    <string name="s_9b30f06e" formatted="false">Процент %</string>
+    <string name="s_9b5be5df" formatted="false">Не удалось добавить товар</string>
+    <string name="s_9cb17c57" formatted="false">Операций пока нет</string>
+    <string name="s_a0b697cb" formatted="false">Изменить товар</string>
+    <string name="s_a1ec84ae" formatted="false">Данные бизнеса сохранены</string>
+    <string name="s_a24110f8" formatted="false">‹ Назад к аккаунту клиента</string>
+    <string name="s_a26cb7f2" formatted="false">Лучше всего подключаться кнопкой «Подключить Facebook» выше — без вставки токенов. Поля ниже нужны для ручного подключения, если понадобится.</string>
+    <string name="s_a2750cc7" formatted="false">Ваш баланс</string>
+    <string name="s_a2daab91" formatted="false">Товар активен</string>
+    <string name="s_a2e93da9" formatted="false">Причина</string>
+    <string name="s_a3836012" formatted="false">Когда он станет активным, эта кнопка откроет страницу Facebook напрямую.</string>
+    <string name="s_a3ac8fb2" formatted="false">Не удалось прочитать фото — попробуйте другое</string>
+    <string name="s_a3e249b8" formatted="false">Не удалось загрузить правила</string>
+    <string name="s_a3e7dfc4" formatted="false">Входящие</string>
+    <string name="s_a40a6e99" formatted="false">Создать аккаунт</string>
+    <string name="s_a4409754" formatted="false">Не удалось загрузить статус подключения Facebook</string>
+    <string name="s_a549b16b" formatted="false">Отвечено</string>
+    <string name="s_a5e584ae" formatted="false">Текст ответа (используйте {name} для имени клиента)</string>
+    <string name="s_a5f6da27" formatted="false">Не удалось получить публикации</string>
+    <string name="s_a652e16c" formatted="false">Этот товар недоступен</string>
+    <string name="s_a6a44b5b" formatted="false">Готовится</string>
+    <string name="s_a6ed2a71" formatted="false">Истёк</string>
+    <string name="s_a6f73674" formatted="false">Входящие сообщения</string>
+    <string name="s_a860cf2b" formatted="false">Моё местоположение</string>
+    <string name="s_ab03953f" formatted="false">Одобрение администратора</string>
+    <string name="s_ac634572" formatted="false">✅ Ваш профиль сохранён</string>
+    <string name="s_ada6e57a" formatted="false">Не удалось загрузить ваш профиль</string>
+    <string name="s_af7715dd" formatted="false">Скидка подтверждена ✓</string>
+    <string name="s_afabc0f2" formatted="false">Не удалось отправить запрос на пополнение</string>
+    <string name="s_b045d443" formatted="false">Мои правила</string>
+    <string name="s_b257b4e1" formatted="false">Убрать</string>
+    <string name="s_b4bbf18b" formatted="false">Отменить заказ</string>
+    <string name="s_b4f76c3a" formatted="false">Изменить</string>
+    <string name="s_b6066a1e" formatted="false">Номер операции перевода</string>
+    <string name="s_b642dd5a" formatted="false">Правила</string>
+    <string name="s_b6aa0c7d" formatted="false">Цена</string>
+    <string name="s_b89a6549" formatted="false">Подключение Facebook на сервере пока не включено (нужно приложение Meta и одобрение разрешений).</string>
+    <string name="s_baffa49c" formatted="false">Адрес</string>
+    <string name="s_bb31982c" formatted="false">Скопировать первый рабочий день на все дни</string>
+    <string name="s_bb6cc0f4" formatted="false">Создать новый аккаунт</string>
+    <string name="s_bb8520e6" formatted="false">Скидки</string>
+    <string name="s_bc12337c" formatted="false">Не удалось загрузить подключения</string>
+    <string name="s_bdb567d9" formatted="false">Не удалось отменить заказ</string>
+    <string name="s_beb6f577" formatted="false">Код недействителен или истёк</string>
+    <string name="s_c03965c6" formatted="false">Используйте это для магазина, клиники, офиса или любого места, которое люди должны находить на карте. Выберите его тип и добавьте адрес. Открытие интернет-магазина — отдельная возможность.</string>
+    <string name="s_c2cbfa91" formatted="false">📄 Экспорт накладной (PDF)</string>
+    <string name="s_c31663d5" formatted="false">Мой кошелёк</string>
+    <string name="s_c33c7465" formatted="false">У вас пока нет правил</string>
+    <string name="s_c4973dca" formatted="false">Не удалось добавить скидку</string>
+    <string name="s_c5324447" formatted="false">Сначала заполните все поля</string>
+    <string name="s_c5822564" formatted="false">Подписка</string>
+    <string name="s_c5ffc332" formatted="false">Входящие заказы</string>
+    <string name="s_c758841f" formatted="false">Страница не подключена — попробуйте ещё раз</string>
+    <string name="s_c7a401f5" formatted="false">Не удалось получить код</string>
+    <string name="s_c89ae688" formatted="false">Сумма чека</string>
+    <string name="s_c91b0e1d" formatted="false">Подключить</string>
+    <string name="s_c9cbc8b2" formatted="false">Войти</string>
+    <string name="s_c9fbbd3c" formatted="false">Новое правило ответа</string>
+    <string name="s_ca575cfb" formatted="false">Не удалось сохранить профиль</string>
+    <string name="s_ca70f840" formatted="false">Конкретные публикации (Facebook / Instagram)</string>
+    <string name="s_cbc18737" formatted="false">Неактивно</string>
+    <string name="s_cc6b3855" formatted="false">Эл. почта</string>
+    <string name="s_cd1c71a4" formatted="false">Сначала активируйте автоответчик (пробный период или подписка), затем его можно подключить.</string>
+    <string name="s_cdffc53b" formatted="false">Не удалось обновить статус заказа</string>
+    <string name="s_d036d6bd" formatted="false">Не удалось загрузить статус подключения — попробуйте обновить.</string>
+    <string name="s_d12fa511" formatted="false">В корзину</string>
+    <string name="s_d14862b0" formatted="false">\?</string>
+    <string name="s_d1feb875" formatted="false">Подтвердить заказ</string>
+    <string name="s_d2cbe1d2" formatted="false">Вернуться к карте без аккаунта</string>
+    <string name="s_d3f3e653" formatted="false">Правило удалено</string>
+    <string name="s_d556272b" formatted="false">Не удалось связаться с сервером — проверьте подключение к интернету</string>
+    <string name="s_d59687ba" formatted="false">Закрыто</string>
+    <string name="s_d5a3c41f" formatted="false">Введите название магазина и выберите категорию</string>
+    <string name="s_d685576e" formatted="false">Не удалось загрузить ваши страницы</string>
+    <string name="s_d697a2b1" formatted="false">Склад</string>
+    <string name="s_d7359b3c" formatted="false">Проигнорировано</string>
+    <string name="s_d766cb06" formatted="false">Каталог</string>
+    <string name="s_d82b4deb" formatted="false">Ключевые слова (через запятую)</string>
+    <string name="s_d9724d06" formatted="false">Подтвердить скидку</string>
+    <string name="s_d97a32ee" formatted="false">Уже есть аккаунт? Войти</string>
+    <string name="s_da0717d9" formatted="false">Не удалось активировать</string>
+    <string name="s_da1e9875" formatted="false">Пополнить баланс</string>
+    <string name="s_daaa4ebe" formatted="false">Не удалось продлить</string>
+    <string name="s_db4175ae" formatted="false">Пароль</string>
+    <string name="s_dc09c826" formatted="false">О вашем бизнесе (ИИ использует это при ответах)</string>
+    <string name="s_dc26b57d" formatted="false">Ваша корзина пуста</string>
+    <string name="s_ddb9dbdc" formatted="false">Адрес</string>
+    <string name="s_de747706" formatted="false">Название скидки</string>
+    <string name="s_e0501ddf" formatted="false">Оставьте пустым, чтобы применить правило ко всему, или выберите публикации, чтобы оно отвечало только на комментарии к ним.</string>
+    <string name="s_e172f208" formatted="false">✅ Часы работы сохранены</string>
+    <string name="s_e19b16bd" formatted="false">Полное имя</string>
+    <string name="s_e2e9f99a" formatted="false">Данные и местоположение магазина</string>
+    <string name="s_e470027c" formatted="false">Ответ отправлен</string>
+    <string name="s_e50b0785" formatted="false">Сумма, которую вы перевели</string>
+    <string name="s_e51fe37e" formatted="false">Не удалось загрузить каналы</string>
+    <string name="s_e644dc4b" formatted="false">Новая операция</string>
+    <string name="s_e776b020" formatted="false">Отмена</string>
+    <string name="s_e78265a1" formatted="false">Не удалось загрузить фото</string>
+    <string name="s_e7e5f1a0" formatted="false">У вас ещё нет членства</string>
+    <string name="s_e947849f" formatted="false">Не удалось рассчитать маршрут</string>
+    <string name="s_ea16c0e6" formatted="false">Доставлено</string>
+    <string name="s_eb92a991" formatted="false">Не удалось добавить товар в корзину</string>
+    <string name="s_ec6d9289" formatted="false">ИИ</string>
+    <string name="s_ed8f478b" formatted="false">Код (6 цифр)</string>
+    <string name="s_ee5aea07" formatted="false">Не удалось отправить</string>
+    <string name="s_eecf189f" formatted="false">Сначала войдите</string>
+    <string name="s_ef73b75f" formatted="false">Страница подключена ✅</string>
+    <string name="s_ef8d4234" formatted="false">✅ Фото сохранено</string>
+    <string name="s_f008af11" formatted="false">Скоро</string>
+    <string name="s_f1b27ce2" formatted="false">Сначала включите хотя бы один день</string>
+    <string name="s_f353c2e2" formatted="false">Отсканировать код 📷</string>
+    <string name="s_f542f592" formatted="false">На жалобы никогда не отвечают автоматически — они появляются здесь, чтобы вы ответили.</string>
+    <string name="s_f5f6d8c4" formatted="false">Не удалось подключить канал</string>
+    <string name="s_f6b288e4" formatted="false">Скидка для участников Dalilacom</string>
+    <string name="s_f79140d3" formatted="false">Отправлено</string>
+    <string name="s_f835f24d" formatted="false">Введите название магазина</string>
+    <string name="s_f85fd2a4" formatted="false">Пополнить кошелёк</string>
+    <string name="s_f90416a9" formatted="false">📷 Сменить фото</string>
+    <string name="s_f90ad780" formatted="false">Вы пока не сохранили ни одного места — нажмите ♡ у любого магазина на карте.</string>
+    <string name="s_f96a754e" formatted="false">Баланс</string>
+    <string name="s_faa866bc" formatted="false">Запасной ответ, если ИИ недоступен (необязательно)</string>
+    <string name="s_fd85c447" formatted="false">Активировано</string>
+    <string name="s_fd98f999" formatted="false">Не удалось изменить</string>
+    <string name="s_fdc54283" formatted="false">Не удалось загрузить входящие</string>
+    <string name="s_fe29f439" formatted="false">Последние операции</string>
+    <string name="s_fe79250b" formatted="false">Проверить</string>
+    <string name="fit_auto_fd107e2a" formatted="false">Фото сертификата или достижения</string>
+    <string name="fit_auto_31d9b741" formatted="false">Syriatel Cash</string>
+    <string name="fit_auto_d79941c7" formatted="false">MTN Cash</string>
+    <string name="fit_auto_098683e9" formatted="false">Sham Cash</string>
+    <string name="fit_auto_13595e7a" formatted="false">💳 Доступные способы оплаты</string>
+    <string name="fit_auto_5b0421bf" formatted="false">Оплата производится напрямую тренеру вне приложения.</string>
+    <string name="fit_auto_7a73da43" formatted="false">Владелец счёта: %1$s</string>
+    <string name="fit_auto_27503bf2" formatted="false">🎯 Месячные тренировочные пакеты</string>
+    <string name="fit_auto_4a0b14c3" formatted="false"> мес. ·</string>
+    <string name="fit_auto_8e0d8542" formatted="false">Ваша заявка на участие отправлена тренеру</string>
+    <string name="fit_auto_aa2fb742" formatted="false">Не удалось отправить заявку</string>
+    <string name="fit_auto_0c38fd67" formatted="false">Ждём ответа тренера</string>
+    <string name="fit_auto_19837e3e" formatted="false">Принято</string>
+    <string name="fit_auto_58d8f68d" formatted="false">Запросить участие</string>
+    <string name="fit_auto_1eaa192f" formatted="false">Войдите, чтобы запросить участие</string>
+    <string name="fit_auto_514b56ff" formatted="false">Оплата в приложении не принимается; свяжитесь с тренером, чтобы договориться.</string>
+    <string name="fit_auto_11e83767" formatted="false">Назад</string>
+    <string name="fit_auto_f7175997" formatted="false">Подопечные и их планы</string>
+    <string name="fit_auto_cd78b295" formatted="false">Мои планы фитнеса и питания</string>
+    <string name="fit_auto_ec4ef902" formatted="false">Планы доступны только тренеру и подопечному.</string>
+    <string name="fit_auto_0d1a0f67" formatted="false">Изменить план · %1$s</string>
+    <string name="fit_auto_7ce78f07" formatted="false">Зарегистрированная эл. почта подопечного</string>
+    <string name="fit_auto_5e657e68" formatted="false">Тренировки</string>
+    <string name="fit_auto_2a48b04e" formatted="false">Питание</string>
+    <string name="fit_auto_384df087" formatted="false">Название плана</string>
+    <string name="fit_auto_6a2e4995" formatted="false">Подробности: одно упражнение или приём пищи в строке</string>
+    <string name="fit_auto_3c4208fe" formatted="false">Заметки</string>
+    <string name="fit_auto_7625f9c4" formatted="false">Дата начала плана (ГГГГ-ММ-ДД, необязательно)</string>
+    <string name="fit_auto_44a5a9a7" formatted="false">Дата окончания плана (ГГГГ-ММ-ДД, необязательно)</string>
+    <string name="fit_auto_61ec5484" formatted="false">Расписание на неделю (необязательно)</string>
+    <string name="fit_auto_70cbbabf" formatted="false">Понедельник</string>
+    <string name="fit_auto_b38d7fc2" formatted="false">Вторник</string>
+    <string name="fit_auto_2e5bdec0" formatted="false">Среда</string>
+    <string name="fit_auto_a6828d5b" formatted="false">Четверг</string>
+    <string name="fit_auto_66e535ba" formatted="false">Пятница</string>
+    <string name="fit_auto_3cf0f7a6" formatted="false">Суббота</string>
+    <string name="fit_auto_86aad79c" formatted="false">Воскресенье</string>
+    <string name="fit_auto_715af372" formatted="false"> · упражнения или приёмы пищи, по одному в строке</string>
+    <string name="fit_auto_0da9f8a8" formatted="false">Сохраняем…</string>
+    <string name="fit_auto_ea76b8bc" formatted="false">Сохранить изменения</string>
+    <string name="fit_auto_e1b96d0a" formatted="false">Отправить план</string>
+    <string name="fit_auto_c5f60175" formatted="false">Отменить редактирование</string>
+    <string name="fit_auto_c66cd2de" formatted="false">Подопечные (%1$d)</string>
+    <string name="fit_auto_6d08f196" formatted="false">Все</string>
+    <string name="fit_auto_eec3db7f" formatted="false">План тренировок</string>
+    <string name="fit_auto_ed87a68b" formatted="false">План питания</string>
+    <string name="fit_auto_49215294" formatted="false">Начало: %1$s</string>
+    <string name="fit_auto_bf43e2f7" formatted="false">Окончание: %1$s</string>
+    <string name="fit_auto_6b100af3" formatted="false">📄 Сохранить план в PDF</string>
+    <string name="fit_auto_4eb10593" formatted="false">Изменить план</string>
+    <string name="fit_auto_df38da5b" formatted="false"> кг ·</string>
+    <string name="fit_auto_943bdb85" formatted="false">Вес в килограммах</string>
+    <string name="fit_auto_1d47217e" formatted="false">Заметка о прогрессе</string>
+    <string name="fit_auto_6a2fcb7c" formatted="false">Записать прогресс</string>
+    <string name="fit_auto_35db8764" formatted="false">Прогресс подопечного</string>
+    <string name="fit_auto_d7644cdb" formatted="false">Сейчас нет планов для показа.</string>
+    <string name="fit_auto_80861134" formatted="false">Заявки на участие в пакетах</string>
+    <string name="fit_auto_458c9253" formatted="false">Мои тренировочные пакеты</string>
+    <string name="fit_auto_dff8acbb" formatted="false">Заявок и тренировочных пакетов пока нет.</string>
+    <string name="fit_auto_4f4865b2" formatted="false">Статус:</string>
+    <string name="fit_auto_ab579793" formatted="false">Отклонено</string>
+    <string name="fit_auto_f5eb0776" formatted="false">Отменено</string>
+    <string name="fit_auto_28cbdf83" formatted="false">Завершено</string>
+    <string name="fit_auto_c5a1a374" formatted="false">Период: %1$s – %2$s</string>
+    <string name="fit_auto_d7e02c92" formatted="false">Принять</string>
+    <string name="fit_auto_b7dee974" formatted="false">Отклонить</string>
+    <string name="fit_auto_dfdf1a42" formatted="false">Завершить подписку</string>
+    <string name="fit_auto_e06a23ff" formatted="false">Отменить заявку</string>
+    <string name="fit_auto_817bd7c2" formatted="false">До 12 фото</string>
+    <string name="fit_auto_77aa4468" formatted="false">Сертификаты и достижения</string>
+    <string name="fit_auto_712ba737" formatted="false">Посетители видят эти фото. Dalilacom не проверял сертификаты.</string>
+    <string name="fit_auto_1b963ebd" formatted="false">📷 Добавить фото сертификата или достижения</string>
+    <string name="fit_auto_4b431162" formatted="false">📜 Фото №</string>
+    <string name="fit_auto_3b9854e1" formatted="false">Удалить</string>
+    <string name="fit_auto_1a8b3258" formatted="false">Способы оплаты и получение платы</string>
+    <string name="fit_auto_6cbcb21f" formatted="false">Добавьте свои платёжные данные, чтобы подопечные могли вам платить. Посетители увидят их на странице тренера; оплата происходит вне приложения.</string>
+    <string name="fit_auto_909db8ed" formatted="false">Имя владельца счёта</string>
+    <string name="fit_auto_6ff1570f" formatted="false">Номер Syriatel Cash</string>
+    <string name="fit_auto_9bb5492f" formatted="false">Номер MTN Cash</string>
+    <string name="fit_auto_04e0bcce" formatted="false">Счёт Sham Cash</string>
+    <string name="fit_auto_043d5776" formatted="false">Месячные тренировочные пакеты</string>
+    <string name="fit_auto_b2007fb0" formatted="false">Добавьте понятную цену и срок, чтобы посетители видели ваши пакеты.</string>
+    <string name="fit_auto_9e1fb97e" formatted="false">Удалить пакет</string>
+    <string name="fit_auto_650b87df" formatted="false">Что входит?</string>
+    <string name="fit_auto_ae92351c" formatted="false">Длительность в месяцах</string>
+    <string name="fit_auto_fa59c355" formatted="false">Цена</string>
+    <string name="fit_auto_72908aa4" formatted="false">Добавить пакет</string>
+    <string name="fit_auto_c2ed8d0d" formatted="false">📋  Планы подопечных</string>
+    <string name="fit_auto_d141a0e3" formatted="false">🏋️  Мои планы фитнеса и питания</string>
+    <string name="fit_auto_b6b55b3a" formatted="false">Название пакета</string>
+    <string name="s_89f995b3" formatted="false">Не удалось связаться с сервисом</string>
+    <string name="s_f03c2218" formatted="false">Не удалось начать онлайн-оплату</string>
+    <string name="s_f1f017e4" formatted="false">Не удалось прочитать накладную</string>
+    <string name="s_0a2edd30" formatted="false">Не удалось сохранить запись</string>
+    <string name="s_364be4bc" formatted="false">Не удалось опубликовать объявление</string>
+    <string name="s_37f81884" formatted="false">Не удалось купить тариф</string>
+    <string name="s_cf802fc0" formatted="false">Не удалось сохранить номер перевода</string>
+    <string name="s_9338c391" formatted="false">Не удалось подтвердить перевод</string>
+    <string name="s_9179029e" formatted="false">Не удалось сохранить способы оплаты</string>
+    <string name="s_7b9c60b6" formatted="false">Сохранено</string>
+    <string name="s_11bc7d18">💳 Способ оплаты · %1$s</string>
+    <string name="s_20f44d7f" formatted="false">Bank Al Sham</string>
+    <string name="s_66c40d1d" formatted="false">После перевода отправьте номер операции со страницы заказа. Владелец магазина подтвердит получение после проверки своего счёта.</string>
+    <string name="s_cc3ae185">Товаров в месяц: %1$s · %2$s</string>
+    <string name="s_6152db49" formatted="false">б/у и новые</string>
+    <string name="s_7d192e2b" formatted="false">только б/у товары</string>
+    <string name="s_55270d0e" formatted="false">باقة متجرك المجانية</string>
+    <string name="s_4a6a560a">Получатель: %1$s</string>
+    <string name="s_2c0bca89">Номер перевода: %1$s</string>
+    <string name="s_16765e8a">Номер операции отправлен: %1$s</string>
+    <string name="s_d701f388" formatted="false">Способ оплаты:</string>
+    <string name="s_6a069c95" formatted="false">Номер операции после перевода</string>
+    <string name="s_9c976ca3" formatted="false">Я отправил перевод</string>
+    <string name="s_f5c962b6" formatted="false">Ожидается подтверждение владельца магазина, что перевод пришёл.</string>
+    <string name="s_6b666b63" formatted="false">Подтвердить, что перевод пришёл</string>
+    <string name="s_e4b4c234" formatted="false">سوق المستخدمين</string>
+    <string name="s_b179bf25" formatted="false">Как вы получаете деньги за свои продажи?</string>
+    <string name="s_2ace6138" formatted="false">Выберите имеющиеся у вас способы. Клиент видит их только после заказа вашего товара.</string>
+    <string name="s_01a85ddc" formatted="false">Имя на счёте</string>
+    <string name="s_54744a3d" formatted="false">Номер счёта или кошелька</string>
+    <string name="s_4816f255" formatted="false">Способы оплаты сохранены</string>
+    <string name="s_40c2c372" formatted="false">Сохранить способы оплаты</string>
+    <string name="s_29c83806" formatted="false">تم إرفاق الصورة</string>
+    <string name="s_4810cb93" formatted="false">تعذّر رفع الصورة</string>
+    <string name="s_fa9309cd" formatted="false">← رجوع</string>
+    <string name="s_ac6aac42" formatted="false">افتح متجرك الخاص</string>
+    <string name="s_d4d43912" formatted="false">اختر اسماً لمتجرك، وبعدها أضف منتجاتك وشارك صفحته مع الناس.</string>
+    <string name="s_e72dca5d" formatted="false">اسم المتجر</string>
+    <string name="s_886333f5" formatted="false">وصف المتجر (اختياري)</string>
+    <string name="s_2203e3d9" formatted="false">تم إنشاء متجرك</string>
+    <string name="s_01b266ff" formatted="false">تعذّر إنشاء المتجر</string>
+    <string name="s_13adebab" formatted="false">إنشاء المتجر</string>
+    <string name="s_d7e8f7da" formatted="false">عرض متجري</string>
+    <string name="s_0ee0b71f" formatted="false">أضف منتج للبيع</string>
+    <string name="s_23a79f17">الإعلانات المجانية المتبقية هذا الشهر: %1$s من %2$s</string>
+    <string name="s_df644ae1" formatted="false">اسم المنتج</string>
+    <string name="s_b5a7adde" formatted="false">وصف المنتج</string>
+    <string name="s_3601146c" formatted="false">السعر</string>
+    <string name="s_5e7ac625" formatted="false">رقم للتواصل (اختياري)</string>
+    <string name="s_fe3ac683" formatted="false">الصورة مرفقة ✓</string>
+    <string name="s_c5cd4e00" formatted="false">إضافة صورة للمنتج</string>
+    <string name="s_019d1ca7" formatted="false">مستعمل</string>
+    <string name="s_03c2e7e4" formatted="false">جديد</string>
+    <string name="s_9cd5d5cd" formatted="false">وصلت للحد المجاني. اختر باقة من باقات المتجر للمتابعة.</string>
+    <string name="s_a1272e5c" formatted="false">تم تفعيل الباقة</string>
+    <string name="s_928735d6" formatted="false">رصيد</string>
+    <string name="s_43b0c75a" formatted="false">تم إرسال إعلانك للمراجعة</string>
+    <string name="s_0b9aa735" formatted="false">إرسال للمراجعة</string>
+    <string name="s_985b09fd" formatted="false">إعلاناتي</string>
+    <string name="s_92e97e03" formatted="false">بانتظار المراجعة</string>
+    <string name="s_bae1ccce" formatted="false">مرفوض بعد مراجعة الذكاء الاصطناعي</string>
+    <string name="s_9b9d8a97" formatted="false">منشور</string>
+    <string name="s_d85a8a38" formatted="false">مباع</string>
+    <string name="s_94f37dcd" formatted="false">السبب: </string>
+    <string name="s_9a7d8a0f" formatted="false">سجّل دخولك لتضيف إعلاناً</string>
+    <string name="s_b6d4223e" formatted="false">تسجيل الدخول</string>
+    <string name="s_318421e6" formatted="false">أحدث المنتجات</string>
+    <string name="s_72608e10" formatted="false">المتجر: </string>
+    <string name="s_698d3436" formatted="false">للتواصل: </string>
+    <string name="s_1bf1c6ab" formatted="false">ما في إعلانات منشورة حالياً</string>
+    <string name="s_e767f75b" formatted="false">عم نحمل المتجر…</string>
+    <string name="s_9aba83cd" formatted="false">ما في منتجات منشورة بهالمتجر حالياً</string>
+    <string name="sec_why" formatted="false">Что вы получите</string>
+    <string name="sec_how" formatted="false">Как это работает</string>
+    <string name="sec_about" formatted="false">ⓘ Об этом разделе</string>
+    <string name="sec_back" formatted="false">Назад</string>
+    <string name="sec_start" formatted="false">Начать</string>
+    <string name="sec_login" formatted="false">Войдите, чтобы начать</string>
+    <string name="sec_register" formatted="false">Создать аккаунт</string>
+    <string name="sec_acc_kicker" formatted="false">🧮 Бухгалтерия</string>
+    <string name="sec_acc_title" formatted="false">Учёт вашего магазина в одном месте</string>
+    <string name="sec_acc_sub" formatted="false">Записывайте доходы и расходы, следите за складом и видьте прибыль, не имея бухгалтерских знаний.</string>
+    <string name="sec_acc_f1t" formatted="false">Доходы и расходы</string>
+    <string name="sec_acc_f1d" formatted="false">Записывайте каждую операцию за секунды и смотрите итог по каждой валюте и за любой период.</string>
+    <string name="sec_acc_f2t" formatted="false">Склад и штрихкоды</string>
+    <string name="sec_acc_f2d" formatted="false">Следите за количеством каждого товара, ищите по штрихкоду и видьте, что заканчивается.</string>
+    <string name="sec_acc_f3t" formatted="false">Сканирование накладных</string>
+    <string name="sec_acc_f3d" formatted="false">Сфотографируйте накладную, ИИ считает сумму и поставщика, а вы проверите и подтвердите.</string>
+    <string name="sec_acc_f4t" formatted="false">Отчёты и экспорт</string>
+    <string name="sec_acc_f4d" formatted="false">Скачайте все записи в виде файла CSV или распечатайте готовый отчёт для бухгалтера.</string>
+    <string name="sec_acc_s1" formatted="false">Выберите тариф или начните пробный период</string>
+    <string name="sec_acc_s2" formatted="false">Добавьте товары и записи</string>
+    <string name="sec_acc_s3" formatted="false">Следите за прибылью и экспортируйте отчёты</string>
+    <string name="sec_resp_kicker" formatted="false">🤖 Автоответчик</string>
+    <string name="sec_resp_title" formatted="false">Отвечайте клиентам, даже когда спите</string>
+    <string name="sec_resp_sub" formatted="false">Подключите своего Telegram-бота, и автоответчик будет отвечать на сообщения вашего магазина. Facebook и Instagram скоро появятся.</string>
+    <string name="sec_resp_f1t" formatted="false">Сообщения и комментарии</string>
+    <string name="sec_resp_f1d" formatted="false">Сейчас он отвечает на сообщения в Telegram. Messenger и Instagram скоро появятся.</string>
+    <string name="sec_resp_f2t" formatted="false">Правила вашими словами</string>
+    <string name="sec_resp_f2d" formatted="false">Задайте ключевые слова и готовые ответы (цены, адрес, часы работы), и они будут отправляться сразу.</string>
+    <string name="sec_resp_f3t" formatted="false">Искусственный интеллект</string>
+    <string name="sec_resp_f3d" formatted="false">Когда ни одно правило не подходит, он пишет подходящий ответ, используя только введённую вами информацию.</string>
+    <string name="sec_resp_f4t" formatted="false">Входящие</string>
+    <string name="sec_resp_f4d" formatted="false">Смотрите все диалоги, вмешивайтесь вручную когда захотите и следите за еженедельными сводками.</string>
+    <string name="sec_resp_s1" formatted="false">Подключите свои каналы</string>
+    <string name="sec_resp_s2" formatted="false">Напишите правила или включите ИИ</string>
+    <string name="sec_resp_s3" formatted="false">Запустите и следите за входящими</string>
+    <string name="tab_hr" formatted="false">Кадры</string>
+    <string name="profile_my_cart" formatted="false">🛒 Моя корзина</string>
+    <string name="sec_hr_open" formatted="false">Открыть «Кадры»</string>
+    <string name="sec_hr_kicker" formatted="false">👥 Кадры (HR)</string>
+    <string name="sec_hr_title" formatted="false">Управляйте персоналом в одном месте</string>
+    <string name="sec_hr_sub" formatted="false">Посещаемость, отпуска, зарплата и авансы для сотрудников вашей компании — просто и с готовыми отчётами.</string>
+    <string name="sec_hr_f1t" formatted="false">Посещаемость</string>
+    <string name="sec_hr_f1d" formatted="false">Сотрудники отмечают приход и уход, а вы следите за рабочим временем и исправляете любую запись.</string>
+    <string name="sec_hr_f2t" formatted="false">Отпуска</string>
+    <string name="sec_hr_f2d" formatted="false">Сотрудник просит отпуск, заявка идёт его руководителю, затем в кадры, а остаток дней считается за вас.</string>
+    <string name="sec_hr_f3t" formatted="false">Расчёт зарплаты</string>
+    <string name="sec_hr_f3d" formatted="false">Готовые ежемесячные расчётные листы, где пропуски и взносы по авансам удерживаются автоматически.</string>
+    <string name="sec_hr_f4t" formatted="false">Авансы</string>
+    <string name="sec_hr_f4d" formatted="false">Запросите аванс, одобрите его и распределите по зарплатам — без бумаг и ручных подсчётов.</string>
+    <string name="sec_hr_s1" formatted="false">Зарегистрируйте компанию</string>
+    <string name="sec_hr_s2" formatted="false">Добавьте отделы и сотрудников</string>
+    <string name="sec_hr_s3" formatted="false">Проводите расчёт зарплаты и следите за отчётами</string>
+    <string name="prof_sec_buy" formatted="false">Мои покупки</string>
+    <string name="prof_sec_buy_sub" formatted="false">Корзина, заказы и избранное</string>
+    <string name="prof_sec_wallet" formatted="false">Мой кошелёк</string>
+    <string name="prof_sec_wallet_sub" formatted="false">Баланс и способы получения оплаты</string>
+    <string name="prof_sec_business" formatted="false">Мой бизнес</string>
+    <string name="prof_sec_business_sub" formatted="false">Магазин, карточка на карте и реклама</string>
+    <string name="prof_sec_marketing" formatted="false">Маркетинг</string>
+    <string name="prof_sec_marketing_sub" formatted="false">Зарабатывайте комиссию за приглашения</string>
+    <string name="prof_sec_services" formatted="false">Мои услуги</string>
+    <string name="prof_sec_services_sub" formatted="false">Записи и обучение</string>
+    <string name="prof_sec_privacy" formatted="false">Местоположение</string>
+    <string name="prof_sec_privacy_sub" formatted="false">Поделиться моим местоположением и местом на карте</string>
+    <string name="prof_sec_admin" formatted="false">Администрирование</string>
+    <string name="prof_sec_admin_sub" formatted="false">Проверка рекламы и заявок</string>
+    <string name="prof_sec_account" formatted="false">Мой аккаунт и безопасность</string>
+    <string name="prof_sec_account_sub" formatted="false">Мои данные, уведомления, выход</string>
+    <string name="store_visit_shop" formatted="false">Перейти в магазин</string>
+    <string name="site_tab_home" formatted="false">Главная</string>
+    <string name="site_why" formatted="false">Зачем это нужно</string>
+    <string name="site_faq" formatted="false">Частые вопросы</string>
+    <string name="site_stepsTitle" formatted="false">Как это работает</string>
+    <string name="site_featuresTitle" formatted="false">Всё в одном месте</string>
+    <string name="site_detailsTitle" formatted="false">Подробнее</string>
+    <string name="site_accounting_d1_t" formatted="false">Доходы и расходы</string>
+    <string name="site_accounting_d1_b1" formatted="false">Записывайте каждую операцию с типом (доход или расход), категорией, описанием и суммой.</string>
+    <string name="site_accounting_d1_b2" formatted="false">Сводка считает доходы, расходы и итог по каждой валюте и за любой период.</string>
+    <string name="site_accounting_d1_b3" formatted="false">Изменяйте или удаляйте любую ошибочную запись.</string>
+    <string name="site_accounting_d2_t" formatted="false">Склад и штрихкоды</string>
+    <string name="site_accounting_d2_b1" formatted="false">Добавьте товар с названием, ценой продажи, себестоимостью и имеющимся количеством.</string>
+    <string name="site_accounting_d2_b2" formatted="false">Считайте штрихкод камерой телефона (если устройство это поддерживает) или введите его вручную.</string>
+    <string name="site_accounting_d2_b3" formatted="false">Каждая продажа уменьшает количество и сама записывает доход и себестоимость проданного товара.</string>
+    <string name="site_accounting_d3_t" formatted="false">Сканирование накладных</string>
+    <string name="site_accounting_d3_b1" formatted="false">Сделайте чёткое фото закупочной накладной.</string>
+    <string name="site_accounting_d3_b2" formatted="false">Приложение считывает сумму, поставщика и описание, а вы проверяете и правите перед сохранением.</string>
+    <string name="site_accounting_d3_b3" formatted="false">Ничего не сохраняется, пока вы не подтвердите. Есть дневной лимит на фото, а накладную всегда можно ввести вручную.</string>
+    <string name="site_accounting_d4_t" formatted="false">Отчёты и ссылка на магазин</string>
+    <string name="site_accounting_d4_b1" formatted="false">В любой момент скачайте все записи в виде файла CSV.</string>
+    <string name="site_accounting_d4_b2" formatted="false">Распечатайте сводный отчёт и передайте бухгалтеру готовые цифры.</string>
+    <string name="site_accounting_d4_b3" formatted="false">Если у вас есть магазин на Dalilacom, доставленные заказы записываются сами: доход, себестоимость и плата за доставку.</string>
+    <string name="site_responder_d1_t" formatted="false">Сообщения</string>
+    <string name="site_responder_d1_b1" formatted="false">Вставьте токен своего Telegram-бота, и он подключится сам.</string>
+    <string name="site_responder_d1_b2" formatted="false">Он отвечает на текстовые сообщения. На фото и голосовые сообщения он не отвечает.</string>
+    <string name="site_responder_d1_b3" formatted="false">Весь автоответчик можно отключить одной кнопкой в настройках.</string>
+    <string name="site_responder_d2_t" formatted="false">Правила</string>
+    <string name="site_responder_d2_b1" formatted="false">Напишите ключевые слова, и когда в сообщении встретится одно из них, будет отправлен выбранный вами ответ.</string>
+    <string name="site_responder_d2_b2" formatted="false">В ответ можно подставить имя клиента, и оно заполнится само.</string>
+    <string name="site_responder_d2_b3" formatted="false">Сообщение, не подходящее ни под одно правило, получает запасной ответ: фиксированный текст, ИИ или никакого ответа.</string>
+    <string name="site_responder_d3_t" formatted="false">Искусственный интеллект</string>
+    <string name="site_responder_d3_b1" formatted="false">Он пишет ответ по описанию вашего бизнеса и тону общения, заданному в настройках.</string>
+    <string name="site_responder_d3_b2" formatted="false">Ему запрещено выдумывать цены, наличие и правила. Если он не уверен, то говорит, что команда свяжется позже.</string>
+    <string name="site_responder_d3_b3" formatted="false">ИИ входит в тарифы, которые его включают, и у него есть квота ответов. Когда квота исчерпана, правила и фиксированные ответы продолжают работать.</string>
+    <string name="site_responder_d4_t" formatted="false">Входящие</string>
+    <string name="site_responder_d4_b1" formatted="false">Каждое сообщение и ответ на него сохраняются во входящих со статусом: отвечено, ждёт вас, ошибка или пропущено.</string>
+    <string name="site_responder_d4_b2" formatted="false">Если сообщение похоже на жалобу, клиент сразу получает извинение, а вы — уведомление.</string>
+    <string name="site_responder_d4_b3" formatted="false">Вы можете вручную ответить на любое сообщение, которое ждёт вас или отправка которого не удалась.</string>
+    <string name="site_ctaTitle" formatted="false">Готовы начать?</string>
+    <string name="site_ctaSub" formatted="false">Несколько простых шагов — и вы почувствуете разницу с первого дня.</string>
+    <string name="site_open_responder" formatted="false">Открыть автоответчик</string>
+    <string name="site_open_accounting" formatted="false">Открыть панель бухгалтерии</string>
+    <string name="site_open_hr" formatted="false">Открыть систему «Кадры»</string>
+    <string name="site_login" formatted="false">Войдите, чтобы начать</string>
+    <string name="site_register" formatted="false">Создать аккаунт</string>
+    <string name="site_plans" formatted="false">Посмотреть тарифы</string>
+    <string name="site_learn" formatted="false">Узнать больше</string>
+    <string name="site_planNeeded" formatted="false">Для бухгалтерии нужен активный тариф или пробный период.</string>
+    <string name="site_responder_tab_overview" formatted="false">Статус</string>
+    <string name="site_responder_tab_channels" formatted="false">Каналы</string>
+    <string name="site_responder_tab_rules" formatted="false">Правила</string>
+    <string name="site_responder_tab_inbox" formatted="false">Входящие</string>
+    <string name="site_accounting_tab_summary" formatted="false">Сводка</string>
+    <string name="site_accounting_tab_entry" formatted="false">Добавить запись</string>
+    <string name="site_accounting_tab_invoices" formatted="false">Накладные</string>
+    <string name="site_accounting_tab_stock" formatted="false">Склад</string>
+    <string name="site_art_chat1" formatted="false">Сколько стоит этот товар?</string>
+    <string name="site_art_chat2" formatted="false">$25, доставка бесплатная 🚚</string>
+    <string name="site_art_chat3" formatted="false">Где вы находитесь?</string>
+    <string name="site_art_chat4" formatted="false">В Дамаске, открыто с 9 до 9 ✅</string>
+    <string name="site_art_kw1" formatted="false">Цены</string>
+    <string name="site_art_kw2" formatted="false">Часы работы</string>
+    <string name="site_art_kw3" formatted="false">Адрес</string>
+    <string name="site_art_income" formatted="false">Доходы</string>
+    <string name="site_art_expense" formatted="false">Расходы</string>
+    <string name="site_art_net" formatted="false">Чистая прибыль</string>
+    <string name="site_art_invoice" formatted="false">Закупочная накладная</string>
+    <string name="site_art_total" formatted="false">Итого</string>
+    <string name="site_art_low" formatted="false">Заканчивается</string>
+    <string name="site_art_item1" formatted="false">Хлопковая рубашка</string>
+    <string name="site_art_item2" formatted="false">Спортивные кроссовки</string>
+    <string name="site_art_item3" formatted="false">Кожаная сумка</string>
+    <string name="site_art_payslip" formatted="false">Расчётный лист</string>
+    <string name="site_art_netpay" formatted="false">К выплате</string>
+    <string name="site_art_leave" formatted="false">Отпуск</string>
+    <string name="site_art_present" formatted="false">Присутствует</string>
+    <string name="site_responder_slide1_t" formatted="false">Мгновенный ответ на каждое сообщение</string>
+    <string name="site_responder_slide1_d" formatted="false">Клиент спрашивает в 3 часа ночи? Автоответчик отвечает за секунды, в вашем стиле.</string>
+    <string name="site_responder_slide2_t" formatted="false">Сейчас Telegram, скоро появятся другие</string>
+    <string name="site_responder_slide2_d" formatted="false">Подключите своего Telegram-бота один раз, и все сообщения соберутся в одном месте. Facebook и Instagram скоро появятся.</string>
+    <string name="site_responder_slide3_t" formatted="false">ИИ, который знает ваш магазин</string>
+    <string name="site_responder_slide3_d" formatted="false">Он отвечает только на основе написанного вами: цены, часы работы и адрес, ничего не выдумывая.</string>
+    <string name="site_responder_st1_n" formatted="false">24/7</string>
+    <string name="site_responder_st1_l" formatted="false">Всегда включён</string>
+    <string name="site_responder_st2_n" formatted="false">Секунды</string>
+    <string name="site_responder_st2_l" formatted="false">Время ответа клиенту</string>
+    <string name="site_responder_st3_n" formatted="false">100%</string>
+    <string name="site_responder_st3_l" formatted="false">Из вашей собственной информации</string>
+    <string name="site_responder_s1_d" formatted="false">Нажмите «Подключить» и выберите свою страницу: без кода и хлопот.</string>
+    <string name="site_responder_s2_d" formatted="false">Напишите ключевые слова и готовые ответы или включите ИИ для остального.</string>
+    <string name="site_responder_s3_d" formatted="false">Все диалоги лежат во входящих, и вы можете вмешаться когда захотите.</string>
+    <string name="site_responder_faq1_q" formatted="false">Какие каналы поддерживаются?</string>
+    <string name="site_responder_faq1_a" formatted="false">Сегодня Telegram. Facebook Messenger и Instagram скоро появятся.</string>
+    <string name="site_responder_faq2_q" formatted="false">Он выдумывает ответы?</string>
+    <string name="site_responder_faq2_a" formatted="false">Нет. Он отвечает только на основе введённой вами информации, а когда не знает — передаёт диалог вам.</string>
+    <string name="site_responder_faq3_q" formatted="false">Могу ли я вмешаться в диалог?</string>
+    <string name="site_responder_faq3_a" formatted="false">Конечно. Во входящих вы видите всё и можете ответить сами в любой момент.</string>
+    <string name="site_responder_faq4_q" formatted="false">Сколько это стоит?</string>
+    <string name="site_responder_faq4_a" formatted="false">Есть тарифы для бизнеса любого размера, с пробным периодом. Их можно увидеть внутри раздела.</string>
+    <string name="site_accounting_slide1_t" formatted="false">Ваш учёт с первого взгляда</string>
+    <string name="site_accounting_slide1_d" formatted="false">Доходы, расходы и чистая прибыль по каждой валюте, без таблиц.</string>
+    <string name="site_accounting_slide2_t" formatted="false">Сфотографируйте накладную — и готово</string>
+    <string name="site_accounting_slide2_d" formatted="false">ИИ считывает сумму и поставщика, а вы проверяете и подтверждаете одним нажатием.</string>
+    <string name="site_accounting_slide3_t" formatted="false">Склад под контролем</string>
+    <string name="site_accounting_slide3_d" formatted="false">Следите за количеством, ищите по штрихкоду и замечайте товар, который заканчивается.</string>
+    <string name="site_accounting_st1_n" formatted="false">📊</string>
+    <string name="site_accounting_st1_l" formatted="false">Ваша чистая прибыль в реальном времени</string>
+    <string name="site_accounting_st2_n" formatted="false">🧾</string>
+    <string name="site_accounting_st2_l" formatted="false">Накладные по фото</string>
+    <string name="site_accounting_st3_n" formatted="false">📦</string>
+    <string name="site_accounting_st3_l" formatted="false">Склад по штрихкоду</string>
+    <string name="site_accounting_s1_d" formatted="false">Начните с пробного периода или тарифа — и откроется панель бухгалтерии.</string>
+    <string name="site_accounting_s2_d" formatted="false">Записывайте операции и добавляйте товары или фотографируйте накладные.</string>
+    <string name="site_accounting_s3_d" formatted="false">Смотрите итог и скачивайте отчёты в CSV или распечатывайте их.</string>
+    <string name="site_accounting_faq1_q" formatted="false">Нужно ли мне знать бухгалтерию?</string>
+    <string name="site_accounting_faq1_a" formatted="false">Нет. Записывайте доходы и расходы, а остальное посчитается за вас.</string>
+    <string name="site_accounting_faq2_q" formatted="false">Связано ли это с моим магазином?</string>
+    <string name="site_accounting_faq2_a" formatted="false">Да. Доставленные заказы записываются за вас: доход, себестоимость и плата за доставку.</string>
+    <string name="site_accounting_faq3_q" formatted="false">Можно ли экспортировать мои данные?</string>
+    <string name="site_accounting_faq3_a" formatted="false">Вы можете в любой момент скачать все записи в виде файла CSV.</string>
+    <string name="site_accounting_faq4_q" formatted="false">Нужна ли мне подписка?</string>
+    <string name="site_accounting_faq4_a" formatted="false">Для бухгалтерии нужен активный тариф или пробный период, а кнопка покажет тарифы.</string>
+    <string name="site_hr_slide1_t" formatted="false">Ваш персонал в одном месте</string>
+    <string name="site_hr_slide1_d" formatted="false">Профили, отделы и права доступа, а данные каждой компании хранятся отдельно и надёжно.</string>
+    <string name="site_hr_slide2_t" formatted="false">Зарплата в один клик</string>
+    <string name="site_hr_slide2_d" formatted="false">Ежемесячные расчётные листы, где пропуски и взносы по авансам удерживаются автоматически.</string>
+    <string name="site_hr_slide3_t" formatted="false">Отпуска и авансы без бумаг</string>
+    <string name="site_hr_slide3_d" formatted="false">Заявки и согласования по цепочке (руководитель, затем кадры), а остаток считается за вас.</string>
+    <string name="site_hr_st1_n" formatted="false">🕒</string>
+    <string name="site_hr_st1_l" formatted="false">Сотрудники отмечаются с телефонов</string>
+    <string name="site_hr_st2_n" formatted="false">💵</string>
+    <string name="site_hr_st2_l" formatted="false">Зарплата считается за вас каждый месяц</string>
+    <string name="site_hr_st3_n" formatted="false">🔒</string>
+    <string name="site_hr_st3_l" formatted="false">Данные каждой компании хранятся отдельно и защищены</string>
+    <string name="site_hr_s1_d" formatted="false">Зарегистрируйте компанию и выберите её валюту.</string>
+    <string name="site_hr_s2_d" formatted="false">Добавьте отделы и сотрудников и задайте их права.</string>
+    <string name="site_hr_s3_d" formatted="false">Проводите расчёт зарплаты и следите за отчётами и панелями.</string>
+    <string name="site_hr_faq1_q" formatted="false">Нужен ли мне другой сайт или приложение?</string>
+    <string name="site_hr_faq1_a" formatted="false">Нет. «Кадры» находятся внутри DALILACOM: вы открываете их отсюда, без другого сайта и без повторного входа.</string>
+    <string name="site_hr_faq2_q" formatted="false">Безопасны ли мои данные?</string>
+    <string name="site_hr_faq2_a" formatted="false">Данные каждой компании полностью отделены от остальных, а права задаются по ролям.</string>
+    <string name="site_hr_faq3_q" formatted="false">Кто что может?</string>
+    <string name="site_hr_faq3_a" formatted="false">Есть роли: администратор компании, кадры, руководитель отдела и сотрудник, у каждой свои права.</string>
+    <string name="site_hr_faq4_q" formatted="false">Сколько это стоит?</string>
+    <string name="site_hr_faq4_a" formatted="false">Есть тарифы и пробный период, их можно увидеть внутри системы.</string>
+
+    <!-- Human resources inside DALILACOM -->
+    <string name="site_hr_tab_people">Сотрудники</string>
+    <string name="site_hr_tab_leave">Отпуска</string>
+    <string name="site_hr_tab_payroll">Расчёт зарплаты</string>
+    <string name="site_hr_tab_job">Моя работа</string>
+    <string name="hr_getPlan">Подключить тариф «Кадры»</string>
+    <string name="hr_error">Что-то пошло не так, попробуйте ещё раз</string>
+    <string name="hr_company_create">Создайте свою компанию</string>
+    <string name="hr_company_createHint">Один раз назовите компанию, затем добавьте сотрудников.</string>
+    <string name="hr_company_name">Название компании</string>
+    <string name="hr_company_createBtn">Создать компанию</string>
+    <string name="hr_company_done">Компания создана</string>
+    <string name="hr_people_count">Сотрудников: %1$s</string>
+    <string name="hr_people_empty">Сотрудников пока нет. Добавьте первого ниже.</string>
+    <string name="hr_people_add">Новый сотрудник</string>
+    <string name="hr_people_addBtn">Добавить сотрудника</string>
+    <string name="hr_people_added">Сотрудник добавлен</string>
+    <string name="hr_f_first">Имя</string>
+    <string name="hr_f_last">Фамилия</string>
+    <string name="hr_f_email">Эл. почта (для приглашения)</string>
+    <string name="hr_f_position">Должность</string>
+    <string name="hr_f_hire">Дата найма</string>
+    <string name="hr_f_salary">Базовая зарплата (%1$s)</string>
+    <string name="hr_role_HR">Кадры</string>
+    <string name="hr_role_MANAGER">Руководитель</string>
+    <string name="hr_role_EMPLOYEE">Сотрудник</string>
+    <string name="hr_role_OWNER">Владелец</string>
+    <string name="hr_status_ACTIVE">Активен</string>
+    <string name="hr_status_ON_LEAVE">В отпуске</string>
+    <string name="hr_status_TERMINATED">Покинул компанию</string>
+    <string name="hr_linked">привязан к аккаунту</string>
+    <string name="hr_invite">Пригласить в аккаунт</string>
+    <string name="hr_invite_emailed">Приглашение отправлено по электронной почте.</string>
+    <string name="hr_invite_code">Скопируйте этот код и отправьте сотруднику. Он показывается один раз:</string>
+    <string name="hr_leave_pending">Заявки на отпуск, ожидающие вас</string>
+    <string name="hr_leave_none">Заявок на отпуск нет</string>
+    <string name="hr_leave_types">Типы отпусков</string>
+    <string name="hr_leave_noTypes">Типов отпусков пока нет. Добавьте один, чтобы сотрудники могли просить отпуск.</string>
+    <string name="hr_leave_days">%1$s дн.</string>
+    <string name="hr_leave_typeName">Название типа</string>
+    <string name="hr_leave_typeDays">Остаток в днях</string>
+    <string name="hr_leave_addType">Добавить тип</string>
+    <string name="hr_leave_typeAdded">Тип отпуска добавлен</string>
+    <string name="hr_approve">Одобрить</string>
+    <string name="hr_reject">Отклонить</string>
+    <string name="hr_decided">Решение сохранено</string>
+    <string name="hr_pay_runs">Расчёты зарплаты</string>
+    <string name="hr_pay_note">Когда вы рассчитываете зарплату, DALILACOM сам записывает в вашу бухгалтерию расход «К выплате по зарплате». Когда вы отметите её выплаченной, он станет расходом «Зарплата».</string>
+    <string name="hr_pay_none">Расчётов зарплаты пока нет</string>
+    <string name="hr_pay_from">С</string>
+    <string name="hr_pay_to">По</string>
+    <string name="hr_pay_create">Новый расчёт</string>
+    <string name="hr_pay_created">Расчёт создан</string>
+    <string name="hr_pay_process">Рассчитать зарплату</string>
+    <string name="hr_pay_processed">Зарплата рассчитана</string>
+    <string name="hr_pay_markPaid">Отметить выплаченной</string>
+    <string name="hr_pay_paidDone">Выплата записана, расход добавлен в бухгалтерию</string>
+    <string name="hr_pay_revert">Отменить выплату</string>
+    <string name="hr_pay_revertAsk">Выплата будет отменена, а расход по зарплате в бухгалтерии вернётся в «К выплате по зарплате». Уверены?</string>
+    <string name="hr_pay_reverted">Выплата отменена</string>
+    <string name="hr_run_DRAFT">Черновик</string>
+    <string name="hr_run_PROCESSED">Рассчитано</string>
+    <string name="hr_run_PAID">Выплачено</string>
+    <string name="hr_adv_pending">Авансы, ожидающие вас</string>
+    <string name="hr_adv_installments">Взносов: %1$s</string>
+    <string name="hr_job_invites">Приглашения для вас</string>
+    <string name="hr_job_accept">Принять</string>
+    <string name="hr_job_accepted">Ваш аккаунт привязан к компании</string>
+    <string name="hr_job_haveCode">Есть код приглашения?</string>
+    <string name="hr_job_in">Вы отметились в %1$s</string>
+    <string name="hr_job_inBtn">Отметить приход</string>
+    <string name="hr_job_inDone">Отмечен приход</string>
+    <string name="hr_job_out">Отметить уход</string>
+    <string name="hr_job_outDone">Отмечен уход</string>
+    <string name="hr_job_leave">Отпуска</string>
+    <string name="hr_job_noBalances">Остатка отпуска пока нет</string>
+    <string name="hr_job_leaveType">Тип отпуска</string>
+    <string name="hr_job_request">Отправить заявку</string>
+    <string name="hr_job_requested">Заявка на отпуск отправлена</string>
+    <string name="hr_job_slips">Расчётные листы</string>
+    <string name="hr_job_noSlips">Расчётных листов пока нет</string>
+    <string name="hr_retry">Повторить</string>
+    <string name="hr_ok">ОК</string>
+    <string name="hr_cancel">Отмена</string>
+    <string name="hr_plan_required">Для раздела «Кадры» нужен активный тариф или бесплатный пробный период.</string>
+    <string name="hr_pay_paidNoExpense">Выплата записана. Расход в бухгалтерию не добавлен, так как итог по зарплате равен нулю.</string>
+    <string name="hr_pay_attNote">Дни без отметки прихода вычитаются из зарплаты. Если в компании никто не отмечает посещаемость, зарплата выплачивается полностью.</string>
+    <string name="hr_pay_paidNoAccounting">Выплата записана. Расход сохранён и появится в бухгалтерии после того, как вы подключите её.</string>
+    <string name="hr_pay_gross">Начислено</string>
+    <string name="hr_pay_deductions">Удержания</string>
+    <string name="hr_pay_net">К выплате сотрудникам</string>
+    <string name="hr_pay_cost">Стоимость расчёта</string>
+    <string name="hr_pay_paidTotal">Общая стоимость выплаченных расчётов: %1$s</string>
+    <string name="accounting_payrollShare">в том числе зарплата: %1$s</string>
+    <string name="site_offerTitle">Предложение к запуску: 3 месяца бесплатно</string>
+    <string name="site_offerSub">Ограничено по времени. Без банковской карты, и ничего не списывается само.</string>
+    <string name="hr_notLinked">не привязан к аккаунту</string>
+    <string name="hr_details">Подробности</string>
+    <string name="hr_leave_waitHr">Ожидает кадров</string>
+    <string name="hr_leave_waitManager">Ожидает руководителя</string>
+    <string name="hr_pay_paidTotalLabel">Общая стоимость выплаченных расчётов</string>
+    <string name="accounting_payrollLabel">Расчёт зарплаты</string>
+    <string name="accounting_payrollDueLabel">К выплате по зарплате</string>
+    <string name="unified_title">Сводка по бухгалтерии и кадрам</string>
+    <string name="unified_note">Этот месяц, итоговые цифры</string>
+    <string name="unified_employees">Сотрудники</string>
+    <string name="unified_salariesPaid">Выплаченные зарплаты</string>
+    <string name="unified_salariesDue">Зарплаты к выплате, ещё не выплаченные</string>
+    <string name="unified_net">Итог после зарплат</string>
+    <string name="accounting_incomeLabel">Доходы</string>
+    <string name="accounting_expensesLabel">Расходы</string>
+    <string name="accounting_netLabel">Итог</string>
+    <string name="hr_dept_title">Отделы</string>
+    <string name="hr_dept_empty">Отделов пока нет. Добавьте первый.</string>
+    <string name="hr_dept_name">Название отдела</string>
+    <string name="hr_dept_add">Добавить отдел</string>
+    <string name="hr_dept_added">Отдел добавлен</string>
+    <string name="hr_dept_renamed">Название сохранено</string>
+    <string name="hr_dept_deleted">Отдел удалён</string>
+    <string name="hr_dept_confirmDelete">Удалить этот отдел?</string>
+    <string name="hr_dept_rename">Переименовать</string>
+    <string name="hr_dept_count">Сотрудников: %1$s</string>
+    <string name="hr_f_dept">Отдел</string>
+    <string name="hr_dept_none">Без отдела</string>
+    <string name="hr_sal_open">Структура зарплаты</string>
+    <string name="hr_sal_title">Структура зарплаты</string>
+    <string name="hr_sal_base">Базовая зарплата (%1$s)</string>
+    <string name="hr_sal_saveBase">Сохранить базовую зарплату</string>
+    <string name="hr_sal_saved">Зарплата сохранена</string>
+    <string name="hr_sal_items">Статьи зарплаты</string>
+    <string name="hr_sal_empty">У этого сотрудника нет статей зарплаты.</string>
+    <string name="hr_sal_earning">Надбавка к зарплате</string>
+    <string name="hr_sal_deduction">Удержание из зарплаты</string>
+    <string name="hr_sal_fixed">Фиксированная сумма</string>
+    <string name="hr_sal_percent">Процент от базовой зарплаты</string>
+    <string name="hr_sal_comp">Статья</string>
+    <string name="hr_sal_amount">Сумма или процент</string>
+    <string name="hr_sal_addItem">Добавить статью сотруднику</string>
+    <string name="hr_sal_itemAdded">Статья добавлена</string>
+    <string name="hr_sal_newComp">Новая статья</string>
+    <string name="hr_sal_compName">Название статьи</string>
+    <string name="hr_sal_createComp">Создать статью</string>
+    <string name="hr_sal_compCreated">Статья создана</string>
+    <string name="hr_sal_remove">Убрать</string>
+    <string name="hr_sal_removed">Статья убрана</string>
+    <string name="hr_sal_close">Закрыть</string>
+    <string name="hr_sal_pickComp">Выберите статью</string>
+    <string name="accounting_pay">Способ оплаты</string>
+    <string name="accounting_pay_CASH">Наличные</string>
+    <string name="accounting_pay_BANK">Банк</string>
+    <string name="accounting_pay_WALLET">Кошелёк</string>
+    <string name="accounting_sell_pay">Как оплачено?</string>
+    <string name="accounting_cash_title">Касса за день</string>
+    <string name="accounting_cash_help">Касса учитывает только наличные операции. Банк и кошелёк показаны ниже отдельно.</string>
+    <string name="accounting_cash_opening">Начальная сумма</string>
+    <string name="accounting_cash_in">Получено наличными</string>
+    <string name="accounting_cash_out">Выплачено наличными</string>
+    <string name="accounting_cash_expected">Должно быть в кассе</string>
+    <string name="accounting_cash_withdist">У дистрибьюторов (ещё не в кассе)</string>
+    <string name="accounting_cash_handedtoday">Получено от них сегодня</string>
+    <string name="accounting_cash_counted">Фактически посчитанная сумма</string>
+    <string name="accounting_cash_close">Закрыть день</string>
+    <string name="accounting_cash_closed">Этот день закрыт</string>
+    <string name="accounting_cash_reopen">Открыть день снова</string>
+    <string name="accounting_cash_diff">Разница</string>
+    <string name="accounting_cash_diff_ok">Касса сходится</string>
+    <string name="accounting_cash_set_opening">Изменить начальную сумму</string>
+    <string name="accounting_cash_opening_prev">По закрытию предыдущего дня</string>
+    <string name="accounting_cash_other">Банк и кошелёк (не в кассе)</string>
+    <string name="accounting_cash_unspecified">Записи без способа оплаты (старые или автоматические), в кассе не учитываются</string>
+    <string name="accounting_sale_title">Новая расходная накладная</string>
+    <string name="accounting_sale_pick">Выберите товар</string>
+    <string name="accounting_sale_qty">Количество</string>
+    <string name="accounting_sale_add">Добавить в накладную</string>
+    <string name="accounting_sale_empty">В накладной пока нет позиций.</string>
+    <string name="accounting_sale_subtotal">Промежуточный итог</string>
+    <string name="accounting_sale_discount">Скидка</string>
+    <string name="accounting_sale_discount_amount">Суммой</string>
+    <string name="accounting_sale_discount_percent">В процентах %</string>
+    <string name="accounting_sale_customer">Имя клиента (необязательно)</string>
+    <string name="accounting_sale_total">Итого со скидкой</string>
+    <string name="accounting_sale_save">Сохранить накладную</string>
+    <string name="accounting_sale_saved">Накладная № %1$d сохранена</string>
+    <string name="accounting_sale_share">Поделиться накладной</string>
+    <string name="accounting_sale_recent">Последние накладные</string>
+    <string name="accounting_sale_number">Расходная накладная № %1$d</string>
+    <string name="accounting_sale_remove">Убрать</string>
+    <string name="accounting_sale_close">Готово</string>
+    <string name="accounting_sale_stock">На складе</string>
+    <string name="accounting_sale_item">Статья</string>
+    <string name="accounting_low_title">Оповещения о запасах</string>
+    <string name="accounting_low_none">Ничего не заканчивается. Всё в порядке.</string>
+    <string name="accounting_low_out">Нет</string>
+    <string name="accounting_low_low">Заканчивается</string>
+    <string name="accounting_low_left">На складе: %1$d</string>
+    <string name="accounting_low_min">Порог оповещения</string>
+    <string name="accounting_low_min_prompt">Оповестить, когда количество упадёт до (0 = без оповещений)</string>
+    <string name="accounting_moves">Движения</string>
+    <string name="accounting_moves_none">Движений по этому товару пока нет.</string>
+    <string name="accounting_move_STOCK_IN">Приход</string>
+    <string name="accounting_move_STOCK_OUT">Нет</string>
+    <string name="accounting_move_ADJUSTMENT">Установлено по подсчёту</string>
+    <string name="accounting_count_start">Фактический подсчёт</string>
+    <string name="accounting_count_help">Введите количество, которое вы насчитали на полке по каждому товару. Любая разница сохранится в движениях.</string>
+    <string name="accounting_count_apply">Применить подсчёт</string>
+    <string name="accounting_count_cancel">Отменить подсчёт</string>
+    <string name="accounting_count_book">По учёту</string>
+    <string name="accounting_count_counted">Насчитано</string>
+    <string name="accounting_count_done">Подсчёт завершён: изменено товаров — %1$d</string>
+    <string name="accounting_count_same">Расхождений нет, учёт сходится</string>
+    <string name="accounting_rep_title">Отчёт о прибыли</string>
+    <string name="accounting_rep_today">Сегодня</string>
+    <string name="accounting_rep_week">7 дней</string>
+    <string name="accounting_rep_month">Этот месяц</string>
+    <string name="accounting_rep_last30">30 дней</string>
+    <string name="accounting_rep_sales">Продажи</string>
+    <string name="accounting_rep_cogs">Себестоимость товаров</string>
+    <string name="accounting_rep_gross">Валовая прибыль</string>
+    <string name="accounting_rep_series">Итог по периодам</string>
+    <string name="accounting_rep_by_product">Прибыль по товарам</string>
+    <string name="accounting_rep_qty">Количество</string>
+    <string name="accounting_rep_profit">Прибыль</string>
+    <string name="accounting_rep_empty">За этот период записей нет.</string>
+    <string name="accounting_party_title">Клиенты и поставщики</string>
+    <string name="accounting_party_customers">Клиенты</string>
+    <string name="accounting_party_suppliers">Поставщики</string>
+    <string name="accounting_party_receivable">Должны нам клиенты</string>
+    <string name="accounting_party_payable">Должны мы поставщикам</string>
+    <string name="accounting_party_name">Имя</string>
+    <string name="accounting_party_add">Добавить</string>
+    <string name="accounting_party_empty">Пока ничего не зарегистрировано.</string>
+    <string name="accounting_party_balance">Баланс</string>
+    <string name="accounting_party_settled">Расчёт закрыт</string>
+    <string name="accounting_party_statement">Выписка</string>
+    <string name="accounting_party_pay">Записать платёж</string>
+    <string name="accounting_party_charge">Долг или старый остаток</string>
+    <string name="accounting_party_amount">Сумма</string>
+    <string name="accounting_party_book">Записать как операцию в учёте</string>
+    <string name="accounting_party_payment_row">Платёж</string>
+    <string name="accounting_party_charge_row">Долг</string>
+    <string name="accounting_party_after">Баланс после</string>
+    <string name="accounting_party_close">Закрыть</string>
+    <string name="accounting_sale_party">Клиент (для продажи в кредит)</string>
+    <string name="accounting_sale_no_party">Нет зарегистрированного клиента</string>
+    <string name="accounting_sale_paid_now">Сумма, оплаченная сейчас (пусто = полностью)</string>
+    <string name="accounting_buy_title">Новая закупочная накладная</string>
+    <string name="accounting_buy_help">Товар поступает на склад, а стоимость товара обновляется по средневзвешенной. Выплаченные деньги уходят из кассы и не записываются как расход.</string>
+    <string name="accounting_buy_cost">Стоимость одной единицы</string>
+    <string name="accounting_buy_supplier">Поставщик (для закупки в кредит)</string>
+    <string name="accounting_buy_no_supplier">Нет зарегистрированного поставщика</string>
+    <string name="accounting_buy_paid_now">Сумма, оплаченная сейчас (пусто = полностью)</string>
+    <string name="accounting_buy_total">Итого по накладной</string>
+    <string name="accounting_buy_save">Сохранить закупочную накладную</string>
+    <string name="accounting_buy_saved">Закупочная накладная № %1$d сохранена</string>
+    <string name="accounting_buy_recent">Последние закупочные накладные</string>
+    <string name="accounting_buy_empty">В накладной пока нет позиций.</string>
+    <string name="accounting_ret_btn">Возврат</string>
+    <string name="accounting_ret_title">Записать возврат</string>
+    <string name="accounting_ret_max">До %1$d</string>
+    <string name="accounting_ret_method">Как возвращаются деньги?</string>
+    <string name="accounting_ret_save">Записать возврат</string>
+    <string name="accounting_ret_done">Возврат записан</string>
+    <string name="accounting_ret_none">Введите количество хотя бы для одной строки</string>
+    <string name="accounting_ret_all">Всё уже возвращено</string>
+    <string name="accounting_rec_title">Регулярные расходы и доходы</string>
+    <string name="accounting_rec_help">Аренда, электричество, подписки: они записываются сами в нужный день. Их можно приостановить или изменить сумму.</string>
+    <string name="accounting_rec_empty">Регулярных записей пока нет.</string>
+    <string name="accounting_rec_next">Следующая</string>
+    <string name="accounting_rec_paused">Приостановлена</string>
+    <string name="accounting_rec_WEEKLY">Каждую неделю</string>
+    <string name="accounting_rec_MONTHLY">Каждый месяц</string>
+    <string name="accounting_rec_YEARLY">Каждый год</string>
+    <string name="accounting_rec_add">Добавить регулярную запись</string>
+    <string name="accounting_rec_pause">Приостановить</string>
+    <string name="accounting_rec_resume">Возобновить</string>
+    <string name="accounting_rec_delete">Удалить</string>
+    <string name="accounting_rec_amount">Изменить сумму</string>
+    <string name="accounting_rec_start">Дата начала (ГГГГ-ММ-ДД)</string>
+    <string name="accounting_rec_backfill">Также записать пропущенные с даты начала</string>
+    <string name="accounting_tax_title">Налог (экспериментально)</string>
+    <string name="accounting_tax_warn">Экспериментальная функция: цифры предназначены для вашего собственного учёта. Сверьте их с бухгалтером, прежде чем полагаться на них в любой налоговой декларации.</string>
+    <string name="accounting_tax_incl">Налог уже включён в цену</string>
+    <string name="accounting_tax_excl">Налог добавляется сверху к цене</string>
+    <string name="accounting_tax_default">Ставка по умолчанию</string>
+    <string name="accounting_tax_none">Без налога</string>
+    <string name="accounting_tax_rates">Налоговые ставки</string>
+    <string name="accounting_tax_rate_name">Название ставки</string>
+    <string name="accounting_tax_rate_pct">Ставка %</string>
+    <string name="accounting_tax_add_rate">Добавить ставку</string>
+    <string name="accounting_tax_off">Отключить</string>
+    <string name="accounting_tax_on">Включить</string>
+    <string name="accounting_tax_no_rates">Налоговых ставок нет. Без ставок накладные не содержат налога.</string>
+    <string name="accounting_tax_output">Собранный налог с продаж</string>
+    <string name="accounting_tax_input">Уплаченный налог с закупок</string>
+    <string name="accounting_tax_payable">К уплате в налоговую</string>
+    <string name="accounting_tax_claim">Можно вернуть</string>
+    <string name="accounting_tax_product">Налог</string>
+    <string name="accounting_tax_in_invoice">в том числе налог</string>
+    <string name="accounting_tax_on_top">Налог добавлен</string>
+    <string name="accounting_tax_report">Налоговый отчёт за этот месяц</string>
+    <string name="accounting_stm_title">Финансовая отчётность (экспериментально)</string>
+    <string name="accounting_stm_warn">Экспериментальная функция: упрощённые отчёты по записанным вами операциям, а не утверждённый баланс. Сверьте их с бухгалтером, прежде чем полагаться на них в декларации, кредите или любом официальном отчёте.</string>
+    <string name="accounting_stm_income">Отчёт о доходах за этот месяц</string>
+    <string name="accounting_stm_position">Упрощённое финансовое положение (на сегодня)</string>
+    <string name="accounting_stm_sales">Продажи</string>
+    <string name="accounting_stm_returns">За вычетом: возвраты</string>
+    <string name="accounting_stm_revenue">Всего доходов</string>
+    <string name="accounting_stm_cogs">За вычетом: себестоимость проданного</string>
+    <string name="accounting_stm_gross">Валовая прибыль</string>
+    <string name="accounting_stm_opex">Всего расходов</string>
+    <string name="accounting_stm_net">Чистая прибыль</string>
+    <string name="accounting_stm_cash">Наличные, банк и кошельки</string>
+    <string name="accounting_stm_receivables">Клиенты должны нам</string>
+    <string name="accounting_stm_inventory">Запасы по себестоимости</string>
+    <string name="accounting_stm_total_assets">Всего активов</string>
+    <string name="accounting_stm_payables">Мы должны поставщикам</string>
+    <string name="accounting_stm_tax_payable">Собранный и причитающийся налог</string>
+    <string name="accounting_stm_total_liabilities">Всего обязательств</string>
+    <string name="accounting_stm_equity">Собственный капитал владельца</string>
+    <string name="accounting_stm_balancing">Капитал, изъятия и первый запас (разница)</string>
+</resources>
