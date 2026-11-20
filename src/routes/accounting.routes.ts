@@ -59,7 +59,7 @@ async function nextSaleNumber(tx: Prisma.TransactionClient, userId: string) {
 function alertLowStock(userId: string, crossed: { name: string; before: number; after: number; min: number }[]) {
   for (const c of crossed) {
     if (!(c.before > c.min && c.after <= c.min)) continue;
-    void notify({ userId, type: "SYSTEM", email: false, title: c.after <= 0 ? "خلصت كمية منتج" : "كمية منتج قاربت تخلص", body: `«${c.name}»: ${c.after}`, data: { kind: "accounting-low-stock", name: c.name, quantity: c.after } });
+    void notify({ userId, type: "SYSTEM", email: false, title: c.after <= 0 ? "نفدت كمية منتج" : "أوشكت كمية منتج على النفاد", body: `«${c.name}»: ${c.after}`, data: { kind: "accounting-low-stock", name: c.name, quantity: c.after } });
   }
 }
 
@@ -82,7 +82,7 @@ accountingRouter.post("/invoices/scan", express.raw({ type: ["image/jpeg", "imag
   const bytes = req.body;
   if (!Buffer.isBuffer(bytes) || !bytes.length) return sendError(res, 415, "UNSUPPORTED_MEDIA", "أرسل صورة فاتورة بصيغة JPEG أو PNG أو WebP");
   const mime = sniffImageMime(bytes);
-  if (!mime) return sendError(res, 415, "UNSUPPORTED_MEDIA", "الملف مو صورة فاتورة صالحة");
+  if (!mime) return sendError(res, 415, "UNSUPPORTED_MEDIA", "الملف ليس صورة فاتورة صالحة");
   if (!visionAvailable()) return sendError(res, 503, "AI_UNAVAILABLE", "قراءة الفواتير بالذكاء الاصطناعي غير مفعّلة حاليًا");
   // every scan costs an AI call: a daily cap per account keeps one account from running up the bill
   const dailyLimit = Number(process.env.ACCOUNTING_SCAN_DAILY_LIMIT) > 0 ? Number(process.env.ACCOUNTING_SCAN_DAILY_LIMIT) : 30;
@@ -100,7 +100,7 @@ accountingRouter.post("/invoices/:id/confirm", route(async (req, res) => {
   if (draft.entryId) return sendError(res, 409, "CONFLICT", "تم تسجيل هذه الفاتورة من قبل");
   const extracted = draft.extracted as { supplier?: string; description?: string; date?: string | null; totalCents?: number | null; currency?: string | null } | null;
   const amountCents = parsed.data.amountCents ?? extracted?.totalCents ?? null;
-  if (!amountCents || amountCents <= 0) return sendError(res, 400, "BAD_REQUEST", "ما قدرنا نقرأ المبلغ بوضوح. اكتب المبلغ يدويًا");
+  if (!amountCents || amountCents <= 0) return sendError(res, 400, "BAD_REQUEST", "لم نتمكن من قراءة المبلغ بوضوح. اكتب المبلغ يدويًا");
   const description = parsed.data.description || [extracted?.supplier, extracted?.description].filter(Boolean).join(" — ") || "فاتورة مشتريات";
   const occurredAt = parsed.data.occurredAt ? new Date(parsed.data.occurredAt) : extracted?.date ? new Date(`${extracted.date}T12:00:00.000Z`) : new Date();
   const entry = await prisma.$transaction(async (tx) => {
@@ -236,7 +236,7 @@ accountingRouter.get("/products/barcode/:barcode", route(async (req, res) => {
   const product = await prisma.accountingProduct.findFirst({ where: { userId: req.user!.id, barcode: req.params.barcode } });
   if (product) return res.json(product);
   const storeProduct = await prisma.product.findFirst({ where: { merchant: { userId: req.user!.id }, barcode: req.params.barcode } });
-  if (!storeProduct) return sendError(res, 404, "NOT_FOUND", "ما لقينا منتج بهالباركود. فيك تضيفه كمنتج جديد.");
+  if (!storeProduct) return sendError(res, 404, "NOT_FOUND", "لم نجد منتجًا بهذا الباركود. يمكنك إضافته كمنتج جديد.");
   res.json({ id: `store:${storeProduct.id}`, name: storeProduct.name, barcode: storeProduct.barcode, sku: storeProduct.sku, quantity: storeProduct.stock, salePriceCents: storeProduct.priceCents, costCents: storeProduct.costPriceCents, currency: await marketOfUser(req.user!.id), unit: "قطعة", lowStockAt: 0, isStoreProduct: true });
 }));
 
@@ -252,7 +252,7 @@ accountingRouter.post("/products", route(async (req, res) => {
     });
     res.status(201).json(product);
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return sendError(res, 409, "CONFLICT", "هذا الباركود مستخدم لمنتج آخر عندك");
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return sendError(res, 409, "CONFLICT", "هذا الباركود مستخدم لمنتج آخر لديك");
     throw err;
   }
 }));
@@ -268,7 +268,7 @@ accountingRouter.patch("/products/:id", route(async (req, res) => {
   try {
     res.json(await prisma.accountingProduct.update({ where: { id: p.id }, data: { ...parsed.data, ...(parsed.data.barcode !== undefined ? { barcode: parsed.data.barcode || null } : {}), ...(parsed.data.sku !== undefined ? { sku: parsed.data.sku || null } : {}) } }));
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return sendError(res, 409, "CONFLICT", "هذا الباركود مستخدم لمنتج آخر عندك");
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return sendError(res, 409, "CONFLICT", "هذا الباركود مستخدم لمنتج آخر لديك");
     throw err;
   }
 }));
@@ -290,7 +290,7 @@ accountingRouter.post("/products/:id/stock", route(async (req, res) => {
     if (!p) return sendError(res, 404, "NOT_FOUND", "منتج المتجر غير موجود");
     if (parsed.data.action !== "ADJUSTMENT" && parsed.data.quantity === 0) return sendError(res, 400, "BAD_REQUEST", "أدخل كمية أكبر من صفر");
     const signed = parsed.data.action === "STOCK_IN" ? parsed.data.quantity : parsed.data.action === "STOCK_OUT" ? -parsed.data.quantity : parsed.data.quantity - p.stock;
-    if (p.stock + signed < 0) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
+    if (p.stock + signed < 0) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي");
     const updated = await prisma.$transaction(async tx => {
       // taking stock out only succeeds while enough is left at this very moment (two requests cannot both take the last pieces)
       if (signed < 0 && !(await tx.product.updateMany({ where: { id: p.id, stock: { gte: -signed } }, data: { stock: { decrement: -signed } } })).count) return null;
@@ -298,21 +298,21 @@ accountingRouter.post("/products/:id/stock", route(async (req, res) => {
       if (signed !== 0) await tx.accountingStockMovement.create({ data: { userId: req.user!.id, storeProductId: p.id, action: parsed.data.action, quantity: parsed.data.quantity, note: parsed.data.note } });
       return changed;
     });
-    if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
+    if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي");
     return res.json({ ...updated, quantity: updated.stock, id: `store:${updated.id}`, isStoreProduct: true });
   }
   const p = await prisma.accountingProduct.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
   if (!p) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
   if (parsed.data.action !== "ADJUSTMENT" && parsed.data.quantity === 0) return sendError(res, 400, "BAD_REQUEST", "أدخل كمية أكبر من صفر");
   const signed = parsed.data.action === "STOCK_IN" ? parsed.data.quantity : parsed.data.action === "STOCK_OUT" ? -parsed.data.quantity : parsed.data.quantity - p.quantity;
-  if (p.quantity + signed < 0) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
+  if (p.quantity + signed < 0) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي");
   const updated = await prisma.$transaction(async (tx) => {
     if (signed < 0 && !(await tx.accountingProduct.updateMany({ where: { id: p.id, quantity: { gte: -signed } }, data: { quantity: { decrement: -signed } } })).count) return null;
     const changed = await tx.accountingProduct.update({ where: { id: p.id }, data: { ...(signed > 0 ? { quantity: { increment: signed } } : {}), ...(parsed.data.unitCostCents !== undefined ? { costCents: parsed.data.unitCostCents } : {}) } });
     if (signed !== 0) await tx.accountingStockMovement.create({ data: { userId: req.user!.id, productId: p.id, action: parsed.data.action, quantity: parsed.data.quantity, unitCostCents: parsed.data.unitCostCents, note: parsed.data.note } });
     return changed;
   });
-  if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
+  if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي");
   res.json(updated);
 }));
 
@@ -331,9 +331,9 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
     const id = req.params.id.slice(6);
     const product = await prisma.product.findFirst({ where: { id, merchant: { userId: req.user!.id }, isActive: true } });
     if (!product) return sendError(res, 404, "NOT_FOUND", "منتج المتجر غير موجود");
-    if (product.stock < parsed.data.quantity) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
+    if (product.stock < parsed.data.quantity) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي");
     const unitPrice = parsed.data.unitPriceCents ?? product.priceCents;
-    if (unitPrice <= 0) return sendError(res, 400, "BAD_REQUEST", "أدخل سعر البيع أولاً");
+    if (unitPrice <= 0) return sendError(res, 400, "BAD_REQUEST", "أدخل سعر البيع أولًا");
     const total = unitPrice * parsed.data.quantity;
     const ref = `store-manual-sale:${crypto.randomUUID()}`;
     const currency = await marketOfUser(req.user!.id);
@@ -347,16 +347,16 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
       await accrueSaleCommission(tx, { ownerId: req.user!.id, actorUserId: actorOf(req), saleId: soldRow.id, netCents: total, currency });
       return tx.product.findUniqueOrThrow({ where: { id } });
     });
-    if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
+    if (!updated) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي");
     const cost = product.costPriceCents * parsed.data.quantity;
     alertLowStock(req.user!.id, [{ name: product.name, before: product.stock, after: updated.stock, min: 0 }]);
     return res.status(201).json({ product: { ...updated, quantity: updated.stock, id: `store:${updated.id}` }, incomeCents: total, costCents: cost, netCents: total - cost });
   }
   const product = await prisma.accountingProduct.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
   if (!product) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
-  if (product.quantity < parsed.data.quantity) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
+  if (product.quantity < parsed.data.quantity) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي");
   const unitPrice = parsed.data.unitPriceCents ?? product.salePriceCents;
-  if (unitPrice <= 0) return sendError(res, 400, "BAD_REQUEST", "أدخل سعر البيع أولاً");
+  if (unitPrice <= 0) return sendError(res, 400, "BAD_REQUEST", "أدخل سعر البيع أولًا");
   const total = unitPrice * parsed.data.quantity;
   const ref = `manual-sale:${crypto.randomUUID()}`;
   const result = await prisma.$transaction(async (tx) => {
@@ -370,7 +370,7 @@ accountingRouter.post("/products/:id/sell", route(async (req, res) => {
     await accrueSaleCommission(tx, { ownerId: req.user!.id, actorUserId: actorOf(req), saleId: soldRow.id, netCents: total, currency: product.currency });
     return updated;
   });
-  if (!result) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي");
+  if (!result) return sendError(res, 409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي");
   alertLowStock(req.user!.id, [{ name: product.name, before: product.quantity, after: result.quantity, min: product.lowStockAt }]);
   res.status(201).json({ product: result, incomeCents: total, costCents: product.costCents * parsed.data.quantity, netCents: total - product.costCents * parsed.data.quantity });
 }));
@@ -635,19 +635,19 @@ accountingRouter.post("/purchases", route(async (req, res) => {
     }
   }
   const currency = lines[0].currency;
-  if (lines.some((l) => l.currency !== currency)) return sendError(res, 400, "BAD_REQUEST", "كل أصناف الفاتورة لازم تكون بنفس العملة");
+  if (lines.some((l) => l.currency !== currency)) return sendError(res, 400, "BAD_REQUEST", "يجب أن تكون كل أصناف الفاتورة بنفس العملة");
   // the cost typed is without tax; the tax paid to the supplier is added on top of it
   const lineTax = lines.map((l) => Math.round(l.unitCost * l.quantity * l.rateBp / 10000));
   const taxTotal = lineTax.reduce((sum, x) => sum + x, 0);
   const total = lines.reduce((sum, l) => sum + l.unitCost * l.quantity, 0) + taxTotal;
-  if (total <= 0) return sendError(res, 400, "BAD_REQUEST", "مجموع الفاتورة لازم يكون أكبر من صفر");
+  if (total <= 0) return sendError(res, 400, "BAD_REQUEST", "يجب أن يكون مجموع الفاتورة أكبر من صفر");
   const paid = d.paidCents ?? total;
   if (paid > total) return sendError(res, 400, "BAD_REQUEST", "المبلغ المدفوع أكبر من مجموع الفاتورة");
   let supplier: { id: string; name: string } | null = null;
   if (d.partyId) {
     supplier = await prisma.accountingParty.findFirst({ where: { id: d.partyId, userId, kind: "SUPPLIER", archivedAt: null }, select: { id: true, name: true } });
     if (!supplier) return sendError(res, 404, "NOT_FOUND", "المورد غير موجود");
-  } else if (paid < total) return sendError(res, 400, "BAD_REQUEST", "الشراء الآجل لازم يكون من مورد مسجّل");
+  } else if (paid < total) return sendError(res, 400, "BAD_REQUEST", "يجب أن يكون الشراء الآجل من مورد مسجّل");
   const when = d.occurredAt ? new Date(d.occurredAt) : new Date();
   const purchase = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"purchase-number:" + userId}))`;
@@ -789,7 +789,7 @@ accountingRouter.post("/purchases/:id/returns", route(async (req, res) => {
       const took = key.startsWith("store:")
         ? await tx.product.updateMany({ where: { id: key.slice(6), stock: { gte: p.quantity } }, data: { stock: { decrement: p.quantity } } })
         : await tx.accountingProduct.updateMany({ where: { id: key, userId, quantity: { gte: p.quantity } }, data: { quantity: { decrement: p.quantity } } });
-      if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي", { productId: key, name: p.line.name });
+      if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي", { productId: key, name: p.line.name });
       await tx.accountingStockMovement.create({ data: { userId, ...(key.startsWith("store:") ? { storeProductId: key.slice(6) } : { productId: key }), action: "STOCK_OUT", quantity: p.quantity, unitCostCents: Number(p.line.unitCostCents), note: `مرتجع فاتورة شراء #${purchase.number}` } });
     }
     const created = await tx.accountingPurchaseReturn.create({
@@ -841,7 +841,7 @@ export async function runRecurring(userId: string) {
     await prisma.accountingRecurring.update({ where: { id: r.id }, data: { nextDue: next, lastRunAt: new Date(), ...(finished ? { active: false } : {}) } });
     if (count > 0) { written += count; names.push(r.description); }
   }
-  if (written > 0) void notify({ userId, type: "SYSTEM", email: false, title: "انسجّلت حركات متكررة", body: names.slice(0, 3).join("، "), data: { kind: "accounting-recurring", count: written } });
+  if (written > 0) void notify({ userId, type: "SYSTEM", email: false, title: "تم تسجيل حركات متكررة", body: names.slice(0, 3).join("، "), data: { kind: "accounting-recurring", count: written } });
   return written;
 }
 
@@ -1075,19 +1075,19 @@ async function createSaleInvoice(userId: string, d: SaleInput, actorId: string =
       lines.push({ key, store: false, id: p.id, name: p.name, quantity: w.quantity, unitPrice: w.unitPriceCents ?? p.salePriceCents, unitCost: p.costCents, currency: p.currency, rateBp: bpFor(tax, p.taxRateId) });
     }
   }
-  if (lines.some((l) => l.unitPrice <= 0)) return fail(400, "BAD_REQUEST", "أدخل سعر البيع أولاً");
+  if (lines.some((l) => l.unitPrice <= 0)) return fail(400, "BAD_REQUEST", "أدخل سعر البيع أولًا");
   const currency = lines[0].currency;
-  if (lines.some((l) => l.currency !== currency)) return fail(400, "BAD_REQUEST", "كل أصناف الفاتورة لازم تكون بنفس العملة");
+  if (lines.some((l) => l.currency !== currency)) return fail(400, "BAD_REQUEST", "يجب أن تكون كل أصناف الفاتورة بنفس العملة");
   const location = d.locationId ? await prisma.accountingLocation.findFirst({ where: { id: d.locationId, userId, isActive: true } }) : null;
   if (d.locationId && !location) return fail(404, "NOT_FOUND", "الموقع غير موجود");
-  if (location && lines.some((l) => l.store)) return fail(400, "BAD_REQUEST", "البيع من فرع أو موزّع بيكون من منتجات المحاسبة بس");
+  if (location && lines.some((l) => l.store)) return fail(400, "BAD_REQUEST", "البيع من فرع أو موزّع يكون من منتجات المحاسبة فقط");
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const discount = d.discountPercent != null ? Math.round(subtotal * d.discountPercent / 100) : d.discountCents ?? 0;
   if (discount > subtotal) return fail(400, "BAD_REQUEST", "الحسم أكبر من مجموع الفاتورة");
   const calc = taxLines(lines.map((l) => ({ gross: l.unitPrice * l.quantity, rateBp: l.rateBp })), discount, tax.include);
   const total = calc.reduce((sum, c) => sum + c.payable, 0);
   const taxTotal = calc.reduce((sum, c) => sum + c.tax, 0);
-  if (total <= 0) return fail(400, "BAD_REQUEST", "مجموع الفاتورة لازم يكون أكبر من صفر");
+  if (total <= 0) return fail(400, "BAD_REQUEST", "يجب أن يكون مجموع الفاتورة أكبر من صفر");
   // a sale on credit: what was paid now, the rest stays on the customer's account
   const paid = d.paidCents ?? total;
   if (paid > total) return fail(400, "BAD_REQUEST", "المبلغ المدفوع أكبر من مجموع الفاتورة");
@@ -1095,7 +1095,7 @@ async function createSaleInvoice(userId: string, d: SaleInput, actorId: string =
   if (d.partyId) {
     party = await prisma.accountingParty.findFirst({ where: { id: d.partyId, userId, kind: "CUSTOMER", archivedAt: null }, select: { id: true, name: true } });
     if (!party) return fail(404, "NOT_FOUND", "الزبون غير موجود");
-  } else if (paid < total) return fail(400, "BAD_REQUEST", "البيع الآجل لازم يكون على زبون مسجّل");
+  } else if (paid < total) return fail(400, "BAD_REQUEST", "يجب أن يكون البيع الآجل على زبون مسجّل");
   const customerLabel = d.customerName || party?.name;
   const cost = lines.reduce((sum, l) => sum + l.unitCost * l.quantity, 0);
   const when = d.occurredAt ? new Date(d.occurredAt) : new Date();
@@ -1109,7 +1109,7 @@ async function createSaleInvoice(userId: string, d: SaleInput, actorId: string =
             : l.store
             ? await tx.product.updateMany({ where: { id: l.id, stock: { gte: l.quantity } }, data: { stock: { decrement: l.quantity }, soldCount: { increment: l.quantity } } })
             : await tx.accountingProduct.updateMany({ where: { id: l.id, quantity: { gte: l.quantity } }, data: { quantity: { decrement: l.quantity } } });
-          if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة ما بتكفي", { productId: l.key, name: l.name });
+          if (!took.count) throw new SaleError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة لا تكفي", { productId: l.key, name: l.name });
         }
         const created = await tx.accountingSale.create({
           data: { userId, number: await nextSaleNumber(tx, userId), customerName: customerLabel || null, partyId: party?.id ?? null, paidCents: paid, note: d.note || null, currency, subtotalCents: subtotal, discountCents: discount, totalCents: total, taxCents: taxTotal, pricesIncludeTax: tax.include, payMethod: d.payMethod, occurredAt: when, recordedById: actorId, locationId: location?.id ?? null, channel: location ? (location.kind === "DISTRIBUTOR" ? "DISTRIBUTOR" : "SHOP") : d.channel ?? "SHOP",
@@ -1157,7 +1157,7 @@ accountingRouter.post("/sales", route(async (req, res) => {
   if (req.staffActor?.staff.role === "CASHIER") {
     const own = await locs.locationOfStaff(req.user!.id, req.staffActor.staff.id);
     if (own) body.locationId = own.id;
-    else if (body.locationId) return sendError(res, 403, "FORBIDDEN", "هاد الموقع مو إلك");
+    else if (body.locationId) return sendError(res, 403, "FORBIDDEN", "هذا الموقع ليس لك");
   }
   const out = await createSaleInvoice(req.user!.id, body, actorOf(req));
   if (!out.ok) return sendError(res, out.status, out.code, out.message, out.details);
@@ -1212,7 +1212,7 @@ accountingRouter.post("/locations/:id/return", route(async (req, res) => {
 accountingRouter.get("/locations/:id/settlement", route(async (req, res) => {
   if (req.staffActor?.staff.role === "CASHIER") {
     const own = await locs.locationOfStaff(req.user!.id, req.staffActor.staff.id);
-    if (!own || own.id !== req.params.id) return sendError(res, 403, "FORBIDDEN", "هاد الموقع مو إلك");
+    if (!own || own.id !== req.params.id) return sendError(res, 403, "FORBIDDEN", "هذا الموقع ليس لك");
   }
   const day = typeof req.query.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.day) ? req.query.day : undefined;
   res.json(await settle.settlement(req.user!.id, req.params.id, day));
@@ -1300,7 +1300,7 @@ accountingRouter.put("/cash/opening", route(async (req, res) => {
   const { day, currency, openingCents } = parsed.data;
   const where = { userId_day_currency: { userId: req.user!.id, day, currency } };
   const existing = await prisma.accountingCashDay.findUnique({ where });
-  if (existing?.closedAt) return sendError(res, 409, "CONFLICT", "هالنهار مقفول. افتحو من جديد قبل ما تغيّر رصيد البداية.");
+  if (existing?.closedAt) return sendError(res, 409, "CONFLICT", "هذا اليوم مُقفل. افتحه من جديد قبل أن تغيّر رصيد البداية.");
   await prisma.accountingCashDay.upsert({ where, create: { userId: req.user!.id, day, currency, openingCents, openingSetByHand: true }, update: { openingCents, openingSetByHand: true } });
   res.json({ ok: true });
 }));

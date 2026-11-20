@@ -12,6 +12,6 @@
     <string name="ord_phone">الهاتف</string>
     <string name="ord_courier">شركة التوصيل</string>
     <string name="ord_tracking">رقم التتبع</string>
-    <string name="ord_ask_courier">شو اسم شركة التوصيل؟</string>
-    <string name="ord_ask_tracking">شو رقم التتبع؟</string>
+    <string name="ord_ask_courier">ما اسم شركة التوصيل؟</string>
+    <string name="ord_ask_tracking">ما رقم التتبع؟</string>
 </resources>

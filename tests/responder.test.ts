@@ -200,8 +200,8 @@ describe("Answering customers", () => {
     expect(await sendWeeklyResponderReports(now)).toMatchObject({ eligible: 1, sent: 1 });
     expect(await sendWeeklyResponderReports(new Date(now.getTime() + 1000))).toMatchObject({ eligible: 0, sent: 0 });
     const report = await prisma.notification.findFirstOrThrow({ where: { userId: basicOwner.id, data: { path: ["reason"], equals: "weekly_report" } } });
-    expect(report.body).toContain("1 رسالة ما لقت رد ثابت");
-    expect(report.body).toContain("كان ممكن يرد عليها");
+    expect(report.body).toContain("1 رسالة لم تجد ردًا ثابتًا");
+    expect(report.body).toContain("كان بإمكان الذكاء الاصطناعي الرد عليها");
     expect(await prisma.notification.count({ where: { userId: aiOwner.id, data: { path: ["reason"], equals: "weekly_report" } } })).toBe(0);
   });
 
@@ -220,7 +220,7 @@ describe("Answering customers", () => {
     expect(await sendWeeklyResponderReports(now)).toMatchObject({ eligible: 1, sent: 1, dailySent: 1, weeklySent: 0 });
     expect(await sendWeeklyResponderReports(new Date(now.getTime() + 1000))).toMatchObject({ eligible: 0, sent: 0, dailySent: 0, weeklySent: 0 });
     const report = await prisma.notification.findFirstOrThrow({ where: { userId: owner.id, data: { path: ["reason"], equals: "daily_report" } } });
-    expect(report.body).toContain("آخر 24 ساعة وصلك 1 رسالة");
+    expect(report.body).toContain("خلال آخر 24 ساعة 1 رسالة");
     expect(await prisma.notification.count({ where: { userId: owner.id, data: { path: ["reason"], equals: "weekly_report" } } })).toBe(0);
   });
 
@@ -297,7 +297,7 @@ describe("Answering customers", () => {
     await customerSays(owner.hook, "عندي شكوى على الطلب");
     await customerSays(owner.hook, "ولسا عندي شكوى!"); // same conversation, same hour
     // never ignored, and never a rule's cheerful template: the customer is told a real person will follow up
-    expect(sentReplies.map((r) => r.body.text)).toEqual([expect.stringContaining("رح يتواصل معك قريبًا"), expect.stringContaining("رح يتواصل معك قريبًا")]);
+    expect(sentReplies.map((r) => r.body.text)).toEqual([expect.stringContaining("سيتواصل معك أحد أعضاء الفريق قريبًا"), expect.stringContaining("سيتواصل معك أحد أعضاء الفريق قريبًا")]);
     const waiting = (await inbox(owner, "NEEDS_REVIEW")).body;
     expect(waiting).toHaveLength(2);
     expect(waiting[0]).toMatchObject({ intent: "complaint", reason: "complaint" });
@@ -354,7 +354,7 @@ describe("Answering customers", () => {
     process.env.GROQ_API_KEY = "test-groq-key";
     aiAnswer = JSON.stringify({ reply: "هذا الرد لا يجب أن يظهر", handoff: false });
     await customerSays(owner.hook, "عندي شكوى: وين محلكم؟", "basic-c-1");
-    expect(sentReplies.at(-1)!.body.text).toContain("وصلت رسالتك لفريقنا");
+    expect(sentReplies.at(-1)!.body.text).toContain("وصلت رسالتك إلى فريقنا");
     expect((await inbox(owner, "NEEDS_REVIEW")).body[0]).toMatchObject({ reason: "complaint", intent: "complaint", status: "NEEDS_REVIEW" });
     expect(aiCalls).toHaveLength(0);
   });

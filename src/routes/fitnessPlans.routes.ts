@@ -58,7 +58,7 @@ coach.post("/", route(async (req, res) => {
   const parsed = bodySchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const trainee = await prisma.user.findFirst({ where: { email: { equals: parsed.data.traineeEmail, mode: "insensitive" } }, select: { id: true } });
-  if (!trainee) return sendError(res, 404, "TRAINEE_NOT_FOUND", "ما لقينا حساب بهذا البريد الإلكتروني");
+  if (!trainee) return sendError(res, 404, "TRAINEE_NOT_FOUND", "لم نجد حسابًا بهذا البريد الإلكتروني");
   const { traineeEmail, startsAt, endsAt, ...data } = parsed.data;
   const item = await prisma.fitnessPlan.create({ data: { ...data, coachMerchantId: res.locals.merchant.id, traineeUserId: trainee.id, startsAt: startsAt ? new Date(startsAt) : null, endsAt: endsAt ? new Date(endsAt) : null }, include: { trainee: { select: { id: true, fullName: true, email: true } } } });
   await notify({ userId: trainee.id, type: "SYSTEM", title: "أرسل لك مدربك خطة جديدة", body: data.title, data: { fitnessPlanId: item.id }, email: false });

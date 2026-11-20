@@ -13,10 +13,10 @@ export type PointInput = { latitude: number; longitude: number; accuracy?: numbe
  */
 export async function reportPoints(me: HrMe, points: PointInput[], phone: PhoneInfo) {
   await assertCompanyActive(me.company);
-  if (!me.employee.tracksLocation) throw new ApiError(403, "TRACKING_OFF", "تتبّع الموقع مو مفعّل لحسابك");
+  if (!me.employee.tracksLocation) throw new ApiError(403, "TRACKING_OFF", "تتبّع الموقع غير مفعّل لحسابك");
   await assertOwnPhone(me, phone);
   const open = await prisma.hrAttendance.findFirst({ where: { employeeId: me.employee.id, checkOut: null }, select: { id: true } });
-  if (!open) throw new ApiError(409, "NOT_CHECKED_IN", "سجّل حضورك أول، التتبّع بيشتغل وقت الدوام بس");
+  if (!open) throw new ApiError(409, "NOT_CHECKED_IN", "سجّل حضورك أولًا، التتبّع يعمل أثناء الدوام فقط");
   const now = Date.now();
   const rows = points
     .map((p) => ({ ...p, t: new Date(p.at).getTime() }))

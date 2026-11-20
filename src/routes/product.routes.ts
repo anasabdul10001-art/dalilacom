@@ -147,7 +147,7 @@ productRouter.post("/photos/:id/enhance", requireAuth, requireRole(Role.MERCHANT
   try {
     improved = await enhanceProductPhoto(Buffer.from(photo.data));
   } catch {
-    return sendError(res, 422, "UNPROCESSABLE", "تعذّر تحسين هالصورة، جرّب صورة ثانية");
+    return sendError(res, 422, "UNPROCESSABLE", "تعذّر تحسين هذه الصورة، جرّب صورة أخرى");
   }
   const created = await prisma.productPhoto.create({ data: { merchantId: found.merchant.id, mime: "image/jpeg", data: improved }, select: { id: true } });
   res.status(201).json({ id: created.id, url: `/store/photos/${created.id}`, from: photo.id });
@@ -234,7 +234,7 @@ productRouter.post("/photos/:id/edit", requireAuth, requireRole(Role.MERCHANT), 
     }
   } catch (err) {
     if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message);
-    return sendError(res, 422, "UNPROCESSABLE", "تعذّر تحسين هالصورة، جرّب صورة ثانية");
+    return sendError(res, 422, "UNPROCESSABLE", "تعذّر تحسين هذه الصورة، جرّب صورة أخرى");
   }
   const created = await prisma.productPhoto.create({ data: { merchantId: found.merchant.id, mime: "image/jpeg", data: improved }, select: { id: true } });
   if (engine === "ai") await recordAiUse(req.user!.id, `photo:${action}`); // only a real AI edit is counted
@@ -257,7 +257,7 @@ productRouter.post("/ai-draft", requireAuth, requireRole(Role.MERCHANT), route(a
   const day = new Date().toISOString().slice(0, 10);
   const used = drafts.get(req.user!.id);
   const count = used && used.day === day ? used.n : 0;
-  if (count >= DAILY_DRAFTS) return sendError(res, 429, "RATE_LIMITED", "وصلت للحد اليومي لاقتراحات الصور، كمّل كتابة المنتج بنفسك");
+  if (count >= DAILY_DRAFTS) return sendError(res, 429, "RATE_LIMITED", "وصلت إلى الحد اليومي لاقتراحات الصور، أكمل كتابة المنتج بنفسك");
   try {
     await ensureCanUseAi(req.user!.id);
   } catch (err) {
@@ -324,7 +324,7 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), route(async
     if (!quota.paid && !settings.marketplace.allowNewProducts) return sendError(res, 403, "NEW_PRODUCTS_CLOSED", "الباقة المجانية الحالية تسمح بالمنتجات المستعملة فقط");
   }
   // a listing fed from the accounting warehouse gets its quantity from there, so the two never disagree
-  if (existing.accountingProductId && parsed.data.stock !== undefined && parsed.data.stock !== existing.stock) return sendError(res, 409, "CONFLICT", "كمية هالمنتج بتنحدد من المحاسبة (المستودع)");
+  if (existing.accountingProductId && parsed.data.stock !== undefined && parsed.data.stock !== existing.stock) return sendError(res, 409, "CONFLICT", "تُحدَّد كمية هذا المنتج من المحاسبة (المستودع)");
 
   // the photos: each must be one this shop uploaded; the first is the main one
   const { images, ...rest } = parsed.data;

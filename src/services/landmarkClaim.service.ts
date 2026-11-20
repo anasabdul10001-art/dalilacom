@@ -213,7 +213,7 @@ export async function askForInfo(id: string, adminId: string, message: string) {
 export async function rejectClaim(id: string, adminId: string, reason: string) {
   const claim = await loadOpenClaim(id);
   await prisma.landmarkClaim.update({ where: { id }, data: { status: "REJECTED", adminMessage: reason.trim(), decidedById: adminId, decidedAt: new Date() } });
-  await notify({ userId: claim.userId, type: NotificationType.SYSTEM, title: "ما قدرنا نقبل طلبك", body: `طلبك للمطالبة بـ «${claim.landmark.name}» انرفض. السبب: ${reason.trim()}`, data: { type: "landmark_claim", claimId: id } });
+  await notify({ userId: claim.userId, type: NotificationType.SYSTEM, title: "لم نتمكن من قبول طلبك", body: `رُفض طلبك للمطالبة بـ «${claim.landmark.name}». السبب: ${reason.trim()}`, data: { type: "landmark_claim", claimId: id } });
 }
 
 /**
@@ -253,18 +253,18 @@ export async function approveClaim(id: string, adminId: string, input: { categor
     await tx.landmarkClaim.update({ where: { id }, data: { status: "APPROVED", decidedById: adminId, decidedAt: new Date(), resultMerchantId: shopId } });
     await tx.landmarkClaim.updateMany({
       where: { landmarkId: place.id, id: { not: id }, status: { in: OPEN } },
-      data: { status: "REJECTED", adminMessage: "تم قبول طلب ثاني لنفس المكان", decidedById: adminId, decidedAt: new Date() },
+      data: { status: "REJECTED", adminMessage: "تم قبول طلب آخر لنفس المكان", decidedById: adminId, decidedAt: new Date() },
     });
     return shopId;
   });
 
   await notify({
     userId: claim.userId, type: NotificationType.SYSTEM, title: "تمت الموافقة على طلبك ✅",
-    body: `صار «${place.name}» محلّك على دليلكم. تقدر تعدّل معلوماته من وضع النشاط.`, data: { type: "landmark_claim", claimId: id },
+    body: `أصبح «${place.name}» محلّك على دليلكم. يمكنك تعديل معلوماته من وضع النشاط.`, data: { type: "landmark_claim", claimId: id },
   });
-  const others = await prisma.landmarkClaim.findMany({ where: { landmarkId: place.id, id: { not: id }, status: "REJECTED", decidedById: adminId, adminMessage: "تم قبول طلب ثاني لنفس المكان" }, select: { userId: true } });
+  const others = await prisma.landmarkClaim.findMany({ where: { landmarkId: place.id, id: { not: id }, status: "REJECTED", decidedById: adminId, adminMessage: "تم قبول طلب آخر لنفس المكان" }, select: { userId: true } });
   for (const o of others) {
-    await notify({ userId: o.userId, type: NotificationType.SYSTEM, title: "ما قدرنا نقبل طلبك", body: `طلبك للمطالبة بـ «${place.name}» انرفض: تم قبول طلب ثاني لنفس المكان.` });
+    await notify({ userId: o.userId, type: NotificationType.SYSTEM, title: "لم نتمكن من قبول طلبك", body: `رُفض طلبك للمطالبة بـ «${place.name}»: تم قبول طلب آخر لنفس المكان.` });
   }
   return { merchantId, asBranch: !!existing };
 }

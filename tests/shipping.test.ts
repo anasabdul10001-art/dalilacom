@@ -40,10 +40,10 @@ describe("a shop that is not approved yet", () => {
     const s = await shop(false);
     const put = await request(app).put("/merchant/shipping-methods").set(s.owner.auth).send({ methods: [{ name: "توصيل", costCents: 200 }] });
     expect(put.status).toBe(403);
-    expect(put.body.error.message).toBe("محلك لسا ما انوافق عليه من الإدارة، بتقدر تستخدم وضع النشاط بعد الموافقة");
+    expect(put.body.error.message).toBe("لم توافق الإدارة على محلك بعد، يمكنك استخدام وضع النشاط بعد الموافقة");
     const discount = await request(app).post("/merchant/discounts").set(s.owner.auth).send({ title: "عرض", percent: 10 });
     expect(discount.status).toBe(403);
-    expect(discount.body.error.message).toContain("محلك لسا ما انوافق");
+    expect(discount.body.error.message).toContain("لم توافق الإدارة على محلك بعد");
   });
 });
 
@@ -67,7 +67,7 @@ describe("shipping methods", () => {
     // a choice is needed
     const without = await request(app).post("/cart/checkout").set(customer.auth).send({});
     expect(without.status).toBe(400);
-    expect(without.body.error.message).toBe("اختر طريقة الشحن لكل متجر بالسلة");
+    expect(without.body.error.message).toBe("اختر طريقة الشحن لكل متجر في السلة");
     // a method of another shop does not count
     const other = await shop();
     const otherMethod = (await request(app).put("/merchant/shipping-methods").set(other.owner.auth).send({ methods: [{ name: "شحن", costCents: 100 }] })).body[0];

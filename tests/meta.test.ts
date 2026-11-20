@@ -138,7 +138,7 @@ describe("Facebook comments and post targeting", () => {
     await deliver(event);
     const posts = calls.filter((c) => c.method === "POST").slice(before);
     expect(posts).toHaveLength(1);
-    expect(JSON.stringify(posts[0].body)).toContain("رح يتواصل معك قريبًا");
+    expect(JSON.stringify(posts[0].body)).toContain("سيتواصل معك أحد أعضاء الفريق قريبًا");
     const item = await prisma.responderInteraction.findFirst({ where: { userId, externalId: (event.entry[0].changes[0].value as any).comment_id } });
     expect(item?.status).toBe("NEEDS_REVIEW");
   });

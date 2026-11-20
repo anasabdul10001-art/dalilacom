@@ -17,7 +17,7 @@ function makeLimiter(name: string, defaultMax: number, defaultWindowMinutes: num
     legacyHeaders: false,
     handler: (req, res) => {
       logSecurityEvent({ type: "RATE_LIMIT_EXCEEDED", req, metadata: { route: name } }).catch(() => {});
-      sendError(res, 429, "RATE_LIMITED", "عدد المحاولات تجاوز الحد المسموح، حاول لاحقًا");
+      sendError(res, 429, "RATE_LIMITED", "تجاوز عدد المحاولات الحد المسموح، حاول لاحقًا");
     },
   });
 }

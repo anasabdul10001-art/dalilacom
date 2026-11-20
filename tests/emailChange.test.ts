@@ -110,7 +110,7 @@ describe("Changing my email", () => {
     await request(app).post("/auth/register").send({ email: contested, password, fullName: "Faster" });
     const taken = await request(app).get("/auth/confirm-email-change").query({ token: contestedToken });
     expect(taken.status).toBe(400);
-    expect(taken.text).toContain("مستعملًا بحساب آخر");
+    expect(taken.text).toContain("مستعملًا في حساب آخر");
     expect((await prisma.user.findUniqueOrThrow({ where: { id: me.id } })).email).toBe(me.email);
     expect((await request(app).get("/auth/confirm-email-change").query({ token: "short" })).status).toBe(400);
   });

@@ -205,7 +205,7 @@ describe("Facebook Login: the callback", () => {
     const { state } = await startState(token);
     const res = await request(app).get("/responder/meta/oauth/callback").query({ state, code: "c" });
     expect(res.status).toBe(400);
-    expect(res.text).toContain("ما لقينا صفحات");
+    expect(res.text).toContain("لم نجد صفحات");
   });
 
   it("names a Page that Facebook lists without a token instead of dropping it silently", async () => {

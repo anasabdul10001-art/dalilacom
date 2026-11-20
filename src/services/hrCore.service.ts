@@ -51,7 +51,7 @@ export async function createCompany(userId: string, input: { name: string; curre
     await hrAudit(company.id, userId, "company.create", "HrCompany", company.id);
     return company;
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw new ApiError(409, "CONFLICT", "عندك شركة موارد بشرية من قبل");
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw new ApiError(409, "CONFLICT", "لديك شركة موارد بشرية من قبل");
     throw err;
   }
 }
@@ -95,7 +95,7 @@ export async function updateDepartment(companyId: string, id: string, input: { n
 
 export async function deleteDepartment(companyId: string, id: string) {
   await assertDepartmentIn(companyId, id);
-  if (await prisma.hrEmployee.count({ where: { departmentId: id } })) throw new ApiError(409, "CONFLICT", "ما بتقدر تحذف قسم فيه موظفين");
+  if (await prisma.hrEmployee.count({ where: { departmentId: id } })) throw new ApiError(409, "CONFLICT", "لا يمكنك حذف قسم فيه موظفون");
   await prisma.hrDepartment.delete({ where: { id } });
 }
 
@@ -129,7 +129,7 @@ const isManagerRole = (role?: HrRole) => !!role && (HR_MANAGER_ROLES as readonly
 
 /** Only the owner hands out the roles that run the company (HR, accountant, secretary, attendance supervisor). */
 function assertMayGrant(actor: HrActor, role?: HrRole) {
-  if (isManagerRole(role) && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "صاحب النشاط وحده بيعطي صلاحية الموارد البشرية");
+  if (isManagerRole(role) && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "صاحب النشاط وحده يمنح صلاحية الموارد البشرية");
 }
 
 /** Salaries are for whoever handles payroll: everybody else gets the employee without them. */
@@ -171,7 +171,7 @@ export async function createEmployee(actor: HrActor, input: EmployeeInput) {
       managerId: input.managerId, role: input.role ?? "EMPLOYEE", hireDate: new Date(input.hireDate), baseSalary: input.baseSalary ?? null, deviceCode: input.deviceCode || null,
     },
     select: { id: true },
-  }).catch((err) => { throw duplicateCode(err) ? new ApiError(409, "CONFLICT", "رقم الجهاز هاد مستخدم لموظف تاني") : err; });
+  }).catch((err) => { throw duplicateCode(err) ? new ApiError(409, "CONFLICT", "رقم الجهاز هذا مستخدم لموظف آخر") : err; });
   await hrAudit(companyId, actor.userId, "employee.create", "HrEmployee", created.id);
   return getEmployee(actor, created.id);
 }
@@ -183,16 +183,16 @@ export async function updateEmployee(actor: HrActor, id: string, input: Partial<
   if (!existing) throw notFound("الموظف غير موجود");
   if (input.role !== undefined && input.role !== existing.role) {
     assertMayGrant(actor, input.role);
-    if (isManagerRole(existing.role) && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "صاحب النشاط وحده بيعطي صلاحية الموارد البشرية");
+    if (isManagerRole(existing.role) && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "صاحب النشاط وحده يمنح صلاحية الموارد البشرية");
   }
   if (input.departmentId) await assertDepartmentIn(companyId, input.departmentId);
   if (input.managerId) {
-    if (input.managerId === id) throw new ApiError(400, "BAD_REQUEST", "الموظف ما بيكون مديره لنفسه");
+    if (input.managerId === id) throw new ApiError(400, "BAD_REQUEST", "لا يكون الموظف مديرًا لنفسه");
     await assertEmployeeIn(companyId, input.managerId);
   }
   const { hireDate, email, deviceCode, ...rest } = input;
   await prisma.hrEmployee.update({ where: { id }, data: { ...rest, ...(email !== undefined ? { email: email ? email.toLowerCase() : null } : {}), ...(deviceCode !== undefined ? { deviceCode: deviceCode || null } : {}), ...(hireDate ? { hireDate: new Date(hireDate) } : {}) } })
-    .catch((err) => { throw duplicateCode(err) ? new ApiError(409, "CONFLICT", "رقم الجهاز هاد مستخدم لموظف تاني") : err; });
+    .catch((err) => { throw duplicateCode(err) ? new ApiError(409, "CONFLICT", "رقم الجهاز هذا مستخدم لموظف آخر") : err; });
   if (input.employmentStatus && input.employmentStatus !== existing.employmentStatus) {
     await hrAudit(companyId, actor.userId, "employee.status_change", "HrEmployee", id, { from: existing.employmentStatus, to: input.employmentStatus });
   }
@@ -206,7 +206,7 @@ export async function inviteEmployee(actor: HrActor, employeeId: string) {
   const employee = await prisma.hrEmployee.findFirst({ where: { id: employeeId, companyId: actor.company.id } });
   if (!employee) throw notFound("الموظف غير موجود");
   if (employee.userId) throw new ApiError(409, "CONFLICT", "الموظف مرتبط بحساب من قبل");
-  if (employee.employmentStatus === "TERMINATED") throw new ApiError(409, "CONFLICT", "الموظف منتهية خدمته");
+  if (employee.employmentStatus === "TERMINATED") throw new ApiError(409, "CONFLICT", "انتهت خدمة الموظف");
   const code = `hri_${crypto.randomBytes(18).toString("base64url")}`;
   const expiresAt = new Date(Date.now() + INVITE_DAYS * 86_400_000);
   await prisma.hrInvite.upsert({
@@ -264,14 +264,14 @@ async function link(userId: string, inviteId: string) {
   const invite = await prisma.hrInvite.findUnique({ where: { id: inviteId }, include: { employee: true, company: true } });
   const bad = () => new ApiError(400, "HR_INVITE_INVALID", "الدعوة غير صحيحة أو انتهت صلاحيتها");
   if (!invite || invite.acceptedAt || invite.expiresAt < new Date() || invite.employee.userId || invite.employee.employmentStatus === "TERMINATED") throw bad();
-  if (invite.company.ownerId === userId) throw new ApiError(409, "CONFLICT", "أنت صاحب هالشركة، ما بتنضم لها كموظف");
+  if (invite.company.ownerId === userId) throw new ApiError(409, "CONFLICT", "أنت صاحب هذه الشركة، ولا يمكنك الانضمام إليها كموظف");
   try {
     // claimed only while nobody took the invitation meanwhile
     const claimed = await prisma.hrInvite.updateMany({ where: { id: invite.id, acceptedAt: null }, data: { acceptedAt: new Date() } });
     if (claimed.count !== 1) throw bad();
     await prisma.hrEmployee.update({ where: { id: invite.employeeId }, data: { userId } });
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw new ApiError(409, "CONFLICT", "حسابك مرتبط بموظف بهالشركة من قبل");
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw new ApiError(409, "CONFLICT", "حسابك مرتبط بموظف في هذه الشركة من قبل");
     throw err;
   }
   await hrAudit(invite.companyId, userId, "employee.accept", "HrEmployee", invite.employeeId);

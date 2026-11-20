@@ -1,9 +1,9 @@
 
 // The page speaks the language of the e-mail link (?lang=), else the one chosen on the website, else the phone's.
 const TXT = {
-  ar: { title: "إعادة تعيين كلمة السر — دليلكم", brand: "🅳 دليلكم", askEmail: "أدخل بريدك الإلكتروني وبنبعتلك رابط لإعادة تعيين كلمة السر", email: "البريد الإلكتروني", sendLink: "إرسال رابط إعادة التعيين",
+  ar: { title: "إعادة تعيين كلمة السر — دليلكم", brand: "🅳 دليلكم", askEmail: "أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة السر", email: "البريد الإلكتروني", sendLink: "إرسال رابط إعادة التعيين",
     setNew: "عيّن كلمة سر جديدة لحسابك", newPw: "كلمة السر الجديدة", min8: "8 أحرف على الأقل", confirmPw: "تأكيد كلمة السر", change: "تغيير كلمة السر",
-    needEmail: "أدخل بريدك الإلكتروني", sent: "إذا كان هذا البريد مسجّلًا، أرسلنا رابط إعادة التعيين", noServer: "تعذّر الاتصال بالسيرفر",
+    needEmail: "أدخل بريدك الإلكتروني", sent: "إذا كان هذا البريد مسجّلًا، أرسلنا رابط إعادة التعيين", noServer: "تعذّر الاتصال بالخادم",
     short: "كلمة السر يجب أن تكون 8 أحرف على الأقل", mismatch: "كلمتا السر غير متطابقتين", done: "تم تغيير كلمة السر بنجاح", goHome: "الذهاب إلى الموقع وتسجيل الدخول", failed: "تعذّر تغيير كلمة السر" },
   en: { title: "Reset your password — Dalilacom", brand: "🅳 Dalilacom", askEmail: "Enter your email and we will send you a link to reset your password", email: "Email", sendLink: "Send the reset link",
     setNew: "Choose a new password for your account", newPw: "New password", min8: "At least 8 characters", confirmPw: "Confirm password", change: "Change password",

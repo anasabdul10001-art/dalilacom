@@ -44,7 +44,7 @@ export async function updateLocation(userId: string, id: string, d: { name?: str
   await assertStaff(userId, d.staffId);
   if (d.isActive === false) {
     const left = await prisma.accountingLocationStock.aggregate({ where: { locationId: id }, _sum: { onHand: true } });
-    if ((left._sum.onHand ?? 0) > 0) throw new ApiError(409, "CONFLICT", "رجّع البضاعة الموجودة بهالموقع للمستودع قبل ما توقفو");
+    if ((left._sum.onHand ?? 0) > 0) throw new ApiError(409, "CONFLICT", "أعد البضاعة الموجودة في هذا الموقع إلى المستودع قبل إيقافه");
   }
   return prisma.accountingLocation.update({ where: { id }, data: d });
 }
@@ -57,7 +57,7 @@ export async function giveStock(userId: string, actorId: string, locationId: str
   if (!product) throw notFound("المنتج غير موجود");
   await prisma.$transaction(async (tx) => {
     const took = await tx.accountingProduct.updateMany({ where: { id: productId, userId, quantity: { gte: quantity } }, data: { quantity: { decrement: quantity } } });
-    if (!took.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة بالمستودع ما بتكفي", { productId, name: product.name });
+    if (!took.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة في المستودع لا تكفي", { productId, name: product.name });
     await tx.accountingLocationStock.upsert({
       where: { locationId_productId: { locationId, productId } },
       create: { locationId, productId, onHand: quantity, given: quantity },
@@ -76,7 +76,7 @@ export async function returnStock(userId: string, actorId: string, locationId: s
   if (!product) throw notFound("المنتج غير موجود");
   await prisma.$transaction(async (tx) => {
     const took = await tx.accountingLocationStock.updateMany({ where: { locationId, productId, onHand: { gte: quantity } }, data: { onHand: { decrement: quantity }, returned: { increment: quantity } } });
-    if (!took.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة بهالموقع ما بتكفي");
+    if (!took.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة في هذا الموقع لا تكفي");
     await tx.accountingProduct.update({ where: { id: productId }, data: { quantity: { increment: quantity } } });
     await tx.accountingLocationMove.create({ data: { locationId, productId, kind: "RETURN", quantity, recordedById: actorId, note: note || null } });
     await tx.accountingStockMovement.create({ data: { userId, productId, action: "STOCK_IN", quantity, unitCostCents: product.costCents, note: `رجوع من ${loc.name}` } });
@@ -94,20 +94,20 @@ export async function setStoreShare(userId: string, accountingProductId: string,
   ]);
   if (!product) throw notFound("المنتج غير موجود");
   if (!listing) throw notFound("منتج المتجر غير موجود");
-  if (listing.accountingProductId && listing.accountingProductId !== product.id) throw new ApiError(409, "CONFLICT", "منتج المتجر هاد مربوط بمنتج تاني بالمحاسبة");
+  if (listing.accountingProductId && listing.accountingProductId !== product.id) throw new ApiError(409, "CONFLICT", "منتج المتجر هذا مربوط بمنتج آخر في المحاسبة");
   const other = await prisma.product.findFirst({ where: { accountingProductId: product.id, id: { not: listing.id } }, select: { id: true } });
-  if (other) throw new ApiError(409, "CONFLICT", "هالمنتج مربوط أصلاً بمنتج تاني بالمتجر");
+  if (other) throw new ApiError(409, "CONFLICT", "هذا المنتج مربوط أصلًا بمنتج آخر في المتجر");
   await prisma.$transaction(async (tx) => {
     // read the store's stock inside the transaction: an order may have taken some a moment ago
     const now = await tx.product.findUniqueOrThrow({ where: { id: listing.id }, select: { stock: true } });
     const delta = target - now.stock;
     if (delta > 0) {
       const took = await tx.accountingProduct.updateMany({ where: { id: product.id, quantity: { gte: delta } }, data: { quantity: { decrement: delta } } });
-      if (!took.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة بالمستودع ما بتكفي");
+      if (!took.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة في المستودع لا تكفي");
       await tx.product.update({ where: { id: listing.id }, data: { stock: { increment: delta }, accountingProductId: product.id } });
     } else if (delta < 0) {
       const back = await tx.product.updateMany({ where: { id: listing.id, stock: { gte: -delta } }, data: { stock: { decrement: -delta }, accountingProductId: product.id } });
-      if (!back.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "الكمية الموجودة بالمتجر تغيّرت، جرّب مرة تانية");
+      if (!back.count) throw new ApiError(409, "INSUFFICIENT_STOCK", "تغيّرت الكمية الموجودة في المتجر، جرّب مرة أخرى");
       await tx.accountingProduct.update({ where: { id: product.id }, data: { quantity: { increment: -delta } } });
     } else {
       await tx.product.update({ where: { id: listing.id }, data: { accountingProductId: product.id } });
@@ -121,7 +121,7 @@ export async function unlinkStore(userId: string, accountingProductId: string, r
   await prisma.$transaction(async (tx) => {
     const product = await tx.accountingProduct.findFirst({ where: { id: accountingProductId, userId }, select: { id: true, costCents: true } });
     const listings = await tx.product.findMany({ where: { accountingProductId, merchant: { userId } }, select: { id: true, stock: true } });
-    if (!product || !listings.length) throw notFound("المنتج مو مربوط بالمتجر");
+    if (!product || !listings.length) throw notFound("المنتج غير مربوط بالمتجر");
     for (const l of listings) {
       let back = 0;
       if (returnUnits && l.stock > 0) {
@@ -162,7 +162,7 @@ export async function deleteLocation(userId: string, id: string) {
   const loc = await prisma.accountingLocation.findFirst({ where: { id, userId }, include: { stock: true } });
   if (!loc) throw notFound("الموقع غير موجود");
   const held = (await cashHeld(userId, [id])).get(id) ?? new Map();
-  for (const c of held.values()) if (heldOf(c) > 0) throw new ApiError(409, "CONFLICT", "لسا عند هالموقع كاش ما انستلم. استلمو أول وبعدين احذفو.");
+  for (const c of held.values()) if (heldOf(c) > 0) throw new ApiError(409, "CONFLICT", "ما زال عند هذا الموقع نقد لم يُستلم. استلمه أولًا ثم احذفه.");
   await prisma.$transaction(async (tx) => {
     for (const st of loc.stock) {
       if (st.onHand <= 0) continue;

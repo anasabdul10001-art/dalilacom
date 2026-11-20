@@ -12,7 +12,7 @@ export function normalizeClock(value: unknown): unknown {
   return m ? `${m[1].padStart(2, "0")}:${m[2].padStart(2, "0")}` : t;
 }
 
-const hhmm = z.preprocess(normalizeClock, z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "الوقت لازم يكون بصيغة HH:mm"));
+const hhmm = z.preprocess(normalizeClock, z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "يجب أن يكون الوقت بصيغة HH:mm"));
 const ranges = z.array(z.object({ open: hhmm, close: hhmm })).max(3);
 
 /** Weekly opening hours; a day that's missing or empty means closed that day. */

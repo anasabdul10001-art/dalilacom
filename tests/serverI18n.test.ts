@@ -26,9 +26,9 @@ async function account(prefix: string, headers: Record<string, string> = {}) {
 describe("translateText", () => {
   it("translates whole texts, texts with numbers and names, and leaves everything else alone", () => {
     expect(translateText("الباقة غير موجودة", "en")).toBe("Plan not found");
-    expect(translateText("رصيدك 5 والاشتراك بدو 9. اشحن محفظتك أولًا.", "en")).toBe("Your balance is 5 and the subscription needs 9. Top up your wallet first.");
-    expect(translateText("باقي 1 يوم على انتهاء عضويتك. جدّدها لتضل تستفيد من الحسومات.", "en")).toContain("1 day left");
-    expect(translateText("باقي 3 أيام على انتهاء عضويتك. جدّدها لتضل تستفيد من الحسومات.", "en")).toContain("3 days left");
+    expect(translateText("رصيدك 5 والاشتراك يكلّف 9. اشحن محفظتك أولًا.", "en")).toBe("Your balance is 5 and the subscription needs 9. Top up your wallet first.");
+    expect(translateText("تبقّى 1 يوم على انتهاء عضويتك. جدّدها لتستمر في الاستفادة من الحسومات.", "en")).toContain("1 day left");
+    expect(translateText("تبقّى 3 أيام على انتهاء عضويتك. جدّدها لتستمر في الاستفادة من الحسومات.", "en")).toContain("3 days left");
     expect(translateText("100 دليلكم كوين", "en")).toBe("100 Dalilacom Credits");
     expect(translateText("نص ما إله ترجمة", "en")).toBe("نص ما إله ترجمة");
     expect(translateText("Already English", "en")).toBe("Already English");
@@ -130,18 +130,18 @@ describe("Notifications and invoices follow the reader's language", () => {
     const user = await account("notifen");
     await prisma.user.update({ where: { id: user.id }, data: { language: "en" } });
 
-    await notify({ userId: user.id, type: "MEMBERSHIP_EXPIRING", title: "عضويتك عم تنتهي قريبًا", body: "باقي 3 أيام على انتهاء عضويتك. جدّدها لتضل تستفيد من الحسومات." });
+    await notify({ userId: user.id, type: "MEMBERSHIP_EXPIRING", title: "عضويتك تنتهي قريبًا", body: "تبقّى 3 أيام على انتهاء عضويتك. جدّدها لتستمر في الاستفادة من الحسومات." });
     const mail = sendSpy.mock.calls.find((c) => c[0].to === user.email && c[0].subject.includes("membership"))![0];
     expect(mail.subject).toBe("Your membership is about to expire");
     expect(mail.text).toContain("3 days left");
 
     const stored = await prisma.notification.findFirstOrThrow({ where: { userId: user.id } });
-    expect(stored.title).toBe("عضويتك عم تنتهي قريبًا"); // the original is kept
+    expect(stored.title).toBe("عضويتك تنتهي قريبًا"); // the original is kept
 
     const asEnglish = await request(app).get("/notifications").set(user.auth).set("Accept-Language", "en");
     expect(asEnglish.body.items[0].title).toBe("Your membership is about to expire");
     const asArabic = await request(app).get("/notifications").set(user.auth);
-    expect(asArabic.body.items[0].title).toBe("عضويتك عم تنتهي قريبًا");
+    expect(asArabic.body.items[0].title).toBe("عضويتك تنتهي قريبًا");
   });
 
   it("prints an invoice in English, left to right, with the product name as the merchant wrote it", async () => {

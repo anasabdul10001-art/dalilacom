@@ -48,7 +48,7 @@ async function nextAvailable(country: string, from: Date, days: number): Promise
 
 export async function ownMerchant(userId: string) {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId }, include: { user: { select: { countryCode: true } } } });
-  if (!merchant) throw new AdError(404, "NOT_FOUND", "ما عندك متجر");
+  if (!merchant) throw new AdError(404, "NOT_FOUND", "ليس لديك متجر");
   if (merchant.approvalStatus !== "APPROVED") throw new AdError(403, "FORBIDDEN", "متجرك لم يُعتمد بعد");
   return merchant;
 }
@@ -108,8 +108,8 @@ export async function bookAd(input: BookInput): Promise<AdBooking> {
 
   const product = await prisma.product.findUnique({ where: { id: input.productId } });
   if (!product || product.merchantId !== merchant.id) throw new AdError(404, "NOT_FOUND", "المنتج غير موجود في متجرك");
-  if (product.moderation !== "APPROVED") throw new AdError(400, "BAD_REQUEST", "المنتج لسا ما انقبل من المراجعة");
-  if (!product.isActive || product.stock <= 0) throw new AdError(400, "BAD_REQUEST", "المنتج لازم يكون ظاهر ومتوفر بالمخزون ليتم الإعلان عنه");
+  if (product.moderation !== "APPROVED") throw new AdError(400, "BAD_REQUEST", "لم يُقبل المنتج من المراجعة بعد");
+  if (!product.isActive || product.stock <= 0) throw new AdError(400, "BAD_REQUEST", "يجب أن يكون المنتج ظاهرًا ومتوفرًا في المخزون ليتم الإعلان عنه");
 
   const now = new Date();
   const requested = input.start && input.start.getTime() > now.getTime() ? input.start : now;
@@ -124,7 +124,7 @@ export async function bookAd(input: BookInput): Promise<AdBooking> {
       const slot = await freeSlot(tx, country, startsAt, endsAt);
       if (slot === null) {
         const next = await nextAvailable(country, startsAt, pack.days);
-        throw new AdError(409, "NO_SPACE", "كل المساحات الإعلانية محجوزة بهذا الوقت", { nextAvailable: next?.toISOString() ?? null });
+        throw new AdError(409, "NO_SPACE", "كل المساحات الإعلانية محجوزة في هذا الوقت", { nextAvailable: next?.toISOString() ?? null });
       }
       if (pack.credits > 0) await adjustBalance(tx, input.userId, -pack.credits, "AD", `ad:${product.id}`);
       return tx.adBooking.create({
@@ -167,7 +167,7 @@ export async function approveAd(id: string): Promise<AdBooking> {
   const endsAt = new Date(startsAt.getTime() + ad.days * DAY_MS);
   const updated = await prisma.$transaction(async (tx) => {
     const slot = await freeSlot(tx, ad.countryCode, startsAt, endsAt, ad.id);
-    if (slot === null) throw new AdError(409, "NO_SPACE", "ما عاد في مساحة فاضية بهذا الوقت، ارفضه ليرجع الرصيد لصاحبه");
+    if (slot === null) throw new AdError(409, "NO_SPACE", "لم تعد هناك مساحة فارغة في هذا الوقت، ارفضه ليعود الرصيد إلى صاحبه");
     return tx.adBooking.update({ where: { id }, data: { status: "ACTIVE", startsAt, endsAt, slot } });
   });
   await notify({ userId: await ownerOf(ad), type: "SYSTEM", title: "تمت الموافقة على إعلانك في المتجر", body: "إعلانك ظاهر الآن في المتجر.", data: { kind: "AD_APPROVED", adId: id }, email: false });
@@ -182,7 +182,7 @@ export async function rejectAd(id: string, reason?: string): Promise<AdBooking> 
     await refund(tx, ad, "refund");
     return ad;
   });
-  await notify({ userId: await ownerOf(updated), type: "SYSTEM", title: "لم تتم الموافقة على إعلانك في المتجر", body: reason ? `السبب: ${reason}. تم إرجاع المبلغ لمحفظتك.` : "تم إرجاع المبلغ لمحفظتك.", data: { kind: "AD_REJECTED", adId: id }, email: false });
+  await notify({ userId: await ownerOf(updated), type: "SYSTEM", title: "لم تتم الموافقة على إعلانك في المتجر", body: reason ? `السبب: ${reason}. تم إرجاع المبلغ إلى محفظتك.` : "تم إرجاع المبلغ إلى محفظتك.", data: { kind: "AD_REJECTED", adId: id }, email: false });
   return updated;
 }
 
@@ -191,7 +191,7 @@ export async function cancelAd(userId: string, id: string): Promise<AdBooking> {
   const merchant = await ownMerchant(userId);
   return prisma.$transaction(async (tx) => {
     const marked = await tx.adBooking.updateMany({ where: { id, merchantId: merchant.id, status: "PENDING" }, data: { status: "CANCELLED" } });
-    if (marked.count === 0) throw new AdError(409, "CONFLICT", "تقدر تلغي الحجز فقط قبل الموافقة عليه");
+    if (marked.count === 0) throw new AdError(409, "CONFLICT", "يمكنك إلغاء الحجز فقط قبل الموافقة عليه");
     const ad = await tx.adBooking.findUniqueOrThrow({ where: { id } });
     await refund(tx, ad, "cancel");
     return ad;
@@ -265,7 +265,7 @@ export async function cancelBannerBooking(userId: string, id: string): Promise<B
   const merchant = await ownMerchant(userId);
   return prisma.$transaction(async (tx) => {
     const marked = await tx.bannerBooking.updateMany({ where: { id, merchantId: merchant.id, status: "PENDING" }, data: { status: "CANCELLED" } });
-    if (marked.count === 0) throw new AdError(409, "CONFLICT", "تقدر تلغي الحجز فقط قبل ما نتواصل معك");
+    if (marked.count === 0) throw new AdError(409, "CONFLICT", "يمكنك إلغاء الحجز فقط قبل أن نتواصل معك");
     const b = await tx.bannerBooking.findUniqueOrThrow({ where: { id } });
     await refundBanner(tx, b, "cancel");
     return b;
@@ -287,7 +287,7 @@ export async function rejectBannerBooking(id: string, reason?: string): Promise<
     return row;
   });
   const owner = await prisma.merchantProfile.findUniqueOrThrow({ where: { id: b.merchantId }, select: { userId: true } });
-  await notify({ userId: owner.userId, type: "SYSTEM", title: "لم يتم حجز البانر الكبير", body: reason ? `السبب: ${reason}. تم إرجاع المبلغ لمحفظتك.` : "تم إرجاع المبلغ لمحفظتك.", data: { kind: "BANNER_BOOKING_REJECTED", bookingId: id }, email: false });
+  await notify({ userId: owner.userId, type: "SYSTEM", title: "لم يتم حجز البانر الكبير", body: reason ? `السبب: ${reason}. تم إرجاع المبلغ إلى محفظتك.` : "تم إرجاع المبلغ إلى محفظتك.", data: { kind: "BANNER_BOOKING_REJECTED", bookingId: id }, email: false });
   return b;
 }
 
@@ -298,6 +298,6 @@ export async function linkBannerToBooking(bookingId: string, bannerId: string): 
   await prisma.bannerBooking.update({ where: { id: bookingId }, data: { status: "SCHEDULED", bannerId } });
   if (b.status !== "SCHEDULED") {
     const owner = await prisma.merchantProfile.findUniqueOrThrow({ where: { id: b.merchantId }, select: { userId: true } });
-    await notify({ userId: owner.userId, type: "SYSTEM", title: "بانرك الكبير صار جاهزًا", body: "تم تجهيز بانرك وجدولته على الصفحة الأولى للمتجر.", data: { kind: "BANNER_SCHEDULED", bookingId }, email: false });
+    await notify({ userId: owner.userId, type: "SYSTEM", title: "بانرك الكبير أصبح جاهزًا", body: "تم تجهيز بانرك وجدولته على الصفحة الأولى للمتجر.", data: { kind: "BANNER_SCHEDULED", bookingId }, email: false });
   }
 }

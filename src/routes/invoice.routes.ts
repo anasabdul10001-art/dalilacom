@@ -60,7 +60,7 @@ invoiceRouter.get("/order/:id", route(async (req, res) => {
     number: order.orderNumber,
     issuedAt: order.createdAt,
     issuer: issuerOf(order.merchant),
-    recipient: { label: "العميل", name: order.user.fullName, taxId: order.user.vatNumber },
+    recipient: { label: "الزبون", name: order.user.fullName, taxId: order.user.vatNumber },
     status: ORDER_STATUS_AR[order.status] ?? order.status,
     rows: order.items.map((i) => ({ label: i.productName, qty: i.quantity, amount: formatMoney(i.unitPriceCents * i.quantity), literal: true })),
     totals: [

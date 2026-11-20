@@ -5,7 +5,7 @@ import { ChannelDriverImpl, DriverContext, IncomingMessage, PostSummary } from "
 // in the catalogue but cannot be connected — it fails loudly instead of pretending to work.
 export const metaPendingDriver: ChannelDriverImpl = {
   validateCredentials() {
-    return "هالقناة بانتظار ربط تطبيق Meta والموافقة عليه — لسا مو متاحة";
+    return "هذه القناة بانتظار ربط تطبيق Meta والموافقة عليه — غير متاحة بعد";
   },
   parseIncoming() {
     return null;
@@ -74,7 +74,7 @@ export const facebookDriver: ChannelDriverImpl = {
   async register(ctx) {
     const { pageId, pageAccessToken } = ctx.credentials;
     const page = await graph<{ id: string; name?: string }>(`${pageId}?fields=id,name`, pageAccessToken);
-    if (page.id !== pageId) throw new Error("الـpageId ما بيطابق الـtoken");
+    if (page.id !== pageId) throw new Error("الـpageId لا يطابق الـtoken");
     await subscribePage(pageId, pageAccessToken);
     return { externalAccountId: pageId, accountName: page.name };
   },
@@ -129,7 +129,7 @@ export const instagramDriver: ChannelDriverImpl = {
   async register(ctx) {
     const { pageId, instagramAccountId, pageAccessToken } = ctx.credentials;
     const account = await graph<{ id: string; username?: string }>(`${instagramAccountId}?fields=id,username`, pageAccessToken);
-    if (account.id !== instagramAccountId) throw new Error("حساب إنستغرام ما بيطابق الـtoken");
+    if (account.id !== instagramAccountId) throw new Error("حساب إنستغرام لا يطابق الـtoken");
     await subscribePage(pageId, pageAccessToken);
     return { externalAccountId: instagramAccountId, accountName: account.username ? `@${account.username}` : undefined };
   },

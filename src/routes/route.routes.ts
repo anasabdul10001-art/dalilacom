@@ -26,7 +26,7 @@ routeRouter.get("/", routeRateLimiter, route(async (req, res) => {
   try {
     res.json({ mode, ...(await getRoute(mode, { lat: fromLat, lng: fromLng }, { lat: toLat, lng: toLng })) });
   } catch (err) {
-    if (err instanceof NoRouteError) return sendError(res, 404, "NO_ROUTE", "ما لقينا طريق بين النقطتين");
+    if (err instanceof NoRouteError) return sendError(res, 404, "NO_ROUTE", "لم نجد طريقًا بين النقطتين");
     if (err instanceof RouteUnavailableError) return sendError(res, 502, "ROUTE_UNAVAILABLE", "خدمة المسارات غير متاحة حاليًا");
     throw err;
   }

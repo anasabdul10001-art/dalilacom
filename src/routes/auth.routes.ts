@@ -91,7 +91,7 @@ authRouter.post("/register", registerRateLimiter, route(async (req, res) => {
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const { email, phone, password, fullName, countryCode, cityId, referralCode, acceptTerms } = parsed.data;
   if (gdprStrict() && acceptTerms !== true) {
-    return sendError(res, 400, "TERMS_NOT_ACCEPTED", "لازم توافق على شروط الاستخدام وسياسة الخصوصية لتسجّل");
+    return sendError(res, 400, "TERMS_NOT_ACCEPTED", "يجب أن توافق على شروط الاستخدام وسياسة الخصوصية لتسجّل");
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -333,7 +333,7 @@ authRouter.post("/change-email", loginRateLimiter, requireAuth, route(async (req
   const parsed = changeEmailSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   if (!process.env.SMTP_HOST) {
-    return sendError(res, 503, "EMAIL_NOT_CONFIGURED", "خدمة البريد غير مفعّلة بعد، ما فينا نأكد الإيميل الجديد");
+    return sendError(res, 503, "EMAIL_NOT_CONFIGURED", "خدمة البريد غير مفعّلة بعد، لا يمكننا تأكيد البريد الإلكتروني الجديد");
   }
   const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { id: true, email: true, passwordHash: true, socialIdentities: { select: { id: true } } } });
   // 403, not 401: a wrong password here must not look like an expired session (the apps sign out on 401).
@@ -342,14 +342,14 @@ authRouter.post("/change-email", loginRateLimiter, requireAuth, route(async (req
   }
   if (parsed.data.newEmail === user.email) return sendError(res, 400, "BAD_REQUEST", "البريد الجديد نفس بريدك الحالي");
   if (await prisma.user.findUnique({ where: { email: parsed.data.newEmail }, select: { id: true } })) {
-    return sendError(res, 409, "EMAIL_IN_USE", "هذا البريد مسجّل بحساب ثاني");
+    return sendError(res, 409, "EMAIL_IN_USE", "هذا البريد مسجّل بحساب آخر");
   }
   await prisma.emailChangeToken.updateMany({ where: { userId: user.id, consumedAt: null }, data: { consumedAt: new Date() } });
   const { raw, hash } = generateRawToken();
   await prisma.emailChangeToken.create({ data: { userId: user.id, newEmail: parsed.data.newEmail, tokenHash: hash, expiresAt: new Date(Date.now() + EMAIL_CHANGE_TTL_MS) } });
   await sendEmailChangeMails(user.email, parsed.data.newEmail, raw, resolveLanguage(req));
   await logSecurityEvent({ userId: user.id, type: "EMAIL_CHANGE_REQUESTED", req });
-  return res.json({ message: "أرسلنا رابط التأكيد للبريد الجديد. اضغطه ليتم التغيير." });
+  return res.json({ message: "أرسلنا رابط التأكيد إلى البريد الجديد. اضغط عليه ليتم التغيير." });
 }));
 
 // The link in the email: a small page, as for email verification. On success the account carries the new, already-confirmed
@@ -385,7 +385,7 @@ authRouter.get("/confirm-email-change", verifyEmailRateLimiter, route(async (req
   const messages = {
     CHANGED: "تم تغيير بريدك الإلكتروني وتوثيقه. سجّل الدخول من جديد بالبريد الجديد.",
     EXPIRED: "انتهت صلاحية رابط التغيير. اطلب تغييرًا جديدًا من التطبيق.",
-    TAKEN: "هذا البريد صار مستعملًا بحساب آخر، جرّب بريدًا ثانيًا.",
+    TAKEN: "أصبح هذا البريد مستعملًا في حساب آخر، جرّب بريدًا آخر.",
     INVALID: "رابط التغيير غير صالح.",
   };
   res.status(outcome === "CHANGED" ? 200 : 400).type("html").send(
@@ -409,7 +409,7 @@ authRouter.post("/change-password", loginRateLimiter, requireAuth, route(async (
     return sendError(res, 401, "AUTH_INVALID_CREDENTIALS", "كلمة السر الحالية غير صحيحة");
   }
   if (parsed.data.newPassword === parsed.data.currentPassword) {
-    return sendError(res, 400, "BAD_REQUEST", "كلمة السر الجديدة لازم تختلف عن الحالية");
+    return sendError(res, 400, "BAD_REQUEST", "يجب أن تختلف كلمة السر الجديدة عن الحالية");
   }
   const updated = await prisma.user.update({
     where: { id: user.id },

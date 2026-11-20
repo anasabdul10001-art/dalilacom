@@ -16,7 +16,7 @@ export const phoneOf = (req: { header(n: string): string | undefined }): PhoneIn
  */
 export async function assertOwnPhone(me: HrMe, phone: PhoneInfo) {
   if (!me.company.deviceLockRequired) return;
-  if (!phone.id) throw new ApiError(403, "DEVICE_ID_REQUIRED", "حدّث تطبيق دليلكم لآخر نسخة حتى تقدر تسجّل دوامك");
+  if (!phone.id) throw new ApiError(403, "DEVICE_ID_REQUIRED", "حدّث تطبيق دليلكم إلى آخر نسخة لتتمكن من تسجيل دوامك");
   const bound = me.employee.boundDeviceId;
   if (!bound) {
     await prisma.hrEmployee.update({ where: { id: me.employee.id }, data: { boundDeviceId: phone.id, boundDeviceName: phone.name ?? null, boundAt: new Date() } });
@@ -37,7 +37,7 @@ export async function assertOwnPhone(me: HrMe, phone: PhoneInfo) {
       await notify({ userId, type: "SYSTEM", title: "طلب تغيير جهاز موظف", body: `${name} حاول يسجّل من جهاز جديد${phone.name ? ` (${phone.name})` : ""}`, data: { kind: "hr.device-request", employeeId: me.employee.id }, email: false }).catch((err) => console.error("HR notification failed", err));
     }
   }
-  throw new ApiError(403, "DEVICE_NOT_APPROVED", "هاد مو الجهاز المسجّل لحسابك. انبعت طلب لصاحب الشركة، ولما يوافق بتقدر تسجّل من هالجهاز.");
+  throw new ApiError(403, "DEVICE_NOT_APPROVED", "هذا ليس الجهاز المسجّل لحسابك. أُرسل طلب إلى صاحب الشركة، وعند موافقته تستطيع التسجيل من هذا الجهاز.");
 }
 
 export const listRequests = (companyId: string, status?: "PENDING" | "APPROVED" | "REJECTED") =>
@@ -51,10 +51,10 @@ export const listRequests = (companyId: string, status?: "PENDING" | "APPROVED" 
 export async function decideRequest(actor: HrActor, id: string, decision: "APPROVE" | "REJECT") {
   const req = await prisma.hrDeviceRequest.findFirst({ where: { id, companyId: actor.company.id } });
   if (!req) throw new ApiError(404, "NOT_FOUND", "الطلب غير موجود");
-  if (req.status !== "PENDING") throw new ApiError(409, "CONFLICT", "الطلب انحسم من قبل");
+  if (req.status !== "PENDING") throw new ApiError(409, "CONFLICT", "تم البتّ في الطلب من قبل");
   const status = decision === "APPROVE" ? "APPROVED" : "REJECTED";
   const done = await prisma.hrDeviceRequest.updateMany({ where: { id, status: "PENDING" }, data: { status, decidedAt: new Date(), decidedById: actor.userId } });
-  if (done.count !== 1) throw new ApiError(409, "CONFLICT", "الطلب انحسم من قبل");
+  if (done.count !== 1) throw new ApiError(409, "CONFLICT", "تم البتّ في الطلب من قبل");
   if (status === "APPROVED") {
     await prisma.hrEmployee.update({ where: { id: req.employeeId }, data: { boundDeviceId: req.deviceId, boundDeviceName: req.deviceName, boundAt: new Date() } });
     // any other waiting request of this employee is stale now
@@ -62,7 +62,7 @@ export async function decideRequest(actor: HrActor, id: string, decision: "APPRO
   }
   await hrAudit(actor.company.id, actor.userId, `device.${decision.toLowerCase()}`, "HrDeviceRequest", id, { employeeId: req.employeeId });
   const emp = await prisma.hrEmployee.findUnique({ where: { id: req.employeeId }, select: { userId: true } });
-  if (emp?.userId) await notify({ userId: emp.userId, type: "SYSTEM", title: status === "APPROVED" ? "تمت الموافقة على جهازك الجديد" : "انرفض طلب الجهاز الجديد", body: undefined, data: { kind: "hr.device-decision" }, email: false }).catch(() => undefined);
+  if (emp?.userId) await notify({ userId: emp.userId, type: "SYSTEM", title: status === "APPROVED" ? "تمت الموافقة على جهازك الجديد" : "رُفض طلب الجهاز الجديد", body: undefined, data: { kind: "hr.device-decision" }, email: false }).catch(() => undefined);
   return prisma.hrDeviceRequest.findUniqueOrThrow({ where: { id } });
 }
 

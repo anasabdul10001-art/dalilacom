@@ -108,7 +108,7 @@ planRouter.delete("/:id", requireAuth, requireRole(Role.ADMIN), route(async (req
   } catch (err) {
     if (err instanceof PlanInUseError) {
       const useCount = err.memberships + err.responderEntitlements;
-      return sendError(res, 409, "PLAN_IN_USE", `ما بنقدر نحذف باقة مستخدمة من ${useCount} حساب أو اشتراك — عطّلها بدل الحذف`);
+      return sendError(res, 409, "PLAN_IN_USE", `لا يمكن حذف باقة مستخدمة من ${useCount} حساب أو اشتراك — عطّلها بدل الحذف`);
     }
     throw err;
   }
@@ -145,7 +145,7 @@ planRouter.put("/:id/prices", requireAuth, requireRole(Role.ADMIN), route(async 
   const existing = await prisma.servicePlan.findUnique({ where: { id: req.params.id } });
   if (!existing) return sendError(res, 404, "NOT_FOUND", "الباقة غير موجودة");
   const duplicates = new Set(parsed.data.prices.map((p) => p.countryId)).size !== parsed.data.prices.length;
-  if (duplicates) return sendError(res, 400, "BAD_REQUEST", "كل بلد مرة وحدة بس");
+  if (duplicates) return sendError(res, 400, "BAD_REQUEST", "لكل بلد مرة واحدة فقط");
   res.json(await replacePrices(existing.id, parsed.data.prices));
 }));
 
@@ -164,7 +164,7 @@ planRouter.post("/:id/offers", requireAuth, requireRole(Role.ADMIN), route(async
   const plan = await prisma.servicePlan.findUnique({ where: { id: req.params.id }, select: { id: true } });
   if (!plan) return sendError(res, 404, "NOT_FOUND", "الباقة غير موجودة");
   const data = { ...parsed.data, startsAt: parsed.data.startsAt ? new Date(parsed.data.startsAt) : null, endsAt: parsed.data.endsAt ? new Date(parsed.data.endsAt) : null };
-  if (data.startsAt && data.endsAt && data.endsAt <= data.startsAt) return sendError(res, 400, "BAD_REQUEST", "تاريخ نهاية العرض لازم يكون بعد تاريخ بدايته");
+  if (data.startsAt && data.endsAt && data.endsAt <= data.startsAt) return sendError(res, 400, "BAD_REQUEST", "يجب أن يكون تاريخ نهاية العرض بعد تاريخ بدايته");
   res.status(201).json(await prisma.planOffer.create({ data: { ...data, planId: plan.id } }));
 }));
 
@@ -180,7 +180,7 @@ planRouter.patch("/offers/:offerId", requireAuth, requireRole(Role.ADMIN), route
   };
   const startsAt = data.startsAt === undefined ? existing.startsAt : data.startsAt;
   const endsAt = data.endsAt === undefined ? existing.endsAt : data.endsAt;
-  if (startsAt && endsAt && endsAt <= startsAt) return sendError(res, 400, "BAD_REQUEST", "تاريخ نهاية العرض لازم يكون بعد تاريخ بدايته");
+  if (startsAt && endsAt && endsAt <= startsAt) return sendError(res, 400, "BAD_REQUEST", "يجب أن يكون تاريخ نهاية العرض بعد تاريخ بدايته");
   res.json(await prisma.planOffer.update({ where: { id: existing.id }, data }));
 }));
 

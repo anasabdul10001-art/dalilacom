@@ -312,7 +312,7 @@ manage.get("/payroll-runs/:id", route(async (req, res) => res.json(await pay.get
 manage.post("/payroll-runs/:id/process", route(async (req, res) => res.json(await pay.processRun(req.hr!, req.params.id))));
 manage.post("/payroll-runs/:id/mark-paid", route(async (req, res) => res.json(await pay.markPaid(req.hr!, req.params.id))));
 manage.post("/payroll-runs/:id/revert-paid", route(async (req, res) => {
-  if (!req.hr!.isOwner) return res.status(403).json({ error: { code: "FORBIDDEN", message: "صاحب النشاط وحده بيرجّع دفعة رواتب" } });
+  if (!req.hr!.isOwner) return res.status(403).json({ error: { code: "FORBIDDEN", message: "صاحب النشاط وحده يُرجع دفعة الرواتب" } });
   res.json(await pay.revertPaid(req.hr!, req.params.id));
 }));
 

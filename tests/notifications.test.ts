@@ -73,7 +73,7 @@ describe("Notification preferences (section 87)", () => {
         userId: record.id,
         type: "SYSTEM",
         title: "ملخص المجيب الآلي لهذا الأسبوع",
-        body: "هالأسبوع وصلك 3 رسالة ما لقت رد ثابت. الذكاء الاصطناعي كان ممكن يرد عليها.",
+        body: "وصلتك هذا الأسبوع 3 رسالة ما لقت رد ثابت. الذكاء الاصطناعي كان ممكن يرد عليها.",
         data: { kind: "RESPONDER", reason: "weekly_report", action: "upgrade" },
       });
       expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({

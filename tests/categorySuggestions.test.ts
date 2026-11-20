@@ -104,7 +104,7 @@ describe("a shop that cannot find its profession", () => {
     expect(created!.translations.find((t) => t.lang === "ar")!.synonyms).toEqual(expect.arrayContaining([written, captain]));
     expect((await prisma.merchantProfile.findUnique({ where: { id: s.id } }))!.categoryId).toBe(created!.id);
     expect(await prisma.categorySuggestion.findUnique({ where: { id: row.id } })).toMatchObject({ status: "APPROVED", categoryId: created!.id });
-    expect(await prisma.notification.count({ where: { userId: s.owner.id, title: "انضافت مهنتك ✅" } })).toBe(1);
+    expect(await prisma.notification.count({ where: { userId: s.owner.id, title: "تمت إضافة مهنتك ✅" } })).toBe(1);
     // it can be found by what the shop wrote and by the new name
     const found = (await request(app).get("/categories/search").query({ q: captain })).body;
     expect(JSON.stringify(found)).toContain(created!.id);
@@ -135,7 +135,7 @@ describe("a shop that cannot find its profession", () => {
     expect((await request(app).post(`/admin/category-suggestions/${row.id}/reject`).set(a.auth).send({ reason: "موجودة تحت مهنة ثانية" })).status).toBe(200);
     expect(await prisma.categorySuggestion.findUnique({ where: { id: row.id } })).toMatchObject({ status: "REJECTED", note: "موجودة تحت مهنة ثانية" });
     expect((await request(app).get("/merchant/me").set(s.owner.auth)).body.categorySuggestion).toMatchObject({ status: "REJECTED", note: "موجودة تحت مهنة ثانية" });
-    expect(await prisma.notification.count({ where: { userId: s.owner.id, title: "ما انقبل اقتراح المهنة" } })).toBe(1);
+    expect(await prisma.notification.count({ where: { userId: s.owner.id, title: "لم يُقبل اقتراح المهنة" } })).toBe(1);
     const rejected = (await request(app).get("/admin/category-suggestions").query({ status: "REJECTED" }).set(a.auth)).body;
     expect(rejected.some((x: { id: string }) => x.id === row.id)).toBe(true);
   });

@@ -54,13 +54,13 @@ walletRouter.post("/topups", requireAuth, route(async (req, res) => {
       const address = settings.payment.usdtTrc20Address;
       if (!address) return sendError(res, 503, "SERVICE_UNAVAILABLE", "الشحن بـ USDT غير مفعّل حاليًا");
       if (!/^[0-9a-fA-F]{64}$/.test(reference)) {
-        return sendError(res, 400, "BAD_REQUEST", "رقم العملية (txid) لازم يكون 64 خانة");
+        return sendError(res, 400, "BAD_REQUEST", "يجب أن يكون رقم العملية (txid) من 64 خانة");
       }
       const check = await verifyUsdtTransfer(reference.toLowerCase(), address);
       if (!check.ok) {
         return check.reason === "NOT_FOUND"
-          ? sendError(res, 404, "NOT_FOUND", "ما لقينا هالتحويل لعنوان المنصة — تأكد من الـ txid أو استنى شوي لحد ما يتأكد بالشبكة")
-          : sendError(res, 502, "BAD_GATEWAY", "تعذّر الاتصال بالشبكة للتحقق، جرّب بعد شوي");
+          ? sendError(res, 404, "NOT_FOUND", "لم نجد هذا التحويل إلى عنوان المنصة — تأكد من الـ txid أو انتظر قليلًا حتى يتأكد في الشبكة")
+          : sendError(res, 502, "BAD_GATEWAY", "تعذّر الاتصال بالشبكة للتحقق، جرّب بعد قليل");
       }
       const credits = Math.floor(check.usdAmount * settings.creditsPerUsd);
       if (credits <= 0) return sendError(res, 400, "BAD_REQUEST", "المبلغ صغير جدًا");
@@ -86,7 +86,7 @@ walletRouter.post("/topups", requireAuth, route(async (req, res) => {
     if (!settings.payment.localWallets.some((w) => w.key === method)) {
       return sendError(res, 400, "BAD_REQUEST", "طريقة دفع غير معروفة");
     }
-    if (!amountClaimed) return sendError(res, 400, "BAD_REQUEST", "دخّل المبلغ اللي دفعته");
+    if (!amountClaimed) return sendError(res, 400, "BAD_REQUEST", "أدخل المبلغ الذي دفعته");
 
     // A transaction number is taken once, whatever the way it was written and whichever method it came with: asking again is refused.
     const number = normalizeReference(reference);
@@ -98,7 +98,7 @@ walletRouter.post("/topups", requireAuth, route(async (req, res) => {
       const check = await verifyShamCashTransfer(number);
       if (!check.ok && check.reason === "NOT_FOUND") {
         // not taken: the transfer may simply not be visible yet, so the same number can be tried again
-        return sendError(res, 404, "NOT_FOUND", "ما لقينا هالحوالة على حسابنا بشام كاش — تأكد من الرقم أو جرّب بعد دقيقة");
+        return sendError(res, 404, "NOT_FOUND", "لم نجد هذه الحوالة على حسابنا في شام كاش — تأكد من الرقم أو جرّب بعد دقيقة");
       }
       const credits = check.ok ? creditsForShamCash(check.amount, check.currency, settings.creditsPerUsd, settings.payment.sypPerUsd) : null;
       const amountMatches = check.ok && check.amount !== undefined && Math.abs(check.amount - amountClaimed) <= Math.max(0.01, check.amount * 0.01);

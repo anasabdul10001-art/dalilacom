@@ -117,7 +117,7 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
     for (const d of live) if ((await memberUse(d, membership.id)).eligible) { discount = d; break; }
   }
   if (live.length && (!discount || !(await memberUse(discount, membership.id)).eligible)) {
-    return sendError(res, 409, "LIMIT_REACHED", "هذا الزبون استنفد حد هذا الحسم");
+    return sendError(res, 409, "LIMIT_REACHED", "استنفد هذا الزبون حد هذا الحسم");
   }
 
   const percent = discount?.percent ?? 0;
@@ -171,7 +171,7 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
     throw err;
   });
 
-  if (transaction === "LIMIT") return sendError(res, 409, "LIMIT_REACHED", "هذا الزبون استنفد حد هذا الحسم");
+  if (transaction === "LIMIT") return sendError(res, 409, "LIMIT_REACHED", "استنفد هذا الزبون حد هذا الحسم");
   if (!transaction) {
     return sendError(res, 409, "CONFLICT", "This code was already redeemed");
   }
@@ -182,7 +182,7 @@ qrRouter.post("/redeem", qrRedeemRateLimiter, requireAuth, requireRole(Role.MERC
     userId: membership.userId,
     type: "DISCOUNT_RECEIVED",
     title: `تم تطبيق الحسم عند ${merchant.businessName} 🎉`,
-    body: `نسبة الحسم ${transaction.discountPercent}% — المبلغ النهائي بعد الحسم صار جاهز على الفاتورة.`,
+    body: `نسبة الحسم ${transaction.discountPercent}% — المبلغ النهائي بعد الحسم أصبح جاهزًا على الفاتورة.`,
     data: {
       transactionRef: transaction.transactionRef,
       merchantId: merchant.id,

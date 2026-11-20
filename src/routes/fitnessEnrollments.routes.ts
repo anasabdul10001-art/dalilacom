@@ -19,9 +19,9 @@ fitnessEnrollmentsRouter.get("/mine", requireAuth, requireRole(Role.CUSTOMER), r
 fitnessEnrollmentsRouter.post("/offers/:offerId/request", requireAuth, requireRole(Role.CUSTOMER), route(async (req, res) => {
   const offer = await prisma.fitnessOffer.findFirst({ where: { id: req.params.offerId, isActive: true }, include: offerView.include });
   if (!offer || !(await isFitnessProviderCategory(offer.merchant.categoryId))) return sendError(res, 404, "OFFER_NOT_FOUND", "الباقة غير متاحة حاليًا");
-  if (offer.merchant.userId === req.user!.id) return sendError(res, 400, "OWN_OFFER", "ما فيك تطلب باقتك أنت");
+  if (offer.merchant.userId === req.user!.id) return sendError(res, 400, "OWN_OFFER", "لا يمكنك طلب باقتك أنت");
   const prior = await prisma.fitnessEnrollment.findUnique({ where: { offerId_userId: { offerId: offer.id, userId: req.user!.id } } });
-  if (prior && (prior.status === FitnessEnrollmentStatus.REQUESTED || prior.status === FitnessEnrollmentStatus.ACCEPTED)) return sendError(res, 409, "REQUEST_EXISTS", "عندك طلب قائم لهذه الباقة بالفعل");
+  if (prior && (prior.status === FitnessEnrollmentStatus.REQUESTED || prior.status === FitnessEnrollmentStatus.ACCEPTED)) return sendError(res, 409, "REQUEST_EXISTS", "لديك طلب قائم لهذه الباقة بالفعل");
   const item = await prisma.fitnessEnrollment.upsert({
     where: { offerId_userId: { offerId: offer.id, userId: req.user!.id } },
     create: { offerId: offer.id, merchantId: offer.merchantId, userId: req.user!.id },

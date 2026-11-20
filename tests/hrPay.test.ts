@@ -202,7 +202,7 @@ describe("HR payroll -> the owner's accounting", () => {
     expect(entry).toMatchObject({ type: "EXPENSE", category: "رواتب", currency: "SYP", source: "PAYROLL", sourceKey: `hr-run:${runId}` });
     expect(Number(entry.amountCents)).toBe(800000);
     expect(entry.occurredAt.toISOString()).toBe("2026-03-31T12:00:00.000Z");
-    expect(entry.description).toContain("عدد الموظفين 2");
+    expect(entry.description).toContain("عدد الموظفون 2");
     expect((await pay(co, runId)).status).toBe(409); // once
     expect(await expenses(co.id)).toHaveLength(1);
 

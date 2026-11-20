@@ -27,7 +27,7 @@ businessStaffRouter.post("/driver/:staffId/orders/:orderId/deliver", route(async
 // ---- the owner's side: needs the accounting plan (the staff work inside the accounting)
 businessStaffRouter.use(route(async (req, res, next) => {
   const active = await prisma.platformSubscription.findFirst({ where: { userId: req.user!.id, status: "ACTIVE", OR: [{ currentPeriodEnd: null }, { currentPeriodEnd: { gt: new Date() } }], plan: { service: "ACCOUNTING" } }, select: { id: true } });
-  if (!active) return sendError(res, 402, "ACCOUNTING_PLAN_REQUIRED", "موظفو النشاط بيشتغلوا داخل المحاسبة، وهي تحتاج باقة فعّالة أو فترة تجربة.");
+  if (!active) return sendError(res, 402, "ACCOUNTING_PLAN_REQUIRED", "يعمل موظفو النشاط داخل المحاسبة، وهي تحتاج إلى باقة فعّالة أو فترة تجربة.");
   next();
 }));
 

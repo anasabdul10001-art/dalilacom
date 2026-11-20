@@ -55,7 +55,7 @@ describe("a shop that registers is read at once", () => {
     expect(screened).toContain("Good Bakery");
     const shop = await prisma.merchantProfile.findUniqueOrThrow({ where: { userId: p.id } });
     expect(shop).toMatchObject({ approvalStatus: "APPROVED", reviewSource: "AI" });
-    expect(await prisma.notification.count({ where: { userId: p.id, title: "انقبل نشاطك ✅" } })).toBe(1);
+    expect(await prisma.notification.count({ where: { userId: p.id, title: "قُبل نشاطك ✅" } })).toBe(1);
     // and it is on the map
     const found = (await request(app).get("/merchant").query({ q: "Good Bakery" })).body;
     expect(found.some((m: { id: string }) => m.id === shop.id)).toBe(true);
@@ -65,7 +65,7 @@ describe("a shop that registers is read at once", () => {
     const p = await person("sr2");
     const res = await register(p, "BAD Name");
     expect(res.body).toMatchObject({ approvalStatus: "REJECTED", reason: "اسم غير لائق" });
-    expect(await prisma.notification.count({ where: { userId: p.id, title: "ما انقبل نشاطك" } })).toBe(1);
+    expect(await prisma.notification.count({ where: { userId: p.id, title: "لم يُقبل نشاطك" } })).toBe(1);
     const fixed = await request(app).patch("/merchant/me").set(p.auth).send({ businessName: "Fixed Name Cafe" });
     expect(fixed.status).toBe(200);
     expect(fixed.body.approvalStatus).toBe("APPROVED");
@@ -99,7 +99,7 @@ describe("a shop that registers is read at once", () => {
     const odd = await person("sr7");
     const reg = await register(odd, "ODD Admin Case");
     await request(app).post(`/merchant/${reg.body.id}/approve`).set(boss.auth).expect(200);
-    expect(await prisma.notification.count({ where: { userId: odd.id, title: "انقبل نشاطك ✅" } })).toBe(1);
+    expect(await prisma.notification.count({ where: { userId: odd.id, title: "قُبل نشاطك ✅" } })).toBe(1);
     const renamed = await request(app).patch("/merchant/me").set(odd.auth).send({ businessName: "BAD Again" });
     expect(renamed.body.approvalStatus).toBe("REJECTED");
     // a detail that is not read (the phone) changes nothing

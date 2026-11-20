@@ -42,7 +42,7 @@ const CREDENTIAL_FIELDS = {
 } as const;
 
 function insufficient(res: any, err: InsufficientBalanceError) {
-  return sendError(res, 402, "PAYMENT_REQUIRED", "رصيدك ما بيكفي — اشحن محفظتك أول", { balance: err.balance, needed: err.needed });
+  return sendError(res, 402, "PAYMENT_REQUIRED", "رصيدك لا يكفي — اشحن محفظتك أولًا", { balance: err.balance, needed: err.needed });
 }
 
 responderRouter.get("/status", requireAuth, route(async (req, res) => {
@@ -143,7 +143,7 @@ responderRouter.post("/activate", requireAuth, route(async (req, res) => {
     const result = await activate(req.user!.id, req.user!.role);
     res.status(201).json(result);
   } catch (err) {
-    if (err instanceof AlreadyRunningError) return sendError(res, 409, "CONFLICT", "الخدمة شغّالة أصلًا");
+    if (err instanceof AlreadyRunningError) return sendError(res, 409, "CONFLICT", "الخدمة تعمل أصلًا");
     if (err instanceof InsufficientBalanceError) return insufficient(res, err);
     throw err;
   }
@@ -263,7 +263,7 @@ responderRouter.post("/connections", requireAuth, route(async (req, res) => {
   if (isMeta && externalAccountId) {
     // One Meta page/account can feed only one connection, otherwise a comment would be answered twice.
     const taken = await prisma.channelConnection.findFirst({ where: { externalAccountId, channel: { driver: channel.driver } } });
-    if (taken) return sendError(res, 409, "CONFLICT", "هالحساب مربوط من قبل");
+    if (taken) return sendError(res, 409, "CONFLICT", "هذا الحساب مربوط من قبل");
   }
 
   const connection = await prisma.channelConnection.create({
@@ -314,7 +314,7 @@ responderRouter.get("/connections/:id/posts", requireAuth, route(async (req, res
   const connection = await prisma.channelConnection.findUnique({ where: { id: req.params.id }, include: { channel: true } });
   if (!connection || connection.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Connection not found");
   const driver = drivers[connection.channel.driver];
-  if (!driver.listPosts) return sendError(res, 400, "BAD_REQUEST", "هالقناة ما فيها منشورات");
+  if (!driver.listPosts) return sendError(res, 400, "BAD_REQUEST", "هذه القناة لا تحتوي على منشورات");
   try {
     res.json(
       await driver.listPosts({
@@ -406,11 +406,11 @@ responderRouter.post("/inbox/:id/send", requireAuth, route(async (req, res) => {
   });
   if (!item || item.userId !== req.user!.id) return sendError(res, 404, "NOT_FOUND", "Message not found");
   if (item.status !== "NEEDS_REVIEW" && item.status !== "FAILED") {
-    return sendError(res, 409, "CONFLICT", "هالرسالة مو بانتظار رد");
+    return sendError(res, 409, "CONFLICT", "هذه الرسالة ليست بانتظار رد");
   }
   const sub = await getSubscription(req.user!.id);
   if (!sub.enabled) return sendError(res, 403, "FORBIDDEN", "المجيب الآلي متوقف من إعداداتك");
-  if (!(await getActiveResponderEntitlements(req.user!.id)).length) return sendError(res, 403, "BASIC_PLAN_REQUIRED", "لازم يكون عندك خطة فعّالة لترد على الرسائل");
+  if (!(await getActiveResponderEntitlements(req.user!.id)).length) return sendError(res, 403, "BASIC_PLAN_REQUIRED", "يجب أن تكون لديك خطة فعّالة لترد على الرسائل");
 
   try {
     await sendThroughConnection(item.connection, parsed.data.reply, item.conversationRef);

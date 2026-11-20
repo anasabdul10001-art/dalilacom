@@ -9,12 +9,12 @@ export const RECEIPT_DAYS = 10;
 export async function respondToReceipt(userId: string, orderId: string, decision: "ACCEPT" | "REJECT", note?: string) {
   const order = await prisma.order.findFirst({ where: { id: orderId, userId }, include: { merchant: { select: { userId: true } } } });
   if (!order) throw new ApiError(404, "NOT_FOUND", "Order not found");
-  if (order.status !== "DELIVERED" || order.receiptStatus !== "PENDING") throw new ApiError(409, "CONFLICT", "هالطلب ما بيحتاج تأكيد استلام");
+  if (order.status !== "DELIVERED" || order.receiptStatus !== "PENDING") throw new ApiError(409, "CONFLICT", "هذا الطلب لا يحتاج إلى تأكيد استلام");
   const claimed = await prisma.order.updateMany({
     where: { id: orderId, userId, receiptStatus: "PENDING" },
     data: { receiptStatus: decision === "ACCEPT" ? "ACCEPTED" : "REJECTED", receiptRespondedAt: new Date(), receiptNote: decision === "REJECT" ? note ?? null : null },
   });
-  if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "تم الرد على هالطلب من قبل");
+  if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "تم الرد على هذا الطلب من قبل");
   if (decision === "REJECT") {
     await reverseRejectedOrder(orderId, order.merchant.userId).catch((err) => console.error("Could not reverse a rejected order in accounting", err));
     const drivers = order.driverStaffId ? await prisma.businessStaff.findMany({ where: { id: order.driverStaffId, userId: { not: null } }, select: { userId: true } }) : [];

@@ -377,7 +377,7 @@ adminRouter.put("/settings", route(async (req, res) => {
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const keys = parsed.data.payment?.localWallets?.map((w) => w.key) ?? [];
   if (new Set(keys).size !== keys.length || keys.includes("USDT_TRC20")) {
-    return sendError(res, 400, "BAD_REQUEST", "مفاتيح المحافظ لازم تكون فريدة ومو USDT_TRC20");
+    return sendError(res, 400, "BAD_REQUEST", "يجب أن تكون مفاتيح المحافظ فريدة وليست USDT_TRC20");
   }
   res.json(await saveSettings(parsed.data as any));
 }));
@@ -664,7 +664,7 @@ adminRouter.post("/channels", route(async (req, res) => {
     res.status(201).json(await prisma.socialChannel.create({ data: parsed.data }));
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return sendError(res, 409, "CONFLICT", "في قناة بنفس المفتاح");
+      return sendError(res, 409, "CONFLICT", "توجد قناة بنفس المفتاح");
     }
     throw err;
   }
@@ -709,7 +709,7 @@ adminRouter.post("/topups/:id/approve", route(async (req, res) => {
     return { code: 200 as const };
   });
   if (result.code === 404) return sendError(res, 404, "NOT_FOUND", "Request not found");
-  if (result.code === 409) return sendError(res, 409, "CONFLICT", "الطلب انعالج من قبل");
+  if (result.code === 409) return sendError(res, 409, "CONFLICT", "عولج الطلب من قبل");
   res.json({ id: req.params.id, status: "APPROVED" });
 }));
 
@@ -720,7 +720,7 @@ adminRouter.post("/topups/:id/reject", route(async (req, res) => {
     where: { id: req.params.id, status: "PENDING" },
     data: { status: "REJECTED", verifiedBy: "ADMIN", note: parsed.data.note },
   });
-  if (claimed.count === 0) return sendError(res, 409, "CONFLICT", "الطلب غير موجود أو انعالج من قبل");
+  if (claimed.count === 0) return sendError(res, 409, "CONFLICT", "الطلب غير موجود أو عولج من قبل");
   res.json({ id: req.params.id, status: "REJECTED" });
 }));
 
@@ -739,7 +739,7 @@ adminRouter.post("/wallet/adjust", route(async (req, res) => {
     );
     res.json({ userId: user.id, balance, transactionId });
   } catch (err) {
-    if (err instanceof InsufficientBalanceError) return sendError(res, 409, "CONFLICT", "الرصيد ما بيكفي للخصم");
+    if (err instanceof InsufficientBalanceError) return sendError(res, 409, "CONFLICT", "الرصيد لا يكفي للاقتطاع");
     throw err;
   }
 }));
@@ -770,7 +770,7 @@ adminRouter.post("/responder/grant", route(async (req, res) => {
     prisma.user.findUnique({ where: { email: parsed.data.userEmail }, select: { id: true, email: true, fullName: true } }),
     prisma.servicePlan.findUnique({ where: { id: parsed.data.planId }, select: { id: true, name: true, service: true, isActive: true } }),
   ]);
-  if (!user) return sendError(res, 404, "NOT_FOUND", "ما لقينا حساب بهذا البريد الإلكتروني");
+  if (!user) return sendError(res, 404, "NOT_FOUND", "لم نجد حسابًا بهذا البريد الإلكتروني");
   if (!plan || !RESPONDER_SERVICES.includes(plan.service) || (!plan.isActive && plan.id !== RESPONDER_LEGACY_PLAN_ID)) return sendError(res, 404, "NOT_FOUND", "الخطة غير متاحة");
   const entitlement = await grantResponderEntitlement(user.id, plan.id, parsed.data.days);
   await prisma.responderSubscription.upsert({
@@ -807,13 +807,13 @@ adminRouter.get("/push-status", route(async (_req, res) => {
 adminRouter.post("/push-test", route(async (req, res) => {
   const devices = await prisma.deviceToken.count({ where: { userId: req.user!.id } });
   if (!devices) {
-    return sendError(res, 409, "NO_DEVICE", "ما في جهاز مسجّل لحسابك — سجّل دخولك بتطبيق أندرويد (النسخة الجديدة) بهالحساب أول.");
+    return sendError(res, 409, "NO_DEVICE", "لا يوجد جهاز مسجّل لحسابك — سجّل دخولك في تطبيق أندرويد (النسخة الجديدة) بهذا الحساب أولًا.");
   }
   const errors: string[] = [];
   const me = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { language: true } });
   const lang = me?.language ?? DEFAULT_LANGUAGE;
   const title = translateText("إشعار تجريبي من دليلكم 🔔", lang);
-  const body = translateText("إذا وصلك هذا الإشعار فالإشعارات شغّالة.", lang);
+  const body = translateText("إذا وصلك هذا الإشعار فالإشعارات تعمل.", lang);
   const delivered = await sendPushToUser(req.user!.id, { title, body, data: { type: "TEST" } }, errors);
   res.json({ devices, delivered, errors });
 }));
@@ -1113,7 +1113,7 @@ adminRouter.get("/banner-bookings", route(async (req, res) => {
 adminRouter.get("/ad-creatives/:kind/:bookingId", route(async (req, res) => {
   const kind = req.params.kind === "banner" ? "BANNER" : req.params.kind === "space" ? "SPACE" : null;
   const c = kind ? await getCreative(kind, req.params.bookingId) : null;
-  if (!c) return sendError(res, 404, "NOT_FOUND", "ما في صورة");
+  if (!c) return sendError(res, 404, "NOT_FOUND", "لا توجد صورة");
   res.set({ "Content-Type": c.mime, "Cache-Control": "private, no-store" });
   res.end(Buffer.from(c.data));
 }));

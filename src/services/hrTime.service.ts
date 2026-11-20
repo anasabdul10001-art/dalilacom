@@ -65,18 +65,18 @@ function assertShopCode(company: { attendanceCodeRequired: boolean; attendanceSe
   const digits = (code ?? "").replace(/\D/g, "");
   const step = Math.floor(now / 1000 / CODE_STEP_SECONDS);
   const ok = digits.length === 6 && [step, step - 1].some((st) => crypto.timingSafeEqual(Buffer.from(codeAt(company.attendanceSecret, st)), Buffer.from(digits)));
-  if (!ok) throw new ApiError(403, "ATTENDANCE_CODE_REQUIRED", "اقرأ الكود من شاشة المحل وسجّل بيه. الكود بيتغيّر كل نص دقيقة.");
+  if (!ok) throw new ApiError(403, "ATTENDANCE_CODE_REQUIRED", "اقرأ الكود من شاشة المحل وسجّل به. يتغيّر الكود كل نصف دقيقة.");
 }
 
 export async function checkIn(me: HrMe, code?: string, phone: PhoneInfo = {}) {
   await assertCompanyActive(me.company);
   await assertOwnPhone(me, phone);
   assertShopCode(me.company, code);
-  if (me.employee.employmentStatus === "TERMINATED") throw conflict("الموظف منتهية خدمته");
+  if (me.employee.employmentStatus === "TERMINATED") throw conflict("انتهت خدمة الموظف");
   try {
     return await prisma.hrAttendance.create({ data: { companyId: me.company.id, employeeId: me.employee.id, checkIn: new Date(), source: "MOBILE" } });
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw conflict("سجّلت حضورك من قبل، سجّل انصرافك أول");
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw conflict("سجّلت حضورك من قبل، سجّل انصرافك أولًا");
     throw err;
   }
 }
@@ -87,9 +87,9 @@ export async function checkOut(me: HrMe, code?: string, phone: PhoneInfo = {}) {
   assertShopCode(me.company, code);
   // closed only while it is still open at this very moment
   const open = await prisma.hrAttendance.findFirst({ where: { employeeId: me.employee.id, checkOut: null }, orderBy: { checkIn: "desc" } });
-  if (!open) throw conflict("ما في تسجيل حضور مفتوح");
+  if (!open) throw conflict("لا يوجد تسجيل حضور مفتوح");
   const closed = await prisma.hrAttendance.updateMany({ where: { id: open.id, checkOut: null }, data: { checkOut: new Date() } });
-  if (closed.count !== 1) throw conflict("ما في تسجيل حضور مفتوح");
+  if (closed.count !== 1) throw conflict("لا يوجد تسجيل حضور مفتوح");
   return prisma.hrAttendance.findUniqueOrThrow({ where: { id: open.id } });
 }
 
@@ -110,13 +110,13 @@ export async function createManualAttendance(actor: HrActor, input: { employeeId
   if (!(await prisma.hrEmployee.findFirst({ where: { id: input.employeeId, companyId }, select: { id: true } }))) throw notFound("الموظف غير موجود");
   const checkIn = new Date(input.checkIn);
   const checkOut = input.checkOut ? new Date(input.checkOut) : null;
-  if (checkOut && checkOut <= checkIn) throw new ApiError(400, "BAD_REQUEST", "وقت الانصراف لازم يكون بعد الحضور");
+  if (checkOut && checkOut <= checkIn) throw new ApiError(400, "BAD_REQUEST", "يجب أن يكون وقت الانصراف بعد الحضور");
   try {
     const record = await prisma.hrAttendance.create({ data: { companyId, employeeId: input.employeeId, checkIn, checkOut, source: "MANUAL", editedById: actor.userId, notes: input.notes } });
     await hrAudit(companyId, actor.userId, "attendance.manual_create", "HrAttendance", record.id, { employeeId: input.employeeId });
     return record;
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw conflict("للموظف تسجيل حضور مفتوح، سكّره أول");
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw conflict("للموظف تسجيل حضور مفتوح، أغلقه أولًا");
     throw err;
   }
 }
@@ -127,13 +127,13 @@ export async function updateAttendance(actor: HrActor, id: string, input: { chec
   if (!existing) throw notFound("تسجيل الحضور غير موجود");
   const checkIn = input.checkIn ? new Date(input.checkIn) : existing.checkIn;
   const checkOut = input.checkOut === undefined ? existing.checkOut : input.checkOut ? new Date(input.checkOut) : null;
-  if (checkOut && checkOut <= checkIn) throw new ApiError(400, "BAD_REQUEST", "وقت الانصراف لازم يكون بعد الحضور");
+  if (checkOut && checkOut <= checkIn) throw new ApiError(400, "BAD_REQUEST", "يجب أن يكون وقت الانصراف بعد الحضور");
   try {
     const record = await prisma.hrAttendance.update({ where: { id }, data: { checkIn, checkOut, ...(input.notes !== undefined ? { notes: input.notes } : {}), editedById: actor.userId } });
     await hrAudit(companyId, actor.userId, "attendance.manual_edit", "HrAttendance", id, { before: { checkIn: existing.checkIn, checkOut: existing.checkOut }, changes: input });
     return record;
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw conflict("للموظف تسجيل حضور مفتوح، سكّره أول");
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw conflict("للموظف تسجيل حضور مفتوح، أغلقه أولًا");
     throw err;
   }
 }
@@ -183,20 +183,20 @@ const requestInclude = { leaveType: true, employee: { select: { id: true, firstN
 
 export async function createLeaveRequest(me: HrMe, input: { leaveTypeId: string; startDate: string; endDate: string; reason?: string }) {
   await assertCompanyActive(me.company);
-  if (me.employee.employmentStatus === "TERMINATED") throw conflict("الموظف منتهية خدمته");
+  if (me.employee.employmentStatus === "TERMINATED") throw conflict("انتهت خدمة الموظف");
   const leaveType = await prisma.hrLeaveType.findFirst({ where: { id: input.leaveTypeId, companyId: me.company.id } });
   if (!leaveType) throw notFound("نوع الإجازة غير موجود");
   const startDate = day(input.startDate);
   const endDate = day(input.endDate);
-  if (endDate < startDate) throw new ApiError(400, "BAD_REQUEST", "تاريخ النهاية لازم يكون بعد البداية");
+  if (endDate < startDate) throw new ApiError(400, "BAD_REQUEST", "يجب أن يكون تاريخ النهاية بعد تاريخ البداية");
   const days = inclusiveDays(startDate, endDate);
   const balance = await balanceRow(me.employee.id, leaveType.id, startDate.getUTCFullYear(), leaveType.defaultBalance);
-  if (balance.balanceDays < days) throw new ApiError(409, "INSUFFICIENT_BALANCE", "رصيد الإجازة ما بيكفي");
+  if (balance.balanceDays < days) throw new ApiError(409, "INSUFFICIENT_BALANCE", "رصيد الإجازة لا يكفي");
   const overlapping = await prisma.hrLeaveRequest.findFirst({
     where: { employeeId: me.employee.id, status: { in: ["PENDING_MANAGER", "PENDING_HR", "APPROVED"] }, startDate: { lte: endDate }, endDate: { gte: startDate } },
     select: { id: true },
   });
-  if (overlapping) throw conflict("هالطلب بيتقاطع مع إجازة ثانية");
+  if (overlapping) throw conflict("يتقاطع هذا الطلب مع إجازة أخرى");
   const dept = me.employee.departmentId ? await prisma.hrDepartment.findUnique({ where: { id: me.employee.departmentId }, select: { managerId: true } }) : null;
   const stage = me.employee.managerId || dept?.managerId ? "PENDING_MANAGER" : "PENDING_HR";
   const request = await prisma.hrLeaveRequest.create({
@@ -214,7 +214,7 @@ export const listLeaveRequests = (companyId: string, employees: Prisma.HrEmploye
 
 export async function cancelLeaveRequest(me: HrMe, id: string) {
   const res = await prisma.hrLeaveRequest.updateMany({ where: { id, employeeId: me.employee.id, status: { in: ["PENDING_MANAGER", "PENDING_HR"] } }, data: { status: "CANCELED" } });
-  if (!res.count) throw conflict("بتقدر تلغي الطلب وهو لسا بانتظار الموافقة بس");
+  if (!res.count) throw conflict("يمكنك إلغاء الطلب فقط وهو بانتظار الموافقة");
   return prisma.hrLeaveRequest.findUniqueOrThrow({ where: { id }, include: { leaveType: true } });
 }
 
@@ -226,29 +226,29 @@ export async function cancelLeaveRequest(me: HrMe, id: string) {
 async function decideStage(company: HrCompany, actingUserId: string, id: string, stage: "PENDING_MANAGER" | "PENDING_HR", decision: "APPROVE" | "REJECT", reason?: string) {
   const request = await prisma.hrLeaveRequest.findFirst({ where: { id, companyId: company.id }, include: requestInclude });
   if (!request) throw notFound("طلب الإجازة غير موجود");
-  if (request.status !== stage) throw conflict("هذا الطلب مو بانتظار قرارك");
+  if (request.status !== stage) throw conflict("هذا الطلب ليس بانتظار قرارك");
   const who = request.employee.userId;
   if (decision === "REJECT") {
     const res = await prisma.hrLeaveRequest.updateMany({ where: { id, status: stage }, data: { status: "REJECTED", rejectionReason: reason ?? null } });
-    if (!res.count) throw conflict("هذا الطلب مو بانتظار قرارك");
+    if (!res.count) throw conflict("هذا الطلب ليس بانتظار قرارك");
     await tell([who], "تم رفض طلب إجازتك", reason, { hr: "leave", id });
   } else if (stage === "PENDING_MANAGER") {
     const res = await prisma.hrLeaveRequest.updateMany({ where: { id, status: stage }, data: { status: "PENDING_HR", managerApprovedBy: actingUserId, managerApprovedAt: new Date() } });
-    if (!res.count) throw conflict("هذا الطلب مو بانتظار قرارك");
+    if (!res.count) throw conflict("هذا الطلب ليس بانتظار قرارك");
     await tell(await approvers(company, "PENDING_HR", request.employee), `وافق المدير على طلب إجازة ${request.employee.firstName} ${request.employee.lastName}`, "بانتظار الموافقة النهائية", { hr: "leave", id });
   } else {
     const days = inclusiveDays(request.startDate, request.endDate);
     const year = request.startDate.getUTCFullYear();
     await prisma.$transaction(async (tx) => {
       const claimed = await tx.hrLeaveRequest.updateMany({ where: { id, status: "PENDING_HR" }, data: { status: "APPROVED", hrApprovedBy: actingUserId, hrApprovedAt: new Date() } });
-      if (claimed.count !== 1) throw conflict("هذا الطلب مو بانتظار قرارك");
+      if (claimed.count !== 1) throw conflict("هذا الطلب ليس بانتظار قرارك");
       await tx.hrLeaveBalance.upsert({
         where: { employeeId_leaveTypeId_year: { employeeId: request.employeeId, leaveTypeId: request.leaveTypeId, year } },
         create: { employeeId: request.employeeId, leaveTypeId: request.leaveTypeId, year, balanceDays: request.leaveType.defaultBalance },
         update: {},
       });
       const taken = await tx.hrLeaveBalance.updateMany({ where: { employeeId: request.employeeId, leaveTypeId: request.leaveTypeId, year, balanceDays: { gte: days } }, data: { balanceDays: { decrement: days } } });
-      if (taken.count !== 1) throw new ApiError(409, "INSUFFICIENT_BALANCE", "رصيد الإجازة ما بيكفي");
+      if (taken.count !== 1) throw new ApiError(409, "INSUFFICIENT_BALANCE", "رصيد الإجازة لا يكفي");
     });
     await tell([who], "تمت الموافقة على طلب إجازتك", undefined, { hr: "leave", id });
   }
@@ -260,8 +260,8 @@ async function decideStage(company: HrCompany, actingUserId: string, id: string,
 export function decideLeaveAsManagement(actor: HrActor, id: string, decision: "APPROVE" | "REJECT", reason?: string) {
   return prisma.hrLeaveRequest.findFirst({ where: { id, companyId: actor.company.id }, select: { status: true } }).then((r) => {
     if (!r) throw notFound("طلب الإجازة غير موجود");
-    if (r.status === "PENDING_MANAGER" && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "هالطلب بانتظار مدير الموظف");
-    if (r.status !== "PENDING_MANAGER" && r.status !== "PENDING_HR") throw conflict("هذا الطلب مو بانتظار قرارك");
+    if (r.status === "PENDING_MANAGER" && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "هذا الطلب بانتظار مدير الموظف");
+    if (r.status !== "PENDING_MANAGER" && r.status !== "PENDING_HR") throw conflict("هذا الطلب ليس بانتظار قرارك");
     return decideStage(actor.company, actor.userId, id, r.status, decision, reason);
   });
 }

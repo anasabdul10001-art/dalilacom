@@ -48,7 +48,7 @@ export function renderBrandedEmail(mail: BrandedEmail): string {
           <a href="${esc(mail.button.url)}" style="display:inline-block;padding:15px 34px;font-size:17px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:12px;font-family:Tahoma,Arial,sans-serif;">${esc(t(mail.button.label))}</a>
         </td></tr>
       </table>
-      <p style="margin:18px 0 0;font-size:12.5px;line-height:1.7;color:#8a7774;text-align:${align};">${esc(t("إذا ما اشتغل الزر، انسخ هذا الرابط والصقه في المتصفح:"))}<br>
+      <p style="margin:18px 0 0;font-size:12.5px;line-height:1.7;color:#8a7774;text-align:${align};">${esc(t("إذا لم يعمل الزر، انسخ هذا الرابط والصقه في المتصفح:"))}<br>
         <a href="${esc(mail.button.url)}" style="color:${RED};word-break:break-all;direction:ltr;unicode-bidi:embed;">${esc(mail.button.url)}</a></p>`
     : "";
   const note = mail.note ? `<p style="margin:16px 0 0;font-size:13px;line-height:1.7;color:#8a7774;">${esc(t(mail.note))}</p>` : "";
@@ -86,7 +86,7 @@ ${preheader}
     </td></tr>
     <tr><td dir="${dir}" style="padding:10px 28px 26px;text-align:${align};">
       <hr style="border:0;border-top:1px solid #efe3e1;margin:18px 0;">
-      <p style="margin:0 0 6px;font-size:13px;line-height:1.7;color:#8a7774;">${esc(t("دليلكم: كل محلات مدينتك وعروضها بمكان واحد"))}</p>
+      <p style="margin:0 0 6px;font-size:13px;line-height:1.7;color:#8a7774;">${esc(t("دليلكم: كل محلات مدينتك وعروضها في مكان واحد"))}</p>
       <p style="margin:0;font-size:12.5px;line-height:1.7;color:#8a7774;">
         <a href="${base}" style="color:${RED};text-decoration:none;">dalilacom.com</a> ·
         <a href="mailto:info@dalilacom.com" style="color:${RED};text-decoration:none;">info@dalilacom.com</a>
@@ -110,7 +110,7 @@ export function verificationEmailHtml(lang: string, link: string, ttlHours: numb
     paragraphs: ["اضغط الزر لتأكيد بريدك الإلكتروني وتفعيل حسابك."],
     button: { label: "تأكيد البريد الإلكتروني", url: link },
     note: `الرابط صالح لمدة ${ttlHours} ساعة. إذا لم تنشئ حسابًا عندنا، تجاهل هذه الرسالة.`,
-    preheader: "خطوة وحدة لتفعيل حسابك",
+    preheader: "خطوة واحدة لتفعيل حسابك",
   });
 }
 

@@ -441,7 +441,7 @@ const discountSchema = z.object({
 async function ownApprovedShop(userId: string) {
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId } });
   if (!merchant) return { merchant: null, error: [404, "NOT_FOUND", "Merchant profile not found"] as [number, string, string] };
-  if (merchant.approvalStatus !== "APPROVED") return { merchant: null, error: [403, "FORBIDDEN", "محلك لسا ما انوافق عليه من الإدارة، بتقدر تستخدم وضع النشاط بعد الموافقة"] as [number, string, string] };
+  if (merchant.approvalStatus !== "APPROVED") return { merchant: null, error: [403, "FORBIDDEN", "لم توافق الإدارة على محلك بعد، يمكنك استخدام وضع النشاط بعد الموافقة"] as [number, string, string] };
   return { merchant, error: null };
 }
 
@@ -562,8 +562,8 @@ async function discountTerms(merchantId: string, input: z.infer<typeof discountS
   const start = input.startDate ? new Date(input.startDate) : null;
   const end = input.endDate ? new Date(input.endDate) : null;
   if ((start && Number.isNaN(start.getTime())) || (end && Number.isNaN(end.getTime()))) return { error: "تاريخ غير صالح" };
-  if (end && end.getTime() < Date.now()) return { error: "تاريخ النهاية لازم يكون بالمستقبل" };
-  if (start && end && end.getTime() <= start.getTime()) return { error: "تاريخ النهاية لازم يكون بعد البداية" };
+  if (end && end.getTime() < Date.now()) return { error: "يجب أن يكون تاريخ النهاية في المستقبل" };
+  if (start && end && end.getTime() <= start.getTime()) return { error: "يجب أن يكون تاريخ النهاية بعد تاريخ البداية" };
   let productIds: string[] = [];
   const sectionName = (input.scopeSection ?? "").trim();
   if (input.scope === "SECTION" && (sectionName.length < 2 || sectionName.length > 60)) return { error: "اكتب اسم القسم (من حرفين إلى 60 حرفًا)" };

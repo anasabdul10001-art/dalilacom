@@ -167,8 +167,8 @@ export function parseCsv(text: string): { punches: PunchInput[]; skipped: number
 
 export async function importCsv(actor: HrActor, text: string) {
   const { punches, skipped } = parseCsv(text);
-  if (punches.length === 0) throw new ApiError(400, "BAD_REQUEST", "ما لقينا أي سطر حضور بالملف");
-  if (punches.length > 2000) throw new ApiError(400, "BAD_REQUEST", "الملف كبير، قسّمو لملفات أصغر (2000 سطر بالمرة)");
+  if (punches.length === 0) throw new ApiError(400, "BAD_REQUEST", "لم نجد أي سطر حضور في الملف");
+  if (punches.length > 2000) throw new ApiError(400, "BAD_REQUEST", "الملف كبير، قسّمه إلى ملفات أصغر (2000 سطر في المرة)");
   const results: PunchResult[] = [];
   for (let i = 0; i < punches.length; i += MAX_PUNCHES) results.push(...(await processPunches(actor.company, punches.slice(i, i + MAX_PUNCHES), "IMPORT", null)));
   const summary = tally(results);

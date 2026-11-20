@@ -34,8 +34,8 @@ export async function aiQuotaFor(userId: string) {
 export async function ensureCanUseAi(userId: string) {
   const q = await aiQuotaFor(userId);
   if ((q.subscription?.left ?? 0) > 0 || q.freeLeft > 0) return q;
-  if (q.creditsPerUse <= 0) throw new ApiError(403, "AI_QUOTA_USED", "انتهت استخداماتك المجانية للذكاء الاصطناعي هالشهر");
-  if (q.balance < q.creditsPerUse) throw new ApiError(402, "PAYMENT_REQUIRED", "انتهت استخداماتك المجانية، ورصيدك ما بيكفي لاستخدام جديد — اشحن محفظتك");
+  if (q.creditsPerUse <= 0) throw new ApiError(403, "AI_QUOTA_USED", "انتهت استخداماتك المجانية للذكاء الاصطناعي هذا الشهر");
+  if (q.balance < q.creditsPerUse) throw new ApiError(402, "PAYMENT_REQUIRED", "انتهت استخداماتك المجانية، ورصيدك لا يكفي لاستخدام جديد — اشحن محفظتك");
   return q;
 }
 
@@ -71,7 +71,7 @@ export async function buyAiPackage(userId: string, packageId: string) {
       try {
         await adjustBalance(tx, userId, -pack.credits, "AI", `package:${pack.id}`);
       } catch (err) {
-        if (err instanceof InsufficientBalanceError) throw new ApiError(402, "PAYMENT_REQUIRED", "رصيدك ما بيكفي لهالباقة — اشحن محفظتك");
+        if (err instanceof InsufficientBalanceError) throw new ApiError(402, "PAYMENT_REQUIRED", "رصيدك لا يكفي لهذه الباقة — اشحن محفظتك");
         throw err;
       }
     }
@@ -110,8 +110,8 @@ async function renewOne(old: { id: string; userId: string; packageId: string; re
       await notify({
         userId: old.userId,
         type: "SYSTEM",
-        title: "ما انجددت باقة الذكاء الاصطناعي ⚠️",
-        body: `رصيدك ما بيكفي لتجديد «${pack.name}». اشحن محفظتك وبتتجدد لحالها.`,
+        title: "لم تتجدد باقة الذكاء الاصطناعي ⚠️",
+        body: `رصيدك لا يكفي لتجديد «${pack.name}». اشحن محفظتك وستتجدد تلقائيًا.`,
         data: { kind: "AI_RENEW_FAILED" },
       }).catch(() => undefined);
     }
@@ -142,6 +142,6 @@ export async function renewAllDueAiPackages(): Promise<number> {
 /** Switches the automatic renewal of the shop's latest package on or off. */
 export async function setAiAutoRenew(userId: string, on: boolean) {
   const latest = await prisma.aiSubscription.findFirst({ where: { userId }, orderBy: { endDate: "desc" } });
-  if (!latest) throw new ApiError(404, "NOT_FOUND", "ما عندك باقة");
+  if (!latest) throw new ApiError(404, "NOT_FOUND", "ليس لديك باقة");
   await prisma.aiSubscription.update({ where: { id: latest.id }, data: { autoRenew: on, ...(on ? { renewFailedAt: null } : {}) } });
 }

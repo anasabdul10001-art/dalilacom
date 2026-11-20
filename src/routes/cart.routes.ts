@@ -270,7 +270,7 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
         userId,
         type: "ORDER_PLACED",
         title: "تم استلام طلبك ✅",
-        body: `طلبك ${order.orderNumber} وصل لصاحب النشاط. رح يوصلك تحديث كل ما تتغير حالته.`,
+        body: `طلبك ${order.orderNumber} وصل إلى صاحب النشاط. سيصلك تحديث كلما تغيرت حالته.`,
         data: { orderId: order.id, orderNumber: order.orderNumber, merchantId: order.merchantId },
       });
     }
@@ -286,7 +286,7 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
       await notify({
         userId: owner.userId,
         type: "ORDER_PLACED",
-        title: "طلب جديد وصلك 🛒",
+        title: "وصلك طلب جديد 🛒",
         body: `وصلك الطلب ${order.orderNumber}. افتح الطلبات لتأكيده.`,
         data: { orderId: order.id, orderNumber: order.orderNumber, audience: "MERCHANT" },
       });
@@ -301,7 +301,7 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
       return sendError(res, 409, "CONFLICT", `Not enough stock for "${err.message.split(":")[1]}"`);
     }
     if (err instanceof Error && err.message.startsWith("SHIPPING_REQUIRED:")) {
-      return sendError(res, 400, "BAD_REQUEST", "اختر طريقة الشحن لكل متجر بالسلة");
+      return sendError(res, 400, "BAD_REQUEST", "اختر طريقة الشحن لكل متجر في السلة");
     }
     if (err instanceof Error && err.message.startsWith("PRODUCT_UNAVAILABLE:")) {
       return sendError(res, 409, "CONFLICT", "One of the products in your cart is no longer available");

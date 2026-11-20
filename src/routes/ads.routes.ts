@@ -96,14 +96,14 @@ adsRouter.get("/banners/:id/image", requireAuth, requireRole(Role.MERCHANT), rou
   const merchant = await ownMerchant(req.user!.id);
   const b = await prisma.bannerBooking.findFirst({ where: { id: req.params.id, merchantId: merchant.id }, select: { id: true } });
   const c = b ? await getCreative("BANNER", b.id) : null;
-  if (!c) throw new AdError(404, "NOT_FOUND", "ما في صورة");
+  if (!c) throw new AdError(404, "NOT_FOUND", "لا توجد صورة");
   res.set({ "Content-Type": c.mime, "Cache-Control": "private, no-store" }).end(Buffer.from(c.data));
 }));
 adsRouter.get("/:id/image", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const merchant = await ownMerchant(req.user!.id);
   const a = await prisma.adBooking.findFirst({ where: { id: req.params.id, merchantId: merchant.id }, select: { id: true } });
   const c = a ? await getCreative("SPACE", a.id) : null;
-  if (!c) throw new AdError(404, "NOT_FOUND", "ما في صورة");
+  if (!c) throw new AdError(404, "NOT_FOUND", "لا توجد صورة");
   res.set({ "Content-Type": c.mime, "Cache-Control": "private, no-store" }).end(Buffer.from(c.data));
 }));
 

@@ -113,14 +113,14 @@ async function loadMarket() {
 function errMsg(data, fallback) {
   if (!data || !data.error) return fallback;
   if (typeof data.error === "string") return data.error;
-  if (data.error.code === "AUTH_MISSING_TOKEN") return "سجّل دخولك أول لتكمل";
+  if (data.error.code === "AUTH_MISSING_TOKEN") return "سجّل دخولك أولًا لتكمل";
   // a refused field is named in plain words (the server's own wording for it is technical)
   const fields = (data.error.details && data.error.details.fieldErrors) || {};
   const FIELD_TEXT = {
-    email: "الإيميل غير صحيح، اكتبه بهالشكل: name@example.com",
-    newEmail: "الإيميل الجديد غير صحيح، اكتبه بهالشكل: name@example.com",
-    password: "كلمة السر لازم تكون 8 أحرف أو أكثر",
-    newPassword: "كلمة السر الجديدة لازم تكون 8 أحرف أو أكثر",
+    email: "البريد الإلكتروني غير صحيح، اكتبه بهذا الشكل: name@example.com",
+    newEmail: "البريد الإلكتروني الجديد غير صحيح، اكتبه بهذا الشكل: name@example.com",
+    password: "يجب أن تكون كلمة السر 8 أحرف أو أكثر",
+    newPassword: "يجب أن تكون كلمة السر الجديدة 8 أحرف أو أكثر",
     fullName: "اكتب اسمك (حرفين أو أكثر)",
     phone: "رقم الهاتف غير صحيح (6 أرقام على الأقل)",
   };
@@ -155,7 +155,7 @@ async function api(method, path, body) {
     }
     return { ok: res.ok, status: res.status, data };
   } catch (e) {
-    return { ok: false, status: 0, data: { error: "تعذّر الاتصال بالسيرفر، تحقق من الإنترنت" } };
+    return { ok: false, status: 0, data: { error: "تعذّر الاتصال بالخادم، تحقق من الإنترنت" } };
   }
 }
 
@@ -661,7 +661,7 @@ function transferReferenceForm(ord) {
 }
 async function submitTransfer(id) {
   const reference = qs("transfer-reference")?.value?.trim();
-  if (!reference || reference.length < 3) return toast("أدخل رقم العملية أولاً");
+  if (!reference || reference.length < 3) return toast("أدخل رقم العملية أولًا");
   const { ok, data } = await api("POST", `/orders/${id}/payment/submit-transfer`, { reference });
   if (!ok) return toast(errMsg(data, "تعذّر حفظ رقم العملية"));
   await loadOrderDetail(id);
@@ -816,8 +816,8 @@ function screenSocialEmail() {
   return `
     ${authLogoHtml()}
     <h1 class="screen-title">أكمل تسجيلك</h1>
-    <p class="screen-sub">${S.params.name ? esc(S.params.name) + "، " : ""}فيسبوك ما شاركنا إيميلك. اكتب إيميلك ورح نبعتلك رابط لتأكيده.</p>
-    <div class="field"><label>الإيميل</label><input id="se-email" placeholder="name@example.com" type="email" dir="ltr" autocomplete="email" /></div>
+    <p class="screen-sub">${S.params.name ? esc(S.params.name) + "، " : ""}لم يشاركنا فيسبوك بريدك الإلكتروني. اكتب بريدك وسنرسل لك رابطًا لتأكيده.</p>
+    <div class="field"><label>البريد الإلكتروني</label><input id="se-email" placeholder="name@example.com" type="email" dir="ltr" autocomplete="email" /></div>
     ${errorBanner()}
     <button class="btn" onclick="doSocialEmail()">إنشاء الحساب</button>
     <button class="link-btn" onclick="reset('login')">رجوع</button>
@@ -826,13 +826,13 @@ function screenSocialEmail() {
 
 async function doSocialEmail() {
   const email = qs("se-email").value.trim();
-  if (!email) { S.error = "اكتب إيميلك"; return render(); }
+  if (!email) { S.error = "اكتب بريدك الإلكتروني"; return render(); }
   S.busy = true; S.error = null; render();
   const { ok, data } = await api("POST", "/auth/social/complete", { pending: S.params.pending, email });
   S.busy = false;
   if (ok) { setToken(data.token, data.user.role); if (!resumeAfterAuthentication()) reset("home"); return; }
   const code = data && data.error && data.error.code;
-  S.error = code === "EMAIL_IN_USE" ? "هذا الإيميل مسجّل عندنا. سجّل دخول بكلمة السر أول، أو استخدم إيميل غيره." : code === "BAD_STATE" ? "انتهت صلاحية الدخول. ابدأ من جديد." : errMsg(data, "تعذّر إنشاء الحساب");
+  S.error = code === "EMAIL_IN_USE" ? "هذا البريد الإلكتروني مسجّل لدينا. سجّل الدخول بكلمة السر أولًا، أو استخدم بريدًا آخر." : code === "BAD_STATE" ? "انتهت صلاحية الدخول. ابدأ من جديد." : errMsg(data, "تعذّر إنشاء الحساب");
   render();
 }
 
@@ -842,9 +842,9 @@ function screenForgot() {
     ${backRow()}
     ${authLogoHtml()}
     <h1 class="screen-title">نسيت كلمة السر</h1>
-    <p class="screen-sub">اكتب إيميل حسابك ورح نبعتلك رابط لتعيين كلمة سر جديدة.</p>
+    <p class="screen-sub">اكتب البريد الإلكتروني لحسابك وسنرسل لك رابطًا لتعيين كلمة سر جديدة.</p>
     ${done ? `<div class="card">${esc(done)}</div>` : `
-      <div class="field"><label>الإيميل</label><input id="f-email" placeholder="name@example.com" type="email" dir="ltr" autocomplete="email" value="${esc(S.params.email || "")}" /></div>
+      <div class="field"><label>البريد الإلكتروني</label><input id="f-email" placeholder="name@example.com" type="email" dir="ltr" autocomplete="email" value="${esc(S.params.email || "")}" /></div>
       ${errorBanner()}
       <button class="btn" onclick="doForgot()">أرسل الرابط</button>`}
   `;
@@ -853,11 +853,11 @@ function screenForgot() {
 async function doForgot() {
   const email = qs("f-email").value.trim();
   S.params.email = email;
-  if (!email) { S.error = "اكتب إيميلك"; return render(); }
+  if (!email) { S.error = "اكتب بريدك الإلكتروني"; return render(); }
   S.busy = true; S.error = null; render();
   const { ok, data } = await api("POST", "/auth/forgot-password", { email });
   S.busy = false;
-  if (ok) S.params.sent = data.message || "إذا الإيميل مسجّل رح يوصلك رابط خلال دقائق.";
+  if (ok) S.params.sent = data.message || "إذا كان البريد مسجّلًا فسيصلك رابط خلال دقائق.";
   else S.error = errMsg(data, "تعذّر الإرسال");
   render();
 }
@@ -874,15 +874,15 @@ function screenLogin() {
     <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
     ${authLogoHtml()}
     <h1 class="screen-title">تسجيل الدخول</h1>
-    <p class="screen-sub">أهلًا فيك بدليلكم — دخّل بياناتك</p>
+    <p class="screen-sub">أهلًا بك في دليلكم — أدخل بياناتك</p>
     ${authFeaturesHtml()}
-    <div class="field"><label>الإيميل</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
+    <div class="field"><label>البريد الإلكتروني</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
     <div class="field"><label>كلمة السر</label><input id="f-password" type="password" placeholder="••••••••" value="${esc(draft.password || "")}" /></div>
     ${errorBanner()}
     <button class="btn" onclick="doLogin()">دخول</button>
     ${socialButtonsHtml()}
     <button class="link-btn" onclick="go('forgot')">نسيت كلمة السر؟</button>
-    <button class="link-btn" onclick="reset('register')">ما عندك حساب؟ سجل واحد جديد</button>
+    <button class="link-btn" onclick="reset('register')">ليس لديك حساب؟ سجّل حسابًا جديدًا</button>
     ${followUsHtml(true)}
     ${legalLinksHtml()}
   `;
@@ -892,7 +892,7 @@ async function doLogin() {
   const email = qs("f-email").value.trim();
   const password = qs("f-password").value;
   S.params.draft = { email, password };
-  if (!email) { S.error = "اكتب الإيميل"; return render(); }
+  if (!email) { S.error = "اكتب البريد الإلكتروني"; return render(); }
   if (!password) { S.error = "اكتب كلمة السر"; return render(); }
   S.busy = true; S.error = null; render();
   const { ok, data } = await api("POST", "/auth/login", { email, password });
@@ -901,7 +901,7 @@ async function doLogin() {
     setToken(data.token, data.user.role);
     if (!resumeAfterAuthentication()) reset("home");
   } else {
-    S.error = "الإيميل أو كلمة السر غير صحيحين، تأكد وجرّب من جديد";
+    S.error = "البريد الإلكتروني أو كلمة السر غير صحيحين، تأكد وجرّب من جديد";
     render();
   }
 }
@@ -919,7 +919,7 @@ function screenRegister() {
   const countryOpts = g.countries.map((c) => `<option value="${esc(c.isoCode2)}" ${draft.country === c.isoCode2 ? "selected" : ""}>${esc(geoName(c))}</option>`).join("");
   const regionOpts = g.regions.map((c) => `<option value="${esc(c.id)}" ${draft.region === c.id ? "selected" : ""}>${esc(geoName(c))}</option>`).join("");
   const cityOpts = g.cities.map((c) => `<option value="${esc(c.id)}" ${draft.city === c.id ? "selected" : ""}>${esc(geoName(c))}</option>`).join("");
-  const cityHint = g.regions.length && !draft.region ? "— اختر المحافظة أول —" : g.cities.length ? "— اختر المدينة —" : "— اختر الدولة أول —";
+  const cityHint = g.regions.length && !draft.region ? "— اختر المحافظة أولًا —" : g.cities.length ? "— اختر المدينة —" : "— اختر الدولة أولًا —";
   return `
     <button class="back-btn" onclick="backToMap()">‹ رجوع للخريطة</button>
     <h1 class="screen-title">إنشاء حساب جديد</h1>
@@ -933,7 +933,7 @@ function screenRegister() {
     </div>
     ${intent === "MERCHANT" ? `<p class="muted" style="color:var(--primary);margin-bottom:12px">${esc(t("reg.bizNote"))}</p>` : ""}
     <div class="field"><label>الاسم الكامل</label><input id="f-name" placeholder="مثال: أحمد محمد" value="${esc(draft.name || "")}" /></div>
-    <div class="field"><label>الإيميل</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
+    <div class="field"><label>البريد الإلكتروني</label><input id="f-email" type="email" placeholder="name@example.com" value="${esc(draft.email || "")}" /></div>
     <div class="field"><label>كلمة السر (8 أحرف على الأقل)</label><input id="f-password" type="password" placeholder="••••••••" value="${esc(draft.password || "")}" /></div>
     <div class="field"><label>الدولة</label><select id="f-country" onchange="regPickCountry()"><option value="">— اختر الدولة —</option>${countryOpts}</select></div>
     ${g.regions.length ? `<div class="field"><label>المحافظة</label><select id="f-region" onchange="regPickRegion()"><option value="">— اختر المحافظة —</option>${regionOpts}</select></div>` : ""}
@@ -943,7 +943,7 @@ function screenRegister() {
     <label class="check-row"><input type="checkbox" id="f-terms" ${draft.terms ? "checked" : ""} /> <span>${esc(t("reg.acceptTerms"))}</span></label>
     <button class="btn" onclick="doRegister()">إنشاء الحساب</button>
     ${socialButtonsHtml()}
-    <button class="link-btn" onclick="reset('login')">عندك حساب أصلًا؟ سجل دخول</button>
+    <button class="link-btn" onclick="reset('login')">هل لديك حساب أصلًا؟ سجّل الدخول</button>
     ${followUsHtml(true)}
     ${legalLinksHtml()}
   `;
@@ -1023,8 +1023,8 @@ async function doRegister() {
   const email = qs("f-email").value.trim();
   const password = qs("f-password").value;
   if (!fullName) { S.error = "اكتب اسمك"; return render(); }
-  if (!email) { S.error = "اكتب الإيميل"; return render(); }
-  if (password.length < 8) { S.error = "كلمة السر لازم تكون 8 أحرف أو أكثر"; return render(); }
+  if (!email) { S.error = "اكتب البريد الإلكتروني"; return render(); }
+  if (password.length < 8) { S.error = "يجب أن تكون كلمة السر 8 أحرف أو أكثر"; return render(); }
   if (!qs("f-terms").checked) { S.error = t("reg.mustAccept"); return render(); }
   S.busy = true; S.error = null; render();
   const body = { email, password, fullName, acceptTerms: true };
@@ -1150,7 +1150,7 @@ function tabCard() {
     </div>
     <div class="qr-wrap"><div id="qr-canvas"></div></div>
     <div class="otp-code">${fullCodeText(c.memberNumber, c.code)}</div>
-    <div class="countdown">بيتجدد خلال ${c.secondsRemaining ?? 0} ثانية</div>
+    <div class="countdown">يتجدد خلال ${c.secondsRemaining ?? 0} ثانية</div>
     ${errorBanner()}
   `;
 }
@@ -1182,7 +1182,7 @@ async function subscribePlan(planId) {
     render();
     loadCardIfNeeded();
   } else {
-    S.error = errMsg(data, "تعذّر الاشتراك بالعضوية");
+    S.error = errMsg(data, "تعذّر الاشتراك في العضوية");
     render();
   }
 }
@@ -1200,7 +1200,7 @@ async function startQrLoop() {
       remaining -= 1;
       S._card.secondsRemaining = remaining;
       const el = document.querySelector(".countdown");
-      if (el) el.textContent = tr(`بيتجدد خلال ${remaining} ثانية`);
+      if (el) el.textContent = tr(`يتجدد خلال ${remaining} ثانية`);
       if (remaining <= 0) clearInterval(S.qrTick);
     }, 1000);
     S.qrTimer = setTimeout(tick, data.expiresInSeconds * 1000);
@@ -2389,7 +2389,7 @@ function screenFavorites() {
   return `
     ${backRow()}
     <h1 class="screen-title">أماكني المحفوظة</h1>
-    ${f.list.length === 0 ? `<div class="empty-state">ما حفظت أي مكان بعد — اضغط ♡ على أي محل</div>` : f.list.map(merchantRowHtml).join("")}
+    ${f.list.length === 0 ? `<div class="empty-state">لم تحفظ أي مكان بعد — اضغط ♡ على أي محل</div>` : f.list.map(merchantRowHtml).join("")}
   `;
 }
 async function loadFavorites() {
@@ -2424,7 +2424,7 @@ function tabCart() {
   const items = c.items || [];
   return `
     <h1 class="screen-title">سلتي</h1>
-    ${items.length === 0 ? `<div class="empty-state">سلتك فاضية</div>` : items.map(cartItemHtml).join("")}
+    ${items.length === 0 ? `<div class="empty-state">سلتك فارغة</div>` : items.map(cartItemHtml).join("")}
     ${items.length > 0 ? `
       ${(c.shipping || []).filter((x) => x.methods.length).map((x) => shipChoiceHtml(x, items)).join("")}
       ${(c.payments || []).map((x) => payChoiceHtml(x, items)).join("")}
@@ -2576,7 +2576,7 @@ function tabOrders() {
   const list = o.list || [];
   return `
     <h1 class="screen-title">طلباتي</h1>
-    ${list.length === 0 ? `<div class="empty-state">ما عندك طلبات بعد</div>` : list.map((ord) => `
+    ${list.length === 0 ? `<div class="empty-state">لا توجد لديك طلبات بعد</div>` : list.map((ord) => `
       <div class="card clickable" onclick="go('orderDetail', {orderId:'${ord.id}'})">
         <div class="title-line"><strong>${esc(ord.orderNumber)}</strong>${orderBadge(ord.status)}</div>
         <p class="muted">${esc(ord.merchant ? ord.merchant.businessName : "")}</p>
@@ -3447,13 +3447,13 @@ function accountingCents(id) { return Math.round(Number(qs(id)?.value || 0) * 10
 async function accountingAddEntry() {
   const body = { type: qs("acc-type").value, category: qs("acc-category").value.trim(), description: qs("acc-description").value.trim(), amountCents: accountingCents("acc-amount"), currency: S.currency || "EUR", payMethod: qs("acc-pay")?.value || "CASH" };
   const { ok, data } = await api("POST", "/accounting/entries", body);
-  if (!ok) return toast(errMsg(data, "ما قدرنا نحفظ الحركة"));
+  if (!ok) return toast(errMsg(data, "تعذّر حفظ الحركة"));
   toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
 }
 async function accountingAddProduct() {
   const body = { name: qs("acc-product-name").value.trim(), barcode: qs("acc-barcode").value.trim() || null, salePriceCents: accountingCents("acc-sale-price"), costCents: accountingCents("acc-cost-price"), quantity: Number(qs("acc-quantity").value || 0), currency: S.currency || "EUR" };
   const { ok, data } = await api("POST", "/accounting/products", body);
-  if (!ok) return toast(errMsg(data, "ما قدرنا نضيف المنتج"));
+  if (!ok) return toast(errMsg(data, "تعذّر إضافة المنتج"));
   toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
 }
 async function accountingScanInvoice(input) {
@@ -3479,14 +3479,14 @@ async function accountingSell(id) {
   const payMethod = await uiPick(t("accounting.sellPay"), [["CASH", t("accounting.pay.CASH")], ["BANK", t("accounting.pay.BANK")], ["WALLET", t("accounting.pay.WALLET")]]);
   if (!payMethod) return;
   const { ok, data } = await api("POST", `/accounting/products/${id}/sell`, { quantity, payMethod });
-  if (!ok) return toast(errMsg(data, "ما قدرنا نسجل البيع"));
+  if (!ok) return toast(errMsg(data, "تعذّر تسجيل البيع"));
   toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
 }
 async function accountingAdjustStock(id, isIn) {
   const quantity = Number(await uiPrompt(t(isIn ? "accounting.addQuantity" : "accounting.removeQuantity"), "1", { numeric: true }));
   if (!quantity) return;
   const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: isIn ? "STOCK_IN" : "STOCK_OUT", quantity, note: isIn ? "إدخال يدوي" : "إخراج يدوي" });
-  if (!ok) return toast(errMsg(data, "ما قدرنا نعدّل الجرد"));
+  if (!ok) return toast(errMsg(data, "تعذّر تعديل الجرد"));
   S._accounting = { loading: true }; await loadAccounting();
 }
 async function accountingSetCost(id) {
@@ -3494,7 +3494,7 @@ async function accountingSetCost(id) {
   const raw = await uiPrompt(t("accounting.costPrice"), (product.costCents / 100).toFixed(2), { numeric: true }); if (raw === null) return;
   const amount = Number(raw.replace(",", ".")); if (!Number.isFinite(amount) || amount < 0) return toast(t("accounting.invalidAmount"));
   const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: "ADJUSTMENT", quantity: product.quantity, unitCostCents: Math.round(amount * 100), note: "تحديث تكلفة الشراء" });
-  if (!ok) return toast(errMsg(data, "ما قدرنا نحدّث تكلفة المنتج"));
+  if (!ok) return toast(errMsg(data, "تعذّر تحديث تكلفة المنتج"));
   S._accounting = { loading: true }; await loadAccounting();
 }
 async function accountingDeleteProduct(id) {
@@ -3715,9 +3715,9 @@ function tabProfile() {
 const PAYOUT_OPTIONS = [["BANK_ALSHAM", "بنك الشام"], ["SYRIATEL", "سيرياتل كاش"], ["MTN", "MTN كاش"]];
 function sellerPayoutSettingsHtml() {
   const state = S._sellerPays || { loading: true, methods: [] };
-  if (state.loading) return `<div class="card" style="width:min(100%,420px)">جاري تحميل وسائل استلام المصاري…</div>`;
+  if (state.loading) return `<div class="card" style="width:min(100%,420px)">جارٍ تحميل وسائل استلام الأموال…</div>`;
   const byProvider = Object.fromEntries((state.methods || []).map((method) => [method.provider, method]));
-  return `<div class="card" style="width:min(100%,420px);text-align:right"><div class="section-title" style="margin-top:0">كيف تستلم مصاري مبيعاتك؟</div><p class="muted">اختَر الوسائل التي عندك. لن تظهر للزبون إلا بعد أن يطلب منك منتجاً.</p>${PAYOUT_OPTIONS.map(([provider, label]) => { const method = byProvider[provider] || {}; return `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="payout-on-${provider}" ${method.isEnabled ? "checked" : ""}><strong>${label}</strong></label><div class="field"><label>الاسم المسجل</label><input id="payout-name-${provider}" value="${esc(method.recipientName || "")}" placeholder="الاسم كما يظهر بالحساب" /></div><div class="field"><label>رقم الحساب أو المحفظة</label><input id="payout-account-${provider}" value="${esc(method.accountNumber || "")}" placeholder="رقم المحفظة أو الحساب" /></div>`; }).join("")}<button class="btn" ${state.saving ? "disabled" : ""} onclick="saveSellerPaymentMethods()">${state.saving ? "جارٍ الحفظ…" : "حفظ وسائل الاستلام"}</button></div>`;
+  return `<div class="card" style="width:min(100%,420px);text-align:right"><div class="section-title" style="margin-top:0">كيف تستلم أموال مبيعاتك؟</div><p class="muted">اختر الوسائل التي لديك. لن تظهر للزبون إلا بعد أن يطلب منك منتجًا.</p>${PAYOUT_OPTIONS.map(([provider, label]) => { const method = byProvider[provider] || {}; return `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="payout-on-${provider}" ${method.isEnabled ? "checked" : ""}><strong>${label}</strong></label><div class="field"><label>الاسم المسجل</label><input id="payout-name-${provider}" value="${esc(method.recipientName || "")}" placeholder="الاسم كما يظهر في الحساب" /></div><div class="field"><label>رقم الحساب أو المحفظة</label><input id="payout-account-${provider}" value="${esc(method.accountNumber || "")}" placeholder="رقم المحفظة أو الحساب" /></div>`; }).join("")}<button class="btn" ${state.saving ? "disabled" : ""} onclick="saveSellerPaymentMethods()">${state.saving ? "جارٍ الحفظ…" : "حفظ وسائل الاستلام"}</button></div>`;
 }
 async function loadSellerPaymentMethods() {
   const { ok, data } = await api("GET", "/profile/payment-methods");
@@ -3954,7 +3954,7 @@ function becomeMarketerHtml(me) {
     <div class="card">
       <p class="muted">${esc(t("ref.becomeSub"))}</p>
       <div class="field"><label>${esc(t("ref.phone"))}</label><input id="ref-phone" placeholder="+963 9xx xxx xxx" dir="ltr" inputmode="tel" /></div>
-      <div class="field"><label>${esc(t("ref.note"))}</label><input id="ref-note" placeholder="مثال: صاحب محل بحي المزة" /></div>
+      <div class="field"><label>${esc(t("ref.note"))}</label><input id="ref-note" placeholder="مثال: صاحب محل في حي المزة" /></div>
       <div class="intent-cards">
         <button class="intent-card" onclick="refRequest('ELECTRONIC')"><span class="ic">💻</span><div><b>${esc(t("ref.electronic"))}</b><small>${esc(t("ref.electronicSub"))}</small></div></button>
         <button class="intent-card" onclick="refRequest('FIELD')"><span class="ic">🚶</span><div><b>${esc(t("ref.field"))}</b><small>${esc(t("ref.fieldSub"))}</small></div></button>
@@ -4141,15 +4141,15 @@ function screenAffiliateMine() {
   return `
     ${backRow()}
     <h1 class="screen-title">مسوّقياتي</h1>
-    <p class="screen-sub">أصحاب الأنشطة اللي إنت مسوّق عندهم، وعمولاتك من كل واحد</p>
-    ${list.length === 0 ? `<div class="empty-state">لسا ما انضممت كمسوّق لأي صاحب نشاط — صاحب النشاط هو اللي بضيفك لفريقه</div>` : list.map((x) => `
+    <p class="screen-sub">أصحاب الأنشطة الذين أنت مسوّق لديهم، وعمولاتك من كل واحد</p>
+    ${list.length === 0 ? `<div class="empty-state">لم تنضم كمسوّق لأي صاحب نشاط بعد — صاحب النشاط هو من يضيفك إلى فريقه</div>` : list.map((x) => `
       <div class="card">
         <div class="title-line"><strong>${esc(x.merchant.businessName)}</strong><span class="badge ${x.isActive ? "success" : "neutral"}">${x.isActive ? "نشط" : "غير نشط"}</span></div>
         <p class="muted">عمولتك: ${x.commissionType === "PERCENT" ? x.commissionValue + "% من كل عملية" : fmt(x.commissionValue) + " لكل عملية"}</p>
         <p class="muted">زبائن أحلتهم: ${x.referredCount} — إجمالي عمولاتك: <strong style="color:var(--primary)">${fmt(x.totalCommissionCents)}</strong></p>
         ${x.sampleLink
           ? `<div class="field"><label>رابط الإحالة (انسخه وشاركه)</label><input readonly value="${esc(x.sampleLink)}" onclick="this.select()" /></div>`
-          : `<p class="muted">كودك: <strong>${esc(x.referralCode)}</strong> — ما عند هالنشاط منتجات بعد لتولّد رابط</p>`}
+          : `<p class="muted">كودك: <strong>${esc(x.referralCode)}</strong> — لا توجد لهذا النشاط منتجات بعد لتولّد رابطًا</p>`}
       </div>`).join("")}
   `;
 }
@@ -4340,7 +4340,7 @@ function screenMerchantHours() {
   return `
     ${backRow()}
     <h1 class="screen-title">ساعات العمل</h1>
-    <p class="screen-sub">حدّد أيام دوامك وأوقاته — بيظهر للزبائن «مفتوح الآن» أو «مغلق». إذا سكّرت بعد منتصف الليل اكتب وقت إغلاق أصغر من الفتح (مثلًا 18:00 – 02:00).</p>
+    <p class="screen-sub">حدّد أيام دوامك وأوقاته — يظهر للزبائن «مفتوح الآن» أو «مغلق». وإذا أغلقت بعد منتصف الليل فاكتب وقت إغلاق أصغر من وقت الفتح (مثلًا 18:00 – 02:00).</p>
     ${errorBanner()}
     <div class="row" style="gap:8px;margin-bottom:10px">
       <button class="btn outline" onclick="hoursCopyToAll()">${esc(t("hours.copyAll"))}</button>
@@ -4385,7 +4385,7 @@ function hoursSet(day, field, value) {
 
 function hoursCopyToAll() {
   const firstOn = DAY_ORDER.map((d) => S._hours.days[d]).find((x) => x.on);
-  if (!firstOn) { S._hours.msg = "فعّل يوم واحد على الأقل أول"; return render(); }
+  if (!firstOn) { S._hours.msg = "فعّل يومًا واحدًا على الأقل أولًا"; return render(); }
   DAY_ORDER.forEach((d) => { S._hours.days[d] = { on: true, open: firstOn.open, close: firstOn.close }; });
   render();
 }
@@ -4411,7 +4411,7 @@ async function saveMerchantHours() {
   });
   const { ok, data } = await api("PUT", "/merchant/me/hours", { openingHours: Object.keys(openingHours).length ? openingHours : null });
   S.error = null;
-  S._hours.msg = ok ? "✅ انحفظت ساعات العمل" : errMsg(data, "تعذّر الحفظ");
+  S._hours.msg = ok ? "✅ تم حفظ ساعات العمل" : errMsg(data, "تعذّر الحفظ");
   render();
 }
 
@@ -4711,7 +4711,7 @@ async function storeAdd(id, ev) {
   if (ev) ev.stopPropagation();
   if (!S.token) return go("login");
   const { ok, data } = await addToCart(id, 1);
-  if (!ok) { S.error = errMsg(data, "تعذّرت إضافة المنتج للسلة"); render(); return; }
+  if (!ok) { S.error = errMsg(data, "تعذّرت إضافة المنتج إلى السلة"); render(); return; }
   S._cart = null;
   S.error = null;
   const st = S._store;
@@ -5742,15 +5742,15 @@ function screenMarketplace() {
   return `<button class="link-btn" onclick="back()">← رجوع</button><h1 class="screen-title">سوق المنتجات</h1>
     <p class="muted">بيع وشراء المنتجات بين مستخدمي دليلكم. الإعلانات تظهر بعد مراجعتها.</p>
     <div class="card"><input id="mp-search" placeholder="ابحث عن منتج" value="${esc(m.q || '')}" onkeydown="if(event.key==='Enter')searchMarketplace()"><button class="btn" onclick="searchMarketplace()">بحث</button></div>
-    ${S.token && !m.store ? `<div class="card"><h3>افتح متجرك الخاص</h3><p class="muted">بعد إنشاء متجرك بتقدر تضيف المنتجات وتشارك صفحة متجرك مع الناس.</p><input id="mp-store-name" maxlength="70" placeholder="اسم المتجر"><textarea id="mp-store-description" maxlength="500" placeholder="وصف المتجر (اختياري)"></textarea><button class="btn" onclick="saveMyMarketplaceStore()">إنشاء المتجر</button><p id="mp-store-msg" class="muted"></p></div>` : ''}
-    ${S.token && m.store ? `<div class="card"><h3>متجري: ${esc(m.store.name)}</h3><p>${esc(m.store.description || '')}</p><button class="btn outline" onclick="go('marketplaceStore',{storeId:'${esc(m.store.id)}'})">عرض متجري للناس</button></div><div class="card"><h3>منتج جديد بمتجري</h3><p class="muted">المجاني المتبقي هذا الشهر: ${quota.remaining} من ${quota.freeLimit}${quota.paid ? ' · عندك باقة فعالة' : ''}</p>
+    ${S.token && !m.store ? `<div class="card"><h3>افتح متجرك الخاص</h3><p class="muted">بعد إنشاء متجرك تستطيع إضافة المنتجات ومشاركة صفحة متجرك مع الناس.</p><input id="mp-store-name" maxlength="70" placeholder="اسم المتجر"><textarea id="mp-store-description" maxlength="500" placeholder="وصف المتجر (اختياري)"></textarea><button class="btn" onclick="saveMyMarketplaceStore()">إنشاء المتجر</button><p id="mp-store-msg" class="muted"></p></div>` : ''}
+    ${S.token && m.store ? `<div class="card"><h3>متجري: ${esc(m.store.name)}</h3><p>${esc(m.store.description || '')}</p><button class="btn outline" onclick="go('marketplaceStore',{storeId:'${esc(m.store.id)}'})">عرض متجري للناس</button></div><div class="card"><h3>منتج جديد بمتجري</h3><p class="muted">المجاني المتبقي هذا الشهر: ${quota.remaining} من ${quota.freeLimit}${quota.paid ? ' · لديك باقة فعالة' : ''}</p>
       ${quota.remaining <= 0 && !quota.paid ? `<p>استهلكت إعلاناتك المجانية. اختر باقة للمتابعة:</p>${(m.plans || []).map(p => `<button class="btn outline" onclick="buyMarketplacePlan('${esc(p.id)}')">${esc(p.name)} · ${p.priceCredits == null ? 'السعر غير محدد' : p.priceCredits + ' رصيد'}</button>`).join('')}` : ''}
       <input id="mp-title" maxlength="80" placeholder="اسم المنتج"><textarea id="mp-description" maxlength="1000" placeholder="وصف مختصر"></textarea>
       <input id="mp-price" type="number" min="0.01" step="0.01" placeholder="السعر"><select id="mp-condition"><option value="USED">مستعمل</option>${m.settings.allowNewProducts || quota.paid ? '<option value="NEW">جديد</option>' : ''}</select>
       <input id="mp-category" maxlength="60" placeholder="التصنيف (اختياري)"><input id="mp-phone" maxlength="30" placeholder="رقم للتواصل (اختياري)"><label>صورة المنتج (اختياري) <input id="mp-photo" type="file" accept="image/jpeg,image/png,image/webp"></label>
       <button class="btn" onclick="createMarketplaceListing()">إضافة المنتج</button><p id="mp-form-msg" class="muted"></p></div>
-      <div class="card"><h3>إعلاناتي</h3>${mine.length ? mine.map(x => `<p><b>${esc(x.title)}</b> · ${esc(statusText[x.status] || x.status)}${x.reviewNote ? `<br><small class="muted">السبب: ${esc(x.reviewNote)}</small>` : ''} ${x.status === 'ACTIVE' ? `<button class="small" onclick="setMarketplaceStatus('${esc(x.id)}','SOLD')">تم البيع</button>` : ''}</p>`).join('') : '<p class="muted">ما عندك إعلانات بعد</p>'}</div>` : `<div class="card">سجّل دخولك لتضيف إعلانك. <button class="btn" onclick="go('login')">تسجيل الدخول</button></div>`}
-    <h2>متاجر المستخدمين</h2>${products.length ? products.map(x => `<article class="card">${x.imageUrl ? `<img src="${esc(x.imageUrl)}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px">` : ''}<h3>${esc(x.title)}</h3><p>${esc(x.description || '')}</p><b>${fmt(x.priceCents, x.currency)}</b><p class="muted">${x.condition === 'USED' ? 'مستعمل' : 'جديد'} · <button class="link-btn" onclick="go('marketplaceStore',{storeId:'${esc(x.storeId)}'})">متجر ${esc(x.sellerName || '')}</button>${x.contactPhone ? ` · للتواصل: ${esc(x.contactPhone)}` : ''}</p></article>`).join('') : '<div class="empty-state">ما في منتجات منشورة حالياً</div>'}`;
+      <div class="card"><h3>إعلاناتي</h3>${mine.length ? mine.map(x => `<p><b>${esc(x.title)}</b> · ${esc(statusText[x.status] || x.status)}${x.reviewNote ? `<br><small class="muted">السبب: ${esc(x.reviewNote)}</small>` : ''} ${x.status === 'ACTIVE' ? `<button class="small" onclick="setMarketplaceStatus('${esc(x.id)}','SOLD')">تم البيع</button>` : ''}</p>`).join('') : '<p class="muted">لا توجد لديك إعلانات بعد</p>'}</div>` : `<div class="card">سجّل دخولك لتضيف إعلانك. <button class="btn" onclick="go('login')">تسجيل الدخول</button></div>`}
+    <h2>متاجر المستخدمين</h2>${products.length ? products.map(x => `<article class="card">${x.imageUrl ? `<img src="${esc(x.imageUrl)}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px">` : ''}<h3>${esc(x.title)}</h3><p>${esc(x.description || '')}</p><b>${fmt(x.priceCents, x.currency)}</b><p class="muted">${x.condition === 'USED' ? 'مستعمل' : 'جديد'} · <button class="link-btn" onclick="go('marketplaceStore',{storeId:'${esc(x.storeId)}'})">متجر ${esc(x.sellerName || '')}</button>${x.contactPhone ? ` · للتواصل: ${esc(x.contactPhone)}` : ''}</p></article>`).join('') : '<div class="empty-state">لا توجد منتجات منشورة حاليًا</div>'}`;
 }
 
 async function loadMarketplace(q) {
@@ -5765,7 +5765,7 @@ async function loadMarketplace(q) {
 async function saveMyMarketplaceStore() {
   const msg = document.getElementById('mp-store-msg');
   const name = document.getElementById('mp-store-name').value.trim();
-  if (name.length < 2) { msg.textContent = 'اكتب اسماً للمتجر (حرفين على الأقل).'; return; }
+  if (name.length < 2) { msg.textContent = 'اكتب اسمًا للمتجر (حرفين على الأقل).'; return; }
   const { ok, data } = await api('PUT', '/marketplace/my-store', { name, description: document.getElementById('mp-store-description').value.trim() || undefined });
   if (!ok) { msg.textContent = errMsg(data, 'تعذّر إنشاء المتجر'); return; }
   await loadMarketplace(S._market?.q || '');
@@ -5776,7 +5776,7 @@ function screenMarketplaceStore() {
   const d = S._marketStore;
   if (d.loading) return spinner();
   if (!d.store) return `<button class="link-btn" onclick="back()">← رجوع</button><div class="empty-state">المتجر غير موجود</div>`;
-  return `<button class="link-btn" onclick="back()">← رجوع</button><h1 class="screen-title">${esc(d.store.name)}</h1><p class="muted">${esc(d.store.description || '')}</p>${d.listings.length ? d.listings.map(x => `<article class="card">${x.imageUrl ? `<img src="${esc(x.imageUrl)}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px">` : ''}<h3>${esc(x.title)}</h3><p>${esc(x.description || '')}</p><b>${fmt(x.priceCents, x.currency)}</b><p class="muted">${x.condition === 'USED' ? 'مستعمل' : 'جديد'}${x.contactPhone ? ` · للتواصل: ${esc(x.contactPhone)}` : ''}</p></article>`).join('') : '<div class="empty-state">المتجر لسه ما فيه منتجات منشورة</div>'}`;
+  return `<button class="link-btn" onclick="back()">← رجوع</button><h1 class="screen-title">${esc(d.store.name)}</h1><p class="muted">${esc(d.store.description || '')}</p>${d.listings.length ? d.listings.map(x => `<article class="card">${x.imageUrl ? `<img src="${esc(x.imageUrl)}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px">` : ''}<h3>${esc(x.title)}</h3><p>${esc(x.description || '')}</p><b>${fmt(x.priceCents, x.currency)}</b><p class="muted">${x.condition === 'USED' ? 'مستعمل' : 'جديد'}${x.contactPhone ? ` · للتواصل: ${esc(x.contactPhone)}` : ''}</p></article>`).join('') : '<div class="empty-state">لا توجد منتجات منشورة في المتجر بعد</div>'}`;
 }
 
 async function loadMarketplaceStore(id) {
@@ -5791,7 +5791,7 @@ async function createMarketplaceListing() {
   const msg = document.getElementById('mp-form-msg');
   const title = document.getElementById('mp-title').value.trim();
   const price = Number(latinDigits(document.getElementById('mp-price').value));
-  if (title.length < 2 || !(price > 0)) { msg.textContent = 'اكتب اسم المنتج وسعراً صحيحاً.'; return; }
+  if (title.length < 2 || !(price > 0)) { msg.textContent = 'اكتب اسم المنتج وسعرًا صحيحًا.'; return; }
   let imageUrl;
   const file = document.getElementById('mp-photo').files?.[0];
   if (file) {
@@ -5968,7 +5968,7 @@ async function addProductToCart(thenCart) {
   const { ok, data } = await addToCart(p.id, p.qty);
   p.adding = false;
   if (ok) { p.added = true; S._cart = null; S.error = null; if (S._store) S._store.cartCount += p.qty; if (thenCart) return storeToCart(); }
-  else { S.error = errMsg(data, "تعذّرت إضافة المنتج للسلة"); }
+  else { S.error = errMsg(data, "تعذّرت إضافة المنتج إلى السلة"); }
   render();
 }
 
@@ -6149,7 +6149,7 @@ async function submitMerchantRegister() {
   snapshotMerchRegDraft();
   const businessName = qs("mr-name").value.trim();
   const categoryId = S._merchReg.selectedCat;
-  if (!businessName || !categoryId) { S.error = "عبّي اسم المحل واختر تصنيف"; return render(); }
+  if (!businessName || !categoryId) { S.error = "املأ اسم المحل واختر تصنيفًا"; return render(); }
   const mode = S._merchReg.mode || "map";
   const address = qs("mr-address") ? qs("mr-address").value.trim() : "";
   const phone = qs("mr-phone").value.trim();
@@ -6174,7 +6174,7 @@ async function submitMerchantRegister() {
     S._onboarding = null;
     S.merchantTab = "catalog"; S._catalog = null; S._mstat = null;
     reset("merchantMode");
-    toast(data.approvalStatus === "APPROVED" ? (mode === "store" ? "✅ حساب متجرك جاهز. اختار الباقة وأضف منتجاتك." : "✅ تم تسجيل نشاطك، وصار ظاهر على الخريطة.") : data.approvalStatus === "REJECTED" ? tr("ما انقبل الطلب:") + " " + (data.reason || tr("راجع البيانات وحاول مرة ثانية")) : (mode === "store" ? "وصل طلب فتح متجرك، وهو قيد المراجعة." : "وصل طلب إضافة نشاطك على الخريطة، وهو قيد المراجعة."));
+    toast(data.approvalStatus === "APPROVED" ? (mode === "store" ? "✅ حساب متجرك جاهز. اختر الباقة وأضف منتجاتك." : "✅ تم تسجيل نشاطك، وأصبح ظاهرًا على الخريطة.") : data.approvalStatus === "REJECTED" ? tr("لم يُقبل الطلب:") + " " + (data.reason || tr("راجع البيانات وحاول مرة أخرى")) : (mode === "store" ? "وصل طلب فتح متجرك، وهو قيد المراجعة." : "وصل طلب إضافة نشاطك على الخريطة، وهو قيد المراجعة."));
   } else {
     S.error = errMsg(data, "تعذّر تسجيل حساب النشاط");
     render();
@@ -6188,7 +6188,7 @@ function pickerHtml(label) {
   const p = S._pick || {};
   return `
     <div class="field">
-      <label>${label ? esc(label) : "موقع نشاطك على الخريطة — بهالطريقة بيلاقيك الزبائن"}</label>
+      <label>${label ? esc(label) : "موقع نشاطك على الخريطة — بهذه الطريقة يجدك الزبائن"}</label>
       <div id="pick-slot" class="pick-map"></div>
       <div class="row" style="margin-top:6px;gap:8px;align-items:center">
         <button class="btn small outline" style="width:auto;flex:none" onclick="pickUseMyLocation()">📍 استخدم موقعي الحالي</button>
@@ -6332,10 +6332,10 @@ function pickAddressSuggestion(owner, index) {
 }
 
 function pickUseMyLocation() {
-  if (!navigator.geolocation) return toast("المتصفح ما بيدعم تحديد الموقع");
+  if (!navigator.geolocation) return toast("المتصفح لا يدعم تحديد الموقع");
   navigator.geolocation.getCurrentPosition(
     (pos) => { pickSet(pos.coords.latitude, pos.coords.longitude, true); fillAddressFromPin(pos.coords.latitude, pos.coords.longitude); },
-    () => toast("ما قدرنا نحدد موقعك — اضغط على الخريطة لتحدده بإيدك"),
+    () => toast("لم نتمكن من تحديد موقعك — اضغط على الخريطة لتحدده بنفسك"),
     { enableHighAccuracy: true, timeout: 10000 },
   );
 }
@@ -6349,7 +6349,7 @@ function screenMerchantProfile() {
   return `
     ${backRow()}
     <h1 class="screen-title">بيانات المحل ومكانه</h1>
-    <p class="screen-sub">هي اللي بتظهر للزبائن على الخريطة وبصفحة محلك</p>
+    <p class="screen-sub">هي التي تظهر للزبائن على الخريطة وفي صفحة محلك</p>
     <div class="section-title">${esc(t("mp.secName"))}</div>
     <div class="field"><label>اسم المحل</label><input id="mp-name" placeholder="مثال: مطعم الياسمين" value="${esc(m.name || "")}" /></div>
     <div class="section-title">${esc(t("mp.secProfession"))}</div>
@@ -6400,7 +6400,7 @@ async function saveMerchantProfile() {
   if (!catIsOnline(m.categories || [], m.categoryId) && body.latitude == null && !body.address) { S.error = t("addr.need"); return render(); }
   S.error = null;
   const { ok, data } = await api("PATCH", "/merchant/me", body);
-  m.msg = ok ? "✅ انحفظت بيانات المحل" : "";
+  m.msg = ok ? "✅ تم حفظ بيانات المحل" : "";
   if (!ok) S.error = errMsg(data, "تعذّر الحفظ");
   S._onboarding = null;
   render();
@@ -6551,10 +6551,10 @@ function merchantChecklistHtml() {
     <div class="card checklist slim">
       <div class="title-line" onclick="S._checklistOpen=!S._checklistOpen;render()" style="cursor:pointer"><strong>${esc(t("ms.setupTitle"))}</strong><span class="badge ${o.steps.approved ? "success" : "warning"}">${done}/5 ${S._checklistOpen ? "▴" : "▾"}</span></div>
       <div class="check-line"><i style="width:${done * 20}%"></i></div>
-      ${!S._checklistOpen ? "" : `${o.steps.approved ? "" : `<p class="muted" style="margin:4px 0 8px">⏳ طلبك بانتظار موافقة الإدارة — ما رح يظهر محلك على الخريطة قبلها.</p>`}
+      ${!S._checklistOpen ? "" : `${o.steps.approved ? "" : `<p class="muted" style="margin:4px 0 8px">⏳ طلبك بانتظار موافقة الإدارة — لن يظهر محلك على الخريطة قبل ذلك.</p>`}
       ${item(o.steps.location, "حدّد موقع نشاطك على الخريطة", "S._mprof=null;go('merchantProfile')")}
       ${item(o.steps.hours, "حدّد ساعات العمل", "S._hours=null;go('merchantHours')")}
-      ${item(o.steps.discount, "أضف حسم للأعضاء", "setMerchantTab('catalog')")}
+      ${item(o.steps.discount, "أضف حسمًا للأعضاء", "setMerchantTab('catalog')")}
       ${item(o.steps.product, "أضف أول منتج", "setMerchantTab('catalog')")}
       ${item(o.steps.approved, "موافقة الإدارة", "")}`}
     </div>`;
@@ -6996,15 +6996,15 @@ function screenAccount() {
     ${refEnterCardHtml()}
 
     <div class="card">
-      <div class="section-title" style="margin-top:0">الإيميل</div>
+      <div class="section-title" style="margin-top:0">البريد الإلكتروني</div>
       <p dir="ltr" style="margin:4px 0;text-align:right"><strong>${esc(p.email)}</strong></p>
       <p class="muted">${p.emailVerified ? "✅ مؤكَّد" : "⚠️ غير مؤكَّد"}</p>
       ${a.emailDelivery ? `
         <div class="divider"></div>
-        <div class="field"><label>الإيميل الجديد</label><input id="ac-newemail" placeholder="name@example.com" type="email" dir="ltr" autocomplete="email" /></div>
+        <div class="field"><label>البريد الإلكتروني الجديد</label><input id="ac-newemail" placeholder="name@example.com" type="email" dir="ltr" autocomplete="email" /></div>
         <div class="field"><label>كلمة السر للتأكيد</label><input id="ac-email-pw" placeholder="••••••••" type="password" autocomplete="current-password" /></div>
-        <p class="muted">رح نبعت رابط تأكيد للإيميل الجديد، وتنبيه للقديم. بعد التأكيد بتسجّل دخول من جديد بالإيميل الجديد.</p>
-        <button class="btn small" onclick="acctChangeEmail()">تغيير الإيميل</button>` : `<p class="muted">تغيير الإيميل مش متوفر حاليًا (خدمة البريد غير مفعّلة بعد).</p>`}
+        <p class="muted">سنرسل رابط تأكيد إلى البريد الإلكتروني الجديد، وتنبيهًا إلى القديم. بعد التأكيد تسجّل الدخول من جديد بالبريد الإلكتروني الجديد.</p>
+        <button class="btn small" onclick="acctChangeEmail()">تغيير البريد الإلكتروني</button>` : `<p class="muted">تغيير البريد الإلكتروني غير متوفر حاليًا (خدمة البريد غير مفعّلة بعد).</p>`}
     </div>
 
     <div class="card">
@@ -7023,7 +7023,7 @@ function screenAccount() {
 
     <div class="card">
       <div class="section-title" style="margin-top:0">بلدي ومدينتي</div>
-      <p class="muted">بتأثر على الأسعار والضريبة بالفواتير.</p>
+      <p class="muted">يؤثر على الأسعار والضريبة في الفواتير.</p>
       <div class="field"><label>البلد</label>
         <select id="ac-country" onchange="acctPickProfileCountry(this.value)">${opt("", "— اختر —", p.countryCode)}${a.countries.map((c) => opt(c.isoCode2, unitName(c), p.countryCode)).join("")}</select></div>
       ${(a.regions || []).length ? `<div class="field"><label>المحافظة</label>
@@ -7045,7 +7045,7 @@ function screenAccount() {
             ${ad.isDefault ? "" : `<button class="btn small outline" onclick="acctDefaultAddress('${ad.id}')">اجعله الأساسي</button>`}
             <button class="btn small outline" onclick="acctDeleteAddress('${ad.id}')">حذف</button>
           </div>
-        </div>`).join("") : `<p class="muted">ما عندك عناوين محفوظة</p>`}
+        </div>`).join("") : `<p class="muted">لا توجد لديك عناوين محفوظة</p>`}
       ${f ? `
         <div class="divider"></div>
         <div class="field"><label>النوع</label>
@@ -7115,7 +7115,7 @@ function acctDone(message, error) {
 async function acctChangePassword() {
   const current = qs("ac-pw-old").value, next = qs("ac-pw-new").value, again = qs("ac-pw-new2").value;
   if (!current || !next) return acctDone(null, "اكتب كلمة السر الحالية والجديدة");
-  if (next.length < 8) return acctDone(null, "كلمة السر الجديدة لازم تكون 8 أحرف على الأقل");
+  if (next.length < 8) return acctDone(null, "يجب أن تكون كلمة السر الجديدة 8 أحرف على الأقل");
   if (next !== again) return acctDone(null, "كلمتا السر الجديدتان غير متطابقتين");
   // a wrong current password answers 401 like an expired session, so call fetch directly and keep the visitor signed in
   const res = await fetch(API_BASE + "/auth/change-password", {
@@ -7135,10 +7135,10 @@ async function acctChangePassword() {
 async function acctChangeEmail() {
   const newEmail = qs("ac-newemail").value.trim();
   const password = qs("ac-email-pw").value;
-  if (!newEmail || !password) return acctDone(null, "اكتب الإيميل الجديد وكلمة السر");
+  if (!newEmail || !password) return acctDone(null, "اكتب البريد الإلكتروني الجديد وكلمة السر");
   const { ok, data } = await api("POST", "/auth/change-email", { newEmail, password });
-  if (!ok) return acctDone(null, errMsg(data, "تعذّر طلب تغيير الإيميل"));
-  acctDone(data.message || "أرسلنا رابط التأكيد للبريد الجديد");
+  if (!ok) return acctDone(null, errMsg(data, "تعذّر طلب تغيير البريد الإلكتروني"));
+  acctDone(data.message || "أرسلنا رابط التأكيد إلى البريد الجديد");
 }
 
 async function acctSavePhone() {
@@ -7249,7 +7249,7 @@ async function acctDeleteAddress(id) {
 
 function screenProfileEdit() {
   if (S._profile == null) { S._profile = {}; loadProfile(); }
-  if (S._profile.failed) return backRow() + `<div class="error-banner">تعذّر تحميل ملفك الشخصي — جرّب لاحقاً</div>`;
+  if (S._profile.failed) return backRow() + `<div class="error-banner">تعذّر تحميل ملفك الشخصي — جرّب لاحقًا</div>`;
   if (!S._profile.id) return backRow() + spinner();
   const p = S._profile;
   return `
@@ -7263,7 +7263,7 @@ function screenProfileEdit() {
       </div>
     </div>
     <div class="field"><label>الاسم</label><input id="pf-name" placeholder="مثال: أحمد محمد" value="${esc(p.fullName || "")}" /></div>
-    <div class="field"><label>نبذة عنك أو عن محلك (بتظهر للزبائن وعلى الفواتير)</label><textarea id="pf-bio" placeholder="نبذة قصيرة عنك، مثال: أحب اكتشاف المحلات الجديدة" rows="4" maxlength="500">${esc(p.bio || "")}</textarea></div>
+    <div class="field"><label>نبذة عنك أو عن محلك (تظهر للزبائن وعلى الفواتير)</label><textarea id="pf-bio" placeholder="نبذة قصيرة عنك، مثال: أحب اكتشاف المحلات الجديدة" rows="4" maxlength="500">${esc(p.bio || "")}</textarea></div>
     ${errorBanner()}
     <button class="btn" onclick="saveProfile()">حفظ</button>
     ${p.msg ? `<p class="muted" style="text-align:center;margin-top:8px">${esc(p.msg)}</p>` : ""}
@@ -7281,7 +7281,7 @@ async function saveProfile() {
   const p = S._profile;
   S.error = null;
   const { ok, data } = await api("PATCH", "/profile/me", { fullName: (p.fullName || "").trim(), bio: (p.bio || "").trim() || null });
-  if (ok) S._profile = { ...data, msg: "✅ انحفظ ملفك الشخصي" };
+  if (ok) S._profile = { ...data, msg: "✅ تم حفظ ملفك الشخصي" };
   else { S.error = errMsg(data, "تعذّر الحفظ"); }
   render();
 }
@@ -7320,10 +7320,10 @@ async function uploadAvatar(file) {
       body: blob,
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok) S._profile = { ...S._profile, ...data, msg: "✅ انحفظت الصورة" };
+    if (res.ok) S._profile = { ...S._profile, ...data, msg: "✅ تم حفظ الصورة" };
     else S.error = errMsg(data, "تعذّر رفع الصورة");
   } catch (e) {
-    S.error = "تعذّرت قراءة الصورة — جرّب صورة ثانية";
+    S.error = "تعذّرت قراءة الصورة — جرّب صورة أخرى";
   }
   render();
 }
@@ -7345,7 +7345,7 @@ async function exportDocument(path) {
   const win = window.open("", "_blank");
   if (win) win.document.write(`<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:32px;text-align:center">${esc(t("doc.loading"))}</body>`);
   let res;
-  try { res = await fetch(API_BASE + path, { headers: { Authorization: "Bearer " + S.token, "Accept-Language": LANG } }); } catch (e) { if (win) win.close(); return toast("تعذّر الاتصال بالسيرفر"); }
+  try { res = await fetch(API_BASE + path, { headers: { Authorization: "Bearer " + S.token, "Accept-Language": LANG } }); } catch (e) { if (win) win.close(); return toast("تعذّر الاتصال بالخادم"); }
   if (!res.ok) { if (win) win.close(); return toast("تعذّر تجهيز المستند"); }
   const html = await res.text();
   if (win) {
@@ -8016,8 +8016,8 @@ const PROMO_STATUS = { PENDING_REVIEW: "بانتظار مراجعة دليلكم
 const PROMO_ERRORS = {
   SHOP_HAS_NO_LOCATION: "حدّد موقع محلك أولًا من «بيانات المحل ومكانه»",
   RADIUS_TOO_LARGE: "المسافة أكبر من المسموح لمتجرك",
-  BROADCAST_LIMIT: "وصلت لحد إعلانات باقتك هذا الشهر",
-  MERCHANT_NOT_APPROVED: "لازم تتم الموافقة على محلك أولًا",
+  BROADCAST_LIMIT: "وصلت إلى حد إعلانات باقتك هذا الشهر",
+  MERCHANT_NOT_APPROVED: "يجب أن تتم الموافقة على محلك أولًا",
   AUDIENCE_TOO_LARGE: "الجمهور كبير جدًا — صغّر المسافة",
   INSUFFICIENT_BALANCE: "رصيد محفظتك لا يكفي لهذا الإعلان — اشحن المحفظة أولًا",
 };
@@ -8042,7 +8042,7 @@ function tabPromo() {
         ? `<div class="field"><label>${esc(t("promo.region"))}</label><select id="pr-region" onchange="promoRegion(this.value)">${option("", "— " + t("promo.pickRegion") + " —", p.regionId)}${(p.regions || []).map((c) => option(c.id, geoName(c), p.regionId)).join("")}</select></div>
           ${p.regionId ? `<div class="field"><label>${esc(t("promo.city"))}</label><select id="pr-city">${option("", "— " + t("promo.pickCity") + " —", p.cityId)}${(p.cities || []).map((c) => option(c.id, geoName(c), p.cityId)).join("")}</select></div>` : ""}`
         : p.audience === "followers" ? "" : `<div class="field"><label>المسافة حول محلك (كم)</label><input id="pr-radius" placeholder="مثال: 5" inputmode="decimal" value="${esc(p.radius)}" /></div>`}
-      <div class="field"><label>العنوان</label><input id="pr-title" placeholder="مثال: خصم 20% على كل المنتجات" maxlength="100" value="${esc(p.title)}" /></div>
+      <div class="field"><label>العنوان</label><input id="pr-title" placeholder="مثال: حسم 20% على كل المنتجات" maxlength="100" value="${esc(p.title)}" /></div>
       <div class="field"><label>النص</label><textarea id="pr-body" placeholder="مثال: العرض لمدة 3 أيام فقط، زورونا!" maxlength="500" rows="3">${esc(p.body)}</textarea></div>
       <div class="field"><label>إرفاق منتج (اختياري)</label>
         <select id="pr-product">${option("", "— بدون —", p.productId)}${(p.products || []).map((x) => option(x.id, x.name, p.productId)).join("")}</select></div>
@@ -8369,7 +8369,7 @@ function tabRedeem() {
   if (r.phase === "input") {
     return `
       <h1 class="screen-title">تأكيد حسم</h1>
-      <p class="screen-sub">دخّل بيانات عضوية الزبون</p>
+      <p class="screen-sub">أدخل بيانات عضوية الزبون</p>
       <div class="field"><label>${esc(t("rd.full"))}</label><input id="rd-full" dir="ltr" inputmode="numeric" autocomplete="off" placeholder="0000 0000 0000 0000" value="${esc(r.full || "")}" /><p class="muted" style="margin:4px 0 0">${esc(t("rd.fullHint"))}</p></div>
       ${errorBanner()}
       <button class="btn" ${S.busy ? "disabled" : ""} onclick="verifyRedeem()">تحقق</button>
@@ -8441,7 +8441,7 @@ async function confirmRedeem() {
   const billText = qs("rd-bill").value;
   S._redeem.billText = billText;
   const billAmountCents = Math.round(parseFloat(latinDigits(billText)) * 100);
-  if (!billAmountCents || billAmountCents <= 0) { S.error = "دخّل قيمة فاتورة صحيحة"; return render(); }
+  if (!billAmountCents || billAmountCents <= 0) { S.error = "أدخل قيمة فاتورة صحيحة"; return render(); }
   S.busy = true; S.error = null; render();
   const r = S._redeem;
   const { ok, data } = await api("POST", "/qr/redeem", { memberNumber: r.memberNumber, code: r.code, billAmountCents, ...(r.discountId ? { discountId: r.discountId } : {}) });
@@ -8540,7 +8540,7 @@ function tabMerchantOrders() {
   const list = o.list || [];
   return `
     <h1 class="screen-title">طلبات واردة</h1>
-    ${list.length === 0 ? `<div class="empty-state">ما في طلبات بعد</div>` : list.map((ord) => {
+    ${list.length === 0 ? `<div class="empty-state">لا توجد طلبات بعد</div>` : list.map((ord) => {
       let next = (ORDER_TRANSITIONS[ord.status] || []).filter((s) => s !== "CANCELLED");
       if (ord.shippingKind === "PICKUP" && ord.status === "PREPARING") next = ["DELIVERED"]; // handed over at the shop
       const canCancel = (ORDER_TRANSITIONS[ord.status] || []).includes("CANCELLED");
@@ -8699,7 +8699,7 @@ async function addCatalogAffiliate() {
   S._catalog.affType = commissionType;
   S._catalog.affValue = qs("aff-value").value;
   if (!userEmail || !commissionValue || commissionValue <= 0 || (commissionType === "PERCENT" && commissionValue > 100)) {
-    S.error = "دخّل بريد المسوّق وقيمة عمولة صحيحة (نسبة لحد 100)";
+    S.error = "أدخل بريد المسوّق وقيمة عمولة صحيحة (نسبة حتى 100)";
     return render();
   }
   const { ok, data } = await api("POST", "/affiliates", { userEmail, commissionType, commissionValue });
@@ -8724,7 +8724,7 @@ async function addCatalogDiscount() {
   S._catalog.discTitle = title;
   S._catalog.discPercent = percentText;
   const percent = parseInt(latinDigits(percentText), 10);
-  if (!title || !percent || percent < 1 || percent > 100) { S.error = "دخّل عنوان الحسم ونسبة بين 1 و100"; return render(); }
+  if (!title || !percent || percent < 1 || percent > 100) { S.error = "أدخل عنوان الحسم ونسبة بين 1 و100"; return render(); }
   const { ok, data } = await api("POST", "/merchant/discounts", { title, percent });
   if (!ok) { S.error = errMsg(data, "تعذّرت إضافة الحسم"); return render(); }
   S._catalog = null;
@@ -8859,7 +8859,7 @@ async function saveProduct() {
   let memberPriceCents = null;
   if (p.memberDiscountEnabled) {
     memberPriceCents = Math.round(parseFloat(latinDigits(p.memberPrice)) * 100);
-    if (!memberPriceCents || memberPriceCents <= 0 || memberPriceCents >= priceCents) { S.error = "سعر العضو لازم يكون أقل من السعر الأصلي"; return render(); }
+    if (!memberPriceCents || memberPriceCents <= 0 || memberPriceCents >= priceCents) { S.error = "يجب أن يكون سعر العضو أقل من السعر الأصلي"; return render(); }
   }
   const payload = {
     name, description: description || undefined, priceCents, productCategoryId: p.productCategoryId || undefined,
@@ -8906,7 +8906,7 @@ function screenWallet() {
       </div>
       <div id="tp-hint" class="muted" style="margin-bottom:10px;line-height:1.7"></div>
       <div class="field"><label id="tp-ref-label">رقم العملية</label><input id="tp-ref" placeholder="مثال: رقم العملية من تطبيق الدفع" /></div>
-      <div class="field" id="tp-amount-row"><label>المبلغ اللي دفعته</label><input id="tp-amount" placeholder="مثال: 50" type="number" /></div>
+      <div class="field" id="tp-amount-row"><label>المبلغ الذي دفعته</label><input id="tp-amount" placeholder="مثال: 50" type="number" /></div>
       ${errorBanner()}
       ${S._walletMsg ? `<div class="success-banner">${esc(S._walletMsg)}</div>` : ""}
       <button class="btn" ${w.submitting ? "disabled" : ""} onclick="submitTopup()">تأكيد الشحن</button>
@@ -8937,11 +8937,11 @@ function onTopupMethod() {
   qs("tp-amount-row").style.display = usdt ? "none" : "block";
   qs("tp-ref-label").textContent = tr(usdt ? "رقم التحويل (txid — 64 خانة)" : "رقم العملية");
   if (usdt) {
-    qs("tp-hint").innerHTML = `حوّل USDT عبر شبكة <b>TRC20</b> لهالعنوان، وبعدين الصق الـ txid — بنتحقق من الشبكة تلقائيًا وبينضاف الرصيد فورًا:<br><b style="direction:ltr;display:block;overflow-wrap:anywhere;user-select:all">${esc(m.usdtTrc20Address)}</b>`;
+    qs("tp-hint").innerHTML = `حوّل USDT عبر شبكة <b>TRC20</b> إلى هذا العنوان، ثم الصق الـ txid — نتحقق من الشبكة تلقائيًا ويُضاف الرصيد فورًا:<br><b style="direction:ltr;display:block;overflow-wrap:anywhere;user-select:all">${esc(m.usdtTrc20Address)}</b>`;
     trDom(qs("tp-hint"));
   } else {
     const l = (m.localWallets || []).find((x) => x.key === sel.value);
-    qs("tp-hint").innerHTML = l ? `حوّل لحساب <b style="user-select:all">${esc(l.accountNumber)}</b>${l.instructions ? " — " + esc(l.instructions) : ""}<br>بعد التحويل دخّل رقم العملية والمبلغ، والإدارة بتأكد وبيضاف رصيدك.` : "";
+    qs("tp-hint").innerHTML = l ? `حوّل إلى حساب <b style="user-select:all">${esc(l.accountNumber)}</b>${l.instructions ? " — " + esc(l.instructions) : ""}<br>بعد التحويل أدخل رقم العملية والمبلغ، وتؤكّد الإدارة ويُضاف رصيدك.` : "";
     trDom(qs("tp-hint"));
   }
 }
@@ -8961,16 +8961,16 @@ async function submitTopup() {
   const amountText = qs("tp-amount").value;
   const draft = { method, reference, amount: amountText };
   const amount = parseFloat(latinDigits(amountText));
-  if (!reference) { S.error = "دخّل رقم العملية"; return restoreTopupDraft(draft); }
+  if (!reference) { S.error = "أدخل رقم العملية"; return restoreTopupDraft(draft); }
   const body = { method, reference };
   if (method !== "USDT_TRC20") {
-    if (!amount) { S.error = "دخّل المبلغ اللي دفعته"; return restoreTopupDraft(draft); }
+    if (!amount) { S.error = "أدخل المبلغ الذي دفعته"; return restoreTopupDraft(draft); }
     body.amountClaimed = amount;
   }
   S.error = null; S._walletMsg = null;
   const { ok, data } = await api("POST", "/wallet/topups", body);
   if (ok) {
-    S._walletMsg = data.status === "APPROVED" ? `تم! انضاف ${data.amountCredits} لرصيدك` : "انرسل الطلب — بانتظار تأكيد الإدارة";
+    S._walletMsg = data.status === "APPROVED" ? `تم! أُضيف ${data.amountCredits} إلى رصيدك` : "أُرسل الطلب — بانتظار تأكيد الإدارة";
     S._wallet = null;
     return render();
   }
@@ -9038,8 +9038,8 @@ function respOverview() {
       <div class="title-line"><strong>حالة الخدمة</strong>${respStatusBadge(st.status)}</div>
       ${stats}
       <p class="muted" style="margin-top:6px">${esc(endInfo)}</p>
-      ${st.status === "EXPIRED" ? `<div class="error-banner">خلصت المدة — الردود الآلية موقوفة. ادفع لتكمل الخدمة.</div>` : ""}
-      <p class="muted">رصيدك: <b>${st.balance}</b> ${esc(st.creditName)} · ردود AI هالفترة: ${st.aiRepliesUsed}/${st.aiReplyLimit}</p>
+      ${st.status === "EXPIRED" ? `<div class="error-banner">انتهت المدة — الردود الآلية متوقفة. ادفع لتستمر الخدمة.</div>` : ""}
+      <p class="muted">رصيدك: <b>${st.balance}</b> ${esc(st.creditName)} · ردود AI في هذه الفترة: ${st.aiRepliesUsed}/${st.aiReplyLimit}</p>
       ${errorBanner()}
       ${S._resp.notice ? `<p class="badge success">${esc(S._resp.notice)}</p>` : ""}
       <div style="height:8px"></div>
@@ -9050,16 +9050,16 @@ function respOverview() {
     ${st.running ? "" : `<div class="card intro-card"><h2>${esc(t("intro.responder.title"))}</h2><p>${esc(t("intro.responder.body"))}</p><p>${esc(t("responder.choosePlanHint"))}</p></div>`}
     ${planCards}
     <div class="card">
-      <div class="section-title" style="margin-top:0">عن نشاطك (بيساعد الذكاء الاصطناعي يرد صح)</div>
+      <div class="section-title" style="margin-top:0">عن نشاطك (يساعد الذكاء الاصطناعي على الرد بشكل صحيح)</div>
       <div class="field"><label>وصف النشاط</label><input id="rp-desc" placeholder="مثال: مطعم مأكولات شرقية، دوام من 10 صباحًا حتى 11 مساءً" value="${esc(st.businessDescription || "")}" /></div>
       <div class="field"><label>نبرة الرد (رسمي، ودود...)</label><input id="rp-tone" placeholder="مثال: ودّي ومحترم" value="${esc(st.tone || "")}" /></div>
-      <div class="field"><label>إذا ما انطبقت أي قاعدة</label>
+      <div class="field"><label>إذا لم تنطبق أي قاعدة</label>
         <select id="rp-fb" onchange="S._resp.status.fallbackMode = this.value; render()">
-          <option value="OFF" ${st.fallbackMode === "OFF" ? "selected" : ""}>ما أرد (أتجاهل الرسالة)</option>
-          <option value="AI" ${st.fallbackMode === "AI" ? "selected" : ""}>الذكاء الاصطناعي يجاوب من معلومات نشاطي</option>
+          <option value="OFF" ${st.fallbackMode === "OFF" ? "selected" : ""}>لا أردّ (أتجاهل الرسالة)</option>
+          <option value="AI" ${st.fallbackMode === "AI" ? "selected" : ""}>يجيب الذكاء الاصطناعي من معلومات نشاطي</option>
           <option value="TEMPLATE" ${st.fallbackMode === "TEMPLATE" ? "selected" : ""}>نص ثابت</option>
         </select></div>
-      ${st.fallbackMode === "TEMPLATE" ? `<div class="field"><label>نص الرد الاحتياطي ({name} = اسم الزبون)</label><textarea id="rp-fbtext" placeholder="مثال: شكرًا لتواصلك! بنرد عليك بأقرب وقت." rows="3">${esc(st.fallbackReply || "")}</textarea></div>` : ""}
+      ${st.fallbackMode === "TEMPLATE" ? `<div class="field"><label>نص الرد الاحتياطي ({name} = اسم الزبون)</label><textarea id="rp-fbtext" placeholder="مثال: شكرًا لتواصلك! سنردّ عليك في أقرب وقت." rows="3">${esc(st.fallbackReply || "")}</textarea></div>` : ""}
       <button class="btn small" onclick="respSaveProfile()">حفظ</button>
     </div>`;
 }
@@ -9117,20 +9117,20 @@ function respChannels() {
         <div class="title-line"><strong>${esc(c.name)}</strong>${c.connectable ? "" : `<span class="badge neutral">قريبًا</span>`}</div>
         ${(c.driver === "FACEBOOK" || c.driver === "INSTAGRAM") && c.connectable ? `
           <button class="btn" onclick="respMetaLink()">${c.driver === "INSTAGRAM" ? "ربط إنستغرام عبر فيسبوك (الأسهل)" : "ربط بحساب فيسبوك (الأسهل)"}</button>
-          <p class="muted">${c.driver === "INSTAGRAM" ? "بتسجّل دخول بفيسبوك وبتختار الصفحة المربوطة بحسابك على إنستغرام، ما في داعي لأي أرقام أو رموز." : "بتسجّل دخول بفيسبوك وبتختار صفحتك، ما في داعي لأي أرقام أو رموز."}</p>
+          <p class="muted">${c.driver === "INSTAGRAM" ? "تسجّل الدخول بفيسبوك وتختار الصفحة المرتبطة بحسابك على إنستغرام، دون حاجة إلى أي أرقام أو رموز." : "تسجّل الدخول بفيسبوك وتختار صفحتك، دون حاجة إلى أي أرقام أو رموز."}</p>
           <div class="muted" style="margin:8px 0">أو يدويًا:</div>` : ""}
         ${c.connectable ? `
           ${c.fields.map((f) => `<div class="field"><label>${esc(f.label)}</label><input id="cf-${c.id}-${f.key}" ${f.secret ? 'type="password"' : ""} autocomplete="off" /></div>`).join("")}
           <button class="btn small" onclick="respConnect('${c.id}', ${JSON.stringify(c.fields.map((f) => f.key)).replace(/"/g, "&quot;")})">ربط</button>`
-        : `<p class="muted">${esc(t(c.driver === "FACEBOOK" || c.driver === "INSTAGRAM" ? "ربط فيسبوك وإنستغرام رح يتاح بعد ما توافق Meta على التطبيق — فيك تستعمل تيليغرام بالوقت الحالي" : "الربط بحسابات ميتا بيحتاج موافقة منهم — لسا مو متاح."))}</p>`}
+        : `<p class="muted">${esc(t(c.driver === "FACEBOOK" || c.driver === "INSTAGRAM" ? "سيتوفر ربط فيسبوك وإنستغرام بعد أن توافق Meta على التطبيق — يمكنك استخدام تيليغرام في الوقت الحالي" : "الربط بحسابات ميتا يحتاج إلى موافقتهم — غير متاح بعد."))}</p>`}
       </div>`).join("")}
     <div class="section-title">اتصالاتي</div>
-    ${r.connections.length === 0 ? `<div class="empty-state">ما في قنوات مربوطة</div>` : r.connections.map((c) => `
+    ${r.connections.length === 0 ? `<div class="empty-state">لا توجد قنوات مربوطة</div>` : r.connections.map((c) => `
       <div class="card">
-        <div class="title-line"><strong>${esc(c.channel)}</strong><span class="badge ${c.isActive ? "success" : "neutral"}">${c.isActive ? "شغّالة" : "موقوفة"}</span></div>
+        <div class="title-line"><strong>${esc(c.channel)}</strong><span class="badge ${c.isActive ? "success" : "neutral"}">${c.isActive ? "فعّالة" : "موقوفة"}</span></div>
         ${c.accountName ? `<p style="margin:2px 0;font-weight:600">${esc(c.accountName)}</p>` : ""}
         ${c.externalAccountId ? `<p class="muted">${c.accountName ? "ID: " : "@"}${esc(c.externalAccountId)}</p>` : ""}
-        ${c.hookUrl ? `<div class="field"><label>رابط استقبال الرسائل (الصقه بالمنصة)</label><input readonly value="${esc(c.hookUrl)}" onclick="this.select()" /></div>` : ""}
+        ${c.hookUrl ? `<div class="field"><label>رابط استقبال الرسائل (الصقه في المنصة)</label><input readonly value="${esc(c.hookUrl)}" onclick="this.select()" /></div>` : ""}
         <div class="row" style="gap:6px">
           <button class="btn small outline" style="width:auto" onclick="respToggleConn('${c.id}', ${!c.isActive})">${c.isActive ? "إيقاف" : "تشغيل"}</button>
           <button class="btn small danger" style="width:auto" onclick="respDeleteConn('${c.id}')">حذف</button>
@@ -9155,7 +9155,7 @@ async function respConnect(channelId, keys) {
   loadResponder();
 }
 async function respDeleteConn(id) {
-  if (!confirm("بدك تحذف هالقناة؟ بتنحذف محادثاتها المسجّلة وبيوقف الرد عليها.")) return;
+  if (!confirm("هل تريد حذف هذه القناة؟ ستُحذف محادثاتها المسجّلة ويتوقف الرد عليها.")) return;
   const { ok, data } = await api("DELETE", "/responder/connections/" + id);
   if (!ok) { S.error = errMsg(data, "تعذّر الحذف"); return render(); }
   loadResponder();
@@ -9192,11 +9192,11 @@ function respRules() {
       <div class="field"><label>نوع الرد</label>
         <select id="ru-mode"><option value="FIXED" ${d.mode !== "AI" ? "selected" : ""}>رد ثابت</option><option value="AI" ${d.mode === "AI" ? "selected" : ""}>ذكاء اصطناعي</option></select></div>
       <div class="field"><label>نص الرد (استخدم {name} لاسم الزبون)</label><input id="ru-reply" placeholder="مثال: أهلًا {name}، سعر المنتج 25" value="${esc(d.reply || "")}" /></div>
-      <div class="field"><label>تعليمات للذكاء الاصطناعي (اختياري)</label><input id="ru-ai" placeholder="مثال: جاوب عن المواعيد والأسعار باختصار" value="${esc(d.ai || "")}" /></div>
+      <div class="field"><label>تعليمات للذكاء الاصطناعي (اختياري)</label><input id="ru-ai" placeholder="مثال: أجب عن المواعيد والأسعار باختصار" value="${esc(d.ai || "")}" /></div>
       <div class="field"><label>القناة</label>
         <select id="ru-channel"><option value="">كل القنوات</option>${r.channels.filter((c) => c.connectable).map((c) => `<option value="${c.id}" ${d.channel === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
       ${socialConns.length ? `
-      <div class="field"><label>منشورات محددة (فيسبوك / إنستغرام) — اتركها فاضية لتنطبق على كل شي</label>
+      <div class="field"><label>منشورات محددة (فيسبوك / إنستغرام) — اتركها فارغة لتنطبق على كل شيء</label>
         <select id="ru-conn">${socialConns.map((c) => `<option value="${c.id}" ${d.conn === c.id ? "selected" : ""}>${esc(c.channel)}${c.accountName || c.externalAccountId ? " — " + esc(c.accountName || c.externalAccountId) : ""}</option>`).join("")}</select>
         <button class="btn small outline" style="width:auto;margin-top:6px" onclick="respLoadPosts()">تحميل منشوراتي</button>
         ${r.postsError ? `<p class="muted" style="color:#b71c1c">${esc(r.postsError)}</p>` : ""}
@@ -9210,9 +9210,9 @@ function respRules() {
               ${/^https:\/\//.test(p.url || "") ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">فتح المنشور</a>` : ""}
             </span>
           </label>`).join("")}
-        ${picked.length ? `<p class="muted">📌 ${picked.length} منشور محدد — القاعدة بتردّ على التعليقات عليهم بس.</p>` : ""}
+        ${picked.length ? `<p class="muted">📌 ${picked.length} منشور محدد — تردّ القاعدة على التعليقات عليها فقط.</p>` : ""}
       </div>` : ""}
-      <p class="muted" style="margin-bottom:8px">الشكاوى ما بتنرد آليًا أبدًا — بتنتظر ردك بصندوق الوارد.</p>
+      <p class="muted" style="margin-bottom:8px">الشكاوى لا يُردّ عليها آليًا أبدًا — تنتظر ردّك في صندوق الوارد.</p>
       <button class="btn" onclick="respAddRule()">${r.editingRuleId ? "حفظ التعديل" : "إضافة القاعدة"}</button>
       ${r.editingRuleId ? `<button class="btn outline" style="margin-top:6px" onclick="respRuleEditCancel()">إلغاء</button>` : ""}
     </div>`;
@@ -9221,7 +9221,7 @@ function respRules() {
 async function respAddRule() {
   const keywords = qs("ru-keys").value.split(/[,،]/).map((k) => k.trim()).filter(Boolean);
   const body = { name: qs("ru-name").value.trim(), keywords, priority: Number(qs("ru-priority").value || 0), mode: qs("ru-mode").value, replyTemplate: qs("ru-reply").value.trim(), aiInstructions: qs("ru-ai").value.trim(), channelId: qs("ru-channel").value || null, postIds: S._resp.selectedPosts || [] };
-  if (!body.name || keywords.length === 0) { S.error = "اكتب اسم القاعدة وكلمة مفتاحية وحدة عالأقل"; return render(); }
+  if (!body.name || keywords.length === 0) { S.error = "اكتب اسم القاعدة وكلمة مفتاحية واحدة على الأقل"; return render(); }
   S.error = null;
   const editing = S._resp.editingRuleId;
   const { ok, data } = editing ? await api("PATCH", "/responder/rules/" + editing, body) : await api("POST", "/responder/rules", body);
@@ -9276,11 +9276,11 @@ async function respRuleDelete(id) { await api("DELETE", "/responder/rules/" + id
 
 function respInbox() {
   const r = S._resp;
-  const label = { SENT: ["success", "انرد"], NEEDS_REVIEW: ["warning", "بانتظار ردك"], FAILED: ["danger", "فشل الإرسال"], SKIPPED: ["neutral", "تجاهلناها"] };
-  const reason = { complaint: "شكوى", ai_unavailable: "الذكاء الاصطناعي غير متاح", empty_template: "نص الرد فاضي", no_matching_rule: "ما في قاعدة مطابقة", subscription_inactive: "الاشتراك منتهي" };
+  const label = { SENT: ["success", "تم الرد"], NEEDS_REVIEW: ["warning", "بانتظار ردك"], FAILED: ["danger", "فشل الإرسال"], SKIPPED: ["neutral", "تجاهلناها"] };
+  const reason = { complaint: "شكوى", ai_unavailable: "الذكاء الاصطناعي غير متاح", empty_template: "نص الرد فارغ", no_matching_rule: "لا توجد قاعدة مطابقة", subscription_inactive: "الاشتراك منتهي" };
   return `
     ${errorBanner()}
-    ${r.inbox.length === 0 ? uiEmpty("💬", "ما وصل رسائل بعد") : r.inbox.map((i) => {
+    ${r.inbox.length === 0 ? uiEmpty("💬", "لم تصل رسائل بعد") : r.inbox.map((i) => {
       const [cls, text] = label[i.status];
       const tone = { success: "ok", warning: "warn", danger: "bad", neutral: "" }[cls] || "";
       return `<div class="item">${uiAvatar(i.authorName)}<div class="item-main">

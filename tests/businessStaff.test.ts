@@ -97,7 +97,7 @@ describe("business staff", () => {
     const pay = await request(app).post(`/business-staff/${s.staffId}/commissions/pay`).set(s.boss.auth).send({ currency: "EUR" });
     expect(pay.status).toBe(200);
     expect(pay.body.paidCents).toBe(100);
-    expect(await prisma.accountingEntry.count({ where: { userId: s.boss.id, category: "عمولات الموظفين" } })).toBe(1);
+    expect(await prisma.accountingEntry.count({ where: { userId: s.boss.id, category: "عمولات الموظفون" } })).toBe(1);
     expect((await request(app).post(`/business-staff/${s.staffId}/commissions/pay`).set(s.boss.auth).send({ currency: "EUR" })).status).toBe(409);
   });
 
@@ -125,7 +125,7 @@ describe("business staff", () => {
     // a fixed pay alone: no commissions, and paying it books one expense
     expect(await prisma.businessStaffCommission.count({ where: { staffId: cid } })).toBe(0);
     expect((await request(app).post(`/business-staff/${cid}/salary/pay`).set(s.boss.auth)).status).toBe(200);
-    expect(await prisma.accountingEntry.count({ where: { userId: s.boss.id, category: "رواتب الموظفين" } })).toBe(1);
+    expect(await prisma.accountingEntry.count({ where: { userId: s.boss.id, category: "رواتب الموظفون" } })).toBe(1);
     expect((await request(app).post(`/business-staff/${s.staffId}/salary/pay`).set(s.boss.auth)).status).toBe(409); // no fixed pay set
     const noPlan = await account("stnoplan");
     expect((await request(app).get("/business-staff").set(noPlan.auth)).status).toBe(402);

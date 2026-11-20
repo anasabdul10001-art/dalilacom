@@ -58,7 +58,7 @@ export async function moderateProduct(productId: string): Promise<Outcome> {
   await prisma.product.update({ where: { id: product.id }, data: { moderation: outcome.moderation, moderationNote: outcome.note, moderatedAt: outcome.moderation === "PENDING" ? null : new Date() } });
   if (outcome.moderation === "PENDING") await tellAdmins(product.merchant.businessName, product.name);
   if (outcome.moderation === "REJECTED") {
-    await notify({ userId: product.merchant.userId, type: "SYSTEM", title: "ما انقبل منتجك", body: `«${product.name}»: ${outcome.note ?? "غير مناسب للنشر"}`, data: { kind: "PRODUCT_REJECTED", productId: product.id }, email: false });
+    await notify({ userId: product.merchant.userId, type: "SYSTEM", title: "لم يُقبل منتجك", body: `«${product.name}»: ${outcome.note ?? "غير مناسب للنشر"}`, data: { kind: "PRODUCT_REJECTED", productId: product.id }, email: false });
   }
   return outcome;
 }
@@ -71,8 +71,8 @@ export async function decideProduct(productId: string, approve: boolean, reason:
   await notify({
     userId: product.merchant.userId,
     type: "SYSTEM",
-    title: approve ? "منتجك صار بالمتجر ✅" : "ما انقبل منتجك",
-    body: approve ? `«${product.name}» انقبل وصار الزبائن بيشوفوه.` : `«${product.name}»: ${reason || "غير مناسب للنشر"}`,
+    title: approve ? "أصبح منتجك في المتجر ✅" : "لم يُقبل منتجك",
+    body: approve ? `تم قبول «${product.name}» وأصبح الزبائن يشاهدونه.` : `«${product.name}»: ${reason || "غير مناسب للنشر"}`,
     data: { kind: approve ? "PRODUCT_APPROVED" : "PRODUCT_REJECTED", productId },
     email: false,
   });

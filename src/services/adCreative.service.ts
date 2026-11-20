@@ -27,7 +27,7 @@ export async function saveCreative(userId: string, kind: CreativeKind, bookingId
   if (kind === "BANNER") {
     const b = await prisma.bannerBooking.findFirst({ where: { id: bookingId, merchantId: merchant.id } });
     if (!b) throw new AdError(404, "NOT_FOUND", "الحجز غير موجود");
-    if (b.status !== "PENDING" && b.status !== "CONTACTED") throw new AdError(409, "CONFLICT", "هذا الحجز انتهى، ما بتقدر تغيّر صورته");
+    if (b.status !== "PENDING" && b.status !== "CONTACTED") throw new AdError(409, "CONFLICT", "انتهى هذا الحجز، ولا يمكنك تغيير صورته");
   } else {
     const a = await prisma.adBooking.findFirst({ where: { id: bookingId, merchantId: merchant.id } });
     if (!a) throw new AdError(404, "NOT_FOUND", "الحجز غير موجود");
@@ -36,7 +36,7 @@ export async function saveCreative(userId: string, kind: CreativeKind, bookingId
       // approved by itself a moment ago: the new picture still has to be looked at, so it waits (its place stays kept)
       await prisma.adBooking.update({ where: { id: a.id }, data: { status: "PENDING" } });
     } else if (a.status !== "PENDING") {
-      throw new AdError(409, "CONFLICT", "هذا الحجز انتهى، ما بتقدر تغيّر صورته");
+      throw new AdError(409, "CONFLICT", "انتهى هذا الحجز، ولا يمكنك تغيير صورته");
     }
   }
   const fitted = await fitCreative(buf, kind);

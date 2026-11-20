@@ -8,7 +8,7 @@ export function telegramSecret(hookToken: string): string {
 
 export const telegramDriver: ChannelDriverImpl = {
   validateCredentials(creds) {
-    return /^\d+:[\w-]{20,}$/.test(creds.botToken ?? "") ? null : "botToken غير صالح (متل 123456:ABC...)";
+    return /^\d+:[\w-]{20,}$/.test(creds.botToken ?? "") ? null : "botToken غير صالح (مثل 123456:ABC...)";
   },
 
   parseIncoming(body, headers, ctx) {

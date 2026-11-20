@@ -80,7 +80,7 @@ export async function recordHandover(userId: string, actorId: string, locationId
     const returns = await tx.accountingSaleReturn.findMany({ where: { userId, saleId: { in: sales.map((s) => s.id) }, payMethod: "CASH" }, select: { refundCents: true } });
     const handed = await tx.accountingHandover.aggregate({ where: { userId, locationId, currency }, _sum: { amountCents: true } });
     const held = sales.reduce((a, s) => a + big(s.paidCents), 0) - returns.reduce((a, r) => a + big(r.refundCents), 0) - big(handed._sum.amountCents);
-    if (amountCents > held) throw new ApiError(409, "CONFLICT", "المبلغ أكبر من الكاش المسجّل عند هالموقع", { heldCents: held });
+    if (amountCents > held) throw new ApiError(409, "CONFLICT", "المبلغ أكبر من النقد المسجّل عند هذا الموقع", { heldCents: held });
     return tx.accountingHandover.create({ data: { userId, locationId, currency, amountCents, note: note || null, recordedById: actorId } });
   });
 }

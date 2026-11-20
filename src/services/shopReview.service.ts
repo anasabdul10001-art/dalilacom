@@ -18,12 +18,12 @@ const hasLetters = (s: string) => /[\p{L}]{2,}/u.test(s);
 /** Plain checks that need no AI: obvious nonsense is only "look at it" (REVIEW), clear profanity is a refusal. */
 function ruleVerdict(shop: { businessName: string; address: string | null; suggested?: string | null }): { verdict: "OK" | "REVIEW" | "BLOCK"; reasons: string[] } {
   const rude = findRude(shop.businessName, shop.address, shop.suggested);
-  if (rude.length) return { verdict: "BLOCK", reasons: ["الاسم أو العنوان فيه ألفاظ غير لائقة"] };
+  if (rude.length) return { verdict: "BLOCK", reasons: ["الاسم أو العنوان يحتوي ألفاظًا غير لائقة"] };
   const reasons: string[] = [];
   const name = shop.businessName.trim();
-  if (!hasLetters(name)) reasons.push("اسم النشاط لازم يكون بحروف واضحة");
-  if (/(.)\1{4,}/u.test(name)) reasons.push("اسم النشاط فيه حروف متكررة بشكل غريب");
-  if (/https?:\/\/|www\.|@|\d{7,}/i.test(name)) reasons.push("اسم النشاط فيه رابط أو رقم هاتف");
+  if (!hasLetters(name)) reasons.push("يجب أن يكون اسم النشاط بحروف واضحة");
+  if (/(.)\1{4,}/u.test(name)) reasons.push("يحتوي اسم النشاط على حروف متكررة بشكل غريب");
+  if (/https?:\/\/|www\.|@|\d{7,}/i.test(name)) reasons.push("يحتوي اسم النشاط على رابط أو رقم هاتف");
   return { verdict: reasons.length ? "REVIEW" : "OK", reasons };
 }
 
@@ -74,9 +74,9 @@ export async function reviewShop(merchantId: string, opts: { suggestedCategory?:
 
 async function announce(userId: string, name: string, status: Status, note: string | null, before: Status, mapListed = true) {
   if (status === "APPROVED") {
-    if (before !== "APPROVED") await notify({ userId, type: "SYSTEM", title: mapListed ? "انقبل نشاطك ✅" : "متجرك جاهز ✅", body: mapListed ? `«${name}» صار على دليلكم وبيظهر للزبائن.` : `«${name}» جاهز لإضافة المنتجات. فيك تضيف عنوانه للخريطة بشكل منفصل إذا حابب.`, data: { kind: "SHOP_APPROVED" }, email: false });
+    if (before !== "APPROVED") await notify({ userId, type: "SYSTEM", title: mapListed ? "قُبل نشاطك ✅" : "متجرك جاهز ✅", body: mapListed ? `أصبح «${name}» على دليلكم ويظهر للزبائن.` : `«${name}» جاهز لإضافة المنتجات. يمكنك إضافة عنوانه إلى الخريطة بشكل منفصل إذا رغبت.`, data: { kind: "SHOP_APPROVED" }, email: false });
   } else if (status === "REJECTED") {
-    await notify({ userId, type: "SYSTEM", title: "ما انقبل نشاطك", body: `«${name}»: ${note ?? "غير مناسب للنشر"}. بتقدر تعدّل معلوماتك وتجرّب من جديد.`, data: { kind: "SHOP_REJECTED" }, email: false });
+    await notify({ userId, type: "SYSTEM", title: "لم يُقبل نشاطك", body: `«${name}»: ${note ?? "غير مناسب للنشر"}. يمكنك تعديل معلوماتك والمحاولة من جديد.`, data: { kind: "SHOP_REJECTED" }, email: false });
   } else {
     await tellAdmins(name, note);
   }

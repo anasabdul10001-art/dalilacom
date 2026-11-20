@@ -68,7 +68,7 @@ describe("a product is looked at before anyone sees it", () => {
     expect((await request(app).get(`/store/products/${res.body.id}`)).status).toBe(404);
     const buyer = await account("rvbuyer");
     expect((await request(app).post("/cart/items").set(buyer.auth).send({ productId: res.body.id, quantity: 1 })).status).toBe(404);
-    expect(await prisma.notification.count({ where: { userId: s.owner.id, title: "ما انقبل منتجك" } })).toBe(1);
+    expect(await prisma.notification.count({ where: { userId: s.owner.id, title: "لم يُقبل منتجك" } })).toBe(1);
   });
 
   it("an unsure product waits for an admin, who approves it or refuses it with a reason", async () => {
@@ -87,7 +87,7 @@ describe("a product is looked at before anyone sees it", () => {
 
     expect((await request(app).post(`/admin/products/${waiting.body.id}/approve`).set(boss.auth)).status).toBe(200);
     expect(await inStore(s.id)).toContain("منتج REVIEW");
-    expect(await prisma.notification.count({ where: { userId: s.owner.id, title: "منتجك صار بالمتجر ✅" } })).toBe(1);
+    expect(await prisma.notification.count({ where: { userId: s.owner.id, title: "أصبح منتجك في المتجر ✅" } })).toBe(1);
 
     const other = await add(s, "منتج REVIEW ثاني");
     expect((await request(app).post(`/admin/products/${other.body.id}/reject`).set(boss.auth).send({ reason: "الصورة غير واضحة" })).status).toBe(200);

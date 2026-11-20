@@ -183,7 +183,7 @@ export async function exchangeCodeForPages(code: string): Promise<{ pages: MetaP
     redirect_uri: metaRedirectUri(),
     code,
   });
-  if (!short.access_token) throw new MetaOAuthError("META_TOKEN_EXCHANGE_FAILED", "تعذّر تبديل الكود بتوكن", 502);
+  if (!short.access_token) throw new MetaOAuthError("META_TOKEN_EXCHANGE_FAILED", "تعذّر تبديل الكود بالتوكن", 502);
 
   const long = await graphGet<{ access_token?: string }>("oauth/access_token", {
     grant_type: "fb_exchange_token",
@@ -289,14 +289,14 @@ export async function connectFromSession(opts: {
   if (!pages) throw new MetaOAuthError("SESSION_INVALID", "انتهت صلاحية الربط — ارجع وجرّب من جديد", 409);
 
   const page = pages.find((p) => p.id === opts.pageId);
-  if (!page) throw new MetaOAuthError("PAGE_NOT_FOUND", "ما لقينا هي الصفحة بحسابك", 404);
+  if (!page) throw new MetaOAuthError("PAGE_NOT_FOUND", "لم نجد هذه الصفحة في حسابك", 404);
 
   const channel = await prisma.socialChannel.findFirst({ where: { driver: opts.driver, isEnabled: true } });
-  if (!channel) throw new MetaOAuthError("CHANNEL_UNAVAILABLE", "هي القناة غير متاحة", 404);
+  if (!channel) throw new MetaOAuthError("CHANNEL_UNAVAILABLE", "هذه القناة غير متاحة", 404);
 
   let credentials: Record<string, string>;
   if (opts.driver === "INSTAGRAM") {
-    if (!page.instagramAccountId) throw new MetaOAuthError("NO_INSTAGRAM_ACCOUNT", "هي الصفحة ما فيها حساب إنستغرام تجاري مربوط", 400);
+    if (!page.instagramAccountId) throw new MetaOAuthError("NO_INSTAGRAM_ACCOUNT", "هذه الصفحة ليس لها حساب إنستغرام تجاري مربوط", 400);
     credentials = { instagramAccountId: page.instagramAccountId, pageId: page.id, pageAccessToken: page.pageAccessToken };
   } else {
     credentials = { pageId: page.id, pageAccessToken: page.pageAccessToken };
@@ -324,7 +324,7 @@ export async function connectFromSession(opts: {
     const taken = await prisma.channelConnection.findFirst({
       where: { externalAccountId, channel: { driver: opts.driver } },
     });
-    if (taken) throw new MetaOAuthError("CONFLICT", "هالحساب مربوط من قبل", 409);
+    if (taken) throw new MetaOAuthError("CONFLICT", "هذا الحساب مربوط من قبل", 409);
   }
 
   const connection = await prisma.channelConnection.create({

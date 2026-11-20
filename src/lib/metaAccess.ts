@@ -7,4 +7,4 @@ export const metaOpenFor = (role: string | undefined): boolean => process.env.ME
 
 export const isMetaDriver = (driver: string): boolean => driver === "FACEBOOK" || driver === "INSTAGRAM";
 
-export const META_NOT_OPEN_MESSAGE = "ربط فيسبوك وإنستغرام رح يتاح بعد ما توافق Meta على التطبيق — فيك تستعمل تيليغرام بالوقت الحالي";
+export const META_NOT_OPEN_MESSAGE = "سيتوفر ربط فيسبوك وإنستغرام بعد أن توافق Meta على التطبيق — يمكنك استخدام تيليغرام في الوقت الحالي";

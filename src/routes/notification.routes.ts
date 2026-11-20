@@ -59,7 +59,7 @@ notificationRouter.put("/preferences", route(async (req, res) => {
   const parsed = preferencesSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const duplicate = new Set(parsed.data.preferences.map((p) => p.type)).size !== parsed.data.preferences.length;
-  if (duplicate) return sendError(res, 400, "BAD_REQUEST", "كل نوع إشعار مرة واحدة بس");
+  if (duplicate) return sendError(res, 400, "BAD_REQUEST", "لكل نوع إشعار مرة واحدة فقط");
   res.json(await setPreferences(req.user!.id, parsed.data.preferences));
 }));
 

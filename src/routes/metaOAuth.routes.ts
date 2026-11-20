@@ -32,7 +32,7 @@ function escapeHtml(value: string): string {
 
 function page(title: string, body: string, deepLink?: string, autoRedirect = true): string {
   const link = deepLink
-    ? `<p><a class="btn"${autoRedirect ? ' data-auto-redirect="true"' : ""} href="${escapeHtml(deepLink)}">${autoRedirect ? "ارجع إلى تطبيق دليلكم" : "افتح تطبيق دليلكم لاختيار الصفحة"}</a></p>`
+    ? `<p><a class="btn"${autoRedirect ? ' data-auto-redirect="true"' : ""} href="${escapeHtml(deepLink)}">${autoRedirect ? "عد إلى تطبيق دليلكم" : "افتح تطبيق دليلكم لاختيار الصفحة"}</a></p>`
     : "";
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)}</title><style>
@@ -67,7 +67,7 @@ metaOAuthRouter.get("/oauth/start", requireAuth, route(async (req, res) => {
       res,
       503,
       "META_NOT_CONFIGURED",
-      "ربط فيسبوك مو مفعّل بعد — بدو تطبيق Meta Developer (META_APP_ID و META_APP_SECRET) وموافقة على الصلاحيات.",
+      "ربط فيسبوك غير مفعّل بعد — يحتاج إلى تطبيق Meta Developer (META_APP_ID و META_APP_SECRET) وموافقة على الصلاحيات.",
     );
   }
   const state = signState(req.user!.id, req.query.platform === "web");
@@ -88,7 +88,7 @@ metaOAuthRouter.get("/oauth/go", route(async (req, res) => {
   const state = typeof req.query.state === "string" ? req.query.state : undefined;
   const userId = verifyState(state);
   if (!userId || !metaOAuthConfigured()) {
-    return res.status(400).send(page("تعذّر إكمال الربط", "<p>رابط البدء غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.</p>"));
+    return res.status(400).send(page("تعذّر إكمال الربط", "<p>رابط البدء غير صالح أو انتهت صلاحيته. عد إلى التطبيق وابدأ من جديد.</p>"));
   }
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
   const target = metaDialogUrl(userId, state, user?.role);
@@ -103,18 +103,18 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
   if (!userId) {
     return res
       .status(400)
-      .send(page("تعذّر إكمال الربط", "<p>رابط الرجوع غير صالح أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.</p>"));
+      .send(page("تعذّر إكمال الربط", "<p>رابط الرجوع غير صالح أو انتهت صلاحيته. عد إلى التطبيق وابدأ من جديد.</p>"));
   }
   const web = stateIsWeb(rawState);
   const back = (params: Record<string, string> = {}) => appDeepLink(params, web);
 
   if (typeof req.query.error === "string") {
     const reason = typeof req.query.error_description === "string" ? req.query.error_description : req.query.error;
-    return res.status(400).send(page("تم إلغاء الربط", `<p>ما تم منح الصلاحية: ${escapeHtml(reason.slice(0, 300))}</p>`, back({ ok: "0", msg: reason.slice(0, 200) })));
+    return res.status(400).send(page("تم إلغاء الربط", `<p>لم تُمنح الصلاحية: ${escapeHtml(reason.slice(0, 300))}</p>`, back({ ok: "0", msg: reason.slice(0, 200) })));
   }
 
   const code = typeof req.query.code === "string" ? req.query.code : undefined;
-  if (!code) return res.status(400).send(page("تعذّر إكمال الربط", "<p>ما وصلنا كود التفويض من فيسبوك.</p>"));
+  if (!code) return res.status(400).send(page("تعذّر إكمال الربط", "<p>لم يصلنا كود التفويض من فيسبوك.</p>"));
 
   let pages: MetaPage[];
   let skipped: { id: string; name: string }[] = [];
@@ -129,9 +129,9 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
   if (pages.length === 0) {
     const names = skipped.map((p) => escapeHtml(p.name.slice(0, 80))).join("، ");
     const detail = skipped.length > 0
-      ? `<p>لقينا ${names ? `«${names}»` : "صفحة"} بس فيسبوك ما سلّمنا صلاحية الإدارة عليها. هذا بيصير غالبًا لما تكون الصفحة ضمن حافظة أعمال وما لك عليها وصول مباشر كمدير صفحة. أضف نفسك مدير صفحة مباشرة من إعدادات الصفحة (وصول فيسبوك الكامل) وجرّب من جديد.</p>`
-      : "<p>حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك.</p>";
-    return res.status(400).send(page("ما لقينا صفحات", detail, back({ ok: "0", msg: ((skipped.length > 0 ? "لقينا الصفحة بس فيسبوك ما سلّمنا صلاحية الإدارة عليها" : "حسابك ما فيه صفحات فيسبوك تديرها، أو ما منحت صلاحية الوصول لصفحاتك") + (diag ? ` [${diag}]` : "")).slice(0, 400) })));
+      ? `<p>وجدنا ${names ? `«${names}»` : "صفحة"} لكن فيسبوك لم يمنحنا صلاحية الإدارة عليها. يحدث هذا غالبًا عندما تكون الصفحة ضمن حافظة أعمال وليس لديك عليها وصول مباشر كمدير صفحة. أضف نفسك مدير صفحة مباشرة من إعدادات الصفحة (وصول فيسبوك الكامل) وجرّب من جديد.</p>`
+      : "<p>ليس في حسابك صفحات فيسبوك تديرها، أو لم تمنح صلاحية الوصول إلى صفحاتك.</p>";
+    return res.status(400).send(page("لم نجد صفحات", detail, back({ ok: "0", msg: ((skipped.length > 0 ? "وجدنا الصفحة لكن فيسبوك لم يمنحنا صلاحية الإدارة عليها" : "ليس في حسابك صفحات فيسبوك تديرها، أو لم تمنح صلاحية الوصول إلى صفحاتك") + (diag ? ` [${diag}]` : "")).slice(0, 400) })));
   }
 
   const sessionId = await createSession(userId, pages);
@@ -141,7 +141,7 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
     try {
       const connection = await connectFromSession({ userId, sessionId, pageId: pages[0].id, driver: "FACEBOOK" });
       return res.send(
-        page(`تم ربط «${pages[0].name.slice(0, 150)}» ✅`, "<p>صار المجيب الآلي يرد على تعليقات ورسائل صفحتك.</p>", back({ ok: "1", connectionId: connection.id })),
+        page(`تم ربط «${pages[0].name.slice(0, 150)}» ✅`, "<p>أصبح المجيب الآلي يردّ على تعليقات ورسائل صفحتك.</p>", back({ ok: "1", connectionId: connection.id })),
       );
     } catch (err) {
       const message = err instanceof MetaOAuthError ? err.message : "تعذّر ربط الصفحة";
@@ -164,8 +164,8 @@ metaOAuthRouter.get("/oauth/callback", route(async (req, res) => {
 
   res.send(
     page(
-      "اختر الصفحة اللي بدك تربطها",
-      `${rows}<p class="muted">الربط صالح 15 دقيقة. إذا ما لقيت صفحتك، تأكد إنك منحت صلاحية الوصول لصفحاتك.</p>`,
+      "اختر الصفحة التي تريد ربطها",
+      `${rows}<p class="muted">الربط صالح 15 دقيقة. إذا لم تجد صفحتك، تأكد من أنك منحت صلاحية الوصول إلى صفحاتك.</p>`,
       // No auto-redirect here: the merchant may prefer to pick right here in the browser. The button
       // hands the session to the app so it can show its own picker instead.
       web ? undefined : back({ session: sessionId }),
@@ -184,16 +184,16 @@ metaOAuthRouter.get("/oauth/pick", route(async (req, res) => {
   const web = req.query.web === "1";
 
   if (!sessionId || !pageId || !verifyPickerToken(sessionId, pageId, driver, sig)) {
-    return res.status(400).send(page("رابط غير صالح", "<p>هالرابط مو موقّع أو انتهت صلاحيته. ارجع للتطبيق وابدأ من جديد.</p>"));
+    return res.status(400).send(page("رابط غير صالح", "<p>هذا الرابط غير موقّع أو انتهت صلاحيته. عد إلى التطبيق وابدأ من جديد.</p>"));
   }
 
   const owner = await sessionOwner(sessionId);
   if (!owner) {
-    return res.status(400).send(page("انتهت صلاحية الربط", "<p>ارجع للتطبيق وابدأ الربط من جديد.</p>"));
+    return res.status(400).send(page("انتهت صلاحية الربط", "<p>عد إلى التطبيق وابدأ الربط من جديد.</p>"));
   }
   try {
     const connection = await connectFromSession({ userId: owner, sessionId, pageId, driver });
-    return res.send(page("تم الربط ✅", "<p>صار المجيب الآلي مربوطًا. ارجع للتطبيق لتشوف القناة.</p>", appDeepLink({ ok: "1", connectionId: connection.id }, web)));
+    return res.send(page("تم الربط ✅", "<p>أصبح المجيب الآلي مربوطًا. عد إلى التطبيق لترى القناة.</p>", appDeepLink({ ok: "1", connectionId: connection.id }, web)));
   } catch (err) {
     const message = err instanceof MetaOAuthError ? err.message : "تعذّر الربط";
     return res.status(400).send(page("تعذّر الربط", `<p>${escapeHtml(message.slice(0, 300))}</p>`, appDeepLink({ ok: "0", msg: message.slice(0, 200) }, web)));
@@ -230,7 +230,7 @@ metaOAuthRouter.post("/oauth/complete", requireAuth, route(async (req, res) => {
   const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
   const pageId = typeof req.body?.pageId === "string" ? req.body.pageId : "";
   const driver: ChannelDriver = req.body?.driver === "INSTAGRAM" ? "INSTAGRAM" : "FACEBOOK";
-  if (!sessionId || !pageId) return sendError(res, 400, "BAD_REQUEST", "sessionId و pageId مطلوبين");
+  if (!sessionId || !pageId) return sendError(res, 400, "BAD_REQUEST", "sessionId و pageId مطلوبان");
 
   try {
     const connection = await connectFromSession({ userId: req.user!.id, sessionId, pageId, driver });

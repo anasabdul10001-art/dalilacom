@@ -33,7 +33,7 @@ export async function moderateMarketplaceListing(id: string) {
     const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
     await Promise.all(admins.map(admin => notify({ userId: admin.id, type: "SYSTEM", title: "إعلان مستخدم بانتظار المراجعة", body: listing.title, data: { kind: "MARKETPLACE_REVIEW", listingId: id }, email: false })));
   } else if (status === "ACTIVE") {
-    await notify({ userId: listing.userId, type: "SYSTEM", title: "تمت الموافقة على إعلانك ✅", body: `«${listing.title}» صار ظاهراً في سوق المستخدمين.`, data: { kind: "MARKETPLACE_APPROVED", listingId: id }, email: false });
+    await notify({ userId: listing.userId, type: "SYSTEM", title: "تمت الموافقة على إعلانك ✅", body: `«${listing.title}» أصبح ظاهرًا في سوق المستخدمين.`, data: { kind: "MARKETPLACE_APPROVED", listingId: id }, email: false });
   } else {
     await notify({ userId: listing.userId, type: "SYSTEM", title: "لم تتم الموافقة على إعلانك", body: `«${listing.title}»: ${reviewNote}`, data: { kind: "MARKETPLACE_REJECTED", listingId: id }, email: false });
   }

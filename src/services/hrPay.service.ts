@@ -70,7 +70,7 @@ function workingDays(start: Date, end: Date, configured: unknown): Date[] {
 export async function createRun(companyId: string, input: { periodStart: string; periodEnd: string }) {
   const periodStart = day(input.periodStart);
   const periodEnd = day(input.periodEnd);
-  if (periodEnd < periodStart) throw new ApiError(400, "BAD_REQUEST", "نهاية الفترة لازم تكون بعد بدايتها");
+  if (periodEnd < periodStart) throw new ApiError(400, "BAD_REQUEST", "يجب أن تكون نهاية الفترة بعد بدايتها");
   return prisma.hrPayrollRun.create({ data: { companyId, periodStart, periodEnd } });
 }
 
@@ -104,7 +104,7 @@ export async function processRun(actor: HrActor, id: string) {
   const company = actor.company;
   const run = await prisma.hrPayrollRun.findFirst({ where: { id, companyId: company.id } });
   if (!run) throw notFound("دورة الرواتب غير موجودة");
-  if (run.status !== "DRAFT") throw conflict("بتقدر تعالج دورة مسودّة بس");
+  if (run.status !== "DRAFT") throw conflict("يمكنك معالجة دورة مسودّة فقط");
   const days = workingDays(run.periodStart, run.periodEnd, company.workingDays);
 
   const employees = await prisma.hrEmployee.findMany({
@@ -178,16 +178,16 @@ export async function processRun(actor: HrActor, id: string) {
 
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.hrPayrollRun.updateMany({ where: { id: run.id, companyId: company.id, status: "DRAFT" }, data: { status: "PROCESSED", runAt: new Date() } });
-    if (claimed.count !== 1) throw conflict("بتقدر تعالج دورة مسودّة بس");
+    if (claimed.count !== 1) throw conflict("يمكنك معالجة دورة مسودّة فقط");
     for (const d of drafts) {
       await tx.hrPayslip.create({ data: { runId: run.id, employeeId: d.employeeId, grossPay: d.gross, totalDeductions: d.deductions, netPay: d.net, breakdown: d.breakdown } });
       if (d.commissionIds.length) {
         const paid = await tx.businessStaffCommission.updateMany({ where: { id: { in: d.commissionIds }, status: "ACCRUED" }, data: { status: "PAID", paidAt: new Date() } });
-        if (paid.count !== d.commissionIds.length) throw conflict("عمولة انحسبت من دورة ثانية");
+        if (paid.count !== d.commissionIds.length) throw conflict("عمولة حُسبت من دورة أخرى");
       }
       if (!d.installmentIds.length) continue;
       const marked = await tx.hrAdvanceInstallment.updateMany({ where: { id: { in: d.installmentIds }, isPaid: false }, data: { isPaid: true, paidInRunId: run.id } });
-      if (marked.count !== d.installmentIds.length) throw conflict("قسط سلفة انحسم من دورة ثانية");
+      if (marked.count !== d.installmentIds.length) throw conflict("قسط سلفة حُسم من دورة أخرى");
       for (const advanceId of d.advanceIds) {
         if ((await tx.hrAdvanceInstallment.count({ where: { advanceId, isPaid: false } })) === 0) await tx.hrAdvance.update({ where: { id: advanceId }, data: { status: "REPAID" } });
       }
@@ -200,7 +200,7 @@ export async function processRun(actor: HrActor, id: string) {
   // the staff members whose commissions joined a payslip are told too
   for (const d of drafts.filter((x) => x.commissionIds.length)) {
     const staffRows = await prisma.businessStaff.findMany({ where: { hrEmployeeId: d.employeeId, userId: { not: null } }, select: { userId: true } });
-    for (const st of staffRows) if (st.userId) await notify({ userId: st.userId, type: "SYSTEM", title: "انضافت عمولاتك لكشف راتبك", data: { kind: "business-staff-commission-paid" }, email: false }).catch(() => undefined);
+    for (const st of staffRows) if (st.userId) await notify({ userId: st.userId, type: "SYSTEM", title: "أُضيفت عمولاتك إلى كشف راتبك", data: { kind: "business-staff-commission-paid" }, email: false }).catch(() => undefined);
   }
   // told only once everything is saved; a failed notification must not undo a finished run
   for (const d of drafts) {
@@ -259,7 +259,7 @@ export async function markPaid(actor: HrActor, id: string) {
   let booked = 0;
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.hrPayrollRun.updateMany({ where: { id, status: "PROCESSED" }, data: { status: "PAID", paidAt: new Date() } });
-    if (claimed.count !== 1) throw conflict("بتقدر تدفع دورة معالَجة بس");
+    if (claimed.count !== 1) throw conflict("يمكنك دفع دورة معالَجة فقط");
     booked = await bookExpense(tx, actor.company, run, true);
     await tx.hrAuditLog.create({ data: { companyId: actor.company.id, userId: actor.userId, action: "payroll.paid", entityType: "HrPayrollRun", entityId: id } });
   });
@@ -275,7 +275,7 @@ export async function revertPaid(actor: HrActor, id: string) {
   if (!run) throw notFound("دورة الرواتب غير موجودة");
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.hrPayrollRun.updateMany({ where: { id, status: "PAID" }, data: { status: "PROCESSED", paidAt: null } });
-    if (claimed.count !== 1) throw conflict("بتقدر ترجّع دورة مدفوعة بس");
+    if (claimed.count !== 1) throw conflict("يمكنك إرجاع دورة مدفوعة فقط");
     await bookExpense(tx, actor.company, run, false);
     await tx.hrAuditLog.create({ data: { companyId: actor.company.id, userId: actor.userId, action: "payroll.revert_paid", entityType: "HrPayrollRun", entityId: id } });
   });
@@ -319,8 +319,8 @@ async function tell(userIds: (string | null)[], title: string, body: string | un
 
 export async function createAdvance(me: HrMe, input: { amount: number; installmentsCount: number; reason?: string }) {
   await assertCompanyActive(me.company);
-  if (me.employee.employmentStatus === "TERMINATED") throw conflict("الموظف منتهية خدمته");
-  if (await prisma.hrAdvance.findFirst({ where: { employeeId: me.employee.id, status: { in: OPEN } }, select: { id: true } })) throw conflict("عندك سلفة قيد الطلب أو السداد");
+  if (me.employee.employmentStatus === "TERMINATED") throw conflict("انتهت خدمة الموظف");
+  if (await prisma.hrAdvance.findFirst({ where: { employeeId: me.employee.id, status: { in: OPEN } }, select: { id: true } })) throw conflict("لديك سلفة قيد الطلب أو السداد");
   const dept = me.employee.departmentId ? await prisma.hrDepartment.findUnique({ where: { id: me.employee.departmentId }, select: { managerId: true } }) : null;
   const stage = me.employee.managerId || dept?.managerId ? "PENDING_MANAGER" : "PENDING_HR";
   const advance = await prisma.hrAdvance.create({ data: { companyId: me.company.id, employeeId: me.employee.id, amount: input.amount, installmentsCount: input.installmentsCount, reason: input.reason, status: stage }, include: advanceInclude });
@@ -345,18 +345,18 @@ function installments(advanceId: string, total: number, count: number, from: Dat
 async function decideAdvanceStage(company: HrCompany, id: string, stage: "PENDING_MANAGER" | "PENDING_HR", decision: "APPROVE" | "REJECT") {
   const advance = await prisma.hrAdvance.findFirst({ where: { id, companyId: company.id }, include: advanceInclude });
   if (!advance) throw notFound("طلب السلفة غير موجود");
-  if (advance.status !== stage) throw conflict("هذا الطلب مو بانتظار قرارك");
+  if (advance.status !== stage) throw conflict("هذا الطلب ليس بانتظار قرارك");
   const who = advance.employee.userId;
   if (decision === "REJECT") {
-    if (!(await prisma.hrAdvance.updateMany({ where: { id, status: stage }, data: { status: "REJECTED" } })).count) throw conflict("هذا الطلب مو بانتظار قرارك");
+    if (!(await prisma.hrAdvance.updateMany({ where: { id, status: stage }, data: { status: "REJECTED" } })).count) throw conflict("هذا الطلب ليس بانتظار قرارك");
     await tell([who], "تم رفض طلب سلفتك", undefined, { hr: "advance", id });
   } else if (stage === "PENDING_MANAGER") {
-    if (!(await prisma.hrAdvance.updateMany({ where: { id, status: stage }, data: { status: "PENDING_HR" } })).count) throw conflict("هذا الطلب مو بانتظار قرارك");
+    if (!(await prisma.hrAdvance.updateMany({ where: { id, status: stage }, data: { status: "PENDING_HR" } })).count) throw conflict("هذا الطلب ليس بانتظار قرارك");
     await tell(await advanceApprovers(company, "PENDING_HR", advance.employee), `وافق المدير على طلب سلفة ${advance.employee.firstName} ${advance.employee.lastName}`, "بانتظار الموافقة النهائية", { hr: "advance", id });
   } else {
     await prisma.$transaction(async (tx) => {
       const claimed = await tx.hrAdvance.updateMany({ where: { id, status: "PENDING_HR" }, data: { status: "APPROVED" } });
-      if (claimed.count !== 1) throw conflict("هذا الطلب مو بانتظار قرارك");
+      if (claimed.count !== 1) throw conflict("هذا الطلب ليس بانتظار قرارك");
       await tx.hrAdvanceInstallment.createMany({ data: installments(id, advance.amount, advance.installmentsCount, new Date()) });
     });
     await tell([who], "تمت الموافقة على طلب سلفتك", undefined, { hr: "advance", id });
@@ -368,8 +368,8 @@ async function decideAdvanceStage(company: HrCompany, id: string, stage: "PENDIN
 export async function decideAdvanceAsManagement(actor: HrActor, id: string, decision: "APPROVE" | "REJECT") {
   const a = await prisma.hrAdvance.findFirst({ where: { id, companyId: actor.company.id }, select: { status: true } });
   if (!a) throw notFound("طلب السلفة غير موجود");
-  if (a.status === "PENDING_MANAGER" && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "هالطلب بانتظار مدير الموظف");
-  if (a.status !== "PENDING_MANAGER" && a.status !== "PENDING_HR") throw conflict("هذا الطلب مو بانتظار قرارك");
+  if (a.status === "PENDING_MANAGER" && !actor.isOwner) throw new ApiError(403, "FORBIDDEN", "هذا الطلب بانتظار مدير الموظف");
+  if (a.status !== "PENDING_MANAGER" && a.status !== "PENDING_HR") throw conflict("هذا الطلب ليس بانتظار قرارك");
   const result = await decideAdvanceStage(actor.company, id, a.status, decision);
   await hrAudit(actor.company.id, actor.userId, `advance.${decision.toLowerCase()}`, "HrAdvance", id, { stage: a.status });
   return result;

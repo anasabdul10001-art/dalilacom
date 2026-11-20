@@ -63,7 +63,7 @@ export async function listSuggestions(status: "PENDING" | "APPROVED" | "MERGED" 
 async function pending(id: string) {
   const row = await prisma.categorySuggestion.findUnique({ where: { id } });
   if (!row) throw new ApiError(404, "NOT_FOUND", "الاقتراح غير موجود");
-  if (row.status !== "PENDING") throw new ApiError(409, "CONFLICT", "هذا الاقتراح انعالج من قبل");
+  if (row.status !== "PENDING") throw new ApiError(409, "CONFLICT", "عولج هذا الاقتراح من قبل");
   return row;
 }
 
@@ -82,7 +82,7 @@ export async function approveSuggestion(id: string, input: { nameAr: string; nam
   invalidateCategoryCache();
   await moveMerchant(row.merchantId, category.id);
   await prisma.categorySuggestion.update({ where: { id }, data: { status: "APPROVED", categoryId: category.id, resolvedAt: new Date() } });
-  await notify({ userId: row.userId, type: "SYSTEM", title: "انضافت مهنتك ✅", body: `انضافت المهنة «${category.name}» ومحلك صار تحتها.`, data: { kind: "CATEGORY_APPROVED", categoryId: category.id }, email: false });
+  await notify({ userId: row.userId, type: "SYSTEM", title: "تمت إضافة مهنتك ✅", body: `أُضيفت المهنة «${category.name}» وأصبح محلك تحتها.`, data: { kind: "CATEGORY_APPROVED", categoryId: category.id }, email: false });
   return category;
 }
 
@@ -103,12 +103,12 @@ export async function mergeSuggestion(id: string, categoryId: string) {
   invalidateCategoryCache();
   await moveMerchant(row.merchantId, categoryId);
   await prisma.categorySuggestion.update({ where: { id }, data: { status: "MERGED", categoryId, resolvedAt: new Date() } });
-  await notify({ userId: row.userId, type: "SYSTEM", title: "تم ترتيب مهنتك ✅", body: `محلك صار تحت «${target.name}» وصار بيطلع لما الناس تبحث عن «${row.name}».`, data: { kind: "CATEGORY_MERGED", categoryId }, email: false });
+  await notify({ userId: row.userId, type: "SYSTEM", title: "تم ترتيب مهنتك ✅", body: `أصبح محلك تحت «${target.name}» ويظهر عندما يبحث الناس عن «${row.name}».`, data: { kind: "CATEGORY_MERGED", categoryId }, email: false });
   return target;
 }
 
 export async function rejectSuggestion(id: string, reason: string) {
   const row = await pending(id);
   await prisma.categorySuggestion.update({ where: { id }, data: { status: "REJECTED", note: reason.trim() || null, resolvedAt: new Date() } });
-  await notify({ userId: row.userId, type: "SYSTEM", title: "ما انقبل اقتراح المهنة", body: reason.trim() ? `السبب: ${reason.trim()}` : "اختر أقرب مهنة من القائمة.", data: { kind: "CATEGORY_REJECTED" }, email: false });
+  await notify({ userId: row.userId, type: "SYSTEM", title: "لم يُقبل اقتراح المهنة", body: reason.trim() ? `السبب: ${reason.trim()}` : "اختر أقرب مهنة من القائمة.", data: { kind: "CATEGORY_REJECTED" }, email: false });
 }

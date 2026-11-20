@@ -256,7 +256,7 @@ app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   const parserErr = err as { status?: number; type?: string } | null;
   if (parserErr && parserErr.type && typeof parserErr.status === "number" && parserErr.status >= 400 && parserErr.status < 500) {
     const tooLarge = parserErr.status === 413;
-    return sendError(res, parserErr.status, tooLarge ? "PAYLOAD_TOO_LARGE" : "BAD_REQUEST", tooLarge ? "الملف كبير جداً" : "طلب غير صالح");
+    return sendError(res, parserErr.status, tooLarge ? "PAYLOAD_TOO_LARGE" : "BAD_REQUEST", tooLarge ? "الملف كبير جدًا" : "طلب غير صالح");
   }
   console.error("Unhandled error:", err);
   return sendError(res, 500, "INTERNAL_ERROR", "حدث خطأ غير متوقع");

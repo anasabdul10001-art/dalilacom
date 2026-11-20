@@ -77,7 +77,7 @@ export async function sendWeeklyResponderReports(now = new Date()) {
         userId: subscription.userId,
         type: NotificationType.SYSTEM,
         title: "ملخص المجيب الآلي لهذا الأسبوع",
-        body: `هالأسبوع وصلك ${weeklyCount} رسالة ما لقت رد ثابت. الذكاء الاصطناعي كان ممكن يرد عليها.`,
+        body: `وصلتك هذا الأسبوع ${weeklyCount} رسالة لم تجد ردًا ثابتًا. كان بإمكان الذكاء الاصطناعي الرد عليها.`,
         data: { kind: "RESPONDER", reason: "weekly_report", action: "upgrade", count: weeklyCount },
       });
       sent++;
@@ -102,7 +102,7 @@ export async function sendWeeklyResponderReports(now = new Date()) {
         userId: subscription.userId,
         type: NotificationType.SYSTEM,
         title: "تنبيه يومي: رسائل بانتظار رد",
-        body: `خلال آخر 24 ساعة وصلك ${dailyCount} رسالة ما لقت رد ثابت. الذكاء الاصطناعي كان ممكن يرد عليها.`,
+        body: `وصلتك خلال آخر 24 ساعة ${dailyCount} رسالة لم تجد ردًا ثابتًا. كان بإمكان الذكاء الاصطناعي الرد عليها.`,
         data: { kind: "RESPONDER", reason: "daily_report", action: "upgrade", count: dailyCount },
       });
       sent++;

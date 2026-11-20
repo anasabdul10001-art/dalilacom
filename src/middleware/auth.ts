@@ -44,7 +44,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     if (typeof owner === "string" && owner && owner !== user.id && marketerMayUse(req.method, req.originalUrl.split("?")[0])) {
       const staff = await prisma.businessStaff.findFirst({ where: { ownerId: owner, userId: user.id, role: "MARKETER", status: "ACTIVE" }, select: { id: true } });
       const boss = staff ? await prisma.user.findUnique({ where: { id: owner }, select: { id: true, role: true, isDisabled: true } }) : null;
-      if (!staff || !boss || boss.isDisabled) return sendError(res, 403, "FORBIDDEN", "ما عندك صلاحية على هالنشاط");
+      if (!staff || !boss || boss.isDisabled) return sendError(res, 403, "FORBIDDEN", "ليست لديك صلاحية على هذا النشاط");
       req.user = { id: boss.id, role: boss.role };
     }
     next();

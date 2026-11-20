@@ -70,8 +70,8 @@ export async function actAsBusinessStaff(req: Request, _res: Response, next: Nex
   const owner = req.headers["x-business-owner"];
   if (typeof owner !== "string" || !owner || owner === req.user!.id) return next();
   const staff = await prisma.businessStaff.findFirst({ where: { ownerId: owner, userId: req.user!.id, status: "ACTIVE" } });
-  if (!staff) return next(new ApiError(403, "FORBIDDEN", "ما عندك صلاحية على محاسبة هالنشاط"));
-  if (!roleAllows(staff.role, req.method, req.path)) return next(new ApiError(403, "FORBIDDEN", "دورك ما بيسمح لك بهالعملية"));
+  if (!staff) return next(new ApiError(403, "FORBIDDEN", "ليست لديك صلاحية على محاسبة هذا النشاط"));
+  if (!roleAllows(staff.role, req.method, req.path)) return next(new ApiError(403, "FORBIDDEN", "دورك لا يسمح لك بهذه العملية"));
   req.staffActor = { staff, userId: req.user!.id };
   req.user = { id: owner, role: req.user!.role };
   next();
@@ -131,16 +131,16 @@ export async function acceptInvite(userId: string, code: string) {
   const bad = () => new ApiError(400, "STAFF_INVITE_INVALID", "الدعوة غير صحيحة أو انتهت صلاحيتها");
   const staff = await prisma.businessStaff.findUnique({ where: { codeHash: sha256(code.trim()) } });
   if (!staff || staff.status === "REMOVED" || staff.userId || !staff.codeExpiresAt || staff.codeExpiresAt < new Date()) throw bad();
-  if (staff.ownerId === userId) throw new ApiError(409, "CONFLICT", "أنت صاحب هالنشاط، ما بتنضم له كموظف");
+  if (staff.ownerId === userId) throw new ApiError(409, "CONFLICT", "أنت صاحب هذا النشاط، ولا يمكنك الانضمام إليه كموظف");
   try {
     const claimed = await prisma.businessStaff.updateMany({ where: { id: staff.id, userId: null, codeHash: staff.codeHash }, data: { userId, status: "ACTIVE", acceptedAt: new Date(), codeHash: null, codeExpiresAt: null } });
     if (claimed.count !== 1) throw bad();
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw new ApiError(409, "CONFLICT", "حسابك مرتبط بهالنشاط من قبل");
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw new ApiError(409, "CONFLICT", "حسابك مرتبط بهذا النشاط من قبل");
     throw err;
   }
   const owner = await prisma.user.findUnique({ where: { id: staff.ownerId }, select: { id: true, fullName: true } });
-  await notify({ userId: staff.ownerId, type: "SYSTEM", title: "موظف جديد قبل دعوتك", body: `«${staff.name}» انضم لفريقك`, data: { kind: "business-staff-joined" }, email: false }).catch(() => undefined);
+  await notify({ userId: staff.ownerId, type: "SYSTEM", title: "موظف جديد قَبِل دعوتك", body: `«${staff.name}» انضم لفريقك`, data: { kind: "business-staff-joined" }, email: false }).catch(() => undefined);
   return { staffId: staff.id, ownerId: staff.ownerId, ownerName: owner?.fullName ?? null, role: staff.role };
 }
 
@@ -215,15 +215,15 @@ export async function payCommissions(ownerId: string, staffId: string, currency:
   return prisma.$transaction(async (tx) => {
     const due = await tx.businessStaffCommission.findMany({ where: { ownerId, staffId, currency, status: "ACCRUED", amountCents: { gt: 0 } } });
     const total = due.reduce((s, c) => s + Number(c.amountCents), 0);
-    if (total <= 0) throw new ApiError(409, "CONFLICT", "ما في عمولات مستحقة لهالموظف");
+    if (total <= 0) throw new ApiError(409, "CONFLICT", "لا توجد عمولات مستحقة لهذا الموظف");
     const claimed = await tx.businessStaffCommission.updateMany({ where: { id: { in: due.map((c) => c.id) }, status: "ACCRUED" }, data: { status: "PAID", paidAt: new Date() } });
-    if (claimed.count !== due.length) throw new ApiError(409, "CONFLICT", "العمولات اندفعت من قبل");
+    if (claimed.count !== due.length) throw new ApiError(409, "CONFLICT", "دُفعت العمولات من قبل");
     await tx.accountingEntry.create({
       data: { userId: ownerId, type: "EXPENSE", category: "عمولات الموظفين", description: `عمولات ${staff.name}`, amountCents: total, currency, source: "COMMISSION", sourceKey: `staff-commission:${staffId}:${Date.now()}`, recordedById: actorUserId },
     });
     return { paidCents: total, count: due.length };
   }).then(async (out) => {
-    if (staff.userId) await notify({ userId: staff.userId, type: "SYSTEM", title: "اندفعت عمولاتك", body: `${(out.paidCents / 100).toFixed(2)} ${currency}`, data: { kind: "business-staff-commission-paid" }, email: false }).catch(() => undefined);
+    if (staff.userId) await notify({ userId: staff.userId, type: "SYSTEM", title: "دُفعت عمولاتك", body: `${(out.paidCents / 100).toFixed(2)} ${currency}`, data: { kind: "business-staff-commission-paid" }, email: false }).catch(() => undefined);
     return out;
   });
 }
@@ -232,7 +232,7 @@ export async function payCommissions(ownerId: string, staffId: string, currency:
 
 async function driverFor(userId: string, staffId: string) {
   const staff = await prisma.businessStaff.findFirst({ where: { id: staffId, userId, status: "ACTIVE", role: "DRIVER" } });
-  if (!staff) throw new ApiError(403, "FORBIDDEN", "ما عندك صلاحية على التوصيل");
+  if (!staff) throw new ApiError(403, "FORBIDDEN", "ليست لديك صلاحية على التوصيل");
   const merchant = await prisma.merchantProfile.findUnique({ where: { userId: staff.ownerId }, select: { id: true } });
   return { staff, merchantId: merchant?.id ?? null };
 }
@@ -253,7 +253,7 @@ export async function driverOrders(userId: string, staffId: string) {
 export async function driverPickup(userId: string, staffId: string, orderId: string) {
   const { staff, merchantId } = await driverFor(userId, staffId);
   const claimed = await prisma.order.updateMany({ where: { id: orderId, merchantId: merchantId ?? "none", status: "PREPARING" }, data: { status: "SHIPPED", driverStaffId: staff.id } });
-  if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "الطلب مو جاهز للاستلام أو أخدو موزّع ثاني");
+  if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "الطلب ليس جاهزًا للاستلام أو استلمه موزّع آخر");
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
   await notify({ userId: order.userId, type: "ORDER_STATUS", title: "تحديث على طلبك: SHIPPED", body: "طلبك انطلق للتوصيل 🚚", data: { orderId, orderNumber: order.orderNumber, status: "SHIPPED" } }).catch(() => undefined);
 }
@@ -262,7 +262,7 @@ export async function driverPickup(userId: string, staffId: string, orderId: str
 export async function driverDeliver(userId: string, staffId: string, orderId: string) {
   const { staff, merchantId } = await driverFor(userId, staffId);
   const claimed = await prisma.order.updateMany({ where: { id: orderId, merchantId: merchantId ?? "none", status: "SHIPPED", OR: [{ driverStaffId: staff.id }, { driverStaffId: null }] }, data: { status: "DELIVERED", driverStaffId: staff.id, deliveredAt: new Date(), receiptStatus: "PENDING" } });
-  if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "الطلب مو بعهدتك أو انسلّم من قبل");
+  if (claimed.count !== 1) throw new ApiError(409, "CONFLICT", "الطلب ليس في عهدتك أو سُلِّم من قبل");
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
   await recordDeliveredOrder(orderId).catch((err) => console.error("Could not sync delivered order to accounting", err));
   const net = order.subtotalCents - order.memberDiscountCents;
@@ -272,7 +272,7 @@ export async function driverDeliver(userId: string, staffId: string, orderId: st
     await prisma.businessStaffCommission.create({ data: { ownerId: staff.ownerId, staffId: staff.id, saleId: `order:${orderId}`, baseCents: net, rateBp: staff.salesRateBp, amountCents, currency } }).catch(() => undefined);
   }
   await accrueTeamOrderCommissions(orderId).catch(() => undefined);
-  await notify({ userId: order.userId, type: "ORDER_STATUS", title: "تحديث على طلبك: DELIVERED", body: "طلبك وصل! منتمنى تكون التجربة حلوة ⭐", data: { orderId, orderNumber: order.orderNumber, status: "DELIVERED" } }).catch(() => undefined);
+  await notify({ userId: order.userId, type: "ORDER_STATUS", title: "تحديث على طلبك: DELIVERED", body: "وصل طلبك! نتمنى أن تكون التجربة جميلة ⭐", data: { orderId, orderNumber: order.orderNumber, status: "DELIVERED" } }).catch(() => undefined);
 }
 
 /** The owner pays the fixed monthly pay set for a staff member: one expense in accounting, in the owner currency. */
@@ -280,10 +280,10 @@ export async function payFixedSalary(ownerId: string, staffId: string, actorUser
   const st = await prisma.businessStaff.findFirst({ where: { id: staffId, ownerId, status: { not: "REMOVED" } } });
   if (!st) throw notFound();
   const amountCents = Number(st.fixedPayCents);
-  if (amountCents <= 0) throw new ApiError(409, "CONFLICT", "ما في راتب ثابت محدد لهالموظف");
+  if (amountCents <= 0) throw new ApiError(409, "CONFLICT", "لا يوجد راتب ثابت محدد لهذا الموظف");
   const currency = await marketOfUser(ownerId);
   await prisma.accountingEntry.create({ data: { userId: ownerId, type: "EXPENSE", category: "رواتب الموظفين", description: `راتب ${st.name}`, amountCents, currency, source: "MANUAL", recordedById: actorUserId } });
-  if (st.userId) await notify({ userId: st.userId, type: "SYSTEM", title: "اندفع راتبك الثابت", body: `${(amountCents / 100).toFixed(2)} ${currency}`, data: { kind: "business-staff-salary-paid" }, email: false }).catch(() => undefined);
+  if (st.userId) await notify({ userId: st.userId, type: "SYSTEM", title: "دُفع راتبك الثابت", body: `${(amountCents / 100).toFixed(2)} ${currency}`, data: { kind: "business-staff-salary-paid" }, email: false }).catch(() => undefined);
   return { paidCents: amountCents, currency };
 }
 
@@ -317,8 +317,8 @@ export async function linkHrEmployee(ownerId: string, staffId: string, hrEmploye
   if (!st) throw notFound();
   if (hrEmployeeId) {
     const emp = await prisma.hrEmployee.findFirst({ where: { id: hrEmployeeId, company: { ownerId }, employmentStatus: { not: "TERMINATED" } }, select: { id: true } });
-    if (!emp) throw new ApiError(404, "NOT_FOUND", "الموظف غير موجود بكشف الرواتب");
-    if (await prisma.businessStaff.count({ where: { ownerId, hrEmployeeId, status: { not: "REMOVED" }, id: { not: staffId } } })) throw new ApiError(409, "CONFLICT", "موظف الرواتب مربوط بموظف ثاني");
+    if (!emp) throw new ApiError(404, "NOT_FOUND", "الموظف غير موجود في كشف الرواتب");
+    if (await prisma.businessStaff.count({ where: { ownerId, hrEmployeeId, status: { not: "REMOVED" }, id: { not: staffId } } })) throw new ApiError(409, "CONFLICT", "موظف الرواتب مربوط بموظف آخر");
   }
   await prisma.businessStaff.update({ where: { id: staffId }, data: { hrEmployeeId } });
 }

@@ -14,10 +14,10 @@ import { respondToReceipt } from "../services/orderReceipt.service";
 /** Customer-facing wording for each order state (section 13: "تغيير حالة الطلب"). */
 const STATUS_MESSAGE: Record<OrderStatus, string> = {
   PENDING: "طلبك وصل وبانتظار تأكيد صاحب النشاط.",
-  CONFIRMED: "صاحب النشاط أكّد طلبك وبلّش يجهّزو.",
-  PREPARING: "طلبك عم يتحضّر هلق.",
+  CONFIRMED: "أكّد صاحب النشاط طلبك وبدأ بتجهيزه.",
+  PREPARING: "طلبك قيد التحضير الآن.",
   SHIPPED: "طلبك انطلق للتوصيل 🚚",
-  DELIVERED: "طلبك وصل! منتمنى تكون التجربة حلوة ⭐",
+  DELIVERED: "وصل طلبك! نتمنى أن تكون التجربة جميلة ⭐",
   CANCELLED: "تم إلغاء طلبك.",
 };
 
@@ -210,7 +210,7 @@ orderRouter.post("/:id/cancel", requireAuth, route(async (req, res) => {
       userId: merchantOwner.userId,
       type: "ORDER_STATUS",
       title: "الزبون ألغى طلبًا",
-      body: `تم إلغاء الطلب ${order.orderNumber} من قبل الزبون، والمخزون رجع.`,
+      body: `تم إلغاء الطلب ${order.orderNumber} من قبل الزبون، وأُعيد المخزون.`,
       data: { orderId: order.id, orderNumber: order.orderNumber, status: "CANCELLED", audience: "MERCHANT" },
     });
   }
@@ -256,7 +256,7 @@ orderRouter.post("/:id/payment/confirm-cash", requireAuth, requireRole(Role.MERC
     return sendError(res, 409, "CONFLICT", "This payment is not waiting for cash");
   }
   if (order.status !== "SHIPPED" && order.status !== "DELIVERED") {
-    return sendError(res, 409, "CONFLICT", "الدفع النقدي بينأكد بعد ما يتشحن الطلب");
+    return sendError(res, 409, "CONFLICT", "يُؤكَّد الدفع النقدي بعد شحن الطلب");
   }
   const payment = await prisma.payment.update({
     where: { id: order.payment.id },

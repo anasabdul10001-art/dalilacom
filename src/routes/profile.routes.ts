@@ -113,7 +113,7 @@ profileRouter.patch("/me", requireAuth, route(async (req, res) => {
   const { fullName, bio, language, countryCode, cityId, vatNumber, phone } = parsed.data;
   if (phone) {
     const taken = await prisma.user.findFirst({ where: { phone, id: { not: req.user!.id } }, select: { id: true } });
-    if (taken) return sendError(res, 409, "PHONE_IN_USE", "رقم الهاتف مستعمل بحساب ثاني");
+    if (taken) return sendError(res, 409, "PHONE_IN_USE", "رقم الهاتف مستعمل في حساب آخر");
   }
   await prisma.user.update({
     where: { id: req.user!.id },
@@ -165,7 +165,7 @@ profileRouter.put("/location", requireAuth, route(async (req, res) => {
   if (!parsed.success) return sendValidationError(res, parsed.error);
   const current = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { locationConsentAt: true } });
   if (gdprStrict() && !current.locationConsentAt && parsed.data.consent !== true) {
-    return sendError(res, 403, "LOCATION_CONSENT_REQUIRED", "لازم توافق صراحةً على استخدام موقعك أولًا");
+    return sendError(res, 403, "LOCATION_CONSENT_REQUIRED", "يجب أن توافق صراحةً على استخدام موقعك أولًا");
   }
   await prisma.user.update({
     where: { id: req.user!.id },

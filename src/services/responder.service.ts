@@ -120,7 +120,7 @@ export async function getSubscription(userId: string): Promise<ResponderSubscrip
       data: { status: "EXPIRED" },
     });
     // the flip happens once, so the notice does too
-    await tell(userId, was === "TRIAL" ? "انتهت تجربة المجيب الآلي" : "انتهى اشتراك المجيب الآلي", "توقّف الرد التلقائي على زبائنك. فعّل أو جدّد الاشتراك ليرجع يشتغل.", { reason: "expired" });
+    await tell(userId, was === "TRIAL" ? "انتهت تجربة المجيب الآلي" : "انتهى اشتراك المجيب الآلي", "توقّف الرد التلقائي على زبائنك. فعّل الاشتراك أو جدّده ليعود إلى العمل.", { reason: "expired" });
   } else if (sub.status === "EXPIRED") {
     await prisma.responderEntitlement.updateMany({
       where: { userId, planId: RESPONDER_LEGACY_PLAN_ID, status: { in: ["TRIAL", "ACTIVE"] } },
@@ -149,7 +149,7 @@ export async function maybeNotifyEnding(sub: ResponderSubscription): Promise<voi
   await tell(
     sub.userId,
     sub.status === "TRIAL" ? "تجربة المجيب الآلي تنتهي قريبًا" : "اشتراك المجيب الآلي ينتهي قريبًا",
-    `باقي ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"}. ${sub.status === "TRIAL" ? "فعّل الاشتراك" : "جدّد الاشتراك"} ليكمل الرد على زبائنك.`,
+    `تبقّى ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"}. ${sub.status === "TRIAL" ? "فعّل الاشتراك" : "جدّد الاشتراك"} ليستمر الرد على زبائنك.`,
     { reason: "ending" },
   );
 }
@@ -213,7 +213,7 @@ export async function pay(userId: string, role: Role): Promise<ActivationResult>
 }
 
 /** Sent when the AI cannot (or may not) settle a complaint: the customer is never left unanswered. */
-const COMPLAINT_HOLDING_REPLY = "نعتذر منك على هالإزعاج 🙏 وصلت رسالتك لفريقنا، وحدا من الفريق رح يتواصل معك قريبًا.";
+const COMPLAINT_HOLDING_REPLY = "نعتذر منك على هذا الإزعاج 🙏 وصلت رسالتك إلى فريقنا، وسيتواصل معك أحد أعضاء الفريق قريبًا.";
 
 const COMPLAINT_WORDS = [
   "شكوى", "شكوي", "سيء", "سيئ", "سيئة", "مشكلة", "مشاكل", "زفت", "نصب", "احتيال", "استرجاع", "ظلم", "ما عجبني", "ماعجبني", "ما وصل", "ماوصل", "تأخر", "تأخير", "خدمة سيئة", "غالي كتير",

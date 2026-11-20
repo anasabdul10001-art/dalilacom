@@ -172,8 +172,8 @@ export async function notifyExpiringMembership(userId: string): Promise<NotifyRe
   return notify({
     userId,
     type: NotificationType.MEMBERSHIP_EXPIRING,
-    title: "عضويتك عم تنتهي قريبًا",
-    body: `باقي ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"} على انتهاء عضويتك. جدّدها لتضل تستفيد من الحسومات.`,
+    title: "عضويتك تنتهي قريبًا",
+    body: `تبقّى ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"} على انتهاء عضويتك. جدّدها لتستمر في الاستفادة من الحسومات.`,
     data: { membershipId: membership.id, endDate: membership.endDate.toISOString() },
   });
 }

@@ -117,7 +117,7 @@ membershipRouter.post("/subscribe", requireAuth, route(async (req, res) => {
       res,
       409,
       "PLAN_PRICING_NOT_CONFIGURED",
-      `سعر هذه الباقة غير مضبوط بعد — لازم الأدمن يحدد سعرها بوحدة ${creditName}.`,
+      `سعر هذه الباقة غير مضبوط بعد — يجب أن يحدد المسؤول سعرها بوحدة ${creditName}.`,
     );
   }
 
@@ -170,7 +170,7 @@ membershipRouter.post("/subscribe", requireAuth, route(async (req, res) => {
         res,
         409,
         "INSUFFICIENT_BALANCE",
-        `رصيدك ${err.balance} والاشتراك بدو ${err.needed}. اشحن محفظتك أولًا.`,
+        `رصيدك ${err.balance} والاشتراك يكلّف ${err.needed}. اشحن محفظتك أولًا.`,
         { balance: err.balance, needed: err.needed },
       );
     }
