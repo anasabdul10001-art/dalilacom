@@ -19,12 +19,12 @@ const d = (slug: string, section: string, icon: string, ar: string, en: string, 
 
 export const PRODUCT_CATEGORIES: ProductCategorySeed[] = [
   d("p-electronics", "electronics", "📱", "إلكترونيات", "Electronics", "الكترونيات|اجهزة|تقنية|electronic|gadgets", [
-    c("p-phones", "موبايلات وأجهزة لوحية", "Phones & tablets", "موبايل|هاتف|جوال|تلفون|ايباد|تابلت|phone|mobile|tablet|smartphone", [
-      c("p-phones-new", "موبايلات جديدة", "New phones", "ايفون|سامسونج|شاومي|هواوي|iphone|samsung|xiaomi"),
-      c("p-phones-used", "موبايلات مستعملة", "Used phones", "مستعمل|مجدد|used|refurbished"),
+    c("p-phones", "هواتف محمولة وأجهزة لوحية", "Phones & tablets", "موبايل|هاتف|جوال|تلفون|ايباد|تابلت|phone|mobile|tablet|smartphone", [
+      c("p-phones-new", "هواتف جديدة", "New phones", "ايفون|سامسونج|شاومي|هواوي|iphone|samsung|xiaomi"),
+      c("p-phones-used", "هواتف مستعملة", "Used phones", "مستعمل|مجدد|used|refurbished"),
       c("p-tablets", "أجهزة لوحية", "Tablets", "تابلت|ايباد|ipad|tablet"),
     ]),
-    c("p-phone-acc", "إكسسوارات الموبايل", "Phone accessories", "كفر|حماية شاشة|شاحن|كبل|سماعة|case|screen protector|charger|cable|powerbank", [
+    c("p-phone-acc", "ملحقات الهاتف", "Phone accessories", "كفر|حماية شاشة|شاحن|كبل|سماعة|case|screen protector|charger|cable|powerbank", [
       c("p-cases", "أغطية وحمايات", "Cases & protectors", "كفر|جراب|حماية|اسكرين|case|cover|protector"),
       c("p-chargers", "شواحن وكوابل وباور بانك", "Chargers, cables & power banks", "شاحن|كبل|كيبل|باور بانك|بطارية متنقلة|charger|cable|power bank"),
       c("p-headphones", "سماعات", "Headphones & earbuds", "سماعة|ايربودز|بلوتوث|headphones|earbuds|airpods|bluetooth"),
@@ -56,15 +56,15 @@ export const PRODUCT_CATEGORIES: ProductCategorySeed[] = [
   d("p-fashion", "fashion", "👗", "أزياء", "Fashion", "ملابس|لبس|موضة|clothes|clothing|fashion|wear", [
     c("p-women", "ملابس نسائية", "Women's clothing", "نسائي|نساء|حريمي|women|ladies|female", [
       c("p-women-dress", "فساتين", "Dresses", "فستان|فساتين|dress|gown"),
-      c("p-women-tops", "بلايز وقمصان", "Tops & shirts", "بلوزة|قميص|توب|blouse|shirt|top"),
-      c("p-women-pants", "بناطيل وتنانير", "Pants & skirts", "بنطلون|جينز|تنورة|jeans|pants|skirt"),
+      c("p-women-tops", "بلوزات وقمصان", "Tops & shirts", "بلوزة|قميص|توب|blouse|shirt|top"),
+      c("p-women-pants", "بنطلونات وتنانير", "Pants & skirts", "بنطلون|جينز|تنورة|jeans|pants|skirt"),
       c("p-women-abaya", "عبايات وحجاب وإسدالات", "Abayas & hijab", "عباية|حجاب|اسدال|وشاح|ايشارب|abaya|hijab|scarf|jilbab"),
       c("p-women-under", "ملابس داخلية ونوم", "Underwear & sleepwear", "داخلي|منامة|بيجاما|lingerie|underwear|pajamas|sleepwear"),
       c("p-women-coat", "جاكيتات ومعاطف", "Jackets & coats", "جاكيت|معطف|بالطو|jacket|coat"),
     ]),
     c("p-men", "ملابس رجالية", "Men's clothing", "رجالي|رجال|men|male", [
       c("p-men-shirts", "قمصان وتيشيرتات", "Shirts & T-shirts", "قميص|تيشيرت|بلوزة|shirt|tshirt|polo"),
-      c("p-men-pants", "بناطيل وجينز", "Pants & jeans", "بنطلون|جينز|بنطال|pants|jeans|trousers"),
+      c("p-men-pants", "بنطلونات وجينز", "Pants & jeans", "بنطلون|جينز|بنطال|pants|jeans|trousers"),
       c("p-men-suits", "بدلات وقمصان رسمية", "Suits & formal", "بدلة|كرافات|رسمي|suit|tie|formal"),
       c("p-men-traditional", "ملابس تقليدية", "Traditional wear", "جلابية|دشداشة|ثوب|عباءة رجالية|thobe|jalabiya|traditional"),
       c("p-men-under", "ملابس داخلية وجوارب", "Underwear & socks", "داخلي|جوارب|سروال|underwear|socks|boxer"),
@@ -82,7 +82,7 @@ export const PRODUCT_CATEGORIES: ProductCategorySeed[] = [
       c("p-shoes-sport", "أحذية رياضية", "Sports shoes", "رياضي|سنيكرز|كوتشي|sneakers|trainers|sport shoes"),
       c("p-shoes-kids", "أحذية أطفال", "Kids' shoes", "حذاء اطفال|kids shoes"),
     ]),
-    c("p-bags", "حقائب وشنط", "Bags & luggage", "شنطة|حقيبة|حقائب|شنط|bag|handbag|backpack|luggage|suitcase", [
+    c("p-bags", "حقائب", "Bags & luggage", "شنطة|حقيبة|حقائب|شنط|bag|handbag|backpack|luggage|suitcase", [
       c("p-handbags", "حقائب يد", "Handbags", "شنطة يد|حقيبة نسائية|handbag|purse"),
       c("p-backpacks", "حقائب ظهر ومدرسية", "Backpacks & school bags", "ظهر|مدرسية|backpack|school bag"),
       c("p-travel-bags", "حقائب سفر", "Travel bags & suitcases", "سفر|سوتكيس|travel|suitcase|luggage"),
@@ -118,7 +118,7 @@ export const PRODUCT_CATEGORIES: ProductCategorySeed[] = [
     c("p-appliances", "أجهزة منزلية", "Home appliances", "ثلاجة|غسالة|فرن|مكيف|fridge|washing machine|oven|air conditioner|appliance", [
       c("p-fridges", "ثلاجات وفريزرات", "Refrigerators & freezers", "ثلاجة|براد|فريزر|fridge|refrigerator|freezer"),
       c("p-washers", "غسالات ونشافات", "Washers & dryers", "غسالة|نشافة|washer|washing machine|dryer"),
-      c("p-cookers", "أفران وبوتاجازات", "Ovens & cookers", "فرن|بوتاغاز|غاز|oven|cooker|stove"),
+      c("p-cookers", "أفران وطباخات", "Ovens & cookers", "فرن|بوتاغاز|غاز|oven|cooker|stove"),
       c("p-ac", "مكيفات ومراوح وسخانات", "A/C, fans & heaters", "مكيف|مروحة|سخان|مدفأة|ac|fan|heater|air conditioner"),
       c("p-small-appliances", "أجهزة مطبخ صغيرة", "Small kitchen appliances", "خلاط|غلاية|محمصة|مكنسة|blender|kettle|toaster|vacuum|mixer|air fryer"),
     ]),
@@ -212,10 +212,10 @@ export const PRODUCT_CATEGORIES: ProductCategorySeed[] = [
       c("p-coffee-tea", "قهوة وشاي", "Coffee & tea", "قهوة|شاي|نسكافيه|coffee|tea|nescafe|mate"),
     ]),
     c("p-nuts", "مكسرات وتمور وبهارات", "Nuts, dates & dried fruit", "مكسرات|تمر|تين|زبيب|nuts|dates|dried fruit|almonds"),
-    c("p-honey", "عسل ومربيات ومونة", "Honey, jams & preserves", "عسل|مربى|مونة|دبس|honey|jam|preserves|molasses|pickles"),
+    c("p-honey", "عسل ومربيات ومؤونة", "Honey, jams & preserves", "عسل|مربى|مونة|دبس|honey|jam|preserves|molasses|pickles"),
     c("p-frozen", "مجمدات", "Frozen food", "مجمد|مجمدات|frozen"),
     c("p-baby-food", "أغذية أطفال", "Baby food", "حليب اطفال|سيريلاك|baby formula|baby food"),
-    c("p-homemade", "أكل بيتي بالطلب", "Homemade food on order", "أكل بيتي|بيتي|بالطلب|مونة|homemade|home cooked|on order"),
+    c("p-homemade", "مأكولات منزلية بالطلب", "Homemade food on order", "أكل بيتي|بيتي|بالطلب|مونة|homemade|home cooked|on order"),
   ]),
 
   d("p-sports", "sports", "⚽", "الرياضة", "Sports", "رياضة|رياضي|sports|fitness|gym", [

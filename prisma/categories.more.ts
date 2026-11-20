@@ -15,11 +15,11 @@ export const RESTAURANT_KINDS: CategorySeed[] = [
   c("rs-grill", "مشاوي وكباب", "Grills & kebab", "🍢", "مشاوي|كباب|شيش طاووق|لحمة مشوية|فحم|مندي|مظبي", "grill|bbq|kebab|shish tawook|mandi"),
   c("rs-fastfood", "وجبات سريعة وبرغر", "Fast food & burgers", "🍔", "برغر|وجبات سريعة|ناغتس|هوت دوغ|ساندويش|سناك", "fast food|burger|nuggets|hot dog|snack"),
   c("rs-pizza", "بيتزا ومعجنات", "Pizza & bakery items", "🍕", "بيتزا|معجنات|فطاير|مناقيش|لحم بعجين|صفيحة", "pizza|pastries|manakish|pies"),
-  c("rs-chicken", "فروج وبروستد", "Chicken & broasted", "🍗", "فروج|بروستد|دجاج مقلي|فروج مشوي|وجبات فروج", "chicken|broasted|fried chicken|roast chicken"),
+  c("rs-chicken", "دجاج مشوي ومقلي", "Chicken & broasted", "🍗", "فروج|بروستد|دجاج مقلي|فروج مشوي|وجبات فروج", "chicken|broasted|fried chicken|roast chicken"),
   c("rs-seafood", "مأكولات بحرية", "Seafood", "🐟", "سمك|مأكولات بحرية|روبيان|جمبري|سمك مشوي|بحري", "seafood|fish|shrimp|grilled fish"),
-  c("rs-syrian", "أكل شعبي وبيتي", "Traditional & home food", "🥘", "اكل شعبي|اكل بيتي|فتة|فول|حمص|كبة|محشي|اكل شامي|اكل حلبي", "traditional|home food|fatteh|foul|hummus|kibbeh|stuffed"),
+  c("rs-syrian", "مأكولات شعبية ومنزلية", "Traditional & home food", "🥘", "اكل شعبي|اكل بيتي|فتة|فول|حمص|كبة|محشي|اكل شامي|اكل حلبي", "traditional|home food|fatteh|foul|hummus|kibbeh|stuffed"),
   c("rs-international", "مطابخ عالمية", "International cuisine", "🍝", "ايطالي|صيني|هندي|تركي|مكسيكي|سوشي|باستا|اسيوي", "italian|chinese|indian|turkish|mexican|sushi|pasta|asian"),
-  c("rs-healthy", "أكل صحي ونباتي", "Healthy & vegetarian", "🥗", "اكل صحي|نباتي|دايت|سلطات|سموذي|كيتو|بدون غلوتين", "healthy|vegetarian|vegan|salads|diet|keto|gluten free"),
+  c("rs-healthy", "طعام صحي ونباتي", "Healthy & vegetarian", "🥗", "اكل صحي|نباتي|دايت|سلطات|سموذي|كيتو|بدون غلوتين", "healthy|vegetarian|vegan|salads|diet|keto|gluten free"),
   c("rs-breakfast", "فطور وسناك", "Breakfast & snacks", "🍳", "فطور|بيض|فول وحمص|مسبحة|فطائر|سناك صباحي", "breakfast|eggs|brunch|morning snacks"),
   c("rs-catering", "طبخ منزلي وتجهيز طلبات", "Home cooking & orders", "👩‍🍳", "طبخ منزلي|طبخ بيت|تجهيز طلبات|عزائم|ولائم|وجبات جاهزة|سفرة", "home cooking|catering orders|prepared meals|feasts"),
 ];
@@ -52,7 +52,7 @@ export const CLOTHING_KINDS: CategorySeed[] = [
   c("cl-uniform", "بدلات عمل ويونيفورم", "Work wear & uniforms", "🦺", "يونيفورم|بدلة عمل|ملابس عمل|مريول|زي موحد|ملابس مدرسية|اوفرول", "uniform|work wear|overalls|school uniform|scrubs"),
   c("cl-wedding", "فساتين أعراس وبدلات عرسان", "Wedding dresses & groom suits", "👰", "فستان عرس|فساتين اعراس|فستان زفاف|بدلة عريس|ايجار فساتين|تأجير فساتين", "wedding dress|bridal|groom suit|dress rental"),
   c("cl-fabric", "أقمشة وخيوط", "Fabrics & threads", "🧵", "قماش|اقمشة|خيوط|زرايير|بطانة|شيفون|حرير|قطن", "fabric|textile|threads|buttons|silk|cotton"),
-  c("cl-used", "ملابس مستعملة (بالة)", "Second-hand clothing", "♻️", "بالة|مستعمل|ملابس مستعملة|اوروبي|ستوك", "second hand|used clothing|thrift|stock"),
+  c("cl-used", "ملابس مستعملة", "Second-hand clothing", "♻️", "بالة|مستعمل|ملابس مستعملة|اوروبي|ستوك", "second hand|used clothing|thrift|stock"),
 ];
 
 export const BEAUTY_KINDS: CategorySeed[] = [
@@ -95,7 +95,7 @@ export const ONLINE_SECTION: CategorySeed = online(
     c("ol-handmade", "مشاريع منزلية ومنتجات يدوية", "Home projects & handmade", "🏡", "مشروع منزلي|شغل يدوي|منتجات يدوية|من البيت|صناعة منزلية|هاند ميد|اشغال", "home business|handmade|made at home|crafts"),
     c("ol-food", "طبخ وحلويات منزلية بالطلب", "Home-cooked food & sweets on order", "🍰", "طبخ بيت|حلويات بيت|بالطلب|اكل بيتي|كيك بيت|مونة|عزايم|تورتات|وجبات", "home cooking|home bakery|on order|homemade food|cakes|meal prep"),
     c("ol-clothing", "ملابس وإكسسوارات أونلاين", "Clothes & accessories online", "👗", "ملابس اونلاين|بيع ملابس|اكسسوارات|حقائب|احذية|اون لاين|بوتيك اونلاين", "online clothing|fashion|accessories|bags|shoes|online boutique"),
-    c("ol-electronics", "إلكترونيات وموبايلات أونلاين", "Electronics & phones online", "📱", "الكترونيات اونلاين|موبايلات|اكسسوارات موبايل|سماعات|شواحن|اجهزة", "online electronics|phones|phone accessories|headphones|chargers|gadgets"),
+    c("ol-electronics", "إلكترونيات وهواتف أونلاين", "Electronics & phones online", "📱", "الكترونيات اونلاين|موبايلات|اكسسوارات موبايل|سماعات|شواحن|اجهزة", "online electronics|phones|phone accessories|headphones|chargers|gadgets"),
     c("ol-cosmetics", "مكياج وعطور وعناية أونلاين", "Makeup, perfume & care online", "💄", "مكياج اونلاين|عطور|كريمات|عناية|بيع مستحضرات|مستحضرات تجميل", "online makeup|perfume|creams|care|cosmetics"),
     c("ol-home", "أدوات منزلية وديكور أونلاين", "Home goods & decor online", "🏠", "اغراض منزلية|ديكور|مطبخ|اواني|مفروشات|هدايا|بيع اغراض", "home goods|decor|kitchenware|linen|gifts"),
     c("ol-kids", "ألعاب وملابس أطفال أونلاين", "Toys & kids' items online", "🧸", "العاب اطفال|ملابس اطفال|مستلزمات بيبي|اطفال اونلاين", "toys|kids clothes|baby items|kids online"),
@@ -112,13 +112,13 @@ export const ONLINE_SECTION: CategorySeed = online(
 export const MORE_SECTIONS: CategorySeed[] = [
   ONLINE_SECTION,
   c("services-home", "الخدمات المنزلية والصيانة", "Home services & repairs", "🛠️", "خدمات|صيانة|فني|تصليح|معلم|حرفي|مهنة", "services|repairs|handyman|technician|maintenance", [
-    c("svc-plumber", "سباكة (مواسرجي)", "Plumber", "🚰", "سباك|سباكة|مواسرجي|تمديدات|صرف صحي|تسريب|مجاري|سخان", "plumber|plumbing|pipes|drain|leak|sewage", [
+    c("svc-plumber", "سباكة", "Plumber", "🚰", "سباك|سباكة|مواسرجي|تمديدات|صرف صحي|تسريب|مجاري|سخان", "plumber|plumbing|pipes|drain|leak|sewage", [
       c("svc-plumber-leaks", "كشف وإصلاح تسريبات", "Leak detection & repair", "💧", "تسريب|نش|رطوبة|كشف تسريب|تسرب مياه", "leak detection|water leak|dampness"),
       c("svc-plumber-heaters", "سخانات (كهرباء وشمسي)", "Water heaters", "♨️", "سخان|سخانات|سخان شمسي|بويلر|ماء ساخن", "water heater|solar heater|boiler|hot water"),
       c("svc-plumber-bath", "تمديدات حمامات ومطابخ", "Bathroom & kitchen plumbing", "🚿", "حمام|مطبخ|تمديد|تركيب مغسلة|تركيب بانيو|جلي", "bathroom plumbing|kitchen plumbing|install sink|bathtub"),
       c("svc-plumber-drain", "فتح مجاري وتسليك", "Drain unblocking", "🪠", "مجاري|تسليك|فتح مجاري|انسداد|بيارة|نضح", "drain unblocking|clogged|sewer|septic"),
     ]),
-    c("svc-electrician", "كهرباء (كهربجي)", "Electrician", "⚡", "كهربجي|كهربائي|تمديدات كهرباء|فني كهرباء|قاطع|اسلاك|فيوز|ماس", "electrician|wiring|electrical|circuit breaker|short circuit", [
+    c("svc-electrician", "كهرباء", "Electrician", "⚡", "كهربجي|كهربائي|تمديدات كهرباء|فني كهرباء|قاطع|اسلاك|فيوز|ماس", "electrician|wiring|electrical|circuit breaker|short circuit", [
       c("svc-electrician-wiring", "تمديدات وتأسيس", "Wiring & installation", "🔌", "تأسيس|تمديد|اسلاك|لوحة كهرباء|عداد", "wiring|installation|panel|meter"),
       c("svc-electrician-lighting", "إنارة وديكور ضوئي", "Lighting & light decor", "💡", "انارة|اضاءة|سبوتات|ثريات|ليد|ديكور ضوئي", "lighting|spotlights|chandeliers|led"),
       c("svc-electrician-generators", "مولدات وأنظمة طوارئ", "Generators & backup", "🔋", "مولدة|مولدات|امبيرات|ups|شاحن|بطاريات|طاقة بديلة", "generator|backup power|ups|batteries"),
@@ -126,11 +126,11 @@ export const MORE_SECTIONS: CategorySeed[] = [
     c("svc-carpenter", "نجارة", "Carpenter", "🪚", "نجار|نجارة|خشب|معلم نجار|ابواب خشب|مطابخ خشب", "carpenter|carpentry|woodwork|wooden doors", [
       c("svc-carpenter-doors", "أبواب ونوافذ خشب", "Wooden doors & windows", "🚪", "باب|ابواب|شبابيك خشب|نوافذ|باب خشب", "wooden doors|windows|door installation"),
       c("svc-carpenter-kitchens", "مطابخ وخزائن خشب", "Wooden kitchens & wardrobes", "🗄️", "مطبخ|خزانة|خزائن|دولاب|مكتبة|جزامة", "kitchen|wardrobe|cabinets|closets"),
-      c("svc-carpenter-repair", "تصليح وتنجيد أثاث", "Furniture repair & upholstery", "🛋️", "تصليح اثاث|تنجيد|كنب|كراسي|ترميم اثاث|تلبيس", "furniture repair|upholstery|sofa|restoration"),
+      c("svc-carpenter-repair", "إصلاح الأثاث وتنجيده", "Furniture repair & upholstery", "🛋️", "تصليح اثاث|تنجيد|كنب|كراسي|ترميم اثاث|تلبيس", "furniture repair|upholstery|sofa|restoration"),
     ]),
     c("svc-painter", "دهان وديكورات جدران", "Painter & wall decor", "🎨", "دهان|دهّان|طلاء|صباغ|دهانات|ورق جدران|ديكور", "painter|painting|wall paint|wallpaper|decor", [
       c("svc-painter-interior", "دهان داخلي وخارجي", "Interior & exterior painting", "🖌️", "دهان داخلي|دهان خارجي|طلاء بيت|دهان شقة|ترميم", "interior painting|exterior painting|apartment painting"),
-      c("svc-painter-gypsum", "جبصين وديكورات", "Gypsum & decorations", "🏛️", "جبصين|جبس|اسقف مستعارة|ديكور جبس|كورنيش|سقف", "gypsum|false ceiling|plaster decor|cornice"),
+      c("svc-painter-gypsum", "جبس وديكورات", "Gypsum & decorations", "🏛️", "جبصين|جبس|اسقف مستعارة|ديكور جبس|كورنيش|سقف", "gypsum|false ceiling|plaster decor|cornice"),
       c("svc-painter-wallpaper", "ورق جدران وتلبيس", "Wallpaper & cladding", "🧱", "ورق جدران|ورق حائط|تلبيس|3d|ستيكر جدران", "wallpaper|wall cladding|3d panels|stickers"),
     ]),
     c("svc-tiles", "بلاط وسيراميك ورخام", "Tiles, ceramic & marble", "🧱", "بلاط|سيراميك|رخام|غرانيت|مبلط|تبليط|بورسلان", "tiles|ceramic|marble|granite|tiler|porcelain", [
@@ -139,7 +139,7 @@ export const MORE_SECTIONS: CategorySeed[] = [
     ]),
     c("svc-aluminum", "ألمنيوم وزجاج", "Aluminum & glass", "🪟", "المنيوم|ألمنيوم|زجاج|سكريت|شبابيك|نوافذ|واجهات", "aluminum|glass|windows|facades|upvc", [
       c("svc-aluminum-windows", "نوافذ وأبواب ألمنيوم", "Aluminum windows & doors", "🚪", "نوافذ المنيوم|ابواب المنيوم|بي في سي|upvc|شباك|شبك", "aluminum windows|upvc|doors"),
-      c("svc-aluminum-glass", "زجاج ومرايا وسكريت", "Glass, mirrors & shower screens", "🪞", "زجاج|مرايا|سكريت|كابينة حمام|زجاج سيكوريت|طاولات زجاج", "glass|mirrors|shower screens|tempered glass"),
+      c("svc-aluminum-glass", "زجاج ومرايا وسيكوريت", "Glass, mirrors & shower screens", "🪞", "زجاج|مرايا|سكريت|كابينة حمام|زجاج سيكوريت|طاولات زجاج", "glass|mirrors|shower screens|tempered glass"),
     ]),
     c("svc-welding", "حدادة ولحام", "Blacksmith & welding", "🔩", "حداد|حدادة|لحام|ابواب حديد|درابزين|سحابات|هناجر", "blacksmith|welding|iron doors|railings|shutters", [
       c("svc-welding-doors", "أبواب وبوابات حديد", "Iron doors & gates", "🚪", "باب حديد|بوابة|بوابات|شبك|قضبان|حماية نوافذ", "iron doors|gates|window bars"),
@@ -147,7 +147,7 @@ export const MORE_SECTIONS: CategorySeed[] = [
     ]),
     c("svc-ac", "تكييف وتبريد", "AC & refrigeration", "❄️", "مكيف|تكييف|تبريد|برادات|فني تكييف|تعبئة فريون|غاز", "ac|air conditioning|refrigeration|fridge|freon|hvac", [
       c("svc-ac-install", "تركيب وصيانة مكيفات", "AC installation & service", "🧊", "تركيب مكيف|صيانة مكيف|تنظيف مكيف|سبليت|مركزي", "ac installation|ac service|split|central ac"),
-      c("svc-ac-fridge", "تصليح برادات وغسالات", "Fridge & washer repair", "🧺", "تصليح براد|تصليح غسالة|براد|غسالة|ثلاجة|جلاية", "fridge repair|washer repair|refrigerator|dishwasher"),
+      c("svc-ac-fridge", "إصلاح ثلاجات وغسالات", "Fridge & washer repair", "🧺", "تصليح براد|تصليح غسالة|براد|غسالة|ثلاجة|جلاية", "fridge repair|washer repair|refrigerator|dishwasher"),
     ]),
     c("svc-cleaning", "تنظيف وتعقيم", "Cleaning & sanitizing", "🧹", "تنظيف|تعقيم|نظافة|شركة تنظيف|عاملة تنظيف|جلي|مكافحة", "cleaning|sanitizing|housekeeping|cleaning company", [
       c("svc-cleaning-home", "تنظيف منازل وشركات", "Home & office cleaning", "🏠", "تنظيف منزل|تنظيف شقة|تنظيف مكاتب|بعد البناء|بعد الدهان", "home cleaning|office cleaning|post-construction cleaning"),
@@ -155,14 +155,14 @@ export const MORE_SECTIONS: CategorySeed[] = [
       c("svc-cleaning-tanks", "تنظيف خزانات وتعقيم مياه", "Tank cleaning", "🛢️", "خزانات|تنظيف خزان|تعقيم مياه|بئر|مياه شرب", "tank cleaning|water sterilization|well|drinking water"),
       c("svc-cleaning-pest", "مكافحة حشرات وقوارض", "Pest control", "🐜", "مكافحة حشرات|رش مبيدات|صراصير|فئران|نمل|بق الفراش|ابادة", "pest control|insects|rodents|ants|bed bugs|fumigation"),
     ]),
-    c("svc-moving", "نقل أثاث وعفش", "Furniture moving", "🚛", "نقل عفش|نقل اثاث|نقل بيت|سيارة عفش|تغليف|فك وتركيب|رافعة", "furniture moving|movers|house move|packing|crane"),
+    c("svc-moving", "نقل الأثاث", "Furniture moving", "🚛", "نقل عفش|نقل اثاث|نقل بيت|سيارة عفش|تغليف|فك وتركيب|رافعة", "furniture moving|movers|house move|packing|crane"),
     c("svc-locksmith", "أقفال ومفاتيح", "Locksmith", "🔑", "قفال|اقفال|مفاتيح|نسخ مفتاح|فتح باب|خزنة|كوداتور|قفل سيارة", "locksmith|locks|keys|safe|door opening|car key"),
     c("svc-garden", "حدائق وتنسيق", "Gardens & landscaping", "🌳", "حدائق|تنسيق حدائق|عشب|ري|تقليم|حدائق منزلية|مشتل", "gardens|landscaping|lawn|irrigation|pruning"),
     c("svc-satellite", "ستالايت وشبكات وإنترنت", "Satellite & networks", "📡", "ستالايت|دش|رسيفر|انترنت|راوتر|شبكات|واي فاي|تمديد انترنت", "satellite|dish|receiver|internet|router|wifi|networking"),
     c("svc-solar", "فني تركيب وصيانة طاقة شمسية", "Solar installer & technician", "☀️", "فني طاقة شمسية|تركيب منظومة|صيانة انفرتر|تمديد نظام شمسي|معلم طاقة شمسية|تركيب طاقة", "solar installer|solar technician|inverter service|solar wiring"),
     c("svc-laundry", "مغاسل وكوي", "Laundry & dry cleaning", "👔", "مغسلة|كوي|دراي كلين|غسيل ملابس|تنظيف جاف|غسيل بطانيات", "laundry|dry cleaning|ironing|clothes washing"),
-    c("svc-handyman", "فني صيانة عام (معلم)", "General handyman", "🧰", "معلم|فني|صيانة عامة|تصليحات|تركيبات|فك وتركيب|اعمال بسيطة", "handyman|odd jobs|general repairs|installations"),
-    c("svc-curtains", "ستائر وبرادي وتركيب", "Curtains & blinds", "🪟", "ستائر|برادي|ستارة|رولر|ستائر طبية|تركيب ستائر|بيرق", "curtains|blinds|roller|window treatments"),
+    c("svc-handyman", "فني صيانة عام", "General handyman", "🧰", "معلم|فني|صيانة عامة|تصليحات|تركيبات|فك وتركيب|اعمال بسيطة", "handyman|odd jobs|general repairs|installations"),
+    c("svc-curtains", "ستائر وتركيبها", "Curtains & blinds", "🪟", "ستائر|برادي|ستارة|رولر|ستائر طبية|تركيب ستائر|بيرق", "curtains|blinds|roller|window treatments"),
   ]),
 
   c("auto", "السيارات والمركبات", "Cars & vehicles", "🚗", "سيارة|سيارات|مركبة|مركبات|سيارات", "cars|vehicles|auto|automotive", [
@@ -171,26 +171,26 @@ export const MORE_SECTIONS: CategorySeed[] = [
       c("auto-sales-used", "سيارات مستعملة", "Used cars", "🚙", "مستعمل|سيارة مستعملة|بيع وشراء|سمسار سيارات", "used cars|second hand|buy and sell|car broker"),
     ]),
     c("auto-mechanic", "ميكانيك وصيانة", "Mechanics & service", "🔧", "ميكانيكي|ميكانيك|صيانة سيارات|كراج|ورشة|تصليح سيارات|معلم سيارات", "mechanic|car repair|garage|workshop|car service", [
-      c("auto-mechanic-engine", "محركات وجير", "Engines & transmissions", "⚙️", "محرك|جير|اوتوماتيك|مكينة|توضيب|قير|صيانة محرك", "engine|transmission|gearbox|automatic|overhaul"),
+      c("auto-mechanic-engine", "محركات وناقل حركة", "Engines & transmissions", "⚙️", "محرك|جير|اوتوماتيك|مكينة|توضيب|قير|صيانة محرك", "engine|transmission|gearbox|automatic|overhaul"),
       c("auto-mechanic-electric", "كهرباء وكمبيوتر سيارات", "Auto electric & diagnostics", "🔌", "كهرباء سيارات|كمبيوتر|فحص كمبيوتر|سكانر|حساسات|دينمو|مارش", "auto electrician|diagnostics|scanner|sensors|alternator|starter"),
       c("auto-mechanic-brakes", "فرامل ومقدمة وتعليق", "Brakes & suspension", "🛞", "فرامل|مقدمة|تعليق|مساعدات|ترصيص|محاذاة|دبرياج", "brakes|suspension|shocks|alignment|clutch"),
       c("auto-mechanic-ac", "تكييف سيارات", "Car AC", "❄️", "تكييف سيارات|مكيف سيارة|فريون سيارة|تعبئة غاز", "car ac|auto air conditioning|freon"),
     ]),
-    c("auto-body", "سمكرة ودهان", "Body & paint", "🎨", "سمكري|سمكرة|دهان سيارات|بويا|صدمة|تعديل|شاسيه|ترميم", "body shop|paint|dent|collision|repair|chassis"),
-    c("auto-tires", "كوشوك وبطاريات وزيوت", "Tires, batteries & oil", "🛞", "كوشوك|كفرات|بطارية|زيت|تبديل زيت|فلاتر|جنطات|ترصيص", "tires|batteries|oil change|filters|rims|wheels", [
-      c("auto-tires-tires", "كفرات وجنطات", "Tires & rims", "🛞", "كوشوك|كفر|جنط|جنطات|ترصيص|بنشر|بنشرجي", "tires|rims|puncture repair|balancing"),
+    c("auto-body", "صيانة الهيكل والدهان", "Body & paint", "🎨", "سمكري|سمكرة|دهان سيارات|بويا|صدمة|تعديل|شاسيه|ترميم", "body shop|paint|dent|collision|repair|chassis"),
+    c("auto-tires", "إطارات وبطاريات وزيوت", "Tires, batteries & oil", "🛞", "كوشوك|كفرات|بطارية|زيت|تبديل زيت|فلاتر|جنطات|ترصيص", "tires|batteries|oil change|filters|rims|wheels", [
+      c("auto-tires-tires", "إطارات وجنوط", "Tires & rims", "🛞", "كوشوك|كفر|جنط|جنطات|ترصيص|بنشر|بنشرجي", "tires|rims|puncture repair|balancing"),
       c("auto-tires-batteries", "بطاريات", "Car batteries", "🔋", "بطارية سيارة|بطاريات|شحن بطارية|امبير", "car battery|batteries|charging"),
       c("auto-tires-oil", "زيوت وفلاتر وتبديل زيت", "Oil, filters & oil change", "🛢️", "زيت|فلتر|تبديل زيت|تشحيم|زيوت محرك|غيار زيت", "oil|filters|oil change|lubrication"),
     ]),
     c("auto-parts", "قطع غيار سيارات", "Car spare parts", "🧩", "قطع غيار|قطع سيارات|اكسسوارات|تشليح|قطع مستعملة|اصلي|تجاري", "spare parts|car parts|used parts|original|aftermarket", [
       c("auto-parts-asian", "قطع يابانية وكورية", "Japanese & Korean parts", "🇯🇵", "تويوتا|هيونداي|كيا|نيسان|ميتسوبيشي|مازدا|قطع يابانية|قطع كورية", "toyota|hyundai|kia|nissan|mitsubishi|mazda|japanese parts|korean parts"),
       c("auto-parts-european", "قطع أوروبية وألمانية", "European & German parts", "🇩🇪", "مرسيدس|بي ام|اودي|فولكس|اوبل|رينو|بيجو|قطع المانية", "mercedes|bmw|audi|volkswagen|opel|renault|peugeot|german parts"),
-      c("auto-parts-used", "تشليح وقطع مستعملة", "Salvage & used parts", "♻️", "تشليح|قطع مستعملة|خردة|هيكل|جسم|مفكك", "salvage|used parts|scrap|breaker yard"),
+      c("auto-parts-used", "قطع مستعملة وخردة", "Salvage & used parts", "♻️", "تشليح|قطع مستعملة|خردة|هيكل|جسم|مفكك", "salvage|used parts|scrap|breaker yard"),
     ]),
     c("auto-wash", "غسيل وتلميع وتنظيف", "Car wash & detailing", "🧽", "غسيل سيارات|تلميع|تنظيف داخلي|بوليش|سيراميك|حماية|تعقيم", "car wash|detailing|polish|interior cleaning|ceramic coating"),
     c("auto-accessories", "إكسسوارات وصوتيات وتظليل", "Accessories, audio & tint", "🎶", "اكسسوارات سيارات|صوتيات|تظليل|زجاج|سبيكر|شاشة|كاميرا خلفية|فرش", "car accessories|audio|window tint|speakers|screen|rear camera|seat covers"),
     c("auto-rental", "تأجير سيارات", "Car rental", "🚖", "تأجير سيارات|ايجار سيارات|سيارة مع سائق|ريزرفيشن|سيارات اعراس", "car rental|rent a car|chauffeur|wedding cars"),
-    c("auto-towing", "سطحة وإنقاذ طرق", "Towing & roadside help", "🛻", "سطحة|سحب سيارات|انقاذ|وينش|عطل طريق|تشغيل بطارية", "towing|roadside assistance|winch|breakdown|jump start"),
+    c("auto-towing", "سحب وإنقاذ على الطرق", "Towing & roadside help", "🛻", "سطحة|سحب سيارات|انقاذ|وينش|عطل طريق|تشغيل بطارية", "towing|roadside assistance|winch|breakdown|jump start"),
     c("auto-moto", "دراجات نارية وهوائية", "Motorcycles & bicycles", "🏍️", "دراجة نارية|موتور|دراجة هوائية|بسكليت|سكوتر|قطع دراجات|صيانة دراجات", "motorcycle|scooter|bicycle|bike shop|bike parts"),
     c("auto-driving", "مدارس تعليم قيادة", "Driving schools", "🚦", "تعليم قيادة|مدرسة قيادة|رخصة قيادة|سواقة|تدريب سواقة|امتحان", "driving school|driving lessons|license|learn to drive"),
     c("auto-papers", "معاملات وتسجيل سيارات", "Car paperwork & registration", "📋", "معاملات سيارات|تسجيل|نقل ملكية|فحص فني|ترخيص|تأمين سيارات|تعقيب", "car paperwork|registration|ownership transfer|inspection|insurance"),
@@ -204,7 +204,7 @@ export const MORE_SECTIONS: CategorySeed[] = [
     ]),
     c("food-sweets", "حلويات وبقلاوة", "Sweets & baklava", "🍯", "حلويات|بقلاوة|كنافة|معمول|بسبوسة|حلاوة|هريسة|مشبك|تمر", "sweets|baklava|kunafa|maamoul|basbousa|halawa|dates", [
       c("food-sweets-arabic", "حلويات عربية وشرقية", "Arabic sweets", "🥮", "حلويات عربية|بقلاوة|كنافة|معمول|ملبن|راحة|حلبية", "arabic sweets|baklava|kunafa|maamoul|turkish delight"),
-      c("food-sweets-cakes", "كاتو وشوكولا وتورتات", "Cakes & chocolate", "🎂", "كاتو|تورتة|شوكولا|حلويات غربية|كب كيك|بسكويت|تورتات", "cakes|chocolate|western sweets|cupcakes|cookies"),
+      c("food-sweets-cakes", "كعك وشوكولا وتورتات", "Cakes & chocolate", "🎂", "كاتو|تورتة|شوكولا|حلويات غربية|كب كيك|بسكويت|تورتات", "cakes|chocolate|western sweets|cupcakes|cookies"),
     ]),
     c("food-butcher", "لحوم وجزارة", "Butcher", "🥩", "جزار|لحمة|لحوم|لحم غنم|لحم عجل|ذبح|ذبائح|مفروم|سجق|مرتديلا", "butcher|meat|lamb|beef|minced|sausage"),
     c("food-poultry", "دجاج وبيض", "Poultry & eggs", "🐔", "فروج|دجاج|بيض|فروج مذبوح|ديك رومي|بط", "poultry|chicken|eggs|turkey|duck"),
@@ -217,7 +217,7 @@ export const MORE_SECTIONS: CategorySeed[] = [
     ]),
     c("food-dairy", "ألبان وأجبان", "Dairy & cheese", "🧀", "ألبان|حليب|لبن|جبنة|اجبان|سمنة|قشطة|لبنة|شنكليش", "dairy|milk|yogurt|cheese|ghee|cream|labneh"),
     c("food-wholesale", "جملة مواد غذائية", "Food wholesale", "📦", "جملة|تجار جملة|مستودع غذائي|سكر|رز|زيت|معلبات|توزيع", "wholesale|food distribution|warehouse|sugar|rice|oil|canned"),
-    c("food-honey", "عسل وزيوت ومونة", "Honey, oils & pantry goods", "🍯", "عسل|زيت زيتون|مونة|مخللات|مربيات|دبس|رب البندورة|مكدوس|صابون", "honey|olive oil|preserves|pickles|jam|molasses|tomato paste"),
+    c("food-honey", "عسل وزيوت ومؤونة", "Honey, oils & pantry goods", "🍯", "عسل|زيت زيتون|مونة|مخللات|مربيات|دبس|رب البندورة|مكدوس|صابون", "honey|olive oil|preserves|pickles|jam|molasses|tomato paste"),
     c("food-water", "مياه وتعبئة", "Water & refills", "💧", "مياه|تعبئة مياه|مياه شرب|غالونات|فلتر مياه|صهريج", "water|water refill|drinking water|gallons|water filter|tanker"),
     c("food-frozen", "مجمدات ومعلبات", "Frozen & canned food", "🧊", "مجمدات|معلبات|ثلج|ايس|كبة مجمدة|خضار مجمد", "frozen food|canned|ice|frozen vegetables"),
     c("food-coffee", "محامص بن وقهوة", "Coffee roasters", "☕", "محمصة|بن|قهوة|قهوة عربية|قهوة تركية|هيل|محامص", "coffee roaster|beans|arabic coffee|turkish coffee|cardamom"),
@@ -359,10 +359,10 @@ export const MORE_SECTIONS: CategorySeed[] = [
     c("cr-tailor", "خياطة وتفصيل", "Tailoring", "✂️", "خياط|خياطة|تفصيل|تعديل ملابس|خياط رجالي|خياطة نسائية|تطريز", "tailor|sewing|bespoke|alterations|men's tailor|women's tailor", [
       c("cr-tailor-men", "خياطة رجالية", "Men's tailoring", "🤵", "خياط رجالي|بدلات|تفصيل بدلة|قمصان|دشداشة|ثوب", "men's tailor|suits|bespoke suit|shirts|thobe"),
       c("cr-tailor-women", "خياطة نسائية وفساتين", "Women's tailoring & dresses", "👗", "خياطة نسائية|فساتين|تفصيل فستان|عبايات|تعديل|موديلات", "women's tailor|dresses|dressmaking|abayas|alterations"),
-      c("cr-tailor-alter", "تعديل وتصليح ملابس", "Alterations & repair", "🪡", "تعديل|تقصير|تصليح|سحاب|رتي|ترقيع", "alterations|hemming|repair|zipper|mending"),
+      c("cr-tailor-alter", "تعديل وإصلاح الملابس", "Alterations & repair", "🪡", "تعديل|تقصير|تصليح|سحاب|رتي|ترقيع", "alterations|hemming|repair|zipper|mending"),
     ]),
-    c("cr-shoemaker", "إصلاح أحذية وجلديات", "Shoe & leather repair", "👞", "اسكافي|اصلاح احذية|تصليح حذاء|جلديات|حقائب|ترميم جلد|مفاتيح", "cobbler|shoe repair|leather repair|bags|keys"),
-    c("cr-watch", "ساعات وتصليحها", "Watches & repair", "⌚", "ساعات|ساعاتي|تصليح ساعات|بطارية ساعة|ساعة يد|ساعات ذكية|اساور", "watches|watchmaker|watch repair|watch battery|smartwatch"),
+    c("cr-shoemaker", "إصلاح الأحذية والجلديات", "Shoe & leather repair", "👞", "اسكافي|اصلاح احذية|تصليح حذاء|جلديات|حقائب|ترميم جلد|مفاتيح", "cobbler|shoe repair|leather repair|bags|keys"),
+    c("cr-watch", "ساعات وإصلاحها", "Watches & repair", "⌚", "ساعات|ساعاتي|تصليح ساعات|بطارية ساعة|ساعة يد|ساعات ذكية|اساور", "watches|watchmaker|watch repair|watch battery|smartwatch"),
     c("cr-glass", "زجاج يدوي وفخار", "Hand-blown glass & pottery", "🏺", "زجاج يدوي|فخار|خزف|سيراميك يدوي|تحف زجاج|نفخ زجاج|فخاري", "hand-blown glass|pottery|ceramics|handmade|glassware"),
     c("cr-soap", "صابون وزيوت (غار وحلبي)", "Soap & oils (Aleppo)", "🧼", "صابون غار|صابون حلبي|صابون|زيت غار|زيوت|مستحضرات طبيعية|طبيعي", "aleppo soap|laurel soap|soap|natural oils|natural cosmetics"),
     c("cr-embroidery", "تطريز وأعمال يدوية", "Embroidery & handmade work", "🪢", "تطريز|كروشيه|تريكو|شغل ابرة|مكرمة|شغل يدوي|اعمال يدوية|هدايا يدوية", "embroidery|crochet|knitting|needlework|macrame|handmade gifts"),
@@ -376,7 +376,7 @@ export const MORE_SECTIONS: CategorySeed[] = [
     c("jw-silver", "فضة وإكسسوارات", "Silver & fashion jewelry", "💎", "فضة|اكسسوار|اكسسوارات|بجوتري|عقود|اساور|خواتم فضة|حلق", "silver|fashion jewelry|bijouterie|necklaces|earrings"),
     c("jw-watches", "ساعات ماركات وتقليد", "Watches", "⌚", "ساعات|ساعة|ماركات|اورجينال|رولكس|ساعات رجالية|ساعات نسائية|ساعة ذكية", "watches|brand watches|original|men's watches|women's watches|smartwatch"),
     c("jw-gems", "ألماس وأحجار كريمة", "Diamonds & gemstones", "💠", "الماس|احجار كريمة|عقيق|فيروز|زمرد|ياقوت|لؤلؤ|مرجان", "diamonds|gemstones|agate|turquoise|emerald|ruby|pearls"),
-    c("jw-repair", "تفصيل وتصليح مجوهرات", "Jewelry design & repair", "🔧", "تفصيل ذهب|تصليح ذهب|لحام ذهب|تصميم مجوهرات|تلميع|حفر|نقش اسم", "jewelry design|gold repair|soldering|polishing|engraving"),
+    c("jw-repair", "تفصيل وإصلاح المجوهرات", "Jewelry design & repair", "🔧", "تفصيل ذهب|تصليح ذهب|لحام ذهب|تصميم مجوهرات|تلميع|حفر|نقش اسم", "jewelry design|gold repair|soldering|polishing|engraving"),
   ]),
 
   c("stationery", "المكتبات والقرطاسية والطباعة", "Books, stationery & printing", "📚", "مكتبة|قرطاسية|كتب|طباعة|تصوير مستندات|مطبعة", "bookstore|stationery|books|printing|photocopy|print shop", [
@@ -396,8 +396,8 @@ export const MORE_SECTIONS: CategorySeed[] = [
   ]),
 
   c("transport", "النقل والتوصيل", "Transport & delivery", "🚚", "نقل|توصيل|شحن|تكسي|سائق|ديليفري|بضائع", "transport|delivery|shipping|taxi|driver|goods|courier", [
-    c("tp-taxi", "تكسي وسيارات أجرة", "Taxis", "🚕", "تكسي|اجرة|سيرفيس|سواق|سائق خاص|تكسي مطار|اوبر|توصيل ركاب", "taxi|cab|service|driver|private driver|airport taxi|ride"),
-    c("tp-delivery", "توصيل طلبات وديليفري", "Order delivery", "🛵", "ديليفري|توصيل طلبات|دليفري|موتور توصيل|توصيل طعام|توصيل منزلي|مندوب", "delivery|order delivery|courier bike|food delivery|home delivery|rider"),
+    c("tp-taxi", "سيارات الأجرة", "Taxis", "🚕", "تكسي|اجرة|سيرفيس|سواق|سائق خاص|تكسي مطار|اوبر|توصيل ركاب", "taxi|cab|service|driver|private driver|airport taxi|ride"),
+    c("tp-delivery", "توصيل الطلبات", "Order delivery", "🛵", "ديليفري|توصيل طلبات|دليفري|موتور توصيل|توصيل طعام|توصيل منزلي|مندوب", "delivery|order delivery|courier bike|food delivery|home delivery|rider"),
     c("tp-trucks", "شاحنات ونقل بضائع", "Trucks & freight", "🚛", "شاحنة|براد|نقل بضائع|نقل ثقيل|سيارة نقل|بيك اب|نقل مواد|قلاب", "trucks|freight|heavy transport|pickup|cargo|dump truck"),
     c("tp-buses", "حافلات وباصات", "Buses & minibuses", "🚌", "باص|حافلة|ميكروباص|نقل طلاب|نقل موظفين|رحلات|باصات سياحية", "bus|minibus|school transport|staff transport|trips|coach"),
     c("tp-courier", "بريد سريع وشحن دولي", "Courier & international shipping", "📮", "بريد سريع|شحن دولي|دي اتش ال|حوالة|شحن طرود|ارسال|استلام طرود|شحن جوي", "courier|international shipping|dhl|parcels|air freight|send packages"),

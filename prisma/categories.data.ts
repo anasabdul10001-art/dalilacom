@@ -102,7 +102,7 @@ export const CATEGORY_TREE: CategorySeed[] = [
 
   c("electronics", "الإلكترونيات", "Electronics", "🔌", "الكترونيات|كهربائيات|اجهزة", "electronics|electrical|gadgets", [
     c("electronics-appliances", "كهربائيات منزلية", "Home appliances", "🧺", "كهربائيات|براد|ثلاجة|غسالة|غسالات|فرن|غاز|سخان|مكيف|مروحة", "appliances|fridge|refrigerator|washing machine|oven|heater|ac|air conditioner", [
-      c("electronics-appliances-fridges", "برادات وغسالات", "Fridges & washers", "🧊", "براد|برادات|ثلاجة|غسالة|غسالات|ناشفة|جلاية", "fridge|refrigerator|washer|washing machine|dryer|dishwasher"),
+      c("electronics-appliances-fridges", "ثلاجات وغسالات", "Fridges & washers", "🧊", "براد|برادات|ثلاجة|غسالة|غسالات|ناشفة|جلاية", "fridge|refrigerator|washer|washing machine|dryer|dishwasher"),
       c("electronics-appliances-tv", "تلفزيونات وشاشات", "TVs & screens", "📺", "تلفزيون|شاشة|شاشات|ستلايت|ريسيفر|سمارت", "tv|television|screen|smart tv|satellite"),
       c("electronics-appliances-ac", "مكيفات وتدفئة", "AC & heating", "❄️", "مكيف|مكيفات|سبلت|تدفئة|مدفأة|صوبية|سخانات|دفاية", "ac|air conditioner|split|heater|heating|boiler|water heater"),
       c("electronics-appliances-kitchen", "أدوات ومعدات مطبخ", "Kitchen appliances", "🍳", "خلاط|غلاية|مكرويف|مايكرويف|طباخ|فرن|مطبخ|عجانة", "blender|kettle|microwave|cooker|oven|mixer"),
@@ -120,14 +120,14 @@ export const CATEGORY_TREE: CategorySeed[] = [
     ]),
     c("electronics-cctv", "كاميرات مراقبة وأمان", "CCTV & security", "📹", "كاميرات|كاميرا مراقبة|انذار|جرس|اقفال ذكية|امان", "cctv|security camera|alarm|security|smart lock"),
     c("electronics-gaming", "ألعاب وكونسول", "Gaming", "🎮", "بلايستيشن|ps5|اكس بوكس|العاب|كونسول|جويستك", "playstation|xbox|gaming|console|games"),
-    c("electronics-repair", "صيانة أجهزة كهربائية", "Appliance repair", "🔧", "صيانة براد|صيانة غسالة|تصليح|فني|كهربائي صيانة", "appliance repair|fix|technician"),
+    c("electronics-repair", "صيانة الأجهزة الكهربائية", "Appliance repair", "🔧", "صيانة براد|صيانة غسالة|تصليح|فني|كهربائي صيانة", "appliance repair|fix|technician"),
   ]),
 
-  c("mobiles", "الموبايلات", "Mobiles", "📱", "موبايل|جوال|هاتف|تلفون|موبايلات|جوالات", "mobile|phone|cell|smartphone|mobiles", [
-    c("mobiles-new", "موبايلات جديدة", "New phones", "📱", "موبايل جديد|ايفون|سامسونج|شاومي|هواوي|اوبو|ريلمي|جهاز جديد", "new phone|iphone|samsung|xiaomi|huawei|oppo|realme"),
-    c("mobiles-used", "موبايلات مستعملة", "Used phones", "♻️", "مستعمل|موبايل مستعمل|بيع وشراء|تبديل|ايفون مستعمل", "used phone|second hand|trade in|buy sell"),
-    c("mobiles-repair", "صيانة موبايلات", "Phone repair", "🛠️", "صيانة|تصليح|شاشة|تبديل شاشة|بطارية|سوفت وير|برمجة|فك حظر|ايكلاود|مياه", "phone repair|screen repair|battery replacement|software|unlock|icloud"),
-    c("mobiles-accessories", "إكسسوارات وكفرات وشواحن", "Accessories & chargers", "🔌", "اكسسوارات|كفر|كفرات|شاحن|سماعات|حماية شاشة|لزقة|باور بنك|كبل", "accessories|case|cover|charger|headphones|screen protector|power bank|cable"),
+  c("mobiles", "الهواتف المحمولة", "Mobiles", "📱", "موبايل|جوال|هاتف|تلفون|موبايلات|جوالات", "mobile|phone|cell|smartphone|mobiles", [
+    c("mobiles-new", "هواتف جديدة", "New phones", "📱", "موبايل جديد|ايفون|سامسونج|شاومي|هواوي|اوبو|ريلمي|جهاز جديد", "new phone|iphone|samsung|xiaomi|huawei|oppo|realme"),
+    c("mobiles-used", "هواتف مستعملة", "Used phones", "♻️", "مستعمل|موبايل مستعمل|بيع وشراء|تبديل|ايفون مستعمل", "used phone|second hand|trade in|buy sell"),
+    c("mobiles-repair", "صيانة الهواتف", "Phone repair", "🛠️", "صيانة موبايل|صيانة جوال|صيانة هاتف|صيانة|تصليح|شاشة|تبديل شاشة|بطارية|سوفت وير|برمجة|فك حظر|ايكلاود|مياه", "phone repair|screen repair|battery replacement|software|unlock|icloud"),
+    c("mobiles-accessories", "ملحقات وأغطية وشواحن", "Accessories & chargers", "🔌", "اكسسوارات|كفر|كفرات|شاحن|سماعات|حماية شاشة|لزقة|باور بنك|كبل", "accessories|case|cover|charger|headphones|screen protector|power bank|cable"),
     c("mobiles-tablets", "تابلت وساعات ذكية", "Tablets & smartwatches", "⌚", "تابلت|ايباد|ساعة ذكية|سمارت واتش|ساعات", "tablet|ipad|smartwatch|watch|wearables"),
     c("mobiles-telecom", "اتصالات وتعبئة رصيد", "Telecom & top-up", "📶", "خط|خطوط|رصيد|تعبئة|اتصالات|سيرياتيل|mtn|انترنت", "sim|line|top up|recharge|telecom|internet|data"),
   ]),

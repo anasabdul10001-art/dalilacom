@@ -59,8 +59,8 @@ async function customerLogout() {
 }
 function renderCustomerStatus() {
   const el = document.getElementById('customer-status');
-  if (state.customerToken) { el.textContent = '✅ مسجل دخول'; el.className = 'status ok'; }
-  else { el.textContent = '❌ غير مسجل دخول'; el.className = 'status bad'; }
+  if (state.customerToken) { el.textContent = '✅ تم تسجيل الدخول'; el.className = 'status ok'; }
+  else { el.textContent = '❌ لم يتم تسجيل الدخول'; el.className = 'status bad'; }
 }
 
 // ---- membership ----
@@ -73,7 +73,7 @@ async function loadPlans() {
       : 'مجانية';
     return `<div class="item">${p.name} — ${p.durationDays} يوم — ${money(p.priceCents)} — <b>${price}</b>
      <button class="small" onclick="subscribe('${p.id}')">اشترك</button></div>`;
-  }).join('') || '<div class="muted">لا يوجد خطط</div>';
+  }).join('') || '<div class="muted">لا توجد خطط</div>';
 }
 async function subscribe(planId) {
   const { ok, data } = await api('POST', '/membership/subscribe', { planId }, state.customerToken);
@@ -82,7 +82,7 @@ async function subscribe(planId) {
       `✅ ${data.memberNumber} — ينتهي ${new Date(data.endDate).toLocaleDateString()}` +
       (data.creditsPaid ? ` — مدفوع ${data.creditsPaid} كوين (الرصيد: ${data.walletBalance})` : ' — مجانية');
   } else {
-    log('خطأ بالاشتراك', data);
+    log('خطأ في الاشتراك', data);
     alert(errText(data, 'تعذّر الاشتراك'));
   }
 }
@@ -90,7 +90,7 @@ async function showQr() {
   const { ok, data } = await api('GET', '/qr/mine', null, state.customerToken);
   document.getElementById('qr-display').innerHTML = ok
     ? `<div>رقم العضوية: <b>${data.memberNumber}</b></div><code class="qr">${data.code}</code><div class="muted">صالح لـ ${data.expiresInSeconds} ثانية إضافية — يتغيّر كل 45 ثانية</div>`
-    : `<div class="muted">${errText(data, 'لا يوجد عضوية فعالة')}</div>`;
+    : `<div class="muted">${errText(data, 'لا توجد عضوية فعّالة')}</div>`;
 }
 
 // ---- discovery ----
@@ -107,7 +107,7 @@ async function searchMerchants(lat, lng) {
       <b>${m.businessName}</b> <span class="muted">${m.category?.name || ''}</span>
       ${m.distanceKm !== undefined ? `<span class="muted"> — ${m.distanceKm.toFixed(1)}كم</span>` : ''}
       ${(m.discounts || []).map(d => `<div class="muted">🏷️ ${d.title} (${d.percent}%)</div>`).join('')}
-      <button class="small" onclick="viewMerchantProducts('${m.id}','${m.businessName}')">شوف المنتجات</button>
+      <button class="small" onclick="viewMerchantProducts('${m.id}','${m.businessName}')">عرض المنتجات</button>
     </div>`).join('') || '<div class="muted">لا نتائج</div>';
 }
 async function viewMerchantProducts(merchantId, name) {
@@ -129,7 +129,7 @@ async function addToCart(productId) {
 }
 async function loadCart() {
   const { ok, data } = await api('GET', '/cart', null, state.customerToken);
-  if (!ok) { document.getElementById('cart-view').innerHTML = '<div class="muted">سجل دخول كزبون أول</div>'; return; }
+  if (!ok) { document.getElementById('cart-view').innerHTML = '<div class="muted">سجّل الدخول كزبون أولًا</div>'; return; }
   document.getElementById('cart-view').innerHTML = data.items.map(i => `
     <div class="item">${i.product.name} × ${i.quantity} (${i.product.merchant.businessName})
       — ${i.regularPriceCents !== i.unitPriceCents ? `<span class="price-orig">${money(i.regularPriceCents)}</span> <span class="price-member">${money(i.unitPriceCents)}</span>` : money(i.unitPriceCents)}
@@ -160,7 +160,7 @@ async function cancelOrder(id) {
 
 // ---- notifications (section 13 + 87) ----
 async function loadNotifications() {
-  if (!state.customerToken) { log('إشعاراتي', { error: 'سجّل دخول كزبون أولًا' }); return; }
+  if (!state.customerToken) { log('إشعاراتي', { error: 'سجّل الدخول كزبون أولًا' }); return; }
   const { ok, data } = await api('GET', '/notifications', null, state.customerToken);
   if (!ok) { log('إشعاراتي', data); return; }
   document.getElementById('notif-unread').textContent = data.unread ? `(${data.unread} غير مقروء)` : '(لا جديد)';
@@ -171,7 +171,7 @@ async function loadNotifications() {
         <div class="muted">${n.body || ''}</div>
         ${n.readAt ? '' : `<button class="small secondary" onclick="markNotificationRead('${n.id}')">تعليم كمقروء</button>`}
       </div>`).join('')
-    : '<div class="muted">ما في إشعارات بعد — اعمل طلب من السلة أو استخدم حسم بالـQR وشوف كيف بيوصل.</div>';
+    : '<div class="muted">لا توجد إشعارات بعد — أنشئ طلبًا من السلة أو استخدم حسمًا برمز QR وشاهد كيف يصل.</div>';
   await loadNotificationPrefs();
 }
 async function markNotificationRead(id) {
@@ -179,7 +179,7 @@ async function markNotificationRead(id) {
   loadNotifications();
 }
 async function markAllNotificationsRead() {
-  if (!state.customerToken) { log('إشعاراتي', { error: 'سجّل دخول كزبون أولًا' }); return; }
+  if (!state.customerToken) { log('إشعاراتي', { error: 'سجّل الدخول كزبون أولًا' }); return; }
   const { ok, data } = await api('POST', '/notifications/read-all', null, state.customerToken);
   if (ok) log('تعليم الكل كمقروء', data);
   loadNotifications();
@@ -188,10 +188,10 @@ async function loadNotificationPrefs() {
   const { ok, data } = await api('GET', '/notifications/preferences', null, state.customerToken);
   if (!ok) return;
   document.getElementById('notif-prefs').innerHTML =
-    '<table><thead><tr><th>النوع</th><th>كيف بيوصل</th></tr></thead><tbody>' +
+    '<table><thead><tr><th>النوع</th><th>كيف يصل</th></tr></thead><tbody>' +
     data.map(p => `<tr><td>${p.type}</td><td>
       <select onchange="saveNotificationPref('${p.type}', this.value)">
-        <option value="FULL"${p.mode === 'FULL' ? ' selected' : ''}>كامل — داخل التطبيق + إيميل</option>
+        <option value="FULL"${p.mode === 'FULL' ? ' selected' : ''}>كامل — داخل التطبيق + البريد الإلكتروني</option>
         <option value="IN_APP_ONLY"${p.mode === 'IN_APP_ONLY' ? ' selected' : ''}>داخل التطبيق فقط</option>
         <option value="OFF"${p.mode === 'OFF' ? ' selected' : ''}>معطّل</option>
       </select></td></tr>`).join('') +
@@ -199,7 +199,7 @@ async function loadNotificationPrefs() {
 }
 async function saveNotificationPref(type, mode) {
   const { ok, data } = await api('PUT', '/notifications/preferences', { preferences: [{ type, mode }] }, state.customerToken);
-  log(ok ? 'تم حفظ تفضيل الإشعار' : 'خطأ بتفضيل الإشعار', ok ? { type, mode } : data);
+  log(ok ? 'تم حفظ تفضيل الإشعار' : 'خطأ في تفضيل الإشعار', ok ? { type, mode } : data);
 }
 
 // ---- merchant auth ----
@@ -224,8 +224,8 @@ async function merchantLogout() {
 }
 function renderMerchantStatus() {
   const el = document.getElementById('merchant-status');
-  if (state.merchantToken) { el.textContent = '✅ مسجل دخول'; el.className = 'status ok'; }
-  else { el.textContent = '❌ غير مسجل دخول'; el.className = 'status bad'; }
+  if (state.merchantToken) { el.textContent = '✅ تم تسجيل الدخول'; el.className = 'status ok'; }
+  else { el.textContent = '❌ لم يتم تسجيل الدخول'; el.className = 'status bad'; }
 }
 
 async function registerMerchantProfile() {
@@ -237,7 +237,7 @@ async function registerMerchantProfile() {
     longitude: parseFloat(document.getElementById('m-lng').value),
   }, state.merchantToken);
   if (ok) {
-    alert('تم التسجيل! الحالة: ' + data.approvalStatus + ' — لازم الأدمن يوافق (تبويب الأدمن).');
+    alert('تم التسجيل! الحالة: ' + data.approvalStatus + ' — يجب أن يوافق الأدمن (تبويب الأدمن).');
     // Role updated server-side — re-login to get a JWT carrying the MERCHANT role.
     await merchantLogin();
   }
@@ -310,7 +310,7 @@ async function adminLogin() {
     password: document.getElementById('a-password').value,
   });
   const el = document.getElementById('admin-status');
-  if (ok) { state.adminToken = data.token; el.textContent = '✅ مسجل دخول'; el.className = 'status ok'; }
+  if (ok) { state.adminToken = data.token; el.textContent = '✅ تم تسجيل الدخول'; el.className = 'status ok'; }
   else { el.textContent = '❌ فشل الدخول'; el.className = 'status bad'; }
 }
 async function loadPending() {
