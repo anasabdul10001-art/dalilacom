@@ -56,7 +56,7 @@ async function changePassword() {
   if (!currentPassword) return;
   const newPassword = prompt('كلمة السر الجديدة (12 خانة على الأقل)؟');
   if (!newPassword) return;
-  if (newPassword.length < 12) { alert('كلمة السر الجديدة لازم تكون 12 خانة على الأقل'); return; }
+  if (newPassword.length < 12) { alert('يجب أن تكون كلمة السر الجديدة 12 خانة على الأقل'); return; }
   const { ok, data } = await api('POST', '/auth/change-password', { currentPassword, newPassword });
   if (!ok) { alert(errText(data, 'تعذّر تغيير كلمة السر')); return; }
   state.token = data.token;
@@ -189,12 +189,12 @@ function renderHome(d) {
 
   const totalWaiting = HOME_WAIT.reduce((a, w) => a + (d.waiting[w[0]] || 0), 0);
   document.getElementById('home-ai').innerHTML = !d.ai.available
-    ? '<div class="error-banner">⚠️ الذكاء الاصطناعي غير مفعّل على السيرفر، فكل نشاط جديد وكل منتج بينتظر موافقتك يدويًا. فعّل مفتاح مزوّد (مثل Groq أو Gemini) من إعدادات السيرفر ليقرأهم لحاله.</div>'
-    : (!d.ai.vision ? '<div class="error-banner" style="background:#fff3cd;color:#8a6300">ℹ️ الذكاء الاصطناعي شغّال لكنه بيقرأ الكلام بس، ما بيشوف الصور. للتأكد من صور المنتجات فعّل مزوّد بيشوف الصور (مثل Gemini).</div>' : '');
+    ? '<div class="error-banner">⚠️ الذكاء الاصطناعي غير مفعّل على الخادم، فكل نشاط جديد وكل منتج ينتظر موافقتك يدويًا. فعّل مفتاح مزوّد (مثل Groq أو Gemini) من إعدادات الخادم ليقرأهم تلقائيًا.</div>'
+    : (!d.ai.vision ? '<div class="error-banner" style="background:#fff3cd;color:#8a6300">ℹ️ الذكاء الاصطناعي يعمل لكنه يقرأ النص فقط ولا يرى الصور. للتأكد من صور المنتجات فعّل مزوّدًا يدعم الصور (مثل Gemini).</div>' : '');
   document.getElementById('home-waiting').innerHTML = HOME_WAIT.map(([key, icon, label, section, loader]) => {
     const n = d.waiting[key] || 0;
-    return `<button class="wait-tile ${n ? 'has' : ''}" onclick="gotoSection('${section}')"><span class="n">${fmt(n)}</span><span class="l">${icon} ${label}<small>${n ? 'اضغط للمراجعة' : 'ما في شي'}</small></span></button>`;
-  }).join('') + (totalWaiting === 0 ? '<div class="all-clear">✅ كل شي منجز، ما في شي ينتظرك الآن.</div>' : '');
+    return `<button class="wait-tile ${n ? 'has' : ''}" onclick="gotoSection('${section}')"><span class="n">${fmt(n)}</span><span class="l">${icon} ${label}<small>${n ? 'اضغط للمراجعة' : 'لا يوجد شيء'}</small></span></button>`;
+  }).join('') + (totalWaiting === 0 ? '<div class="all-clear">✅ كل شيء منجز، لا يوجد شيء ينتظرك الآن.</div>' : '');
 
   const u = d.users, m = d.merchants, ds = d.discounts, o = d.orders;
   document.getElementById('home-kpis').innerHTML = [
@@ -214,7 +214,7 @@ function renderHome(d) {
 
   document.getElementById('home-people').innerHTML = splitHtml([
     { l: 'زبائن', v: u.customers, c: '#ba2a34' }, { l: 'أصحاب أنشطة', v: u.merchants, c: '#1b5fa6' }, { l: 'أدمن', v: u.admins, c: '#8a7b78' },
-  ], 'ما في مستخدمين بعد') + `<div class="legend" style="margin-top:12px"><span>📧 إيميل موثّق <b>${fmt(u.verified)}</b></span><span>📱 أجهزة بإشعارات <b>${fmt(u.devices)}</b></span><span>🆕 آخر 7 أيام <b>${fmt(u.last7)}</b></span></div>`;
+  ], 'لا يوجد مستخدمون بعد') + `<div class="legend" style="margin-top:12px"><span>📧 بريد موثّق <b>${fmt(u.verified)}</b></span><span>📱 أجهزة بإشعارات <b>${fmt(u.devices)}</b></span><span>🆕 آخر 7 أيام <b>${fmt(u.last7)}</b></span></div>`;
   document.getElementById('home-orders').innerHTML = splitHtml(Object.entries(ORDER_STATUS).map(([k, [l, c]]) => ({ l, v: o.byStatus[k] || 0, c })), 'ما في طلبات بعد');
   document.getElementById('home-cats').innerHTML = barList(d.topCategories, 'count', 'ما في أنشطة معتمدة بعد');
   document.getElementById('home-shops').innerHTML = barList(d.topShops, 'count', 'ما في عمليات حسم بآخر 30 يوم');
@@ -250,7 +250,7 @@ async function loadAppUpdate() {
   if (!r.ok) { box.textContent = errText(r.data, 'تعذّر التحميل'); return; }
   box.innerHTML = `
     <h3>🔔 رسالة «نسخة جديدة» داخل التطبيق</h3>
-    <p class="muted">بتظهر لكل شخص نسخته أقدم من الرقم اللي بتكتبه، وفيها زر «حدّث الآن». اللي نزّل من جوجل بلاي بيروح لصفحة التطبيق هناك، واللي نزّل الملف مباشرة بيروح لصفحة التحميل. <b>شغّلها بعد ما جوجل توافق على النسخة</b> عشان ما نرسل الناس لتحديث مو موجود.</p>
+    <p class="muted">تظهر لكل شخص نسخته أقدم من الرقم الذي تكتبه، وفيها زر «حدّث الآن». من نزّل من جوجل بلاي يذهب إلى صفحة التطبيق هناك، ومن نزّل الملف مباشرة يذهب إلى صفحة التحميل. <b>شغّلها بعد أن توافق جوجل على النسخة</b> حتى لا نرسل الناس إلى تحديث غير موجود.</p>
     <div class="grid2">
       <div class="field"><label>آخر نسخة متاحة (مثلًا 0.1.6)</label><input id="upd-version" dir="ltr" placeholder="0.1.6" value="${esc(r.data.version || '')}"></div>
     </div>
@@ -260,7 +260,7 @@ async function loadAppUpdate() {
 async function saveAppUpdate() {
   const msg = document.getElementById('upd-msg');
   const r = await api('PUT', '/admin/app-update', { version: document.getElementById('upd-version').value.trim(), notify: document.getElementById('upd-notify').checked });
-  msg.textContent = r.ok ? 'انحفظ ✅' : errText(r.data, 'فشل الحفظ');
+  msg.textContent = r.ok ? 'تم الحفظ ✅' : errText(r.data, 'فشل الحفظ');
   if (r.ok) loadAppUpdate();
 }
 
@@ -303,7 +303,7 @@ function uploadAppFile() {
   btn.disabled = true;
   box.style.display = 'block';
   show(0, 0);
-  msg.textContent = 'عم يرفع… ما تسكّر الصفحة';
+  msg.textContent = 'جارٍ الرفع… لا تغلق الصفحة';
   const fail = (text) => { msg.textContent = text; btn.disabled = false; box.style.display = 'none'; };
   const xhr = new XMLHttpRequest();
   xhr.open('PUT', '/admin/app-download/file?version=' + encodeURIComponent(version));
@@ -313,7 +313,7 @@ function uploadAppFile() {
     if (!e.lengthComputable) return;
     const p = Math.min(100, Math.round((e.loaded / e.total) * 100));
     show(p, e.loaded);
-    if (p >= 100) msg.textContent = 'وصل الملف، عم يتحقق منه ويحفظه…';
+    if (p >= 100) msg.textContent = 'وصل الملف، ويجري التحقق منه وحفظه…';
   };
   xhr.onerror = () => fail('انقطع الاتصال أثناء الرفع، جرّب من جديد');
   xhr.ontimeout = () => fail('أخذ وقت طويل، جرّب من جديد');
@@ -354,7 +354,7 @@ async function saveSocialLinks() {
   const msg = document.getElementById('social-msg');
   const links = Object.keys(SOCIAL_NAMES).map((p) => ({ platform: p, url: document.getElementById('soc-url-' + p).value.trim(), visible: document.getElementById('soc-vis-' + p).checked }));
   const r = await api('PUT', '/admin/social-links', { links });
-  msg.textContent = r.ok ? 'انحفظ ✅' : errText(r.data, 'فشل الحفظ');
+  msg.textContent = r.ok ? 'تم الحفظ ✅' : errText(r.data, 'فشل الحفظ');
   if (r.ok) loadSocialLinks();
 }
 
@@ -367,20 +367,20 @@ async function loadLaunchReset() {
   launchInfo = r.data;
   const d = r.data;
   box.innerHTML = `
-    <p><b>الحسابات اللي رح تبقى:</b> ${d.keptAdmins.map((a) => esc(a.email)).join('، ') || '—'}</p>
+    <p><b>الحسابات التي ستبقى:</b> ${d.keptAdmins.map((a) => esc(a.email)).join('، ') || '—'}</p>
     <p><b>عدد المستخدمين الحاليين:</b> ${d.users}</p>
-    <p><b>اللي رح يُمسح:</b></p>
-    <table><thead><tr><th>الجدول</th><th>الصفوف</th></tr></thead><tbody>${d.willBeRemoved.map((x) => `<tr><td>${esc(x.table)}</td><td>${x.rows}</td></tr>`).join('') || '<tr><td colspan="2">لا شي</td></tr>'}</tbody></table>
+    <p><b>ما سيُمسح:</b></p>
+    <table><thead><tr><th>الجدول</th><th>الصفوف</th></tr></thead><tbody>${d.willBeRemoved.map((x) => `<tr><td>${esc(x.table)}</td><td>${x.rows}</td></tr>`).join('') || '<tr><td colspan="2">لا شيء</td></tr>'}</tbody></table>
     <p class="subtitle">تأكد من أخذ نسخة احتياطية من قاعدة البيانات (Neon) قبل ما تكمل.</p>
     ${d.enabled ? `
       <div class="field"><label>اكتب الجملة: <b>${esc(d.phrase)}</b></label><input placeholder="اكتب العبارة المطلوبة حرفيًا" id="launch-phrase" autocomplete="off"></div>
       <div class="field"><label>كلمة سر السوبر أدمن</label><input placeholder="كلمة سر الأدمن" id="launch-pass" type="password" autocomplete="current-password"></div>
-      <button class="danger" onclick="runLaunchReset()">مسح كل شي والبدء من الصفر</button>
+      <button class="danger" onclick="runLaunchReset()">مسح كل شيء والبدء من الصفر</button>
       <div id="launch-msg" class="subtitle"></div>` : `<div class="card" style="background:#fff8e1">التصفير مقفول. لتفتحه: بـ Render ضيف المتغير <b>ALLOW_DATA_RESET</b> بقيمة <b>yes</b> للخدمة، وانتظر الإعادة. وبعد ما تخلص احذفه.</div>`}`;
 }
 async function runLaunchReset() {
   const msg = document.getElementById('launch-msg');
-  if (!confirm('متأكد؟ هاد المسح نهائي وما في رجعة.')) return;
+  if (!confirm('هل أنت متأكد؟ هذا المسح نهائي ولا يمكن التراجع عنه.')) return;
   const r = await api('POST', '/admin/launch-reset', { phrase: document.getElementById('launch-phrase').value, password: document.getElementById('launch-pass').value });
   msg.textContent = r.ok ? `تم. بقي ${r.data.usersLeft} حساب (السوبر أدمن). حدّث الصفحة.` : errText(r.data, 'فشل');
   if (r.ok) loadLaunchReset();
@@ -460,7 +460,7 @@ async function loadMarketers() {
 async function saveReferralDefaults() {
   const num = (id) => Number(document.getElementById(id).value) || 0;
   const { ok, data } = await api('PUT', '/admin/settings', { referral: { marketerPercent: num('ref-mpct'), marketerSignupCredits: Math.round(num('ref-mfix')), managerPercent: num('ref-gpct'), managerSignupCredits: Math.round(num('ref-gfix')) } });
-  document.getElementById('ref-defaults-msg').textContent = ok ? 'انحفظ ✓' : errText(data, 'تعذّر الحفظ');
+  document.getElementById('ref-defaults-msg').textContent = ok ? 'تم الحفظ ✓' : errText(data, 'تعذّر الحفظ');
 }
 
 async function saveMarketer() {
@@ -476,7 +476,7 @@ async function saveMarketer() {
     res = await api('POST', '/admin/marketers', body);
   }
   if (!res.ok) { msg.textContent = errText(res.data, 'تعذّر الحفظ'); return; }
-  msg.textContent = 'انحفظ ✓';
+  msg.textContent = 'تم الحفظ ✓';
   resetMarketerForm();
   loadMarketers();
 }
@@ -545,7 +545,7 @@ async function loadUsers(keepPage) {
     <tr>
       <td class="rownum">${(usersPage - 1) * PAGE_SIZE + i + 1}</td>
       <td>${esc(u.fullName)}</td>
-      <td class="muted" style="direction:ltr;text-align:right">${esc(u.email)}${u.isEmailVerified ? '' : ' <small title="الإيميل غير مؤكَّد">⚠️</small>'}</td>
+      <td class="muted" style="direction:ltr;text-align:right">${esc(u.email)}${u.isEmailVerified ? '' : ' <small title="البريد الإلكتروني غير مؤكَّد">⚠️</small>'}</td>
       <td class="muted" style="direction:ltr;text-align:right">${esc(u.phone || '—')}</td>
       <td><span class="badge ${u.role === 'ADMIN' ? 'APPROVED' : 'inactive'}">${esc(ROLE_LABEL[u.role] || u.role)}</span></td>
       <td><span class="badge ${u.isDisabled ? 'REJECTED' : 'active'}">${u.isDisabled ? 'معطّل' : 'فعّال'}</span></td>
@@ -570,7 +570,7 @@ async function openUserEdit(id) {
   document.getElementById('ue-delete').style.display = isAdmin ? 'none' : '';
   const day = d => new Date(d).toLocaleDateString('ar', { day: 'numeric', month: 'short', year: 'numeric' });
   document.getElementById('ue-title').textContent = 'تعديل حساب: ' + data.fullName;
-  document.getElementById('ue-info').textContent = 'انفتح الحساب ' + day(data.createdAt) + ' · رصيد المحفظة ' + data.walletBalance + ' · الطلبات ' + data.ordersCount + ' · العضويات ' + data.membershipsCount + (data.merchantProfile ? ' · المحل: ' + data.merchantProfile.businessName : '');
+  document.getElementById('ue-info').textContent = 'فُتح الحساب ' + day(data.createdAt) + ' · رصيد المحفظة ' + data.walletBalance + ' · الطلبات ' + data.ordersCount + ' · العضويات ' + data.membershipsCount + (data.merchantProfile ? ' · المحل: ' + data.merchantProfile.businessName : '');
   document.getElementById('ue-msg').textContent = '';
   const box = document.getElementById('user-edit');
   box.style.display = '';
@@ -593,28 +593,28 @@ async function saveUserEdit() {
   };
   if (!document.getElementById('ue-role').disabled) body.role = v('role');
   if (v('pass')) body.newPassword = v('pass');
-  if (body.isDisabled && !confirm('الحساب معطّل: بيطلع من كل أجهزته. متأكد؟')) return;
+  if (body.isDisabled && !confirm('الحساب معطّل: سيخرج من كل أجهزته. هل أنت متأكد؟')) return;
   const { ok, data } = await api('PATCH', '/admin/users/' + editingUserId, body);
   if (!ok) { msg.textContent = errText(data, 'تعذّر الحفظ'); return; }
-  msg.textContent = 'انحفظ ✓';
+  msg.textContent = 'تم الحفظ ✓';
   loadUsers(true);
 }
 
 async function deleteUserForGood() {
   if (!confirm('حذف هذا الحساب نهائيًا؟ ما في رجعة.')) return;
-  if (!confirm('تأكيد أخير: بيتمسح الحساب وكل بياناته الشخصية.')) return;
+  if (!confirm('تأكيد أخير: سيُمسح الحساب وكل بياناته الشخصية.')) return;
   const { ok, data } = await api('DELETE', '/admin/users/' + editingUserId);
   const msg = document.getElementById('users-msg');
   if (!ok) { document.getElementById('ue-msg').textContent = errText(data, 'تعذّر الحذف'); return; }
   closeUserEdit();
   loadUsers(true);
   msg.textContent = data.result === 'deleted'
-    ? 'انحذف الحساب نهائيًا.'
-    : 'عند الحساب طلبات أو حركات مالية مسجّلة، فانمسحت كل بياناته الشخصية وبقي سجل مجهول وغير فعّال للحسابات المالية.';
+    ? 'تم حذف الحساب نهائيًا.'
+    : 'لدى الحساب طلبات أو حركات مالية مسجّلة، فمُسحت كل بياناته الشخصية وبقي سجل مجهول وغير فعّال للحسابات المالية.';
 }
 
 async function toggleUser(id, disable) {
-  if (disable && !confirm('تعطيل هذا الحساب؟ بيطلع من كل أجهزته ولا يقدر يدخل.')) return;
+  if (disable && !confirm('تعطيل هذا الحساب؟ سيخرج من كل أجهزته ولن يستطيع الدخول.')) return;
   const { ok, data } = await api('PATCH', '/admin/users/' + id, { isDisabled: disable });
   if (!ok) { document.getElementById('users-msg').textContent = errText(data, 'تعذّر التنفيذ'); return; }
   loadUsers(true);
@@ -681,7 +681,7 @@ async function geoList() {
         <button class="small" onclick="geoSave('${u.id}')">حفظ</button>
         <button class="small" style="background:#777" onclick="geoHide('${u.id}')">إخفاء</button>
       </td>
-    </tr>`).join('') : '<tr><td colspan="3" class="muted">لا شيء هون بعد — أضف أول اسم</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="3" class="muted">لا شيءء هنا بعد — أضف أول اسم</td></tr>';
 }
 
 async function geoAdd() {
@@ -725,7 +725,7 @@ async function geoSave(id) {
 }
 
 async function geoHide(id) {
-  if (!confirm('إخفاء هذا المكان؟ ما رح يظهر بالقوائم (الحسابات وأصحاب الأنشطة المرتبطين فيه ما بيتأثروا).')) return;
+  if (!confirm('إخفاء هذا المكان؟ لن يظهر في القوائم (لا تتأثر الحسابات وأصحاب الأنشطة المرتبطون به).')) return;
   const { ok, data } = await api('PATCH', '/geo/units/' + id, { isActive: false });
   if (!ok) { document.getElementById('geo-msg').textContent = errText(data, 'تعذّر الإخفاء'); return; }
   await geoRefreshPickers(geoLevel());
@@ -773,7 +773,7 @@ async function loadBroadcasts() {
       <td>${where} — نحو ${esc(b.targeted)}</td>
       <td style="white-space:nowrap"><button class="small" onclick="bcApprove('${esc(b.id)}')">✓ نشر</button> <button class="small" style="background:#777" onclick="bcReject('${esc(b.id)}')">✕ رفض</button></td>
     </tr>`;
-  }).join('') : '<tr><td colspan="5" class="muted">لا شيء بانتظار المراجعة</td></tr>';
+  }).join('') : '<tr><td colspan="5" class="muted">لا شيءء بانتظار المراجعة</td></tr>';
 
   if (all.ok) {
     document.getElementById('bc-history-body').innerHTML = all.data.length ? all.data.map(b => {
@@ -898,28 +898,28 @@ async function loadPushStatus() {
   if (!ok) { logout(); return; }
   const badge = (good, yes, no) => `<span class="badge ${good ? 'APPROVED' : 'REJECTED'}">${good ? yes : no}</span>`;
   document.getElementById('push-configured').innerHTML = data.invalid
-    ? badge(false, '', 'المتغيّر موجود لكنه مو ملف JSON صالح')
+    ? badge(false, '', 'المتغيّر موجود لكنه ليس ملف JSON صالحًا')
     : badge(data.configured, 'نعم', 'لا — ضيف FIREBASE_SERVICE_ACCOUNT_JSON على Render');
   document.getElementById('push-project').textContent = data.projectId || '—';
-  document.getElementById('push-auth').innerHTML = data.authenticated === null ? '—' : badge(data.authenticated, 'شغّال', 'فشل');
+  document.getElementById('push-auth').innerHTML = data.authenticated === null ? '—' : badge(data.authenticated, 'يعمل', 'فشل');
   document.getElementById('push-devices').textContent = `${data.devices} (${data.usersWithDevices})`;
   document.getElementById('push-error').textContent = data.error || '';
 }
 
 async function sendPushTest() {
   const out = document.getElementById('push-test-result');
-  out.textContent = 'عم يرسل...';
+  out.textContent = 'جارٍ الإرسال...';
   const { ok, data } = await api('POST', '/admin/push-test');
   if (!ok) { out.textContent = (data && data.error && data.error.message) || 'تعذّر الإرسال'; return; }
   out.textContent = data.delivered > 0
-    ? `انبعت لـ ${data.delivered} من ${data.devices} جهاز — تأكد أنه وصل على الموبايل.`
+    ? `أُرسل إلى ${data.delivered} من ${data.devices} جهاز — تأكد أنه وصل على الهاتف.`
     : `ما وصل لأي جهاز. ${data.errors.join(' | ')}`;
   loadPushStatus();
 }
 
 async function testAiProvider(id, btn) {
   const out = document.getElementById('ai-test-' + id);
-  btn.disabled = true; out.textContent = ' عم نجرّب...';
+  btn.disabled = true; out.textContent = ' جارٍ التجربة...';
   const { ok, data } = await api('POST', '/admin/ai-test', { provider: id });
   btn.disabled = false;
   if (!ok) { out.textContent = ' تعذّر الاختبار'; return; }
@@ -928,7 +928,7 @@ async function testAiProvider(id, btn) {
 
 // ---- Discounts ----
 let discStatus = 'PENDING';
-const DISC_STATE_AR = { PENDING: 'بانتظار الموافقة', REJECTED: 'مرفوض', PAUSED: 'موقوف', SCHEDULED: 'لسا ما بدأ', LIVE: 'شغّال', ENDED: 'انتهى' };
+const DISC_STATE_AR = { PENDING: 'بانتظار الموافقة', REJECTED: 'مرفوض', PAUSED: 'موقوف', SCHEDULED: 'لم يبدأ بعد', LIVE: 'يعمل', ENDED: 'انتهى' };
 
 function discScopeAr(d) {
   if (d.scope === 'SECTION' && d.section) return 'قسم: ' + d.section.name;
@@ -964,7 +964,7 @@ async function refreshDiscBadge() {
 
 async function reviewDiscount(id, action) {
   let body = {};
-  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط، واختياري):'); if (reason === null) return; body = { reason }; }
+  if (action === 'reject') { const reason = prompt('سبب الرفض (يصل إلى صاحب النشاط، واختياري):'); if (reason === null) return; body = { reason }; }
   const { ok, data } = await api('POST', '/admin/discounts/' + id + '/' + action, body);
   if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
   loadDiscounts(discStatus);
@@ -982,18 +982,18 @@ async function loadProductCats() {
     <td class="muted">${esc(c.shop || '—')}</td>
     <td>${c.productCount}</td>
     <td style="white-space:nowrap"><button class="small" onclick="savePcat('${c.id}')">حفظ</button> <button class="small danger" onclick="deletePcat('${c.id}')">حذف</button></td>
-  </tr>`).join('') : '<tr><td colspan="6" class="muted">ما أضاف حدا تصنيف بعد</td></tr>';
+  </tr>`).join('') : '<tr><td colspan="6" class="muted">لم يضف أحد تصنيفًا بعد</td></tr>';
 }
 
 async function savePcat(id) {
   const name = document.getElementById('pc-ar-' + id).value.trim();
   const nameEn = document.getElementById('pc-en-' + id).value.trim();
   const { ok, data } = await api('PATCH', '/admin/product-categories/' + id, { name, nameEn: nameEn || null });
-  document.getElementById('pcats-msg').textContent = ok ? 'انحفظ ✓' : errText(data, 'تعذّر الحفظ');
+  document.getElementById('pcats-msg').textContent = ok ? 'تم الحفظ ✓' : errText(data, 'تعذّر الحفظ');
 }
 
 async function deletePcat(id) {
-  if (!confirm('حذف هذا التصنيف؟ منتجاته بتنتقل للتصنيف الأعلى.')) return;
+  if (!confirm('حذف هذا التصنيف؟ تنتقل منتجاته إلى التصنيف الأعلى.')) return;
   const { ok, data } = await api('DELETE', '/admin/product-categories/' + id);
   if (!ok) { document.getElementById('pcats-msg').textContent = errText(data, 'تعذّر الحذف'); return; }
   loadProductCats();
@@ -1044,7 +1044,7 @@ async function deleteSelectedProducts() {
 }
 
 async function deleteProduct(id) {
-  if (!confirm('متأكد بدك تحذف هذا المنتج؟ إذا عليه طلب أو سجل ترويج، رح نمنع الحذف ونخليك تخفيه بدل ذلك.')) return;
+  if (!confirm('هل تريد حذف هذا المنتج؟ إذا كان عليه طلب أو سجل ترويج فسنمنع الحذف ويمكنك إخفاءه بدلًا من ذلك.')) return;
   const { ok, data } = await api('DELETE', '/admin/products/' + id);
   if (!ok) { alert(errText(data, 'تعذّر حذف المنتج')); return; }
   selectedProductIds.delete(id);
@@ -1132,7 +1132,7 @@ async function refreshProductReviewBadge() {
 
 async function decideProduct(id, action) {
   let body = {};
-  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط):'); if (reason === null) return; body = { reason }; }
+  if (action === 'reject') { const reason = prompt('سبب الرفض (يصل إلى صاحب النشاط):'); if (reason === null) return; body = { reason }; }
   const { ok, data } = await api('POST', '/admin/products/' + id + '/' + action, body);
   if (!ok) { alert(errText(data, 'تعذّر التنفيذ')); return; }
   loadProductReview();
@@ -1202,14 +1202,14 @@ async function approveSuggestion(id) {
 
 async function mergeSuggestion(id) {
   const categoryId = document.getElementById('sug-mrg-' + id).value;
-  if (!categoryId) { alert('اختر المهنة اللي بدك تضيفها لها'); return; }
+  if (!categoryId) { alert('اختر المهنة التي تريد إضافتها إليها'); return; }
   const { ok, data } = await api('POST', '/admin/category-suggestions/' + id + '/merge', { categoryId });
   if (!ok) { alert(errText(data, 'تعذّر التنفيذ')); return; }
   loadSuggestions();
 }
 
 async function rejectSuggestion(id) {
-  const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط، واختياري):');
+  const reason = prompt('سبب الرفض (يصل إلى صاحب النشاط، واختياري):');
   if (reason === null) return;
   const { ok, data } = await api('POST', '/admin/category-suggestions/' + id + '/reject', { reason });
   if (!ok) { alert(errText(data, 'تعذّر التنفيذ')); return; }
@@ -1296,7 +1296,7 @@ async function bannerBookingContacted(id) {
 }
 
 async function bannerBookingReject(id) {
-  const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط، واختياري، وبيرجع له المبلغ):');
+  const reason = prompt('سبب الرفض (يصل إلى صاحب النشاط، واختياري، ويُعاد إليه المبلغ):');
   if (reason === null) return;
   const { ok, data } = await api('POST', '/admin/banner-bookings/' + id + '/reject', { reason });
   if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
@@ -1325,7 +1325,7 @@ function makeBannerFor(id) {
   document.getElementById('bn-start').value = localInput(start.toISOString());
   document.getElementById('bn-end').value = localInput(end.toISOString());
   bannerTargetHint();
-  document.getElementById('banner-msg').textContent = b.hasImage ? '🖼️ الزبون أرسل صورة: بتنحط للبانر تلقائيًا عند الحفظ (ارفع صورة ثانية لتبدّلها).' : '';
+  document.getElementById('banner-msg').textContent = b.hasImage ? '🖼️ الزبون أرسل صورة: تُوضع في البانر تلقائيًا عند الحفظ (ارفع صورة أخرى لتبديلها).' : '';
   document.getElementById('banner-form-title').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1357,7 +1357,7 @@ async function refreshAdsBadge() {
 
 async function reviewAd(id, action) {
   let body = {};
-  if (action === 'reject') { const reason = prompt('سبب الرفض (بيوصل لصاحب النشاط، واختياري):'); if (reason === null) return; body = { reason }; }
+  if (action === 'reject') { const reason = prompt('سبب الرفض (يصل إلى صاحب النشاط، واختياري):'); if (reason === null) return; body = { reason }; }
   const { ok, data } = await api('POST', '/admin/ads/' + id + '/' + action, body);
   if (!ok) alert(errText(data, 'تعذّر التنفيذ'));
   loadAdBookings(adStatus);
@@ -1376,7 +1376,7 @@ async function loadBanners() {
     <td>${b.imageUrl ? '<img src="' + esc(b.imageUrl) + '" style="width:64px;height:24px;object-fit:cover;border-radius:4px;vertical-align:middle"> ' : ''}${esc(b.title)}</td>
     <td>${esc(b.countryCode || 'الكل')}</td><td>${b.startsAt ? new Date(b.startsAt).toLocaleDateString('ar') : '—'} → ${b.endsAt ? new Date(b.endsAt).toLocaleDateString('ar') : '—'}</td>
     <td><span class="badge ${b.isActive ? 'active' : 'inactive'}">${b.isActive ? 'ظاهر' : 'مخفي'}</span></td><td>${b.views} / ${b.clicks}</td>
-    <td style="white-space:nowrap"><button class="small" onclick="editBanner('${b.id}')">تعديل</button><button class="small danger" onclick="deleteBanner('${b.id}')">حذف</button></td></tr>`).join('') + '</tbody></table>' : '<p class="muted">ما في بانرات — بيظهر البانر الافتراضي.</p>';
+    <td style="white-space:nowrap"><button class="small" onclick="editBanner('${b.id}')">تعديل</button><button class="small danger" onclick="deleteBanner('${b.id}')">حذف</button></td></tr>`).join('') + '</tbody></table>' : '<p class="muted">لا توجد بانرات — يظهر البانر الافتراضي.</p>';
 }
 
 async function moveBanner(i, d) {
@@ -1431,13 +1431,13 @@ async function saveBanner() {
     ...(bannerForBooking ? { bookingId: bannerForBooking } : {}),
   };
   if (!body.title) { msg.textContent = 'اكتب العنوان'; return; }
-  msg.textContent = 'عم يحفظ...';
+  msg.textContent = 'جارٍ الحفظ...';
   const res = editingBanner ? await api('PATCH', '/admin/banners/' + editingBanner, body) : await api('POST', '/admin/banners', body);
   if (!res.ok) { msg.textContent = errText(res.data, 'تعذّر الحفظ'); return; }
   const file = document.getElementById('bn-image').files[0];
   if (file) {
     const up = await fetch('/admin/banners/' + res.data.id + '/image', { method: 'PUT', headers: { 'Content-Type': file.type, Authorization: 'Bearer ' + state.token }, body: file });
-    if (!up.ok) { msg.textContent = 'انحفظ البانر لكن الصورة ما انرفعت (JPG/PNG/WebP حتى 2 ميغا)'; loadBanners(); return; }
+    if (!up.ok) { msg.textContent = 'تم حفظ البانر لكن لم تُرفع الصورة (JPG/PNG/WebP حتى 2 ميغا)'; loadBanners(); return; }
   }
   msg.textContent = 'تم الحفظ ✓';
   const hadBooking = !!bannerForBooking;
@@ -1467,7 +1467,7 @@ async function loadMarketplaceAdmin() {
 
 async function saveMarketplaceSettings() {
   const { ok, data } = await api('PUT', '/admin/settings', { marketplace: { freeListingsPerMonth: Math.max(0, Math.floor(Number(document.getElementById('mp-free-limit').value) || 0)), allowNewProducts: document.getElementById('mp-new-enabled').checked } });
-  document.getElementById('mp-settings-msg').textContent = ok ? 'انحفظ ✓' : errText(data, 'تعذّر الحفظ');
+  document.getElementById('mp-settings-msg').textContent = ok ? 'تم الحفظ ✓' : errText(data, 'تعذّر الحفظ');
 }
 
 async function reviewMarketplace(id, status) {
@@ -1484,7 +1484,7 @@ async function demoStore(method) {
   if (!ok) { out.textContent = (data && data.error && data.error.message) || 'تعذّر التنفيذ'; return; }
   out.textContent = method === 'POST'
     ? (data.created ? `انضافت ${data.created} منتج لـ ${data.shops} متاجر.` : `المنتجات التجريبية موجودة من قبل (${data.products}).`)
-    : `انحذف ${data.products} منتج و${data.shops} متاجر تجريبية.`;
+    : `تم حذف ${data.products} منتج و${data.shops} متاجر تجريبية.`;
 }
 
 // ---- AI provider status ----
@@ -1512,7 +1512,7 @@ async function testImageEdit() {
   msg.textContent = 'جاري الاختبار...';
   const { ok, data } = await api('POST', '/admin/ai-image-test');
   if (!ok) { msg.textContent = errText(data, 'تعذّر الاختبار'); return; }
-  msg.textContent = data.ok ? 'تعديل الصور بالذكاء الاصطناعي شغّال ✓ (' + data.ms + ' ms)' : 'ما اشتغل: ' + (data.reason || 'سبب غير معروف');
+  msg.textContent = data.ok ? 'تعديل الصور بالذكاء الاصطناعي يعمل ✓ (' + data.ms + ' ms)' : 'لم يعمل: ' + (data.reason || 'سبب غير معروف');
 }
 
 async function loadAiQuota() {
@@ -1546,7 +1546,7 @@ function addAiModelPrice() {
 async function saveAiModelPrices() {
   const msg = document.getElementById('ai-model-price-msg');
   if (aiModelPrices.some(p => !p.provider.trim() || !p.model.trim() || !(p.inputUsdPerMillion === null || Number.isFinite(p.inputUsdPerMillion)) || !(p.outputUsdPerMillion === null || Number.isFinite(p.outputUsdPerMillion)))) { msg.textContent = 'تأكد من تعبئة اسم المزوّد والنموذج والأسعار'; return; }
-  msg.textContent = 'عم نحفظ...';
+  msg.textContent = 'جارٍ الحفظ...';
   const { ok } = await api('PUT', '/admin/settings', { aiModelPrices: aiModelPrices.map(p => ({ ...p, provider: p.provider.trim(), model: p.model.trim() })) });
   msg.textContent = ok ? 'انحفظت الأسعار ✓' : 'تعذّر الحفظ';
   if (ok) loadResponderAiUsage();
@@ -1567,9 +1567,9 @@ async function saveAiQuota() {
   const creditsPerUse = Number(document.getElementById('ai-price').value);
   if (!Number.isInteger(freePerMonth) || freePerMonth < 0 || !Number.isInteger(creditsPerUse) || creditsPerUse < 0) { msg.textContent = 'اكتب أرقام صحيحة (صفر أو أكثر)'; return; }
   if (aiPacks.some((p) => p.name.trim().length < 2 || !(p.days >= 1) || !(p.uses >= 1) || !(p.credits >= 0))) { msg.textContent = 'عبّي اسم وأيام واستخدامات وسعر لكل باقة'; return; }
-  msg.textContent = 'عم نحفظ...';
+  msg.textContent = 'جارٍ الحفظ...';
   const { ok } = await api('PUT', '/admin/settings', { ai: { freePerMonth, creditsPerUse, packages: aiPacks.map((p) => ({ id: p.id, name: p.name.trim(), days: p.days, uses: p.uses, credits: p.credits })) } });
-  msg.textContent = ok ? 'انحفظ ✓' : 'تعذّر الحفظ';
+  msg.textContent = ok ? 'تم الحفظ ✓' : 'تعذّر الحفظ';
 }
 
 async function loadAiStatus() {
@@ -1577,7 +1577,7 @@ async function loadAiStatus() {
   loadResponderAiUsage();
   const { ok, data } = await api('GET', '/admin/ai-status');
   if (!ok) { logout(); return; }
-  document.getElementById('ai-vision').textContent = data.vision ? 'شغّال ✓' : 'مطفأ — ضيف مفتاح Gemini على Render';
+  document.getElementById('ai-vision').textContent = data.vision ? 'يعمل ✓' : 'متوقف — أضف مفتاح Gemini على Render';
 
   // Every provider the server knows, in the order they are tried; a failing one rests for a while (shown here).
   const providers = (data.providers || []).map(p => ({
@@ -1809,7 +1809,7 @@ function planCardHtml(p) {
       <span class="badge PENDING">${SERVICE_LABEL[p.service] || p.service}</span>
       <span class="badge ${p.isActive ? 'active' : 'inactive'}">${p.isActive ? 'فعالة' : 'معطّلة'}</span>
       <span class="muted">${p._count ? p._count.memberships : 0} عضوية</span>
-      ${needsCredits ? '<span class="badge REJECTED" title="ما حدا بيقدر يشترك بهي الباقة">ما في سعر بالكوينز</span>' : ''}
+      ${needsCredits ? '<span class="badge REJECTED" title="لا أحد يستطيع الاشتراك في هذه الباقة">لا يوجد سعر بالكوينز</span>' : ''}
     </div>
     <div class="row">
       <div><label>الاسم</label><input placeholder="مثال: شهري" id="pl-name-${p.id}" value="${escHtml(p.name)}" /></div>
@@ -1820,7 +1820,7 @@ function planCardHtml(p) {
       <div><label>أيام التجربة</label><input placeholder="مثال: 7" id="pl-trial-${p.id}" value="${p.trialDays}" /></div>
       <div><label>ترتيب العرض</label><input placeholder="مثال: 1" id="pl-sort-${p.id}" value="${p.sortOrder}" /></div>
       ${isMerchant ? `<div><label>حد الرسائل الجماعية بالشهر</label><input placeholder="مثال: 10" id="pl-broadcast-${p.id}" value="${p.monthlyBroadcastLimit ?? ''}" /></div>` : ''}
-      ${isResponder ? `<div><label>عدد المنشورات المجدولة بالشهر (فاضي = بدون نشر)</label><input placeholder="مثال: 10" id="pl-posts-${p.id}" value="${p.monthlyPostLimit ?? ''}" /></div>` : ''}
+      ${isResponder ? `<div><label>عدد المنشورات المجدولة بالشهر (فارغ = بدون نشر)</label><input placeholder="مثال: 10" id="pl-posts-${p.id}" value="${p.monthlyPostLimit ?? ''}" /></div>` : ''}
     </div>
     <div class="row">
       <div><label>السعر (بالعملة)</label><input placeholder="مثال: 9.99" id="pl-price-${p.id}" value="${money(p.priceCents)}" /></div>
@@ -1830,12 +1830,12 @@ function planCardHtml(p) {
     </div>
     <div class="row">
       <div><label>عرض حسم على السعر بالكوينز (% — 0 = بدون عرض)</label><input type="number" min="0" max="100" id="pl-disc-${p.id}" value="${p.discountPercent || 0}" placeholder="مثال: 50" /></div>
-      <div><label>ينتهي العرض (فاضي = لحد ما توقّفو)</label><input type="datetime-local" id="pl-discend-${p.id}" value="${offerDateInput(p.discountEndsAt)}" /></div>
+      <div><label>ينتهي العرض (فارغ = حتى توقفه)</label><input type="datetime-local" id="pl-discend-${p.id}" value="${offerDateInput(p.discountEndsAt)}" /></div>
     </div>
-    <p class="muted" style="margin:0 0 10px">لما ينتهي العرض بيرجع كل الناس للسعر العادي عند التجديد، حتى اللي اشتركوا خلال العرض.</p>
+    <p class="muted" style="margin:0 0 10px">عندما ينتهي العرض يعود الجميع إلى السعر العادي عند التجديد، حتى من اشتركوا خلال العرض.</p>
     <label>المواصفات — بند بكل سطر، وابدأ السطر بـ ✘ إذا البند غير مشمول</label>
     <textarea id="pl-features-${p.id}" rows="4" placeholder="✔ 500 رد ذكي بالشهر&#10;✘ رسائل جماعية">${escHtml(features)}</textarea>
-    <label>أسعار خاصة بالبلدان (الباقة بتنباع بسعرها الأساسي لأي بلد ما إلو سطر هون)</label>
+    <label>أسعار خاصة بالبلدان (تُباع الباقة بسعرها الأساسي لأي بلد ليس له سطر هنا)</label>
     <div id="pp-${p.id}">${(p.prices || []).map(priceRowHtml).join('')}</div>
     <button class="small secondary" onclick="addPriceRow('${p.id}')">+ إضافة بلد</button>
     <label style="margin-top:12px">عروض المدة (سعر الفترات المدفوعة، مع أيام إضافية مجانًا)</label>
@@ -1861,7 +1861,7 @@ function renderPlans() {
 
 function parseNonNegInt(raw, label) {
   const n = parseInt(String(raw).trim(), 10);
-  if (!Number.isInteger(n) || n < 0) { alert(label + ' لازم يكون رقم صحيح'); return null; }
+  if (!Number.isInteger(n) || n < 0) { alert(label + ' يجب أن يكون رقمًا صحيحًا'); return null; }
   return n;
 }
 
@@ -1870,22 +1870,22 @@ function readTrialExtension(dryRun) {
   const days = parseInt(document.getElementById('te-days').value, 10);
   const endedWithinDays = parseInt(document.getElementById('te-ended').value || '0', 10);
   if (!Number.isInteger(days) || days < 1 || days > 365) { alert('أيام التمديد من 1 لـ365'); return null; }
-  if (!Number.isInteger(endedWithinDays) || endedWithinDays < 0 || endedWithinDays > 90) { alert('اللي خلصت تجربتهم: من 0 لـ90 يوم'); return null; }
+  if (!Number.isInteger(endedWithinDays) || endedWithinDays < 0 || endedWithinDays > 90) { alert('من انتهت تجربتهم: من 0 إلى 90 يومًا'); return null; }
   return { service: document.getElementById('te-service').value, days, endedWithinDays, dryRun };
 }
 async function extendTrialsPreview() {
   const body = readTrialExtension(true);
   if (!body) return;
   const { ok, data } = await api('POST', '/admin/trials/extend', body);
-  document.getElementById('te-msg').textContent = ok ? `الحسابات اللي رح تتأثر: ${data.affected} (تجربتها شغّالة: ${data.running}، خلصت مؤخراً: ${data.ended})` : errText(data, 'خطأ');
+  document.getElementById('te-msg').textContent = ok ? `الحسابات التي ستتأثر: ${data.affected} (تجربتها جارية: ${data.running}، انتهت مؤخرًا: ${data.ended})` : errText(data, 'خطأ');
 }
 async function extendTrialsRun() {
   const body = readTrialExtension(false);
   if (!body) return;
   const preview = await api('POST', '/admin/trials/extend', { ...body, dryRun: true });
   if (!preview.ok) { alert(errText(preview.data, 'خطأ')); return; }
-  if (preview.data.affected === 0) { document.getElementById('te-msg').textContent = 'ما في حسابات بتنطبق عليها الشروط'; return; }
-  if (!confirm(`رح تتمدّد تجربة ${preview.data.affected} حساب لـ${body.days} يوم. كمّل؟`)) return;
+  if (preview.data.affected === 0) { document.getElementById('te-msg').textContent = 'لا توجد حسابات تنطبق عليها الشروط'; return; }
+  if (!confirm(`ستُمدَّد تجربة ${preview.data.affected} حساب لمدة ${body.days} يوم. هل تريد المتابعة؟`)) return;
   const { ok, data } = await api('POST', '/admin/trials/extend', body);
   document.getElementById('te-msg').textContent = ok ? `انمدّدت تجربة ${data.affected} حساب` : errText(data, 'خطأ');
 }
@@ -1946,7 +1946,7 @@ async function savePlanFull(id) {
   if ((creditsRaw !== '' && priceCredits === null) || trialDays === null || !durationDays || !Number.isFinite(priceCents) || !Number.isFinite(sortOrder)) return;
   const prices = readCountryPrices(id);
   if (prices === null) return;
-  if (new Set(prices.map(p => p.countryId)).size !== prices.length) { alert('كل بلد مرة وحدة بس'); return; }
+  if (new Set(prices.map(p => p.countryId)).size !== prices.length) { alert('لكل بلد مرة واحدة فقط'); return; }
 
   const body = {
     name: get('name').value.trim(), description: get('desc').value.trim() || null,
@@ -1954,7 +1954,7 @@ async function savePlanFull(id) {
   };
   const discountPercent = parseNonNegInt(get('disc').value.trim() || '0', 'نسبة الحسم');
   if (discountPercent === null) return;
-  if (discountPercent > 100) { alert('نسبة الحسم ما بتزيد عن 100'); return; }
+  if (discountPercent > 100) { alert('نسبة الحسم لا تزيد على 100'); return; }
   const discEnd = get('discend').value;
   body.discountPercent = discountPercent;
   body.discountEndsAt = discEnd ? new Date(discEnd).toISOString() : null;
@@ -2034,7 +2034,7 @@ async function loadTaxRates() {
       <td>${escHtml(r.name)}</td>
       <td>${(r.percentBps / 100).toFixed(2)}%</td>
       <td><button class="small danger" onclick="removeTaxRate('${r.id}')">🗑️ حذف</button></td>
-    </tr>`).join('') || `<tr><td colspan="4" class="muted">ما في نسب ضريبة — الفواتير بتطلع بدون ضريبة</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="4" class="muted">لا توجد نسب ضريبة — تصدر الفواتير بدون ضريبة</td></tr>`;
 }
 
 async function saveTaxRate() {
@@ -2144,7 +2144,7 @@ async function loadTopups(status) {
     || '<tr><td colspan="6" class="muted">لا يوجد طلبات</td></tr>';
 }
 async function approveTopup(id) {
-  const v = prompt('كم وحدة من عملة دليلكم تضيف لرصيده؟');
+  const v = prompt('كم وحدة من عملة دليلكم تريد إضافتها إلى رصيده؟');
   const amountCredits = parseInt(v, 10);
   if (!amountCredits || amountCredits <= 0) return;
   const { ok, data } = await api('POST', '/admin/topups/' + id + '/approve', { amountCredits });
@@ -2229,12 +2229,12 @@ async function lmLoad(page) {
     bulk.style.display = 'block';
     bulk.innerHTML = `<button onclick="lmBulk('approve')">✅ اعتماد كل المنتظرة${kind ? ' من نوع «' + esc(kindName) + '»' : ''} ${kind ? '' : ' (' + fmt(waiting) + ')'} وإظهارها على الخريطة</button> ` +
       (status === 'PENDING_REVIEW' ? `<button class="danger" onclick="lmBulk('delete')">🗑️ حذف كل المنتظرة${kind ? ' من نوع «' + esc(kindName) + '»' : ''}</button> ` : '') +
-      `<span class="muted">الأماكن اللي بدون اسم عربي معلّمة ⚠️، عدّلها قبل الاعتماد.</span>`;
+      `<span class="muted">الأماكن التي بدون اسم عربي معلّمة ⚠️، عدّلها قبل الاعتماد.</span>`;
   } else { bulk.style.display = 'none'; }
   document.getElementById('lm-body').innerHTML = d.items.length ? d.items.map((l, i) => `
     <tr>
       <td class="rownum">${(lm.page - 1) * d.pageSize + i + 1}</td>
-      <td><b>${esc(l.name)}</b>${hasArabicText(l.name) ? '' : ' <span class="badge PENDING" title="الاسم مو بالعربي، عدّله">⚠️ بدون اسم عربي</span>'}${l.nameEn ? `<br><small class="muted" dir="ltr">${esc(l.nameEn)}</small>` : ''}</td>
+      <td><b>${esc(l.name)}</b>${hasArabicText(l.name) ? '' : ' <span class="badge PENDING" title="الاسم ليس بالعربية، عدّله">⚠️ بدون اسم عربي</span>'}${l.nameEn ? `<br><small class="muted" dir="ltr">${esc(l.nameEn)}</small>` : ''}</td>
       <td>${esc(l.kind.icon)} ${esc(l.kind.nameAr)}${l.sector ? ` <small class="muted">· ${l.sector === 'PUBLIC' ? 'عام' : 'خاص'}</small>` : ''}</td>
       <td class="muted">${esc(l.address || '—')}</td>
       <td><span class="badge ${LM_STATUS[l.status][1]}">${LM_STATUS[l.status][0]}</span>${l.source === 'OSM' ? ' <small class="muted">OSM</small>' : ''}</td>
@@ -2257,7 +2257,7 @@ async function lmSetStatus(id, status) {
 }
 
 async function lmDelete(id) {
-  if (!confirm('تحذف هالمكان؟')) return;
+  if (!confirm('حذف هذا المكان؟')) return;
   const r = await fetch('/admin/landmarks/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + state.token } });
   if (!r.ok) { alert(errText(await r.json().catch(() => ({})), 'تعذّر الحذف')); return; }
   lmLoad(lm.page);
@@ -2266,7 +2266,7 @@ async function lmDelete(id) {
 async function lmBulk(action) {
   // only the places waiting for review (never the hidden or the shown ones), of the kind chosen in the filter if any
   const filter = { status: 'PENDING_REVIEW', kind: document.getElementById('lm-f-kind').value || undefined };
-  if (!confirm(action === 'approve' ? 'تعتمد كل الأماكن المنتظرة للمراجعة وتظهر على الخريطة؟' : 'تحذف كل الأماكن المنتظرة للمراجعة؟ ما بيرجعوا.')) return;
+  if (!confirm(action === 'approve' ? 'اعتماد كل الأماكن المنتظرة للمراجعة وإظهارها على الخريطة؟' : 'حذف كل الأماكن المنتظرة للمراجعة؟ لا يمكن استرجاعها.')) return;
   const r = await api('POST', '/admin/landmarks/review', { action, filter });
   if (!r.ok) { alert(errText(r.data, 'تعذّر التنفيذ')); return; }
   alert('تم: ' + fmt(r.data.changed) + ' مكان');
@@ -2399,7 +2399,7 @@ async function lmSave(force) {
   }
   dup.style.display = 'none';
   if (!r.ok) { msg.textContent = errText(r.data, 'فشل الحفظ'); return; }
-  msg.textContent = 'انحفظ ✅';
+  msg.textContent = 'تم الحفظ ✅';
   lm.editingId = null;
   lmTab('list');
 }
@@ -2491,7 +2491,7 @@ async function lmImport() {
       sum.total += d.total; sum.skipped += d.skipped; sum.unnamed += d.unnamed; sum.withoutArabic += d.withoutArabic;
       Object.entries(d.created).forEach(([k, n]) => { sum.created[k] = (sum.created[k] || 0) + n; });
     }
-    msg.innerHTML = (failed ? `<span style="color:var(--danger,#b71c1c)">${esc(failed)}</span><br>` : '') + `انجلب <b>${fmt(sum.total)}</b> مكان جديد (${Object.entries(sum.created).map(([k, n]) => fmt(n) + ' ' + (names[k] || k)).join('، ') || 'لا شي'}) · موجود مسبقًا ${fmt(sum.skipped)} · بدون اسم ${fmt(sum.unnamed)} · بدون اسم عربي ${fmt(sum.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
+    msg.innerHTML = (failed ? `<span style="color:var(--danger,#b71c1c)">${esc(failed)}</span><br>` : '') + `تم جلب <b>${fmt(sum.total)}</b> مكان جديد (${Object.entries(sum.created).map(([k, n]) => fmt(n) + ' ' + (names[k] || k)).join('، ') || 'لا شيء'}) · موجود مسبقًا ${fmt(sum.skipped)} · بدون اسم ${fmt(sum.unnamed)} · بدون اسم عربي ${fmt(sum.withoutArabic)} <button class="small" onclick="lmFilterStatus('PENDING_REVIEW');lmTab('list')">افتح قائمة المراجعة</button>`;
   } catch (error) {
     msg.textContent = `توقف الجلب بأمان. ${error?.message || 'تعذّر الاتصال؛ أعد المحاولة أو صغّر المساحة.'}`;
   } finally {
@@ -2520,7 +2520,7 @@ async function lmLoadDups() {
       <td>${Math.round(d.km * 1000)} م</td>
       <td style="white-space:nowrap">
         <button class="small" onclick="lmDupHide('${d.landmark.id}')">🙈 إخفاء المعلم</button>
-        <button class="small secondary" onclick="lmDupDismiss('${d.landmark.id}')">✋ مو نفس المكان</button>
+        <button class="small secondary" onclick="lmDupDismiss('${d.landmark.id}')">✋ ليس نفس المكان</button>
       </td>
     </tr>`).join('') + '</tbody></table>' : '<p class="muted">ما في معالم مكررة 👌</p>';
 }
@@ -2576,7 +2576,7 @@ async function lmLoadClaims(page) {
       <div style="display:flex;gap:10px;flex-wrap:wrap" id="lc-files-${c.id}">${c.files.length ? c.files.map(f => `<img data-file="${f.id}" alt="${esc(f.name)}" style="width:150px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;background:var(--surface-2)" onclick="lcOpenFile(this)">`).join('') : '<span class="muted">ما أرسل صور</span>'}</div>
       ${c.status === 'PENDING' || c.status === 'NEEDS_INFO' ? `
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        ${c.user.merchantProfile ? '<span class="muted">بيتضاف فرعًا لمحله</span>' : `<select id="lc-cat-${c.id}" style="max-width:260px"><option value="">اختار مهنة المحل الجديد…</option>${catOptions}</select>`}
+        ${c.user.merchantProfile ? '<span class="muted">يُضاف فرعًا لمحله</span>' : `<select id="lc-cat-${c.id}" style="max-width:260px"><option value="">اختر مهنة المحل الجديد…</option>${catOptions}</select>`}
         <button onclick="lcApprove('${c.id}', ${c.user.merchantProfile ? 'true' : 'false'})">✅ موافقة</button>
         <button class="secondary" onclick="lcAsk('${c.id}')">❓ طلب معلومات</button>
         <button class="danger" onclick="lcReject('${c.id}')">❌ رفض</button>
@@ -2599,20 +2599,20 @@ async function lcApprove(id, hasShop) {
     if (!cat) { alert('اختار مهنة المحل الجديد أول'); return; }
     body.categoryId = cat;
   }
-  if (!confirm('توافق؟ المكان بيصير محل صاحب الطلب وبيختفي من المعالم.')) return;
+  if (!confirm('هل توافق؟ يصبح المكان محل صاحب الطلب ويختفي من المعالم.')) return;
   const r = await api('POST', '/admin/landmark-claims/' + id + '/approve', body);
   if (!r.ok) { alert(errText(r.data, 'تعذّرت الموافقة')); return; }
   lmLoadClaims(1);
 }
 async function lcAsk(id) {
-  const message = prompt('شو المعلومات أو الإثبات اللي بدك ياها؟ (بيوصله إشعار)');
+  const message = prompt('ما المعلومات أو الإثبات التي تريدها؟ (يصله إشعار)');
   if (!message) return;
   const r = await api('POST', '/admin/landmark-claims/' + id + '/needs-info', { message });
   if (!r.ok) { alert(errText(r.data, 'تعذّر الإرسال')); return; }
   lmLoadClaims(1);
 }
 async function lcReject(id) {
-  const reason = prompt('سبب الرفض؟ (بيوصل لصاحب الطلب)');
+  const reason = prompt('سبب الرفض؟ (يصل إلى صاحب الطلب)');
   if (!reason) return;
   const r = await api('POST', '/admin/landmark-claims/' + id + '/reject', { reason });
   if (!r.ok) { alert(errText(r.data, 'تعذّر الرفض')); return; }
@@ -2640,7 +2640,7 @@ async function lmSaveKind(id) {
   const r = await api('PATCH', '/admin/landmark-kinds/' + id, { icon: g('icon').value.trim(), nameAr: g('ar').value.trim(), nameEn: g('en').value.trim(), color: g('color').value, claimable: g('claim').checked, isActive: g('on').checked });
   if (!r.ok) { alert(errText(r.data, 'فشل الحفظ')); return; }
   await lmLoadKinds();
-  alert('انحفظ ✅');
+  alert('تم الحفظ ✅');
 }
 
 async function lmAddKind() {
@@ -2650,7 +2650,7 @@ async function lmAddKind() {
     icon: document.getElementById('nk-icon').value.trim(), color: document.getElementById('nk-color').value, geometry: document.getElementById('nk-geo').value, claimable: false, isActive: true,
   });
   if (!r.ok) { msg.textContent = errText(r.data, 'فشلت الإضافة'); return; }
-  msg.textContent = 'انضاف ✅';
+  msg.textContent = 'تمت الإضافة ✅';
   ['slug', 'ar', 'en', 'icon'].forEach(f => { document.getElementById('nk-' + f).value = ''; });
   await lmLoadKinds();
 }

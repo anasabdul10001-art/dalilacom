@@ -223,7 +223,7 @@
     <h1>لوحة تحكم دليلكم</h1>
     <p>دخول مخصّص للأدمن فقط</p>
     <div id="login-error" class="error-banner" style="display:none"></div>
-    <label>الإيميل</label>
+    <label>البريد الإلكتروني</label>
     <input placeholder="name@example.com" id="login-email" autocomplete="username" />
     <label>كلمة السر</label>
     <input placeholder="••••••••" id="login-password" type="password" autocomplete="current-password" />
@@ -288,13 +288,13 @@
     <!-- LANDMARKS -->
     <div class="section" id="section-landmarks" style="display:none">
       <h2>المعالم العامة</h2>
-      <p class="subtitle">جوامع ومشافي وحدائق وشوارع رئيسية: أماكن بدون صاحب حساب بتظهر على الخريطة للجميع. أضفها بإيدك أو استوردها من OpenStreetMap لقائمة مراجعة، وما بيظهر منها شي قبل ما تعتمده. صاحب المشفى الخاص بيقدر يطالب بمكانه لاحقًا.</p>
+      <p class="subtitle">جوامع ومشافي وحدائق وشوارع رئيسية: أماكن بدون صاحب حساب تظهر على الخريطة للجميع. أضفها بنفسك أو استوردها من OpenStreetMap إلى قائمة مراجعة، ولا يظهر منها شيء قبل أن تعتمده. ويستطيع صاحب المشفى الخاص المطالبة بمكانه لاحقًا.</p>
       <div class="filters" id="lm-tabs">
         <button class="active" data-tab="list" onclick="lmTab('list')">📋 القائمة</button>
         <button data-tab="form" onclick="lmTab('form')">➕ إضافة مكان</button>
         <button data-tab="import" onclick="lmTab('import')">⬇️ استيراد من OpenStreetMap</button>
         <button data-tab="claims" onclick="lmTab('claims')">📨 طلبات المطالبة<span id="lm-claims-badge"></span></button>
-        <button data-tab="dups" onclick="lmTab('dups')">🔁 معالم صار لها محل<span id="lm-dups-badge"></span></button>
+        <button data-tab="dups" onclick="lmTab('dups')">🔁 معالم أصبح لها محل<span id="lm-dups-badge"></span></button>
         <button data-tab="kinds" onclick="lmTab('kinds')">🏷️ الأنواع</button>
       </div>
 
@@ -332,7 +332,7 @@
             <div class="field"><label>الاسم بالعربي</label><input id="lm-name" placeholder="مثال: جامع الأموي"></div>
             <div class="field"><label>الاسم بالإنكليزي (اختياري)</label><input id="lm-name-en" dir="ltr" placeholder="e.g. Umayyad Mosque"></div>
             <div class="field" id="lm-sector-box"><label>القطاع (للمشافي)</label>
-              <select id="lm-sector"><option value="">غير محدد</option><option value="PUBLIC">عام / حكومي (ما بينطلب ملكيته)</option><option value="PRIVATE">خاص (صاحبه يقدر يطالب فيه)</option></select></div>
+              <select id="lm-sector"><option value="">غير محدد</option><option value="PUBLIC">عام / حكومي (لا تُطلب ملكيته)</option><option value="PRIVATE">خاص (يستطيع صاحبه المطالبة به)</option></select></div>
             <div class="field"><label>الهاتف (اختياري)</label><input id="lm-phone" dir="ltr" placeholder="+963 9xx xxx xxx"></div>
           </div>
           <div class="field"><label>العنوان (اختياري)</label><input id="lm-address" placeholder="مثال: دمشق القديمة، شارع مدحت باشا"></div>
@@ -357,7 +357,7 @@
       <div id="lm-pane-import" style="display:none">
         <div class="card">
           <h3>⬇️ استيراد من OpenStreetMap</h3>
-          <p class="muted">بيجيب الأماكن الموجودة حول نقطة محددة وبيحطها بقائمة <b>«بانتظار المراجعة»</b>. ما بيظهر منها شي على الخريطة قبل ما تعتمده. الأسماء بالعربي من OSM ممكن تكون ناقصة، فبتعدّلها قبل الاعتماد. الأماكن اللي موجودة عندنا مسبقًا ما بتنكرر.</p>
+          <p class="muted">يجلب الأماكن الموجودة حول نقطة محددة ويضعها في قائمة <b>«بانتظار المراجعة»</b>. لا يظهر منها شيء على الخريطة قبل أن تعتمده. قد تكون الأسماء العربية من OSM ناقصة، فعدّلها قبل الاعتماد. الأماكن الموجودة لدينا مسبقًا لا تتكرر.</p>
           <label>اختار مدينة، أو اضغط على الخريطة لتحديد مركز المنطقة (وتقدر تحرك الدبوس)</label>
           <div id="lm-cities" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
           <div class="grid2">
@@ -375,8 +375,8 @@
 
       <div id="lm-pane-dups" style="display:none">
         <div class="card">
-          <h3>🔁 معالم صار لها محل بنفس الاسم</h3>
-          <p class="muted">هدول أماكن عامة (مشفى خاص، مدرسة...) ظاهرة على الخريطة، وبنفس المكان تقريبًا في محل مسجّل باسمها. غالبًا هو نفسه، فالمكان بيظهر مرتين. اضغط <b>إخفاء المعلم</b> إذا هو نفسه، أو <b>مو نفس المكان</b> إذا لا (ما بيطلع هالزوج مرة ثانية).</p>
+          <h3>🔁 معالم أصبح لها محل بنفس الاسم</h3>
+          <p class="muted">هذه أماكن عامة (مشفى خاص، مدرسة...) ظاهرة على الخريطة، وفي المكان نفسه تقريبًا يوجد محل مسجّل باسمها. غالبًا هو نفسه، فيظهر المكان مرتين. اضغط <b>إخفاء المعلم</b> إذا كان هو نفسه، أو <b>ليس نفس المكان</b> إذا لم يكن (لا يظهر هذا الزوج مرة أخرى).</p>
           <div id="ld-list"></div>
         </div>
       </div>
@@ -384,7 +384,7 @@
       <div id="lm-pane-claims" style="display:none">
         <div class="card">
           <h3>📨 طلبات المطالبة بالملكية</h3>
-          <p class="muted">صاحب أو مدير مكان خاص (مشفى مثلًا) بيقدّم طلب مع إثبات. بتشوف الإثبات وبتوافق (المكان بيصير محله، أو فرعًا لمحله إذا عنده محل)، أو بتطلب معلومات إضافية، أو بترفض بسبب. أول ما توافق، بيختفي المكان من المعالم وبيحل محله محله على الخريطة.</p>
+          <p class="muted">يقدّم صاحب أو مدير مكان خاص (مشفى مثلًا) طلبًا مع إثبات. ترى الإثبات وتوافق (يصبح المكان محله، أو فرعًا لمحله إذا كان لديه محل)، أو تطلب معلومات إضافية، أو ترفض بسبب. بمجرد الموافقة يختفي المكان من المعالم ويحل محله محله على الخريطة.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
             <select id="lc-status" style="max-width:240px" onchange="lmLoadClaims(1)">
               <option value="PENDING">بانتظار قرارك</option><option value="NEEDS_INFO">طلبت معلومات</option><option value="APPROVED">موافق عليها</option><option value="REJECTED">مرفوضة</option><option value="WITHDRAWN">سحبها صاحبها</option><option value="">الكل</option>
@@ -399,7 +399,7 @@
       <div id="lm-pane-kinds" style="display:none">
         <div class="card">
           <h3>الأنواع</h3>
-          <p class="muted">أي نوع جديد (مدرسة، سوق، موقف...) بتضيفه هون بيظهر مباشرة على الخريطة، بدون برمجة. «خط» للشوارع، و«نقطة» لأي شي ثاني. «قابل للمطالبة» معناه إن صاحب مكان خاص من هالنوع يقدر يطالب فيه.</p>
+          <p class="muted">أي نوع جديد (مدرسة، سوق، موقف...) تضيفه هنا فيظهر مباشرة على الخريطة، دون برمجة. «خط» للشوارع، و«نقطة» لأي شيء آخر. «قابل للمطالبة» يعني أن صاحب مكان خاص من هذا النوع يستطيع المطالبة به.</p>
           <table>
             <thead><tr><th>الرمز</th><th>الاسم بالعربي</th><th>بالإنكليزي</th><th>اللون</th><th>الشكل</th><th>قابل للمطالبة</th><th>مفعّل</th><th></th></tr></thead>
             <tbody id="lm-kinds-body"></tbody>
@@ -423,7 +423,7 @@
       <div class="hello">
         <div>
           <h2 id="home-greet">أهلًا بك 👋</h2>
-          <p class="subtitle" id="home-sub">نظرة سريعة على دليلكم: الأرقام، وكل شي ينتظر قرارك.</p>
+          <p class="subtitle" id="home-sub">نظرة سريعة على دليلكم: الأرقام، وكل شيء ينتظر قرارك.</p>
         </div>
         <button class="refresh" id="home-refresh" onclick="loadHome(true)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> <span id="home-updated">تحديث</span></button>
       </div>
@@ -463,7 +463,7 @@
       </div>
       <div class="card">
         <table>
-          <thead><tr><th class="rownum">#</th><th>اسم المحل</th><th>المالك</th><th>الإيميل</th><th>التصنيف</th><th>الحالة</th><th>الموقع على الخريطة</th><th>الباقة</th><th>إجراءات</th></tr></thead>
+          <thead><tr><th class="rownum">#</th><th>اسم المحل</th><th>المالك</th><th>البريد الإلكتروني</th><th>التصنيف</th><th>الحالة</th><th>الموقع على الخريطة</th><th>الباقة</th><th>إجراءات</th></tr></thead>
           <tbody id="merchants-body"></tbody>
         </table>
         <div id="merchants-pager" style="margin-top:10px"></div>
@@ -493,7 +493,7 @@
     <!-- PLANS -->
     <div class="section" id="section-plans" style="display:none">
       <h2>الباقات والأسعار والضريبة</h2>
-      <p class="subtitle">كل شي تباع به المنصة بمكان واحد: الباقة وسعرها ومواصفاتها وسعر خاص لكل بلد، ونسبة الضريبة المطبوعة على الفواتير.</p>
+      <p class="subtitle">كل ما تبيعه المنصة في مكان واحد: الباقة وسعرها ومواصفاتها وسعر خاص لكل بلد، ونسبة الضريبة المطبوعة على الفواتير.</p>
 
       <div class="card">
         <h3>إضافة باقة جديدة</h3>
@@ -522,7 +522,7 @@
 
       <div class="card">
         <h3>تمديد التجربة المجانية</h3>
-        <p class="subtitle">بيزيد أيام على التجارب المجانية اللي لسا شغّالة لخدمة معيّنة، وإذا حبيت كمان اللي خلصت مؤخراً. ما بينسحب شي من حدا، ومين ما جرّب أصلاً ما بياخد شي. «كم حساب؟» بيعدّ بدون ما يغيّر.</p>
+        <p class="subtitle">يزيد أيامًا على التجارب المجانية الجارية لخدمة معيّنة، وإذا أردت أيضًا التي انتهت مؤخرًا. لا يُسحب شيء من أحد، ومن لم يجرّب أصلًا لا يحصل على شيء. «كم حساب؟» يعدّ دون أن يغيّر.</p>
         <div class="row">
           <div><label>الخدمة</label>
             <select id="te-service">
@@ -532,7 +532,7 @@
               <option value="MERCHANT_ACCOUNT">باقة النشاط</option>
             </select></div>
           <div><label>أيام التمديد</label><input id="te-days" value="30" /></div>
-          <div><label>وشمل اللي خلصت تجربتهم من (يوم)</label><input id="te-ended" value="0" /></div>
+          <div><label>وشمل من انتهت تجربتهم منذ (يوم)</label><input id="te-ended" value="0" /></div>
         </div>
         <button class="btn" onclick="extendTrialsPreview()">كم حساب؟</button>
         <button class="btn" onclick="extendTrialsRun()">مدّد التجربة</button>
@@ -543,7 +543,7 @@
 
       <div class="card">
         <h3>نسب الضريبة (VAT)</h3>
-        <p class="muted" style="margin-top:0">الأسعار شاملة الضريبة: الفاتورة بتفصل جزء الضريبة من الإجمالي وما بتزيد عليه. ما بتطلع أي ضريبة على الفاتورة إلا إذا ضبطت نسبة لبلد الزبون أو نسبة افتراضية.</p>
+        <p class="muted" style="margin-top:0">الأسعار شاملة الضريبة: تفصل الفاتورة جزء الضريبة من الإجمالي ولا تزيد عليه. لا تظهر أي ضريبة على الفاتورة إلا إذا ضبطت نسبة لبلد الزبون أو نسبة افتراضية.</p>
         <div class="row">
           <div><label>البلد</label><select id="tx-country"></select></div>
           <div><label>الاسم المطبوع على الفاتورة</label><input id="tx-name" placeholder="VAT 19%" /></div>
@@ -560,7 +560,7 @@
     <!-- RESPONDER SETTINGS -->
     <div class="section" id="section-responder" style="display:none">
       <h2>المجيب الآلي</h2>
-      <p class="subtitle">التسعير والتجربة وعملة دليلكم وحسابات الدفع — كلها من هون</p>
+      <p class="subtitle">التسعير والتجربة وعملة دليلكم وحسابات الدفع — كلها من هنا</p>
       <div class="card">
         <h3>الأسعار والتجربة (بعملة دليلكم)</h3>
         <div class="row">
@@ -581,12 +581,12 @@
         <input id="rs-usdt" placeholder="T..." />
         <label>المحافظ المحلية — سطر لكل محفظة: KEY|الاسم|رقم الحساب|تعليمات</label>
         <textarea id="rs-wallets" rows="4" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:inherit" placeholder="SHAM_CASH|شام كاش|0999xxxxxx|حوّل وابعت رقم العملية"></textarea>
-        <p class="muted" style="margin:6px 0 0">المحفظة اللي مفتاحها <b>SHAM_CASH</b> بتصير تلقائية (بيتحقق السيرفر من الحوالة وبينزّل الرصيد فورًا) لما تحط عنوان ومفتاح الخدمة بإعدادات السيرفر. وبدونهم بتضل بانتظار موافقتك. رقم العملية بينقبل مرة وحدة فقط.</p>
+        <p class="muted" style="margin:6px 0 0">المحفظة التي مفتاحها <b>SHAM_CASH</b> تصبح تلقائية (يتحقق الخادم من الحوالة وينزّل الرصيد فورًا) عند وضع عنوان ومفتاح الخدمة في إعدادات الخادم. وبدونهما تبقى بانتظار موافقتك. رقم العملية يُقبل مرة واحدة فقط.</p>
         <h3 style="margin-top:18px">علامة دليلكم على الردود</h3>
         <label><input id="rs-badge-enabled" type="checkbox" checked /> إظهار العلامة للخطط التي لا تزيلها</label>
         <label>النص الذي يظهر في نهاية الرد</label>
         <input id="rs-badge-text" maxlength="80" placeholder="⚡ بواسطة دليلكم" />
-        <label>كم ليرة سورية = 1 دولار (لتحويل حوالات الليرة لرصيد؛ صفر = الليرة بتنراجع يدويًا)</label>
+        <label>كم ليرة سورية = 1 دولار (لتحويل حوالات الليرة إلى رصيد؛ صفر = تُراجع حوالات الليرة يدويًا)</label>
         <input placeholder="مثال: 15000" id="rs-syp" type="number" min="0" step="1" />
         <button style="margin-top:12px" onclick="saveResponderSettings()">حفظ الإعدادات</button>
         <span id="rs-msg" class="muted" style="margin-right:10px"></span>
@@ -621,10 +621,10 @@
     <!-- USERS: who is who -->
     <div class="section" id="section-users" style="display:none">
       <h2>المستخدمون</h2>
-      <p class="subtitle">ابحث عن أي حساب بالاسم أو الإيميل أو الهاتف، وشوف دوره وحالته. حسابات الأدمن محمية: ما حدا بيعدّل على حساب أدمن غير صاحبه. زر «تعديل» بيفتح كل تفاصيل الحساب (الاسم والإيميل والهاتف والدور وكلمة السر...) مع التعطيل والحذف النهائي. تعطيل الحساب بيوقفه فورًا وبينهي جلساته. الترقية لأدمن بتتم فقط من إعدادات السيرفر (SUPER_ADMIN_EMAIL).</p>
+      <p class="subtitle">ابحث عن أي حساب بالاسم أو البريد الإلكتروني أو الهاتف، وشاهد دوره وحالته. حسابات الأدمن محمية: لا أحد يعدّل حساب أدمن غير صاحبه. زر «تعديل» يفتح كل تفاصيل الحساب (الاسم والبريد الإلكتروني والهاتف والدور وكلمة السر...) مع التعطيل والحذف النهائي. تعطيل الحساب يوقفه فورًا وينهي جلساته. تتم الترقية إلى أدمن فقط من إعدادات الخادم (SUPER_ADMIN_EMAIL).</p>
       <div class="card">
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input id="users-q" placeholder="اسم أو إيميل أو هاتف" style="flex:2;min-width:200px" onkeydown="if(event.key==='Enter') loadUsers()" />
+          <input id="users-q" placeholder="اسم أو بريد أو هاتف" style="flex:2;min-width:200px" onkeydown="if(event.key==='Enter') loadUsers()" />
           <select id="users-role" style="flex:1;min-width:140px" onchange="loadUsers()">
             <option value="">كل الأدوار</option>
             <option value="ADMIN">أدمن</option>
@@ -634,7 +634,7 @@
           <button onclick="loadUsers()">🔍 بحث</button>
         </div>
         <table style="margin-top:14px">
-          <thead><tr><th class="rownum">#</th><th>الاسم</th><th>الإيميل</th><th>الهاتف</th><th>الدور</th><th>الحالة</th><th></th></tr></thead>
+          <thead><tr><th class="rownum">#</th><th>الاسم</th><th>البريد الإلكتروني</th><th>الهاتف</th><th>الدور</th><th>الحالة</th><th></th></tr></thead>
           <tbody id="users-body"></tbody>
         </table>
         <p id="users-msg" class="muted" style="margin-top:8px"></p>
@@ -644,7 +644,7 @@
         <p id="ue-info" class="muted"></p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
           <label>الاسم الكامل<input placeholder="مثال: أحمد محمد" id="ue-name" /></label>
-          <label>الإيميل<input placeholder="name@example.com" id="ue-email" dir="ltr" /></label>
+          <label>البريد الإلكتروني<input placeholder="name@example.com" id="ue-email" dir="ltr" /></label>
           <label>الهاتف<input id="ue-phone" dir="ltr" placeholder="+963..." /></label>
           <label>الدور
             <select id="ue-role"><option value="CUSTOMER">زبون</option><option value="MERCHANT">صاحب نشاط</option><option value="ADMIN" disabled>أدمن</option></select>
@@ -654,11 +654,11 @@
           </label>
           <label>رمز الدولة (حرفين)<input id="ue-country" dir="ltr" maxlength="2" placeholder="SY" /></label>
           <label>الرقم الضريبي<input placeholder="مثال: DE123456789" id="ue-vat" dir="ltr" /></label>
-          <label>كلمة سر جديدة (اتركها فاضية إذا ما بدك تغيّرها)<input id="ue-pass" type="text" dir="ltr" autocomplete="off" placeholder="8 خانات على الأقل" /></label>
+          <label>كلمة سر جديدة (اتركها فارغة إذا لم ترد تغييرها)<input id="ue-pass" type="text" dir="ltr" autocomplete="off" placeholder="8 خانات على الأقل" /></label>
         </div>
         <label style="display:block;margin-top:10px">نبذة<textarea placeholder="نبذة قصيرة، مثال: صاحب محل ملابس" id="ue-bio" rows="2" style="width:100%"></textarea></label>
         <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px">
-          <label><input type="checkbox" id="ue-verified" /> الإيميل مؤكَّد</label>
+          <label><input type="checkbox" id="ue-verified" /> البريد الإلكتروني مؤكَّد</label>
           <label><input type="checkbox" id="ue-disabled" /> الحساب معطّل</label>
         </div>
         <p id="ue-msg" class="muted" style="margin-top:8px"></p>
@@ -674,7 +674,7 @@
     <!-- GEOGRAPHY: governorates > cities > neighbourhoods -->
     <div class="section" id="section-geo" style="display:none">
       <h2>المدن والمناطق والأحياء</h2>
-      <p class="subtitle">المحافظة ثم المدينة ثم الحي. اختر مكانًا لتشوف اللي تحته وتضيف عليه. أصحاب الأنشطة بيكفيهم يختاروا المدينة، والأحياء اختيارية.</p>
+      <p class="subtitle">المحافظة ثم المدينة ثم الحي. اختر مكانًا لترى ما تحته وتضيف عليه. يكفي أصحاب الأنشطة أن يختاروا المدينة، والأحياء اختيارية.</p>
       <div class="card">
         <label>البلد</label>
         <select id="geo-country" onchange="geoPickCountry()"><option value="">— اختر بلدًا —</option></select>
@@ -705,7 +705,7 @@
 
       <div class="card">
         <h3>حدود إعلانات أصحاب الأنشطة</h3>
-        <p class="muted">الإعلانات المُضمَّنة بباقة المتجر مجانية، وكل إعلان بعدها بيُخصم سعره من محفظة المتجر (وبيرجع له إذا انرفض). عدد الإعلانات بالشهر يحدّده نوع اشتراك المتجر (حقل «حد الرسائل الجماعية بالشهر» بباقات أصحاب الأنشطة، وتعيّن الباقة لكل متجر من قسم أصحاب الأنشطة). المتجر بلا باقة يأخذ الرقم الافتراضي هون. الصفر يعني ممنوع.</p>
+        <p class="muted">الإعلانات المُضمَّنة في باقة المتجر مجانية، وكل إعلان بعدها يُخصم سعره من محفظة المتجر (ويُعاد إليه إذا رُفض). يحدّد نوع اشتراك المتجر عدد الإعلانات في الشهر (حقل «حد الرسائل الجماعية في الشهر» في باقات أصحاب الأنشطة، وتُعيَّن الباقة لكل متجر من قسم أصحاب الأنشطة). المتجر بلا باقة يأخذ الرقم الافتراضي هنا. الصفر يعني ممنوع.</p>
         <label>الرقم الافتراضي لإعلانات المتجر بالشهر</label>
         <input placeholder="مثال: 5" id="bc-limit-default" inputmode="numeric" />
         <label>سعر الإعلان الواحد بعد المُضمَّن بالباقة (بوحدات دليلكم كوين، الصفر = غير معروض للبيع)</label>
@@ -720,8 +720,8 @@
 
       <div class="card">
         <h3>🏷️ إشعار الحسم الجديد</h3>
-        <p class="muted">لما توافق على حسم جديد لمحل، بيوصل إشعار تلقائي لهالفئة (مرة وحدة لكل حسم، ما بيتكرر لو تعدّل). غيّر الاختيار بأي وقت حسب عدد المستخدمين. المحل نفسه ما بيوصله إشعار.</p>
-        <label>مين بيوصله إشعار الحسم؟</label>
+        <p class="muted">لما توافق على حسم جديد لمحل، يصل إشعار تلقائي لهذه الفئة (مرة واحدة لكل حسم، ولا يتكرر لو عُدّل). غيّر الاختيار في أي وقت حسب عدد المستخدمين. المحل نفسه لا يصله إشعار.</p>
+        <label>من يصله إشعار الحسم؟</label>
         <select id="dn-mode" onchange="dnModeChanged()">
           <option value="CITY">كل الناس بمدينة المحل (الافتراضي)</option>
           <option value="CITY_MEMBERS">حاملو بطاقة الحسم بمدينة المحل فقط</option>
@@ -787,7 +787,7 @@
     <!-- PUSH NOTIFICATIONS STATUS -->
     <div class="section" id="section-push" style="display:none">
       <h2>الإشعارات</h2>
-      <p class="subtitle">هل مفتاح Firebase مضبوط على السيرفر وشغّال، وكم جهاز مسجّل — مع زر يبعت إشعار تجريبي لجهازك.</p>
+      <p class="subtitle">هل مفتاح Firebase مضبوط على الخادم ويعمل، وكم جهاز مسجّل — مع زر يرسل إشعارًا تجريبيًا إلى جهازك.</p>
       <div class="card">
         <button class="small" onclick="loadPushStatus()">🔄 تحديث</button>
         <span id="push-msg" class="muted" style="margin-right:10px"></span>
@@ -812,24 +812,24 @@
     <!-- AI PROVIDER STATUS -->
     <div class="section" id="section-ai" style="display:none">
       <h2>حالة الذكاء الاصطناعي</h2>
-      <p class="subtitle">أي مزوّد مضبوط على السيرفر، ومين فعليًا جاوب — من ذاكرة الخدمة الحالية ومن قاعدة البيانات.</p>
+      <p class="subtitle">أي مزوّد مضبوط على الخادم، ومن أجاب فعليًا — من ذاكرة الخدمة الحالية ومن قاعدة البيانات.</p>
       <div class="card">
         <button class="small" onclick="loadAiStatus()">🔄 تحديث</button>
         <button class="small" onclick="testImageEdit()">🖼️ اختبار تعديل الصور</button>
         <span id="ai-image-msg" class="muted" style="margin-right:10px"></span>
         <span id="ai-msg" class="muted" style="margin-right:10px"></span>
         <p class="muted" style="margin-top:14px">المزوّد المُجرَّب أولًا: <b id="ai-active">—</b></p>
-        <p class="muted">"منتج من صورة" (وصف المنتج لصاحب النشاط): <b id="ai-vision">—</b> <small>(بيحتاج مفتاح Gemini أو Mistral أو Claude)</small></p>
+        <p class="muted">"منتج من صورة" (وصف المنتج لصاحب النشاط): <b id="ai-vision">—</b> <small>(يحتاج إلى مفتاح Gemini أو Mistral أو Claude)</small></p>
       </div>
       <div class="card">
         <h3>الذكاء الاصطناعي لأصحاب الأنشطة</h3>
-        <p class="muted">صاحب النشاط بس هو اللي بيستخدمه (وصف المنتج من صورته، وتعديل الصور: إزالة الخلفية والألوان والإضاءة). كل صاحب نشاط عنده عدد استخدامات مجانية كل شهر، وبعدها كل استخدام بينخصم من رصيد محفظته. «التنظيف السريع» للصورة مجاني دايمًا.</p>
+        <p class="muted">صاحب النشاط وحده يستخدمه (وصف المنتج من صورته، وتعديل الصور: إزالة الخلفية والألوان والإضاءة). لكل صاحب نشاط عدد استخدامات مجانية كل شهر، وبعدها يُخصم كل استخدام من رصيد محفظته. «التنظيف السريع» للصورة مجاني دائمًا.</p>
         <div class="row">
           <div><label>الاستخدامات المجانية لكل صاحب نشاط بالشهر</label><input placeholder="مثال: 3" id="ai-free" type="number" min="0" /></div>
           <div><label>سعر كل استخدام بعدها (<span class="credit-name">الرصيد</span>) — 0 = ما في بيع</label><input placeholder="مثال: 5" id="ai-price" type="number" min="0" /></div>
         </div>
         <h4 style="margin:16px 0 6px">الباقات الشهرية (سعر ثابت)</h4>
-        <p class="muted">صاحب النشاط بيشتري باقة من محفظته: عدد استخدامات مضمون لعدد أيام. استخدامات الباقة بتنصرف أول، وبعدها المجاني، وبعدها الدفع لكل استخدام. شراء باقة ثانية والباقة شغّالة بيضيف الأيام والاستخدامات عليها.</p>
+        <p class="muted">يشتري صاحب النشاط باقة من محفظته: عدد استخدامات مضمون لعدد أيام. تُصرف استخدامات الباقة أولًا، ثم المجاني، ثم الدفع لكل استخدام. وشراء باقة أخرى والباقة فعّالة يضيف الأيام والاستخدامات إليها.</p>
         <table><thead><tr><th>الاسم</th><th style="width:14%">الأيام</th><th style="width:16%">الاستخدامات</th><th style="width:20%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ai-packs"></tbody></table>
         <button class="small" style="margin-top:8px" onclick="aiPackAdd()">+ باقة</button>
         <br>
@@ -846,17 +846,17 @@
       </div>
       <div class="card">
         <h3>الجلسة الحالية</h3>
-        <p class="muted">أرقام الخدمة الشغّالة هلق بالضبط — تتصفّر مع كل نشر أو نوم للخطة المجانية.</p>
+        <p class="muted">أرقام الخدمة العاملة الآن بالضبط — تتصفّر مع كل نشر أو نوم للخطة المجانية.</p>
         <table style="margin-top:12px">
           <thead><tr><th>المزوّد</th><th>المفتاح مضبوط؟</th><th>محاولات</th><th>نجاح</th><th>فشل</th><th>تجربة</th></tr></thead>
           <tbody id="ai-session-body"></tbody>
         </table>
         <p class="muted" style="margin-top:14px">آخر مزوّد جاوب فعلًا: <b id="ai-last">—</b> — <b id="ai-last-at">—</b></p>
-        <p class="muted">إذا كل الأرقام أصفار، معناها ما مرّ ولا ردّ على المجيب الآلي بعد — مو عطل.</p>
+        <p class="muted">إذا كانت كل الأرقام أصفارًا، فمعناها أنه لم تمر أي رسالة ولا ردّ على المجيب الآلي بعد — وليس عطلًا.</p>
       </div>
       <div class="card">
         <h3>الإجمالي المحفوظ</h3>
-        <p class="muted">محفوظ بقاعدة البيانات — بيبقى بعد كل النشرات وإعادة التشغيل.</p>
+        <p class="muted">محفوظ في قاعدة البيانات — يبقى بعد كل النشرات وإعادة التشغيل.</p>
         <table style="margin-top:12px">
           <thead><tr><th>المزوّد</th><th>المفتاح مضبوط؟</th><th>محاولات</th><th>نجاح</th><th>فشل</th></tr></thead>
           <tbody id="ai-totals-body"></tbody>
@@ -889,7 +889,7 @@
       </div>
       <div class="card">
         <h3>منتجات تجريبية</h3>
-        <p class="muted">يضيف 5 متاجر وهمية و50 منتج موزّعة على أقسام المتجر. الحذف يمسح هالتجريبي فقط ولا يمس بيانات حقيقية.</p>
+        <p class="muted">يضيف 5 متاجر وهمية و50 منتج موزّعة على أقسام المتجر. الحذف يمسح هذه البيانات التجريبية فقط ولا يمس بيانات حقيقية.</p>
         <button style="margin-top:12px" onclick="demoStore('POST')">➕ أضف 50 منتج تجريبي</button>
         <button class="danger" style="margin-top:12px;margin-right:8px" onclick="demoStore('DELETE')">🗑️ احذف المنتجات التجريبية</button>
         <p id="store-msg" class="muted" style="margin-top:10px"></p>
@@ -898,8 +898,8 @@
 
     <!-- PRODUCT CATEGORIES ADDED BY SHOPS -->
     <div class="section" id="section-pcats" style="display:none">
-      <h2>تصنيفات المنتجات اللي أضافها أصحاب الأنشطة</h2>
-      <p class="subtitle">القائمة الأساسية جاهزة، وصاحب النشاط بيقدر يضيف تصنيف ينفع فوراً. هون بتشوف اللي أضافوه، وبتعدّل اسمه أو ترجمته، أو بتحذفه فتنتقل منتجاته للتصنيف الأعلى منه.</p>
+      <h2>تصنيفات المنتجات التي أضافها أصحاب الأنشطة</h2>
+      <p class="subtitle">القائمة الأساسية جاهزة، ويستطيع صاحب النشاط إضافة تصنيف ينفع فورًا. هنا ترى ما أضافوه، وتعدّل اسمه أو ترجمته، أو تحذفه فتنتقل منتجاته إلى التصنيف الأعلى منه.</p>
       <div class="card">
         <table><thead><tr><th>التصنيف</th><th>بالإنكليزي</th><th>تحت</th><th>المحل</th><th>منتجات</th><th></th></tr></thead><tbody id="pcats-body"></tbody></table>
         <p id="pcats-msg" class="muted"></p>
@@ -909,7 +909,7 @@
     <!-- PRODUCTS WAITING FOR REVIEW -->
     <div class="section" id="section-prodreview" style="display:none">
       <h2>إدارة المنتجات ومراجعتها</h2>
-      <p class="subtitle">الذكاء الاصطناعي بيقرأ كل منتج جديد قبل ما يظهر. المنتج الواضح الغير لائق بينرفض لحاله، والعادي بيظهر، واللي ما تأكد منه (أو لما ما يجاوب الذكاء الاصطناعي) بيجي لهون لتقرر إنت.</p>
+      <p class="subtitle">يقرأ الذكاء الاصطناعي كل منتج جديد قبل أن يظهر. المنتج غير اللائق بوضوح يُرفض تلقائيًا، والعادي يظهر، وما لم يتأكد منه (أو عندما لا يجيب الذكاء الاصطناعي) يأتي إلى هنا لتقرر أنت.</p>
       <div class="filters">
         <button class="active" data-pstatus="PENDING" onclick="loadProductReview('PENDING')">بانتظار القرار</button>
         <button data-pstatus="REJECTED" onclick="loadProductReview('REJECTED')">مرفوضة</button>
@@ -942,26 +942,26 @@
     <!-- MARKETERS -->
     <div class="section" id="section-appfile" style="display:none">
       <h2>تحميل التطبيق من الموقع (APK)</h2>
-      <p class="subtitle">ارفع هون ملف التطبيق (.apk) كل ما تطلع نسخة جديدة. الناس اللي ما بيفتح عندهم جوجل بلاي بينزّلوه من صفحة <b>dalilacom.com/download.html</b>. الملف بيضل محفوظ حتى لو أعاد السيرفر التشغيل. زر «إظهار» بيشغّل أو بيطفّي الرابط بكل الأماكن.</p>
+      <p class="subtitle">ارفع هنا ملف التطبيق (.apk) كلما صدرت نسخة جديدة. الناس الذين لا يعمل لديهم جوجل بلاي ينزّلونه من صفحة <b>dalilacom.com/download.html</b>. يبقى الملف محفوظًا حتى لو أعاد الخادم التشغيل. زر «إظهار» يشغّل الرابط أو يوقفه في كل الأماكن.</p>
       <div class="card" id="appfile-card">جارٍ التحميل…</div>
       <div class="card" id="appupdate-card">جارٍ التحميل…</div>
     </div>
 
     <div class="section" id="section-social" style="display:none">
       <h2>روابط التواصل الاجتماعي</h2>
-      <p class="subtitle">حط رابط صفحتك على كل منصة، وشغّل زر «إظهار» للمنصات اللي بدك تظهر. اللي بيكون مشغّل وعليه رابط بيظهر كأيقونة صغيرة بالموقع وبتطبيق الأندرويد وبأسفل الإيميلات. وإذا طفّيته بيختفي من كل الأماكن فورًا.</p>
+      <p class="subtitle">ضع رابط صفحتك على كل منصة، وشغّل زر «إظهار» للمنصات التي تريد إظهارها. ما كان مشغّلًا وعليه رابط يظهر كأيقونة صغيرة في الموقع وفي تطبيق الأندرويد وأسفل الرسائل الإلكترونية. وإذا أوقفته يختفي من كل الأماكن فورًا.</p>
       <div class="card" id="social-card">جارٍ التحميل…</div>
     </div>
 
     <div class="section" id="section-launch" style="display:none">
       <h2>تهيئة الإطلاق (البدء من الصفر)</h2>
-      <p class="subtitle">بيمسح كل الحسابات ما عدا السوبر أدمن، ومعهم كل المحلات والمنتجات والعروض والطلبات والمحافظ والإعلانات والمراجعات والإشعارات. بيبقى: الدول والمدن، التصنيفات، الباقات والأسعار، الضرائب، وإعدادات المنصة. <b>ما في رجعة.</b></p>
+      <p class="subtitle">يمسح كل الحسابات ما عدا السوبر أدمن، ومعها كل المحلات والمنتجات والعروض والطلبات والمحافظ والإعلانات والمراجعات والإشعارات. ويبقى: الدول والمدن، التصنيفات، الباقات والأسعار، الضرائب، وإعدادات المنصة. <b>لا يمكن التراجع.</b></p>
       <div class="card" id="launch-card">جارٍ التحميل…</div>
     </div>
 
     <div class="section" id="section-marketers" style="display:none">
       <h2>المسوّقون</h2>
-      <p class="subtitle">مسوّق بيجيب ناس لدليلكم برابطه. مدير التسويق تحته مسوّقين وبيربح من كل اللي بيجيبهم فريقه. الربح بيدخل لمحفظة الشخص: مبلغ ثابت عن كل تسجيل مؤكَّد، ونسبة من اللي بيدفعه الشخص من محفظته (باقات، إعلانات، ذكاء اصطناعي). صفر يعني بلا ربح.</p>
+      <p class="subtitle">المسوّق يجلب الناس إلى دليلكم برابطه. مدير التسويق تحته مسوّقون ويربح من كل من يجلبهم فريقه. يدخل الربح إلى محفظة الشخص: مبلغ ثابت عن كل تسجيل مؤكَّد، ونسبة مما يدفعه الشخص من محفظته (باقات، إعلانات، ذكاء اصطناعي). صفر يعني بلا ربح.</p>
       <div class="card" id="mkreq-card" style="display:none">
         <h3>طلبات التحويل إلى مسوّق</h3>
         <table><thead><tr><th>الاسم</th><th>النوع</th><th>الهاتف</th><th>ملاحظة</th><th></th></tr></thead><tbody id="mkreq-body"></tbody></table>
@@ -979,7 +979,7 @@
       <div class="card">
         <h3 id="mk-form-title">إضافة مسوّق أو مدير تسويق</h3>
         <div class="grid2">
-          <div class="field"><label>إيميل الحساب (لازم يكون مسجّل)</label><input placeholder="name@example.com" id="mk-email" type="email" dir="ltr"></div>
+          <div class="field"><label>بريد الحساب (يجب أن يكون مسجّلًا)</label><input placeholder="name@example.com" id="mk-email" type="email" dir="ltr"></div>
           <div class="field"><label>النوع</label><select id="mk-kind" onchange="mkKindChanged()"><option value="MARKETER">مسوّق</option><option value="MANAGER">مدير تسويق</option></select></div>
           <div class="field"><label>طريقة التسويق</label><select id="mk-channel"><option value="ELECTRONIC">إلكتروني</option><option value="FIELD">ميداني</option></select></div>
           <div class="field" id="mk-parent-wrap"><label>مدير التسويق فوقه</label><select id="mk-parent"></select></div>
@@ -998,7 +998,7 @@
     <!-- PROFESSION SUGGESTIONS -->
     <div class="section" id="section-suggestions" style="display:none">
       <h2>اقتراحات المهن</h2>
-      <p class="subtitle">صاحب النشاط اللي ما لقي مهنته بيكتبها، وبيبقى محله تحت أقرب مهنة. إنت بتقبلها كمهنة جديدة (وبتعدّل اسمها وتترجمها وتحدد مكانها)، أو بتضيفها لمهنة موجودة، أو بترفضها.</p>
+      <p class="subtitle">صاحب النشاط الذي لم يجد مهنته يكتبها، ويبقى محله تحت أقرب مهنة. وأنت تقبلها كمهنة جديدة (وتعدّل اسمها وتترجمها وتحدد مكانها)، أو تضيفها إلى مهنة موجودة، أو ترفضها.</p>
       <div class="filters">
         <button class="active" data-sstatus="PENDING" onclick="loadSuggestions('PENDING')">بانتظار القرار</button>
         <button data-sstatus="APPROVED" onclick="loadSuggestions('APPROVED')">أُضيفت كمهنة جديدة</button>
@@ -1011,29 +1011,29 @@
     <!-- DISCOUNTS -->
     <div class="section" id="section-discounts" style="display:none">
       <h2>حسومات المحلات</h2>
-      <p class="subtitle">كل حسم بيحطه صاحب نشاط بيوصل هون، وما بيظهر للزبائن ولا بيتطبّق عند الصندوق إلا بعد موافقتك.</p>
+      <p class="subtitle">كل حسم يضعه صاحب نشاط يصل إلى هنا، ولا يظهر للزبائن ولا يُطبَّق عند الصندوق إلا بعد موافقتك.</p>
       <div class="filters">
         <button class="active" data-dstatus="PENDING" onclick="loadDiscounts('PENDING')">بانتظار الموافقة</button>
         <button data-dstatus="APPROVED" onclick="loadDiscounts('APPROVED')">مقبولة</button>
         <button data-dstatus="REJECTED" onclick="loadDiscounts('REJECTED')">مرفوضة</button>
       </div>
       <div class="card">
-        <table><thead><tr><th>المتجر</th><th>الحسم</th><th>على شو</th><th>المدة</th><th>الحدود</th><th>ملاحظاته</th><th>الحالة</th><th></th></tr></thead><tbody id="disc-body"></tbody></table>
+        <table><thead><tr><th>المتجر</th><th>الحسم</th><th>على ماذا</th><th>المدة</th><th>الحدود</th><th>ملاحظاته</th><th>الحالة</th><th></th></tr></thead><tbody id="disc-body"></tbody></table>
       </div>
     </div>
 
     <!-- STORE ADS AND BANNERS -->
     <div class="section" id="section-ads" style="display:none">
       <h2>إعلانات المتجر</h2>
-      <p class="subtitle">المساحات الإعلانية (6 مساحات لكل دولة بجانب البانر الكبير) يستأجرها أصحاب الأنشطة من محفظتهم، والبانرات الكبيرة إنت اللي بتتحكم فيها.</p>
+      <p class="subtitle">المساحات الإعلانية (6 مساحات لكل دولة بجانب البانر الكبير) يستأجرها أصحاب الأنشطة من محفظتهم، والبانرات الكبيرة أنت من يتحكم فيها.</p>
 
       <div class="card">
         <h3>الأسعار والمدد</h3>
-        <p class="muted">كل سطر: عدد أيام وسعره بوحدة المحفظة. صاحب النشاط بيشوف هالخيارات بس. احذف السطر لتوقف بيع هالمدة.</p>
+        <p class="muted">كل سطر: عدد أيام وسعره بوحدة المحفظة. يرى صاحب النشاط هذه الخيارات فقط. احذف السطر لتوقف بيع هذه المدة.</p>
         <table><thead><tr><th style="width:30%">عدد الأيام</th><th style="width:40%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ads-packages"></tbody></table>
         <button class="secondary" style="margin-top:10px" onclick="addAdPackage()">➕ أضف مدة</button>
         <h3 style="margin-top:18px">أسعار البانر الكبير</h3>
-        <p class="muted">صاحب النشاط بيشوف هالمدد والأسعار ويحجز، وبيترك رقمه، وإنت بتتواصل معه وبتجهّز البانر.</p>
+        <p class="muted">يرى صاحب النشاط هذه المدد والأسعار ويحجز، ويترك رقمه، وأنت تتواصل معه وتجهّز البانر.</p>
         <table><thead><tr><th style="width:30%">عدد الأيام</th><th style="width:40%">السعر (<span class="credit-name">الرصيد</span>)</th><th></th></tr></thead><tbody id="ads-banner-packages"></tbody></table>
         <button class="secondary" style="margin-top:10px" onclick="addAdPackage(null, null, 'ads-banner-packages')">➕ أضف مدة</button>
         <div class="row" style="margin-top:14px">
@@ -1059,7 +1059,7 @@
 
       <div class="card">
         <h3>حجوزات البانر الكبير <span id="bb-count" class="badge PENDING" style="display:none"></span></h3>
-        <p class="muted">صاحب النشاط دفع وترك رقمه. اتصل فيه، واتفقوا شو بده يكتب بالبانر، وبعدين اضغط "جهّز البانر" لتعبّي النموذج تحت.</p>
+        <p class="muted">صاحب النشاط دفع وترك رقمه. اتصل به، واتفقا على ما يريد كتابته في البانر، ثم اضغط "جهّز البانر" لتعبئة النموذج أدناه.</p>
         <div class="filters">
           <button class="active" data-bbstatus="PENDING" onclick="loadBannerBookings('PENDING')">جديدة</button>
           <button data-bbstatus="CONTACTED" onclick="loadBannerBookings('CONTACTED')">تم التواصل</button>
@@ -1072,7 +1072,7 @@
 
       <div class="card">
         <h3>البانرات الكبيرة</h3>
-        <p class="muted">بتتبدّل لحالها بالترتيب اللي هون. عدد غير محدود. بانر بدون صورة بيترسم من اللون.</p>
+        <p class="muted">تتبدّل تلقائيًا بالترتيب الموجود هنا. عدد غير محدود. البانر بدون صورة يُرسم من اللون.</p>
         <div id="banners-list"></div>
         <h3 style="margin-top:18px" id="banner-form-title">بانر جديد</h3>
         <div class="row">
@@ -1083,12 +1083,12 @@
         <div class="row" style="margin-top:10px">
           <div><label>اللون (لما ما في صورة)</label>
             <select id="bn-bg"><option value="coral">مرجاني</option><option value="black">أسود</option><option value="blue">أزرق</option><option value="green">أخضر</option><option value="purple">بنفسجي</option><option value="gold">ذهبي</option></select></div>
-          <div><label>الزر بياخد لـ</label>
-            <select id="bn-target" onchange="bannerTargetHint()"><option value="none">لا شيء</option><option value="deals">قائمة عروض الأعضاء</option><option value="section">قسم</option><option value="product">منتج</option><option value="shop">متجر</option><option value="url">رابط خارجي</option></select></div>
+          <div><label>الزر ينقل إلى</label>
+            <select id="bn-target" onchange="bannerTargetHint()"><option value="none">لا شيءء</option><option value="deals">قائمة عروض الأعضاء</option><option value="section">قسم</option><option value="product">منتج</option><option value="shop">متجر</option><option value="url">رابط خارجي</option></select></div>
           <div><label id="bn-target-label">القيمة</label><input placeholder="مثال: https://dalilacom.com" id="bn-value" /></div>
         </div>
         <div class="row" style="margin-top:10px">
-          <div><label>الدولة (كل الدول لو تركتها فاضية)</label><select id="bn-country"><option value="">كل الدول</option></select></div>
+          <div><label>الدولة (كل الدول إن تركتها فارغة)</label><select id="bn-country"><option value="">كل الدول</option></select></div>
           <div><label>يبدأ (اختياري)</label><input id="bn-start" type="datetime-local" /></div>
           <div><label>ينتهي (اختياري)</label><input id="bn-end" type="datetime-local" /></div>
         </div>
@@ -1104,7 +1104,7 @@
 
     <div class="section" id="section-topups" style="display:none">
       <h2>طلبات الإيداع</h2>
-      <p class="subtitle">حوالات المحافظ المحلية بانتظار تأكيدك. USDT بينتحقق منه السيرفر تلقائيًا.</p>
+      <p class="subtitle">حوالات المحافظ المحلية بانتظار تأكيدك. USDT يتحقق منه الخادم تلقائيًا.</p>
       <div class="filters">
         <button class="active" data-tstatus="PENDING" onclick="loadTopups('PENDING')">بانتظار</button>
         <button data-tstatus="APPROVED" onclick="loadTopups('APPROVED')">مقبول</button>
