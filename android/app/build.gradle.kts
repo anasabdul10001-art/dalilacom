@@ -20,8 +20,8 @@ android {
         applicationId = "com.dalilacom.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 45
-        versionName = "0.1.44"
+        versionCode = 46
+        versionName = "0.1.45"
     }
 
     // The upload key for Google Play: android/keystore.properties (not in git) names the keystore that lives outside the repository.
