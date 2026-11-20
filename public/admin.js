@@ -215,9 +215,9 @@ function renderHome(d) {
   document.getElementById('home-people').innerHTML = splitHtml([
     { l: 'زبائن', v: u.customers, c: '#ba2a34' }, { l: 'أصحاب أنشطة', v: u.merchants, c: '#1b5fa6' }, { l: 'أدمن', v: u.admins, c: '#8a7b78' },
   ], 'لا يوجد مستخدمون بعد') + `<div class="legend" style="margin-top:12px"><span>📧 بريد موثّق <b>${fmt(u.verified)}</b></span><span>📱 أجهزة بإشعارات <b>${fmt(u.devices)}</b></span><span>🆕 آخر 7 أيام <b>${fmt(u.last7)}</b></span></div>`;
-  document.getElementById('home-orders').innerHTML = splitHtml(Object.entries(ORDER_STATUS).map(([k, [l, c]]) => ({ l, v: o.byStatus[k] || 0, c })), 'ما في طلبات بعد');
-  document.getElementById('home-cats').innerHTML = barList(d.topCategories, 'count', 'ما في أنشطة معتمدة بعد');
-  document.getElementById('home-shops').innerHTML = barList(d.topShops, 'count', 'ما في عمليات حسم بآخر 30 يوم');
+  document.getElementById('home-orders').innerHTML = splitHtml(Object.entries(ORDER_STATUS).map(([k, [l, c]]) => ({ l, v: o.byStatus[k] || 0, c })), 'لا يوجد طلبات بعد');
+  document.getElementById('home-cats').innerHTML = barList(d.topCategories, 'count', 'لا يوجد أنشطة معتمدة بعد');
+  document.getElementById('home-shops').innerHTML = barList(d.topShops, 'count', 'لا يوجد عمليات حسم بآخر 30 يوم');
   document.getElementById('home-quick').innerHTML = HOME_QUICK.map(([i, l, s]) => `<button onclick="gotoSection('${s}')"><span>${i}</span>${l}</button>`).join('');
 }
 
@@ -272,7 +272,7 @@ async function loadAppDownload() {
   const d = r.data;
   const when = d.uploadedAt ? new Date(d.uploadedAt).toLocaleString('ar') : '';
   box.innerHTML = `
-    <p><b>الملف الحالي:</b> ${d.hasFile ? `النسخة <b>${esc(d.version)}</b> · ${(d.sizeBytes / 1048576).toFixed(1)} MB · انرفع ${esc(when)}<br><span class="muted" dir="ltr" style="word-break:break-all">SHA-256: ${esc(d.sha256)}</span>` : 'ما في ملف مرفوع بعد'}</p>
+    <p><b>الملف الحالي:</b> ${d.hasFile ? `النسخة <b>${esc(d.version)}</b> · ${(d.sizeBytes / 1048576).toFixed(1)} MB · انرفع ${esc(when)}<br><span class="muted" dir="ltr" style="word-break:break-all">SHA-256: ${esc(d.sha256)}</span>` : 'لا يوجد ملف مرفوع بعد'}</p>
     <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="app-visible" ${d.visible ? 'checked' : ''} ${d.hasFile ? '' : 'disabled'} onchange="setAppVisible(this.checked)" style="width:20px;height:20px"> <span>إظهار رابط التحميل على الموقع</span></label>
     <hr style="margin:16px 0;border:0;border-top:1px solid #ead9d6">
     <h3>رفع نسخة جديدة</h3>
@@ -453,7 +453,7 @@ async function loadMarketers() {
       <td>${x.people}</td>
       <td>${x.earned}</td>
       <td style="white-space:nowrap"><button class="small" onclick="copyMarketerLink('${esc(x.id)}')">نسخ الرابط</button> <button class="small" onclick="editMarketer('${esc(x.id)}')">✏️</button> <button class="small" style="${x.isActive ? 'background:#777' : ''}" onclick="toggleMarketer('${esc(x.id)}', ${!x.isActive})">${x.isActive ? 'تعطيل' : 'تفعيل'}</button></td>
-    </tr>`).join('') : '<tr><td colspan="9" class="muted">ما في مسوّقين بعد</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="9" class="muted">لا يوجد مسوّقين بعد</td></tr>';
   mkKindChanged();
 }
 
@@ -550,7 +550,7 @@ async function loadUsers(keepPage) {
       <td><span class="badge ${u.role === 'ADMIN' ? 'APPROVED' : 'inactive'}">${esc(ROLE_LABEL[u.role] || u.role)}</span></td>
       <td><span class="badge ${u.isDisabled ? 'REJECTED' : 'active'}">${u.isDisabled ? 'معطّل' : 'فعّال'}</span></td>
       <td style="white-space:nowrap">${u.role === 'ADMIN' && u.id !== state.myId ? '<span class="muted" title="حساب أدمن محمي: بس صاحبه بيعدّل عليه">🔒 محمي</span>' : `<button class="small" onclick="openUserEdit('${esc(u.id)}')">✏️ تعديل</button> <button class="small" style="${u.isDisabled ? '' : 'background:#777'}" onclick="toggleUser('${esc(u.id)}', ${!u.isDisabled})">${u.isDisabled ? 'تفعيل' : 'تعطيل'}</button>`}</td>
-    </tr>`).join('') : '<tr><td colspan="7" class="muted">ما في نتائج</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="7" class="muted">لا يوجد نتائج</td></tr>';
 }
 
 let editingUserId = null;
@@ -601,7 +601,7 @@ async function saveUserEdit() {
 }
 
 async function deleteUserForGood() {
-  if (!confirm('حذف هذا الحساب نهائيًا؟ ما في رجعة.')) return;
+  if (!confirm('حذف هذا الحساب نهائيًا؟ لا يمكن التراجع.')) return;
   if (!confirm('تأكيد أخير: سيُمسح الحساب وكل بياناته الشخصية.')) return;
   const { ok, data } = await api('DELETE', '/admin/users/' + editingUserId);
   const msg = document.getElementById('users-msg');
@@ -952,7 +952,7 @@ async function loadDiscounts(status) {
     <td style="max-width:220px">${esc(d.description || '')}${d.rejectionReason ? `<br><small class="muted">رُفض: ${esc(d.rejectionReason)}</small>` : ''}</td>
     <td><span class="badge ${d.status === 'APPROVED' ? 'APPROVED' : d.status === 'PENDING' ? 'PENDING' : 'REJECTED'}">${esc(DISC_STATE_AR[d.state] || d.state)}</span></td>
     <td style="white-space:nowrap">${d.status !== 'APPROVED' ? `<button class="small" onclick="reviewDiscount('${d.id}','approve')">موافقة</button>` : ''}${d.status !== 'REJECTED' ? `<button class="small danger" onclick="reviewDiscount('${d.id}','reject')">رفض</button>` : ''}</td></tr>`).join('')
-    : '<tr><td colspan="8" class="muted">ما في حسومات</td></tr>';
+    : '<tr><td colspan="8" class="muted">لا يوجد حسومات</td></tr>';
   refreshDiscBadge();
 }
 
@@ -1021,7 +1021,7 @@ function toggleProductPageSelection(checked) {
 }
 
 function updateProductSelectionUi() {
-  document.getElementById('prev-selection-count').textContent = selectedProductIds.size ? `محدد ${selectedProductIds.size} منتج` : 'ما في منتجات محددة';
+  document.getElementById('prev-selection-count').textContent = selectedProductIds.size ? `محدد ${selectedProductIds.size} منتج` : 'لا يوجد منتجات محددة';
   document.getElementById('prev-bulk-delete').disabled = !selectedProductIds.size;
   const pageIds = Object.keys(prevItems);
   const allChecked = pageIds.length > 0 && pageIds.every(id => selectedProductIds.has(id));
@@ -1084,7 +1084,7 @@ async function loadProductReview(status, page) {
         </div>
         <div id="pedit-${p.id}"></div>
       </div>
-    </div></div>`).join('') : '<div class="card muted">ما في منتجات</div>';
+    </div></div>`).join('') : '<div class="card muted">لا يوجد منتجات</div>';
   document.getElementById('prev-pager').innerHTML = pagerHtml('prevGo', prevPage, total);
   updateProductSelectionUi();
   refreshProductReviewBadge();
@@ -1176,7 +1176,7 @@ async function loadSuggestions(status) {
         <button class="small danger" onclick="rejectSuggestion('${s.id}')">رفض</button>
       </div>
     </div>`;
-  }).join('') : '<div class="card muted">ما في اقتراحات</div>';
+  }).join('') : '<div class="card muted">لا يوجد اقتراحات</div>';
   data.filter(s => s.status === 'PENDING').forEach(s => { const el = document.getElementById('sug-par-' + s.id); if (el && s.nearestId) el.value = s.nearestId; });
   refreshSugBadge();
 }
@@ -1282,7 +1282,7 @@ async function loadBannerBookings(status) {
     <td style="white-space:nowrap">
       ${b.status === 'PENDING' ? `<button class="small" onclick="bannerBookingContacted('${b.id}')">تم التواصل</button>` : ''}
       ${b.status === 'PENDING' || b.status === 'CONTACTED' ? `<button class="small" onclick="makeBannerFor('${b.id}')">جهّز البانر</button><button class="small danger" onclick="bannerBookingReject('${b.id}')">رفض</button>` : `<span class="badge ${b.status === 'SCHEDULED' ? 'APPROVED' : 'REJECTED'}">${esc(BB_STATE[b.status])}</span>`}
-    </td></tr>`).join('') : '<tr><td colspan="7" class="muted">ما في حجوزات</td></tr>';
+    </td></tr>`).join('') : '<tr><td colspan="7" class="muted">لا يوجد حجوزات</td></tr>';
   const pending = await api('GET', '/admin/banner-bookings?status=PENDING');
   const badge = document.getElementById('bb-count');
   if (pending.ok && pending.data.length) { badge.textContent = pending.data.length; badge.style.display = ''; } else badge.style.display = 'none';
@@ -1307,7 +1307,7 @@ async function bannerBookingReject(id) {
 /** The picture a shop sent with its booking, opened in a new tab (it needs the admin's key, so it is fetched first). */
 async function viewCreative(kind, id) {
   const res = await fetch('/admin/ad-creatives/' + kind + '/' + id, { headers: { Authorization: 'Bearer ' + state.token } });
-  if (!res.ok) { alert('ما في صورة'); return; }
+  if (!res.ok) { alert('لا يوجد صورة'); return; }
   window.open(URL.createObjectURL(await res.blob()), '_blank');
 }
 
@@ -1343,7 +1343,7 @@ async function loadAdBookings(status) {
     <td><span class="badge ${a.status === 'ACTIVE' ? 'APPROVED' : a.status === 'PENDING' ? 'PENDING' : 'REJECTED'}">${esc(AD_STATE[a.state] || a.state)}</span></td>
     <td>${day(a.startsAt)} → ${day(a.endsAt)}</td><td>${a.impressions} / ${a.clicks}</td>
     <td>${a.status === 'PENDING' ? `<button class="small" onclick="reviewAd('${a.id}','approve')">موافقة</button><button class="small danger" onclick="reviewAd('${a.id}','reject')">رفض</button>` : ''}</td></tr>`).join('')
-    : '<tr><td colspan="10" class="muted">ما في حجوزات</td></tr>';
+    : '<tr><td colspan="10" class="muted">لا يوجد حجوزات</td></tr>';
   refreshAdsBadge();
 }
 
@@ -1462,7 +1462,7 @@ async function loadMarketplaceAdmin() {
     document.getElementById('mp-new-enabled').checked = !!m.allowNewProducts;
   }
   const rows = listings.ok ? listings.data : [];
-  document.getElementById('mp-review-body').innerHTML = rows.length ? rows.map(x => `<tr><td>${esc(x.title)}<br><small>${esc(x.description || '')}</small></td><td>${money(x.priceCents)} ${esc(x.currency)}</td><td>${esc(x.condition === 'USED' ? 'مستعمل' : 'جديد')}</td><td>${esc(x.user?.fullName || '')}<br><small>${esc(x.user?.email || '')}</small></td><td>${x.reviewNote ? `<small class="muted">ملاحظة الذكاء الاصطناعي: ${esc(x.reviewNote)}</small><br>` : ''}<button class="small" onclick="reviewMarketplace('${esc(x.id)}','ACTIVE')">موافقة</button> <button class="small danger" onclick="reviewMarketplace('${esc(x.id)}','HIDDEN')">إخفاء</button></td></tr>`).join('') : '<tr><td colspan="5" class="muted">ما في إعلانات بانتظار المراجعة</td></tr>';
+  document.getElementById('mp-review-body').innerHTML = rows.length ? rows.map(x => `<tr><td>${esc(x.title)}<br><small>${esc(x.description || '')}</small></td><td>${money(x.priceCents)} ${esc(x.currency)}</td><td>${esc(x.condition === 'USED' ? 'مستعمل' : 'جديد')}</td><td>${esc(x.user?.fullName || '')}<br><small>${esc(x.user?.email || '')}</small></td><td>${x.reviewNote ? `<small class="muted">ملاحظة الذكاء الاصطناعي: ${esc(x.reviewNote)}</small><br>` : ''}<button class="small" onclick="reviewMarketplace('${esc(x.id)}','ACTIVE')">موافقة</button> <button class="small danger" onclick="reviewMarketplace('${esc(x.id)}','HIDDEN')">إخفاء</button></td></tr>`).join('') : '<tr><td colspan="5" class="muted">لا يوجد إعلانات بانتظار المراجعة</td></tr>';
 }
 
 async function saveMarketplaceSettings() {
@@ -1557,7 +1557,7 @@ async function loadResponderAiUsage() {
   if (!ok) return;
   const body = document.getElementById('responder-ai-usage-body');
   if (!body) return;
-  body.innerHTML = (data.accounts || []).map(row => `<tr><td>${esc(row.user?.fullName || '—')}<br><small>${esc(row.user?.email || '')}</small></td><td>${row.calls}</td><td>${row.promptTokens}</td><td>${row.completionTokens}</td><td>${row.estimatedCostUsd ?? 'غير معروفة'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">ما في استخدام مسجل هذا الشهر</td></tr>';
+  body.innerHTML = (data.accounts || []).map(row => `<tr><td>${esc(row.user?.fullName || '—')}<br><small>${esc(row.user?.email || '')}</small></td><td>${row.calls}</td><td>${row.promptTokens}</td><td>${row.completionTokens}</td><td>${row.estimatedCostUsd ?? 'غير معروفة'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">لا يوجد استخدام مسجل هذا الشهر</td></tr>';
   document.getElementById('responder-ai-usage-note').textContent = `الفترة: ${data.month}`;
 }
 
@@ -1609,7 +1609,7 @@ async function loadAiStatus() {
     document.getElementById('ai-totals-body').innerHTML = rows(totals);
     document.getElementById('ai-totals-note').textContent = totals.lastUsedAt
       ? `آخر جواب مسجّل: ${totals.lastProvider} — ${new Date(totals.lastUsedAt).toLocaleString()}`
-      : 'ما في ولا جواب مسجّل بعد';
+      : 'لا يوجد أي جواب مسجّل بعد';
   } else {
     document.getElementById('ai-totals-body').innerHTML = '<tr><td colspan="5" class="muted">غير متاح — تعذّر الوصول لقاعدة البيانات</td></tr>';
     document.getElementById('ai-totals-note').textContent = '';
@@ -2244,7 +2244,7 @@ async function lmLoad(page) {
         ${l.status === 'ACTIVE' ? `<button class="small secondary" onclick="lmSetStatus('${l.id}','HIDDEN')">🙈 إخفاء</button>` : ''}
         ${l.status !== 'CLAIMED' ? `<button class="small danger" onclick="lmDelete('${l.id}')">🗑️</button>` : ''}
       </td>
-    </tr>`).join('') : '<tr><td colspan="6" class="muted">ما في أماكن بهالفلتر</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="6" class="muted">لا يوجد أماكن بهالفلتر</td></tr>';
   document.getElementById('lm-pager').innerHTML = pagerHtml('lmLoad', lm.page, d.total);
 }
 
@@ -2522,7 +2522,7 @@ async function lmLoadDups() {
         <button class="small" onclick="lmDupHide('${d.landmark.id}')">🙈 إخفاء المعلم</button>
         <button class="small secondary" onclick="lmDupDismiss('${d.landmark.id}')">✋ ليس نفس المكان</button>
       </td>
-    </tr>`).join('') + '</tbody></table>' : '<p class="muted">ما في معالم مكررة 👌</p>';
+    </tr>`).join('') + '</tbody></table>' : '<p class="muted">لا يوجد معالم مكررة 👌</p>';
 }
 
 async function lmDupHide(id) {
@@ -2581,7 +2581,7 @@ async function lmLoadClaims(page) {
         <button class="secondary" onclick="lcAsk('${c.id}')">❓ طلب معلومات</button>
         <button class="danger" onclick="lcReject('${c.id}')">❌ رفض</button>
       </div>` : ''}
-    </div>`).join('') : '<p class="muted">ما في طلبات بهالحالة</p>';
+    </div>`).join('') : '<p class="muted">لا يوجد طلبات بهالحالة</p>';
   document.getElementById('lc-pager').innerHTML = pagerHtml('lmLoadClaims', page || 1, d.total);
   // the proof pictures need the admin's key, so they are fetched and shown from memory
   document.querySelectorAll('#lc-list img[data-file]').forEach(async (img) => {
