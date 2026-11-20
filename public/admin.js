@@ -549,7 +549,7 @@ async function loadUsers(keepPage) {
       <td class="muted" style="direction:ltr;text-align:right">${esc(u.phone || '—')}</td>
       <td><span class="badge ${u.role === 'ADMIN' ? 'APPROVED' : 'inactive'}">${esc(ROLE_LABEL[u.role] || u.role)}</span></td>
       <td><span class="badge ${u.isDisabled ? 'REJECTED' : 'active'}">${u.isDisabled ? 'معطّل' : 'فعّال'}</span></td>
-      <td style="white-space:nowrap">${u.role === 'ADMIN' && u.id !== state.myId ? '<span class="muted" title="حساب أدمن محمي: بس صاحبه بيعدّل عليه">🔒 محمي</span>' : `<button class="small" onclick="openUserEdit('${esc(u.id)}')">✏️ تعديل</button> <button class="small" style="${u.isDisabled ? '' : 'background:#777'}" onclick="toggleUser('${esc(u.id)}', ${!u.isDisabled})">${u.isDisabled ? 'تفعيل' : 'تعطيل'}</button>`}</td>
+      <td style="white-space:nowrap">${u.role === 'ADMIN' && u.id !== state.myId ? '<span class="muted" title="حساب أدمن محمي: لا يعدّله إلا صاحبه">🔒 محمي</span>' : `<button class="small" onclick="openUserEdit('${esc(u.id)}')">✏️ تعديل</button> <button class="small" style="${u.isDisabled ? '' : 'background:#777'}" onclick="toggleUser('${esc(u.id)}', ${!u.isDisabled})">${u.isDisabled ? 'تفعيل' : 'تعطيل'}</button>`}</td>
     </tr>`).join('') : '<tr><td colspan="7" class="muted">لا يوجد نتائج</td></tr>';
 }
 
