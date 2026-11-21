@@ -142,7 +142,9 @@ fun CityGate(container: AppContainer, signedInKey: Boolean) {
                 LanguageChips()
                 Spacer(Modifier.height(12.dp))
                 if (guess != null) {
-                    Text(stringResource(R.string.city_detected, guess.name + " - " + (country?.let { name(it) } ?: "")), style = MaterialTheme.typography.titleMedium)
+                    // the place is isolated (U+2068 ... U+2069), so a Latin city name keeps its own order inside an Arabic sentence
+                    val placeText = "⁨" + guess.name + " - " + (country?.let { name(it) } ?: "") + "⁩"
+                    Text(stringResource(R.string.city_detected, placeText), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(12.dp))
                     Button(onClick = { pick(guess) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.city_yes)) }
                     OutlinedButton(onClick = { detected = null }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.city_change)) }

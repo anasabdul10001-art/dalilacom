@@ -34,6 +34,21 @@ class MainActivity : ComponentActivity() {
     /** Set when the browser comes back from a Google/Facebook sign-in through dalilacom://auth/social. */
     private val socialReturn = mutableStateOf<SocialReturn?>(null)
 
+    /** The language the activity's own context was built with (see attachBaseContext). */
+    private var attachedLanguage: String? = null
+
+    /**
+     * Dialogs, menus and system pickers take their texts from the activity's own context, not from the one the screens provide.
+     * So the activity itself speaks the saved language (otherwise they followed the phone's language, not the app's).
+     */
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val container = (newBase.applicationContext as? DalilacomApp)?.container
+        val code = container?.let { runCatching { runBlocking { it.sessionStore.getLanguage() } }.getOrNull() }
+        val language = AppLanguages.find(code)
+        attachedLanguage = language.code
+        super.attachBaseContext(LocalizedContext(newBase, language))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         deepLink.value = metaReturnIntent(intent)
@@ -57,6 +72,8 @@ class MainActivity : ComponentActivity() {
             val localized = remember(language.code) { LocalizedContext(baseContext, language) }
             AppStrings.resources = localized.resources
             AppStrings.language = language.code
+            // a language chosen while the app is open: rebuild the activity so its own context (dialogs, menus) speaks it too
+            androidx.compose.runtime.LaunchedEffect(language.code) { if (language.code != attachedLanguage) recreate() }
 
             // Switching language rebuilds the UI tree (key) so every screen and helper picks up the new texts and direction.
             key(language.code) {

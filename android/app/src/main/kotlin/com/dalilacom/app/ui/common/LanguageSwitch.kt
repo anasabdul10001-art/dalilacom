@@ -1,6 +1,8 @@
 package com.dalilacom.app.ui.common
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,7 +35,8 @@ fun LanguageChips(modifier: Modifier = Modifier, onColor: Boolean = false) {
     val scope = rememberCoroutineScope()
     val saved by container.sessionStore.languageFlow.collectAsState(initial = null)
     val current = AppLanguages.find(saved).code
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // five languages do not fit one phone width: the row scrolls sideways (it starts at the reading side, so the first language is always visible)
+    Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         AppLanguages.all.forEach { language ->
             val pick: () -> Unit = { scope.launch { container.sessionStore.saveLanguage(language.code) } }
             val small = Modifier.height(36.dp)

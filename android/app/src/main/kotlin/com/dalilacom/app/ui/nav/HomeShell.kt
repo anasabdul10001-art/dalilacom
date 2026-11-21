@@ -160,7 +160,8 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                                     contentAlignment = Alignment.Center,
                                 ) { Icon(tab.icon, contentDescription = stringResource(tab.labelRes), tint = Color.White) }
                             },
-                            label = { Text(stringResource(tab.labelRes), style = MaterialTheme.typography.labelSmall, color = BrandOrange, fontSize = 10.sp, lineHeight = 12.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
+                            // two words may take two lines, but a single word (English "Responder") must never be cut in the middle
+                            label = { val text = stringResource(tab.labelRes); Text(text, style = MaterialTheme.typography.labelSmall, color = BrandOrange, fontSize = 10.sp, lineHeight = 12.sp, maxLines = 2, softWrap = text.contains(' '), textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.wrapContentWidth(unbounded = true)) },
                         )
                     } else {
                         NavigationBarItem(
