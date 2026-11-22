@@ -214,6 +214,7 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
                         }
                     },
                     onStartSelling = { rootNavController.navigate("merchantRegister/store") },
+                    onAuctionSale = { rootNavController.navigate("productWizardAuction") },
                     showBack = false,
                 )
                 HomeTab.Responder -> Unit // never selected: its button opens its own screen

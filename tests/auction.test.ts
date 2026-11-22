@@ -168,3 +168,24 @@ describe("a product without an auction", () => {
     expect((await request(app).get(`/auctions/${s.productId}`)).status).toBe(404);
   });
 });
+
+describe("any account can sell by auction", () => {
+  it("a plain account becomes a personal seller in one call and lists an auction without a store", async () => {
+    const cat = await prisma.category.upsert({ where: { slug: "auction-test-cat" }, update: {}, create: { name: "Auction Test", slug: "auction-test-cat" } });
+    void cat;
+    const person = await account("privateseller");
+    expect((await request(app).post("/products").set(person.auth).send({ name: "My old bike", priceCents: 5000, stock: 1, auctionHours: 24 })).status).toBe(403); // not a seller yet
+    const first = await request(app).post("/merchant/personal-seller").set(person.auth);
+    expect(first.status).toBe(201);
+    expect(first.body.approvalStatus).toBe("APPROVED");
+    const again = await request(app).post("/merchant/personal-seller").set(person.auth);
+    expect(again.status).toBe(200);
+    expect(again.body.created).toBe(false);
+    const login = await request(app).post("/auth/login").send({ email: (await prisma.user.findUniqueOrThrow({ where: { id: person.id } })).email, password });
+    const auth = { Authorization: `Bearer ${login.body.token}` };
+    const product = await request(app).post("/products").set(auth).send({ name: "My old bike", priceCents: 5000, stock: 1, auctionHours: 24 });
+    expect(product.status).toBe(201);
+    expect((await prisma.auction.count({ where: { productId: product.body.id } }))).toBe(1);
+    expect((await request(app).post("/merchant/personal-seller")).status).toBe(401);
+  });
+});

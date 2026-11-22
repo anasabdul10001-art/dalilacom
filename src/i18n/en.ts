@@ -694,6 +694,7 @@ export const en: LanguagePack = {
     "انتهى مزادك": "Your auction has ended",
     "تفوّق عليك أحدهم في المزاد": "Someone outbid you in the auction",
     "لم يكمل الفائز الشراء": "The winner did not complete the purchase",
+    "تعذّر فتح حساب البائع الآن": "Could not open the seller account now",
   },
   patterns: [
     [/^انتهى مزاد «(.+)» دون أي مزايدة\.$/, "The auction for «$1» ended with no bids."],

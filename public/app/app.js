@@ -5890,6 +5890,7 @@ function screenStore() {
         ${sections.map((x) => `<button class="${st.section === x.id ? "on" : ""}" onclick="storePickSection('${x.id}')">${esc(storeSecName(x))}</button>`).join("")}
       </div>
       ${storeScopeBar(st)}
+      ${!filtering ? `<section class="store-seller-cta"><div><b>🔨 ${esc(t("auc.sellCta"))}</b><small>${esc(t("auc.sellCtaSub"))}</small></div><button onclick="startAuctionSale()">${esc(t("auc.sellCtaBtn"))} ←</button></section>` : ""}
       ${S.token && S.role === "CUSTOMER" ? `<section class="store-seller-cta"><div><b>🛍️ ${esc(t("merchant.storeFrontCta"))}</b><small>${esc(t("merchant.storeFrontSub"))}</small></div><button onclick="go('merchantRegister',{mode:'store'})">${esc(t("profile.openOnlineStore"))} ←</button></section>` : ""}
       ${errorBanner()}
       ${body}
@@ -5970,6 +5971,20 @@ async function loadProductDetail(id) {
 }
 
 /* ---------------- online auctions on the store ---------------- */
+
+/** Anyone can sell something of their own by auction: a personal seller profile is opened for the account the first time, then the add-product steps start with the auction chosen. */
+async function startAuctionSale() {
+  if (!S.token) return go("login");
+  if (S.role !== "MERCHANT") {
+    const { ok, data } = await api("POST", "/merchant/personal-seller");
+    if (!ok) return toast(errMsg(data, t("auc.failed")));
+    S.role = "MERCHANT"; localStorage.setItem("dlk_role", "MERCHANT");
+    S._shopStatus = null; S._catalog = null; S._mstat = null; S._onboarding = null;
+  }
+  openProductWizard();
+  S._wiz.auction = 72;
+  render();
+}
 
 /** "2 days 3 hours" / "5 hours 10 minutes" / "3 minutes 20 seconds" until [endsAt]. */
 function auctionTimeLeft(endsAt) {
@@ -8864,8 +8879,11 @@ function screenProductEdit() {
     <div class="field"><label>اسم المنتج</label><input id="pe-name" placeholder="مثال: قميص قطن أبيض" value="${esc(p.name)}" /></div>
     <div class="field"><label>الوصف (اختياري)</label><input id="pe-desc" placeholder="وصف قصير للمنتج، مثال: قميص قطن 100% مريح" value="${esc(p.description)}" /></div>
     <div class="row">
-      <div class="field"><label>السعر${hasTwoMoneys() ? ` (${esc(shopMoneyCode())})` : ""}</label><input id="pe-price" placeholder="مثال: 25.00" value="${esc(p.price)}" /></div>
-      <div class="field"><label>المخزون</label><input id="pe-stock" inputmode="numeric" value="${esc(p.stock)}" placeholder="${esc(t("pe.stockPh"))}" /></div>
+      ${p.isNew ? `<div class="field"><label>${esc(t("auc.sell"))}</label>
+        <div class="wiz-seg"><button class="${!p.auction ? "on" : ""}" onclick="snapshotProdEditDraft();S._prodEdit.auction=0;render()">${esc(t("auc.fixed"))}</button><button class="${p.auction ? "on" : ""}" onclick="snapshotProdEditDraft();S._prodEdit.auction=S._prodEdit.auction||72;render()">🔨 ${esc(t("auc.auction"))}</button></div>
+        ${p.auction ? `<p class="muted" style="margin:6px 0">${esc(t("auc.sellHelp"))}</p><label>${esc(t("auc.duration"))}</label><div class="wiz-seg">${[24, 72, 168].map((h) => `<button class="${p.auction === h ? "on" : ""}" onclick="snapshotProdEditDraft();S._prodEdit.auction=${h};render()">${esc(t("auc.d" + h))}</button>`).join("")}</div>` : ""}</div>` : ""}
+      <div class="field"><label>${p.auction ? esc(t("auc.startPrice")) : "السعر"}${hasTwoMoneys() ? ` (${esc(shopMoneyCode())})` : ""}</label><input id="pe-price" placeholder="مثال: 25.00" value="${esc(p.price)}" /></div>
+      ${p.auction ? "" : `<div class="field"><label>المخزون</label><input id="pe-stock" inputmode="numeric" value="${esc(p.stock)}" placeholder="${esc(t("pe.stockPh"))}" /></div>`}
     </div>
     <div class="field"><label>SKU (اختياري)</label><input id="pe-sku" placeholder="مثال: SH-001" value="${esc(p.sku)}" /></div>
     <div class="section-title">${esc(t("pe.photos"))}</div>
@@ -8881,11 +8899,11 @@ function screenProductEdit() {
     <div class="info-banner">${esc(t("photo.rules"))}</div>
     <div class="section-title">${esc(t("pc.title"))}</div>
     ${pcatPickerHtml(p.productCategoryId, "selectProdCategory")}
-    <div class="switch-row">
+    ${p.isNew && p.auction ? "" : `<div class="switch-row">
       <span>حسم أعضاء دليلكم</span>
       <label class="switch"><input type="checkbox" id="pe-member-toggle" ${p.memberDiscountEnabled ? "checked" : ""} onchange="toggleMemberDiscount(this.checked)" /><span class="track"></span></label>
-    </div>
-    ${p.memberDiscountEnabled ? `<div class="field"><label>سعر العضو</label><input id="pe-member-price" placeholder="مثال: 20.00" value="${esc(p.memberPrice)}" /></div>` : ""}
+    </div>`}
+    ${p.memberDiscountEnabled && !(p.isNew && p.auction) ? `<div class="field"><label>سعر العضو</label><input id="pe-member-price" placeholder="مثال: 20.00" value="${esc(p.memberPrice)}" /></div>` : ""}
     ${!p.isNew ? `
       <div class="switch-row">
         <span>المنتج نشط</span>
@@ -8968,18 +8986,19 @@ async function saveProduct() {
   const name = p.name.trim();
   const description = p.description.trim();
   const priceCents = Math.round(parseFloat(latinDigits(p.price)) * 100);
-  const stock = parseInt(latinDigits(p.stock), 10);
+  const stock = p.isNew && p.auction ? 1 : parseInt(latinDigits(p.stock), 10);
   const sku = p.sku.trim();
   if (!name || !priceCents || priceCents <= 0 || isNaN(stock) || stock < 0) { S.error = "تأكد من اسم المنتج والسعر والمخزون"; return render(); }
   if (p.isNew && !(await shipGuard())) return;
   let memberPriceCents = null;
-  if (p.memberDiscountEnabled) {
+  const isAuction = p.isNew && p.auction;
+  if (p.memberDiscountEnabled && !isAuction) {
     memberPriceCents = Math.round(parseFloat(latinDigits(p.memberPrice)) * 100);
     if (!memberPriceCents || memberPriceCents <= 0 || memberPriceCents >= priceCents) { S.error = "يجب أن يكون سعر العضو أقل من السعر الأصلي"; return render(); }
   }
   const payload = {
     name, description: description || undefined, priceCents, productCategoryId: p.productCategoryId || undefined,
-    stock, sku: sku || undefined, memberDiscountEnabled: p.memberDiscountEnabled, memberPriceCents: memberPriceCents || undefined,
+    stock, sku: sku || undefined, memberDiscountEnabled: isAuction ? false : p.memberDiscountEnabled, memberPriceCents: memberPriceCents || undefined, ...(isAuction ? { auctionHours: p.auction } : {}),
     images: (p.images || []).filter((u) => /^\/store\/photos\/[0-9a-f-]{36}$/.test(u)),
   };
   S.busy = true; S.error = null; render();

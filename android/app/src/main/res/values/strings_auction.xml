@@ -33,4 +33,7 @@
     <string name="auc_d72">3 أيام</string>
     <string name="auc_d168">7 أيام</string>
     <string name="auc_start_price">سعر البداية</string>
+    <string name="auc_sell_cta">بع أي شيء تملكه بالمزاد</string>
+    <string name="auc_sell_cta_sub">لا تحتاج إلى متجر ولا إلى نشاط تجاري. أضف صورة وسعر البداية واترك المشترين يتنافسون.</string>
+    <string name="auc_sell_cta_btn">ابدأ البيع بالمزاد</string>
 </resources>

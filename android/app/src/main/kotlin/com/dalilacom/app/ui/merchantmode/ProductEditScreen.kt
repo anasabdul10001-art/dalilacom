@@ -93,6 +93,24 @@ fun ProductEditScreen(
             placeholder = { Hint(stringResource(R.string.ph_product_desc)) },
         )
             Spacer(Modifier.height(10.dp))
+            if (state.isNew) {
+                Text(stringResource(R.string.auc_sell), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(0 to stringResource(R.string.auc_fixed), 72 to "🔨 " + stringResource(R.string.auc_auction)).forEach { (hours, label) ->
+                        val on = (state.auctionHours > 0) == (hours > 0)
+                        androidx.compose.material3.FilterChip(selected = on, onClick = { viewModel.onAuctionHours(if (hours == 0) 0 else if (state.auctionHours > 0) state.auctionHours else 72) }, label = { Text(label) })
+                    }
+                }
+                if (state.auctionHours > 0) {
+                    Text(stringResource(R.string.auc_sell_help), style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(24 to R.string.auc_d24, 72 to R.string.auc_d72, 168 to R.string.auc_d168).forEach { (hours, label) ->
+                            androidx.compose.material3.FilterChip(selected = state.auctionHours == hours, onClick = { viewModel.onAuctionHours(hours) }, label = { Text(stringResource(label)) })
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = state.priceText,
@@ -101,7 +119,7 @@ fun ProductEditScreen(
                     modifier = Modifier.weight(1f),
                 placeholder = { Hint(stringResource(R.string.ph_price)) },
             )
-                OutlinedTextField(
+                if (!(state.isNew && state.auctionHours > 0)) OutlinedTextField(
                     value = state.stockText,
                     onValueChange = viewModel::onStockChange,
                     label = { Text(AppStrings.get(R.string.s_d697a2b1)) },
@@ -159,11 +177,11 @@ fun ProductEditScreen(
             )
             Spacer(Modifier.height(16.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            if (!(state.isNew && state.auctionHours > 0)) Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(AppStrings.get(R.string.s_f6b288e4), modifier = Modifier.weight(1f))
                 Switch(checked = state.memberDiscountEnabled, onCheckedChange = viewModel::onMemberDiscountToggle)
             }
-            if (state.memberDiscountEnabled) {
+            if (state.memberDiscountEnabled && !(state.isNew && state.auctionHours > 0)) {
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = state.memberPriceText,

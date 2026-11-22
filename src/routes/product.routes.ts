@@ -330,7 +330,8 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), route(async
     if (!quota.paid && !settings.marketplace.allowNewProducts) return sendError(res, 403, "NEW_PRODUCTS_CLOSED", "الباقة المجانية الحالية تسمح بالمنتجات المستعملة فقط");
   }
   // a product in an auction keeps its starting price, its single piece and its place on the store until the auction is over
-  if (parsed.data.priceCents !== undefined || parsed.data.stock !== undefined || parsed.data.isActive === false || parsed.data.memberDiscountEnabled) {
+  const typedPrice = existing.enteredPriceCents ?? existing.priceCents;
+  if ((parsed.data.priceCents !== undefined && parsed.data.priceCents !== typedPrice) || (parsed.data.stock !== undefined && parsed.data.stock !== existing.stock) || parsed.data.isActive === false || parsed.data.memberDiscountEnabled) {
     if (await prisma.auction.findUnique({ where: { productId: existing.id }, select: { id: true } })) return sendError(res, 409, "AUCTION_LOCKED", "لا يمكن تعديل السعر أو الكمية أو إخفاء منتج معروض في مزاد");
   }
   // a listing fed from the accounting warehouse gets its quantity from there, so the two never disagree

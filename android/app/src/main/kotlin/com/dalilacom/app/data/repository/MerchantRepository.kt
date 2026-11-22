@@ -32,6 +32,14 @@ class MerchantRepository(
     private val api: ApiService,
     private val sessionStore: SessionStore,
 ) {
+    /** Anyone can sell by auction: the server opens a personal seller profile for the account (or finds the one it has). */
+    suspend fun becomePersonalSeller(): Result<Unit> {
+        val response = safeApiCall { api.personalSeller() } ?: return Result.failure(Exception(AppStrings.get(R.string.auc_failed)))
+        if (!response.isSuccessful) return Result.failure(Exception(errorText(response, AppStrings.get(R.string.auc_failed))))
+        sessionStore.saveRole("MERCHANT")
+        return Result.success(Unit)
+    }
+
     suspend fun registerMerchant(
         businessName: String,
         categoryId: String,

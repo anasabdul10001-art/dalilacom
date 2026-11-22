@@ -2274,6 +2274,9 @@ DICT.de = {
   "auc.d72": "3 Tage",
   "auc.d168": "7 Tage",
   "auc.startPrice": "Startpreis",
+  "auc.sellCta": "Verkaufen Sie alles, was Sie besitzen, per Auktion",
+  "auc.sellCtaSub": "Sie brauchen weder ein Geschäft noch ein Unternehmen. Fügen Sie ein Foto und einen Startpreis hinzu, und lassen Sie Käufer mitbieten.",
+  "auc.sellCtaBtn": "Auktion starten",
 };
 PHRASES.de = {
   "تعذّر التأكيد": "Bestätigung nicht möglich",

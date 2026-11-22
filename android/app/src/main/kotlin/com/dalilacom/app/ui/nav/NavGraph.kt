@@ -301,6 +301,9 @@ fun DalilacomNavGraph(
             MarketplaceScreen(container = container, onBack = { navController.popBackStack() }, onLogin = { navController.navigate("login") }, onOpenStore = { id -> navController.navigate("marketplaceStore/$id") })
         }
         composable("marketplaceStore/{storeId}") { entry -> MarketplaceStoreScreen(container = container, storeId = entry.arguments?.getString("storeId").orEmpty(), onBack = { navController.popBackStack() }) }
+        composable("productWizardAuction") {
+            ProductWizardScreen(container = container, startAuction = true, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") }, onOpenShipping = { navController.navigate("shipping") }, onOpenAiPlans = { navController.navigate("aiPlans") }, onBackToShop = { navController.popBackStack("merchantMode", inclusive = false) }, onBackToAccount = { navController.popBackStack("home", inclusive = false) })
+        }
         composable("productWizard") {
             ProductWizardScreen(container = container, onBack = { navController.popBackStack() }, onManual = { navController.navigate("merchantProduct") }, onOpenProduct = { id -> navController.navigate("product/$id") }, onOpenShipping = { navController.navigate("shipping") }, onOpenAiPlans = { navController.navigate("aiPlans") }, onBackToShop = { navController.popBackStack("merchantMode", inclusive = false) }, onBackToAccount = { navController.popBackStack("home", inclusive = false) })
         }

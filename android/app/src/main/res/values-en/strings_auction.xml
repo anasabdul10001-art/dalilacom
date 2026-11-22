@@ -33,4 +33,7 @@
     <string name="auc_d72">3 days</string>
     <string name="auc_d168">7 days</string>
     <string name="auc_start_price">Starting price</string>
+    <string name="auc_sell_cta">Sell anything you own by auction</string>
+    <string name="auc_sell_cta_sub">You need no store or business. Add a photo and a starting price and let buyers compete.</string>
+    <string name="auc_sell_cta_btn">Start an auction</string>
 </resources>

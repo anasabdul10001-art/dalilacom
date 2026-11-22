@@ -246,6 +246,8 @@ fun StoreScreen(
     /** A tile that introduces one of the app's sections was tapped: "map", "deals", "card", "accounting", "hr" or "responder". */
     onPromo: (String) -> Unit = {},
     onStartSelling: () -> Unit = {},
+    /** The account became a personal seller: open the add-product steps with the auction chosen. */
+    onAuctionSale: () -> Unit = {},
     /** False when the store is a tab of the home page: there is no page behind it to go back to. */
     showBack: Boolean = true,
 ) {
@@ -323,6 +325,20 @@ fun StoreScreen(
         }
 
         LazyColumn(contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
+            if (!ui.filtering) item {
+                StoreCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("🔨  " + stringResource(R.string.auc_sell_cta), fontWeight = FontWeight.ExtraBold)
+                        Text(stringResource(R.string.auc_sell_cta_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick = {
+                            scope.launch {
+                                if (!container.authRepository.hasStoredSession()) { onLogin(); return@launch }
+                                container.merchantRepository.becomePersonalSeller().onSuccess { onAuctionSale() }.onFailure { e -> android.widget.Toast.makeText(context, e.message ?: "", android.widget.Toast.LENGTH_LONG).show() }
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.auc_sell_cta_btn)) }
+                    }
+                }
+            }
             if (role == "CUSTOMER") item {
                 StoreCard {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

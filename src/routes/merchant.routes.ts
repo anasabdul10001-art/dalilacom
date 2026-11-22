@@ -100,6 +100,24 @@ merchantRouter.post("/register", requireAuth, route(async (req, res) => {
   });
 }));
 
+// Any account can sell by auction: the first time, a personal seller profile is made for it at once (named after the person,
+// online only, no place on the map). Its products still go through the product review before anyone sees them.
+merchantRouter.post("/personal-seller", requireAuth, route(async (req, res) => {
+  const existing = await prisma.merchantProfile.findUnique({ where: { userId: req.user!.id } });
+  if (existing) return res.json({ id: existing.id, approvalStatus: existing.approvalStatus, created: false });
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { fullName: true } });
+  const category = (await prisma.category.findFirst({ where: { isOnline: true }, orderBy: { createdAt: "asc" } })) ?? (await prisma.category.findFirst({ orderBy: { createdAt: "asc" } }));
+  if (!category) return sendError(res, 503, "UNAVAILABLE", "تعذّر فتح حساب البائع الآن");
+  const defaultCountry = await getDefaultCountry();
+  const profile = await prisma.$transaction(async (tx) => {
+    const created = await tx.merchantProfile.create({ data: { userId: req.user!.id, businessName: (user?.fullName ?? "").trim().length >= 2 ? user!.fullName.trim() : "Seller", categoryId: category.id, approvalStatus: "APPROVED", reviewSource: "RULES" } });
+    await tx.user.update({ where: { id: req.user!.id }, data: { role: Role.MERCHANT } });
+    await createBusinessFromMerchantProfile(tx, created, defaultCountry.id);
+    return created;
+  });
+  res.status(201).json({ id: profile.id, approvalStatus: profile.approvalStatus, created: true });
+}));
+
 // A shop that cannot find its profession proposes one (it stays under the closest profession it chose until the admin decides).
 merchantRouter.post("/category-suggestions", requireAuth, requireRole(Role.MERCHANT), route(async (req, res) => {
   const parsed = z.object({ name: z.string().trim().min(2).max(60) }).safeParse(req.body);

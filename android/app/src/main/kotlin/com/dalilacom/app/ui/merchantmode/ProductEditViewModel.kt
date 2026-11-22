@@ -27,6 +27,7 @@ data class ProductEditUiState(
     val memberDiscountEnabled: Boolean = false,
     val memberPriceText: String = "",
     val isActive: Boolean = true,
+    val auctionHours: Int = 0, // a new product only: 0 = fixed price, 24 / 72 / 168 = an auction of that length
     val categoryOptions: List<CategoryOption> = emptyList(),
     val selectedCategoryId: String? = null,
     val productCategories: List<com.dalilacom.app.data.network.ProductCategoryDto> = emptyList(),
@@ -90,6 +91,7 @@ class ProductEditViewModel(
     fun onStockChange(value: String) { _uiState.value = _uiState.value.copy(stockText = value) }
     fun onSkuChange(value: String) { _uiState.value = _uiState.value.copy(sku = value) }
     fun onMemberPriceChange(value: String) { _uiState.value = _uiState.value.copy(memberPriceText = value) }
+    fun onAuctionHours(hours: Int) { _uiState.value = _uiState.value.copy(auctionHours = hours, memberDiscountEnabled = if (hours > 0) false else _uiState.value.memberDiscountEnabled) }
     fun onMemberDiscountToggle(enabled: Boolean) { _uiState.value = _uiState.value.copy(memberDiscountEnabled = enabled) }
     fun onActiveToggle(active: Boolean) { _uiState.value = _uiState.value.copy(isActive = active) }
     /** The photos: add (uploaded now), remove, make one the main (first) one, or improve one for Google. */
@@ -125,13 +127,14 @@ class ProductEditViewModel(
     fun save() {
         val state = _uiState.value
         val priceCents = state.priceText.parseCents()
-        val stock = state.stockText.parseInt()
+        val auction = state.isNew && state.auctionHours > 0
+        val stock = if (auction) 1 else state.stockText.parseInt()
         if (state.name.isBlank() || priceCents == null || priceCents <= 0 || stock == null || stock < 0) {
             _uiState.value = state.copy(error = AppStrings.get(R.string.s_8d0496d3))
             return
         }
         var memberPriceCents: Int? = null
-        if (state.memberDiscountEnabled) {
+        if (state.memberDiscountEnabled && !auction) {
             memberPriceCents = state.memberPriceText.parseCents()
             if (memberPriceCents == null || memberPriceCents <= 0 || memberPriceCents >= priceCents) {
                 _uiState.value = state.copy(error = AppStrings.get(R.string.s_746ec1bd))
@@ -155,9 +158,10 @@ class ProductEditViewModel(
                         productCategoryId = state.selectedProductCategoryId,
                         stock = stock,
                         sku = state.sku.trim().ifBlank { null },
-                        memberDiscountEnabled = state.memberDiscountEnabled,
+                        memberDiscountEnabled = state.memberDiscountEnabled && !auction,
                         memberPriceCents = memberPriceCents,
                         images = state.images.filter { it.startsWith("/store/photos/") },
+                        auctionHours = state.auctionHours.takeIf { it > 0 },
                     ),
                 )
             } else {

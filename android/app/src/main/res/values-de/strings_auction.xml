@@ -33,4 +33,7 @@
     <string name="auc_d72">3 Tage</string>
     <string name="auc_d168">7 Tage</string>
     <string name="auc_start_price">Startpreis</string>
+    <string name="auc_sell_cta">Verkaufen Sie alles, was Sie besitzen, per Auktion</string>
+    <string name="auc_sell_cta_sub">Sie brauchen weder ein Geschäft noch ein Unternehmen. Fügen Sie ein Foto und einen Startpreis hinzu, und lassen Sie Käufer mitbieten.</string>
+    <string name="auc_sell_cta_btn">Auktion starten</string>
 </resources>

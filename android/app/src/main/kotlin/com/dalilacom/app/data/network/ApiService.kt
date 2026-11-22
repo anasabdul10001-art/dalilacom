@@ -600,6 +600,9 @@ interface ApiService {
     @POST("merchant/register")
     suspend fun registerMerchant(@Body body: RegisterMerchantRequest): Response<RegisterMerchantResponse>
 
+    @POST("merchant/personal-seller")
+    suspend fun personalSeller(): Response<okhttp3.ResponseBody>
+
     @GET("affiliates")
     suspend fun getMyMarketingTeam(): Response<List<ShopAffiliateDto>>
 

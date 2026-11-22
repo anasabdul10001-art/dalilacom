@@ -228,11 +228,12 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
 }
 
 @Composable
-fun ProductWizardScreen(container: AppContainer, onBack: () -> Unit, onManual: () -> Unit, onOpenProduct: (String) -> Unit, onOpenShipping: () -> Unit = {}, onBackToShop: () -> Unit = {}, onBackToAccount: () -> Unit = {}, onOpenAiPlans: () -> Unit = {}) {
+fun ProductWizardScreen(container: AppContainer, startAuction: Boolean = false, onBack: () -> Unit, onManual: () -> Unit, onOpenProduct: (String) -> Unit, onOpenShipping: () -> Unit = {}, onBackToShop: () -> Unit = {}, onBackToAccount: () -> Unit = {}, onOpenAiPlans: () -> Unit = {}) {
     val vm: ProductWizardViewModel = viewModel(factory = viewModelFactory { initializer { ProductWizardViewModel(container.storeRepository, container.productRepository, container.merchantRepository) } })
     val ui by vm.ui.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    androidx.compose.runtime.LaunchedEffect(Unit) { if (startAuction) vm.setAuction(72) }
 
     val picker = rememberPhotoPicker { uri: Uri -> scope.launch { vm.addPhoto(withContext(Dispatchers.Default) { ImageUtil.maxJpeg(context, uri) }) } }
 

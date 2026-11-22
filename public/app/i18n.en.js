@@ -1162,6 +1162,9 @@ DICT.en = {
   "auc.d72": "3 days",
   "auc.d168": "7 days",
   "auc.startPrice": "Starting price",
+  "auc.sellCta": "Sell anything you own by auction",
+  "auc.sellCtaSub": "You need no store or business. Add a photo and a starting price and let buyers compete.",
+  "auc.sellCtaBtn": "Start an auction",
 };
 
 // English phrase table for the web preview — gettext-style: each key is the Arabic text exactly as it appears on screen.
