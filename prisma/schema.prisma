@@ -845,6 +845,7 @@ model Product {
   // The accounting product whose warehouse this store listing draws from: `stock` is the share of it the merchant put on the store.
   accountingProductId String?
   accountingProduct   AccountingProduct?        @relation(fields: [accountingProductId], references: [id], onDelete: SetNull)
+  auction             Auction? // set when the product is sold by an online auction instead of at a fixed price
 
   @@index([merchantId])
   @@index([accountingProductId])
@@ -3352,4 +3353,46 @@ model BusinessStaffCommission {
 
   @@index([ownerId, status])
   @@index([staffId, status])
+}
+
+// An online auction for one store product (stock 1). Product.priceCents is the starting price; bids are in the market currency.
+enum AuctionStatus {
+  OPEN // taking bids
+  NO_BIDS // ended with no bid
+  WON // ended with a winner who has to check out before claimDeadline
+  PAID // the winner checked out: the order exists
+  UNCLAIMED // the winner did not check out in time
+}
+
+model Auction {
+  id              String        @id @default(uuid())
+  productId       String        @unique
+  startPriceCents Int
+  currentBidCents Int // the highest bid so far (the start price while there is none)
+  bidCount        Int           @default(0)
+  highBidderId    String?
+  endsAt          DateTime // moves a little later when a bid arrives in the last minutes
+  status          AuctionStatus @default(OPEN)
+  claimDeadline   DateTime? // the winner's time to check out
+  orderId         String?
+  createdAt       DateTime      @default(now())
+
+  product Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  bids    AuctionBid[]
+
+  @@index([status, endsAt])
+  @@index([highBidderId])
+}
+
+model AuctionBid {
+  id          String   @id @default(uuid())
+  auctionId   String
+  userId      String
+  amountCents Int
+  createdAt   DateTime @default(now())
+
+  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@index([auctionId, amountCents])
+  @@index([userId])
 }

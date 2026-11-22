@@ -45,8 +45,8 @@ class StoreRepository(private val api: ApiService) {
     suspend fun home(s: StoreScope): StoreHomeDto? =
         safeApiCall { api.storeHome(s.scope, s.cityId, s.radiusKm, s.lat, s.lng) }?.takeIf { it.isSuccessful }?.body()?.also { if (it.currency.isNotBlank()) Market.currency = it.currency }
 
-    suspend fun products(q: String?, section: String?, deals: Boolean, sort: String, offset: Int, s: StoreScope, merchantId: String? = null, limit: Int = 24): StoreListDto? =
-        safeApiCall { api.storeProducts(q?.ifBlank { null }, section?.ifBlank { null }, if (deals) "1" else null, merchantId, sort, limit, offset, s.scope, s.cityId, s.radiusKm, s.lat, s.lng) }
+    suspend fun products(q: String?, section: String?, deals: Boolean, sort: String, offset: Int, s: StoreScope, merchantId: String? = null, limit: Int = 24, auctions: Boolean = false): StoreListDto? =
+        safeApiCall { api.storeProducts(q?.ifBlank { null }, section?.ifBlank { null }, if (deals) "1" else null, merchantId, sort, limit, offset, s.scope, s.cityId, s.radiusKm, s.lat, s.lng, if (auctions) "1" else null) }
             ?.takeIf { it.isSuccessful }?.body()?.also { if (it.currency.isNotBlank()) Market.currency = it.currency }
 
     private fun jpeg(bytes: ByteArray) = bytes.toRequestBody("image/jpeg".toMediaType())
@@ -147,6 +147,21 @@ class StoreRepository(private val api: ApiService) {
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.ads_failed))))
     }
+
+    suspend fun auction(productId: String): com.dalilacom.app.data.network.AuctionDto? = safeApiCall { api.auction(productId) }?.takeIf { it.isSuccessful }?.body()
+
+    suspend fun placeBid(productId: String, amountCents: Int): Result<com.dalilacom.app.data.network.AuctionDto> {
+        val response = safeApiCall { api.placeBid(productId, com.dalilacom.app.data.network.BidRequest(amountCents)) } ?: return Result.failure(Exception(AppStrings.get(R.string.auc_failed)))
+        val body = response.body()
+        return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.auc_failed))))
+    }
+
+    suspend fun checkoutAuction(productId: String, request: com.dalilacom.app.data.network.AuctionCheckoutRequest): Result<Unit> {
+        val response = safeApiCall { api.checkoutAuction(productId, request) } ?: return Result.failure(Exception(AppStrings.get(R.string.auc_failed)))
+        return if (response.isSuccessful) Result.success(Unit) else Result.failure(Exception(errorText(response, AppStrings.get(R.string.auc_failed))))
+    }
+
+    suspend fun wonAuctions(): List<com.dalilacom.app.data.network.WonAuctionDto> = safeApiCall { api.wonAuctions() }?.takeIf { it.isSuccessful }?.body().orEmpty()
 
     suspend fun product(id: String): StoreProductDto? =
         safeApiCall { api.storeProduct(id) }?.takeIf { it.isSuccessful }?.body()?.also { if (it.currency.isNotBlank()) Market.currency = it.currency }

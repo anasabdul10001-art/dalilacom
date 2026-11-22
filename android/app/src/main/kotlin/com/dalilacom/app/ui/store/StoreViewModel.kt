@@ -36,6 +36,7 @@ data class StoreUi(
     val query: String = "",
     val section: String = "",
     val dealsOnly: Boolean = false,
+    val auctionsOnly: Boolean = false,
     /** Searching with a photo: what it showed (blank while still looking) and the picture itself. */
     val byPhoto: PhotoSearchUi? = null,
     val sort: String = "popular",
@@ -56,7 +57,7 @@ data class StoreUi(
     val needLogin: Boolean = false,
     val error: String? = null,
 ) {
-    val filtering get() = query.isNotBlank() || section.isNotBlank() || dealsOnly || byPhoto != null
+    val filtering get() = query.isNotBlank() || section.isNotBlank() || dealsOnly || auctionsOnly || byPhoto != null
 }
 
 /** The online store: every shop's products of the shopper's own country, narrowed by city or by kilometres around them. */
@@ -119,7 +120,7 @@ class StoreViewModel(
         val s = _ui.value
         _ui.value = s.copy(busy = true, items = if (append) s.items else emptyList(), total = if (append) s.total else 0)
         viewModelScope.launch {
-            val result = store.products(s.query, s.section, s.dealsOnly, s.sort, if (append) s.items.size else 0, scope())
+            val result = store.products(s.query, s.section, s.dealsOnly, s.sort, if (append) s.items.size else 0, scope(), auctions = s.auctionsOnly)
             val now = _ui.value
             _ui.value = now.copy(busy = false, items = if (append) now.items + (result?.items ?: emptyList()) else result?.items ?: emptyList(), total = result?.total ?: now.total)
         }
@@ -130,18 +131,24 @@ class StoreViewModel(
     }
 
     fun search(q: String) {
-        _ui.value = _ui.value.copy(query = q.trim(), dealsOnly = false, byPhoto = null)
+        _ui.value = _ui.value.copy(query = q.trim(), dealsOnly = false, auctionsOnly = false, byPhoto = null)
         if (_ui.value.filtering) loadList(false)
     }
 
     fun pickSection(id: String) {
-        _ui.value = _ui.value.copy(section = id, dealsOnly = false, byPhoto = null)
+        _ui.value = _ui.value.copy(section = id, dealsOnly = false, auctionsOnly = false, byPhoto = null)
         if (_ui.value.filtering) loadList(false)
+    }
+
+    /** The auctions still taking bids, the ones ending first on top. */
+    fun pickAuctions() {
+        _ui.value = _ui.value.copy(query = "", section = "", dealsOnly = false, auctionsOnly = true, byPhoto = null, sort = "ending")
+        loadList(false)
     }
 
     /** "See all" of a home row: the member deals, the best sellers or the newest, as a full list. */
     fun seeAll(kind: String) {
-        _ui.value = _ui.value.copy(query = "", section = "", dealsOnly = kind == "deals", sort = if (kind == "new") "new" else "popular")
+        _ui.value = _ui.value.copy(query = "", section = "", dealsOnly = kind == "deals", auctionsOnly = false, sort = if (kind == "new") "new" else "popular")
         loadList(false)
     }
 
@@ -153,7 +160,7 @@ class StoreViewModel(
     /** Back inside the store first clears the search/section; true when it did so. */
     fun clearFilters(): Boolean {
         if (!_ui.value.filtering) return false
-        _ui.value = _ui.value.copy(query = "", section = "", dealsOnly = false, byPhoto = null)
+        _ui.value = _ui.value.copy(query = "", section = "", dealsOnly = false, auctionsOnly = false, byPhoto = null)
         return true
     }
 

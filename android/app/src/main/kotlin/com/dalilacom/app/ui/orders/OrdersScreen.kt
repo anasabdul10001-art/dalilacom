@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -33,17 +34,31 @@ import com.dalilacom.app.ui.common.orderStatusColor
 import com.dalilacom.app.ui.common.orderStatusLabel
 
 @Composable
-fun OrdersScreen(factory: ViewModelFactory, onOrderClick: (String) -> Unit) {
+fun OrdersScreen(factory: ViewModelFactory, onOrderClick: (String) -> Unit, won: suspend () -> List<com.dalilacom.app.data.network.WonAuctionDto> = { emptyList() }, onOpenProduct: (String) -> Unit = {}) {
     val viewModel: OrdersViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
 
     // Re-fetch every time this tab becomes visible again — an order placed or updated
     // elsewhere in the app shouldn't show stale status here.
     LaunchedEffect(Unit) { viewModel.refresh() }
+    // auctions this person won and has not paid for yet
+    var wonAuctions by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(emptyList<com.dalilacom.app.data.network.WonAuctionDto>()) }
+    LaunchedEffect(Unit) { wonAuctions = won() }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(AppStrings.get(R.string.s_00246e91), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(12.dp))
+        wonAuctions.forEach { w ->
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable { onOpenProduct(w.product.id) }) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("🎉 " + w.product.name, style = MaterialTheme.typography.titleMedium)
+                        Text(formatCents(w.currentBidCents), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text(androidx.compose.ui.res.stringResource(R.string.auc_won_list), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
 
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

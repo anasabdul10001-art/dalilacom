@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auc_filter">المزادات</string>
+    <string name="auc_sort_ending">ينتهي قريبًا</string>
+    <string name="auc_badge">مزاد</string>
+    <string name="auc_bids">%1$d مزايدة</string>
+    <string name="auc_ends_in">ينتهي بعد</string>
+    <string name="auc_your_bid">مبلغ مزايدتك</string>
+    <string name="auc_min">الحد الأدنى %1$s</string>
+    <string name="auc_bid_btn">زايد الآن</string>
+    <string name="auc_placed">تمت المزايدة</string>
+    <string name="auc_failed">تعذّرت المزايدة</string>
+    <string name="auc_you_lead">مزايدتك هي الأعلى حاليًا</string>
+    <string name="auc_rule">يجب أن تتجاوز كل مزايدة أعلى مزايدة بنسبة 5 بالمئة على الأقل. وإذا وصلت مزايدة في آخر دقيقتين يمتد المزاد دقيقتين إضافيتين.</string>
+    <string name="auc_history">آخر المزايدات</string>
+    <string name="auc_you">أنت</string>
+    <string name="auc_won">فزت بهذا المزاد</string>
+    <string name="auc_won_sub">أكمل الشراء قبل %1$s وإلا تُلغى فرصتك.</string>
+    <string name="auc_won_list">فزت بهذا المزاد، أكمل الشراء.</string>
+    <string name="auc_shipping">طريقة الشحن</string>
+    <string name="auc_payment">طريقة الدفع</string>
+    <string name="auc_buy">إتمام الشراء بمبلغ %1$s</string>
+    <string name="auc_need_address">اكتب عنوان التوصيل ورقم هاتفك.</string>
+    <string name="auc_paid">أتممت شراء هذا المنتج. تجد طلبك في «طلباتي».</string>
+    <string name="auc_ended_sold">انتهى هذا المزاد.</string>
+    <string name="auc_ended_no_bids">انتهى هذا المزاد دون أي مزايدة.</string>
+    <string name="auc_sell">طريقة البيع</string>
+    <string name="auc_fixed">سعر ثابت</string>
+    <string name="auc_auction">مزاد علني</string>
+    <string name="auc_sell_help">يزايد المشترون على المنتج، ويفوز صاحب أعلى مزايدة عند انتهاء المدة. القطعة واحدة ولا يمكن تعديل سعرها بعد البدء.</string>
+    <string name="auc_duration">مدة المزاد</string>
+    <string name="auc_d24">يوم واحد</string>
+    <string name="auc_d72">3 أيام</string>
+    <string name="auc_d168">7 أيام</string>
+    <string name="auc_start_price">سعر البداية</string>
+</resources>

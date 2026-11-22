@@ -553,10 +553,16 @@ interface ApiService {
         @Query("radiusKm") radiusKm: Int?,
         @Query("lat") lat: Double?,
         @Query("lng") lng: Double?,
+        @Query("auctions") auctions: String? = null,
     ): Response<StoreListDto>
 
     @GET("store/products/{id}")
     suspend fun storeProduct(@Path("id") id: String): Response<StoreProductDto>
+
+    @GET("auctions/{id}") suspend fun auction(@Path("id") id: String): Response<AuctionDto>
+    @POST("auctions/{id}/bids") suspend fun placeBid(@Path("id") id: String, @Body body: BidRequest): Response<AuctionDto>
+    @POST("auctions/{id}/checkout") suspend fun checkoutAuction(@Path("id") id: String, @Body body: AuctionCheckoutRequest): Response<okhttp3.ResponseBody>
+    @GET("auctions/won/list") suspend fun wonAuctions(): Response<List<WonAuctionDto>>
 
     @GET("marketplace/settings") suspend fun marketplaceSettings(): Response<MarketplaceSettingsDto>
     @GET("marketplace/listings") suspend fun marketplaceListings(@Query("q") q: String? = null): Response<MarketplaceListingsDto>

@@ -48,6 +48,7 @@ import com.dalilacom.app.data.network.StoreProductDto
 import com.dalilacom.app.data.repository.AuthRepository
 import com.dalilacom.app.data.repository.CartRepository
 import com.dalilacom.app.data.repository.StoreRepository
+import com.dalilacom.app.ui.i18n.AppStrings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,6 +67,16 @@ data class StoreProductUi(
     val reviewTarget: com.dalilacom.app.ui.common.ReviewTarget? = null,
     val reviewBusy: Boolean = false,
     val reviewError: String? = null,
+    val auction: com.dalilacom.app.data.network.AuctionDto? = null,
+    val bidText: String = "",
+    val bidding: Boolean = false,
+    val shipPick: String? = null,
+    val payPick: String = "COD",
+    val address: String = "",
+    val phone: String = "",
+    val buying: Boolean = false,
+    val purchased: Boolean = false,
+    val placed: Boolean = false,
 )
 
 class StoreProductViewModel(
@@ -79,7 +90,57 @@ class StoreProductViewModel(
     val ui: StateFlow<StoreProductUi> = _ui.asStateFlow()
 
     init {
-        viewModelScope.launch { _ui.value = StoreProductUi(loading = false, product = store.product(productId), reviews = reviews.of("product", productId)) }
+        viewModelScope.launch {
+            val product = store.product(productId)
+            _ui.value = StoreProductUi(loading = false, product = product, reviews = reviews.of("product", productId), auction = if (product?.auction != null) store.auction(productId) ?: product.auction else null, shipPick = product?.shipping?.singleOrNull()?.id)
+            _ui.value = _ui.value.copy(bidText = "%.2f".format(java.util.Locale.US, (_ui.value.auction?.minNextBidCents ?: 0) / 100.0))
+        }
+    }
+
+    /** Looks at the auction again: other people's bids, the end moving later, or the result once the time is up. */
+    fun refreshAuction() {
+        if (_ui.value.auction == null) return
+        viewModelScope.launch {
+            val next = store.auction(productId) ?: return@launch
+            val old = _ui.value.auction
+            val changed = old == null || old.bidCount != next.bidCount || old.endsAt != next.endsAt || old.status != next.status
+            _ui.value = _ui.value.copy(auction = next, bidText = if (changed) "%.2f".format(java.util.Locale.US, next.minNextBidCents / 100.0) else _ui.value.bidText)
+            if (old?.status != next.status) _ui.value = _ui.value.copy(product = store.product(productId) ?: _ui.value.product)
+        }
+    }
+
+    fun setBid(v: String) { _ui.value = _ui.value.copy(bidText = v) }
+    fun pickShip(id: String) { _ui.value = _ui.value.copy(shipPick = id) }
+    fun pickPay(m: String) { _ui.value = _ui.value.copy(payPick = m) }
+    fun setAddress(v: String) { _ui.value = _ui.value.copy(address = v) }
+    fun setPhone(v: String) { _ui.value = _ui.value.copy(phone = v) }
+
+    fun bid() {
+        val cents = Math.round((_ui.value.bidText.replace(",", ".").toDoubleOrNull() ?: return) * 100).toInt()
+        viewModelScope.launch {
+            if (!auth.hasStoredSession()) { _ui.value = _ui.value.copy(needLogin = true); return@launch }
+            _ui.value = _ui.value.copy(bidding = true, error = null, placed = false)
+            store.placeBid(productId, cents)
+                .onSuccess { _ui.value = _ui.value.copy(bidding = false, placed = true) }
+                .onFailure { _ui.value = _ui.value.copy(bidding = false, error = it.message) }
+            val next = store.auction(productId)
+            if (next != null) _ui.value = _ui.value.copy(auction = next, bidText = "%.2f".format(java.util.Locale.US, next.minNextBidCents / 100.0))
+        }
+    }
+
+    fun buyAuction() {
+        val s = _ui.value
+        val product = s.product ?: return
+        when {
+            product.shipping.isNotEmpty() && s.shipPick == null -> { _ui.value = s.copy(error = AppStrings.get(R.string.ship_pick_all)); return }
+            s.address.trim().length < 5 || s.phone.trim().length < 6 -> { _ui.value = s.copy(error = AppStrings.get(R.string.auc_need_address)); return }
+        }
+        _ui.value = s.copy(buying = true, error = null)
+        viewModelScope.launch {
+            store.checkoutAuction(productId, com.dalilacom.app.data.network.AuctionCheckoutRequest(shippingId = s.shipPick, paymentMethod = s.payPick, address = s.address.trim(), phone = s.phone.trim()))
+                .onSuccess { _ui.value = _ui.value.copy(buying = false, purchased = true, auction = store.auction(productId)) }
+                .onFailure { _ui.value = _ui.value.copy(buying = false, error = it.message) }
+        }
     }
 
     fun openReview(title: String) {
@@ -182,6 +243,8 @@ fun StoreProductScreen(
     LaunchedEffect(ui.needLogin) { if (ui.needLogin) { vm.consumeNeedLogin(); onLogin() } }
     ui.reviewTarget?.let { target -> com.dalilacom.app.ui.common.ReviewDialog(target, ui.reviewBusy, ui.reviewError, vm::sendReview, vm::closeReview) }
     LaunchedEffect(ui.goToCart) { if (ui.goToCart) { vm.consumeGoToCart(); onGoToCart() } }
+    // while an auction is open its figures are looked at again every ten seconds
+    LaunchedEffect(ui.auction?.status) { while (ui.auction?.status == "OPEN") { kotlinx.coroutines.delay(10_000); vm.refreshAuction() } }
 
     Column(Modifier.fillMaxSize()) {
         TextButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) { Text("‹  " + stringResource(R.string.store_back)) }
@@ -236,7 +299,8 @@ fun StoreProductScreen(
                             }
                         }
                     }
-                    if (product.stock <= 0) Text(stringResource(R.string.store_unavailable), color = MaterialTheme.colorScheme.error)
+                    if (product.auction != null) AuctionPanel(ui, product, vm)
+                    else if (product.stock <= 0) Text(stringResource(R.string.store_unavailable), color = MaterialTheme.colorScheme.error)
                     else {
                         Text(
                             "✓ " + stringResource(R.string.store_stock_count, product.stock),
@@ -265,6 +329,66 @@ fun StoreProductScreen(
                     }
                 }
                 StoreProductRow(stringResource(R.string.store_related), product.related, null, onOpenProduct) { onOpenProduct(it) }
+            }
+        }
+    }
+}
+
+/** Bidding on an auction: the time left, the bid box, the latest bids; for the winner, the form that turns it into an order. */
+@Composable
+private fun AuctionPanel(ui: StoreProductUi, product: StoreProductDto, vm: StoreProductViewModel) {
+    val a = ui.auction ?: return
+    val open = a.status == "OPEN"
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        when {
+            open -> {
+                Text("⏳ " + stringResource(R.string.auc_ends_in) + " " + (com.dalilacom.app.ui.common.countdownText(a.endsAt) ?: ""), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                if (a.youLead) Text("✓ " + stringResource(R.string.auc_you_lead), color = androidx.compose.ui.graphics.Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                androidx.compose.material3.OutlinedTextField(
+                    value = ui.bidText, onValueChange = vm::setBid, singleLine = true,
+                    label = { Text(stringResource(R.string.auc_your_bid) + " · " + stringResource(R.string.auc_min, formatCents(a.minNextBidCents))) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(onClick = vm::bid, enabled = !ui.bidding, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("🔨  " + stringResource(R.string.auc_bid_btn)) }
+                if (ui.placed) Text(stringResource(R.string.auc_placed) + " ✓", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.auc_rule), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            }
+            a.youWon && a.status == "WON" && !ui.purchased -> {
+                Text("🎉 " + stringResource(R.string.auc_won), fontWeight = FontWeight.ExtraBold, color = androidx.compose.ui.graphics.Color(0xFF2E7D32))
+                a.claimDeadline?.let { d -> Text(stringResource(R.string.auc_won_sub, runCatching { java.time.Instant.parse(d).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString() }.getOrDefault("")), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) }
+                if (product.shipping.isNotEmpty()) {
+                    Text("🚚 " + stringResource(R.string.auc_shipping), fontWeight = FontWeight.Bold)
+                    product.shipping.forEach { m ->
+                        Row(Modifier.fillMaxWidth().clickable { vm.pickShip(m.id) }, verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.RadioButton(selected = ui.shipPick == m.id, onClick = { vm.pickShip(m.id) })
+                            Text(m.name, Modifier.weight(1f))
+                            Text(if (m.costCents > 0) formatCents(m.costCents) else stringResource(R.string.ship_free), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                Text("💳 " + stringResource(R.string.auc_payment), fontWeight = FontWeight.Bold)
+                val labels = mapOf("COD" to AppStrings.get(R.string.pay_cod), "BANK_ALSHAM" to AppStrings.get(R.string.s_20f44d7f), "SYRIATEL" to AppStrings.get(R.string.fit_auto_31d9b741), "MTN" to AppStrings.get(R.string.fit_auto_d79941c7))
+                a.paymentMethods.ifEmpty { listOf("COD") }.forEach { m ->
+                    Row(Modifier.fillMaxWidth().clickable { vm.pickPay(m) }, verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.RadioButton(selected = ui.payPick == m, onClick = { vm.pickPay(m) })
+                        Text(labels[m] ?: m)
+                    }
+                }
+                androidx.compose.material3.OutlinedTextField(value = ui.address, onValueChange = vm::setAddress, label = { Text(stringResource(R.string.addr_title)) }, placeholder = { Text(stringResource(R.string.addr_ph)) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                androidx.compose.material3.OutlinedTextField(value = ui.phone, onValueChange = vm::setPhone, label = { Text(stringResource(R.string.addr_phone)) }, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone), modifier = Modifier.fillMaxWidth())
+                Button(onClick = vm::buyAuction, enabled = !ui.buying, shape = RoundedCornerShape(4.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(stringResource(R.string.auc_buy, formatCents(a.currentBidCents))) }
+            }
+            a.youWon -> Text("✓ " + stringResource(R.string.auc_paid), color = androidx.compose.ui.graphics.Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+            else -> Text(stringResource(if (a.bidCount > 0) R.string.auc_ended_sold else R.string.auc_ended_no_bids), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (a.bids.isNotEmpty()) {
+            Text(stringResource(R.string.auc_history), fontWeight = FontWeight.Bold)
+            a.bids.forEach { b ->
+                Row(Modifier.fillMaxWidth().background(if (b.mine) androidx.compose.ui.graphics.Color(0x24FA6338) else androidx.compose.ui.graphics.Color(0x14808080), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    Text(formatCents(b.amountCents), Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                    Text((if (b.mine) stringResource(R.string.auc_you) else ""), fontSize = 12.sp)
+                }
             }
         }
     }

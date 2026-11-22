@@ -2576,6 +2576,7 @@ function tabOrders() {
   const list = o.list || [];
   return `
     <h1 class="screen-title">طلباتي</h1>
+    ${(o.won || []).map((w) => `<div class="card clickable auc-won" onclick="go('productDetail',{productId:'${w.product.id}'})"><div class="title-line"><strong>🎉 ${esc(w.product.name)}</strong><span class="price">${fmt(w.currentBidCents)}</span></div><p class="muted">${esc(t("auc.wonList"))}</p></div>`).join("")}
     ${list.length === 0 ? `<div class="empty-state">لا توجد لديك طلبات بعد</div>` : list.map((ord) => `
       <div class="card clickable" onclick="go('orderDetail', {orderId:'${ord.id}'})">
         <div class="title-line"><strong>${esc(ord.orderNumber)}</strong>${orderBadge(ord.status)}</div>
@@ -2586,8 +2587,8 @@ function tabOrders() {
 }
 
 async function loadOrders() {
-  const { ok, data } = await api("GET", "/orders/mine");
-  S._orders = { loading: false, list: ok ? data : [] };
+  const [{ ok, data }, won] = await Promise.all([api("GET", "/orders/mine"), api("GET", "/auctions/won/list")]);
+  S._orders = { loading: false, list: ok ? data : [], won: won.ok ? won.data : [] };
   render();
 }
 
@@ -4264,7 +4265,7 @@ function screenMerchantDetail() {
     body = `
       <div class="store-bar"><h2>${esc(t("shop.allProducts"))} <small>${sorted.length}</small></h2>
         <select class="store-sort" onchange="S._merchantDetail.sort=this.value;render()">
-          ${[["popular", "الأكثر مبيعًا"], ["rating", "الأعلى تقييمًا"], ["price_asc", "السعر: من الأقل"], ["price_desc", "السعر: من الأعلى"]].map(([v, l]) => `<option value="${v}" ${m.sort === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
+          ${[["popular", "الأكثر مبيعًا"], ["rating", "الأعلى تقييمًا"], ["price_asc", "السعر: من الأقل"], ["price_desc", "السعر: من الأعلى"], ...(st.auctions ? [["ending", t("auc.sortEnding")]] : [])].map(([v, l]) => `<option value="${v}" ${m.sort === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
         </select></div>
       ${sorted.length ? `<div class="store-grid">${sorted.map(storeCard).join("")}</div>` : `<div class="empty">${esc(t("place.noProducts"))}</div>`}`;
   } else {
@@ -4620,6 +4621,7 @@ async function loadStoreList(append) {
   if (st.q) params.set("q", st.q);
   if (st.section) params.set("section", st.section);
   if (st.deals) params.set("deals", "1");
+  if (st.auctions) params.set("auctions", "1");
   storeScopeParams(st, params);
   const { ok, data } = await api("GET", "/store/products?" + params);
   st.busy = false;
@@ -4664,7 +4666,7 @@ function storeSearch(ev) {
   const st = S._store;
   st.byPhoto = null;
   st.q = qs("store-q").value.trim();
-  st.deals = false;
+  st.deals = false; st.auctions = false;
   if (!st.q && !st.section) { render(); return; }
   loadStoreList(false);
 }
@@ -4672,8 +4674,15 @@ function storeSearch(ev) {
 function storePickSection(id) {
   const st = S._store;
   st.section = id;
-  st.deals = false;
+  st.deals = false; st.auctions = false;
   if (!id && !st.q) { render(); return; }
+  loadStoreList(false);
+}
+
+/** The auctions that are still taking bids, the ones ending first on top. */
+function storePickAuctions() {
+  const st = S._store;
+  st.q = ""; st.section = ""; st.deals = false; st.auctions = true; st.byPhoto = null; st.sort = "ending";
   loadStoreList(false);
 }
 
@@ -4681,7 +4690,7 @@ function storeSetSort(v) { S._store.sort = v; loadStoreList(false); }
 
 function storeBack() {
   const st = S._store;
-  if (st && (st.q || st.section || st.deals || st.byPhoto)) { st.q = ""; st.section = ""; st.deals = false; st.byPhoto = null; window.scrollTo(0, 0); render(); return; }
+  if (st && (st.q || st.section || st.deals || st.auctions || st.byPhoto)) { st.q = ""; st.section = ""; st.deals = false; st.auctions = false; st.byPhoto = null; window.scrollTo(0, 0); render(); return; }
   if (S.screen === "home") return; // on the store tab there is nothing behind it: only a search or a filter can be left
   S._store = null;
   back();
@@ -4691,7 +4700,7 @@ function storeBack() {
 function storeSeeAll(kind) {
   const st = S._store;
   st.q = ""; st.section = "";
-  st.deals = kind === "deals";
+  st.deals = kind === "deals"; st.auctions = false;
   st.sort = kind === "new" ? "new" : "popular";
   loadStoreList(false);
 }
@@ -5274,7 +5283,7 @@ async function cancelMyAd(id) {
 /* ---------------- a product from a photo (for shops that are not used to typing) ---------------- */
 
 function openProductWizard() {
-  S._pcat = null; S._wiz = { step: "photos", photos: [], specs: [], stock: "", condition: "NEW", section: "", categoryId: "", name: "", description: "", price: "", alternatives: [], busy: false, error: null };
+  S._pcat = null; S._wiz = { step: "photos", photos: [], specs: [], stock: "", auction: 0, condition: "NEW", section: "", categoryId: "", name: "", description: "", price: "", alternatives: [], busy: false, error: null };
   go("productWizard");
   if (!S._wizSections) api("GET", "/store/sections?all=1").then((r) => { if (r.ok) { S._wizSections = r.data; render(); } });
 }
@@ -5368,12 +5377,18 @@ function screenProductWizard() {
       ${w.specs.map((x, i) => `<div class="wiz-spec"><input value="${esc(x.label)}" onchange="S._wiz.specs[${i}].label=this.value" placeholder="${esc(t("wiz.specLabel"))}"><input value="${esc(x.value)}" onchange="S._wiz.specs[${i}].value=this.value" placeholder="${esc(t("wiz.specValue"))}"><button onclick="S._wiz.specs.splice(${i},1);render()" aria-label="x">✕</button></div>`).join("")}
       <button class="link-btn" onclick="S._wiz.specs.push({label:'',value:''});render()">+ ${esc(t("wiz.addSpec"))}</button></div>
 
-    <div class="field"><label>${esc(t("wiz.price"))} (${esc(hasTwoMoneys() ? (shopMoneyCode() === "USD" ? "$" : "SYP") : cur === "EUR" ? "€" : cur)})</label>
+    <div class="field"><label>${esc(t("auc.sell"))}</label>
+      <div class="wiz-seg"><button class="${!w.auction ? "on" : ""}" onclick="S._wiz.auction=0;render()">${esc(t("auc.fixed"))}</button><button class="${w.auction ? "on" : ""}" onclick="S._wiz.auction=S._wiz.auction||72;render()">🔨 ${esc(t("auc.auction"))}</button></div>
+      ${w.auction ? `<p class="muted" style="margin:6px 0">${esc(t("auc.sellHelp"))}</p>
+      <label>${esc(t("auc.duration"))}</label>
+      <div class="wiz-seg">${[24, 72, 168].map((h) => `<button class="${w.auction === h ? "on" : ""}" onclick="S._wiz.auction=${h};render()">${esc(t("auc.d" + h))}</button>`).join("")}</div>` : ""}</div>
+
+    <div class="field"><label>${esc(w.auction ? t("auc.startPrice") : t("wiz.price"))} (${esc(hasTwoMoneys() ? (shopMoneyCode() === "USD" ? "$" : "SYP") : cur === "EUR" ? "€" : cur)})</label>
       <input class="wiz-price" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(w.price)}" oninput="S._wiz.price=this.value" placeholder="0.00">
       ${w.priceHint ? `<p class="muted" style="margin:6px 0 0">💡 ${esc(t("wiz.priceHint", { min: fmt(w.priceHint.min), max: fmt(w.priceHint.max) }))}</p>` : ""}</div>
 
-    <div class="field"><label>${esc(t("wiz.stock"))}</label>
-      <input type="number" inputmode="numeric" min="1" value="${esc(w.stock)}" oninput="S._wiz.stock=this.value" placeholder="${esc(t("wiz.stockPh"))}"></div>
+    ${w.auction ? "" : `<div class="field"><label>${esc(t("wiz.stock"))}</label>
+      <input type="number" inputmode="numeric" min="1" value="${esc(w.stock)}" oninput="S._wiz.stock=this.value" placeholder="${esc(t("wiz.stockPh"))}"></div>`}
 
     ${w.error ? `<div class="error-banner">${esc(w.error)}</div>` : ""}
     <button class="btn wiz-go" ${w.busy ? "disabled" : ""} onclick="wizPublish()">✅ ${esc(w.busy ? t("wiz.publishing") : t("wiz.publish"))}</button>`;
@@ -5594,13 +5609,13 @@ async function wizPublish() {
   if (!w.name.trim()) { w.error = t("wiz.needName"); return render(); }
   if (!w.categoryId) { w.error = t("wiz.needSection"); return render(); }
   if (!(price > 0)) { w.error = t("wiz.needPrice"); return render(); }
-  const stock = parseInt(latinDigits(String(w.stock)), 10);
+  const stock = w.auction ? 1 : parseInt(latinDigits(String(w.stock)), 10);
   if (!(stock >= 1)) { w.error = t("wiz.needStock"); return render(); }
   if (!(await shipGuard())) return;
   w.busy = true; w.error = null; render();
   const body = {
     name: w.name.trim(), description: w.description.trim() || undefined, priceCents: Math.round(price * 100), stock,
-    productCategoryId: w.categoryId, condition: w.condition, images: w.photos.map((p) => p.url),
+    productCategoryId: w.categoryId, condition: w.condition, images: w.photos.map((p) => p.url), ...(w.auction ? { auctionHours: w.auction } : {}),
     specs: w.specs.filter((x) => x.label.trim() && x.value.trim()).map((x) => ({ label: x.label.trim(), value: x.value.trim() })),
   };
   const { ok, data } = await api("POST", "/products", body);
@@ -5698,6 +5713,7 @@ function storePickImage(i) {
 function storeCount(n) { return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k+" : String(n); }
 
 function storePrice(p) {
+  if (p.auction) return `<div class="store-price"><b>${fmt(p.auction.currentBidCents)}</b></div><div class="store-off">🔨 ${esc(t("auc.badge"))} · ${esc(t("auc.bids", { n: p.auction.bidCount }))}</div>`;
   return p.memberDiscountEnabled
     ? `<div class="store-price sale"><b>${priceText(p, true)}</b><s>${priceText(p, false)}</s></div><div class="store-off">${esc(t("store.offLabel", { n: storeOff(p) }))}</div>`
     : `<div class="store-price"><b>${priceText(p, false)}</b></div>`;
@@ -5711,7 +5727,7 @@ function storeCard(p) {
         ${storePic(p)}
         ${p.images && p.images[1] ? `<img class="store-alt" src="${esc(p.images[1])}" alt="" loading="lazy" />` : ""}
         ${p.soldCount >= 8000 ? `<span class="store-tag hot">${esc(t("store.best"))}</span>` : ""}
-        <button class="store-bag ${added ? "done" : ""}" onclick="storeAdd('${p.id}', event)" aria-label="${esc(t("store.add"))}">${added ? "✓" : ICON.bag}</button>
+        ${p.auction ? `<span class="store-tag hot">🔨 ${esc(t("auc.badge"))}</span>` : `<button class="store-bag ${added ? "done" : ""}" onclick="storeAdd('${p.id}', event)" aria-label="${esc(t("store.add"))}">${added ? "✓" : ICON.bag}</button>`}
       </div>
       <div class="store-card-body">
         <div class="store-name">${esc(p.name)}</div>
@@ -5823,12 +5839,12 @@ function screenStore() {
   const st = storeState();
   const home = st.home;
   const sections = home ? home.sections : [];
-  const filtering = !!(st.q || st.section || st.deals || st.byPhoto);
+  const filtering = !!(st.q || st.section || st.deals || st.auctions || st.byPhoto);
   const activeSection = sections.find((x) => x.id === st.section);
   let body;
   if (st.loading) body = spinner();
   else if (filtering) {
-    const title = st.byPhoto ? t("photo.resultsFor", { name: st.byPhoto.title || "" }) : st.q ? `${t("store.resultsFor")} «${st.q}»` : st.deals ? t("store.deals") : storeSecName(activeSection) || t("store.best");
+    const title = st.byPhoto ? t("photo.resultsFor", { name: st.byPhoto.title || "" }) : st.q ? `${t("store.resultsFor")} «${st.q}»` : st.auctions ? t("auc.filter") : st.deals ? t("store.deals") : storeSecName(activeSection) || t("store.best");
     body = `
       ${st.byPhoto ? `<div class="photo-seen">${st.byPhoto.preview ? `<img src="${esc(st.byPhoto.preview)}" alt="">` : ""}<span>${esc(t("photo.seen"))}: <b>${esc(st.byPhoto.title || "")}</b></span></div>` : ""}
       <div class="store-bar"><h2>${esc(title)} <small>${st.total ? st.total : ""}</small></h2>
@@ -5869,7 +5885,8 @@ function screenStore() {
         <button class="store-icon-btn store-cart" onclick="storeToCart()" aria-label="cart">${ICON.bag}${st.cartCount ? `<span class="store-badge">${st.cartCount}</span>` : ""}</button>
       </div>
       <div class="store-tabs">
-        <button class="${!st.section && !st.deals ? "on" : ""}" onclick="storePickSection('')">${esc(t("store.all"))}</button>
+        <button class="${!st.section && !st.deals && !st.auctions ? "on" : ""}" onclick="storePickSection('')">${esc(t("store.all"))}</button>
+        <button class="${st.auctions ? "on" : ""}" onclick="storePickAuctions()">🔨 ${esc(t("auc.filter"))}</button>
         ${sections.map((x) => `<button class="${st.section === x.id ? "on" : ""}" onclick="storePickSection('${x.id}')">${esc(storeSecName(x))}</button>`).join("")}
       </div>
       ${storeScopeBar(st)}
@@ -5902,7 +5919,8 @@ function screenProductDetail() {
             ${prod.ratingCount ? `<span class="star">${"★".repeat(Math.round(prod.rating))}${"☆".repeat(5 - Math.round(prod.rating))}</span> <b>${prod.rating.toFixed(1)}</b> <span>${esc(t("store.ratings", { n: prod.ratingCount }))}</span>` : ""}
             ${prod.soldCount ? `<span class="dot">·</span><span>${esc(t("store.soldShort", { n: storeCount(prod.soldCount) }))}</span>` : ""}
           </div>
-          <div class="pd-price-box">
+          ${prod.auction ? auctionHeadHtml(prod, p) : ""}
+          <div class="pd-price-box" ${prod.auction ? `style="display:none"` : ""}>
             ${prod.memberDiscountEnabled
               ? `<b class="sale">${priceText(prod, true)}</b><s>${priceText(prod, false)}</s><span class="store-tag off inline">-${off}%</span>
                  <div class="pd-member">⭐ ${esc(t("store.memberPrice"))}</div>`
@@ -5918,11 +5936,12 @@ function screenProductDetail() {
             ${prod.condition ? `<div><span>${esc(t("wiz.condition"))}</span><b>${esc(t("wiz.cond." + prod.condition))}</b></div>` : ""}
             ${(prod.specs || []).map((x) => `<div><span>${esc(x.label)}</span><b>${esc(x.value)}</b></div>`).join("")}
           </div>` : ""}
-          <div class="pd-rows">
+          <div class="pd-rows" ${prod.auction ? `style="display:none"` : ""}>
             <div><span>${esc(t("store.availability"))}</span>${available ? `<b class="${prod.stock <= 5 ? "low" : "ok"}">✓ ${esc(t("store.stockCount", { n: prod.stock }))}</b>` : `<b class="low">${esc(t("store.unavailable"))}</b>`}</div>
           </div>
           ${(prod.shipping || []).length ? `<div class="pd-ship"><b>🚚 ${esc(t("ship.methods"))}</b>${prod.shipping.map((m) => `<div><span>${esc(m.name)}</span><span>${m.costCents ? fmt(m.costCents) : esc(t("ship.free"))}</span></div>`).join("")}</div>` : ""}
-          ${available ? `
+          ${prod.auction ? auctionBodyHtml(prod, p) : ""}
+          ${available && !prod.auction ? `
             <div class="stepper"><button onclick="changeProductQty(-1)">−</button><span>${p.qty}</span><button onclick="changeProductQty(1)">+</button></div>
             <div class="pd-actions">
               <button class="btn" ${p.adding ? "disabled" : ""} onclick="addProductToCart(false)">${ICON.bag} ${esc(t("store.add"))}</button>
@@ -5946,8 +5965,105 @@ function screenProductDetail() {
 async function loadProductDetail(id) {
   const [{ ok, data }, rv] = await Promise.all([api("GET", "/store/products/" + id), api("GET", "/reviews/products/" + id + "?limit=10")]);
   S._productDetail = { id, loading: false, product: ok ? data : null, qty: 1, reviews: rv.ok ? rv.data : null };
+  if (ok && data.auction) { const au = await api("GET", "/auctions/" + id); if (au.ok) S._productDetail.auc = au.data; }
   render();
 }
+
+/* ---------------- online auctions on the store ---------------- */
+
+/** "2 days 3 hours" / "5 hours 10 minutes" / "3 minutes 20 seconds" until [endsAt]. */
+function auctionTimeLeft(endsAt) {
+  const s = Math.max(0, Math.floor((new Date(endsAt).getTime() - Date.now()) / 1000));
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+  if (d) return t("auc.left.d", { d, h });
+  if (h) return t("auc.left.h", { h, m });
+  return t("auc.left.m", { m, s: s % 60 });
+}
+
+function auctionHeadHtml(prod, p) {
+  const a = p.auc || prod.auction;
+  return `<div class="pd-price-box auc-box"><small>🔨 ${esc(t(a.bidCount ? "auc.current" : "auc.startsAt"))}</small><b>${fmt(a.currentBidCents)}</b><span class="muted">${esc(t("auc.bids", { n: a.bidCount }))}</span></div>`;
+}
+
+function auctionBodyHtml(prod, p) {
+  const a = p.auc || prod.auction;
+  const open = a.status === "OPEN" && new Date(a.endsAt) > new Date();
+  const bids = (p.auc && p.auc.bids) || [];
+  const list = bids.length ? `<div class="auc-bids"><b>${esc(t("auc.history"))}</b>${bids.map((b) => `<div class="${b.mine ? "mine" : ""}"><span>${fmt(b.amountCents)}</span><span>${new Date(b.at).toLocaleString(LANG, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}${b.mine ? " · " + esc(t("auc.you")) : ""}</span></div>`).join("")}</div>` : "";
+  if (open) {
+    return `<div class="auc-panel">
+      <div class="auc-time">⏳ ${esc(t("auc.endsIn"))} <b id="auc-left" data-end="${esc(a.endsAt)}">${esc(auctionTimeLeft(a.endsAt))}</b></div>
+      ${a.youLead ? `<div class="success-banner">✓ ${esc(t("auc.youLead"))}</div>` : ""}
+      ${S.token
+        ? `<div class="field"><label>${esc(t("auc.yourBid"))} · ${esc(t("auc.min", { amount: fmt(a.minNextBidCents) }))}</label>
+            <input id="auc-amount" type="number" inputmode="decimal" min="0" step="0.01" value="${(a.minNextBidCents / 100).toFixed(2)}"></div>
+            <button class="btn" ${p.bidding ? "disabled" : ""} onclick="placeAuctionBid()">🔨 ${esc(t("auc.bidBtn"))}</button>`
+        : `<button class="btn" onclick="go('login')">${esc(t("auc.signIn"))}</button>`}
+      <p class="muted" style="font-size:12px">${esc(t("auc.rule"))}</p>
+      ${list}
+      ${errorBanner()}</div>`;
+  }
+  if (a.youWon && a.status === "WON") return auctionCheckoutHtml(prod, p, a) + list;
+  if (a.youWon && a.status === "PAID") return `<div class="auc-panel"><div class="success-banner">✓ ${esc(t("auc.paid"))}</div>${list}</div>`;
+  return `<div class="auc-panel"><div class="info-banner">${esc(t(a.bidCount ? "auc.endedSold" : "auc.endedNoBids"))}</div>${list}</div>`;
+}
+
+function auctionCheckoutHtml(prod, p, a) {
+  const ship = prod.shipping || [];
+  if (ship.length === 1 && !p.ship) p.ship = ship[0].id;
+  const pay = (p.auc && p.auc.paymentMethods) || ["COD"];
+  const picked = p.pay || "COD";
+  return `<div class="auc-panel">
+    <div class="success-banner">🎉 ${esc(t("auc.won"))}</div>
+    <p class="muted">${esc(t("auc.wonSub", { date: new Date(a.claimDeadline).toLocaleDateString(LANG, { day: "numeric", month: "long" }) }))}</p>
+    ${ship.length ? `<div class="card"><div class="section-title" style="margin-top:0">🚚 ${esc(t("auc.shipping"))}</div>${ship.map((m) => `<label class="ship-opt ${p.ship === m.id ? "on" : ""}"><input type="radio" name="auc-ship" ${p.ship === m.id ? "checked" : ""} onchange="aucPick('ship','${m.id}')"><span>${esc(m.name)}</span><b>${m.costCents ? fmt(m.costCents) : esc(t("ship.free"))}</b></label>`).join("")}</div>` : ""}
+    <div class="card"><div class="section-title" style="margin-top:0">💳 ${esc(t("auc.payment"))}</div>${pay.map((m) => `<label class="ship-opt ${picked === m ? "on" : ""}"><input type="radio" name="auc-pay" ${picked === m ? "checked" : ""} onchange="aucPick('pay','${m}')"><span>${esc(PAYMENT_LABELS[m] || m)}</span></label>`).join("")}</div>
+    ${addressFormHtml()}
+    <button class="btn" ${p.buying ? "disabled" : ""} onclick="completeAuctionPurchase()">${esc(t("auc.buy", { amount: fmt(a.currentBidCents) }))}</button>
+    ${errorBanner()}</div>`;
+}
+
+function aucPick(kind, v) { S._productDetail[kind] = v; render(); }
+
+async function placeAuctionBid() {
+  const p = S._productDetail;
+  const cents = Math.round(parseFloat(latinDigits(String(qs("auc-amount").value).replace(",", "."))) * 100);
+  if (!(cents > 0)) return;
+  if (!confirm(t("auc.confirmBid", { amount: fmt(cents) }))) return;
+  p.bidding = true; S.error = null; render();
+  const { ok, data } = await api("POST", `/auctions/${p.id}/bids`, { amountCents: cents });
+  if (ok) toast(t("auc.placed")); else S.error = errMsg(data, t("auc.failed"));
+  await loadProductDetail(p.id);
+}
+
+async function completeAuctionPurchase() {
+  const p = S._productDetail;
+  const ship = p.product.shipping || [];
+  const addr = addrGet();
+  if (ship.length && !p.ship) { S.error = t("ship.pickAll"); return render(); }
+  if (addr.text.trim().length < 5 || addr.phone.trim().length < 6) { S.error = t("addr.need"); return render(); }
+  p.buying = true; S.error = null; render();
+  const { ok, data } = await api("POST", `/auctions/${p.id}/checkout`, { shippingId: p.ship || undefined, paymentMethod: p.pay || "COD", address: addr.text.trim(), phone: addr.phone.trim() });
+  p.buying = false;
+  if (ok) { S._orders = null; S._productDetail = null; S.homeTab = "orders"; reset("home"); return; }
+  S.error = errMsg(data, t("auc.failed"));
+  render();
+}
+
+// the countdown ticks every second; every ten seconds the bids are looked at again, and when the time is up the page asks the server for the result
+let AUC_TICK = 0;
+setInterval(() => {
+  const el = document.getElementById("auc-left");
+  const p = S._productDetail;
+  if (!el || !p || !p.auc) return;
+  if (new Date(el.dataset.end).getTime() <= Date.now()) { if (!p.refreshing) { p.refreshing = true; loadProductDetail(p.id); } return; }
+  el.textContent = auctionTimeLeft(el.dataset.end);
+  if (++AUC_TICK % 10 === 0) {
+    api("GET", "/auctions/" + p.id).then(({ ok, data }) => {
+      if (ok && S._productDetail === p && (data.bidCount !== p.auc.bidCount || data.endsAt !== p.auc.endsAt || data.status !== p.auc.status)) { p.auc = data; render(); }
+    });
+  }
+}, 1000);
 
 async function moreProductReviews() {
   const p = S._productDetail;

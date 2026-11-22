@@ -20,6 +20,7 @@ import { draftProductFromPhoto, visionAvailable } from "../services/ai.service";
 import { STORE_SECTIONS, isStoreSection } from "../lib/storeSections";
 import { priceColumns } from "../lib/pricing";
 import { marketOfUser } from "../services/viewerCountry.service";
+import { AUCTION_HOURS } from "../services/auction.service";
 import { countSellerListings, hasPaidSellerPlan, sellerListingQuota } from "../services/sellerListingsQuota.service";
 
 export const productRouter = Router();
@@ -48,6 +49,8 @@ const productFieldsSchema = z.object({
   images: z.array(z.string().regex(/^\/store\/photos\/[0-9a-f-]{36}$/)).max(6).optional(),
   specs: z.array(z.object({ label: z.string().trim().min(1).max(30), value: z.string().trim().min(1).max(60) })).max(10).optional(),
   condition: z.enum(["NEW", "USED"]).default("USED"),
+  // sold by an online auction instead of at a fixed price: how many hours it runs (priceCents is then the starting price)
+  auctionHours: z.number().int().refine((h) => (AUCTION_HOURS as readonly number[]).includes(h), "Unknown auction length").optional(),
 });
 
 /** Photos are the shop's own: each one has to be among the pictures this shop uploaded. */
@@ -92,7 +95,8 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), route(async (re
   }
 
   if (!(await ownPhotos(result.merchant.id, parsed.data.images))) return sendError(res, 400, "BAD_REQUEST", "الصورة غير صالحة");
-  const { images, ...rest } = parsed.data;
+  const { images, auctionHours, ...rest } = parsed.data;
+  if (auctionHours) { rest.stock = 1; rest.memberDiscountEnabled = false; rest.memberPriceCents = undefined; } // one piece, no member price
   // the department of the chosen category decides which store section the product appears in
   let filedSection: string | null = null;
   if (rest.productCategoryId) {
@@ -107,9 +111,11 @@ productRouter.post("/", requireAuth, requireRole(Role.MERCHANT), route(async (re
     const paid = await hasPaidSellerPlan(req.user!.id);
     if (!paid && rest.condition === "NEW" && !settings.marketplace.allowNewProducts) throw new Error("MARKETPLACE_NEW_CLOSED");
     if (!paid && used >= settings.marketplace.freeListingsPerMonth) throw new Error("MARKETPLACE_QUOTA");
-    return tx.product.create({
+    const created = await tx.product.create({
       data: { merchantId: result.merchant.id, ...rest, ...columns, ...(!rest.storeSection && filedSection ? { storeSection: filedSection } : {}), ...(images?.length ? { images, imageUrl: images[0] } : {}) },
     });
+    if (auctionHours) await tx.auction.create({ data: { productId: created.id, startPriceCents: created.priceCents, currentBidCents: created.priceCents, endsAt: new Date(Date.now() + auctionHours * 3600_000) } });
+    return created;
   }).catch(err => {
     if ((err as Error).message === "MARKETPLACE_QUOTA" || (err as Error).message === "MARKETPLACE_NEW_CLOSED") return null;
     throw err;
@@ -323,11 +329,16 @@ productRouter.patch("/:id", requireAuth, requireRole(Role.MERCHANT), route(async
     const [settings, quota] = await Promise.all([getSettings(), sellerListingQuota(req.user!.id)]);
     if (!quota.paid && !settings.marketplace.allowNewProducts) return sendError(res, 403, "NEW_PRODUCTS_CLOSED", "الباقة المجانية الحالية تسمح بالمنتجات المستعملة فقط");
   }
+  // a product in an auction keeps its starting price, its single piece and its place on the store until the auction is over
+  if (parsed.data.priceCents !== undefined || parsed.data.stock !== undefined || parsed.data.isActive === false || parsed.data.memberDiscountEnabled) {
+    if (await prisma.auction.findUnique({ where: { productId: existing.id }, select: { id: true } })) return sendError(res, 409, "AUCTION_LOCKED", "لا يمكن تعديل السعر أو الكمية أو إخفاء منتج معروض في مزاد");
+  }
   // a listing fed from the accounting warehouse gets its quantity from there, so the two never disagree
   if (existing.accountingProductId && parsed.data.stock !== undefined && parsed.data.stock !== existing.stock) return sendError(res, 409, "CONFLICT", "تُحدَّد كمية هذا المنتج من المحاسبة (المستودع)");
 
   // the photos: each must be one this shop uploaded; the first is the main one
-  const { images, ...rest } = parsed.data;
+  const { images, auctionHours: _hours, ...rest } = parsed.data;
+  void _hours;
   if (images !== undefined && !(await ownPhotos(merchant.id, images))) return sendError(res, 400, "BAD_REQUEST", "الصورة غير صالحة");
   let filedSection: string | null = null;
   if (rest.productCategoryId) {

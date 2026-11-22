@@ -453,7 +453,7 @@ fun DalilacomNavGraph(
         composable("orders") {
             androidx.compose.foundation.layout.Column {
                 androidx.compose.material3.TextButton(onClick = { navController.popBackStack() }) { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.dalilacom.app.R.string.back)) }
-                OrdersScreen(factory = factory, onOrderClick = { id -> navController.navigate("order/$id") })
+                OrdersScreen(factory = factory, onOrderClick = { id -> navController.navigate("order/$id") }, won = { container.storeRepository.wonAuctions() }, onOpenProduct = { id -> navController.navigate("product/$id") })
             }
         }
         composable("merchantMode") {

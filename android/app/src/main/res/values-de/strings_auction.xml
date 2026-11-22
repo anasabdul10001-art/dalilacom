@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auc_filter">Auktionen</string>
+    <string name="auc_sort_ending">Endet bald</string>
+    <string name="auc_badge">Auktion</string>
+    <string name="auc_bids">%1$d Gebot(e)</string>
+    <string name="auc_ends_in">Endet in</string>
+    <string name="auc_your_bid">Ihr Gebot</string>
+    <string name="auc_min">Minimum %1$s</string>
+    <string name="auc_bid_btn">Jetzt bieten</string>
+    <string name="auc_placed">Ihr Gebot wurde abgegeben</string>
+    <string name="auc_failed">Das Gebot konnte nicht abgegeben werden</string>
+    <string name="auc_you_lead">Ihr Gebot ist derzeit das höchste</string>
+    <string name="auc_rule">Jedes Gebot muss das höchste Gebot um mindestens 5 Prozent übertreffen. Ein Gebot in den letzten zwei Minuten verlängert die Auktion um zwei Minuten.</string>
+    <string name="auc_history">Letzte Gebote</string>
+    <string name="auc_you">Sie</string>
+    <string name="auc_won">Sie haben diese Auktion gewonnen</string>
+    <string name="auc_won_sub">Schließen Sie den Kauf vor dem %1$s ab, sonst verfällt Ihre Chance.</string>
+    <string name="auc_won_list">Sie haben diese Auktion gewonnen: Schließen Sie den Kauf ab.</string>
+    <string name="auc_shipping">Versandart</string>
+    <string name="auc_payment">Zahlungsart</string>
+    <string name="auc_buy">Für %1$s kaufen</string>
+    <string name="auc_need_address">Geben Sie die Lieferadresse und Ihre Telefonnummer ein.</string>
+    <string name="auc_paid">Sie haben den Kauf abgeschlossen. Ihre Bestellung finden Sie unter „Meine Bestellungen“.</string>
+    <string name="auc_ended_sold">Diese Auktion ist beendet.</string>
+    <string name="auc_ended_no_bids">Diese Auktion endete ohne Gebote.</string>
+    <string name="auc_sell">Verkaufsart</string>
+    <string name="auc_fixed">Festpreis</string>
+    <string name="auc_auction">Auktion</string>
+    <string name="auc_sell_help">Käufer bieten auf das Produkt, und der Höchstbietende gewinnt, wenn die Zeit abläuft. Es ist ein Stück, und sein Preis kann nach dem Start nicht geändert werden.</string>
+    <string name="auc_duration">Dauer der Auktion</string>
+    <string name="auc_d24">1 Tag</string>
+    <string name="auc_d72">3 Tage</string>
+    <string name="auc_d168">7 Tage</string>
+    <string name="auc_start_price">Startpreis</string>
+</resources>

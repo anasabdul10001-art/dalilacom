@@ -25,6 +25,8 @@ import { addressRouter } from "./routes/address.routes";
 import { businessRouter, branchRouter } from "./routes/business.routes";
 import { catalogRouter } from "./routes/catalog.routes";
 import { storeRouter } from "./routes/store.routes";
+import { auctionRouter } from "./routes/auction.routes";
+import { settleDueAuctions } from "./services/auction.service";
 import { adsRouter } from "./routes/ads.routes";
 import { reviewsRouter } from "./routes/reviews.routes";
 import { favoritesRouter } from "./routes/favorites.routes";
@@ -216,6 +218,7 @@ app.use("/businesses", businessRouter);
 app.use("/branches", branchRouter);
 app.use("/catalog", catalogRouter);
 app.use("/store", storeRouter);
+app.use("/auctions", auctionRouter);
 app.use("/marketplace", marketplaceRouter);
 app.use("/accounting", accountingRouter);
 app.use("/business-staff", businessStaffRouter);
@@ -280,6 +283,10 @@ if (process.env.NODE_ENV !== "test") {
   const receiptSweep = () => autoAcceptDueReceipts().catch((err) => console.error("Receipt auto-accept failed:", err instanceof Error ? err.message : err));
   setTimeout(receiptSweep, 40_000).unref();
   setInterval(receiptSweep, 60 * 60 * 1000).unref();
+  // auctions whose time is up get their winner (also done at the moment someone looks at one)
+  const auctionSweep = () => settleDueAuctions().catch((err) => console.error("Auction settling failed:", err instanceof Error ? err.message : err));
+  setTimeout(auctionSweep, 50_000).unref();
+  setInterval(auctionSweep, 60 * 1000).unref();
 }
 
 export { app };

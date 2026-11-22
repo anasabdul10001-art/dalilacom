@@ -684,6 +684,7 @@ data class CreateProductRequest(
     val images: List<String>? = null,
     val specs: List<SpecDto>? = null,
     val condition: String? = null,
+    val auctionHours: Int? = null, // sold by auction instead of at a fixed price: 24, 72 or 168 hours
 )
 
 @Serializable
@@ -1007,7 +1008,40 @@ data class StoreProductDto(
     val related: List<StoreProductDto> = emptyList(),
     val currency: String = "",
     val shipping: List<ShippingMethodDto> = emptyList(),
+    val auction: AuctionDto? = null, // set when the product is sold by auction: no fixed price, no cart
 )
+
+@Serializable
+data class AuctionBidDto(val amountCents: Int, val at: String, val mine: Boolean = false)
+
+/** An auction: the summary inside a store product, and with [bids] / [paymentMethods] from GET /auctions/{productId}. */
+@Serializable
+data class AuctionDto(
+    val id: String = "",
+    val status: String = "OPEN",
+    val startPriceCents: Int = 0,
+    val currentBidCents: Int = 0,
+    val bidCount: Int = 0,
+    val minNextBidCents: Int = 0,
+    val endsAt: String = "",
+    val claimDeadline: String? = null,
+    val youLead: Boolean = false,
+    val youWon: Boolean = false,
+    val bids: List<AuctionBidDto> = emptyList(),
+    val paymentMethods: List<String> = emptyList(),
+)
+
+@Serializable
+data class BidRequest(val amountCents: Int)
+
+@Serializable
+data class AuctionCheckoutRequest(val shippingId: String? = null, val paymentMethod: String = "COD", val address: String? = null, val phone: String? = null)
+
+@Serializable
+data class WonAuctionProductDto(val id: String, val name: String, val imageUrl: String? = null)
+
+@Serializable
+data class WonAuctionDto(val id: String, val currentBidCents: Int = 0, val claimDeadline: String? = null, val product: WonAuctionProductDto)
 
 @Serializable
 data class StoreHomeDto(

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auc_filter">Аукціони</string>
+    <string name="auc_sort_ending">Скоро завершаться</string>
+    <string name="auc_badge">Аукціон</string>
+    <string name="auc_bids">ставок: %1$d</string>
+    <string name="auc_ends_in">Завершиться через</string>
+    <string name="auc_your_bid">Ваша ставка</string>
+    <string name="auc_min">мінімум %1$s</string>
+    <string name="auc_bid_btn">Зробити ставку</string>
+    <string name="auc_placed">Ставку зроблено</string>
+    <string name="auc_failed">Не вдалося зробити ставку</string>
+    <string name="auc_you_lead">Ваша ставка зараз найвища</string>
+    <string name="auc_rule">Кожна ставка має бути вищою за поточну найвищу щонайменше на 5 відсотків. Ставка в останні дві хвилини продовжує аукціон на дві хвилини.</string>
+    <string name="auc_history">Останні ставки</string>
+    <string name="auc_you">ви</string>
+    <string name="auc_won">Ви виграли цей аукціон</string>
+    <string name="auc_won_sub">Завершіть покупку до %1$s, інакше ви втратите цю можливість.</string>
+    <string name="auc_won_list">Ви виграли цей аукціон: завершіть покупку.</string>
+    <string name="auc_shipping">Спосіб доставки</string>
+    <string name="auc_payment">Спосіб оплати</string>
+    <string name="auc_buy">Купити за %1$s</string>
+    <string name="auc_need_address">Введіть адресу доставки та номер телефону.</string>
+    <string name="auc_paid">Ви завершили покупку. Замовлення знаходиться в розділі «Мої замовлення».</string>
+    <string name="auc_ended_sold">Цей аукціон завершено.</string>
+    <string name="auc_ended_no_bids">Цей аукціон завершився без ставок.</string>
+    <string name="auc_sell">Спосіб продажу</string>
+    <string name="auc_fixed">Фіксована ціна</string>
+    <string name="auc_auction">Аукціон</string>
+    <string name="auc_sell_help">Покупці роблять ставки на товар, і по закінченні часу перемагає найвища. Товар в одному екземплярі, ціну не можна змінювати після початку.</string>
+    <string name="auc_duration">Тривалість аукціону</string>
+    <string name="auc_d24">1 день</string>
+    <string name="auc_d72">3 дні</string>
+    <string name="auc_d168">7 днів</string>
+    <string name="auc_start_price">Початкова ціна</string>
+</resources>

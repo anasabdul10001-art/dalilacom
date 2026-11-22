@@ -136,6 +136,13 @@ fun StoreStars(product: StoreProductDto) {
 @Composable
 fun StorePrice(product: StoreProductDto, big: Boolean = false) {
     val size = if (big) 28.sp else 16.sp
+    product.auction?.let { a ->
+        Column {
+            Text(com.dalilacom.app.ui.common.formatCents(a.currentBidCents), fontWeight = FontWeight.ExtraBold, fontSize = size)
+            Text("🔨 " + stringResource(R.string.auc_badge) + " · " + stringResource(R.string.auc_bids, a.bidCount), color = StoreSale, fontSize = if (big) 14.sp else 12.sp)
+        }
+        return
+    }
     if (product.memberDiscountEnabled && product.memberPriceCents != null) {
         Column {
             Row(verticalAlignment = Alignment.Bottom) {
@@ -158,7 +165,11 @@ fun StoreProductCard(product: StoreProductDto, added: Boolean, onOpen: () -> Uni
                 color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(Color.Black, RoundedCornerShape(3.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
             )
-            Surface(
+            if (product.auction != null) Text(
+                "🔨 " + stringResource(R.string.auc_badge),
+                color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).background(StoreSale, RoundedCornerShape(3.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
+            ) else Surface(
                 onClick = onAdd,
                 shape = CircleShape,
                 color = if (added) Color(0xFF1E8A3A) else Color.White,
@@ -220,6 +231,7 @@ private val SORTS = listOf(
     "rating" to R.string.store_sort_rating,
     "price_asc" to R.string.store_sort_price_asc,
     "price_desc" to R.string.store_sort_price_desc,
+    "ending" to R.string.auc_sort_ending,
 )
 
 @Composable
@@ -305,7 +317,8 @@ fun StoreScreen(
         }
         // the departments as a black strip with an underline on the chosen one
         LazyRow(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            item { StoreTab(stringResource(R.string.store_all), ui.section.isBlank() && !ui.dealsOnly) { vm.pickSection("") } }
+            item { StoreTab(stringResource(R.string.store_all), ui.section.isBlank() && !ui.dealsOnly && !ui.auctionsOnly) { vm.pickSection("") } }
+            item { StoreTab("🔨 " + stringResource(R.string.auc_filter), ui.auctionsOnly) { vm.pickAuctions() } }
             items(ui.sections, key = { it.id }) { s -> StoreTab(s.label(), ui.section == s.id) { vm.pickSection(s.id) } }
         }
 
@@ -360,6 +373,7 @@ fun StoreScreen(
                             val title = when {
                                 ui.byPhoto != null -> stringResource(R.string.photo_results_for, ui.byPhoto!!.title)
                                 ui.query.isNotBlank() -> stringResource(R.string.store_results_for, ui.query)
+                                ui.auctionsOnly -> stringResource(R.string.auc_filter)
                                 ui.dealsOnly -> stringResource(R.string.store_deals)
                                 else -> ui.sections.firstOrNull { it.id == ui.section }?.label().orEmpty()
                             }

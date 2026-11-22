@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auc_filter">Auctions</string>
+    <string name="auc_sort_ending">Ending soon</string>
+    <string name="auc_badge">Auction</string>
+    <string name="auc_bids">%1$d bid(s)</string>
+    <string name="auc_ends_in">Ends in</string>
+    <string name="auc_your_bid">Your bid</string>
+    <string name="auc_min">minimum %1$s</string>
+    <string name="auc_bid_btn">Place bid</string>
+    <string name="auc_placed">Your bid was placed</string>
+    <string name="auc_failed">The bid could not be placed</string>
+    <string name="auc_you_lead">Your bid is the highest right now</string>
+    <string name="auc_rule">Every bid must beat the highest bid by at least 5 percent. A bid in the last two minutes extends the auction by two minutes.</string>
+    <string name="auc_history">Latest bids</string>
+    <string name="auc_you">you</string>
+    <string name="auc_won">You won this auction</string>
+    <string name="auc_won_sub">Complete the purchase before %1$s, or your chance is lost.</string>
+    <string name="auc_won_list">You won this auction: complete the purchase.</string>
+    <string name="auc_shipping">Shipping method</string>
+    <string name="auc_payment">Payment method</string>
+    <string name="auc_buy">Buy for %1$s</string>
+    <string name="auc_need_address">Enter the delivery address and your phone number.</string>
+    <string name="auc_paid">You completed this purchase. Your order is under My orders.</string>
+    <string name="auc_ended_sold">This auction has ended.</string>
+    <string name="auc_ended_no_bids">This auction ended with no bids.</string>
+    <string name="auc_sell">How to sell</string>
+    <string name="auc_fixed">Fixed price</string>
+    <string name="auc_auction">Auction</string>
+    <string name="auc_sell_help">Buyers bid on the product and the highest bidder wins when time is up. It is one piece and its price cannot be changed once it starts.</string>
+    <string name="auc_duration">Auction length</string>
+    <string name="auc_d24">1 day</string>
+    <string name="auc_d72">3 days</string>
+    <string name="auc_d168">7 days</string>
+    <string name="auc_start_price">Starting price</string>
+</resources>

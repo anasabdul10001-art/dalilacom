@@ -103,6 +103,7 @@ data class WizardUi(
     val specs: List<SpecDto> = emptyList(),
     val price: String = "",
     val stock: String = "",
+    val auctionHours: Int = 0, // 0 = a fixed price; 24 / 72 / 168 = an auction of that length
     val needShipping: Boolean = false,
     val hintMin: Int? = null,
     val hintMax: Int? = null,
@@ -176,6 +177,7 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
     suspend fun addCategory(name: String, parentId: String): Result<String> =
         store.addProductCategory(name, parentId).onSuccess { _ui.update { s -> s.copy(productCategories = store.productCategories()) } }
     fun setCondition(v: String) = _ui.update { it.copy(condition = v) }
+    fun setAuction(hours: Int) = _ui.update { it.copy(auctionHours = hours) }
     fun setStock(v: String) = _ui.update { it.copy(stock = v.filter(Char::isDigit).take(6)) }
     fun addSpec() = _ui.update { it.copy(specs = it.specs + SpecDto("", "")) }
     fun setSpec(i: Int, label: String?, value: String?) = _ui.update { s -> s.copy(specs = s.specs.mapIndexed { k, x -> if (k == i) SpecDto(label ?: x.label, value ?: x.value) else x }) }
@@ -198,7 +200,7 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
             s.name.isBlank() -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_name)) }; return }
             s.categoryId.isBlank() -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_section)) }; return }
             price == null || price <= 0 -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_price)) }; return }
-            (s.stock.toIntOrNull() ?: 0) < 1 -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_stock)) }; return }
+            s.auctionHours == 0 && (s.stock.toIntOrNull() ?: 0) < 1 -> { _ui.update { it.copy(error = AppStrings.get(R.string.wiz_need_stock)) }; return }
         }
         _ui.update { it.copy(busy = true, error = null, needShipping = false) }
         viewModelScope.launch {
@@ -211,7 +213,8 @@ class ProductWizardViewModel(private val store: StoreRepository, private val pro
                 name = s.name.trim(),
                 description = s.description.trim().ifBlank { null },
                 priceCents = Math.round(price!! * 100).toInt(),
-                stock = s.stock.toInt(),
+                stock = if (s.auctionHours > 0) 1 else s.stock.toInt(),
+                auctionHours = s.auctionHours.takeIf { it > 0 },
                 productCategoryId = s.categoryId,
                 condition = s.condition,
                 images = s.photos.map { it.url },
@@ -392,12 +395,36 @@ private fun FormStep(ui: WizardUi, vm: ProductWizardViewModel, listen: (String) 
         }
         TextButton(onClick = vm::addSpec) { Text("+  " + stringResource(R.string.wiz_add_spec)) }
 
-        FieldLabel(stringResource(R.string.wiz_price))
+        FieldLabel(stringResource(R.string.auc_sell))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(0 to stringResource(R.string.auc_fixed), 72 to "🔨 " + stringResource(R.string.auc_auction)).forEach { (hours, label) ->
+                val on = (ui.auctionHours > 0) == (hours > 0)
+                Surface(onClick = { vm.setAuction(if (hours == 0) 0 else if (ui.auctionHours > 0) ui.auctionHours else 72) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), border = BorderStroke(2.dp, if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant), color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface, contentColor = if (on) Color.White else MaterialTheme.colorScheme.onSurface) {
+                    Box(Modifier.padding(vertical = 13.dp), contentAlignment = Alignment.Center) { Text(label, fontWeight = FontWeight.ExtraBold) }
+                }
+            }
+        }
+        if (ui.auctionHours > 0) {
+            Text(stringResource(R.string.auc_sell_help), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+            FieldLabel(stringResource(R.string.auc_duration))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(24 to R.string.auc_d24, 72 to R.string.auc_d72, 168 to R.string.auc_d168).forEach { (hours, label) ->
+                    val on = ui.auctionHours == hours
+                    Surface(onClick = { vm.setAuction(hours) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), border = BorderStroke(2.dp, if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant), color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface, contentColor = if (on) Color.White else MaterialTheme.colorScheme.onSurface) {
+                        Box(Modifier.padding(vertical = 11.dp), contentAlignment = Alignment.Center) { Text(stringResource(label), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) }
+                    }
+                }
+            }
+        }
+
+        FieldLabel(stringResource(if (ui.auctionHours > 0) R.string.auc_start_price else R.string.wiz_price))
         OutlinedTextField(value = ui.price, onValueChange = vm::setPrice, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), textStyle = androidx.compose.ui.text.TextStyle(fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center), placeholder = { Hint("0.00", modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
         if (ui.hintMin != null && ui.hintMax != null) Text("💡 " + stringResource(R.string.wiz_price_hint, formatCents(ui.hintMin), formatCents(ui.hintMax)), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
 
-        FieldLabel(stringResource(R.string.wiz_stock))
-        OutlinedTextField(value = ui.stock, onValueChange = vm::setStock, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Hint(stringResource(R.string.stock_ph)) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
+        if (ui.auctionHours == 0) {
+            FieldLabel(stringResource(R.string.wiz_stock))
+            OutlinedTextField(value = ui.stock, onValueChange = vm::setStock, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), placeholder = { Hint(stringResource(R.string.stock_ph)) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
+        }
 
         ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (ui.needShipping) OutlinedButton(onClick = onOpenShipping, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("🚚  " + stringResource(R.string.ship_add_methods)) }

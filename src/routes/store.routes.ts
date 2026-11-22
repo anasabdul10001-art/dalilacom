@@ -14,6 +14,7 @@ import { route } from "../lib/asyncRoute";
 import { resolveLanguage } from "../lib/languages";
 import { translateProducts, translateRecords } from "../services/contentTranslation.service";
 import { avatarUrl } from "../lib/profile";
+import { auctionView } from "../services/auction.service";
 
 /**
  * The online store: every shop's products in one place, like a marketplace. Read-only and public; buying goes
@@ -21,7 +22,7 @@ import { avatarUrl } from "../lib/profile";
  */
 export const storeRouter = Router();
 
-type ProductWithShop = Prisma.ProductGetPayload<{ include: { merchant: { select: { id: true; businessName: true; usdRateSyp: true; priceCurrency: true; showBothCurrencies: true; user: { select: { id: true; avatarUpdatedAt: true } } } } } }>;
+type ProductWithShop = Prisma.ProductGetPayload<{ include: { auction: true; merchant: { select: { id: true; businessName: true; usdRateSyp: true; priceCurrency: true; showBothCurrencies: true; user: { select: { id: true; avatarUpdatedAt: true } } } } } }>;
 
 /** A stable colour (0-359) from the id, used by the clients to paint the picture when a product has no photo. */
 function hueOf(id: string): number {
@@ -30,7 +31,8 @@ function hueOf(id: string): number {
   return h;
 }
 
-function view(p: ProductWithShop, market: string) {
+function view(p: ProductWithShop | Omit<ProductWithShop, "auction">, market: string) {
+  const auction = "auction" in p ? p.auction : null;
   const section = STORE_SECTIONS.find((s) => s.id === p.storeSection) ?? null;
   return {
     id: p.id,
@@ -51,6 +53,7 @@ function view(p: ProductWithShop, market: string) {
     rating: p.rating,
     ratingCount: p.ratingCount,
     soldCount: p.soldCount,
+    auction: auction ? auctionView(auction) : null, // set when it is sold by auction: then it has no fixed price and is not added to the cart
     section: section ? { id: section.id, name: section.name, nameEn: section.nameEn, icon: section.icon, image: section.image } : null,
     // the shop's logo is its owner's account photo; the clients show it as a card that opens the shop
     merchant: { id: p.merchant.id, name: p.merchant.businessName, avatarUrl: avatarUrl(p.merchant.user.id, p.merchant.user.avatarUpdatedAt) },
@@ -103,7 +106,7 @@ async function visibleFor(query: unknown, country: string): Promise<Prisma.Produ
   return { isActive: true, stock: { gt: 0 }, moderation: "APPROVED", merchant };
 }
 
-const include = { merchant: { select: { id: true, businessName: true, usdRateSyp: true, priceCurrency: true, showBothCurrencies: true, user: { select: { id: true, avatarUpdatedAt: true } } } } } as const;
+const include = { auction: true, merchant: { select: { id: true, businessName: true, usdRateSyp: true, priceCurrency: true, showBothCurrencies: true, user: { select: { id: true, avatarUpdatedAt: true } } } } } as const;
 
 const sorts: Record<string, Prisma.ProductOrderByWithRelationInput[]> = {
   popular: [{ soldCount: "desc" }, { createdAt: "desc" }],
@@ -111,6 +114,7 @@ const sorts: Record<string, Prisma.ProductOrderByWithRelationInput[]> = {
   rating: [{ rating: "desc" }, { ratingCount: "desc" }],
   price_asc: [{ priceCents: "asc" }],
   price_desc: [{ priceCents: "desc" }],
+  ending: [{ auction: { endsAt: "asc" } }, { createdAt: "desc" }], // auctions that end first
 };
 
 async function sectionsWithCounts(visible: Prisma.ProductWhereInput, lang: string) {
@@ -161,7 +165,8 @@ const listSchema = z.object({
   section: z.string().optional(),
   merchantId: z.string().uuid().optional(),
   deals: z.enum(["1"]).optional(), // only products with a member price
-  sort: z.enum(["popular", "new", "rating", "price_asc", "price_desc"]).default("popular"),
+  auctions: z.enum(["1"]).optional(), // only products sold by auction
+  sort: z.enum(["popular", "new", "rating", "price_asc", "price_desc", "ending"]).default("popular"),
   limit: z.coerce.number().int().min(1).max(60).default(24),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -169,7 +174,7 @@ const listSchema = z.object({
 storeRouter.get("/products", route(async (req, res) => {
   const parsed = listSchema.safeParse(req.query);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  const { q, section, merchantId, deals, sort, limit, offset } = parsed.data;
+  const { q, section, merchantId, deals, auctions, sort, limit, offset } = parsed.data;
   if (section && !isStoreSection(section)) return sendError(res, 400, "BAD_REQUEST", "Unknown store section");
 
   const country = await viewerCountry(req);
@@ -178,6 +183,7 @@ storeRouter.get("/products", route(async (req, res) => {
     ...(section ? { storeSection: section } : {}),
     ...(merchantId ? { merchantId } : {}),
     ...(deals ? { memberDiscountEnabled: true, memberPriceCents: { not: null } } : {}),
+    ...(auctions ? { auction: { is: { status: "OPEN", endsAt: { gt: new Date() } } } } : {}),
     ...(q
       ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { description: { contains: q, mode: "insensitive" } }, { merchant: { businessName: { contains: q, mode: "insensitive" } } }] }
       : {}),

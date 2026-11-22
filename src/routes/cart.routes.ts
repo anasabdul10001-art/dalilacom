@@ -85,6 +85,7 @@ cartRouter.post("/items", requireAuth, route(async (req, res) => {
   if (!product || !product.isActive || product.moderation !== "APPROVED") {
     return sendError(res, 404, "NOT_FOUND", "Product not found");
   }
+  if (await prisma.auction.findUnique({ where: { productId }, select: { id: true } })) return sendError(res, 409, "AUCTION_ONLY", "هذا المنتج يُباع بالمزاد فقط");
 
   const cart = await getOrCreateCart(req.user!.id);
   const existing = await prisma.cartItem.findUnique({
@@ -175,6 +176,7 @@ cartRouter.post("/checkout", requireAuth, route(async (req, res) => {
         where: { id: { in: items.map((i) => i.productId) } },
       });
       const productById = new Map(freshProducts.map((p) => [p.id, p]));
+      if (await tx.auction.count({ where: { productId: { in: freshProducts.map((p) => p.id) } } }) > 0) throw new Error("PRODUCT_UNAVAILABLE:auction");
 
       for (const item of items) {
         const product = productById.get(item.productId);
