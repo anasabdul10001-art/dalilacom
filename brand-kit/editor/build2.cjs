@@ -5,6 +5,7 @@ const S = Number(process.env.DLK_SCALE || 1); // 2 = 4K
 const fs = require("fs"), path = require("path"), crypto = require("crypto"), { spawnSync } = require("child_process");
 const { renderFrames } = require("./render.cjs");
 const FF = "C:/Users/Tom/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
+const UHD = process.env.UHD === "1"; if (UHD) process.env.DLK_SCALE = "2"; const SW = UHD ? 3840 : 1920, SH = UHD ? 2160 : 1080, SUF = UHD ? "-4k" : "";
 const RAWDIR = path.join(__dirname, "..", "video-plans", "accounting", "raw");
 const RAW = path.join(RAWDIR, "accounting-guided.mp4");
 const steps = JSON.parse(fs.readFileSync(RAW.replace(".mp4", ".steps.json"), "utf8"));
@@ -13,6 +14,7 @@ const W = path.join(__dirname, "work2"), VO = path.join(__dirname, "voice2"), OU
 [W, VO, OUTD].forEach((d) => fs.mkdirSync(d, { recursive: true }));
 const VOICE_ID = process.env.VOICE_ID || "clS4TmlZF18Hafme6bgr"; // "Anas DALILACOM" (the owner's clone)
 const AR = "٠١٢٣٤٥٦٧٨٩"; const arNum = (n) => String(n).replace(/\d/g, (d) => AR[d]);
+const runAsync = (args, label) => new Promise((res, rej) => { const { spawn } = require("child_process"); const c = spawn(FF, ["-hide_banner", "-loglevel", "error", "-y", ...args]); let e = ""; c.stderr.on("data", (d) => (e += d)); c.on("close", (k) => (k === 0 ? res() : rej(new Error(label + ": " + e.slice(0, 600))))); });
 const run = (args, label) => { const r = spawnSync(FF, ["-hide_banner", "-loglevel", "error", "-y", ...args], { maxBuffer: 1 << 28 }); if (r.status !== 0) throw new Error(label + ": " + (r.stderr || "").toString().slice(0, 600)); };
 const durOf = (f) => { const r = spawnSync(FF, ["-hide_banner", "-i", f]); const m = /Duration: (\d+):(\d+):([\d.]+)/.exec((r.stderr || "").toString()); return m ? +m[1] * 3600 + +m[2] * 60 + +m[3] : 0; };
 const RAW_LEN = durOf(RAW);
@@ -67,7 +69,7 @@ if (process.argv[2] === "voice") { genVoice().then(() => process.exit(0)); retur
 
 (async () => {
   const HOOK_LEN = 9.0;
-  if (!fs.existsSync(path.join(__dirname, "work", "hook2.mp4"))) throw new Error("run hook-render2.cjs first");
+  if (!fs.existsSync(path.join(__dirname, "work", UHD ? "hook2-4k.mp4" : "hook2.mp4"))) throw new Error("run hook-render2.cjs first");
   // ---- segments: one per step, retimed to its narration
   const segs = [];
   const all = steps.slice().sort((a, b) => a.t - b.t);
@@ -107,12 +109,12 @@ if (process.argv[2] === "voice") { genVoice().then(() => process.exit(0)); retur
   segs.forEach((g, i) => {
     const sp = g.speed.toFixed(4);
     const N = Math.max(1, Math.round((g.T + g.D - HOOK_LEN) * FR) - Math.round((g.T - HOOK_LEN) * FR)); g.frames = N;
-    parts.push(`[0:v]trim=start=${g.t0.toFixed(3)}:end=${g.t1.toFixed(3)},setpts=(PTS-STARTPTS)/${sp},fps=${FR},scale=1920:1080,setsar=1,tpad=stop_mode=clone:stop_duration=${Math.ceil(g.D) + 2},trim=end_frame=${N},setpts=PTS-STARTPTS[v${i}]`);
+    parts.push(`[0:v]trim=start=${g.t0.toFixed(3)}:end=${g.t1.toFixed(3)},setpts=(PTS-STARTPTS)/${sp},fps=${FR},scale=${SW}:${SH},setsar=1,tpad=stop_mode=clone:stop_duration=${Math.ceil(g.D) + 2},trim=end_frame=${N},setpts=PTS-STARTPTS[v${i}]`);
     labels.push(`[v${i}]`);
   });
   fs.writeFileSync(path.join(W, "graph.txt"), parts.join(";\n") + ";\n" + labels.join("") + `concat=n=${segs.length}:v=1:a=0,setpts=N/${FR}/TB[out]`);
-  run(["-i", RAW, "-filter_complex_script", path.join(W, "graph.txt"), "-map", "[out]", "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p", "-fps_mode", "passthrough", path.join(W, "body.mp4")], "body");
-  run(["-i", path.join(__dirname, "work", "hook2.mp4"), "-i", path.join(W, "body.mp4"), "-filter_complex", "[0:v]tpad=stop_mode=clone:stop_duration=1[h];[h][1:v]concat=n=2:v=1:a=0,setpts=N/30/TB[v]", "-map", "[v]", "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p", "-fps_mode", "passthrough", path.join(W, "base.mp4")], "base");
+  const bodyP = runAsync(["-i", RAW, "-filter_complex_script", path.join(W, "graph.txt"), "-map", "[out]", "-an", "-c:v", "libx264", "-preset", UHD ? "veryfast" : "fast", "-crf", "18", "-pix_fmt", "yuv420p", "-fps_mode", "passthrough", path.join(W, "body.mp4")], "body");
+  bodyP.catch(() => {});
 
   // ---- overlay events (chapter wipe + title + bullets)
   const ev = [];
@@ -132,11 +134,13 @@ if (process.argv[2] === "voice") { genVoice().then(() => process.exit(0)); retur
   const files = await renderFrames({ html: path.join(__dirname, "overlay.html"), times: times.map((x) => (Number(x) - HOOK_LEN).toFixed(4)), outDir: dir, transparent: true, port: 9383, setupJs: `window.setup(${JSON.stringify(ev.map((e) => ({ ...e, t0: e.t0 - HOOK_LEN })))})` });
   const bs = String.fromCharCode(92);
   fs.writeFileSync(path.join(W, "ov.txt"), "ffconcat version 1.0\n" + files.map((f, i) => `file '${f.split(bs).join("/")}'\nduration ${durs[i].toFixed(5)}`).join("\n") + `\nfile '${files[files.length - 1].split(bs).join("/")}'\n`);
+  await bodyP;
+  run(["-i", path.join(__dirname, "work", UHD ? "hook2-4k.mp4" : "hook2.mp4"), "-i", path.join(W, "body.mp4"), "-filter_complex", "[0:v]tpad=stop_mode=clone:stop_duration=1[h];[h][1:v]concat=n=2:v=1:a=0,setpts=N/30/TB[v]", "-map", "[v]", "-c:v", "libx264", "-preset", UHD ? "veryfast" : "fast", "-crf", "18", "-pix_fmt", "yuv420p", "-fps_mode", "passthrough", path.join(W, "base.mp4")], "base");
   // ---- final picture (silent). The audio is mixed separately and deterministically by mix_audio.py (sample-accurate placement of every narration clip + quiet music).
-  const prog = `drawbox=x=0:y=1074:w='iw*max(t-${HOOK_LEN},0)/${(TOTAL - HOOK_LEN).toFixed(2)}':h=6:color=0xf48050:t=fill`;
+  const prog = `drawbox=x=0:y=${UHD ? 2148 : 1074}:w='iw*max(t-${HOOK_LEN},0)/${(TOTAL - HOOK_LEN).toFixed(2)}':h=${UHD ? 12 : 6}:color=0xf48050:t=fill`;
   const MUSIC = path.join(__dirname, "..", "social", "videos", "dalilacom-register-free-music.wav"), MUSIC_VOL = process.env.MUSIC_VOL || "0.06";
-  const out = path.join(OUTD, "accounting-guided-edit.mp4"), silent = path.join(OUTD, "accounting-guided-silent.mp4");
-  run(["-i", path.join(W, "base.mp4"), "-f", "concat", "-safe", "0", "-i", path.join(W, "ov.txt"), "-filter_complex", `[0:v][1:v]overlay=0:0:format=auto,${prog},format=yuv420p[v]`, "-map", "[v]", "-an", "-r", "30", "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-movflags", "+faststart", "-t", TOTAL.toFixed(2), silent], "final");
+  const out = path.join(OUTD, "accounting-guided-edit" + SUF + ".mp4"), silent = path.join(OUTD, "accounting-guided-silent" + SUF + ".mp4");
+  run(["-i", path.join(W, "base.mp4"), "-f", "concat", "-safe", "0", "-i", path.join(W, "ov.txt"), "-filter_complex", `[0:v][1:v]overlay=0:0:format=auto,${prog},format=yuv420p[v]`, "-map", "[v]", "-an", "-r", "30", "-c:v", "libx264", "-preset", UHD ? "veryfast" : "medium", "-crf", "18", "-movflags", "+faststart", "-t", TOTAL.toFixed(2), silent], "final");
   const mx = spawnSync("python", [path.join(__dirname, "mix_audio.py"), "--timeline", path.join(OUTD, "accounting-guided.timeline.json"), "--video-in", silent, "--out", out, "--music", MUSIC, "--vol", MUSIC_VOL], { stdio: "inherit", env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
   if (mx.status !== 0) throw new Error("mix_audio failed");
   console.log("DONE", out, TOTAL.toFixed(0) + "s");
