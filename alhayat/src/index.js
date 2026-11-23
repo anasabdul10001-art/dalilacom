@@ -88,9 +88,22 @@ function bootstrapAdmin() {
   console.log(`\n[setup] تم إنشاء مدير النظام: ${email}${generated ? `  كلمة المرور المؤقتة: ${pw}` : ''}\n`);
 }
 
+/** قاعدة جاهزة منسوخة (demo-data): نضبط دخول مدير النظام من المتغيرات، وإلا كلمة مرور عشوائية تُكتب مرة واحدة في السجل. */
+function setAdminLogin() {
+  let pw = config.adminPassword;
+  let generated = false;
+  if (!pw || pw.length < 10) { pw = crypto.randomBytes(9).toString('base64url'); generated = true; }
+  const row = db.prepare("SELECT id, email FROM users WHERE role='admin' ORDER BY id LIMIT 1").get();
+  if (!row) return;
+  const email = config.adminEmail || row.email;
+  db.prepare('UPDATE users SET password_hash=?, email=? WHERE id=?').run(hashPassword(pw), email, row.id);
+  console.log(`\n[setup] مدير النظام: ${email}${generated ? `  كلمة المرور المؤقتة: ${pw}` : ''}\n`);
+}
+
 /** تجهيز قاعدة البيانات والمهام الدورية (يُستدعى مرة واحدة، من هنا أو من خادم دليلكم الذي يستضيف هذا الموقع). */
-export async function initNews() {
+export async function initNews({ resetAdmin = false } = {}) {
   bootstrapAdmin();
+  if (resetAdmin) setAdminLogin();
   if (!db.prepare('SELECT COUNT(*) n FROM categories').get().n && (process.env.SEED_DEMO === '1' || (process.env.SEED_DEMO !== '0' && !config.isProd))) {
     const { seedDemo } = await import('./seed/demo.js');
     await seedDemo();

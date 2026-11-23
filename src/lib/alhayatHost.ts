@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import { NextFunction, Request, Response } from "express";
 
@@ -26,9 +27,17 @@ function load(): Promise<Handler | null> {
         // Optional: a fixed sign-in for the demo's admin panel (otherwise a random password is printed once in the server log).
         if (process.env.ALHAYAT_ADMIN_EMAIL) process.env.ADMIN_EMAIL = process.env.ALHAYAT_ADMIN_EMAIL;
         if (process.env.ALHAYAT_ADMIN_PASSWORD) process.env.ADMIN_PASSWORD = process.env.ALHAYAT_ADMIN_PASSWORD;
-        const dir = path.join(__dirname, "..", "..", "alhayat", "src", "index.js");
-        const mod = await importEsm(pathToFileUrl(dir));
-        await mod.initNews();
+        // The demo content is shipped ready-made (alhayat/demo-data): generating it at start-up (sharp, 30+ images) ran the
+        // 512 MB instance out of memory. The copy happens once per start because the disk is ephemeral.
+        const root = path.join(__dirname, "..", "..", "alhayat");
+        const dataDir = path.resolve(root, process.env.DATA_DIR || "./data");
+        let fresh = false;
+        if (!fs.existsSync(path.join(dataDir, "news.db"))) {
+          fs.cpSync(path.join(root, "demo-data"), dataDir, { recursive: true });
+          fresh = true;
+        }
+        const mod = await importEsm(pathToFileUrl(path.join(root, "src", "index.js")));
+        await mod.initNews({ resetAdmin: fresh });
         return mod.createApp() as Handler;
       } catch (err) {
         console.error("[alhayat] could not start:", err);
