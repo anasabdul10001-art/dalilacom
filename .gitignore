@@ -24,3 +24,5 @@ tmp-i18n-sandbox/
 android/keystore.properties
 *.jks
 *.keystore
+
+alhayat/data/

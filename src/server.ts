@@ -61,10 +61,13 @@ import { businessStaffRouter } from "./routes/businessStaff.routes";
 import { hrRouter, hrDeviceRouter } from "./routes/hr.routes";
 import { billingRouter } from "./routes/billing.routes";
 import { sendDueDoctorAppointmentReminders } from "./services/doctorAppointmentReminder.service";
+import { alhayatMiddleware } from "./lib/alhayatHost";
 
 
 const app = express();
 app.set("trust proxy", 1); // Render sits behind a proxy — needed for correct req.ip / X-Forwarded-For
+// The Al-Hayat newspaper demo answers on its own subdomain only; this must stay before every other middleware.
+app.use(alhayatMiddleware);
 // One address for the website: a visit to the old Render address (the pages, and the "continue with Facebook/Google" starts, whose
 // cookie must live on the same address the provider sends the person back to) moves to PUBLIC_BASE_URL. The API itself keeps
 // answering on the old address, so apps that were built before the new domain keep working.
