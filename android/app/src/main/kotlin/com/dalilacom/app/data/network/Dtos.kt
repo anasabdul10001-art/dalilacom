@@ -1469,6 +1469,8 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class ServicePlanDto(val id: String = "", val service: String = "", val name: String = "", val description: String? = null, val durationDays: Int = 30, val trialDays: Int = 0, val priceCredits: Int? = null, val cashAmountCents: Int = 0, val currency: String = "EUR", val features: List<PlanFeatureDto> = emptyList(), val source: String = "catalog", val paypalAvailable: Boolean = false)
 @Serializable data class BillingCheckoutDto(val checkoutUrl: String = "", val provider: String = "")
 @Serializable data class BillingRequest(val planId: String, val provider: String = "STRIPE")
+@Serializable data class MySubscriptionPlanDto(val service: String = "")
+@Serializable data class MySubscriptionDto(val id: String = "", val status: String = "", val currentPeriodEnd: String? = null, val plan: MySubscriptionPlanDto? = null)
 
 // ---- the staff of a business owner (they work inside the owner's accounting)
 @Serializable data class StaffAmountDto(val currency: String = "EUR", val cents: Long = 0)

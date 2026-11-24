@@ -77,7 +77,7 @@ import com.dalilacom.app.ui.theme.BrandOrange
 import androidx.compose.material.icons.filled.SmartToy
 
 private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) {
-    /** The first tab and the page the app opens on: the online store (open to guests too). */
+    /** The online store (open to guests too). */
     Store(R.string.tab_store, Icons.Filled.Storefront),
     Discover(R.string.tab_map, Icons.Filled.Map),
     /** The discount map; the membership card lives behind a button on it. */
@@ -95,7 +95,9 @@ private enum class HomeTab(@StringRes val labelRes: Int, val icon: ImageVector) 
 
 @Composable
 fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
-    var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Store) }
+    // The app opens on the map; an account with an active subscription opens on that service instead (decided once, kept across a language change)
+    var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Discover) }
+    var landingChosen by rememberSaveable { mutableStateOf(false) }
     var showDealsOnMap by rememberSaveable { mutableStateOf(false) }
     val isMerchant = container.sessionStore.roleFlow.collectAsState(initial = null).value == "MERCHANT"
     val factory = remember { ViewModelFactory(container) }
@@ -105,6 +107,20 @@ fun HomeShell(rootNavController: NavHostController, container: AppContainer) {
     LaunchedEffect(Unit) {
         isGuest = !container.authRepository.hasStoredSession()
         if (!isGuest) container.profileRepository.me() // fetched ahead, so the profile tab already has the name and photo
+    }
+    LaunchedEffect(Unit) {
+        if (landingChosen) return@LaunchedEffect
+        landingChosen = true
+        if (!container.authRepository.hasStoredSession()) return@LaunchedEffect
+        val firstTab = selectedTab
+        when (container.accountingRepository.landingService()) {
+            "ACCOUNTING" -> if (selectedTab == firstTab) selectedTab = HomeTab.Accounting
+            "HR" -> if (selectedTab == firstTab) selectedTab = HomeTab.Hr
+            "MERCHANT_ACCOUNT" -> if (selectedTab == firstTab) selectedTab = HomeTab.Profile
+            "MEMBERSHIP" -> if (selectedTab == firstTab) rootNavController.navigate("card")
+            "RESPONDER_BASIC", "RESPONDER_MERCHANT", "RESPONDER_CUSTOMER" ->
+                if (selectedTab == firstTab && !com.dalilacom.app.ui.common.ComingSoon.RESPONDER) rootNavController.navigate("responder")
+        }
     }
     // the deals tab opens with an encouraging message, until the person asks never to see it again
     val tipsOffHome by container.sessionStore.fabTipsOffFlow.collectAsState(initial = false)

@@ -25,7 +25,7 @@ const S = {
   _actAs: localStorage.getItem("dlk_actas") || null, // the business this account works for as staff (null: its own accounting)
   role: localStorage.getItem("dlk_role") || null,
   screen: S_initialScreen(),
-  homeTab: "store", // the site opens on the store; the map and the other sections are one tap away in the bar
+  homeTab: "discover", // the site opens on the map; a signed-in account with an active subscription opens on that service instead (chooseLanding)
   merchantTab: "home",
   params: {},
   stack: [],
@@ -150,7 +150,7 @@ async function api(method, path, body) {
     if (res.status === 401 && S.token) {
       // An expired/revoked session drops the visitor back onto the (public) store, not a login wall.
       clearToken();
-      S.homeTab = "store";
+      S.homeTab = "discover";
       reset("home");
     }
     return { ok: res.ok, status: res.status, data };
@@ -169,6 +169,7 @@ function setToken(token, role) {
   loadMarket(); // the account's own country decides the currency
   saveAccountLanguage(); // push notifications and emails are written in this language
   claimStoredJoin(); // a code from a referral link, for accounts made with Google or Facebook
+  chooseLanding(); // signed in with an active subscription: open on that service
   ensureCity(); // the first sign-in asks for the city (a choice made as a visitor is copied to the account)
 }
 
@@ -1066,7 +1067,7 @@ async function deleteMyAccount() {
   const { ok, data } = await api("DELETE", "/profile/me", { confirm: true, password: password || undefined });
   if (!ok) return toast(errMsg(data, t("profile.deleteFailed")));
   clearToken();
-  S.homeTab = "store";
+  S.homeTab = "discover";
   reset("home");
   toast(t("profile.deleted"));
 }
@@ -1075,7 +1076,7 @@ function doLogout() {
   api("POST", "/auth/logout");
   clearToken();
   S._mstat = null; S._ship = null; S._shipPick = {};
-  S.homeTab = "store";
+  S.homeTab = "discover";
   reset("home");
 }
 
@@ -9718,13 +9719,29 @@ loadSocialLinks();
 loadSiteSlides();
 loadAppDownloadLink();
 
+/** Smart landing: no subscription (or a guest) -> the map; an active subscription -> that service. Runs once at start, never on a language change. */
+const LANDING_BY_SERVICE = { ACCOUNTING: "accounting", HR: "hr", RESPONDER_BASIC: "responder", RESPONDER_MERCHANT: "responder", RESPONDER_CUSTOMER: "responder", MERCHANT_ACCOUNT: "profile", MEMBERSHIP: "card" };
+async function chooseLanding() {
+  if (!S.token) return;
+  const { ok, data } = await api("GET", "/billing/mine");
+  if (!ok || !Array.isArray(data)) return;
+  const now = Date.now();
+  const active = data.filter((x) => x.status === "ACTIVE" && (!x.currentPeriodEnd || new Date(x.currentPeriodEnd).getTime() > now) && LANDING_BY_SERVICE[x.plan && x.plan.service]);
+  if (!active.length) return;
+  // the person already moved somewhere else while this loaded: leave them there
+  if (S.screen !== "home" || S.homeTab !== "discover" || S.stack.length) return;
+  const target = LANDING_BY_SERVICE[active[active.length - 1].plan.service]; // the server lists newest first: the last one is the FIRST section the person subscribed to
+  if (target === "responder") { if (!SOON.responder) setHomeTab("responder"); return; }
+  setHomeTab(target);
+}
+
 bootSocialReturn().then((social) => {
   setTimeout(ensureCity, 1200); // first use: ask for the city once
   if (social) return;
   if (bootMetaReturn()) return;
   if (bootResponderPlansLink()) return;
   bootReferralCapture().then((handled) => {
-    if (!handled && !bootMerchantLink()) render();
+    if (!handled && !bootMerchantLink()) { render(); chooseLanding(); }
   });
 });
 async function requestFitnessOffer(offerId) {

@@ -343,6 +343,7 @@ interface ApiService {
     @POST("accounting/invoices/scan") suspend fun scanAccountingInvoice(@Body image: RequestBody): Response<AccountingInvoiceDraftDto>
     @POST("accounting/invoices/{id}/confirm") suspend fun confirmAccountingInvoice(@Path("id") id: String, @Body body: AccountingInvoiceConfirmRequest): Response<AccountingEntryDto>
     @GET("plans/catalog") suspend fun planCatalog(): Response<PlanCatalogDto>
+    @GET("billing/mine") suspend fun myBillingSubscriptions(): Response<List<MySubscriptionDto>>
     @POST("billing/checkout") suspend fun beginBillingCheckout(@Body body: BillingRequest): Response<BillingCheckoutDto>
     @POST("billing/trial") suspend fun beginBillingTrial(@Body body: BillingRequest): Response<kotlinx.serialization.json.JsonElement>
     @POST("billing/activate-free") suspend fun activateFreePlan(@Body body: BillingRequest): Response<kotlinx.serialization.json.JsonElement>

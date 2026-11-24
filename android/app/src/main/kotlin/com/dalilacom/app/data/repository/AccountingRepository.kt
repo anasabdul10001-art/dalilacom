@@ -24,6 +24,16 @@ class AccountingRepository(private val api: ApiService) {
     /** A staff member works on the owner's plan: the paywall flag is cleared until a call says otherwise. */
     fun clearPlanRequired() { requiresPlan = false }
     suspend fun summary() = safeApiCall { api.accountingSummary() }?.also { requiresPlan = it.code() == 402 }?.takeIf { it.isSuccessful }?.body()
+    /** The service the app should open on: the OLDEST ACTIVE (not expired) subscription's service (the first section the person subscribed to), or null (no subscription -> the map). */
+    suspend fun landingService(): String? {
+        val list = safeApiCall { api.myBillingSubscriptions() }?.takeIf { it.isSuccessful }?.body() ?: return null
+        val now = System.currentTimeMillis()
+        return list.lastOrNull { sub ->
+            sub.status == "ACTIVE" && sub.plan?.service in LANDING_SERVICES &&
+                (sub.currentPeriodEnd == null || runCatching { java.time.Instant.parse(sub.currentPeriodEnd).toEpochMilli() > now }.getOrDefault(true))
+        }?.plan?.service // the server lists newest first: the last match is the FIRST section subscribed to
+    }
+    private companion object { val LANDING_SERVICES = setOf("ACCOUNTING", "HR", "RESPONDER_BASIC", "RESPONDER_MERCHANT", "RESPONDER_CUSTOMER", "MERCHANT_ACCOUNT", "MEMBERSHIP") }
     suspend fun planCatalog(): PlanCatalogDto? = safeApiCall { api.planCatalog() }?.takeIf { it.isSuccessful }?.body()
     suspend fun checkout(planId: String, provider: String = "STRIPE"): Result<BillingCheckoutDto> {
         val response = safeApiCall { api.beginBillingCheckout(BillingRequest(planId, provider)) } ?: return Result.failure(Exception(AppStrings.get(R.string.s_89f995b3)))
