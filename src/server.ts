@@ -275,21 +275,28 @@ if (process.env.NODE_ENV !== "test") {
   });
   // every country of the world is listed from the start; cities are added as people pick them
   ensureWorldCountries().then((n) => { if (n) console.log(`Listed ${n} new countries`); }).catch((err) => console.error("Listing countries failed:", err instanceof Error ? err.message : err));
-  // AI packages that ended are renewed from the shop's wallet (also done at the moment a shop looks, for a service that slept)
-  const sweep = () => renewAllDueAiPackages().catch((err) => console.error("AI package renewal failed:", err instanceof Error ? err.message : err));
-  setTimeout(sweep, 30_000).unref();
-  setInterval(sweep, 60 * 60 * 1000).unref();
-  const appointmentReminderSweep = () => sendDueDoctorAppointmentReminders().catch((err) => console.error("Appointment reminder failed:", err instanceof Error ? err.message : err));
-  setTimeout(appointmentReminderSweep, 20_000).unref();
-  setInterval(appointmentReminderSweep, 5 * 60 * 1000).unref();
-  // delivered orders nobody answered for 10 days count as accepted
-  const receiptSweep = () => autoAcceptDueReceipts().catch((err) => console.error("Receipt auto-accept failed:", err instanceof Error ? err.message : err));
-  setTimeout(receiptSweep, 40_000).unref();
-  setInterval(receiptSweep, 60 * 60 * 1000).unref();
-  // auctions whose time is up get their winner (also done at the moment someone looks at one)
-  const auctionSweep = () => settleDueAuctions().catch((err) => console.error("Auction settling failed:", err instanceof Error ? err.message : err));
-  setTimeout(auctionSweep, 50_000).unref();
-  setInterval(auctionSweep, 60 * 1000).unref();
+  // Background jobs. The database (Neon free plan) sleeps after 5 idle minutes and is billed by the hour it is awake, so these
+  // must NOT poll every minute (that kept it awake 24/7 and used the whole monthly allowance with no real users). All jobs share
+  // ONE tick every 15 minutes (the database wakes once per tick, then sleeps). The testing service (an onrender.com address)
+  // does not run them at all: it shares the live service's database, and the live one already does the work.
+  const baseHost = (() => { try { return new URL(process.env.PUBLIC_BASE_URL || "").host; } catch { return ""; } })();
+  const runJobs = process.env.BACKGROUND_JOBS !== "off" && !baseHost.endsWith(".onrender.com");
+  if (runJobs) {
+    const logFail = (what: string) => (err: unknown) => console.error(`${what} failed:`, err instanceof Error ? err.message : err);
+    const tick = () => {
+      // AI packages that ended are renewed from the shop's wallet (also done at the moment a shop looks, for a service that slept)
+      renewAllDueAiPackages().catch(logFail("AI package renewal"));
+      sendDueDoctorAppointmentReminders().catch(logFail("Appointment reminder"));
+      // delivered orders nobody answered for 10 days count as accepted
+      autoAcceptDueReceipts().catch(logFail("Receipt auto-accept"));
+      // auctions whose time is up get their winner (also done at the moment someone looks at one)
+      settleDueAuctions().catch(logFail("Auction settling"));
+    };
+    setTimeout(tick, 60_000).unref();
+    setInterval(tick, 15 * 60 * 1000).unref();
+  } else {
+    console.log("Background jobs are off on this service");
+  }
 }
 
 export { app };
