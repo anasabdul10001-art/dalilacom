@@ -65,6 +65,9 @@ import { alhayatMiddleware } from "./lib/alhayatHost";
 
 
 const app = express();
+// when a real visitor last asked for something (the health check does not count): the background jobs sleep while nobody is around
+let lastVisitAt = Date.now();
+app.use((req, _res, next) => { if (req.path !== "/health") lastVisitAt = Date.now(); next(); });
 app.set("trust proxy", 1); // Render sits behind a proxy — needed for correct req.ip / X-Forwarded-For
 // The Al-Hayat newspaper demo answers on its own subdomain only; this must stay before every other middleware.
 app.use(alhayatMiddleware);
@@ -277,13 +280,18 @@ if (process.env.NODE_ENV !== "test") {
   ensureWorldCountries().then((n) => { if (n) console.log(`Listed ${n} new countries`); }).catch((err) => console.error("Listing countries failed:", err instanceof Error ? err.message : err));
   // Background jobs. The database (Neon free plan) sleeps after 5 idle minutes and is billed by the hour it is awake, so these
   // must NOT poll every minute (that kept it awake 24/7 and used the whole monthly allowance with no real users). All jobs share
-  // ONE tick every 15 minutes (the database wakes once per tick, then sleeps). The testing service (an onrender.com address)
+  // ONE tick every 15 minutes (the database wakes once per tick, then sleeps), and when nobody has visited for 30 minutes the tick only runs every 3 hours. The testing service (an onrender.com address)
   // does not run them at all: it shares the live service's database, and the live one already does the work.
   const baseHost = (() => { try { return new URL(process.env.PUBLIC_BASE_URL || "").host; } catch { return ""; } })();
   const runJobs = process.env.BACKGROUND_JOBS !== "off" && !baseHost.endsWith(".onrender.com");
   if (runJobs) {
     const logFail = (what: string) => (err: unknown) => console.error(`${what} failed:`, err instanceof Error ? err.message : err);
+    let lastRunAt = 0;
+    const IDLE_AFTER = 30 * 60 * 1000, IDLE_EVERY = 3 * 60 * 60 * 1000;
     const tick = () => {
+      // nobody has visited for 30 minutes: only look once every 3 hours (nothing new can have been created without a visit)
+      if (Date.now() - lastVisitAt > IDLE_AFTER && Date.now() - lastRunAt < IDLE_EVERY) return;
+      lastRunAt = Date.now();
       // AI packages that ended are renewed from the shop's wallet (also done at the moment a shop looks, for a service that slept)
       renewAllDueAiPackages().catch(logFail("AI package renewal"));
       sendDueDoctorAppointmentReminders().catch(logFail("Appointment reminder"));
