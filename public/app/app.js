@@ -295,7 +295,7 @@ const FAB_TAG_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"
 /** The Dalilacom mark (the letter D with its arrows) stays in the top corner of every page, so people always see whose site this is. */
 function brandMarkHtml() {
   if (["login", "register"].includes(S.screen)) return "";
-  return `<button class="brand-mark" onclick="go('home')" aria-label="DALILACOM"><img src="/brand/logo.png" alt="" /></button>`;
+  return `<button class="brand-mark" onclick="go('home')" aria-label="DALILACOM"><img class="bm-d" src="/brand/logo.png" alt="" /><img class="on-light" src="${logoSrc("horizontal", "color")}" alt="" /><img class="on-dark" src="${logoSrc("horizontal", "white")}" alt="" aria-hidden="true" /></button>`;
 }
 
 function isMapScreen() { return S.screen === "home" && S.homeTab === "discover"; }

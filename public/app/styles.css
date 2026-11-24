@@ -2116,3 +2116,29 @@ html[dir="rtl"] .pd-seller-go::after { transform: scaleX(-1); }
 .auc-bids > div { display: flex; justify-content: space-between; padding: 4px 8px; border-radius: 6px; background: rgba(127, 127, 127, 0.08); }
 .auc-bids > div.mine { background: rgba(255, 107, 0, 0.14); }
 .auc-won { border: 1px solid var(--sale); }
+
+/* ---- phone layout fixes ---- */
+/* the brand mark sits IN the page, as a slim row at the very top (scrolls away), instead of a disc floating over the content; on the map (full screen) and on wide screens it stays a small floating mark */
+.brand-mark .on-light, .brand-mark .on-dark { display: none; }
+@media (max-width: 899px) {
+  .screen-body:not(.map-mode) > .brand-mark .bm-d { display: none; }
+  .screen-body:not(.map-mode) > .brand-mark .on-light { display: block; }
+  .screen-body:not(.map-mode) > .brand-mark { position: static; inset: auto; z-index: auto; width: auto; height: auto; padding: 6px 16px 2px; border-radius: 0; background: none; box-shadow: none; align-self: flex-start; }
+  .screen-body:not(.map-mode) > .brand-mark img { width: auto; height: 30px; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .screen-body:not(.map-mode) > .brand-mark .on-light { display: none; }
+    :root:not([data-theme="light"]) .screen-body:not(.map-mode) > .brand-mark .on-dark { display: block; }
+  }
+  :root[data-theme="dark"] .screen-body:not(.map-mode) > .brand-mark .on-light { display: none; }
+  :root[data-theme="dark"] .screen-body:not(.map-mode) > .brand-mark .on-dark { display: block; }
+}
+/* the brand / invite banners on a phone: logo above the line (a wide English logo no longer pushes the text out of the picture) */
+@media (max-width: 520px) {
+  .store-slider { min-height: 220px; }
+  .store-slide.brand-slide, .store-slide.invite-slide { flex-direction: column; justify-content: center; text-align: center; gap: 10px; padding: 14px 18px; }
+  .brand-slide .bs-text, .invite-slide .bs-text { align-items: center; }
+  .brand-slide .bs-logo img, .invite-slide .bs-logo img { height: 56px; }
+  html[lang="en"] .brand-slide .bs-logo img, html[lang="en"] .invite-slide .bs-logo img { height: auto; width: min(190px, 52vw); }
+  .brand-slide h1, .invite-slide h1 { font-size: 20px; line-height: 1.3; }
+  .brand-slide .btn-pill, .invite-slide .btn-pill { margin-top: 4px; }
+}
