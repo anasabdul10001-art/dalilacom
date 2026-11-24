@@ -1,22 +1,23 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&display=swap">
-<link rel="stylesheet" href="base.css">
 <style>
-  /* the card shown when the site's link is shared (WhatsApp, Facebook, Telegram...): 1200 x 630 */
-  body { width: 1200px; height: 630px; overflow: hidden; background: linear-gradient(100deg, var(--deep), var(--red) 80%); position: relative; }
-  .center { position: absolute; inset: 0; display: grid; place-items: center; }
-  .box { display: flex; align-items: center; gap: 84px; }
-  .lockup { height: 400px; display: block; }
-  .tag { color: #fff; font-size: 52px; font-weight: 800; line-height: 1.5; }
-  .url { color: #fff; font-size: 30px; margin-top: 18px; opacity: .9; }
-  .ring { position: absolute; border: 2px solid rgba(255,255,255,.12); border-radius: 50%; }
+  /* link-share card (WhatsApp, Facebook, Telegram...): 1200 x 630. Light background, big dark text: readable even as a small thumbnail */
+  @font-face { font-family: T; src: url(../fonts/tajawal_bold.ttf); font-weight: 800; }
+  @font-face { font-family: T; src: url(../fonts/tajawal_medium.ttf); font-weight: 500; }
+  html { background: #fff; } body { margin: 0; }
+  body { width: 1200px; height: 630px; overflow: hidden; position: relative; font-family: T, sans-serif; direction: rtl;
+         background: linear-gradient(135deg, #fffaf6 0%, #ffe6d6 100%); }
+  .bar { position: absolute; top: 0; left: 0; right: 0; height: 18px; background: linear-gradient(90deg, #f48050, #e8643a); }
+  .logo { position: absolute; top: 70px; right: 70px; height: 130px; }
+  .t1 { position: absolute; right: 70px; top: 235px; font-size: 100px; font-weight: 800; color: #2a1f1c; line-height: 1.1; }
+  .t2 { position: absolute; right: 70px; top: 345px; font-size: 100px; font-weight: 800; color: #e8643a; line-height: 1.1; }
+  .url { position: absolute; right: 70px; bottom: 56px; background: #e8643a; color: #fff; font-size: 46px; font-weight: 800; padding: 10px 44px 16px; border-radius: 60px; direction: ltr; }
+  .ring { position: absolute; left: -130px; bottom: -170px; width: 560px; height: 560px; border-radius: 50%; background: rgba(244,128,80,.14); }
 </style></head>
 <body>
-  <div class="ring" style="width:520px;height:520px;left:-150px;top:-100px"></div>
-  <div class="ring" style="width:360px;height:360px;right:-80px;bottom:-160px"></div>
-  <div class="center"><div class="box">
-    <img class="lockup" src="../logo/logo-full-vertical-white.png" alt="دليلكم">
-    <div><div class="tag">محلات مدينتك<br>وعروضها بمكان واحد</div><div class="url latin">dalilacom.com</div></div>
-  </div></div>
+  <div class="ring"></div><div class="bar"></div>
+  <img class="logo" src="../logo/logo-full-horizontal-color.png" alt="دليلكم">
+  <div class="t1">محلات مدينتك</div>
+  <div class="t2">وعروضها بمكان واحد</div>
+  <div class="url">dalilacom.com</div>
 </body></html>
