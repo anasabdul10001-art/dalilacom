@@ -1,13 +1,14 @@
 // Chapters: inventory, sale invoice, purchases, customers and suppliers.
 const { sleep, vis } = require("./lib.cjs");
+const { money: $ } = require("./ru-map.cjs");
 const ask = async (b, text) => { await b.waitFor(`document.querySelector('.ui-ask input')`); await sleep(500); await b.fillBy(`document.querySelector('.ui-ask input')`, text); await b.clickText("حفظ", ".ui-ask button"); await sleep(1800); };
 const pick = async (b, text) => { await b.waitFor(`document.querySelector('.ui-ask [data-v]')`); await sleep(900); await b.clickText(text, ".ui-ask button"); await sleep(1800); };
 const rowBtn = (b, prod, label) => b.click(`(() => { const rows = ${vis(".site .title-line")}.filter(r => r.innerText.includes(${JSON.stringify(prod)})); const r = rows[rows.length-1]; return [...r.querySelectorAll('button')].find(x => x.innerText.trim() === ${JSON.stringify(label)}); })()`);
 const PRODUCTS = [
-  ["6281001", "أرز مصري 1 كغ", "3.5", "2.4", "40"],
-  ["6281002", "سكر ناعم 1 كغ", "2.2", "1.6", "60"],
-  ["6281003", "زيت دوّار الشمس 1 لتر", "4.8", "3.9", "25"],
-  ["6281004", "شاي أحمد 450 غ", "6.5", "5", "18"],
+  ["6281001", "أرز مصري 1 كغ", $("3.5"), $("2.4"), "40"],
+  ["6281002", "سكر ناعم 1 كغ", $("2.2"), $("1.6"), "60"],
+  ["6281003", "زيت دوّار الشمس 1 لتر", $("4.8"), $("3.9"), "25"],
+  ["6281004", "شاي أحمد 450 غ", $("6.5"), $("5"), "18"],
 ];
 async function inventory(b) {
   await b.tab("المخزون"); await sleep(2000);

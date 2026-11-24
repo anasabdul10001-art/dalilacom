@@ -1171,6 +1171,7 @@ DICT.en = {
 // To add a language, copy this file (e.g. i18n.de.js), translate the values, keep the keys, and load it in index.html.
 // PHRASES = whole texts; PATTERNS = texts with numbers or names inside (regex -> replacement or function).
 PHRASES.en = {
+  "قطعة": "pcs",
   "لم يُقبل الطلب:": "The request was not accepted:",
   "راجع البيانات وحاول مرة أخرى": "Review the information and try again",
   "وصل طلب فتح متجرك، وهو قيد المراجعة.": "Your shop application was received and is under review.",
@@ -1701,4 +1702,4 @@ PATTERNS.en = [
   [/^رقم التحويل الذي أرسلته: (.+)\. بانتظار تأكيد صاحب المتجر\.$/, "The transfer number you sent: $1. Waiting for the store owner to confirm."],
   [/^متجر (.+)$/, "Store $1"],
 ];
-WORDS.en = { "دليلكم كوين": "Dalilacom Credits" };
+WORDS.en = { "رصيد افتتاحي":"Opening balance", "إخراج يدوي":"Manual stock out", "إدخال يدوي":"Manual stock in", "قطعة":"pcs", "فاتورة بيع":"Sales invoice", "فاتورة شراء":"Purchase invoice", "مرتجع":"Return", "دليلكم كوين": "Dalilacom Credits" };

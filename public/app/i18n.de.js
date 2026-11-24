@@ -2279,6 +2279,7 @@ DICT.de = {
   "auc.sellCtaBtn": "Auktion starten",
 };
 PHRASES.de = {
+  "قطعة": "Stück",
   "تعذّر التأكيد": "Bestätigung nicht möglich",
   "% من كل عملية": "% jeder Transaktion",
   "+ منتج جديد": "+ Neues Produkt",
@@ -2806,4 +2807,4 @@ PATTERNS.de = [
   [/^رقم التحويل الذي أرسلته: (.+)\. بانتظار تأكيد صاحب المتجر\.$/, "Die von Ihnen gesendete Überweisungsnummer: $1. Wartet auf die Bestätigung des Shop-Inhabers."],
   [/^متجر (.+)$/, "Shop $1"],
 ];
-WORDS.de = {"دليلكم كوين":"Dalilacom-Credits"};
+WORDS.de = {"رصيد افتتاحي":"Anfangsbestand", "إخراج يدوي":"Manueller Warenausgang", "إدخال يدوي":"Manueller Wareneingang", "قطعة":"Stück", "فاتورة بيع":"Verkaufsrechnung", "فاتورة شراء":"Einkaufsrechnung", "مرتجع":"Rückgabe", "دليلكم كوين":"Dalilacom-Credits"};

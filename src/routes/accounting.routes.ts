@@ -262,11 +262,14 @@ accountingRouter.patch("/products/:id", route(async (req, res) => {
   if (req.params.id.startsWith("store:")) return sendError(res, 400, "BAD_REQUEST", "منتجات المتجر تُعدَّل من صفحة المتجر");
   const parsed = productSchema.omit({ quantity: true }).partial().safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
-  if (parsed.data.taxRateId && (await ownRateId(req.user!.id, parsed.data.taxRateId)) === undefined) return sendError(res, 404, "NOT_FOUND", "نسبة الضريبة غير موجودة");
+  // zod 4 applies .default() inside .partial(): a request that sends only lowStockAt would silently reset the cost, the sale price, the unit and the currency. Only the fields the client really sent are updated.
+  const sent = req.body && typeof req.body === "object" ? req.body : {};
+  const data = Object.fromEntries(Object.entries(parsed.data).filter(([k]) => k in sent)) as typeof parsed.data;
+  if (data.taxRateId && (await ownRateId(req.user!.id, data.taxRateId)) === undefined) return sendError(res, 404, "NOT_FOUND", "نسبة الضريبة غير موجودة");
   const p = await prisma.accountingProduct.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true } });
   if (!p) return sendError(res, 404, "NOT_FOUND", "المنتج غير موجود");
   try {
-    res.json(await prisma.accountingProduct.update({ where: { id: p.id }, data: { ...parsed.data, ...(parsed.data.barcode !== undefined ? { barcode: parsed.data.barcode || null } : {}), ...(parsed.data.sku !== undefined ? { sku: parsed.data.sku || null } : {}) } }));
+    res.json(await prisma.accountingProduct.update({ where: { id: p.id }, data: { ...data, ...(data.barcode !== undefined ? { barcode: data.barcode || null } : {}), ...(data.sku !== undefined ? { sku: data.sku || null } : {}) } }));
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return sendError(res, 409, "CONFLICT", "هذا الباركود مستخدم لمنتج آخر لديك");
     throw err;

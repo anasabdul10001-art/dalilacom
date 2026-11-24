@@ -134,3 +134,4 @@ async function staff(b) {
   console.log(await b.ev(`${vis(".site button")}.map(x=>x.innerText.trim()).filter(Boolean).slice(14).join("|")`));
 }
 module.exports.settle = settle; module.exports.staff = staff;
+module.exports.card = card;

@@ -3248,6 +3248,7 @@ async function accountingMoves(id) {
   const box = document.createElement("div"); box.className = "ui-ask";
   box.innerHTML = `<div class="ui-ask-card" role="dialog" aria-modal="true" style="max-height:80vh;overflow:auto"><label>${esc(t("accounting.moves"))}</label>${data.length === 0 ? `<p class="muted">${esc(t("accounting.moves.none"))}</p>` : data.map((m) => `<div class="item"><div class="item-main"><div class="item-title">${esc(t("accounting.move." + m.action))}: ${m.action === "ADJUSTMENT" ? "→ " : (m.action === "STOCK_OUT" ? "−" : "+")}${m.quantity}</div><div class="item-sub"><bdi>${esc(new Date(m.occurredAt).toLocaleString())}</bdi>${m.note ? " · " + esc(m.note) : ""}</div></div></div>`).join("")}<div class="btn-row"><button class="btn small outline" data-no>${esc(t("accounting.moves.close"))}</button></div></div>`;
   box.addEventListener("click", (e) => { if (e.target === box || e.target.closest("[data-no]")) box.remove(); });
+  trDom(box); // built outside render(): translate its texts (the movement notes written by the server) here
   document.body.appendChild(box);
 }
 function accountingCountStart() { S._count = true; render(); }

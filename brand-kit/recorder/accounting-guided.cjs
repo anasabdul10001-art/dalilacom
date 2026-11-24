@@ -2,8 +2,10 @@
 // Needs http://localhost:4000 (see accounting-video-plan.md). Output: video-plans/accounting/raw/accounting-guided.mp4 + .steps.json
 const path = require("path"), fs = require("fs");
 const { open, sleep, vis } = require("./lib.cjs");
+const { money: $ } = require("./ru-map.cjs");
 const G = require("./guided.cjs");
-const OUT = path.join(__dirname, "..", "video-plans", "accounting", "raw", "accounting-guided.mp4");
+const SUFFIX = process.env.VIDEO_LANG && process.env.VIDEO_LANG !== "ar" ? "-" + process.env.VIDEO_LANG : ""; // the Russian recording never overwrites the Arabic one
+const OUT = path.join(__dirname, "..", "video-plans", "accounting", "raw", `accounting-guided${SUFFIX}.mp4`);
 const EMAIL = `demo.shop.${Date.now()}@example.test`, PASS = "Demo-pass-2026!";
 
 async function signup(b) {
@@ -24,13 +26,16 @@ async function signup(b) {
   await b.clickText("إنشاء حساب", "button,a,[role=button]"); await sleep(2200);
   await b.clickText("لدي نشاط", "button,[role=button]"); await sleep(1500);
   b.mark("fill", { label: "اسمك", value: "أبو سامر للمواد الغذائية" });
-  await b.silent(() => b.fillBy(`${vis('input[placeholder="مثال: أحمد محمد"]')}[0]`, "أبو سامر للمواد الغذائية"));
+  await b.silent(() => b.fillBy(`${vis('input#f-name')}[0]`, "أبو سامر للمواد الغذائية"));
   b.mark("fill", { label: "البريد الإلكتروني", value: "" });
   await b.silent(() => b.fillBy(`${vis('input[type="email"],input[placeholder="name@example.com"]')}[0]`, EMAIL));
   b.mark("fill", { label: "كلمة المرور", value: "" });
   await b.silent(() => b.fillBy(`${vis('input[type="password"]')}[0]`, PASS));
   await b.scrollBy(300, 900);
-  await b.setSelect(`${vis("select")}[0]`, "سوريا"); await b.setSelect(`${vis("select")}[1]`, "دمشق"); await b.setSelect(`${vis("select")}[2]`, "دمشق");
+  await b.setSelect(`${vis("select")}[0]`, "سوريا");
+  // Syria has a province -> city chain; every other country (the Russian video: Germany) has only a city list, and the city name comes from OpenStreetMap in Latin letters
+  if (process.env.VIDEO_LANG === "ru") await b.setSelect(`${vis("select")}[1]`, "Moscow");
+  else { await b.setSelect(`${vis("select")}[1]`, "دمشق"); await b.setSelect(`${vis("select")}[2]`, "دمشق"); }
   await b.scrollBy(420, 1100);
   b.note("وافق على الشروط، ثم اضغط إنشاء الحساب.");
   await b.click(`${vis('input[type="checkbox"]')}[0]`); await sleep(700);
@@ -52,7 +57,8 @@ async function plan(b) {
   await b.clickText("المحاسب", "button,a,[role=button]"); await sleep(2200);
   await b.waitFor(b.byText("افتح لوحة المحاسب", "button,a")); await sleep(800);
   await b.clickText("افتح لوحة المحاسب", "button,a");
-  await b.waitFor(`document.body.innerText.includes("ملخص الحركات")`); await sleep(3000);
+  // the panel is open when its tab strip is there (a new account may open on the home tab, not on the summary)
+  await b.waitFor(`document.querySelector(".site-tabs, .site-tab") || document.body.innerText.includes("ملخص الحركات")`); await sleep(3000);
 }
 async function tour(b) {
   b.note("هذه لوحة المحاسب. في الأعلى شريط التبويبات، وسنمرّ عليها تبويباً تبويباً.");
@@ -62,7 +68,7 @@ async function tour(b) {
 const CHAPTERS = [
   ["ابدأ بدقيقة", signup], ["اختر باقتك", plan], ["جولة على اللوحة", tour],
   ["المخزون", async (b) => { await G.inventory(b); await G.stockCount(b); }], ["الزبائن والموردون", G.parties], ["فاتورة بيع", G.sale], ["فاتورة شراء", G.purchases],
-  ["كشف حساب الزبون", (b) => G.partyStatement(b, "الزبائن", "أم خالد", "4", "نقدًا", "10")], ["كشف حساب المورّد", (b) => G.partyStatement(b, "الموردون", "مستودع الشام", "40", "بنك")],
+  ["كشف حساب الزبون", (b) => G.partyStatement(b, "الزبائن", "أم خالد", $("4"), "نقدًا", $("10"))], ["كشف حساب المورّد", (b) => G.partyStatement(b, "الموردون", "مستودع الشام", $("40"), "بنك")],
   ["مصاريف ودخل", G.moves], ["الحركات المتكررة", G.recurring], ["الملخص وصندوق اليوم", G.summary],
   ["الفروع والموزّعون", G.locations], ["بضاعة الموزّع", async (b) => { await G.distribute(b); await G.saleDistributor(b); await G.settle(b); }],
   ["الضريبة", G.tax], ["التقارير", G.reports], ["الكشوف", G.statements], ["الموظفون", G.staff], ["فواتير بالصورة", G.photoInvoices], ["الخلاصة", G.finalSummary],
@@ -72,7 +78,9 @@ if (require.main === module) (async () => {
   const b = await open(9371, { fresh: true });
   try {
     await b.goto("http://localhost:4000/app/"); await b.startRec(); await sleep(2000);
-    for (const [name, fn] of CHAPTERS) {
+    const only = process.env.ONLY ? process.env.ONLY.split(",").map(Number) : null; // e.g. ONLY=0,1,2 records just the first chapters (a test)
+    for (const [ci, [name, fn]] of CHAPTERS.entries()) {
+      if (only && !only.includes(ci)) continue;
       b.chapter(name); const t0 = Date.now();
       try { await fn(b); console.log("ok  ", Math.round((Date.now() - t0) / 1000) + "s", name); }
       catch (e) { console.log("FAIL", name, "-", e.message.slice(0, 400)); await b.shot("gfail-" + name.replace(/\s/g, "_")); }

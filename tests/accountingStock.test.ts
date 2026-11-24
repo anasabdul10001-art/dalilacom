@@ -37,6 +37,14 @@ describe("accounting: stock watch", () => {
     expect((await request(app).get("/accounting/stock/low").set(a.auth)).body.low).toBe(0);
   });
 
+  it("editing one field of a product keeps everything else (the cost, the price, the unit, the currency)", async () => {
+    const a = await subscriber("stkeep");
+    const p = await product(a, { name: "Keeper", quantity: 5, costCents: 4700, salePriceCents: 9900, unit: "kg", currency: "RUB" });
+    expect((await request(app).patch(`/accounting/products/${p.id}`).set(a.auth).send({ lowStockAt: 3 })).status).toBe(200);
+    const row = await prisma.accountingProduct.findUniqueOrThrow({ where: { id: p.id } });
+    expect(row).toMatchObject({ lowStockAt: 3, costCents: 4700, salePriceCents: 9900, unit: "kg", currency: "RUB" });
+  });
+
   it("a physical count sets the counted numbers, keeps a movement for each difference and skips what did not change", async () => {
     const a = await subscriber("stcount");
     const tea = await product(a, { name: "Tea", quantity: 10 });

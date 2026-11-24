@@ -1,6 +1,7 @@
 // Guided walkthrough chapters: every action is a step the narration describes (the recorder logs each click / field / choice).
 // b.note(text) = an explanation sentence (spoken at that moment); b.setQuiet(true) = repeated actions that are not narrated again.
 const { sleep, vis } = require("./lib.cjs");
+const { money: $ } = require("./ru-map.cjs");
 const A = require("./ch-a.cjs"), B = require("./ch-b.cjs");
 const { ask, pick, rowBtn, PRODUCTS } = A; const { fld, byId, setDate, daysAgo, card } = B;
 const selById = (id) => `document.getElementById(${JSON.stringify(id)})`;
@@ -22,7 +23,7 @@ async function inventory(b) {
   b.note("لاحظ أن كل منتج له أزرار: بيع، تعديل تكلفة الشراء، حد التنبيه، ضريبة، الحركات، وزيادة أو إنقاص الكمية.");
   await idle(4500);
   b.note("إذا تغيّر سعر الشراء، عدّل التكلفة من هنا، فيبقى حساب ربحك صحيحاً.");
-  await rowBtn(b, "شاي", "تعديل تكلفة الشراء"); await ask(b, "5.2");
+  await rowBtn(b, "شاي", "تعديل تكلفة الشراء"); await ask(b, $("5.2"));
   b.note("وحدّد حد التنبيه: عندما تنزل الكمية إلى هذا الرقم، ينبّهك الموقع أن البضاعة قاربت على النفاد.");
   await rowBtn(b, "شاي", "حد التنبيه"); await ask(b, "20");
   await b.scrollBy(-900, 1500); await idle(1500);
@@ -73,7 +74,7 @@ async function sale(b) {
   b.note("الآن بيانات الفاتورة. اختر الزبون من القائمة.");
   await b.setSelect(fld("الزبون (للبيع"), "أم خالد");
   b.note("إذا دفع الزبون جزءاً من المبلغ فقط، اكتب المبلغ المدفوع، والباقي يُسجَّل ديناً عليه.");
-  await b.fillBy(fld("المدفوع"), "12");
+  await b.fillBy(fld("المدفوع"), $("12"));
   await b.setSelect(`${vis(".site select")}.find(s => [...s.options].some(o => o.text.includes("حسم بالنسبة")))`, "حسم بالنسبة (%)");
   b.note("ويمكنك إضافة خصم، بالمبلغ أو بالنسبة المئوية.");
   await b.fillBy(selById("sale-discount"), "5");
@@ -95,16 +96,16 @@ async function sale(b) {
 async function purchases(b) {
   await b.tab("المشتريات"); await idle(1500);
   b.note("وعندما تشتري بضاعة من مورّد، تسجّل ذلك هنا. اختر المنتج، واكتب الكمية، وتكلفة الوحدة.");
-  await b.setSelect(selById("buy-product"), "أرز"); await b.fillBy(selById("buy-qty"), "50"); await b.fillBy(selById("buy-cost"), "2.3");
+  await b.setSelect(selById("buy-product"), "أرز"); await b.fillBy(selById("buy-qty"), "50"); await b.fillBy(selById("buy-cost"), $("2.3"));
   await b.clickText("أضف إلى الفاتورة", "button"); await idle(1400);
   b.setQuiet(true);
-  await b.setSelect(selById("buy-product"), "سكر"); await b.fillBy(selById("buy-qty"), "30"); await b.fillBy(selById("buy-cost"), "1.5");
+  await b.setSelect(selById("buy-product"), "سكر"); await b.fillBy(selById("buy-qty"), "30"); await b.fillBy(selById("buy-cost"), $("1.5"));
   await b.clickText("أضف إلى الفاتورة", "button"); await idle(1400);
   b.setQuiet(false);
   await b.scrollBy(500, 1200);
   await b.setSelect(`${vis(".site select")}.find(s => [...s.options].some(o => o.text.includes("بدون مورد")))`, "مستودع الشام للجملة");
   b.note("اكتب المبلغ الذي دفعته الآن. الباقي يُسجَّل ديناً للمورّد.");
-  await b.fillBy(fld("المبلغ المدفوع"), "60");
+  await b.fillBy(fld("المبلغ المدفوع"), $("60"));
   await b.fillBy(fld("ملاحظة"), "دفعة أولى والباقي آجل");
   await b.scrollBy(400, 1000); await idle(1200);
   await b.clickText("حفظ فاتورة الشراء", "button"); await idle(3200);
@@ -131,8 +132,8 @@ async function moves(b) {
     await b.fillBy(byId("acc-category"), cat); await b.fillBy(byId("acc-description"), desc); await b.fillBy(byId("acc-amount"), amt);
     await b.clickText("حفظ", ".site button"); await idle(2400);
   };
-  await add("المصاريف", "نقدًا", "كهرباء", "فاتورة الكهرباء", "45");
-  b.setQuiet(true); await add("المصاريف", "بنك", "نقل", "أجرة نقل بضاعة", "30"); await add("الدخل", "محفظة", "خدمات", "عمولة تعبئة رصيد", "18"); b.setQuiet(false);
+  await add("المصاريف", "نقدًا", "كهرباء", "فاتورة الكهرباء", $("45"));
+  b.setQuiet(true); await add("المصاريف", "بنك", "نقل", "أجرة نقل بضاعة", $("30")); await add("الدخل", "محفظة", "خدمات", "عمولة تعبئة رصيد", $("18")); b.setQuiet(false);
   b.note("وبالطريقة نفسها سجّلنا مصروفاً آخر، ودخلاً من المحفظة.");
   await idle(2000);
 }
@@ -140,25 +141,26 @@ async function recurring(b) {
   await b.tab("المتكررة"); await idle(1200);
   b.note("الإيجار والاشتراكات لا تحتاج أن تكتبها كل شهر. أضفها مرة واحدة هنا.");
   await b.setSelect(fld("النوع"), "المصاريف"); await b.setSelect(fld("التكرار"), "كل شهر"); await b.setSelect(fld("طريقة الدفع"), "بنك");
-  await b.fillBy(byId("rec-category"), "إيجار"); await b.fillBy(byId("rec-description"), "إيجار المحل"); await b.fillBy(byId("rec-amount"), "300");
+  await b.fillBy(byId("rec-category"), "إيجار"); await b.fillBy(byId("rec-description"), "إيجار المحل"); await b.fillBy(byId("rec-amount"), $("300"));
   b.mark("fill", { label: "تاريخ البداية", value: "تاريخ قبل شهرين" }); await setDate(b, byId("rec-start"), daysAgo(65));
   b.note("وإذا بدأ الإيجار قبل استخدامك الموقع، فعّل تسجيل الأشهر الماضية أيضاً.");
   await b.click(byId("rec-backfill")); await idle(800);
   await b.clickText("إضافة حركة متكررة", ".site button"); await idle(2800);
   await b.scrollBy(500, 1200); await idle(1500);
   b.note("ويمكنك إيقافها مؤقتاً، أو تغيير المبلغ إذا زاد الإيجار، أو حذفها.");
-  await safe(b, async () => { await b.clickText("تغيير المبلغ", ".site button"); await ask(b, "320"); });
+  await safe(b, async () => { await b.clickText("تغيير المبلغ", ".site button"); await ask(b, $("320")); });
   await idle(1500);
 }
 async function summary(b) {
   await b.tab("الملخص"); await idle(2500);
+  if (process.env.VIDEO_LANG) await b.shot("hookshot-" + process.env.VIDEO_LANG); // background of the video hook (a full-size screenshot of the summary screen)
   b.note("هذا الملخص: إجمالي الدخل، والمصاريف، والصافي، وقيمة الجرد، وتنبيهات المخزون.");
   await b.scrollBy(500, 1500); await idle(3000);
   b.note("وهنا صندوق اليوم: رصيد البداية، وما قبضته نقداً، وما دفعته، والمبلغ المتوقع في الصندوق.");
   await b.scrollBy(500, 1500); await idle(2500);
   b.note("اكتب رصيد بداية اليوم، ثم عدّ النقد الموجود فعلاً، واكتب المبلغ، واضغط إقفال اليوم.");
-  await b.clickText("تغيير رصيد البداية", ".site button"); await ask(b, "200"); await idle(1500);
-  await b.fillBy(byId("acc-cash-counted"), "105");
+  await b.clickText("تغيير رصيد البداية", ".site button"); await ask(b, $("200")); await idle(1500);
+  await b.fillBy(byId("acc-cash-counted"), $("105"));
   await b.clickText("إقفال اليوم", ".site button"); await idle(2800);
   b.note("يعرض لك الموقع الفرق بين المتوقع والمعدود، زيادة أو نقصاً. ويمكنك إعادة فتح اليوم عند الحاجة.");
   await b.scrollBy(500, 1200); await idle(3000);
@@ -203,7 +205,7 @@ async function settle(b) {
   const hf = `document.querySelector('[id^="loc-h-"]')`;
   if (await b.waitFor(hf, 20000).then(() => true, () => false)) {
     b.note("عندما يسلّمك المبلغ، اكتبه واضغط استلام. ولا يمكنك استلام أكثر مما معه.");
-    await b.fillBy(hf, "14");
+    await b.fillBy(hf, $("14"));
     await b.clickText("استلام", ".site button"); await idle(2800);
   }
   b.note("وإذا بقيت عنده بضاعة، اختر المنتج والكمية، واضغط رجّع للمستودع.");
@@ -220,7 +222,7 @@ async function tax(b) {
   await b.fillBy(byId("tax-number"), "123456789"); await b.fillBy(byId("tax-business"), "أبو سامر للمواد الغذائية");
   await b.setSelect(fld("كيف تُكتب الأسعار"), "تُضاف الضريبة إلى السعر");
   b.note("ثم أضف نسبة الضريبة: اكتب اسمها ونسبتها.");
-  await b.fillBy(byId("tax-rate-name"), "ضريبة المبيعات"); await b.fillBy(byId("tax-rate-pct"), "5");
+  await b.fillBy(byId("tax-rate-name"), "ضريبة المبيعات"); await b.fillBy(byId("tax-rate-pct"), process.env.VIDEO_LANG === "ru" ? "19" : "5");
   await b.clickText("إضافة نسبة", ".site button"); await idle(2500);
   await b.scrollBy(-600, 1000);
   await b.setSelect(fld("النسبة الافتراضية"), "ضريبة المبيعات · 5%");
@@ -251,7 +253,7 @@ async function staff(b) {
   await b.tab("الموظفون"); await idle(2200);
   b.note("إذا كان عندك موظفون، أضفهم من هنا. اكتب اسم الموظف، واختر دوره، ثم حدّد عمولته من المبيعات، أو راتبه الثابت.");
   await b.fillBy(byId("staff-name"), "سامر العلي"); await b.setSelect(fld("الدور"), "كاشير");
-  await b.fillBy(byId("staff-rate"), "2"); await b.fillBy(byId("staff-fixed"), "150");
+  await b.fillBy(byId("staff-rate"), "2"); await b.fillBy(byId("staff-fixed"), $("150"));
   await b.clickText("إضافة موظف", ".site button"); await idle(3000);
   b.note("ثم اضغط رمز دعوة، وأعطِ الرمز للموظف، فيدخل بحسابه ولا يرى إلا ما يخصّه.");
   await safe(b, async () => { await b.clickText("رمز دعوة", ".site button"); await idle(3000); });

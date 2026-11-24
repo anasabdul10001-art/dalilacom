@@ -26,12 +26,16 @@ const CURSOR_JS = `(() => {
   window.__ripple = (x, y) => { const r = document.createElement('div'); r.className = '__rip'; r.style.left = x + 'px'; r.style.top = y + 'px'; document.documentElement.appendChild(r); setTimeout(() => r.remove(), 700); };
 })();`;
 
+// VIDEO_LANG=ru (any language but Arabic): every Arabic literal the scripts use is replaced by its Russian text (see ru-map.cjs)
+const T = process.env.VIDEO_LANG && process.env.VIDEO_LANG !== "ar" ? require("./ru-map.cjs").tr : (x) => x;
+const Tobj = (o) => { const r = {}; for (const [k, v] of Object.entries(o || {})) r[k] = typeof v === "string" ? T(v) : v; return r; };
+
 async function launch(opts = {}) {
   const port = opts.port || 9333;
   const keepProfile = !!opts.profile; const profile = opts.profile || fs.mkdtempSync(path.join(os.tmpdir(), "dlk-rec-"));
   const proc = spawn(CHROME, [
     "--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
-    "--window-size=1920,1080", `--force-device-scale-factor=${SCALE}`, "--hide-scrollbars", "--lang=ar", "--no-first-run",
+    "--window-size=1920,1080", `--force-device-scale-factor=${SCALE}`, "--hide-scrollbars", `--lang=${process.env.VIDEO_LANG || "ar"}`, "--no-first-run",
     "--no-default-browser-check", "--disable-notifications", "--mute-audio", "about:blank",
   ], { stdio: "ignore" });
   let wsUrl = null;
@@ -52,13 +56,15 @@ async function launch(opts = {}) {
   await send("Page.enable"); await send("Runtime.enable");
   await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: SCALE, mobile: false });
   await send("Page.addScriptToEvaluateOnNewDocument", { source: CURSOR_JS });
+  // the site language is chosen by the visitor (localStorage dlk_lang): set it before any page script runs, so a non-Arabic video starts in its own language
+  if (process.env.VIDEO_LANG) await send("Page.addScriptToEvaluateOnNewDocument", { source: `try{localStorage.setItem("dlk_lang",${JSON.stringify(process.env.VIDEO_LANG)})}catch(e){}` });
 
-  const ev = async (expr) => { const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.text + " " + (r.exceptionDetails.exception && r.exceptionDetails.exception.description || "").split(String.fromCharCode(10))[0] + " IN: " + expr.replace(/\s+/g, " ").slice(0, 260)); return r.result.value; };
+  const ev = async (expr) => { expr = T(expr); const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.text + " " + (r.exceptionDetails.exception && r.exceptionDetails.exception.description || "").split(String.fromCharCode(10))[0] + " IN: " + expr.replace(/\s+/g, " ").slice(0, 260)); return r.result.value; };
   const goto = async (url) => { await send("Page.navigate", { url }); await sleep(2500); await ev(CURSOR_JS); };
 
   // ---- recorder (screencast: a frame whenever the screen changes)
-  let frames = [], rec = null, T0 = null; const steps = []; let wall0 = null, quiet = false, sup = 0;
-  const mark = (kind, data) => { if (!rec || sup > 0) return; steps.push({ t: ((Date.now() - (wall0 || rec.startWall)) / 1000), abs: Date.now() / 1000, kind, quiet, ...data }); };
+  let arabicWatch = null; let frames = [], rec = null, T0 = null; const steps = []; let wall0 = null, quiet = false, sup = 0;
+  const mark = (kind, data) => { if (!rec || sup > 0) return; steps.push({ t: ((Date.now() - (wall0 || rec.startWall)) / 1000), abs: Date.now() / 1000, kind, quiet, ...Tobj(data) }); };
   const describe = async (expr) => ev(`(() => { const el = (${expr}); if (!el) return {}; const lab = (el.closest('.field') && el.closest('.field').querySelector('label')) || (el.closest('.ui-ask') && el.closest('.ui-ask').querySelector('label')); return { text: ((el.innerText || el.value || el.getAttribute('aria-label') || '') + '').trim().split(String.fromCharCode(10))[0].slice(0, 60), label: lab ? lab.innerText.trim().slice(0, 60) : (el.placeholder || ''), tag: el.tagName }; })()`);
   listeners.push((msg) => {
     if (msg.method === "Page.screencastFrame" && rec) {
@@ -74,8 +80,23 @@ async function launch(opts = {}) {
   const startRec = async () => {
     rec = { dir: fs.mkdtempSync(path.join(os.tmpdir(), "dlk-frames-")), n: 0, frames: [], startWall: Date.now() }; wall0 = null; steps.length = 0;
     await send("Page.startScreencast", { format: "jpeg", quality: 92, maxWidth: 1920 * SCALE, maxHeight: 1080 * SCALE, everyNthFrame: 1 });
+    // a video in another language must show NO Arabic: every 2 s look for Arabic text that is really visible on screen and report it (owner rule)
+    if (process.env.VIDEO_LANG && process.env.VIDEO_LANG !== "ar") {
+      const seenAr = new Set();
+      arabicWatch = setInterval(async () => {
+        if (!rec) return;
+        try {
+          const found = await ev(`(() => { const out = []; const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n;
+            while ((n = w.nextNode()) && out.length < 4) { const t = n.nodeValue.trim(); if (!/[\\u0600-\\u06FF]/.test(t)) continue; const el = n.parentElement; if (!el) continue;
+              const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden" || +cs.opacity === 0) continue; const r = el.getBoundingClientRect();
+              if (r.width < 2 || r.height < 2 || r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue; out.push(t.slice(0, 70)); }
+            return out; })()`);
+          for (const t of found || []) if (!seenAr.has(t)) { seenAr.add(t); console.log("   [ARABIC ON SCREEN]", t); }
+        } catch {}
+      }, 2000);
+    }
   };
-  const stopRec = async (outMp4, tailSec = 1.5) => {
+  const stopRec = async (outMp4, tailSec = 1.5) => { if (arabicWatch) clearInterval(arabicWatch);
     await sleep(600); await send("Page.stopScreencast"); const r = rec; rec = null;
     const list = r.frames;
     let txt = "ffconcat version 1.0\n";
@@ -107,7 +128,7 @@ async function launch(opts = {}) {
   const click = async (expr) => { const p = await rectOf(expr); if (!p) throw new Error("not found: " + expr); if (sup === 0) { const d = await describe(expr); mark("click", d); } await sleep(300); await clickAt(p); };
   const clickText = (t, sel) => click(byText(t, sel));
   const type = async (text, delay = 85) => { for (const ch of text) { await send("Input.insertText", { text: ch }); await sleep(delay); } };
-  const fillBy = async (expr, text) => { const d = await describe(expr); mark("fill", { ...d, value: text }); sup++; try { await click(expr); } finally { sup--; } await ev(`(()=>{const e=document.activeElement; if(e&&e.select) try{e.select()}catch(_){}})()`); await type(text); await sleep(300); };
+  const fillBy = async (expr, text) => { text = T(text); const d = await describe(expr); mark("fill", { ...d, value: text }); sup++; try { await click(expr); } finally { sup--; } await ev(`(()=>{const e=document.activeElement; if(e&&e.select) try{e.select()}catch(_){}})()`); await type(text); await sleep(300); };
   const setSelect = async (expr, label) => {
     const p = await rectOf(expr); mark("select", { ...(await describe(expr)), value: label }); await sleep(250); await ev(`window.__moveCursor(${p.x}, ${p.y})`); await sleep(900); await ev(`window.__ripple(${p.x}, ${p.y})`); await sleep(300);
     await ev(`(() => { const s = (${expr}); const o = [...s.options].find(o => o.text.trim() === ${JSON.stringify(label)} || o.text.trim().startsWith(${JSON.stringify(label)} + ' ')); s.value = o.value; s.dispatchEvent(new Event('input',{bubbles:true})); s.dispatchEvent(new Event('change',{bubbles:true})); })()`);

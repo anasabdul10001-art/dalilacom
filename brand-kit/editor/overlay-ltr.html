@@ -1,0 +1,40 @@
+<!doctype html><html lang="ru" dir="ltr"><meta charset="utf-8">
+<style>
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transparent;font-family:"Segoe UI",Arial,sans-serif}
+#title{position:absolute;left:40px;top:26px;display:flex;align-items:center;gap:16px;padding:12px 26px 12px 12px;border-radius:60px;background:linear-gradient(135deg,#f48050,#e8643a);color:#fff;font-weight:800;font-size:46px;box-shadow:0 10px 30px rgba(196,85,43,.45);opacity:0;white-space:nowrap}
+#title .n{width:64px;height:64px;border-radius:50%;background:#fff;color:#e8643a;display:grid;place-items:center;font-size:40px}
+.b{position:absolute;left:40px;display:flex;align-items:center;gap:14px;padding:14px 28px 14px 18px;border-radius:22px;background:#fff;color:#2a1f1c;font-weight:800;font-size:40px;box-shadow:0 12px 34px rgba(60,30,20,.28);border-left:8px solid #f48050;opacity:0;white-space:nowrap}
+.b i{width:44px;height:44px;border-radius:50%;background:#f48050;color:#fff;display:grid;place-items:center;font-style:normal;font-size:28px}
+#wipe{position:absolute;inset:0;background:linear-gradient(135deg,#f48050,#ffb089);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transform:translateX(100%);}
+#wipe .num{font-size:220px;font-weight:800;line-height:1;text-shadow:0 8px 30px rgba(120,40,10,.3)}
+#wipe .tx{font-size:84px;font-weight:800}
+#hl{position:absolute;border:6px solid #f48050;border-radius:18px;box-shadow:0 0 0 9999px rgba(30,15,10,.0);opacity:0}
+</style>
+<div id="title"><div class="n"></div><span></span></div>
+<div id="bs"></div>
+<div id="wipe"><div class="num"></div><div class="tx"></div></div>
+<script>
+const ease={out:t=>1-Math.pow(1-t,3),back:t=>{const c=1.9;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2)},inout:t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const T=document.getElementById('title'),BS=document.getElementById('bs'),W=document.getElementById('wipe');
+const bEls=[];
+window.setup=ev=>{window.EV=ev;ev.filter(e=>e.type==='bullet').forEach(e=>{const d=document.createElement('div');d.className='b';d.innerHTML='<i>✓</i><span></span>';d.querySelector('span').textContent=e.text;BS.appendChild(d);e.el=d;})};
+// state at time t (seconds)
+window.draw=t=>{
+  let title=null;const bl=[];let wipe=null;
+  for(const e of EV){
+    if(e.type==='title'&&t>=e.t0&&t<=e.t0+e.dur)title=e;
+    if(e.type==='bullet'&&t>=e.t0&&t<=e.t0+e.dur)bl.push(e);
+    if(e.type==='wipe'&&t>=e.t0&&t<=e.t0+e.dur)wipe=e;
+  }
+  if(title){const a=t-title.t0,o=title.dur-a;const pin=ease.back(cl(a/.55)),pout=ease.inout(cl(o<.4?1-o/.4:0));
+    T.style.opacity=cl(a/.2)*(1-pout);T.style.transform=`translateX(${(-1+pin)*520-pout*520}px) scale(${.9+.1*pin})`;T.querySelector('.n').textContent=title.num;T.querySelector('span').textContent=title.text}else T.style.opacity=0;
+  bEls.length=0;
+  EV.filter(e=>e.type==='bullet').forEach(e=>e.el.style.opacity=0);
+  bl.forEach((e,idx)=>{const a=t-e.t0,o=e.dur-a;const pin=ease.back(cl(a/.5)),pout=cl(o<.35?1-o/.35:0);
+    const slot=idx;e.el.style.opacity=cl(a/.18)*(1-pout);e.el.style.bottom=(70+slot*92)+'px';e.el.style.transform=`translateY(${(1-pin)*60}px) scale(${.92+.08*pin})`});
+  if(wipe){const a=t-wipe.t0,p=a/wipe.dur; // 0..0.5 cover from right, 0.5..1 uncover to left
+    let x;if(p<.5)x=100*(1-ease.inout(p/.5));else x=-100*ease.inout((p-.5)/.5);
+    W.style.transform=`translateX(${x}%)`;W.querySelector('.num').textContent=wipe.num;W.querySelector('.tx').textContent=wipe.text}else W.style.transform='translateX(110%)';
+};
+</script></html>

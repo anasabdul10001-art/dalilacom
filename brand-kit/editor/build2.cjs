@@ -2,27 +2,47 @@
 // with the owner's cloned voice; the video is retimed step by step to the narration. Overlays: chapter wipes/titles/bullets.
 // node build2.cjs --dry   (list the narration, count characters)   |   node build2.cjs voice   (generate audio)   |   node build2.cjs   (build video)
 const S = Number(process.env.DLK_SCALE || 1); // 2 = 4K
+const VL = process.env.VIDEO_LANG || "ar"; const NONAR = VL !== "ar"; const LS = NONAR ? "-" + VL : ""; // "-ru": the Russian files never overwrite the Arabic ones
 const fs = require("fs"), path = require("path"), crypto = require("crypto"), { spawnSync } = require("child_process");
 const { renderFrames } = require("./render.cjs");
 const FF = "C:/Users/Tom/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
 const UHD = process.env.UHD === "1"; if (UHD) process.env.DLK_SCALE = "2"; const SW = UHD ? 3840 : 1920, SH = UHD ? 2160 : 1080, SUF = UHD ? "-4k" : "";
 const RAWDIR = path.join(__dirname, "..", "video-plans", "accounting", "raw");
-const RAW = path.join(RAWDIR, "accounting-guided.mp4");
+const RAW = path.join(RAWDIR, `accounting-guided${LS}.mp4`);
 const steps = JSON.parse(fs.readFileSync(RAW.replace(".mp4", ".steps.json"), "utf8"));
-const script = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "video-plans", "accounting", "script.json"), "utf8"));
-const W = path.join(__dirname, "work2"), VO = path.join(__dirname, "voice2"), OUTD = path.join(__dirname, "out");
+const script = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "video-plans", "accounting", NONAR ? `script-${VL}.json` : "script.json"), "utf8"));
+const W = path.join(__dirname, "work2" + LS), VO = path.join(__dirname, "voice2" + LS), OUTD = path.join(__dirname, "out");
 [W, VO, OUTD].forEach((d) => fs.mkdirSync(d, { recursive: true }));
 const VOICE_ID = process.env.VOICE_ID || "clS4TmlZF18Hafme6bgr"; // "Anas DALILACOM" (the owner's clone)
-const AR = "٠١٢٣٤٥٦٧٨٩"; const arNum = (n) => String(n).replace(/\d/g, (d) => AR[d]);
+const AR = "٠١٢٣٤٥٦٧٨٩"; const arNum = (n) => (NONAR ? String(n) : String(n).replace(/\d/g, (d) => AR[d]));
 const runAsync = (args, label) => new Promise((res, rej) => { const { spawn } = require("child_process"); const c = spawn(FF, ["-hide_banner", "-loglevel", "error", "-y", ...args]); let e = ""; c.stderr.on("data", (d) => (e += d)); c.on("close", (k) => (k === 0 ? res() : rej(new Error(label + ": " + e.slice(0, 600))))); });
 const run = (args, label) => { const r = spawnSync(FF, ["-hide_banner", "-loglevel", "error", "-y", ...args], { maxBuffer: 1 << 28 }); if (r.status !== 0) throw new Error(label + ": " + (r.stderr || "").toString().slice(0, 600)); };
 const durOf = (f) => { const r = spawnSync(FF, ["-hide_banner", "-i", f]); const m = /Duration: (\d+):(\d+):([\d.]+)/.exec((r.stderr || "").toString()); return m ? +m[1] * 3600 + +m[2] * 60 + +m[3] : 0; };
 const RAW_LEN = durOf(RAW);
 
 // ---- narration text for every step
-const clean = (s) => (s || "").replace(/[^\u0600-\u06FFa-zA-Z0-9 .%()\u061F-]/g, " ").replace(/\s+/g, " ").trim();
+const clean = (s) => (s || "").replace(/[^\u0600-\u06FF\u0400-\u04FFa-zA-Z0-9 .%()\u061F-]/g, " ").replace(/\s+/g, " ").trim();
 const SYM = { "+": "زر الزائد لإضافة كمية", "−": "زر الناقص لإنقاص كمية", "-": "زر الناقص لإنقاص كمية" };
+const SYM_RU = { "+": "кнопка «плюс» для увеличения количества", "−": "кнопка «минус» для уменьшения количества", "-": "кнопка «минус» для уменьшения количества" };
+function textForRu(s) {
+  if (s.quiet) return "";
+  if (s.kind === "note") return s.text;
+  if (s.kind === "tab") return `Перейдите на вкладку «${clean(s.text)}».`;
+  if (s.kind === "click" && (s.text || "").trim() === "on") return "Поставьте галочку, что вы принимаете условия.";
+  if (s.kind === "click") { const t = SYM_RU[(s.text || "").trim()] || clean(s.text).slice(0, 48); return t ? (SYM_RU[(s.text || "").trim()] ? `Нажмите на ${t}.` : `Нажмите «${t}».`) : ""; }
+  if (s.kind === "select") { const l = clean(s.label); const v = clean(s.value).replace(/Moscow/g, "Москва"); return l ? `В списке «${l}» выберите: ${v}.` : `Выберите: ${v}.`; }
+  if (s.kind === "fill") {
+    const l = clean(s.label), v = clean(String(s.value || ""));
+    if (/парол|password/i.test(l + (s.text || ""))) return "В поле «Пароль» введите надёжный пароль.";
+    if (/почт|email|e-mail/i.test(l)) return "Введите свою электронную почту.";
+    if (!v) return l ? `В поле «${l}» введите нужные данные.` : "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return l ? `В поле «${l}» выберите дату.` : "Выберите дату.";
+    return l ? `В поле «${l}» введите: ${v}.` : `Введите: ${v}.`;
+  }
+  return "";
+}
 function textFor(s) {
+  if (NONAR) return textForRu(s);
   if (s.quiet) return "";
   if (s.kind === "note") return s.text;
   if (s.kind === "tab") return `انتقل إلى تبويب «${clean(s.text)}».`;
@@ -69,7 +89,7 @@ if (process.argv[2] === "voice") { genVoice().then(() => process.exit(0)); retur
 
 (async () => {
   const HOOK_LEN = 9.0;
-  if (!fs.existsSync(path.join(__dirname, "work", UHD ? "hook2-4k.mp4" : "hook2.mp4"))) throw new Error("run hook-render2.cjs first");
+  if (!fs.existsSync(path.join(__dirname, "work", (UHD ? "hook2-4k" : "hook2") + LS + ".mp4"))) throw new Error("run hook-render2.cjs first");
   // ---- segments: one per step, retimed to its narration
   const segs = [];
   const all = steps.slice().sort((a, b) => a.t - b.t);
@@ -96,7 +116,7 @@ if (process.argv[2] === "voice") { genVoice().then(() => process.exit(0)); retur
   // ---- timeline for the automatic sync check (verify_sync.py): where every narration clip and every raw second ended up in the final video
   const LANG = process.env.VIDEO_LANG || "ar";
   const stepOf = new Map(all.map((s, k) => [s, k]));
-  fs.writeFileSync(path.join(OUTD, "accounting-guided.timeline.json"), JSON.stringify({ lang: LANG, hookLen: HOOK_LEN, total: TOTAL, rawLen: RAW_LEN,
+  fs.writeFileSync(path.join(OUTD, `accounting-guided${LS}.timeline.json`), JSON.stringify({ lang: LANG, hookLen: HOOK_LEN, total: TOTAL, rawLen: RAW_LEN,
     hook: fs.existsSync(mp3Of(HOOK_TEXT)) ? { text: HOOK_TEXT, file: mp3Of(HOOK_TEXT), at: 0.2 } : null,
     segs: segs.map((g, i) => ({ i, kind: g.kind || (g.chapter ? "chapter" : "gap"), t0: g.t0, t1: g.t1, T: g.T, D: g.D, speed: g.speed, pad: g.pad, say: g.say || "", file: g.file || null, at: g.file ? g.T + 0.05 : null })) }, null, 1));
   if (process.argv.includes("--fast")) return;
@@ -131,17 +151,17 @@ if (process.argv[2] === "voice") { genVoice().then(() => process.exit(0)); retur
   for (let i = 0; i < nF; i++) { const tt = i / FPS, s = sig(tt); if (s === last && !s.includes("A")) durs[durs.length - 1] += 1 / FPS; else { times.push(tt.toFixed(4)); durs.push(1 / FPS); } last = s; }
   console.log("overlay frames", times.length);
   const dir = path.join(W, "ovframes"); fs.rmSync(dir, { recursive: true, force: true });
-  const files = await renderFrames({ html: path.join(__dirname, "overlay.html"), times: times.map((x) => (Number(x) - HOOK_LEN).toFixed(4)), outDir: dir, transparent: true, port: 9383, setupJs: `window.setup(${JSON.stringify(ev.map((e) => ({ ...e, t0: e.t0 - HOOK_LEN })))})` });
+  const files = await renderFrames({ html: path.join(__dirname, NONAR ? "overlay-ltr.html" : "overlay.html"), times: times.map((x) => (Number(x) - HOOK_LEN).toFixed(4)), outDir: dir, transparent: true, port: 9383, setupJs: `window.setup(${JSON.stringify(ev.map((e) => ({ ...e, t0: e.t0 - HOOK_LEN })))})` });
   const bs = String.fromCharCode(92);
   fs.writeFileSync(path.join(W, "ov.txt"), "ffconcat version 1.0\n" + files.map((f, i) => `file '${f.split(bs).join("/")}'\nduration ${durs[i].toFixed(5)}`).join("\n") + `\nfile '${files[files.length - 1].split(bs).join("/")}'\n`);
   await bodyP;
-  run(["-i", path.join(__dirname, "work", UHD ? "hook2-4k.mp4" : "hook2.mp4"), "-i", path.join(W, "body.mp4"), "-filter_complex", "[0:v]tpad=stop_mode=clone:stop_duration=1[h];[h][1:v]concat=n=2:v=1:a=0,setpts=N/30/TB[v]", "-map", "[v]", "-c:v", "libx264", "-preset", UHD ? "veryfast" : "fast", "-crf", "18", "-pix_fmt", "yuv420p", "-fps_mode", "passthrough", path.join(W, "base.mp4")], "base");
+  run(["-i", path.join(__dirname, "work", (UHD ? "hook2-4k" : "hook2") + LS + ".mp4"), "-i", path.join(W, "body.mp4"), "-filter_complex", "[0:v]tpad=stop_mode=clone:stop_duration=1[h];[h][1:v]concat=n=2:v=1:a=0,setpts=N/30/TB[v]", "-map", "[v]", "-c:v", "libx264", "-preset", UHD ? "veryfast" : "fast", "-crf", "18", "-pix_fmt", "yuv420p", "-fps_mode", "passthrough", path.join(W, "base.mp4")], "base");
   // ---- final picture (silent). The audio is mixed separately and deterministically by mix_audio.py (sample-accurate placement of every narration clip + quiet music).
   const prog = `drawbox=x=0:y=${UHD ? 2148 : 1074}:w='iw*max(t-${HOOK_LEN},0)/${(TOTAL - HOOK_LEN).toFixed(2)}':h=${UHD ? 12 : 6}:color=0xf48050:t=fill`;
   const MUSIC = path.join(__dirname, "..", "social", "videos", "dalilacom-register-free-music.wav"), MUSIC_VOL = process.env.MUSIC_VOL || "0.06";
-  const out = path.join(OUTD, "accounting-guided-edit" + SUF + ".mp4"), silent = path.join(OUTD, "accounting-guided-silent" + SUF + ".mp4");
+  const out = path.join(OUTD, `accounting-guided${LS}-edit` + SUF + ".mp4"), silent = path.join(OUTD, `accounting-guided${LS}-silent` + SUF + ".mp4");
   run(["-i", path.join(W, "base.mp4"), "-f", "concat", "-safe", "0", "-i", path.join(W, "ov.txt"), "-filter_complex", `[0:v][1:v]overlay=0:0:format=auto,${prog},format=yuv420p[v]`, "-map", "[v]", "-an", "-r", "30", "-c:v", "libx264", "-preset", UHD ? "veryfast" : "medium", "-crf", "18", "-movflags", "+faststart", "-t", TOTAL.toFixed(2), silent], "final");
-  const mx = spawnSync("python", [path.join(__dirname, "mix_audio.py"), "--timeline", path.join(OUTD, "accounting-guided.timeline.json"), "--video-in", silent, "--out", out, "--music", MUSIC, "--vol", MUSIC_VOL], { stdio: "inherit", env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
+  const mx = spawnSync("python", [path.join(__dirname, "mix_audio.py"), "--timeline", path.join(OUTD, `accounting-guided${LS}.timeline.json`), "--video-in", silent, "--out", out, "--music", MUSIC, "--vol", MUSIC_VOL], { stdio: "inherit", env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
   if (mx.status !== 0) throw new Error("mix_audio failed");
   console.log("DONE", out, TOTAL.toFixed(0) + "s");
 })().catch((e) => { console.error("BUILD FAILED", e.stack); process.exit(1); });
