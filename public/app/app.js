@@ -3029,6 +3029,7 @@ function accountingBuyCard(a) {
     <div class="field"><label>${esc(t("accounting.sale.product"))}</label><select id="buy-product" onchange="accountingBuyPick(this.value)"><option value="">${esc(t("accounting.sale.pickFirst"))}</option>${products.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(t("accounting.sale.stock"))}: ${p.quantity}</option>`).join("")}</select></div>
     <div class="row"><div class="field"><label>${esc(t("accounting.sale.qty"))}</label><input id="buy-qty" inputmode="numeric" value="1" /></div><div class="field"><label>${esc(t("accounting.buy.cost"))}</label><input id="buy-cost" inputmode="decimal" /></div></div>
     <button class="btn soft" onclick="accountingBuyAdd()">${esc(t("accounting.sale.add"))}</button>
+    <div class="row" style="margin-top:10px"><div class="field"><label>${esc(t("accounting.buy.barcode"))}</label><input id="buy-barcode" autocomplete="off" inputmode="text" onkeydown="if(event.key==='Enter'){event.preventDefault();accountingBuyAddBarcode()}" /></div><div class="field"><label>&nbsp;</label><button class="btn small soft" onclick="accountingBuyAddBarcode()">${esc(t("accounting.sale.addBarcode"))}</button></div></div>
     <div class="panel-title" style="margin-top:12px">${esc(t("accounting.buy.title"))}</div>${lines}
     <div class="field"><label>${esc(t("accounting.buy.supplier"))}</label><select onchange="buyState().partyId=this.value"><option value="">${esc(t("accounting.buy.noSupplier"))}</option>${(a.suppliers || []).map((c) => `<option value="${esc(c.id)}" ${st.partyId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
     <div class="field"><label>${esc(t("accounting.buy.paidNow"))}</label><input inputmode="decimal" value="${esc(st.paid || "")}" oninput="buyState().paid=this.value;accountingBuyTotals()" /></div>
@@ -3060,6 +3061,33 @@ function accountingBuyAdd() {
   const st = buyState(); const have = st.items.find((i) => i.productId === id);
   if (have) { have.cost = Math.round((have.qty * have.cost + qty * cost) / (have.qty + qty)); have.qty += qty; } else st.items.push({ productId: id, name: p.name, qty, cost, currency: p.currency });
   render();
+}
+/** The product of a barcode: from the loaded list at once (a fast reader does not wait), else from the server. */
+async function accountingFindByBarcode(code) {
+  const here = ((S._accounting || {}).products || []).find((x) => x.barcode === code);
+  if (here) return here;
+  const { ok, data } = await api("GET", "/accounting/products/barcode/" + encodeURIComponent(code));
+  return ok && data ? data : null;
+}
+/** Goods coming in with a barcode reader: each scan adds one piece at the known cost of the product. */
+async function accountingBuyAddBarcode() {
+  const input = document.getElementById("buy-barcode");
+  const code = ((input || {}).value || "").trim(); if (!code) return;
+  input.value = "";
+  const refocus = () => setTimeout(() => { const el = document.getElementById("buy-barcode"); if (el) el.focus(); }, 60);
+  const p = await accountingFindByBarcode(code);
+  if (!p) { accountingBeep(); toast(t("accounting.buy.newProduct")); return refocus(); }
+  if (String(p.id).startsWith("store:")) { accountingBeep(); toast(t("accounting.buy.storeProduct", { name: p.name })); return refocus(); }
+  const st = buyState(); const have = st.items.find((i) => i.productId === p.id);
+  if (!have && !(p.costCents > 0)) {
+    accountingBeep(); toast(t("accounting.buy.needCost", { name: p.name }));
+    const pick = document.getElementById("buy-product"); if (pick) pick.value = p.id;
+    const cost = document.getElementById("buy-cost"); if (cost) { cost.value = ""; cost.focus(); }
+    return;
+  }
+  if (have) have.qty += 1; else st.items.push({ productId: p.id, name: p.name, qty: 1, cost: p.costCents, currency: p.currency });
+  render();
+  refocus();
 }
 function accountingBuyRemove(idx) { buyState().items.splice(idx, 1); render(); }
 function accountingBuyNew() { S._buy = null; render(); }
@@ -3295,7 +3323,7 @@ function accountingSaleCard(a) {
     <div class="row"><div class="field"><label>${esc(t("accounting.sale.product"))}</label><select id="sale-product"><option value="">${esc(t("accounting.sale.pickFirst"))}</option>${products.filter((p) => p.quantity > 0 && p.salePriceCents > 0).map((p) => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(fmt(p.salePriceCents, p.currency))} · ${esc(t("accounting.sale.stock"))}: ${p.quantity}</option>`).join("")}</select></div>
       <div class="field"><label>${esc(t("accounting.sale.qty"))}</label><input id="sale-qty" inputmode="numeric" value="1" /></div></div>
     <button class="btn soft" onclick="accountingSaleAdd()">${esc(t("accounting.sale.add"))}</button>
-    <div class="row" style="margin-top:10px"><div class="field"><label>${esc(t("accounting.sale.barcode"))}</label><input id="sale-barcode" autocomplete="off" inputmode="text" onkeydown="if(event.key==='Enter'){event.preventDefault();accountingSaleAddBarcode()}" /></div><div class="field"><label>&nbsp;</label><button class="btn small soft" onclick="accountingSaleAddBarcode()">${esc(t("accounting.sale.addBarcode"))}</button></div></div>
+    <div class="row" style="margin-top:10px"><div class="field"><label>${esc(t("accounting.buy.barcode"))}</label><input id="sale-barcode" autocomplete="off" inputmode="text" onkeydown="if(event.key==='Enter'){event.preventDefault();accountingSaleAddBarcode()}" /></div><div class="field"><label>&nbsp;</label><button class="btn small soft" onclick="accountingSaleAddBarcode()">${esc(t("accounting.sale.addBarcode"))}</button></div></div>
     <div class="panel-title" style="margin-top:12px">${esc(t("accounting.sale.title"))}</div>${lines}
     <div class="field"><label>${esc(t("accounting.sale.party"))}</label><select onchange="saleState().partyId=this.value;accountingSaleTotals()"><option value="">${esc(t("accounting.sale.noParty"))}</option>${(a.customers || []).map((c) => `<option value="${esc(c.id)}" ${st.partyId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
     <div class="field"><label>${esc(t("accounting.sale.customer"))}</label><input value="${esc(st.customer)}" oninput="saleState().customer=this.value" maxlength="120" /></div>
@@ -3351,9 +3379,11 @@ function accountingBeep() {
 async function accountingSaleAddBarcode() {
   const input = document.getElementById("sale-barcode");
   const code = ((input || {}).value || "").trim(); if (!code) return;
-  const refocus = () => setTimeout(() => { const el = document.getElementById("sale-barcode"); if (el) { el.value = ""; el.focus(); } }, 60);
-  const { ok, data } = await api("GET", "/accounting/products/barcode/" + encodeURIComponent(code));
-  if (!ok || !data) { accountingBeep(); toast(t("accounting.sale.notFound")); return refocus(); }
+  input.value = "";
+  const refocus = () => setTimeout(() => { const el = document.getElementById("sale-barcode"); if (el) el.focus(); }, 60);
+  const found = await accountingFindByBarcode(code);
+  if (!found) { accountingBeep(); toast(t("accounting.sale.notFound")); return refocus(); }
+  const data = { ...found };
   if (saleState().locationId) { const here = saleProducts(S._accounting).find((x) => x.id === data.id); data.quantity = here ? here.quantity : 0; }
   if (!(data.salePriceCents > 0) || !(data.quantity > 0)) { accountingBeep(); toast(t("accounting.sale.short", { name: data.name })); return refocus(); }
   accountingSalePush(data, 1);
@@ -3544,8 +3574,8 @@ function accountingStopScan() { if (accountingStream) accountingStream.getTracks
 async function accountingLookupBarcode() {
   const code = qs("acc-barcode")?.value?.trim(); if (!code) return;
   const { ok, data } = await api("GET", `/accounting/products/barcode/${encodeURIComponent(code)}`);
-  if (ok) { qs("acc-product-name").value = data.name; qs("acc-sale-price").value = (data.salePriceCents / 100).toFixed(2); qs("acc-cost-price").value = (data.costCents / 100).toFixed(2); qs("acc-quantity").value = "0"; }
-  else toast(errMsg(data, t("accounting.newBarcode")));
+  if (ok) { qs("acc-product-name").value = data.name; qs("acc-sale-price").value = (data.salePriceCents / 100).toFixed(2); qs("acc-cost-price").value = (data.costCents / 100).toFixed(2); qs("acc-quantity").value = "0"; toast(t("accounting.barcodeExists", { name: data.name })); }
+  else { toast(errMsg(data, t("accounting.newBarcode"))); qs("acc-product-name")?.focus(); }
 }
 async function downloadAccounting() {
   try {

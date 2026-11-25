@@ -35,6 +35,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.dalilacom.app.R
@@ -145,6 +148,10 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var saleChannel by remember { mutableStateOf("SHOP") }
     var locations by remember { mutableStateOf<List<com.dalilacom.app.data.network.AccountingLocationDto>>(emptyList()) }
     var saleLocation by remember { mutableStateOf<String?>(null) }
+    // barcodes: which invoice the open camera feeds ("sale" or "buy"), and what happened to the last code of each
+    var scanTarget by remember { mutableStateOf<String?>(null) }
+    var saleScanNote by remember { mutableStateOf<ScanReply?>(null) }
+    var buyScanNote by remember { mutableStateOf<ScanReply?>(null) }
     var savedSale by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingSaleDto?>(null) }
     var entryPay by remember { mutableStateOf("CASH") }
     var cashDay by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
@@ -194,8 +201,42 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         loadedOnce = true
     }
     LaunchedEffect(Unit) { reload() }
+    // the loaded list holds the first 300 products; the search finds the others
+    suspend fun productByBarcode(code: String): AccountingProductDto? =
+        products.firstOrNull { it.barcode == code } ?: container.accountingRepository.products(code).firstOrNull { it.barcode == code }
+    suspend fun sellByBarcode(code: String): ScanReply {
+        val found = productByBarcode(code) ?: return ScanReply(context.getString(R.string.barcode_unknown), false)
+        val here = locations.firstOrNull { it.id == saleLocation && it.isActive }
+        val stock = if (here == null) found.quantity else here.items.firstOrNull { it.productId == found.id }?.onHand ?: 0
+        val have = basket.firstOrNull { it.first.id == found.id }?.second ?: 0
+        if (found.salePriceCents <= 0 || have + 1 > stock) return ScanReply(context.getString(R.string.barcode_cannot_sell, found.name), false)
+        val line = found.copy(quantity = stock) to (have + 1)
+        basket = if (have == 0) basket + line else basket.map { if (it.first.id == found.id) line else it }
+        return ScanReply(context.getString(R.string.barcode_added, found.name, have + 1), true)
+    }
+    suspend fun buyByBarcode(code: String): ScanReply {
+        val found = productByBarcode(code)
+        if (found == null) {
+            barcode = code // waiting in "add a product" for its name and prices
+            return ScanReply(context.getString(R.string.barcode_new_product), false)
+        }
+        if (found.id.startsWith("store:")) return ScanReply(context.getString(R.string.barcode_store_product, found.name), false)
+        val have = buyBasket.firstOrNull { it.first.id == found.id }
+        val unitCost = have?.third ?: found.costCents.toLong()
+        if (unitCost <= 0) {
+            buyPick = found; buyCost = ""
+            return ScanReply(context.getString(R.string.barcode_need_cost, found.name), false, close = true)
+        }
+        val line = Triple(found, (have?.second ?: 0) + 1, unitCost)
+        buyBasket = if (have == null) buyBasket + line else buyBasket.map { if (it.first.id == found.id) line else it }
+        return ScanReply(context.getString(R.string.barcode_added, found.name, line.second), true)
+    }
+    fun checkNewBarcode(code: String) {
+        barcode = code
+        scope.launch { productByBarcode(code)?.let { message = context.getString(R.string.barcode_exists, it.name) } }
+    }
     val scanner = rememberLauncherForActivityResult(ScanContract()) { result ->
-        result.contents?.let { barcode = it }
+        result.contents?.let { checkNewBarcode(it) }
     }
     val invoicePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) scope.launch {
@@ -328,6 +369,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                             locations.filter { it.isActive }.forEach { l -> if (saleLocation == l.id) Button(onClick = { }) { Text(l.name) } else OutlinedButton(onClick = { saleLocation = l.id; basket = emptyList(); salePick = null }) { Text(l.name) } }
                         }
                     }
+                    BarcodeEntryRow(saleScanNote, onCamera = { scanTarget = "sale" }) { code -> scope.launch { saleScanNote = sellByBarcode(code) } }
                     androidx.compose.foundation.layout.Box {
                         OutlinedButton(onClick = { salePickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(salePick?.let { it.name + " · " + money(it.salePriceCents) + " · " + stringResource(R.string.accounting_sale_stock) + ": " + it.quantity } ?: stringResource(R.string.accounting_sale_pick)) }
                         androidx.compose.material3.DropdownMenu(expanded = salePickOpen, onDismissRequest = { salePickOpen = false }) {
@@ -390,7 +432,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                     customerName = saleCustomer.trim().ifEmpty { null }, payMethod = salePayMethod, channel = saleChannel, locationId = saleLocation, partyId = salePartyId, paidCents = salePaid.trim().takeIf { it.isNotEmpty() }?.let { cents(it).toLong() },
                                 )
                                 container.accountingRepository.createSale(req).fold({ sale ->
-                                    savedSale = sale; basket = emptyList(); saleCustomer = ""; saleDiscount = ""; salePaid = ""; salePartyId = null; salePick = null; reload()
+                                    savedSale = sale; basket = emptyList(); saleCustomer = ""; saleDiscount = ""; salePaid = ""; salePartyId = null; salePick = null; saleScanNote = null; reload()
                                 }, { message = it.message ?: AppStrings.get(R.string.ship_failed) })
                             }
                         },
@@ -414,6 +456,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             CollapsibleCard(stringResource(R.string.accounting_buy_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.accounting_buy_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    BarcodeEntryRow(buyScanNote, onCamera = { scanTarget = "buy" }) { code -> scope.launch { buyScanNote = buyByBarcode(code) } }
                     androidx.compose.foundation.layout.Box {
                         OutlinedButton(onClick = { buyPickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(buyPick?.let { it.name + " · " + stringResource(R.string.accounting_sale_stock) + ": " + it.quantity } ?: stringResource(R.string.accounting_sale_pick)) }
                         androidx.compose.material3.DropdownMenu(expanded = buyPickOpen, onDismissRequest = { buyPickOpen = false }) {
@@ -464,7 +507,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                     partyId = buyPartyId, paidCents = buyPaid.trim().takeIf { it.isNotEmpty() }?.let { cents(it).toLong() }, payMethod = buyPayMethod,
                                 )
                                 container.accountingRepository.createPurchase(req).fold({ pu ->
-                                    message = context.getString(R.string.accounting_buy_saved, pu.number); buyBasket = emptyList(); buyPaid = ""; buyPartyId = null; buyPick = null; reload()
+                                    message = context.getString(R.string.accounting_buy_saved, pu.number); buyBasket = emptyList(); buyPaid = ""; buyPartyId = null; buyPick = null; buyScanNote = null; reload()
                                 }, { message = it.message ?: AppStrings.get(R.string.ship_failed) })
                             }
                         },
@@ -773,8 +816,13 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             CollapsibleCard(stringResource(R.string.accounting_add_product_title)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(barcode, { barcode = it }, label = { Text(stringResource(R.string.accounting_barcode)) }, singleLine = true, modifier = Modifier.weight(1f))
-                        OutlinedButton(onClick = { scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.ONE_D_CODE_TYPES).setPrompt(context.getString(R.string.accounting_scan_prompt)).setBeepEnabled(false)) }) { Text(stringResource(R.string.accounting_scan)) }
+                        OutlinedTextField(barcode, { barcode = it }, label = { Text(stringResource(R.string.accounting_barcode)) }, singleLine = true, modifier = Modifier.weight(1f).onPreviewKeyEvent { event ->
+                            // a barcode reader ends the code with Enter
+                            if (event.key != androidx.compose.ui.input.key.Key.Enter) return@onPreviewKeyEvent false
+                            if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && barcode.isNotBlank()) checkNewBarcode(barcode.trim())
+                            true
+                        })
+                        OutlinedButton(onClick = { scanner.launch(com.dalilacom.app.ui.common.qrScanOptions().setDesiredBarcodeFormats(ScanOptions.ONE_D_CODE_TYPES).setPrompt(context.getString(R.string.accounting_scan_prompt))) }) { Text(stringResource(R.string.accounting_scan)) }
                     }
                     OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.accounting_product_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1004,6 +1052,13 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             dismissButton = { OutlinedButton(onClick = { taxProductTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
+    scanTarget?.let { target ->
+        ContinuousScanDialog(
+            onCode = { code -> if (target == "sale") sellByBarcode(code).also { saleScanNote = it } else buyByBarcode(code).also { buyScanNote = it } },
+            onDismiss = { scanTarget = null },
+        )
+    }
+
     savedSale?.let { sale ->
         val text = buildString {
             append(context.getString(R.string.accounting_sale_number, sale.number)); append("\n")

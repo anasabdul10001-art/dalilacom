@@ -981,4 +981,16 @@
     <string name="accounting_stm_total_liabilities">Всего обязательств</string>
     <string name="accounting_stm_equity">Собственный капитал владельца</string>
     <string name="accounting_stm_balancing">Капитал, изъятия и первый запас (разница)</string>
+    <string name="barcode_scan_camera">Сканировать штрихкоды камерой</string>
+    <string name="barcode_reader_field">Или используйте сканер штрихкодов, или введите номер</string>
+    <string name="barcode_camera_hint">Подносите товары к камере один за другим. Чтобы добавить вторую единицу того же товара, уберите её на мгновение и покажите снова.</string>
+    <string name="barcode_camera_denied">Разрешите приложению использовать камеру для сканирования штрихкодов.</string>
+    <string name="barcode_done">Готово</string>
+    <string name="barcode_added">Добавлено: %1$s — количество: %2$d</string>
+    <string name="barcode_unknown">Нет товара с этим штрихкодом</string>
+    <string name="barcode_cannot_sell">Продать нельзя: недостаточно на складе или нет цены продажи: %1$s</string>
+    <string name="barcode_new_product">Новый товар. Его номер сохранён в разделе добавления товара.</string>
+    <string name="barcode_store_product">Это товар магазина, его нельзя добавить в накладную закупки: %1$s</string>
+    <string name="barcode_need_cost">Введите стоимость одной единицы и нажмите «Добавить»: %1$s</string>
+    <string name="barcode_exists">Этот штрихкод уже принадлежит товару: %1$s</string>
 </resources>
