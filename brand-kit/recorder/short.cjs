@@ -2,7 +2,9 @@
 // real speed and every step simply lasts as long as its sentence. Nothing is retimed or concatenated, so sound and
 // picture cannot drift apart. Needs http://localhost:4000.
 //   node short.cjs 01-goods voice    generate the narration (ElevenLabs, the owner's clone)
-//   node short.cjs 01-goods          record and mix -> editor/out/short-01-goods.mp4
+//   node short.cjs 01-goods          record and mix -> editor/out/short-01-goods.mp4   (UHD=1 -> short-01-goods-4k.mp4)
+const UHD = process.env.UHD === "1"; if (UHD) process.env.DLK_SCALE = "2"; // 3840x2160 (must be set before the recorder is loaded)
+const SUF = UHD ? "-4k" : "";
 const fs = require("fs"), path = require("path"), crypto = require("crypto"), { spawnSync } = require("child_process");
 const { open, sleep } = require("./lib.cjs");
 const { signup, plan } = require("./accounting-guided.cjs");
@@ -61,11 +63,11 @@ const ACTIONS = {
 async function record() {
   for (const s of clip.steps) if (!fs.existsSync(mp3Of(s.say))) throw new Error("run the voice step first");
   const b = await open(9373, { fresh: true });
-  const silentMp4 = path.join(OUT, `short-${ID}-silent.mp4`), outMp4 = path.join(OUT, `short-${ID}.mp4`);
+  const silentMp4 = path.join(OUT, `short-${ID}${SUF}-silent.mp4`), outMp4 = path.join(OUT, `short-${ID}${SUF}.mp4`);
   try {
     await signup(b); await plan(b); // preparation, not recorded
     // 1280x720 CSS px drawn at 1.5x = a 1920x1080 picture with text large enough for a phone
-    await b.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 720, deviceScaleFactor: 1.5, mobile: false });
+    await b.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 720, deviceScaleFactor: UHD ? 3 : 1.5, mobile: false });
     await b.tab(clip.start); await sleep(2000);
     await card(b, clip.title); await sleep(800);
     await b.startRec(); await sleep(150);
@@ -84,7 +86,7 @@ async function record() {
     const rec = await b.stopRec(silentMp4, 0.5);
     const t0 = b.frameT0(), total = durOf(silentMp4);
     const segs = marks.map((m, i) => ({ i, kind: m.do, say: m.say, file: m.file, dur: m.dur, at: Math.max(0.15, m.abs - t0 + 0.15) }));
-    const tl = path.join(OUT, `short-${ID}.timeline.json`);
+    const tl = path.join(OUT, `short-${ID}${SUF}.timeline.json`);
     fs.writeFileSync(tl, JSON.stringify({ lang: "ar", total, recorderSeconds: rec.seconds, hook: null, segs }, null, 1));
     const music = path.join(__dirname, "..", "social", "videos", "dalilacom-register-free-music.wav");
     const mx = spawnSync("python", [path.join(ED, "mix_audio.py"), "--timeline", tl, "--video-in", silentMp4, "--out", outMp4, "--music", music, "--vol", "0.05"], { stdio: "inherit", env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
