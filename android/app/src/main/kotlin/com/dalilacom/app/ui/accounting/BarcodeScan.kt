@@ -52,6 +52,9 @@ import com.journeyapps.barcodescanner.DecoratedBarcodeView
 import com.journeyapps.barcodescanner.DefaultDecoderFactory
 import kotlinx.coroutines.launch
 
+/** A code as read or typed: Arabic digits become the digits printed under the bars. */
+fun cleanBarcode(raw: String): String = raw.trim().map { c -> val d = Character.digit(c, 10); if (c.isDigit() && d >= 0) '0' + d else c }.joinToString("")
+
 /** What happened to one scanned code: the line to show, and whether the product was accepted. */
 data class ScanReply(val text: String, val ok: Boolean, val close: Boolean = false)
 
@@ -95,7 +98,7 @@ fun ContinuousScanDialog(onCode: suspend (String) -> ScanReply, onDismiss: () ->
                             setStatusText("")
                             decodeContinuous(object : BarcodeCallback {
                                 override fun barcodeResult(result: BarcodeResult) {
-                                    val code = result.text?.trim().orEmpty()
+                                    val code = cleanBarcode(result.text.orEmpty())
                                     if (code.isEmpty()) return
                                     val now = SystemClock.elapsedRealtime()
                                     val repeated = code == lastCode && now - lastSeen < SAME_CODE_GAP_MS
@@ -145,7 +148,7 @@ fun ContinuousScanDialog(onCode: suspend (String) -> ScanReply, onDismiss: () ->
 fun BarcodeEntryRow(note: ScanReply?, onCamera: () -> Unit, onTyped: (String) -> Unit) {
     var typed by remember { mutableStateOf("") }
     fun submit() {
-        val code = typed.trim()
+        val code = cleanBarcode(typed)
         typed = ""
         if (code.isNotEmpty()) onTyped(code)
     }

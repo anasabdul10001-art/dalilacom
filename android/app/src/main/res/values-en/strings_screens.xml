@@ -993,4 +993,7 @@
     <string name="barcode_store_product">This is a store product and cannot go on a purchase invoice: %1$s</string>
     <string name="barcode_need_cost">Type the cost of one unit, then press Add: %1$s</string>
     <string name="barcode_exists">This barcode already belongs to: %1$s</string>
+    <string name="barcode_counted">%1$s — counted: %2$d</string>
+    <string name="barcode_chosen">%1$s — chosen quantity: %2$d</string>
+    <string name="barcode_edit_hint">Scan the code or type it. Leave empty to remove it.</string>
 </resources>

@@ -317,6 +317,7 @@ interface ApiService {
     @GET("accounting/stock/low") suspend fun accountingLowStock(): Response<AccountingLowDto>
     @GET("accounting/products/{id}/movements") suspend fun accountingMovements(@Path("id") id: String): Response<List<AccountingMovementDto>>
     @POST("accounting/stock/count") suspend fun accountingStockCount(@Body body: AccountingCountRequest): Response<AccountingCountResultDto>
+    @retrofit2.http.PATCH("accounting/products/{id}") suspend fun setAccountingProductBarcode(@Path("id") id: String, @Body body: AccountingBarcodePatch): Response<okhttp3.ResponseBody>
     @retrofit2.http.PATCH("accounting/products/{id}") suspend fun setAccountingProductMin(@Path("id") id: String, @Body body: AccountingMinRequest): Response<okhttp3.ResponseBody>
     @GET("accounting/locations") suspend fun accountingLocations(): Response<List<AccountingLocationDto>>
     @POST("accounting/locations") suspend fun createAccountingLocation(@Body body: AccountingLocationRequest): Response<okhttp3.ResponseBody>

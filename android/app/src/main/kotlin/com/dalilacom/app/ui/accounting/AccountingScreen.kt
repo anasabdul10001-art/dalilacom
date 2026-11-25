@@ -152,6 +152,9 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
     var scanTarget by remember { mutableStateOf<String?>(null) }
     var saleScanNote by remember { mutableStateOf<ScanReply?>(null) }
     var buyScanNote by remember { mutableStateOf<ScanReply?>(null) }
+    var countScanNote by remember { mutableStateOf<ScanReply?>(null) }
+    var barcodeTarget by remember { mutableStateOf<AccountingProductDto?>(null) } // the product whose barcode is being changed
+    var barcodeValue by remember { mutableStateOf("") }
     var savedSale by remember { mutableStateOf<com.dalilacom.app.data.network.AccountingSaleDto?>(null) }
     var entryPay by remember { mutableStateOf("CASH") }
     var cashDay by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
@@ -231,7 +234,16 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
         buyBasket = if (have == null) buyBasket + line else buyBasket.map { if (it.first.id == found.id) line else it }
         return ScanReply(context.getString(R.string.barcode_added, found.name, line.second), true)
     }
-    fun checkNewBarcode(code: String) {
+    // counting with the camera or a reader: every scan is one piece more of that product
+    suspend fun countByBarcode(code: String): ScanReply {
+        val found = productByBarcode(code)
+        if (found == null || products.none { it.id == found.id }) return ScanReply(context.getString(R.string.barcode_unknown), false)
+        val n = (counts[found.id]?.trim()?.toIntOrNull() ?: 0) + 1
+        counts[found.id] = n.toString()
+        return ScanReply(context.getString(R.string.barcode_counted, found.name, n), true)
+    }
+    fun checkNewBarcode(raw: String) {
+        val code = cleanBarcode(raw)
         barcode = code
         scope.launch { productByBarcode(code)?.let { message = context.getString(R.string.barcode_exists, it.name) } }
     }
@@ -392,6 +404,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) { Text(p.name, style = MaterialTheme.typography.titleSmall); Text("$q × " + money(p.salePriceCents), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                             Text(money((p.salePriceCents.toLong() * q).toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                            TextButton(onClick = { if (q > 1) basket = basket.map { if (it.first.id == p.id) p to (q - 1) else it } }, enabled = q > 1) { Text("−") }
+                            TextButton(onClick = { if (q < p.quantity) basket = basket.map { if (it.first.id == p.id) p to (q + 1) else it } else message = context.getString(R.string.barcode_cannot_sell, p.name) }) { Text("+") }
                             TextButton(onClick = { basket = basket.filter { it.first.id != p.id } }) { Text("✕", color = MaterialTheme.colorScheme.error) }
                         }
                     }
@@ -481,6 +495,8 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) { Text(p.name, style = MaterialTheme.typography.titleSmall); Text("$q × " + money(c.toInt()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                             Text(money((c * q).toInt()), fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                            TextButton(onClick = { if (q > 1) buyBasket = buyBasket.map { if (it.first.id == p.id) Triple(p, q - 1, c) else it } }, enabled = q > 1) { Text("−") }
+                            TextButton(onClick = { buyBasket = buyBasket.map { if (it.first.id == p.id) Triple(p, q + 1, c) else it } }) { Text("+") }
                             TextButton(onClick = { buyBasket = buyBasket.filter { it.first.id != p.id } }) { Text("✕", color = MaterialTheme.colorScheme.error) }
                         }
                     }
@@ -732,6 +748,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                 CollapsibleCard(stringResource(R.string.accounting_low_title)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (countMode) {
+                            BarcodeEntryRow(countScanNote, onCamera = { scanTarget = "count" }) { code -> scope.launch { countScanNote = countByBarcode(code) } }
                             Text(stringResource(R.string.accounting_count_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             products.filter { !it.id.startsWith("store:") }.forEach { p ->
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -746,11 +763,11 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                                     scope.launch {
                                         container.accountingRepository.countStock(items).fold({ r ->
                                             message = if (r.changed.isEmpty()) context.getString(R.string.accounting_count_same) else context.getString(R.string.accounting_count_done, r.changed.size)
-                                            counts.clear(); countMode = false; reload()
+                                            counts.clear(); countScanNote = null; countMode = false; reload()
                                         }, { message = it.message ?: AppStrings.get(R.string.ship_failed) })
                                     }
                                 }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.accounting_count_apply)) }
-                                OutlinedButton(onClick = { counts.clear(); countMode = false }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.accounting_count_cancel)) }
+                                OutlinedButton(onClick = { counts.clear(); countScanNote = null; countMode = false }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.accounting_count_cancel)) }
                             }
                         } else {
                             if (lw.items.isEmpty()) Text(stringResource(R.string.accounting_low_none), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -832,7 +849,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                     OutlinedTextField(quantity, { quantity = it }, label = { Text(stringResource(R.string.accounting_quantity)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Button(onClick = {
                         if (name.isBlank()) { message = context.getString(R.string.accounting_missing_name); return@Button }
-                        showResult { container.accountingRepository.addProduct(AccountingProductRequest(name, barcode.ifBlank { null }, costCents = cents(cost), salePriceCents = cents(price), quantity = quantity.toIntOrNull() ?: 0)) }
+                        showResult { container.accountingRepository.addProduct(AccountingProductRequest(name, cleanBarcode(barcode).ifBlank { null }, costCents = cents(cost), salePriceCents = cents(price), quantity = quantity.toIntOrNull() ?: 0)) }
                     }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounting_add_product)) }
                 }
             }
@@ -860,6 +877,7 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
                         if (!p.id.startsWith("store:")) TextButton(onClick = { taxProductTarget = p }) { Text(stringResource(R.string.accounting_tax_product)) }
                         TextButton(onClick = { movesTarget = p; scope.launch { moves = container.accountingRepository.movements(p.id) } }) { Text(stringResource(R.string.accounting_moves)) }
                     }
+                    if (!p.id.startsWith("store:") && can("stockWrite")) TextButton(onClick = { barcodeTarget = p; barcodeValue = p.barcode.orEmpty() }) { Text(stringResource(R.string.accounting_barcode)) }
                     if (!p.id.startsWith("store:")) TextButton(onClick = { deleteProductTarget = p }) { Text(stringResource(R.string.accounting_delete), color = MaterialTheme.colorScheme.error) }
                 }
             }
@@ -1052,9 +1070,32 @@ fun AccountingScreen(container: AppContainer, onOpenPlans: () -> Unit = {}) {
             dismissButton = { OutlinedButton(onClick = { taxProductTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
         )
     }
+    barcodeTarget?.let { p ->
+        AlertDialog(
+            onDismissRequest = { barcodeTarget = null },
+            title = { Text(p.name) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.barcode_edit_hint), style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(barcodeValue, { barcodeValue = it }, label = { Text(stringResource(R.string.accounting_barcode)) }, singleLine = true, modifier = Modifier.fillMaxWidth().onPreviewKeyEvent { it.key == androidx.compose.ui.input.key.Key.Enter }) // a reader's Enter changes nothing: Save does
+                    OutlinedButton(onClick = { scanTarget = "edit" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.barcode_scan_camera)) }
+                }
+            },
+            confirmButton = { Button(onClick = { val code = cleanBarcode(barcodeValue); barcodeTarget = null; if (code != p.barcode.orEmpty()) showResult { container.accountingRepository.setBarcode(p.id, code) } }) { Text(stringResource(R.string.accounting_save)) } },
+            dismissButton = { OutlinedButton(onClick = { barcodeTarget = null }) { Text(stringResource(R.string.account_cancel)) } },
+        )
+    }
+
     scanTarget?.let { target ->
         ContinuousScanDialog(
-            onCode = { code -> if (target == "sale") sellByBarcode(code).also { saleScanNote = it } else buyByBarcode(code).also { buyScanNote = it } },
+            onCode = { code ->
+                when (target) {
+                    "sale" -> sellByBarcode(code).also { saleScanNote = it }
+                    "count" -> countByBarcode(code).also { countScanNote = it }
+                    "edit" -> { barcodeValue = code; ScanReply(code, true, close = true) } // one code is enough here
+                    else -> buyByBarcode(code).also { buyScanNote = it }
+                }
+            },
             onDismiss = { scanTarget = null },
         )
     }

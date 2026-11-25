@@ -2773,7 +2773,7 @@ function screenAccounting() {
       <div class="field"><label>${esc(t("accounting.costPrice"))}</label><input id="acc-cost-price" type="number" min="0" step="0.01" /></div>
       <div class="field"><label>${esc(t("accounting.quantity"))}</label><input id="acc-quantity" type="number" min="0" step="1" value="0" /></div>
       <button class="btn" onclick="accountingAddProduct()">${esc(t("accounting.addProduct"))}</button>
-      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingSetMin('${p.id}')">${esc(t("accounting.low.min"))}${p.lowStockAt ? ": " + p.lowStockAt : ""}</button>`}${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingSetTax('${p.id}')">${esc(t("accounting.tax.product"))}</button>`}<button class="btn small outline" onclick="accountingMoves('${p.id}')">${esc(t("accounting.moves"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingDeleteProduct('${p.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button>`}</div></div>`).join("")}
+      ${(a.products || []).map(p => `<div class="title-line" style="margin-top:12px"><div><strong>${esc(p.name)}</strong><div class="muted">${esc(p.barcode || p.sku || "")} · ${esc(t("accounting.stock"))}: ${p.quantity} ${esc(p.unit)} · ${esc(t("accounting.costPrice"))}: ${fmt(p.costCents,p.currency)}</div></div><div><button class="btn small outline" onclick="accountingSell('${p.id}')">${esc(t("accounting.sell"))}</button><button class="btn small outline" onclick="accountingSetCost('${p.id}')">${esc(t("accounting.setCost"))}</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingSetBarcode('${p.id}')">${esc(t("accounting.bc.edit"))}</button>`}${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingSetMin('${p.id}')">${esc(t("accounting.low.min"))}${p.lowStockAt ? ": " + p.lowStockAt : ""}</button>`}${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingSetTax('${p.id}')">${esc(t("accounting.tax.product"))}</button>`}<button class="btn small outline" onclick="accountingMoves('${p.id}')">${esc(t("accounting.moves"))}</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',true)">+</button><button class="btn small outline" onclick="accountingAdjustStock('${p.id}',false)">−</button>${p.isStoreProduct ? "" : `<button class="btn small outline" onclick="accountingDeleteProduct('${p.id}')" aria-label="${esc(t("accounting.delete"))}">🗑</button>`}</div></div>`).join("")}
     </div>`,
   };
   return siteShell("accounting", tab, (cards[tab] || cards.summary) + errorBanner());
@@ -3024,7 +3024,7 @@ function accountingBuyCard(a) {
   const net = buyTotal(st);
   const buyTax = st.items.reduce((sum, i) => sum + Math.round(i.cost * i.qty * accRateBp(i.productId) / 10000), 0);
   const total = net + buyTax;
-  const lines = st.items.length === 0 ? `<p class="muted">${esc(t("accounting.buy.empty"))}</p>` : st.items.map((i, idx) => `<div class="item"><div class="item-main"><div class="item-title">${esc(i.name)}</div><div class="item-sub">${i.qty} × ${esc(fmt(i.cost, i.currency))}</div></div><div class="item-end">${esc(fmt(i.cost * i.qty, i.currency))}</div><button class="btn small outline" onclick="accountingBuyRemove(${idx})" aria-label="${esc(t("accounting.sale.remove"))}">✕</button></div>`).join("");
+  const lines = st.items.length === 0 ? `<p class="muted">${esc(t("accounting.buy.empty"))}</p>` : st.items.map((i, idx) => `<div class="item"><div class="item-main"><div class="item-title">${esc(i.name)}</div><div class="item-sub">${i.qty} × ${esc(fmt(i.cost, i.currency))}</div></div><div class="item-end">${esc(fmt(i.cost * i.qty, i.currency))}</div><button class="btn small outline" onclick="accountingBuyStep(${idx},-1)" aria-label="${esc(t("accounting.bc.less"))}">−</button><button class="btn small outline" onclick="accountingBuyStep(${idx},1)" aria-label="${esc(t("accounting.bc.more"))}">+</button><button class="btn small outline" onclick="accountingBuyRemove(${idx})" aria-label="${esc(t("accounting.sale.remove"))}">✕</button></div>`).join("");
   return `<div class="card"><div class="section-title">${esc(t("accounting.buy.title"))}</div><p class="muted" style="margin:0 0 10px">${esc(t("accounting.buy.help"))}</p>
     <div class="field"><label>${esc(t("accounting.sale.product"))}</label><select id="buy-product" onchange="accountingBuyPick(this.value)"><option value="">${esc(t("accounting.sale.pickFirst"))}</option>${products.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(t("accounting.sale.stock"))}: ${p.quantity}</option>`).join("")}</select></div>
     <div class="row"><div class="field"><label>${esc(t("accounting.sale.qty"))}</label><input id="buy-qty" inputmode="numeric" value="1" /></div><div class="field"><label>${esc(t("accounting.buy.cost"))}</label><input id="buy-cost" inputmode="decimal" /></div></div>
@@ -3062,6 +3062,8 @@ function accountingBuyAdd() {
   if (have) { have.cost = Math.round((have.qty * have.cost + qty * cost) / (have.qty + qty)); have.qty += qty; } else st.items.push({ productId: id, name: p.name, qty, cost, currency: p.currency });
   render();
 }
+/** A code as typed by a person or a reader: Arabic digits become the digits printed under the bars. */
+function barcodeClean(v) { return String(v || "").replace(/[\u0660-\u0669\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) & 15)).trim(); }
 /** The product of a barcode: from the loaded list at once (a fast reader does not wait), else from the server. */
 async function accountingFindByBarcode(code) {
   const here = ((S._accounting || {}).products || []).find((x) => x.barcode === code);
@@ -3072,7 +3074,7 @@ async function accountingFindByBarcode(code) {
 /** Goods coming in with a barcode reader: each scan adds one piece at the known cost of the product. */
 async function accountingBuyAddBarcode() {
   const input = document.getElementById("buy-barcode");
-  const code = ((input || {}).value || "").trim(); if (!code) return;
+  const code = barcodeClean((input || {}).value); if (!code) return;
   input.value = "";
   const refocus = () => setTimeout(() => { const el = document.getElementById("buy-barcode"); if (el) el.focus(); }, 60);
   const p = await accountingFindByBarcode(code);
@@ -3089,6 +3091,7 @@ async function accountingBuyAddBarcode() {
   render();
   refocus();
 }
+function accountingBuyStep(idx, d) { const line = buyState().items[idx]; if (!line || line.qty + d < 1) return; line.qty += d; render(); }
 function accountingBuyRemove(idx) { buyState().items.splice(idx, 1); render(); }
 function accountingBuyNew() { S._buy = null; render(); }
 async function accountingBuySave(btn) {
@@ -3284,7 +3287,19 @@ function accountingCountStart() { S._count = true; render(); }
 function accountingCountCancel() { S._count = false; render(); }
 function accountingCountCard(a) {
   const rows = (a.products || []).filter((p) => !p.isStoreProduct || true).map((p) => `<div class="item"><div class="item-main"><div class="item-title">${esc(p.name)}</div><div class="item-sub">${esc(t("accounting.count.book"))}: ${p.quantity}</div></div><input class="count-in" data-id="${esc(p.id)}" inputmode="numeric" placeholder="${esc(t("accounting.count.counted"))}" style="width:92px" /></div>`).join("");
-  return `<div class="card"><div class="section-title">${esc(t("accounting.count.start"))}</div><p class="muted">${esc(t("accounting.count.help"))}</p>${rows}<div class="btn-row"><button class="btn" onclick="accountingCountApply(this)">${esc(t("accounting.count.apply"))}</button><button class="btn outline" onclick="accountingCountCancel()">${esc(t("accounting.count.cancel"))}</button></div></div>`;
+  return `<div class="card"><div class="section-title">${esc(t("accounting.count.start"))}</div><p class="muted">${esc(t("accounting.count.help"))}</p>
+    <div class="field"><label>${esc(t("accounting.bc.countScan"))}</label><input id="count-barcode" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();accountingCountScan()}" /></div><p id="count-last" class="muted" role="status"></p>${rows}<div class="btn-row"><button class="btn" onclick="accountingCountApply(this)">${esc(t("accounting.count.apply"))}</button><button class="btn outline" onclick="accountingCountCancel()">${esc(t("accounting.count.cancel"))}</button></div></div>`;
+}
+/** Counting with a reader: every scan is one piece more of that product. The page is not redrawn, so nothing typed is lost. */
+async function accountingCountScan() {
+  const input = document.getElementById("count-barcode");
+  const code = barcodeClean((input || {}).value); if (!code) return;
+  input.value = "";
+  const p = await accountingFindByBarcode(code);
+  const box = p && [...document.querySelectorAll(".count-in")].find((i) => i.dataset.id === p.id);
+  if (!box) { accountingBeep(); return toast(t("accounting.sale.notFound")); }
+  box.value = String((Math.floor(Number(box.value)) || 0) + 1);
+  const last = document.getElementById("count-last"); if (last) last.textContent = t("accounting.bc.counted", { name: p.name, n: box.value });
 }
 async function accountingCountApply(btn) {
   const items = [...document.querySelectorAll(".count-in")].filter((i) => i.value.trim() !== "").map((i) => ({ productId: i.dataset.id, countedQuantity: Math.floor(Number(i.value)) })).filter((i) => i.countedQuantity >= 0);
@@ -3317,7 +3332,7 @@ function accountingSaleCard(a) {
   if (!products.length) return `<div class="card">${uiEmpty("📦", t("accounting.sale.noProducts"))}</div>${accountingSaleRecent(a)}`;
   const sub = saleSubtotal(st), disc = saleDiscount(st, sub);
   const taxView = st.items.length ? taxPreview(st.items.map((i) => ({ gross: i.price * i.qty, productId: i.productId })), disc, (a.taxSettings || {}).pricesIncludeTax !== false, (i) => accRateBp(i.productId)) : { total: 0, tax: 0 };
-  const lines = st.items.length === 0 ? `<p class="muted">${esc(t("accounting.sale.empty"))}</p>` : st.items.map((i, idx) => `<div class="item"><div class="item-main"><div class="item-title">${esc(i.name)}</div><div class="item-sub">${i.qty} × ${esc(fmt(i.price, i.currency))}</div></div><div class="item-end">${esc(fmt(i.price * i.qty, i.currency))}</div><button class="btn small outline" onclick="accountingSaleRemove(${idx})" aria-label="${esc(t("accounting.sale.remove"))}">✕</button></div>`).join("");
+  const lines = st.items.length === 0 ? `<p class="muted">${esc(t("accounting.sale.empty"))}</p>` : st.items.map((i, idx) => `<div class="item"><div class="item-main"><div class="item-title">${esc(i.name)}</div><div class="item-sub">${i.qty} × ${esc(fmt(i.price, i.currency))}</div></div><div class="item-end">${esc(fmt(i.price * i.qty, i.currency))}</div><button class="btn small outline" onclick="accountingSaleStep(${idx},-1)" aria-label="${esc(t("accounting.bc.less"))}">−</button><button class="btn small outline" onclick="accountingSaleStep(${idx},1)" aria-label="${esc(t("accounting.bc.more"))}">+</button><button class="btn small outline" onclick="accountingSaleRemove(${idx})" aria-label="${esc(t("accounting.sale.remove"))}">✕</button></div>`).join("");
   return `<div class="card"><div class="section-title">${esc(t("accounting.sale.title"))}</div>
     ${saleLocationField(a)}
     <div class="row"><div class="field"><label>${esc(t("accounting.sale.product"))}</label><select id="sale-product"><option value="">${esc(t("accounting.sale.pickFirst"))}</option>${products.filter((p) => p.quantity > 0 && p.salePriceCents > 0).map((p) => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(fmt(p.salePriceCents, p.currency))} · ${esc(t("accounting.sale.stock"))}: ${p.quantity}</option>`).join("")}</select></div>
@@ -3378,7 +3393,7 @@ function accountingBeep() {
 /** A USB or Bluetooth reader types the code and presses Enter: the item is added and the field is ready for the next scan. */
 async function accountingSaleAddBarcode() {
   const input = document.getElementById("sale-barcode");
-  const code = ((input || {}).value || "").trim(); if (!code) return;
+  const code = barcodeClean((input || {}).value); if (!code) return;
   input.value = "";
   const refocus = () => setTimeout(() => { const el = document.getElementById("sale-barcode"); if (el) el.focus(); }, 60);
   const found = await accountingFindByBarcode(code);
@@ -3388,6 +3403,11 @@ async function accountingSaleAddBarcode() {
   if (!(data.salePriceCents > 0) || !(data.quantity > 0)) { accountingBeep(); toast(t("accounting.sale.short", { name: data.name })); return refocus(); }
   accountingSalePush(data, 1);
   refocus();
+}
+function accountingSaleStep(idx, d) {
+  const st = saleState(), line = st.items[idx]; if (!line || line.qty + d < 1) return;
+  if (d > 0) { const p = saleProducts(S._accounting).find((x) => x.id === line.productId); if (p && line.qty + d > p.quantity) return toast(t("accounting.sale.short", { name: line.name })); }
+  line.qty += d; render();
 }
 function accountingSaleRemove(idx) { saleState().items.splice(idx, 1); render(); }
 function accountingSaleNew() { S._sale = null; render(); }
@@ -3484,7 +3504,7 @@ async function accountingAddEntry() {
   toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
 }
 async function accountingAddProduct() {
-  const body = { name: qs("acc-product-name").value.trim(), barcode: qs("acc-barcode").value.trim() || null, salePriceCents: accountingCents("acc-sale-price"), costCents: accountingCents("acc-cost-price"), quantity: Number(qs("acc-quantity").value || 0), currency: S.currency || "EUR" };
+  const body = { name: qs("acc-product-name").value.trim(), barcode: barcodeClean(qs("acc-barcode").value) || null, salePriceCents: accountingCents("acc-sale-price"), costCents: accountingCents("acc-cost-price"), quantity: Number(qs("acc-quantity").value || 0), currency: S.currency || "EUR" };
   const { ok, data } = await api("POST", "/accounting/products", body);
   if (!ok) return toast(errMsg(data, "تعذّر إضافة المنتج"));
   toast(t("accounting.saved")); S._accounting = { loading: true }; await loadAccounting();
@@ -3521,6 +3541,16 @@ async function accountingAdjustStock(id, isIn) {
   const { ok, data } = await api("POST", `/accounting/products/${id}/stock`, { action: isIn ? "STOCK_IN" : "STOCK_OUT", quantity, note: isIn ? "إدخال يدوي" : "إخراج يدوي" });
   if (!ok) return toast(errMsg(data, "تعذّر تعديل الجرد"));
   S._accounting = { loading: true }; await loadAccounting();
+}
+/** Gives a product its barcode, changes it, or removes it (empty). A reader types the code in the box and presses Enter. */
+async function accountingSetBarcode(id) {
+  const p = (S._accounting?.products || []).find((x) => x.id === id); if (!p) return;
+  const raw = await uiPrompt(t("accounting.bc.prompt", { name: p.name }), p.barcode || ""); if (raw === null) return;
+  const code = barcodeClean(raw);
+  if (code === (p.barcode || "")) return;
+  const res = await api("PATCH", `/accounting/products/${id}`, { barcode: code || null });
+  if (!res.ok) return toast(errMsg(res.data, t("accounting.deleteFailed")));
+  toast(t(code ? "accounting.bc.saved" : "accounting.bc.removed")); S._accounting = { ...S._accounting, loading: true }; await loadAccounting();
 }
 async function accountingSetCost(id) {
   const product = (S._accounting?.products || []).find(p => p.id === id); if (!product) return;
@@ -3572,7 +3602,8 @@ async function accountingScan() {
 }
 function accountingStopScan() { if (accountingStream) accountingStream.getTracks().forEach(t => t.stop()); accountingStream = null; if (qs("acc-scanner")) qs("acc-scanner").hidden = true; }
 async function accountingLookupBarcode() {
-  const code = qs("acc-barcode")?.value?.trim(); if (!code) return;
+  const code = barcodeClean(qs("acc-barcode")?.value); if (!code) return;
+  qs("acc-barcode").value = code;
   const { ok, data } = await api("GET", `/accounting/products/barcode/${encodeURIComponent(code)}`);
   if (ok) { qs("acc-product-name").value = data.name; qs("acc-sale-price").value = (data.salePriceCents / 100).toFixed(2); qs("acc-cost-price").value = (data.costCents / 100).toFixed(2); qs("acc-quantity").value = "0"; toast(t("accounting.barcodeExists", { name: data.name })); }
   else { toast(errMsg(data, t("accounting.newBarcode"))); qs("acc-product-name")?.focus(); }

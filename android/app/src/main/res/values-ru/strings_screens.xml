@@ -993,4 +993,7 @@
     <string name="barcode_store_product">Это товар магазина, его нельзя добавить в накладную закупки: %1$s</string>
     <string name="barcode_need_cost">Введите стоимость одной единицы и нажмите «Добавить»: %1$s</string>
     <string name="barcode_exists">Этот штрихкод уже принадлежит товару: %1$s</string>
+    <string name="barcode_counted">%1$s — посчитано: %2$d</string>
+    <string name="barcode_chosen">%1$s — выбранное количество: %2$d</string>
+    <string name="barcode_edit_hint">Отсканируйте код или введите его. Оставьте пустым, чтобы удалить.</string>
 </resources>

@@ -993,4 +993,7 @@
     <string name="barcode_store_product">Dies ist ein Shop-Produkt und kann nicht auf eine Einkaufsrechnung: %1$s</string>
     <string name="barcode_need_cost">Geben Sie die Kosten pro Einheit ein und tippen Sie auf Hinzufügen: %1$s</string>
     <string name="barcode_exists">Dieser Barcode gehört bereits zu: %1$s</string>
+    <string name="barcode_counted">%1$s — gezählt: %2$d</string>
+    <string name="barcode_chosen">%1$s — gewählte Menge: %2$d</string>
+    <string name="barcode_edit_hint">Code scannen oder eingeben. Leer lassen zum Entfernen.</string>
 </resources>

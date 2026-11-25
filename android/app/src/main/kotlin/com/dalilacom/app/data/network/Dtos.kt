@@ -1427,6 +1427,8 @@ data class ShopTransactionsDto(val summary: TxSummaryDto = TxSummaryDto(), val i
 @Serializable data class AccountingCountRequest(val items: List<AccountingCountItemRequest>)
 @Serializable data class AccountingCountResultDto(val changed: List<kotlinx.serialization.json.JsonElement> = emptyList(), val unchanged: Int = 0, val skipped: List<kotlinx.serialization.json.JsonElement> = emptyList())
 @Serializable data class AccountingMinRequest(val lowStockAt: Int)
+/** An empty code removes the barcode of the product. */
+@Serializable data class AccountingBarcodePatch(val barcode: String)
 @Serializable data class AccountingSaleItemRequest(val productId: String, val quantity: Int)
 @Serializable data class AccountingSaleRequest(val items: List<AccountingSaleItemRequest>, val discountCents: Long? = null, val discountPercent: Double? = null, val customerName: String? = null, val payMethod: String = "CASH", val partyId: String? = null, val paidCents: Long? = null, val channel: String = "SHOP", val locationId: String? = null)
 /** Goods at a branch or a distributor (the main store is the product's own quantity). */

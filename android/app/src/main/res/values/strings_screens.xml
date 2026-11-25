@@ -993,4 +993,7 @@
     <string name="barcode_store_product">هذا منتج من المتجر، ولا يُضاف إلى فاتورة الشراء: %1$s</string>
     <string name="barcode_need_cost">اكتب تكلفة الوحدة ثم اضغط «أضف»: %1$s</string>
     <string name="barcode_exists">هذا الباركود مسجّل للمنتج: %1$s</string>
+    <string name="barcode_counted">%1$s — المعدود: %2$d</string>
+    <string name="barcode_chosen">%1$s — الكمية المختارة: %2$d</string>
+    <string name="barcode_edit_hint">امسح الرمز أو اكتبه. اترك الخانة فارغة لإزالته.</string>
 </resources>

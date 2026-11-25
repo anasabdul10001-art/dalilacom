@@ -86,6 +86,7 @@ class AccountingRepository(private val api: ApiService) {
         val body = response.body()
         return if (response.isSuccessful && body != null) Result.success(body) else Result.failure(Exception(AppStrings.get(R.string.s_0a2edd30)))
     }
+    suspend fun setBarcode(id: String, code: String): Result<Unit> = resultMsg { api.setAccountingProductBarcode(id, com.dalilacom.app.data.network.AccountingBarcodePatch(code)) }
     suspend fun setMin(id: String, value: Int): Result<Unit> = result { api.setAccountingProductMin(id, com.dalilacom.app.data.network.AccountingMinRequest(value)) }
     suspend fun sales(): List<com.dalilacom.app.data.network.AccountingSaleDto> = safeApiCall { api.accountingSales() }?.takeIf { it.isSuccessful }?.body().orEmpty()
     suspend fun createSale(body: com.dalilacom.app.data.network.AccountingSaleRequest): Result<com.dalilacom.app.data.network.AccountingSaleDto> {

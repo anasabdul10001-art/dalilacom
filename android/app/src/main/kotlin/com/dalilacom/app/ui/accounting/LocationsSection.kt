@@ -51,6 +51,7 @@ fun LocationsSection(
     setMessage: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var overview by remember { mutableStateOf<List<AccountingOverviewRowDto>?>(null) }
     LaunchedEffect(locations, products) { overview = container.accountingRepository.stockOverview() }
     var newName by remember { mutableStateOf("") }
@@ -120,6 +121,18 @@ fun LocationsSection(
             var pick by remember(l.id) { mutableStateOf<AccountingProductDto?>(null) }
             var pickOpen by remember(l.id) { mutableStateOf(false) }
             var qty by remember(l.id) { mutableStateOf("1") }
+            var scanning by remember(l.id) { mutableStateOf(false) }
+            var scanNote by remember(l.id) { mutableStateOf<ScanReply?>(null) }
+            var lastScanned by remember(l.id) { mutableStateOf<String?>(null) }
+            // a scan chooses the product; each further scan of the same product is one piece more. Nothing moves before the button.
+            suspend fun chooseByBarcode(code: String): ScanReply {
+                val found = (products.firstOrNull { it.barcode == code } ?: container.accountingRepository.products(code).firstOrNull { it.barcode == code })?.takeIf { !it.id.startsWith("store:") }
+                    ?: return ScanReply(context.getString(R.string.barcode_unknown), false)
+                val n = if (lastScanned == found.id && pick?.id == found.id) (qty.toIntOrNull() ?: 0) + 1 else 1
+                lastScanned = found.id; pick = found; qty = n.toString()
+                return ScanReply(context.getString(R.string.barcode_chosen, found.name, n), true)
+            }
+            if (scanning) ContinuousScanDialog(onCode = { code -> chooseByBarcode(code).also { scanNote = it } }, onDismiss = { scanning = false })
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(l.name, fontWeight = FontWeight.ExtraBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -130,6 +143,7 @@ fun LocationsSection(
                 l.items.forEach { i -> Text(i.name + "  ·  " + stringResource(R.string.accounting_loc_onhand) + ": " + i.onHand + "  ·  " + stringResource(R.string.accounting_loc_sold) + ": " + i.sold, fontSize = 13.sp) }
                 LocationCashBlock(container, l.id, canReceive, locations, setMessage)
                 if (canMove && l.isActive) {
+                    BarcodeEntryRow(scanNote, onCamera = { scanning = true }) { code -> scope.launch { scanNote = chooseByBarcode(code) } }
                     androidx.compose.foundation.layout.Box {
                         OutlinedButton(onClick = { pickOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(pick?.name ?: stringResource(R.string.accounting_loc_pick)) }
                         DropdownMenu(expanded = pickOpen, onDismissRequest = { pickOpen = false }) {

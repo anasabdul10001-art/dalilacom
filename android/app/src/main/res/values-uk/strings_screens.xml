@@ -993,4 +993,7 @@
     <string name="barcode_store_product">Це товар магазину, його не можна додати до накладної закупівлі: %1$s</string>
     <string name="barcode_need_cost">Введіть вартість однієї одиниці та натисніть «Додати»: %1$s</string>
     <string name="barcode_exists">Цей штрихкод уже належить товару: %1$s</string>
+    <string name="barcode_counted">%1$s — пораховано: %2$d</string>
+    <string name="barcode_chosen">%1$s — обрана кількість: %2$d</string>
+    <string name="barcode_edit_hint">Відскануйте код або введіть його. Залиште порожнім, щоб видалити.</string>
 </resources>

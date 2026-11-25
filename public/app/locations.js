@@ -135,7 +135,7 @@ function accountingLocationsCard(a) {
       <div class="item-title">${esc(l.name)} ${uiChip(t("loc.kind." + l.kind), l.isActive ? "info" : "warn")}${l.staffName ? " " + uiChip(l.staffName) : ""}</div>
       <p class="muted">${esc(t("loc.held", { n: l.onHandUnits }))} · ${esc(t("loc.soldHere", { n: l.soldUnits }))}</p>
       ${l.items.length ? `<table class="plain-table" style="width:100%"><thead><tr><th>${esc(t("loc.product"))}</th><th>${esc(t("loc.onHand"))}</th><th>${esc(t("loc.sold"))}</th></tr></thead><tbody>${l.items.map((i) => `<tr><td>${esc(i.name)}</td><td>${i.onHand}</td><td>${i.sold}</td></tr>`).join("")}</tbody></table>` : ""}
-      ${canMove && l.isActive ? `<div class="row"><div class="field"><label>${esc(t("loc.product"))}</label><select id="loc-p-${esc(l.id)}">${productOpts}</select></div><div class="field"><label>${esc(t("loc.qty"))}</label><input id="loc-q-${esc(l.id)}" inputmode="numeric" value="1" /></div></div>
+      ${canMove && l.isActive ? `<div class="field"><label>${esc(t("accounting.buy.barcode"))}</label><input id="loc-b-${esc(l.id)}" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();locScan('${esc(l.id)}')}" /></div><p id="loc-last-${esc(l.id)}" class="muted" role="status"></p><div class="row"><div class="field"><label>${esc(t("loc.product"))}</label><select id="loc-p-${esc(l.id)}">${productOpts}</select></div><div class="field"><label>${esc(t("loc.qty"))}</label><input id="loc-q-${esc(l.id)}" inputmode="numeric" value="1" /></div></div>
         <div class="btn-row"><button class="btn small" onclick="locMove(this,'${esc(l.id)}','give')">${esc(t("loc.give"))}</button><button class="btn small outline" onclick="locMove(this,'${esc(l.id)}','return')">${esc(t("loc.return"))}</button></div>` : ""}
       ${locSettleBlock(l)}
       ${!S._actAs ? `<div class="btn-row"><button class="btn small soft" onclick="locToggle(this,'${esc(l.id)}',${l.isActive ? "false" : "true"})">${esc(t(l.isActive ? "loc.switchOff" : "loc.switchOn"))}</button><button class="btn small outline" onclick="locDelete(this,'${esc(l.id)}')">${esc(t("loc.delete"))}</button></div>` : ""}
@@ -170,6 +170,18 @@ async function locCreate(btn) {
   const res = await uiBusy(btn, () => api("POST", "/accounting/locations", body));
   if (!res.ok) return toast(errMsg(res.data, t("loc.failed")));
   toast(t("loc.added")); locReload();
+}
+/** A scan chooses the product to hand over; each further scan of the same product is one piece more. Nothing moves before the button. */
+async function locScan(id) {
+  const input = document.getElementById("loc-b-" + id);
+  const code = barcodeClean((input || {}).value); if (!code) return;
+  input.value = "";
+  const p = await accountingFindByBarcode(code);
+  const pick = document.getElementById("loc-p-" + id), qty = document.getElementById("loc-q-" + id);
+  if (!p || !pick || ![...pick.options].some((o) => o.value === p.id)) { accountingBeep(); return toast(t("accounting.sale.notFound")); }
+  const n = input.dataset.last === p.id && pick.value === p.id ? (Math.floor(Number(qty.value)) || 0) + 1 : 1;
+  input.dataset.last = p.id; pick.value = p.id; qty.value = String(n);
+  const last = document.getElementById("loc-last-" + id); if (last) last.textContent = t("accounting.bc.chosen", { name: p.name, n });
 }
 async function locMove(btn, id, kind) {
   const productId = document.getElementById("loc-p-" + id).value;
