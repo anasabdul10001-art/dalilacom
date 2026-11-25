@@ -8,6 +8,7 @@ const SUF = UHD ? "-4k" : "";
 const fs = require("fs"), path = require("path"), crypto = require("crypto"), { spawnSync } = require("child_process");
 const { open, sleep } = require("./lib.cjs");
 const { signup, plan } = require("./accounting-guided.cjs");
+const { fld } = require("./ch-b.cjs");
 
 const ID = process.argv[2];
 const clip = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "video-plans", "accounting", "clips", ID + ".json"), "utf8"));
@@ -44,7 +45,29 @@ const uncard = (b) => b.ev(`document.getElementById("__card")?.remove()`);
 
 const id = (x) => `document.getElementById(${JSON.stringify(x)})`;
 const addProduct = async (b) => { await b.clickText("إضافة المنتج إلى الجرد", "button"); await sleep(2200); };
+const button = async (b, label) => { await b.clickText(label, ".site button"); await sleep(1400); };
+// what a clip needs to exist before the camera starts
+const PREP = {
+  twoProducts: async (b) => {
+    await b.tab("المخزون"); await sleep(1500);
+    for (const p of [["6281001", "أرز مصري", "3.5", "2.5", "40"], ["6281002", "سكر ناعم", "2", "1.5", "60"]]) {
+      for (const [i, f] of ["acc-barcode", "acc-product-name", "acc-sale-price", "acc-cost-price", "acc-quantity"].entries()) await b.fillBy(id(f), p[i]);
+      await addProduct(b);
+    }
+  },
+};
+const tabClick = async (b, label) => { await uncard(b); await sleep(1200); await b.clickText(label, ".site-tabs *, .site-tab, button"); await sleep(1500); };
 const ACTIONS = {
+  openSale: (b) => tabClick(b, "فاتورة بيع"),
+  pickProduct: (b) => b.setSelect(id("sale-product"), "أرز"),
+  saleQty: (b) => b.fillBy(id("sale-qty"), "3"),
+  addLine: async (b) => { await sleep(900); await button(b, "أضف إلى الفاتورة"); },
+  byBarcode: async (b) => { await b.fillBy(id("sale-barcode"), "6281002"); await sleep(1500); await button(b, "أضف بالباركود"); },
+  payment: async (b) => { const f = fld("طريقة الدفع"); await sleep(1500); await b.setSelect(f, "بنك"); await sleep(1200); await b.setSelect(f, "نقدًا"); },
+  totals: (b) => b.scrollBy(350, 1500),
+  save: async (b) => { await sleep(1200); await button(b, "حفظ الفاتورة"); await sleep(1500); },
+  saved: async () => {},
+  stockAfter: async (b) => { await b.ev(`window.scrollTo({top:0,behavior:"smooth"})`); await sleep(1200); await b.clickText("المخزون", ".site-tabs *, .site-tab, button"); await sleep(1800); await b.scrollBy(420, 1500); },
   title: async () => {},
   openStock: async (b) => { await uncard(b); await sleep(1200); await b.clickText("المخزون", ".site-tabs *, .site-tab, button"); await sleep(1200); },
   barcode: (b) => b.fillBy(id("acc-barcode"), "6281001"),
@@ -70,6 +93,7 @@ async function record() {
     await signup(b); await plan(b); // preparation, not recorded
     // 1280x720 CSS px drawn at 1.5x = a 1920x1080 picture with text large enough for a phone
     await b.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 720, deviceScaleFactor: UHD ? 3 : 1.5, mobile: false });
+    if (clip.prep) { await PREP[clip.prep](b); await sleep(4000); } // wait for the "saved" message to leave
     await b.tab(clip.start); await sleep(2000);
     await card(b, clip.title); await sleep(800);
     await b.startRec(); await sleep(150);
