@@ -1,9 +1,9 @@
 // Short "how do I ...?" videos: one clip = one question. The voice is generated FIRST, then the screen is recorded at
 // real speed and every step simply lasts as long as its sentence. Nothing is retimed or concatenated, so sound and
 // picture cannot drift apart. Needs http://localhost:4000.
-//   node short.cjs 01-goods voice    generate the narration (ElevenLabs, the owner's clone)
+//   node short.cjs 01-goods voice    generate the narration (ElevenLabs)
 //   node short.cjs 01-goods          record and mix -> editor/out/short-01-goods.mp4   (UHD=1 -> short-01-goods-4k.mp4)
-const UHD = process.env.UHD === "1"; if (UHD) process.env.DLK_SCALE = "2"; // 3840x2160 (must be set before the recorder is loaded)
+const UHD = process.env.UHD === "1"; if (UHD) process.env.DLK_SCALE = "3"; /* the picture is the 1280x720 layout times this factor */ // 3840x2160 (must be set before the recorder is loaded)
 const SUF = UHD ? "-4k" : "";
 const fs = require("fs"), path = require("path"), crypto = require("crypto"), { spawnSync } = require("child_process");
 const { open, sleep } = require("./lib.cjs");
@@ -14,8 +14,10 @@ const clip = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "video-plans"
 const ED = path.join(__dirname, "..", "editor"), OUT = path.join(ED, "out"), VO = path.join(ED, "voice-short");
 [OUT, VO].forEach((d) => fs.mkdirSync(d, { recursive: true }));
 const FF = "C:/Users/Tom/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
-const VOICE_ID = "clS4TmlZF18Hafme6bgr";
-const mp3Of = (t) => path.join(VO, crypto.createHash("sha1").update(t).digest("hex").slice(0, 12) + ".mp3");
+// the owner's choice 2026-11-25 (sample 3): the library voice "Mohamed" (Modern Standard Arabic) with lively settings
+const VOICE_ID = "g5BnCY7skxdy7I1pn4xV";
+const VOICE_SETTINGS = { stability: 0.3, similarity_boost: 0.8, style: 0.55, use_speaker_boost: true, speed: 1.05 };
+const mp3Of = (t) => path.join(VO, crypto.createHash("sha1").update(VOICE_ID + JSON.stringify(VOICE_SETTINGS) + t).digest("hex").slice(0, 12) + ".mp3");
 const durOf = (f) => { const r = spawnSync(FF, ["-hide_banner", "-i", f]); const m = /Duration: (\d+):(\d+):([\d.]+)/.exec(String(r.stderr)); if (!m) throw new Error("no duration: " + f); return +m[1] * 3600 + +m[2] * 60 + +m[3]; };
 const PAUSE = 0.9; // a breath after every sentence
 
@@ -27,7 +29,7 @@ async function genVoice() {
   for (const { say } of clip.steps) {
     const f = mp3Of(say); if (fs.existsSync(f)) continue;
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`, { method: "POST", headers: { "xi-api-key": KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ text: say, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.6, similarity_boost: 0.85, style: 0.05, use_speaker_boost: true, speed: 0.95 } }) });
+      body: JSON.stringify({ text: say, model_id: "eleven_multilingual_v2", voice_settings: VOICE_SETTINGS }) });
     if (!r.ok) throw new Error("TTS " + r.status + " " + (await r.text()).slice(0, 200));
     fs.writeFileSync(f, Buffer.from(await r.arrayBuffer()));
     console.log("voice", durOf(f).toFixed(1) + "s", path.basename(f));
