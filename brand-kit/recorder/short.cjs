@@ -15,8 +15,8 @@ const clip = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "video-plans"
 const ED = path.join(__dirname, "..", "editor"), OUT = path.join(ED, "out"), VO = path.join(ED, "voice-short");
 [OUT, VO].forEach((d) => fs.mkdirSync(d, { recursive: true }));
 const FF = "C:/Users/Tom/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
-// the owner's choice 2026-11-25 (sample 3): the library voice "Mohamed" (Modern Standard Arabic) with lively settings
-const VOICE_ID = "g5BnCY7skxdy7I1pn4xV";
+// the owner's final choice 2026-11-25: his own cloned voice "Anas DALILACOM" with lively settings (sample 1)
+const VOICE_ID = "clS4TmlZF18Hafme6bgr";
 const VOICE_SETTINGS = { stability: 0.3, similarity_boost: 0.8, style: 0.55, use_speaker_boost: true, speed: 1.05 };
 const mp3Of = (t) => path.join(VO, crypto.createHash("sha1").update(VOICE_ID + JSON.stringify(VOICE_SETTINGS) + t).digest("hex").slice(0, 12) + ".mp3");
 const durOf = (f) => { const r = spawnSync(FF, ["-hide_banner", "-i", f]); const m = /Duration: (\d+):(\d+):([\d.]+)/.exec(String(r.stderr)); if (!m) throw new Error("no duration: " + f); return +m[1] * 3600 + +m[2] * 60 + +m[3]; };
@@ -85,16 +85,20 @@ const ACTIONS = {
   outro: (b) => card(b, "جرّب محاسب دليلكم<br>مجاناً لمدة 3 أشهر", "dalilacom.com"),
 };
 
+// the actions of clips 3 and later live in their own file
+const more = require("./short-actions.cjs")({ sleep, card, uncard, id, button, tabClick, addProduct, PREP });
+Object.assign(PREP, more.PREP); Object.assign(ACTIONS, more.ACTIONS);
+
 async function record() {
   for (const s of clip.steps) if (!fs.existsSync(mp3Of(s.say))) throw new Error("run the voice step first");
   const b = await open(9373, { fresh: true });
   const silentMp4 = path.join(OUT, `short-${ID}${SUF}-silent.mp4`), outMp4 = path.join(OUT, `short-${ID}${SUF}.mp4`);
   try {
-    await signup(b); await plan(b); // preparation, not recorded
+    if (!clip.fromStart) { await signup(b); await plan(b); } // preparation, not recorded
     // 1280x720 CSS px drawn at 1.5x = a 1920x1080 picture with text large enough for a phone
     await b.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 720, deviceScaleFactor: UHD ? 3 : 1.5, mobile: false });
     if (clip.prep) { await PREP[clip.prep](b); await sleep(4000); } // wait for the "saved" message to leave
-    await b.tab(clip.start); await sleep(2000);
+    if (clip.fromStart) { await b.goto("http://localhost:4000/app/"); await sleep(2500); } else { await b.tab(clip.start); await sleep(2000); }
     await card(b, clip.title); await sleep(800);
     await b.startRec(); await sleep(150);
     const marks = [];
